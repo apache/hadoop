@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedAction;
 import java.util.Collection;
 
 import org.apache.commons.logging.Log;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.SecurityUtil;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -284,6 +286,17 @@ public class EditLogTailer {
     
     @Override
     public void run() {
+      SecurityUtil.doAsLoginUserOrFatal(
+          new PrivilegedAction<Object>() {
+          @Override
+          public Object run() {
+            doWork();
+            return null;
+          }
+        });
+    }
+    
+    private void doWork() {
       while (shouldRun) {
         try {
           // There's no point in triggering a log roll if the Standby hasn't

@@ -307,25 +307,14 @@ public class SecondaryNameNode implements Runnable {
   }
 
   public void run() {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      UserGroupInformation ugi = null;
-      try { 
-        ugi = UserGroupInformation.getLoginUser();
-      } catch (IOException e) {
-        LOG.error("Exception while getting login user", e);
-        e.printStackTrace();
-        Runtime.getRuntime().exit(-1);
-      }
-      ugi.doAs(new PrivilegedAction<Object>() {
+    SecurityUtil.doAsLoginUserOrFatal(
+        new PrivilegedAction<Object>() {
         @Override
         public Object run() {
           doWork();
           return null;
         }
       });
-    } else {
-      doWork();
-    }
   }
   //
   // The main work loop

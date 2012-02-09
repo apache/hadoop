@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceCancelledException;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -212,26 +213,14 @@ public class StandbyCheckpointer {
     public void run() {
       // We have to make sure we're logged in as far as JAAS
       // is concerned, in order to use kerberized SSL properly.
-      // This code copied from SecondaryNameNode - TODO: refactor
-      // to a utility function.
-      if (UserGroupInformation.isSecurityEnabled()) {
-        UserGroupInformation ugi = null;
-        try { 
-          ugi = UserGroupInformation.getLoginUser();
-        } catch (IOException e) {
-          LOG.error("Exception while getting login user", e);
-          Runtime.getRuntime().exit(-1);
-        }
-        ugi.doAs(new PrivilegedAction<Object>() {
+      SecurityUtil.doAsLoginUserOrFatal(
+          new PrivilegedAction<Object>() {
           @Override
           public Object run() {
             doWork();
             return null;
           }
         });
-      } else {
-        doWork();
-      }
     }
 
     /**
