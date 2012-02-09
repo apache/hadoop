@@ -1618,12 +1618,13 @@
   </target>
 
   <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio" 
-		description="assembles artifacts for binary target">
-    <delete dir="${dist.dir}"/>
+               description="assembles artifacts for binary target">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc/hadoop"/>
     <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/lib/native"/>
+    <mkdir dir="${dist.dir}/lib/native/${build.platform}"/>
     <mkdir dir="${dist.dir}/libexec"/>
     <mkdir dir="${dist.dir}/sbin"/>
     <mkdir dir="${dist.dir}/share/${name}/contrib"/>
@@ -1654,7 +1655,7 @@
       <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
     </exec>
 
-    <move todir="${dist.dir}/lib" flatten="true">
+    <move todir="${dist.dir}/lib/native/${build.platform}" flatten="true">
       <fileset dir="${dist.dir}/native">
         <include name="*/*"/>
       </fileset>
@@ -1715,7 +1716,7 @@
       </fileset>
     </copy>
 
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+    <copy todir="${dist.dir}/lib/native/${build.platform}" includeEmptyDirs="false" flatten="true">
       <fileset dir="${build.dir}/c++">
         <include name="**/lib/*"/>
       </fileset>
