@@ -8,6 +8,9 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8032. mvn site:stage-deploy should be able to use the scp protocol
     to stage documents (Ravi Prakash via tgraves)
 
+    HADOOP-7923. Automate the updating of version numbers in the doc system.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
