@@ -1827,6 +1827,10 @@ public class MiniDFSCluster {
   public void setLeasePeriod(long soft, long hard) {
     NameNodeAdapter.setLeasePeriod(getNamesystem(), soft, hard);
   }
+  
+  public void setWaitSafeMode(boolean wait) {
+    this.waitSafeMode = wait;
+  }
 
   /**
    * Returns the current set of datanodes

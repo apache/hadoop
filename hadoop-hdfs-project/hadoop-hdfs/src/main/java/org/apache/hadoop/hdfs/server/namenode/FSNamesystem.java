@@ -32,6 +32,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT;
@@ -269,6 +271,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private static final long DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL =
     TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
   private DelegationTokenSecretManager dtSecretManager;
+  private boolean alwaysUseDelegationTokensForTests;
+  
 
   //
   // Stores the correct file name hierarchy
@@ -447,13 +451,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     dir.imageLoadComplete();
   }
 
-  void startSecretManager() throws IOException {
+  private void startSecretManager() {
     if (dtSecretManager != null) {
-      dtSecretManager.startThreads();
+      try {
+        dtSecretManager.startThreads();
+      } catch (IOException e) {
+        // Inability to start secret manager
+        // can't be recovered from.
+        throw new RuntimeException(e);
+      }
     }
   }
   
-  void stopSecretManager() {
+  private void startSecretManagerIfNecessary() {
+    boolean shouldRun = shouldUseDelegationTokens() &&
+      !isInSafeMode() && getEditLog().isOpenForWrite();
+    boolean running = dtSecretManager.isRunning();
+    if (shouldRun && !running) {
+      startSecretManager();
+    }
+  }
+
+  private void stopSecretManager() {
     if (dtSecretManager != null) {
       dtSecretManager.stopThreads();
     }
@@ -539,9 +558,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         dir.fsImage.editLog.openForWrite();
       }
-      if (UserGroupInformation.isSecurityEnabled()) {
-        startSecretManager();
-      }
       if (haEnabled) {
         // Renew all of the leases before becoming active.
         // This is because, while we were in standby mode,
@@ -550,9 +566,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         leaseManager.renewAllLeases();
       }
       leaseManager.startMonitor();
+      startSecretManagerIfNecessary();
     } finally {
       writeUnlock();
     }
+  }
+
+  private boolean shouldUseDelegationTokens() {
+    return UserGroupInformation.isSecurityEnabled() ||
+      alwaysUseDelegationTokensForTests;
   }
 
   /** 
@@ -839,6 +861,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     this.standbyShouldCheckpoint = conf.getBoolean(
         DFS_HA_STANDBY_CHECKPOINTS_KEY,
         DFS_HA_STANDBY_CHECKPOINTS_DEFAULT);
+    
+    // For testing purposes, allow the DT secret manager to be started regardless
+    // of whether security is enabled.
+    alwaysUseDelegationTokensForTests = 
+      conf.getBoolean(DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY,
+          DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
   }
 
   /**
@@ -3479,6 +3507,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           + nt.getNumOfLeaves() + " datanodes");
       NameNode.stateChangeLog.info("STATE* UnderReplicatedBlocks has "
           + blockManager.numOfUnderReplicatedBlocks() + " blocks");
+
+      startSecretManagerIfNecessary();
     }
 
     /**
@@ -3956,6 +3986,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void enterSafeMode(boolean resourcesLow) throws IOException {
     writeLock();
     try {
+      // Stop the secret manager, since rolling the master key would
+      // try to write to the edit log
+      stopSecretManager();
+
       // Ensure that any concurrent operations have been fully synced
       // before entering safe mode. This ensures that the FSImage
       // is entirely stable on disk as soon as we're in safe mode.
@@ -4805,16 +4839,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param key new delegation key.
    */
   public void logUpdateMasterKey(DelegationKey key) throws IOException {
-    writeLock();
-    try {
-      if (isInSafeMode()) {
-        throw new SafeModeException(
-          "Cannot log master key update in safe mode", safeMode);
-      }
-      getEditLog().logUpdateMasterKey(key);
-    } finally {
-      writeUnlock();
-    }
+    
+    assert !isInSafeMode() :
+      "this should never be called while in safemode, since we stop " +
+      "the DT manager before entering safemode!";
+    // No need to hold FSN lock since we don't access any internal
+    // structures, and this is stopped before the FSN shuts itself
+    // down, etc.
+    getEditLog().logUpdateMasterKey(key);
     getEditLog().logSync();
   }
   

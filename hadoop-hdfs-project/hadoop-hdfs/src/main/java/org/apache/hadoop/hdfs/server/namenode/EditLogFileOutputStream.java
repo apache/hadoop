@@ -219,6 +219,11 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
   File getFile() {
     return file;
   }
+  
+  @Override
+  public String toString() {
+    return "EditLogFileOutputStream(" + file + ")";
+  }
 
   /**
    * @return true if this stream is currently open.

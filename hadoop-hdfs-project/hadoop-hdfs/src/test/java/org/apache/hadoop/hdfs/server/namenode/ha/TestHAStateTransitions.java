@@ -317,6 +317,9 @@ public class TestHAStateTransitions {
   public void testDelegationTokensAfterFailover() throws IOException,
       URISyntaxException {
     Configuration conf = new Configuration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(0)
@@ -326,7 +329,6 @@ public class TestHAStateTransitions {
       cluster.transitionToActive(0);
       NameNode nn1 = cluster.getNameNode(0);
       NameNode nn2 = cluster.getNameNode(1);
-      NameNodeAdapter.getDtSecretManager(nn1.getNamesystem()).startThreads();
 
       String renewer = UserGroupInformation.getLoginUser().getUserName();
       Token<DelegationTokenIdentifier> token = nn1.getRpcServer()
@@ -335,8 +337,6 @@ public class TestHAStateTransitions {
       LOG.info("Failing over to NN 1");
       cluster.transitionToStandby(0);
       cluster.transitionToActive(1);
-      // Need to explicitly start threads because security is not enabled.
-      NameNodeAdapter.getDtSecretManager(nn2.getNamesystem()).startThreads();
 
       nn2.getRpcServer().renewDelegationToken(token);
       nn2.getRpcServer().cancelDelegationToken(token);
@@ -420,5 +420,125 @@ public class TestHAStateTransitions {
           inProgressFile));
       EditLogFileOutputStream.writeHeader(out);
     }
+  }
+  
+
+  /**
+   * The secret manager needs to start/stop - the invariant should be that
+   * the secret manager runs if and only if the NN is active and not in
+   * safe mode. As a state diagram, we need to test all of the following
+   * transitions to make sure the secret manager is started when we transition
+   * into state 4, but none of the others.
+   * <pre>
+   *         SafeMode     Not SafeMode 
+   * Standby   1 <------> 2
+   *           ^          ^
+   *           |          |
+   *           v          v
+   * Active    3 <------> 4
+   * </pre>
+   */
+  @Test(timeout=60000)
+  public void testSecretManagerState() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    conf.setInt(
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY, 50);
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(1)
+         .waitSafeMode(false)
+        .build();
+    try {
+      cluster.transitionToActive(0);
+      DFSTestUtil.createFile(cluster.getFileSystem(0),
+          TEST_FILE_PATH, 6000, (short)1, 1L);
+      
+      cluster.getConfiguration(0).setInt(
+          DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 60000);
+
+      cluster.restartNameNode(0);
+      NameNode nn = cluster.getNameNode(0);
+      
+      banner("Started in state 1.");
+      assertTrue(nn.isStandbyState());
+      assertTrue(nn.isInSafeMode());
+      assertFalse(isDTRunning(nn));
+      
+      banner("Transition 1->2. Should not start secret manager");
+      NameNodeAdapter.leaveSafeMode(nn, false);
+      assertTrue(nn.isStandbyState());
+      assertFalse(nn.isInSafeMode());
+      assertFalse(isDTRunning(nn));
+  
+      banner("Transition 2->1. Should not start secret manager.");
+      NameNodeAdapter.enterSafeMode(nn, false);
+      assertTrue(nn.isStandbyState());
+      assertTrue(nn.isInSafeMode());
+      assertFalse(isDTRunning(nn));
+  
+      banner("Transition 1->3. Should not start secret manager.");
+      nn.getRpcServer().transitionToActive();
+      assertFalse(nn.isStandbyState());
+      assertTrue(nn.isInSafeMode());
+      assertFalse(isDTRunning(nn));
+  
+      banner("Transition 3->1. Should not start secret manager.");
+      nn.getRpcServer().transitionToStandby();
+      assertTrue(nn.isStandbyState());
+      assertTrue(nn.isInSafeMode());
+      assertFalse(isDTRunning(nn));
+  
+      banner("Transition 1->3->4. Should start secret manager.");
+      nn.getRpcServer().transitionToActive();
+      NameNodeAdapter.leaveSafeMode(nn, false);
+      assertFalse(nn.isStandbyState());
+      assertFalse(nn.isInSafeMode());
+      assertTrue(isDTRunning(nn));
+      
+      banner("Transition 4->3. Should stop secret manager");
+      NameNodeAdapter.enterSafeMode(nn, false);
+      assertFalse(nn.isStandbyState());
+      assertTrue(nn.isInSafeMode());
+      assertFalse(isDTRunning(nn));
+  
+      banner("Transition 3->4. Should start secret manager");
+      NameNodeAdapter.leaveSafeMode(nn, false);
+      assertFalse(nn.isStandbyState());
+      assertFalse(nn.isInSafeMode());
+      assertTrue(isDTRunning(nn));
+      
+      for (int i = 0; i < 20; i++) {
+        // Loop the last check to suss out races.
+        banner("Transition 4->2. Should stop secret manager.");
+        nn.getRpcServer().transitionToStandby();
+        assertTrue(nn.isStandbyState());
+        assertFalse(nn.isInSafeMode());
+        assertFalse(isDTRunning(nn));
+    
+        banner("Transition 2->4. Should start secret manager");
+        nn.getRpcServer().transitionToActive();
+        assertFalse(nn.isStandbyState());
+        assertFalse(nn.isInSafeMode());
+        assertTrue(isDTRunning(nn));
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  private boolean isDTRunning(NameNode nn) {
+    return NameNodeAdapter.getDtSecretManager(nn.getNamesystem()).isRunning();
+  }
+
+  /**
+   * Print a big banner in the test log to make debug easier.
+   */
+  static void banner(String string) {
+    LOG.info("\n\n\n\n================================================\n" +
+        string + "\n" +
+        "==================================================\n\n");
   }
 }

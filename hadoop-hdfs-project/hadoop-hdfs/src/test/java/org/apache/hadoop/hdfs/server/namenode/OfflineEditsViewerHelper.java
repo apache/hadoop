@@ -108,10 +108,11 @@ public class OfflineEditsViewerHelper {
     // for security to work (fake JobTracker user)
     config.set("hadoop.security.auth_to_local",
       "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
+    config.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     cluster =
       new MiniDFSCluster.Builder(config).manageNameDfsDirs(false).build();
     cluster.waitClusterUp();
-    cluster.getNamesystem().getDelegationTokenSecretManager().startThreads();
   }
 
   /**
