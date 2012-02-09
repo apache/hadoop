@@ -39,6 +39,7 @@ class RetryInvocationHandler implements RpcInvocationHandler {
    * The number of times the associated proxyProvider has ever been failed over.
    */
   private long proxyProviderFailoverCount = 0;
+  private volatile boolean hasMadeASuccessfulCall = false;
   
   private RetryPolicy defaultPolicy;
   private Map<String,RetryPolicy> methodNameToPolicyMap;
@@ -79,7 +80,9 @@ class RetryInvocationHandler implements RpcInvocationHandler {
         invocationAttemptFailoverCount = proxyProviderFailoverCount;
       }
       try {
-        return invokeMethod(method, args);
+        Object ret = invokeMethod(method, args);
+        hasMadeASuccessfulCall = true;
+        return ret;
       } catch (Exception e) {
         boolean isMethodIdempotent = proxyProvider.getInterface()
             .getMethod(method.getName(), method.getParameterTypes())
@@ -94,12 +97,20 @@ class RetryInvocationHandler implements RpcInvocationHandler {
           }
           return null;
         } else { // retry or failover
-
-          if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY) {
+          // avoid logging the failover if this is the first call on this
+          // proxy object, and we successfully achieve the failover without
+          // any flip-flopping
+          boolean worthLogging = 
+            !(invocationFailoverCount == 0 && !hasMadeASuccessfulCall);
+          worthLogging |= LOG.isDebugEnabled();
+          if (action.action == RetryAction.RetryDecision.FAILOVER_AND_RETRY &&
+              worthLogging) {
             String msg = "Exception while invoking " + method.getName()
-              + " of " + currentProxy.getClass()
-              + " after " + invocationFailoverCount + " fail over attempts."
-              + " Trying to fail over " + formatSleepMessage(action.delayMillis);
+              + " of class " + currentProxy.getClass().getSimpleName();
+            if (invocationFailoverCount > 0) {
+              msg += " after " + invocationFailoverCount + " fail over attempts"; 
+            }
+            msg += ". Trying to fail over " + formatSleepMessage(action.delayMillis);
             if (LOG.isDebugEnabled()) {
               LOG.debug(msg, e);
             } else {
@@ -108,8 +119,8 @@ class RetryInvocationHandler implements RpcInvocationHandler {
           } else {
             if(LOG.isDebugEnabled()) {
               LOG.debug("Exception while invoking " + method.getName()
-                  + " of " + currentProxy.getClass() + ". Retrying " +
-                  formatSleepMessage(action.delayMillis), e);
+                  + " of class " + currentProxy.getClass().getSimpleName() +
+                  ". Retrying " + formatSleepMessage(action.delayMillis), e);
             }
           }
           
