@@ -188,3 +188,6 @@ HDFS-2579. Starting delegation token manager during safemode fails. (todd)
 HDFS-2510. Add HA-related metrics. (atm)
 
 HDFS-2924. Standby checkpointing fails to authenticate in secure cluster. (todd)
+
+HDFS-2915. HA: TestFailureOfSharedDir.testFailureOfSharedDir() has race condition. (Bikas Saha via jitendra)
+

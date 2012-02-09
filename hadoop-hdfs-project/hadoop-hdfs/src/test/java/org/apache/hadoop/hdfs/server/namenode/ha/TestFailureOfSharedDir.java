@@ -129,6 +129,8 @@ public class TestFailureOfSharedDir {
     
     // The shared edits dir will automatically be marked required.
     MiniDFSCluster cluster = null;
+    int chmodSucceeded = -1;
+    File sharedEditsDir = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
@@ -143,9 +145,15 @@ public class TestFailureOfSharedDir {
       assertTrue(fs.mkdirs(new Path("/test1")));
       
       // Blow away the shared edits dir.
-      URI sharedEditsUri = cluster.getSharedEditsDir(0, 1);      
-      FileUtil.fullyDelete(new File(sharedEditsUri));
-      
+      URI sharedEditsUri = cluster.getSharedEditsDir(0, 1);
+      sharedEditsDir = new File(sharedEditsUri);
+      chmodSucceeded = FileUtil.chmod(sharedEditsDir.getAbsolutePath(), "-w",
+          true);
+      if (chmodSucceeded != 0) {
+        LOG.error("Failed to remove write permissions on shared edits dir:"
+            + sharedEditsDir.getAbsolutePath());
+      }
+
       NameNode nn0 = cluster.getNameNode(0);
       try {
         // Make sure that subsequent operations on the NN fail.
@@ -171,6 +179,10 @@ public class TestFailureOfSharedDir {
             NNStorage.getInProgressEditsFileName(1));
       }
     } finally {
+      if (chmodSucceeded == 0) {
+        // without this test cleanup will fail
+        FileUtil.chmod(sharedEditsDir.getAbsolutePath(), "+w", true);
+      }
       if (cluster != null) {
         cluster.shutdown();
       }
