@@ -158,6 +158,9 @@ Release 0.23.2 - UNRELEASED
   
   IMPROVEMENTS
 
+    HADOOP-7923. Automate the updating of version numbers in the doc system.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
