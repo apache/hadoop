@@ -141,19 +141,6 @@ chmod 0755 ${RPM_BUILD_DIR}/%{_final_name}/sbin/hadoop-*
 #### INSTALL SECTION ####
 #########################
 %install
-%ifarch i386
-mv  ${RPM_BUILD_DIR}/%{_final_name}/lib/native/%{hadoop_arch}/lib*  ${RPM_BUILD_DIR}%{_lib_dir}
-rm -rf ${RPM_BUILD_DIR}/%{_final_name}/lib
-rm -rf ${RPM_BUILD_DIR}/%{_final_name}/c++
-
-%endif
-
-%ifarch amd64 x86_64
-mv  ${RPM_BUILD_DIR}/%{_final_name}/lib/native/%{hadoop_arch}/lib*  ${RPM_BUILD_DIR}%{_lib64_dir}
-rm -rf ${RPM_BUILD_DIR}/%{_final_name}/lib
-rm -rf ${RPM_BUILD_DIR}/%{_final_name}/c++
-%endif
-
 mv ${RPM_BUILD_DIR}/%{_final_name}/etc/hadoop/* ${RPM_BUILD_DIR}%{_conf_dir}
 mv ${RPM_BUILD_DIR}/%{_final_name}/* ${RPM_BUILD_DIR}%{_prefix}
 
