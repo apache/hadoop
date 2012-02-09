@@ -124,8 +124,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
     this.metrics = NameNode.getNameNodeMetrics();
     
     int handlerCount = 
-      conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
-                  DFS_DATANODE_HANDLER_COUNT_DEFAULT);
+      conf.getInt(DFS_NAMENODE_HANDLER_COUNT_KEY, 
+                  DFS_NAMENODE_HANDLER_COUNT_DEFAULT);
     InetSocketAddress socAddr = nn.getRpcServerAddress(conf);
 
     InetSocketAddress dnSocketAddr = nn.getServiceRpcServerAddress(conf);
