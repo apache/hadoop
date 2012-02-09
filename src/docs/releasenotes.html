@@ -16,8 +16,21 @@
 <a name="changes"/>
 <h2>Changes since Hadoop 1.0.0</h2>
 <h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+
 <ul>
-  <li>none.
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8009">HADOOP-8009</a>.
+     Critical improvement reported by tucu00 and fixed by tucu00 (build)<br>
+     <b>Create hadoop-client and hadoop-minicluster artifacts for downstream projects </b><br>
+     <blockquote>                    Generate integration artifacts &quot;org.apache.hadoop:hadoop-client&quot; and &quot;org.apache.hadoop:hadoop-test&quot; containing all the jars needed to use Hadoop client APIs, and to run Hadoop Mini Clusters, respectively.  Push these artifacts to the maven repository when mvn-deploy, along with existing artifacts. 
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8037">HADOOP-8037</a>.
+     Blocker bug reported by mattf and fixed by gkesavan (build)<br>
+     <b>Binary tarball does not preserve platform info for native builds, and RPMs fail to provide needed symlinks for libhadoop.so</b><br>
+     <blockquote>                    This fix is marked &quot;incompatible&quot; only because it changes the bin-tarball directory structure to be consistent with the source tarball directory structure.  Everything else (in particular, the source tarball and rpm directory structures) are unchanged.
+</blockquote></li>
+
 </ul>
 
 <h3>Other Jiras (describe bug fixes and minor changes)</h3>
