@@ -34,6 +34,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -59,6 +60,8 @@ import static org.mockito.Mockito.mock;
  */
 public abstract class FSImageTestUtil {
   
+  public static final Log LOG = LogFactory.getLog(FSImageTestUtil.class);
+
   /**
    * The position in the fsimage header where the txid is
    * written.
@@ -369,6 +372,8 @@ public abstract class FSImageTestUtil {
       List<Integer> txids) {
 
     for (File nameDir : getNameNodeCurrentDirs(cluster)) {
+      LOG.info("examining name dir with files: " +
+          Joiner.on(",").join(nameDir.listFiles()));
       // Should have fsimage_N for the three checkpoints
       for (long checkpointTxId : txids) {
         File image = new File(nameDir,
