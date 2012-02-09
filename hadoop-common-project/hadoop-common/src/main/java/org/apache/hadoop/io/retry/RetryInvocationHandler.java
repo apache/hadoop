@@ -113,8 +113,6 @@ class RetryInvocationHandler implements RpcInvocationHandler {
             msg += ". Trying to fail over " + formatSleepMessage(action.delayMillis);
             if (LOG.isDebugEnabled()) {
               LOG.debug(msg, e);
-            } else {
-              LOG.warn(msg);
             }
           } else {
             if(LOG.isDebugEnabled()) {

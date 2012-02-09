@@ -681,7 +681,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /*
-   * Requests the namenode to dump data strcutures into specified 
+   * Requests the namenode to dump data structures into specified 
    * file.
    */
   public void metaSave(String pathname) throws IOException {
@@ -699,7 +699,7 @@ public class DistributedFileSystem extends FileSystem {
    * we can consider figuring out exactly which block is corrupt.
    */
   // We do not see a need for user to report block checksum errors and do not  
-  // want to rely on user to report block corruptions.
+  // want to rely on user to report block corruption.
   @Deprecated
   public boolean reportChecksumFailure(Path f, 
     FSDataInputStream in, long inPos, 

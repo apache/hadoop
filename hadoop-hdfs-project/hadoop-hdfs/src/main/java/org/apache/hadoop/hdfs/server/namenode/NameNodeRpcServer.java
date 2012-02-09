@@ -697,7 +697,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
       throws IOException {
-    // TODO(HA): decide on OperationCategory for this
+    namesystem.checkOperation(OperationCategory.READ);
     DatanodeInfo results[] = namesystem.datanodeReport(type);
     if (results == null ) {
       throw new IOException("Cannot find datanode report");
@@ -707,32 +707,32 @@ class NameNodeRpcServer implements NamenodeProtocols {
     
   @Override // ClientProtocol
   public boolean setSafeMode(SafeModeAction action) throws IOException {
-    // TODO:HA decide on OperationCategory for this
+    // NB: not checking OperationCategory so this works on a standby
     return namesystem.setSafeMode(action);
   }
   @Override // ClientProtocol
   public boolean restoreFailedStorage(String arg) 
       throws AccessControlException {
-    // TODO:HA decide on OperationCategory for this
+    // NB: not checking OperationCategory so this works on a standby
     return namesystem.restoreFailedStorage(arg);
   }
 
   @Override // ClientProtocol
   public void saveNamespace() throws IOException {
-    // TODO:HA decide on OperationCategory for this
+    // NB: not checking OperationCategory so this works on a standby
     namesystem.saveNamespace();
   }
 
   @Override // ClientProtocol
   public void refreshNodes() throws IOException {
-    // TODO:HA decide on OperationCategory for this
+    // NB: not checking OperationCategory so this works on a standby
     namesystem.getBlockManager().getDatanodeManager().refreshNodes(
         new HdfsConfiguration());
   }
 
   @Override // NamenodeProtocol
-  public long getTransactionID() {
-    // TODO:HA decide on OperationCategory for this
+  public long getTransactionID()  throws IOException {
+    namesystem.checkOperation(OperationCategory.READ);
     return namesystem.getEditLog().getSyncTxId();
   }
 
@@ -744,26 +744,26 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
   throws IOException {
-    // TODO:HA decide on OperationCategory for this
+    namesystem.checkOperation(OperationCategory.READ);
     return namesystem.getEditLog().getEditLogManifest(sinceTxId);
   }
     
   @Override // ClientProtocol
   public void finalizeUpgrade() throws IOException {
-    // TODO:HA decide on OperationCategory for this
+    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.finalizeUpgrade();
   }
 
   @Override // ClientProtocol
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action)
       throws IOException {
-    // TODO:HA decide on OperationCategory for this
+    namesystem.checkOperation(OperationCategory.READ);
     return namesystem.distributedUpgradeProgress(action);
   }
 
   @Override // ClientProtocol
   public void metaSave(String filename) throws IOException {
-    // TODO:HA decide on OperationCategory for this
+    // NB: not checking OperationCategory so this works on a standby
     namesystem.metaSave(filename);
   }
   @Override // ClientProtocol
@@ -784,12 +784,12 @@ class NameNodeRpcServer implements NamenodeProtocols {
   /**
    * Tell all datanodes to use a new, non-persistent bandwidth value for
    * dfs.datanode.balance.bandwidthPerSec.
-   * @param bandwidth Blanacer bandwidth in bytes per second for all datanodes.
+   * @param bandwidth Balancer bandwidth in bytes per second for all datanodes.
    * @throws IOException
    */
   @Override // ClientProtocol
   public void setBalancerBandwidth(long bandwidth) throws IOException {
-    // TODO:HA decide on OperationCategory for this
+    // NB: not checking OperationCategory so this works on a standby
     namesystem.getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
   }
   
