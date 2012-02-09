@@ -199,6 +199,9 @@ Trunk (unreleased changes)
 
     HDFS-2764. TestBackupNode is racy. (atm)
 
+    HDFS-2908. Add apache license header for StorageReport.java. (Brandon Li
+    via jitendra)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
