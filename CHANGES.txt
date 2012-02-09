@@ -35,6 +35,10 @@ Release 1.0.1 - 2012.02.08
     HADOOP-8010. hadoop-config.sh errors when HADOOP_HOME_WARN_SUPPRESS is set 
     to true and HADOOP_HOME is present. (Roman Shaposhnik via mattf)
 
+    HADOOP-8037. Binary tarball does not preserve platform info for native builds,
+    and RPMs fail to provide needed symlinks for libhadoop.so. (Giridharan Kesavan
+    via mattf)
+
 Release 1.0.0 - 2011.12.15
 
   NEW FEATURES
