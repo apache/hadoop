@@ -5,6 +5,8 @@ Release 0.23.2 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-8048. Allow merging of Credentials (Daryn Sharp via tgraves)
+ 
     HADOOP-8032. mvn site:stage-deploy should be able to use the scp protocol
     to stage documents (Ravi Prakash via tgraves)
 
