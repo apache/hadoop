@@ -101,13 +101,15 @@ public class Statistics implements Component<Job> {
     }
     
     int maps = 0;
+    int reds = 0;
     if (jobdesc == null) {
       throw new IllegalArgumentException(
         " JobStory not available for job " + job.getJobName());
     } else {
       maps = jobdesc.getNumberMaps();
+      reds = jobdesc.getNumberReduces();
     }
-    JobStats stats = new JobStats(maps,job);
+    JobStats stats = new JobStats(maps, reds, job);
     jobMaps.put(seq,stats);
   }
 
@@ -258,14 +260,19 @@ public class Statistics implements Component<Job> {
    */
   static class JobStats {
     private int noOfMaps;
+    private int noOfReds;
     private Job job;
 
-    public JobStats(int noOfMaps,Job job){
+    public JobStats(int noOfMaps,int numOfReds, Job job){
       this.job = job;
       this.noOfMaps = noOfMaps;
+      this.noOfReds = numOfReds;
     }
     public int getNoOfMaps() {
       return noOfMaps;
+    }
+    public int getNoOfReds() {
+      return noOfReds;
     }
 
     /**

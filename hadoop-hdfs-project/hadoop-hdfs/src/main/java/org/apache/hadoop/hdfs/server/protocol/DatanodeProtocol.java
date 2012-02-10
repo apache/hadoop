@@ -25,8 +25,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol;
-import org.apache.hadoop.hdfs.server.protocolR23Compatible.DatanodeWireProtocol;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -48,10 +46,11 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * to insulate from the protocol serialization.
    * 
    * If you are adding/changing DN's interface then you need to 
-   * change both this class and ALSO
-   * {@link DatanodeWireProtocol}.
-   * These changes need to be done in a compatible fashion as described in 
-   * {@link ClientNamenodeWireProtocol}
+   * change both this class and ALSO related protocol buffer
+   * wire protocol definition in DatanodeProtocol.proto.
+   * 
+   * For more details on protocol buffer wire protocol, please see 
+   * .../org/apache/hadoop/hdfs/protocolPB/overview.html
    */
   public static final long versionID = 28L;
   
@@ -81,13 +80,16 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * Register Datanode.
    *
    * @see org.apache.hadoop.hdfs.server.namenode.FSNamesystem#registerDatanode(DatanodeRegistration)
-   * 
+   * @param registration datanode registration information
+   * @param storages list of storages on the datanode``
    * @return updated {@link org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration}, which contains 
    * new storageID if the datanode did not have one and
    * registration ID for further communication.
    */
-  public DatanodeRegistration registerDatanode(DatanodeRegistration registration
-                                       ) throws IOException;
+  public DatanodeRegistration registerDatanode(
+      DatanodeRegistration registration, DatanodeStorage[] storages)
+      throws IOException;
+  
   /**
    * sendHeartbeat() tells the NameNode that the DataNode is still
    * alive and well.  Includes some status info, too. 
@@ -96,19 +98,14 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * A DatanodeCommand tells the DataNode to invalidate local block(s), 
    * or to copy them to other DataNodes, etc.
    * @param registration datanode registration information
-   * @param capacity total storage capacity available at the datanode
-   * @param dfsUsed storage used by HDFS
-   * @param remaining remaining storage available for HDFS
-   * @param blockPoolUsed storage used by the block pool
+   * @param reports utilization report per storage
    * @param xmitsInProgress number of transfers from this datanode to others
    * @param xceiverCount number of active transceiver threads
    * @param failedVolumes number of failed volumes
    * @throws IOException on error
    */
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration registration,
-                                       long capacity,
-                                       long dfsUsed, long remaining,
-                                       long blockPoolUsed,
+                                       StorageReport[] reports,
                                        int xmitsInProgress,
                                        int xceiverCount,
                                        int failedVolumes) throws IOException;
@@ -121,7 +118,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * infrequently afterwards.
    * @param registration
    * @param poolId - the block pool ID for the blocks
-   * @param blocks - the block list as an array of longs.
+   * @param reports - report of blocks per storage
    *     Each finalized block is represented as 3 longs. Each under-
    *     construction replica is represented as 4 longs.
    *     This is done instead of Block[] to reduce memory used by block reports.
@@ -130,8 +127,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public DatanodeCommand blockReport(DatanodeRegistration registration,
-                                     String poolId,
-                                     long[] blocks) throws IOException;
+      String poolId, StorageBlockReport[] reports) throws IOException;
     
   /**
    * blockReceivedAndDeleted() allows the DataNode to tell the NameNode about
@@ -145,7 +141,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
    */
   public void blockReceivedAndDeleted(DatanodeRegistration registration,
                             String poolId,
-                            ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks)
+                            StorageReceivedDeletedBlocks[] rcvdAndDeletedBlocks)
                             throws IOException;
 
   /**

@@ -41,10 +41,14 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
@@ -251,8 +255,10 @@ class BPServiceActor implements Runnable {
       }
     }
     if (receivedAndDeletedBlockArray != null) {
+      StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+          bpRegistration.getStorageID(), receivedAndDeletedBlockArray) };
       bpNamenode.blockReceivedAndDeleted(bpRegistration, bpos.getBlockPoolId(),
-          receivedAndDeletedBlockArray);
+          report);
       synchronized (receivedAndDeletedBlockList) {
         for (int i = 0; i < receivedAndDeletedBlockArray.length; i++) {
           receivedAndDeletedBlockList.remove(receivedAndDeletedBlockArray[i]);
@@ -354,8 +360,9 @@ class BPServiceActor implements Runnable {
 
       // Send block report
       long brSendStartTime = now();
-      cmd = bpNamenode.blockReport(bpRegistration, bpos.getBlockPoolId(), bReport
-          .getBlockListAsLongs());
+      StorageBlockReport[] report = { new StorageBlockReport(
+          bpRegistration.getStorageID(), bReport.getBlockListAsLongs()) };
+      cmd = bpNamenode.blockReport(bpRegistration, bpos.getBlockPoolId(), report);
 
       // Log the block report processing stats from Datanode perspective
       long brSendCost = now() - brSendStartTime;
@@ -388,13 +395,17 @@ class BPServiceActor implements Runnable {
   
   HeartbeatResponse sendHeartBeat() throws IOException {
     LOG.info("heartbeat: " + this);
-    return bpNamenode.sendHeartbeat(bpRegistration,
+    // reports number of failed volumes
+    StorageReport[] report = { new StorageReport(bpRegistration.getStorageID(),
+        false,
         dn.getFSDataset().getCapacity(),
         dn.getFSDataset().getDfsUsed(),
         dn.getFSDataset().getRemaining(),
-        dn.getFSDataset().getBlockPoolUsed(bpos.getBlockPoolId()),
+        dn.getFSDataset().getBlockPoolUsed(bpos.getBlockPoolId())) };
+    return bpNamenode.sendHeartbeat(bpRegistration, report,
         dn.getXmitsInProgress(),
-        dn.getXceiverCount(), dn.getFSDataset().getNumFailedVolumes());
+        dn.getXceiverCount(),
+        dn.getFSDataset().getNumFailedVolumes());
   }
   
   //This must be called only by BPOfferService
@@ -569,7 +580,8 @@ class BPServiceActor implements Runnable {
     while (shouldRun()) {
       try {
         // Use returned registration from namenode with updated machine name.
-        bpRegistration = bpNamenode.registerDatanode(bpRegistration);
+        bpRegistration = bpNamenode.registerDatanode(bpRegistration,
+            new DatanodeStorage[0]);
         break;
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + nnAddr);

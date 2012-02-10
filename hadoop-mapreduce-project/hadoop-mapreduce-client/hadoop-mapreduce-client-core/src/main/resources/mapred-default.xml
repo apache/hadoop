@@ -518,6 +518,13 @@
 </property>
 
 <property>
+  <name>mapreduce.reduce.shuffle.memory.limit.percent</name>
+  <value>0.25</value>
+  <description>Expert: Maximum percentage of the in-memory limit that a
+  single shuffle can consume</description>
+</property>
+
+<property>
   <name>mapreduce.reduce.markreset.buffer.percent</name>
   <value>0.0</value>
   <description>The percentage of memory -relative to the maximum heap size- to
@@ -1246,6 +1253,27 @@
   <value>1000</value>
   <description>The interval in ms at which the MR AppMaster should send
     heartbeats to the ResourceManager</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.client-am.ipc.max-retries</name>
+  <value>1</value>
+  <description>The number of client retries to the AM - before reconnecting
+    to the RM to fetch Application Status.</description>
+</property>
+
+<!-- jobhistory properties -->
+
+<property>
+  <name>mapreduce.jobhistory.address</name>
+  <value>0.0.0.0:10020</value>
+  <description>MapReduce JobHistory Server host:port</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.webapp.address</name>
+  <value>0.0.0.0:19888</value>
+  <description>MapReduce JobHistory Server Web UI host:port</description>
 </property>
 
 </configuration>

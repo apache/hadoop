@@ -41,7 +41,6 @@ import org.apache.hadoop.classification.InterfaceStability;
  * @see TaskID
  * @see TaskAttemptID
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class JobID extends org.apache.hadoop.mapreduce.JobID {

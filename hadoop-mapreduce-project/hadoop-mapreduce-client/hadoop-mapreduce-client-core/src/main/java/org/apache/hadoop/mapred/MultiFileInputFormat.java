@@ -36,9 +36,7 @@ import org.apache.hadoop.fs.Path;
  * Subclasses implement {@link #getRecordReader(InputSplit, JobConf, Reporter)}
  * to construct <code>RecordReader</code>'s for <code>MultiFileSplit</code>'s.
  * @see MultiFileSplit
- * @deprecated Use {@link org.apache.hadoop.mapred.lib.CombineFileInputFormat} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class MultiFileInputFormat<K, V>

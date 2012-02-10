@@ -21,7 +21,9 @@ package org.apache.hadoop.mapreduce;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -34,6 +36,7 @@ import java.io.StringReader;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.TaskReport;
 import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.log4j.Layout;
@@ -88,6 +91,7 @@ public class TestJobMonitorAndPrint extends TestCase {
         }
         ).when(job).getTaskCompletionEvents(anyInt(), anyInt());
 
+    doReturn(new TaskReport[5]).when(job).getTaskReports(isA(TaskType.class));
     when(clientProtocol.getJobStatus(any(JobID.class))).thenReturn(jobStatus_1, jobStatus_2);
     // setup the logger to capture all logs
     Layout layout =
@@ -106,21 +110,25 @@ public class TestJobMonitorAndPrint extends TestCase {
     boolean foundHundred = false;
     boolean foundComplete = false;
     boolean foundUber = false;
-    String match_1 = "uber mode : true";
-    String match_2 = "map 100% reduce 100%";
-    String match_3 = "completed successfully";
+    String uberModeMatch = "uber mode : true";
+    String progressMatch = "map 100% reduce 100%";
+    String completionMatch = "completed successfully";
     while ((line = r.readLine()) != null) {
-      if (line.contains(match_1)) {
+      if (line.contains(uberModeMatch)) {
         foundUber = true;
       }
-      foundHundred = line.contains(match_2);      
+      foundHundred = line.contains(progressMatch);      
       if (foundHundred)
         break;
     }
     line = r.readLine();
-    foundComplete = line.contains(match_3);
+    foundComplete = line.contains(completionMatch);
     assertTrue(foundUber);
     assertTrue(foundHundred);
     assertTrue(foundComplete);
+
+    System.out.println("The output of job.toString() is : \n" + job.toString());
+    assertTrue(job.toString().contains("Number of maps: 5\n"));
+    assertTrue(job.toString().contains("Number of reduces: 5\n"));
   }
 }

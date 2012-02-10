@@ -62,6 +62,7 @@ import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.util.KerberosName;
@@ -492,19 +493,18 @@ public class JspHelper {
     return UserGroupInformation.createRemoteUser(strings[0]);
   }
 
-  private static String getNNServiceAddress(ServletContext context,
+  private static InetSocketAddress getNNServiceAddress(ServletContext context,
       HttpServletRequest request) {
     String namenodeAddressInUrl = request.getParameter(NAMENODE_ADDRESS);
     InetSocketAddress namenodeAddress = null;
     if (namenodeAddressInUrl != null) {
-      namenodeAddress = DFSUtil.getSocketAddress(namenodeAddressInUrl);
+      namenodeAddress = NetUtils.createSocketAddr(namenodeAddressInUrl);
     } else if (context != null) {
       namenodeAddress = NameNodeHttpServer.getNameNodeAddressFromContext(
           context); 
     }
     if (namenodeAddress != null) {
-      return (namenodeAddress.getAddress().getHostAddress() + ":" 
-          + namenodeAddress.getPort());
+      return namenodeAddress;
     }
     return null;
   }
@@ -547,9 +547,9 @@ public class JspHelper {
         Token<DelegationTokenIdentifier> token = 
           new Token<DelegationTokenIdentifier>();
         token.decodeFromUrlString(tokenString);
-        String serviceAddress = getNNServiceAddress(context, request);
+        InetSocketAddress serviceAddress = getNNServiceAddress(context, request);
         if (serviceAddress != null) {
-          token.setService(new Text(serviceAddress));
+          SecurityUtil.setTokenService(token, serviceAddress);
           token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
         }
         ByteArrayInputStream buf = new ByteArrayInputStream(token

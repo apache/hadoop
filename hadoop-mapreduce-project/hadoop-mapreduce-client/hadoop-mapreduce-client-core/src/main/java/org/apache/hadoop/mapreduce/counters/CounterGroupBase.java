@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.counters;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Counter;
@@ -98,4 +99,11 @@ public interface CounterGroupBase<T extends Counter>
    * @param rightGroup  the group to be added to this group
    */
   void incrAllCounters(CounterGroupBase<T> rightGroup);
+  
+  @Private
+  /**
+   * Exposes the underlying group type if a facade.
+   * @return the underlying object that this object is wrapping up.
+   */
+  CounterGroupBase<T> getUnderlyingGroup();
 }

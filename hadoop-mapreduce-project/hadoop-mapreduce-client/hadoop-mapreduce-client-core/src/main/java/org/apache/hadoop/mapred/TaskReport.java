@@ -24,10 +24,9 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-/** A report on the state of a task. 
- * @deprecated Use {@link org.apache.hadoop.mapreduce.TaskReport} instead
- **/
-@Deprecated
+/** 
+ * A report on the state of a task. 
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TaskReport extends org.apache.hadoop.mapreduce.TaskReport {

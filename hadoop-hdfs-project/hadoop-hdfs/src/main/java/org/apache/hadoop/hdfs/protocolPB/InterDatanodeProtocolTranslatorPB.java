@@ -37,8 +37,11 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcClientUtil;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.protobuf.RpcController;
@@ -52,7 +55,7 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class InterDatanodeProtocolTranslatorPB implements
-    InterDatanodeProtocol, Closeable {
+    ProtocolMetaInterface, InterDatanodeProtocol, Closeable {
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   final private InterDatanodeProtocolPB rpcProxy;
@@ -115,5 +118,12 @@ public class InterDatanodeProtocolTranslatorPB implements
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
+  }
+
+  @Override
+  public boolean isMethodSupported(String methodName) throws IOException {
+    return RpcClientUtil.isMethodSupported(rpcProxy,
+        InterDatanodeProtocolPB.class, RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.getProtocolVersion(InterDatanodeProtocolPB.class), methodName);
   }
 }

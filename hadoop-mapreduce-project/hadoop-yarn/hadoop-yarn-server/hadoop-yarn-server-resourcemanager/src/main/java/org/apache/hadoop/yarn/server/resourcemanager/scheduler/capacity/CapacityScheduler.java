@@ -531,8 +531,10 @@ implements ResourceScheduler, CapacitySchedulerContext {
   private synchronized void nodeUpdate(RMNode nm, 
       List<ContainerStatus> newlyLaunchedContainers,
       List<ContainerStatus> completedContainers) {
-    LOG.info("nodeUpdate: " + nm + " clusterResources: " + clusterResource);
-    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("nodeUpdate: " + nm + " clusterResources: " + clusterResource);
+    }
+                  
     SchedulerNode node = getNode(nm.getNodeID());
 
     // Processing the newly launched containers

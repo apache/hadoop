@@ -101,7 +101,9 @@ public class ClientServiceDelegate {
     this.conf = new Configuration(conf); // Cloning for modifying.
     // For faster redirects from AM to HS.
     this.conf.setInt(
-        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 3);
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
+        this.conf.getInt(MRJobConfig.MR_CLIENT_TO_AM_IPC_MAX_RETRIES,
+            MRJobConfig.DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES));
     this.rm = rm;
     this.jobId = jobId;
     this.historyServerProxy = historyServerProxy;

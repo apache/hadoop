@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -80,6 +81,33 @@ abstract public class Task implements Writable, Configurable {
 
   public static String MERGED_OUTPUT_PREFIX = ".merged";
   public static final long DEFAULT_COMBINE_RECORDS_BEFORE_PROGRESS = 10000;
+  
+  /**
+   * @deprecated Provided for compatibility. Use {@link TaskCounter} instead.
+   */
+  @Deprecated
+  public static enum Counter { 
+    MAP_INPUT_RECORDS, 
+    MAP_OUTPUT_RECORDS,
+    MAP_SKIPPED_RECORDS,
+    MAP_INPUT_BYTES, 
+    MAP_OUTPUT_BYTES,
+    MAP_OUTPUT_MATERIALIZED_BYTES,
+    COMBINE_INPUT_RECORDS,
+    COMBINE_OUTPUT_RECORDS,
+    REDUCE_INPUT_GROUPS,
+    REDUCE_SHUFFLE_BYTES,
+    REDUCE_INPUT_RECORDS,
+    REDUCE_OUTPUT_RECORDS,
+    REDUCE_SKIPPED_GROUPS,
+    REDUCE_SKIPPED_RECORDS,
+    SPILLED_RECORDS,
+    SPLIT_RAW_BYTES,
+    CPU_MILLISECONDS,
+    PHYSICAL_MEMORY_BYTES,
+    VIRTUAL_MEMORY_BYTES,
+    COMMITTED_HEAP_BYTES
+  }
 
   /**
    * Counters to measure the usage of the different file systems.
@@ -299,14 +327,13 @@ abstract public class Task implements Writable, Configurable {
    *   the path.
    * @return a Statistics instance, or null if none is found for the scheme.
    */
-  protected static Statistics getFsStatistics(Path path, Configuration conf) throws IOException {
-    Statistics matchedStats = null;
+  protected static List<Statistics> getFsStatistics(Path path, Configuration conf) throws IOException {
+    List<Statistics> matchedStats = new ArrayList<FileSystem.Statistics>();
     path = path.getFileSystem(conf).makeQualified(path);
     String scheme = path.toUri().getScheme();
     for (Statistics stats : FileSystem.getAllStatistics()) {
       if (stats.getScheme().equals(scheme)) {
-        matchedStats = stats;
-        break;
+        matchedStats.add(stats);
       }
     }
     return matchedStats;
@@ -525,7 +552,7 @@ abstract public class Task implements Writable, Configurable {
     if (outputPath != null) {
       if ((committer instanceof FileOutputCommitter)) {
         FileOutputFormat.setWorkOutputPath(conf, 
-          ((FileOutputCommitter)committer).getTempTaskOutputPath(taskContext));
+          ((FileOutputCommitter)committer).getTaskAttemptPath(taskContext));
       } else {
         FileOutputFormat.setWorkOutputPath(conf, outputPath);
       }
@@ -656,14 +683,13 @@ abstract public class Task implements Writable, Configurable {
         try {
           boolean taskFound = true; // whether TT knows about this task
           // sleep for a bit
-          try {
-            Thread.sleep(PROGRESS_INTERVAL);
-          } 
-          catch (InterruptedException e) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(getTaskID() + " Progress/ping thread exiting " +
-                        "since it got interrupted");
+          synchronized(lock) {
+            if (taskDone.get()) {
+              break;
             }
+            lock.wait(PROGRESS_INTERVAL);
+          }
+          if (taskDone.get()) {
             break;
           }
 
@@ -721,7 +747,14 @@ abstract public class Task implements Writable, Configurable {
     }
     public void stopCommunicationThread() throws InterruptedException {
       if (pingThread != null) {
-        synchronized (lock) {
+        // Intent of the lock is to not send an interupt in the middle of an
+        // umbilical.ping or umbilical.statusUpdate
+        synchronized(lock) {
+        //Interrupt if sleeping. Otherwise wait for the RPC call to return.
+          lock.notify(); 
+        }
+
+        synchronized (lock) { 
           while (!done) {
             lock.wait();
           }
@@ -820,7 +853,8 @@ abstract public class Task implements Writable, Configurable {
         return; // nothing to do.
       }
 
-      Counter gcCounter = counters.findCounter(TaskCounter.GC_TIME_MILLIS);
+      org.apache.hadoop.mapred.Counters.Counter gcCounter =
+        counters.findCounter(TaskCounter.GC_TIME_MILLIS);
       if (null != gcCounter) {
         gcCounter.increment(getElapsedGc());
       }
@@ -832,41 +866,53 @@ abstract public class Task implements Writable, Configurable {
    * system and only creates the counters when they are needed.
    */
   class FileSystemStatisticUpdater {
-    private FileSystem.Statistics stats;
+    private List<FileSystem.Statistics> stats;
     private Counters.Counter readBytesCounter, writeBytesCounter,
         readOpsCounter, largeReadOpsCounter, writeOpsCounter;
-    
-    FileSystemStatisticUpdater(FileSystem.Statistics stats) {
+    private String scheme;
+    FileSystemStatisticUpdater(List<FileSystem.Statistics> stats, String scheme) {
       this.stats = stats;
+      this.scheme = scheme;
     }
 
     void updateCounters() {
-      String scheme = stats.getScheme();
       if (readBytesCounter == null) {
         readBytesCounter = counters.findCounter(scheme,
             FileSystemCounter.BYTES_READ);
       }
-      readBytesCounter.setValue(stats.getBytesRead());
       if (writeBytesCounter == null) {
         writeBytesCounter = counters.findCounter(scheme,
             FileSystemCounter.BYTES_WRITTEN);
       }
-      writeBytesCounter.setValue(stats.getBytesWritten());
       if (readOpsCounter == null) {
         readOpsCounter = counters.findCounter(scheme,
             FileSystemCounter.READ_OPS);
       }
-      readOpsCounter.setValue(stats.getReadOps());
       if (largeReadOpsCounter == null) {
         largeReadOpsCounter = counters.findCounter(scheme,
             FileSystemCounter.LARGE_READ_OPS);
       }
-      largeReadOpsCounter.setValue(stats.getLargeReadOps());
       if (writeOpsCounter == null) {
         writeOpsCounter = counters.findCounter(scheme,
             FileSystemCounter.WRITE_OPS);
       }
-      writeOpsCounter.setValue(stats.getWriteOps());
+      long readBytes = 0;
+      long writeBytes = 0;
+      long readOps = 0;
+      long largeReadOps = 0;
+      long writeOps = 0;
+      for (FileSystem.Statistics stat: stats) {
+        readBytes = readBytes + stat.getBytesRead();
+        writeBytes = writeBytes + stat.getBytesWritten();
+        readOps = readOps + stat.getReadOps();
+        largeReadOps = largeReadOps + stat.getLargeReadOps();
+        writeOps = writeOps + stat.getWriteOps();
+      }
+      readBytesCounter.setValue(readBytes);
+      writeBytesCounter.setValue(writeBytes);
+      readOpsCounter.setValue(readOps);
+      largeReadOpsCounter.setValue(largeReadOps);
+      writeOpsCounter.setValue(writeOps);
     }
   }
   
@@ -877,16 +923,28 @@ abstract public class Task implements Writable, Configurable {
      new HashMap<String, FileSystemStatisticUpdater>();
   
   private synchronized void updateCounters() {
+    Map<String, List<FileSystem.Statistics>> map = new 
+        HashMap<String, List<FileSystem.Statistics>>();
     for(Statistics stat: FileSystem.getAllStatistics()) {
       String uriScheme = stat.getScheme();
-      FileSystemStatisticUpdater updater = statisticUpdaters.get(uriScheme);
-      if(updater==null) {//new FileSystem has been found in the cache
-        updater = new FileSystemStatisticUpdater(stat);
-        statisticUpdaters.put(uriScheme, updater);
+      if (map.containsKey(uriScheme)) {
+        List<FileSystem.Statistics> list = map.get(uriScheme);
+        list.add(stat);
+      } else {
+        List<FileSystem.Statistics> list = new ArrayList<FileSystem.Statistics>();
+        list.add(stat);
+        map.put(uriScheme, list);
       }
-      updater.updateCounters();      
     }
-
+    for (Map.Entry<String, List<FileSystem.Statistics>> entry: map.entrySet()) {
+      FileSystemStatisticUpdater updater = statisticUpdaters.get(entry.getKey());
+      if(updater==null) {//new FileSystem has been found in the cache
+        updater = new FileSystemStatisticUpdater(entry.getValue(), entry.getKey());
+        statisticUpdaters.put(entry.getKey(), updater);
+      }
+      updater.updateCounters();
+    }
+    
     gcUpdater.incrementGcCounter();
     updateResourceCounters();
   }

@@ -37,11 +37,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * A RecordReader that can effect joins of RecordReaders sharing a common key
  * type and partitioning.
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.join.CompositeRecordReader} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class CompositeRecordReader<

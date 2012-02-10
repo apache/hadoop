@@ -66,7 +66,7 @@ import static org.mockito.Mockito.mock;
  */
 public abstract class FSImageTestUtil {
   
-  public static final Log LOG = LogFactory.getLog(FSImageTestUtil.class.getName());
+  public static final Log LOG = LogFactory.getLog(FSImageTestUtil.class);
   
   /**
    * The position in the fsimage header where the txid is
@@ -413,6 +413,8 @@ public abstract class FSImageTestUtil {
       int nnIdx, List<Integer> txids) {
 
     for (File nameDir : getNameNodeCurrentDirs(cluster, nnIdx)) {
+      LOG.info("examining name dir with files: " +
+          Joiner.on(",").join(nameDir.listFiles()));
       // Should have fsimage_N for the three checkpoints
       LOG.info("Examining storage dir " + nameDir + " with contents: "
           + StringUtils.join(nameDir.listFiles(), ", "));

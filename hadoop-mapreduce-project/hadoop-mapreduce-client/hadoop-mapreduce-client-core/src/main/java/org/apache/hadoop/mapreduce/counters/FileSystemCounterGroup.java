@@ -110,6 +110,11 @@ public abstract class FileSystemCounterGroup<C extends Counter>
     public void readFields(DataInput in) throws IOException {
       assert false : "shouldn't be called";
     }
+
+    @Override
+    public Counter getUnderlyingCounter() {
+      return this;
+    }
   }
 
   @Override
@@ -231,10 +236,10 @@ public abstract class FileSystemCounterGroup<C extends Counter>
   @Override
   @SuppressWarnings("unchecked")
   public void incrAllCounters(CounterGroupBase<C> other) {
-    if (checkNotNull(other, "other group")
+    if (checkNotNull(other.getUnderlyingGroup(), "other group")
         instanceof FileSystemCounterGroup<?>) {
       for (Counter counter : other) {
-        FSCounter c = (FSCounter) counter;
+        FSCounter c = (FSCounter) ((Counter)counter).getUnderlyingCounter();
         findCounter(c.scheme, c.key) .increment(counter.getValue());
       }
     }
@@ -253,7 +258,7 @@ public abstract class FileSystemCounterGroup<C extends Counter>
       for (Object counter : entry.getValue()) {
         if (counter == null) continue;
         @SuppressWarnings("unchecked")
-        FSCounter c = (FSCounter) counter;
+        FSCounter c = (FSCounter) ((Counter)counter).getUnderlyingCounter();
         WritableUtils.writeVInt(out, c.key.ordinal());  // key
         WritableUtils.writeVLong(out, c.getValue());    // value
       }

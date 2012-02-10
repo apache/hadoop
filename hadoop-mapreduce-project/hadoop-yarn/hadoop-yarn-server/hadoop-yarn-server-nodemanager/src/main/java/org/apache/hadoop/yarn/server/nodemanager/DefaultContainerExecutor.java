@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
@@ -127,6 +128,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
     // Create the container log-dirs on all disks
     createContainerLogDirs(appIdStr, containerIdStr, logDirs);
+
+    Path tmpDir = new Path(containerWorkDir,
+        YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR);
+    lfs.mkdir(tmpDir, null, false);
 
     // copy launch script to work dir
     Path launchDst =

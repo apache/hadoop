@@ -338,7 +338,7 @@ public class TestGridmixSummary {
         return isSuccessful;
       };
     };
-    return new JobStats(numMaps, fakeJob);
+    return new JobStats(numMaps, numReds, fakeJob);
   }
   
   /**

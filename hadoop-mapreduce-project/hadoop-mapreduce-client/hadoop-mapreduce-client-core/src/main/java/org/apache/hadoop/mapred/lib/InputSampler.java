@@ -25,11 +25,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 
-/**
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.partition.InputSampler}
- */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class InputSampler<K,V> extends 

@@ -35,10 +35,7 @@ import org.apache.hadoop.conf.Configuration;
  * This class allows using different RecordReaders for processing
  * these data chunks from different files.
  * @see CombineFileSplit
- * @deprecated Use
- * {@link org.apache.hadoop.mapreduce.lib.input.CombineFileRecordReader}
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class CombineFileRecordReader<K, V> implements RecordReader<K, V> {

@@ -92,6 +92,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
@@ -100,8 +101,10 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
@@ -156,8 +159,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
     this.metrics = NameNode.getNameNodeMetrics();
     
     int handlerCount = 
-      conf.getInt(DFS_DATANODE_HANDLER_COUNT_KEY, 
-                  DFS_DATANODE_HANDLER_COUNT_DEFAULT);
+      conf.getInt(DFS_NAMENODE_HANDLER_COUNT_KEY, 
+                  DFS_NAMENODE_HANDLER_COUNT_DEFAULT);
     InetSocketAddress socAddr = nn.getRpcServerAddress(conf);
 		RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
          ProtobufRpcEngine.class);
@@ -855,8 +858,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
 
   @Override // DatanodeProtocol
-  public DatanodeRegistration registerDatanode(DatanodeRegistration nodeReg)
-      throws IOException {
+  public DatanodeRegistration registerDatanode(DatanodeRegistration nodeReg,
+      DatanodeStorage[] storages) throws IOException {
     verifyVersion(nodeReg.getVersion());
     namesystem.registerDatanode(nodeReg);
       
@@ -865,19 +868,20 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // DatanodeProtocol
   public HeartbeatResponse sendHeartbeat(DatanodeRegistration nodeReg,
-      long capacity, long dfsUsed, long remaining, long blockPoolUsed,
-      int xmitsInProgress, int xceiverCount, int failedVolumes)
-      throws IOException {
+      StorageReport[] report, int xmitsInProgress, int xceiverCount,
+      int failedVolumes) throws IOException {
     verifyRequest(nodeReg);
-    return namesystem.handleHeartbeat(nodeReg, capacity, dfsUsed, remaining,
-        blockPoolUsed, xceiverCount, xmitsInProgress, failedVolumes);
+    return namesystem.handleHeartbeat(nodeReg, report[0].getCapacity(),
+        report[0].getDfsUsed(), report[0].getRemaining(),
+        report[0].getBlockPoolUsed(), xceiverCount, xmitsInProgress,
+        failedVolumes);
   }
 
   @Override // DatanodeProtocol
   public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
-      String poolId, long[] blocks) throws IOException {
+      String poolId, StorageBlockReport[] reports) throws IOException {
     verifyRequest(nodeReg);
-    BlockListAsLongs blist = new BlockListAsLongs(blocks);
+    BlockListAsLongs blist = new BlockListAsLongs(reports[0].getBlocks());
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
            + "from " + nodeReg.getName() + " " + blist.getNumberOfBlocks()
@@ -892,7 +896,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // DatanodeProtocol
   public void blockReceivedAndDeleted(DatanodeRegistration nodeReg, String poolId,
-      ReceivedDeletedBlockInfo[] receivedAndDeletedBlocks) throws IOException {
+      StorageReceivedDeletedBlocks[] receivedAndDeletedBlocks) throws IOException {
     verifyRequest(nodeReg);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
@@ -900,7 +904,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
           +" blocks.");
     }
     namesystem.getBlockManager().processIncrementalBlockReport(
-        nodeReg, poolId, receivedAndDeletedBlocks);
+        nodeReg, poolId, receivedAndDeletedBlocks[0].getBlocks());
   }
 
   @Override // DatanodeProtocol

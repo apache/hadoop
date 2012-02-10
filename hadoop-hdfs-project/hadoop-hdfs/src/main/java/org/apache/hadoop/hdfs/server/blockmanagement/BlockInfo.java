@@ -17,27 +17,38 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.LinkedList;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 /**
- * Internal class for block metadata.
+ * BlockInfo class maintains for a given block
+ * the {@link INodeFile} it is part of and datanodes where the replicas of 
+ * the block are stored.
  */
-public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
+@InterfaceAudience.Private
+public class BlockInfo extends Block implements
+    LightWeightGSet.LinkedElement {
   private INodeFile inode;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */
   private LightWeightGSet.LinkedElement nextLinkedElement;
 
   /**
-   * This array contains triplets of references.
-   * For each i-th datanode the block belongs to
-   * triplets[3*i] is the reference to the DatanodeDescriptor
-   * and triplets[3*i+1] and triplets[3*i+2] are references 
-   * to the previous and the next blocks, respectively, in the 
-   * list of blocks belonging to this data-node.
+   * This array contains triplets of references. For each i-th datanode the
+   * block belongs to triplets[3*i] is the reference to the DatanodeDescriptor
+   * and triplets[3*i+1] and triplets[3*i+2] are references to the previous and
+   * the next blocks, respectively, in the list of blocks belonging to this
+   * data-node.
+   * 
+   * Using previous and next in Object triplets is done instead of a
+   * {@link LinkedList} list to efficiently use memory. With LinkedList the cost
+   * per replica is 42 bytes (LinkedList#Entry object per replica) versus 16
+   * bytes using the triplets.
    */
   private Object[] triplets;
 
@@ -84,7 +95,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return node;
   }
 
-  BlockInfo getPrevious(int index) {
+  private BlockInfo getPrevious(int index) {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+1];
@@ -104,22 +115,14 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return info;
   }
 
-  void setDatanode(int index, DatanodeDescriptor node) {
+  private void setDatanode(int index, DatanodeDescriptor node, BlockInfo previous,
+      BlockInfo next) {
     assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3 < triplets.length : "Index is out of bound";
-    triplets[index*3] = node;
-  }
-
-  void setPrevious(int index, BlockInfo to) {
-    assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
-    triplets[index*3+1] = to;
-  }
-
-  void setNext(int index, BlockInfo to) {
-    assert this.triplets != null : "BlockInfo is not initialized";
-    assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
-    triplets[index*3+2] = to;
+    int i = index * 3;
+    assert index >= 0 && i+2 < triplets.length : "Index is out of bound";
+    triplets[i] = node;
+    triplets[i+1] = previous;
+    triplets[i+2] = next;
   }
 
   /**
@@ -130,7 +133,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * @param to - block to be set to previous on the list of blocks
    * @return current previous block on the list of blocks
    */
-  BlockInfo getSetPrevious(int index, BlockInfo to) {
+  private BlockInfo setPrevious(int index, BlockInfo to) {
 	assert this.triplets != null : "BlockInfo is not initialized";
 	assert index >= 0 && index*3+1 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+1];
@@ -146,7 +149,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    * @param to - block to be set to next on the list of blocks
    *    * @return current next block on the list of blocks
    */
-  BlockInfo getSetNext(int index, BlockInfo to) {
+  private BlockInfo setNext(int index, BlockInfo to) {
 	assert this.triplets != null : "BlockInfo is not initialized";
 	assert index >= 0 && index*3+2 < triplets.length : "Index is out of bound";
     BlockInfo info = (BlockInfo)triplets[index*3+2];
@@ -198,9 +201,7 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
       return false;
     // find the last null node
     int lastNode = ensureCapacity(1);
-    setDatanode(lastNode, node);
-    setNext(lastNode, null);
-    setPrevious(lastNode, null);
+    setDatanode(lastNode, node, null, null);
     return true;
   }
 
@@ -216,13 +217,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     // find the last not null node
     int lastNode = numNodes()-1; 
     // replace current node triplet by the lastNode one 
-    setDatanode(dnIndex, getDatanode(lastNode));
-    setNext(dnIndex, getNext(lastNode)); 
-    setPrevious(dnIndex, getPrevious(lastNode)); 
+    setDatanode(dnIndex, getDatanode(lastNode), getPrevious(lastNode),
+        getNext(lastNode));
     // set the last triplet to null
-    setDatanode(lastNode, null);
-    setNext(lastNode, null); 
-    setPrevious(lastNode, null); 
+    setDatanode(lastNode, null, null, null);
     return true;
   }
 
@@ -300,8 +298,8 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     if (head == this) {
       return this;
     }
-    BlockInfo next = this.getSetNext(curIndex, head);
-    BlockInfo prev = this.getSetPrevious(curIndex, null);
+    BlockInfo next = this.setNext(curIndex, head);
+    BlockInfo prev = this.setPrevious(curIndex, null);
 
     head.setPrevious(headIndex, this);
     prev.setNext(prev.findDatanode(dn), next);
@@ -331,7 +329,6 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
 
   /**
    * Convert a complete block to an under construction block.
-   * 
    * @return BlockInfoUnderConstruction -  an under construction block.
    */
   public BlockInfoUnderConstruction convertToBlockUnderConstruction(

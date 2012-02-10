@@ -32,11 +32,7 @@ import org.apache.hadoop.mapred.Reporter;
 
 /**
  * This class implements the generic mapper of Aggregate.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorMapper}
- * instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ValueAggregatorMapper<K1 extends WritableComparable,

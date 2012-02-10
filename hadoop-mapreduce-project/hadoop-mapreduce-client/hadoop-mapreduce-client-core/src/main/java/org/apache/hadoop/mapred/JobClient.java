@@ -29,6 +29,9 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.ClusterStatus.BlackListInfo;
 import org.apache.hadoop.mapreduce.Cluster;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
@@ -40,13 +43,10 @@ import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
-import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -132,9 +132,7 @@ import org.apache.hadoop.util.ToolRunner;
  * @see ClusterStatus
  * @see Tool
  * @see DistributedCache
- * @deprecated Use {@link Job} and {@link Cluster} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class JobClient extends CLI {
@@ -147,7 +145,7 @@ public class JobClient extends CLI {
    */
   private boolean getDelegationTokenCalled = false;
   /* notes the renewer that will renew the delegation token */
-  private Text dtRenewer = null;
+  private String dtRenewer = null;
   /* do we need a HS delegation token for this client */
   static final String HS_DELEGATION_TOKEN_REQUIRED 
       = "mapreduce.history.server.delegationtoken.required";
@@ -600,7 +598,7 @@ public class JobClient extends CLI {
       if (getDelegationTokenCalled) {
         conf.setBoolean(HS_DELEGATION_TOKEN_REQUIRED, getDelegationTokenCalled);
         getDelegationTokenCalled = false;
-        conf.set(HS_DELEGATION_TOKEN_RENEWER, dtRenewer.toString());
+        conf.set(HS_DELEGATION_TOKEN_RENEWER, dtRenewer);
         dtRenewer = null;
       }
       Job job = clientUgi.doAs(new PrivilegedExceptionAction<Job> () {
@@ -1204,7 +1202,7 @@ public class JobClient extends CLI {
   public Token<DelegationTokenIdentifier> 
     getDelegationToken(final Text renewer) throws IOException, InterruptedException {
     getDelegationTokenCalled = true;
-    dtRenewer = renewer;
+    dtRenewer = renewer.toString();
     return clientUgi.doAs(new 
         PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
       public Token<DelegationTokenIdentifier> run() throws IOException, 

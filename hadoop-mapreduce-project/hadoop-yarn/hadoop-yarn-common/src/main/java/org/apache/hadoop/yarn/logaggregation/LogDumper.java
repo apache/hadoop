@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.logaggregation;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.commons.cli.CommandLine;
@@ -103,14 +104,15 @@ public class LogDumper extends Configured implements Tool {
     if (appOwner == null || appOwner.isEmpty()) {
       appOwner = UserGroupInformation.getCurrentUser().getShortUserName();
     }
+    int resultCode = 0;
     if (containerIdStr == null && nodeAddress == null) {
-      dumpAllContainersLogs(appId, appOwner, out);
+      resultCode = dumpAllContainersLogs(appId, appOwner, out);
     } else if ((containerIdStr == null && nodeAddress != null)
         || (containerIdStr != null && nodeAddress == null)) {
       System.out.println("ContainerId or NodeAddress cannot be null!");
       HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp("general options are: ", opts);
-      return -1;
+      resultCode = -1;
     } else {
       Path remoteRootLogDir =
         new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
@@ -122,27 +124,33 @@ public class LogDumper extends Configured implements Tool {
                   appId,
                   appOwner,
                   ConverterUtils.toNodeId(nodeAddress),
-                  getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
-                      YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX)));
-      return dumpAContainerLogs(containerIdStr, reader, out);
+                  LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf())));
+      resultCode = dumpAContainerLogs(containerIdStr, reader, out);
     }
 
-    return 0;
+    return resultCode;
   }
 
-  public void dumpAContainersLogs(String appId, String containerId,
+  public int dumpAContainersLogs(String appId, String containerId,
       String nodeId, String jobOwner) throws IOException {
     Path remoteRootLogDir =
         new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
-    AggregatedLogFormat.LogReader reader =
-        new AggregatedLogFormat.LogReader(getConf(),
-            LogAggregationUtils.getRemoteNodeLogFileForApp(remoteRootLogDir,
-                ConverterUtils.toApplicationId(appId), jobOwner,
-                ConverterUtils.toNodeId(nodeId), suffix));
+    Path logPath = LogAggregationUtils.getRemoteNodeLogFileForApp(
+        remoteRootLogDir, ConverterUtils.toApplicationId(appId), jobOwner,
+        ConverterUtils.toNodeId(nodeId), suffix);
+    AggregatedLogFormat.LogReader reader;
+    try {
+      reader = new AggregatedLogFormat.LogReader(getConf(), logPath);
+    } catch (FileNotFoundException fnfe) {
+      System.out.println("Logs not available at " + logPath.toString());
+      System.out.println(
+          "Log aggregation has not completed or is not enabled.");
+      return -1;
+    }
     DataOutputStream out = new DataOutputStream(System.out);
-    dumpAContainerLogs(containerId, reader, out);
+    return dumpAContainerLogs(containerId, reader, out);
   }
 
   private int dumpAContainerLogs(String containerIdStr,
@@ -174,21 +182,28 @@ public class LogDumper extends Configured implements Tool {
     return 0;
   }
 
-  private void dumpAllContainersLogs(ApplicationId appId, String appOwner,
+  private int dumpAllContainersLogs(ApplicationId appId, String appOwner,
       DataOutputStream out) throws IOException {
     Path remoteRootLogDir =
         new Path(getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
     String user = appOwner;
     String logDirSuffix =
-        getConf().get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
+        LogAggregationUtils.getRemoteNodeLogDirSuffix(getConf());
     //TODO Change this to get a list of files from the LAS.
     Path remoteAppLogDir =
         LogAggregationUtils.getRemoteAppLogDir(remoteRootLogDir, appId, user,
             logDirSuffix);
-    RemoteIterator<FileStatus> nodeFiles =
-        FileContext.getFileContext().listStatus(remoteAppLogDir);
+    RemoteIterator<FileStatus> nodeFiles;
+    try {
+      nodeFiles = FileContext.getFileContext().listStatus(remoteAppLogDir);
+    } catch (FileNotFoundException fnf) {
+      System.out.println("Logs not available at "
+          + remoteAppLogDir.toString());
+      System.out.println(
+          "Log aggregation has not completed or is not enabled.");
+      return -1;
+    }
     while (nodeFiles.hasNext()) {
       FileStatus thisNodeFile = nodeFiles.next();
       AggregatedLogFormat.LogReader reader =
@@ -217,12 +232,14 @@ public class LogDumper extends Configured implements Tool {
         reader.close();
       }
     }
+    return 0;
   }
 
   public static void main(String[] args) throws Exception {
     Configuration conf = new YarnConfiguration();
     LogDumper logDumper = new LogDumper();
     logDumper.setConf(conf);
-    logDumper.run(args);
+    int exitCode = logDumper.run(args);
+    System.exit(exitCode);
   }
 }

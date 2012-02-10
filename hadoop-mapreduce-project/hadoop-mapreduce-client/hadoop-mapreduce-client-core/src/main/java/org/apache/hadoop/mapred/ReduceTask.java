@@ -476,14 +476,14 @@ public class ReduceTask extends Task {
     private final RecordWriter<K, V> real;
     private final org.apache.hadoop.mapred.Counters.Counter reduceOutputCounter;
     private final org.apache.hadoop.mapred.Counters.Counter fileOutputByteCounter;
-    private final Statistics fsStats;
+    private final List<Statistics> fsStats;
 
     @SuppressWarnings({ "deprecation", "unchecked" })
     public OldTrackingRecordWriter(ReduceTask reduce, JobConf job,
         TaskReporter reporter, String finalName) throws IOException {
       this.reduceOutputCounter = reduce.reduceOutputCounter;
       this.fileOutputByteCounter = reduce.fileOutputByteCounter;
-      Statistics matchedStats = null;
+      List<Statistics> matchedStats = null;
       if (job.getOutputFormat() instanceof FileOutputFormat) {
         matchedStats = getFsStatistics(FileOutputFormat.getOutputPath(job), job);
       }
@@ -514,8 +514,13 @@ public class ReduceTask extends Task {
       fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
     }
 
-    private long getOutputBytes(Statistics stats) {
-      return stats == null ? 0 : stats.getBytesWritten();
+    private long getOutputBytes(List<Statistics> stats) {
+      if (stats == null) return 0;
+      long bytesWritten = 0;
+      for (Statistics stat: stats) {
+        bytesWritten = bytesWritten + stat.getBytesWritten();
+      }
+      return bytesWritten;
     }
   }
 
@@ -524,7 +529,7 @@ public class ReduceTask extends Task {
     private final org.apache.hadoop.mapreduce.RecordWriter<K,V> real;
     private final org.apache.hadoop.mapreduce.Counter outputRecordCounter;
     private final org.apache.hadoop.mapreduce.Counter fileOutputByteCounter;
-    private final Statistics fsStats;
+    private final List<Statistics> fsStats;
 
     @SuppressWarnings("unchecked")
     NewTrackingRecordWriter(ReduceTask reduce,
@@ -533,7 +538,7 @@ public class ReduceTask extends Task {
       this.outputRecordCounter = reduce.reduceOutputCounter;
       this.fileOutputByteCounter = reduce.fileOutputByteCounter;
 
-      Statistics matchedStats = null;
+      List<Statistics> matchedStats = null;
       if (reduce.outputFormat instanceof org.apache.hadoop.mapreduce.lib.output.FileOutputFormat) {
         matchedStats = getFsStatistics(org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
             .getOutputPath(taskContext), taskContext.getConfiguration());
@@ -566,8 +571,13 @@ public class ReduceTask extends Task {
       outputRecordCounter.increment(1);
     }
 
-    private long getOutputBytes(Statistics stats) {
-      return stats == null ? 0 : stats.getBytesWritten();
+    private long getOutputBytes(List<Statistics> stats) {
+      if (stats == null) return 0;
+      long bytesWritten = 0;
+      for (Statistics stat: stats) {
+        bytesWritten = bytesWritten + stat.getBytesWritten();
+      }
+      return bytesWritten;
     }
   }
 

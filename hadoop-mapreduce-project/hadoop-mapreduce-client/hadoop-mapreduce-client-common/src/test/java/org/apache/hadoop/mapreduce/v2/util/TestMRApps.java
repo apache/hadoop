@@ -130,13 +130,43 @@ public class TestMRApps {
     Job job = Job.getInstance();
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, job.getConfiguration());
-    assertEquals("job.jar:$PWD/*:$HADOOP_CONF_DIR:" +
+    assertEquals("$HADOOP_CONF_DIR:" +
         "$HADOOP_COMMON_HOME/share/hadoop/common/*:" +
         "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*:" +
         "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*:" +
         "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*:" +
         "$YARN_HOME/share/hadoop/mapreduce/*:" +
-        "$YARN_HOME/share/hadoop/mapreduce/lib/*",
+        "$YARN_HOME/share/hadoop/mapreduce/lib/*:" +
+        "job.jar:$PWD/*",
         environment.get("CLASSPATH"));
   }
+
+ @Test public void testSetClasspathWithUserPrecendence() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, true);
+    Map<String, String> env = new HashMap<String, String>();
+    try {
+      MRApps.setClasspath(env, conf);
+    } catch (Exception e) {
+      fail("Got exception while setting classpath");
+    }
+    String env_str = env.get("CLASSPATH");
+    assertSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST set, but not taking effect!",
+      env_str.indexOf("job.jar"), 0);
+  }
+
+  @Test public void testSetClasspathWithNoUserPrecendence() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JOB_USER_CLASSPATH_FIRST, false);
+    Map<String, String> env = new HashMap<String, String>();
+    try {
+      MRApps.setClasspath(env, conf);
+    } catch (Exception e) {
+      fail("Got exception while setting classpath");
+    }
+    String env_str = env.get("CLASSPATH");
+    assertNotSame("MAPREDUCE_JOB_USER_CLASSPATH_FIRST false, but taking effect!",
+      env_str.indexOf("job.jar"), 0);
+  }
+
 }

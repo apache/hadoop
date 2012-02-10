@@ -20,6 +20,16 @@
 # Resolve links ($0 may be a softlink) and convert a relative path
 # to an absolute path.  NB: The -P option requires bash built-ins
 # or POSIX:2001 compliant cd and pwd.
+
+#   HADOOP_CLASSPATH Extra Java CLASSPATH entries.
+#
+#   HADOOP_USER_CLASSPATH_FIRST      When defined, the HADOOP_CLASSPATH is 
+#                                    added in the beginning of the global
+#                                    classpath. Can be defined, for example,
+#                                    by doing 
+#                                    export HADOOP_USER_CLASSPATH_FIRST=true
+#
+
 this="${BASH_SOURCE-$0}"
 common_bin=$(cd -P -- "$(dirname -- "$this")" && pwd -P)
 script="$(basename -- "$this")"
@@ -153,6 +163,10 @@ fi
 # CLASSPATH initially contains $HADOOP_CONF_DIR
 CLASSPATH="${HADOOP_CONF_DIR}"
 
+if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ] && [ "$HADOOP_CLASSPATH" != "" ] ; then
+  CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
+fi
+
 # so that filenames w/ spaces are handled correctly in loops below
 IFS=
 
@@ -174,7 +188,7 @@ fi
 CLASSPATH=${CLASSPATH}:$HADOOP_COMMON_HOME/$HADOOP_COMMON_DIR'/*'
 
 # add user-specified CLASSPATH last
-if [ "$HADOOP_CLASSPATH" != "" ]; then
+if [ "$HADOOP_USER_CLASSPATH_FIRST" = "" ] && [ "$HADOOP_CLASSPATH" != "" ]; then
   CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
 fi
 
@@ -213,6 +227,9 @@ if [ -d "${HADOOP_PREFIX}/build/native" -o -d "${HADOOP_PREFIX}/$HADOOP_COMMON_L
     fi
   fi
 fi
+
+# setup a default TOOL_PATH
+TOOL_PATH="${TOOL_PATH:-$HADOOP_PREFIX/share/hadoop/tools/lib/*}"
 
 # cygwin path translation
 if $cygwin; then

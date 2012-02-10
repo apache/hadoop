@@ -51,20 +51,19 @@ public class QueueMetrics {
   @Metric("# of apps killed") MutableCounterInt appsKilled;
   @Metric("# of apps failed") MutableCounterInt appsFailed;
 
-  @Metric("Allocated memory in GiB") MutableGaugeInt allocatedGB;
+  @Metric("Allocated memory in MB") MutableGaugeInt allocatedMB;
   @Metric("# of allocated containers") MutableGaugeInt allocatedContainers;
   @Metric("Aggregate # of allocated containers") MutableCounterLong aggregateContainersAllocated;
   @Metric("Aggregate # of released containers") MutableCounterLong aggregateContainersReleased;
-  @Metric("Available memory in GiB") MutableGaugeInt availableGB;
-  @Metric("Pending memory allocation in GiB") MutableGaugeInt pendingGB;
+  @Metric("Available memory in MB") MutableGaugeInt availableMB;
+  @Metric("Pending memory allocation in MB") MutableGaugeInt pendingMB;
   @Metric("# of pending containers") MutableGaugeInt pendingContainers;
-  @Metric("# of reserved memory in GiB") MutableGaugeInt reservedGB;
+  @Metric("# of reserved memory in MB") MutableGaugeInt reservedMB;
   @Metric("# of reserved containers") MutableGaugeInt reservedContainers;
   @Metric("# of active users") MutableGaugeInt activeUsers;
   @Metric("# of active users") MutableGaugeInt activeApplications;
 
   static final Logger LOG = LoggerFactory.getLogger(QueueMetrics.class);
-  static final int GB = 1024; // resource.memory is in MB
   static final MetricsInfo RECORD_INFO = info("QueueMetrics",
       "Metrics for the resource scheduler");
   static final MetricsInfo QUEUE_INFO = info("Queue", "Metrics by queue");
@@ -183,7 +182,7 @@ public class QueueMetrics {
    * @param limit resource limit
    */
   public void setAvailableResourcesToQueue(Resource limit) {
-    availableGB.set(limit.getMemory()/GB);
+    availableMB.set(limit.getMemory());
   }
 
   /**
@@ -219,7 +218,7 @@ public class QueueMetrics {
 
   private void _incrPendingResources(int containers, Resource res) {
     pendingContainers.incr(containers);
-    pendingGB.incr(res.getMemory()/GB);
+    pendingMB.incr(res.getMemory());
   }
 
   public void decrPendingResources(String user, int containers, Resource res) {
@@ -235,13 +234,13 @@ public class QueueMetrics {
 
   private void _decrPendingResources(int containers, Resource res) {
     pendingContainers.decr(containers);
-    pendingGB.decr(res.getMemory()/GB);
+    pendingMB.decr(res.getMemory());
   }
 
   public void allocateResources(String user, int containers, Resource res) {
     allocatedContainers.incr(containers);
     aggregateContainersAllocated.incr(containers);
-    allocatedGB.incr(res.getMemory()/GB * containers);
+    allocatedMB.incr(res.getMemory() * containers);
     _decrPendingResources(containers, multiply(res, containers));
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
@@ -255,7 +254,7 @@ public class QueueMetrics {
   public void releaseResources(String user, int containers, Resource res) {
     allocatedContainers.decr(containers);
     aggregateContainersReleased.incr(containers);
-    allocatedGB.decr(res.getMemory()/GB * containers);
+    allocatedMB.decr(res.getMemory() * containers);
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
       userMetrics.releaseResources(user, containers, res);
@@ -267,7 +266,7 @@ public class QueueMetrics {
 
   public void reserveResource(String user, Resource res) {
     reservedContainers.incr();
-    reservedGB.incr(res.getMemory()/GB);
+    reservedMB.incr(res.getMemory());
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
       userMetrics.reserveResource(user, res);
@@ -279,7 +278,7 @@ public class QueueMetrics {
 
   public void unreserveResource(String user, Resource res) {
     reservedContainers.decr();
-    reservedGB.decr(res.getMemory()/GB);
+    reservedMB.decr(res.getMemory());
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
       userMetrics.unreserveResource(user, res);
@@ -343,28 +342,28 @@ public class QueueMetrics {
     return appsFailed.value();
   }
 
-  public int getAllocatedGB() {
-    return allocatedGB.value();
+  public int getAllocatedMB() {
+    return allocatedMB.value();
   }
 
   public int getAllocatedContainers() {
     return allocatedContainers.value();
   }
 
-  public int getAvailableGB() {
-    return availableGB.value();
+  public int getAvailableMB() {
+    return availableMB.value();
   }  
 
-  public int getPendingGB() {
-    return pendingGB.value();
+  public int getPendingMB() {
+    return pendingMB.value();
   }
 
   public int getPendingContainers() {
     return pendingContainers.value();
   }
   
-  public int getReservedGB() {
-    return reservedGB.value();
+  public int getReservedMB() {
+    return reservedMB.value();
   }
 
   public int getReservedContainers() {

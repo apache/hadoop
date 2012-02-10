@@ -57,16 +57,16 @@ public class TestQueueMetrics {
     metrics.incrPendingResources(user, 5, Resources.createResource(15*GB));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
-    checkResources(queueSource, 0, 0, 0, 0, 100, 15, 5, 0, 0);
+    checkResources(queueSource, 0, 0, 0, 0, 100*GB, 15*GB, 5, 0, 0);
 
     metrics.incrAppsRunning(user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0);
 
     metrics.allocateResources(user, 3, Resources.createResource(2*GB));
-    checkResources(queueSource, 6, 3, 3, 0, 100, 9, 2, 0, 0);
+    checkResources(queueSource, 6*GB, 3, 3, 0, 100*GB, 9*GB, 2, 0, 0);
 
     metrics.releaseResources(user, 1, Resources.createResource(2*GB));
-    checkResources(queueSource, 4, 2, 3, 1, 100, 9, 2, 0, 0);
+    checkResources(queueSource, 4*GB, 2, 3, 1, 100*GB, 9*GB, 2, 0, 0);
 
     metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0);
@@ -92,20 +92,20 @@ public class TestQueueMetrics {
     metrics.incrPendingResources(user, 5, Resources.createResource(15*GB));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
-    checkResources(queueSource, 0, 0, 0, 0,  100, 15, 5, 0, 0);
-    checkResources(userSource, 0, 0, 0, 0, 10, 15, 5, 0, 0);
+    checkResources(queueSource, 0, 0, 0, 0,  100*GB, 15*GB, 5, 0, 0);
+    checkResources(userSource, 0, 0, 0, 0, 10*GB, 15*GB, 5, 0, 0);
 
     metrics.incrAppsRunning(user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0);
     checkApps(userSource, 1, 0, 1, 0, 0, 0);
 
     metrics.allocateResources(user, 3, Resources.createResource(2*GB));
-    checkResources(queueSource, 6, 3, 3, 0, 100, 9, 2, 0, 0);
-    checkResources(userSource, 6, 3, 3, 0, 10, 9, 2, 0, 0);
+    checkResources(queueSource, 6*GB, 3, 3, 0, 100*GB, 9*GB, 2, 0, 0);
+    checkResources(userSource, 6*GB, 3, 3, 0, 10*GB, 9*GB, 2, 0, 0);
 
     metrics.releaseResources(user, 1, Resources.createResource(2*GB));
-    checkResources(queueSource, 4, 2, 3, 1, 100, 9, 2, 0, 0);
-    checkResources(userSource, 4, 2, 3, 1, 10, 9, 2, 0, 0);
+    checkResources(queueSource, 4*GB, 2, 3, 1, 100*GB, 9*GB, 2, 0, 0);
+    checkResources(userSource, 4*GB, 2, 3, 1, 10*GB, 9*GB, 2, 0, 0);
 
     metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0);
@@ -141,10 +141,10 @@ public class TestQueueMetrics {
     parentMetrics.setAvailableResourcesToUser(user, Resources.createResource(10*GB));
     metrics.setAvailableResourcesToUser(user, Resources.createResource(10*GB));
     metrics.incrPendingResources(user, 5, Resources.createResource(15*GB));
-    checkResources(queueSource, 0, 0, 0, 0, 100, 15, 5, 0, 0);
-    checkResources(parentQueueSource, 0, 0, 0, 0, 100, 15, 5, 0, 0);
-    checkResources(userSource, 0, 0, 0, 0, 10, 15, 5, 0, 0);
-    checkResources(parentUserSource, 0, 0, 0, 0, 10, 15, 5, 0, 0);
+    checkResources(queueSource, 0, 0, 0, 0, 100*GB, 15*GB, 5, 0, 0);
+    checkResources(parentQueueSource, 0, 0, 0, 0, 100*GB, 15*GB, 5, 0, 0);
+    checkResources(userSource, 0, 0, 0, 0, 10*GB, 15*GB, 5, 0, 0);
+    checkResources(parentUserSource, 0, 0, 0, 0, 10*GB, 15*GB, 5, 0, 0);
 
     metrics.incrAppsRunning(user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0);
@@ -154,17 +154,17 @@ public class TestQueueMetrics {
     metrics.reserveResource(user, Resources.createResource(3*GB));
     // Available resources is set externally, as it depends on dynamic
     // configurable cluster/queue resources
-    checkResources(queueSource, 6, 3, 3, 0, 100, 9, 2, 3, 1);
-    checkResources(parentQueueSource, 6, 3, 3, 0,  100, 9, 2, 3, 1);
-    checkResources(userSource, 6, 3, 3, 0, 10, 9, 2, 3, 1);
-    checkResources(parentUserSource, 6, 3, 3, 0, 10, 9, 2, 3, 1);
+    checkResources(queueSource, 6*GB, 3, 3, 0, 100*GB, 9*GB, 2, 3*GB, 1);
+    checkResources(parentQueueSource, 6*GB, 3, 3, 0,  100*GB, 9*GB, 2, 3*GB, 1);
+    checkResources(userSource, 6*GB, 3, 3, 0, 10*GB, 9*GB, 2, 3*GB, 1);
+    checkResources(parentUserSource, 6*GB, 3, 3, 0, 10*GB, 9*GB, 2, 3*GB, 1);
 
     metrics.releaseResources(user, 1, Resources.createResource(2*GB));
     metrics.unreserveResource(user, Resources.createResource(3*GB));
-    checkResources(queueSource, 4, 2, 3, 1, 100, 9, 2, 0, 0);
-    checkResources(parentQueueSource, 4, 2, 3, 1, 100, 9, 2, 0, 0);
-    checkResources(userSource, 4, 2, 3, 1, 10, 9, 2, 0, 0);
-    checkResources(parentUserSource, 4, 2, 3, 1, 10, 9, 2, 0, 0);
+    checkResources(queueSource, 4*GB, 2, 3, 1, 100*GB, 9*GB, 2, 0, 0);
+    checkResources(parentQueueSource, 4*GB, 2, 3, 1, 100*GB, 9*GB, 2, 0, 0);
+    checkResources(userSource, 4*GB, 2, 3, 1, 10*GB, 9*GB, 2, 0, 0);
+    checkResources(parentUserSource, 4*GB, 2, 3, 1, 10*GB, 9*GB, 2, 0, 0);
 
     metrics.finishApp(app, RMAppAttemptState.FINISHED);
     checkApps(queueSource, 1, 0, 0, 1, 0, 0);
@@ -184,18 +184,19 @@ public class TestQueueMetrics {
     assertCounter("AppsKilled", killed, rb);
   }
 
-  public static void checkResources(MetricsSource source, int allocGB,
-      int allocCtnrs, long aggreAllocCtnrs, long aggreReleasedCtnrs, int availGB, int pendingGB, int pendingCtnrs,
-      int reservedGB, int reservedCtnrs) {
+  public static void checkResources(MetricsSource source, int allocatedMB,
+      int allocCtnrs, long aggreAllocCtnrs, long aggreReleasedCtnrs, 
+      int availableMB, int pendingMB, int pendingCtnrs,
+      int reservedMB, int reservedCtnrs) {
     MetricsRecordBuilder rb = getMetrics(source);
-    assertGauge("AllocatedGB", allocGB, rb);
+    assertGauge("AllocatedMB", allocatedMB, rb);
     assertGauge("AllocatedContainers", allocCtnrs, rb);
     assertCounter("AggregateContainersAllocated", aggreAllocCtnrs, rb);
     assertCounter("AggregateContainersReleased", aggreReleasedCtnrs, rb);
-    assertGauge("AvailableGB", availGB, rb);
-    assertGauge("PendingGB", pendingGB, rb);
+    assertGauge("AvailableMB", availableMB, rb);
+    assertGauge("PendingMB", pendingMB, rb);
     assertGauge("PendingContainers", pendingCtnrs, rb);
-    assertGauge("ReservedGB", reservedGB, rb);
+    assertGauge("ReservedMB", reservedMB, rb);
     assertGauge("ReservedContainers", reservedCtnrs, rb);
   }
 

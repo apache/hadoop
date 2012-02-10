@@ -73,7 +73,7 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public RefreshNamenodesResponseProto refreshNamenode(
+  public RefreshNamenodesResponseProto refreshNamenodes(
       RpcController unused, RefreshNamenodesRequestProto request)
       throws ServiceException {
     try {

@@ -43,10 +43,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  * InputFormats.
  * 
  * @see MultipleInputs#addInputPath(JobConf, Path, Class, Class)
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.DelegatingInputFormat} instead
  */
-@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DelegatingInputFormat<K, V> implements InputFormat<K, V> {

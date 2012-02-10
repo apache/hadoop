@@ -37,11 +37,15 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat.State;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
@@ -111,15 +115,13 @@ public class TestBPOfferService {
       .when(mock).versionRequest();
     
     Mockito.doReturn(new DatanodeRegistration("fake-node"))
-      .when(mock).registerDatanode(Mockito.any(DatanodeRegistration.class));
+      .when(mock).registerDatanode(Mockito.any(DatanodeRegistration.class),
+          Mockito.any(DatanodeStorage[].class));
     
     Mockito.doAnswer(new HeartbeatAnswer(nnIdx))
       .when(mock).sendHeartbeat(
           Mockito.any(DatanodeRegistration.class),
-          Mockito.anyLong(),
-          Mockito.anyLong(),
-          Mockito.anyLong(),
-          Mockito.anyLong(),
+          Mockito.any(StorageReport[].class),
           Mockito.anyInt(),
           Mockito.anyInt(),
           Mockito.anyInt());
@@ -160,10 +162,10 @@ public class TestBPOfferService {
       waitForInitialization(bpos);
       
       // The DN should have register to both NNs.
-      Mockito.verify(mockNN1).registerDatanode(
-          (DatanodeRegistration) Mockito.anyObject());
-      Mockito.verify(mockNN2).registerDatanode(
-          (DatanodeRegistration) Mockito.anyObject());
+      Mockito.verify(mockNN1).registerDatanode(Mockito.any(DatanodeRegistration.class),
+          Mockito.any(DatanodeStorage[].class));
+      Mockito.verify(mockNN2).registerDatanode(Mockito.any(DatanodeRegistration.class),
+          Mockito.any(DatanodeStorage[].class));
       
       // Should get block reports from both NNs
       waitForBlockReport(mockNN1);
@@ -199,7 +201,7 @@ public class TestBPOfferService {
         .when(mockNN2).blockReport(
             Mockito.<DatanodeRegistration>anyObject(),  
             Mockito.eq(FAKE_BPID),
-            Mockito.<long[]>anyObject());
+            Mockito.<StorageBlockReport[]>anyObject());
 
     bpos.start();
     try {
@@ -343,7 +345,7 @@ public class TestBPOfferService {
           Mockito.verify(mockNN).blockReport(
               Mockito.<DatanodeRegistration>anyObject(),  
               Mockito.eq(FAKE_BPID),
-              Mockito.<long[]>anyObject());
+              Mockito.<StorageBlockReport[]>anyObject());
           return true;
         } catch (Throwable t) {
           LOG.info("waiting on block report: " + t.getMessage());
@@ -380,8 +382,8 @@ public class TestBPOfferService {
   private ReceivedDeletedBlockInfo[] waitForBlockReceived(
       ExtendedBlock fakeBlock,
       DatanodeProtocolClientSideTranslatorPB mockNN) throws Exception {
-    final ArgumentCaptor<ReceivedDeletedBlockInfo[]> captor =
-      ArgumentCaptor.forClass(ReceivedDeletedBlockInfo[].class);
+    final ArgumentCaptor<StorageReceivedDeletedBlocks[]> captor =
+      ArgumentCaptor.forClass(StorageReceivedDeletedBlocks[].class);
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
 
       @Override
@@ -397,7 +399,7 @@ public class TestBPOfferService {
         }
       }
     }, 100, 10000);
-    return captor.getValue();
+    return captor.getValue()[0].getBlocks();
   }
 
 }

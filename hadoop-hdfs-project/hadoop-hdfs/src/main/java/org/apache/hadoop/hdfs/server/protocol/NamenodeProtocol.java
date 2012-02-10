@@ -49,10 +49,11 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * NN server side to insulate from the protocol serialization.
    * 
    * If you are adding/changing NN's interface then you need to 
-   * change both this class and ALSO
-   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.NamenodeWireProtocol}.
-   * These changes need to be done in a compatible fashion as described in 
-   * {@link org.apache.hadoop.hdfs.protocolR23Compatible.ClientNamenodeWireProtocol}
+   * change both this class and ALSO related protocol buffer
+   * wire protocol definition in NamenodeProtocol.proto.
+   * 
+   * For more details on protocol buffer wire protocol, please see 
+   * .../org/apache/hadoop/hdfs/protocolPB/overview.html
    * 
    * 6: Switch to txid-based file naming for image and edits
    */

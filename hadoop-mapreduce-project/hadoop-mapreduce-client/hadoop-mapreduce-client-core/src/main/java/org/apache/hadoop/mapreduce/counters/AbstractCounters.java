@@ -18,18 +18,18 @@
 
 package org.apache.hadoop.mapreduce.counters;
 
+import static org.apache.hadoop.mapreduce.counters.CounterGroupFactory.getFrameworkGroupId;
+import static org.apache.hadoop.mapreduce.counters.CounterGroupFactory.isFrameworkGroup;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentSkipListMap;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
-
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
@@ -39,7 +39,10 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
-import static org.apache.hadoop.mapreduce.counters.CounterGroupFactory.*;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Maps;
 
 /**
  * An abstract class to provide common implementation for the Counters
@@ -60,8 +63,10 @@ public abstract class AbstractCounters<C extends Counter,
    * A cache from enum values to the associated counter.
    */
   private Map<Enum<?>, C> cache = Maps.newIdentityHashMap();
-  private Map<String, G> fgroups = Maps.newTreeMap(); // framework & fs groups
-  private Map<String, G> groups = Maps.newTreeMap();  // other groups
+  //framework & fs groups
+  private Map<String, G> fgroups = new ConcurrentSkipListMap<String, G>();
+  // other groups
+  private Map<String, G> groups = new ConcurrentSkipListMap<String, G>();
   private final CounterGroupFactory<C, G> groupFactory;
 
   // For framework counter serialization without strings
@@ -171,7 +176,8 @@ public abstract class AbstractCounters<C extends Counter,
   @InterfaceAudience.Private
   public synchronized C findCounter(String scheme, FileSystemCounter key) {
     return ((FileSystemCounterGroup<C>) getGroup(
-        FileSystemCounter.class.getName())).findCounter(scheme, key);
+        FileSystemCounter.class.getName()).getUnderlyingGroup()).
+        findCounter(scheme, key);
   }
 
   /**
@@ -213,7 +219,7 @@ public abstract class AbstractCounters<C extends Counter,
   private String filterGroupName(String oldName) {
     String newName = legacyMap.get(oldName);
     if (newName == null) {
-      return limits.filterGroupName(oldName);
+      return Limits.filterGroupName(oldName);
     }
     LOG.warn("Group "+ oldName +" is deprecated. Use "+ newName +" instead");
     return newName;
@@ -241,11 +247,11 @@ public abstract class AbstractCounters<C extends Counter,
     WritableUtils.writeVInt(out, groupFactory.version());
     WritableUtils.writeVInt(out, fgroups.size());  // framework groups first
     for (G group : fgroups.values()) {
-      if (group instanceof FrameworkCounterGroup<?, ?>) {
+      if (group.getUnderlyingGroup() instanceof FrameworkCounterGroup<?, ?>) {
         WritableUtils.writeVInt(out, GroupType.FRAMEWORK.ordinal());
         WritableUtils.writeVInt(out, getFrameworkGroupId(group.getName()));
         group.write(out);
-      } else if (group instanceof FileSystemCounterGroup<?>) {
+      } else if (group.getUnderlyingGroup() instanceof FileSystemCounterGroup<?>) {
         WritableUtils.writeVInt(out, GroupType.FILESYSTEM.ordinal());
         group.write(out);
       }

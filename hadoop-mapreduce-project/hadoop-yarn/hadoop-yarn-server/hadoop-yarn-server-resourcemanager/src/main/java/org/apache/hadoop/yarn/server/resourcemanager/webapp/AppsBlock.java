@@ -19,11 +19,14 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -49,16 +52,24 @@ class AppsBlock extends HtmlBlock {
             th(".user", "User").
             th(".name", "Name").
             th(".queue", "Queue").
+            th(".starttime", "StartTime").
+            th(".finishtime", "FinishTime").
             th(".state", "State").
             th(".finalstatus", "FinalStatus").
             th(".progress", "Progress").
-            th(".ui", "Tracking UI").
-            th(".note", "Note")._()._().
+            th(".ui", "Tracking UI")._()._().
         tbody();
     int i = 0;
+    String reqState = $(APP_STATE);
+    reqState = (reqState == null ? "" : reqState);
     for (RMApp app : list.apps.values()) {
+      if (!reqState.isEmpty() && app.getState() != RMAppState.valueOf(reqState)) {
+        continue;
+      }
       AppInfo appInfo = new AppInfo(app, true);
       String percent = String.format("%.1f", appInfo.getProgress());
+      String startTime = Times.format(appInfo.getStartTime());
+      String finishTime = Times.format(appInfo.getFinishTime());
       tbody.
         tr().
           td().
@@ -67,6 +78,10 @@ class AppsBlock extends HtmlBlock {
           td(appInfo.getUser()).
           td(appInfo.getName()).
           td(appInfo.getQueue()).
+          td().
+            br().$title(startTime)._()._(startTime)._().
+          td().
+          br().$title(finishTime)._()._(finishTime)._().
           td(appInfo.getState()).
           td(appInfo.getFinalStatus()).
           td().
@@ -77,8 +92,7 @@ class AppsBlock extends HtmlBlock {
                 $style(join("width:", percent, '%'))._()._()._().
           td().
             a(!appInfo.isTrackingUrlReady()?
-              "#" : appInfo.getTrackingUrlPretty(), appInfo.getTrackingUI())._().
-          td(appInfo.getNote())._();
+              "#" : appInfo.getTrackingUrlPretty(), appInfo.getTrackingUI())._()._();
       if (list.rendering != Render.HTML && ++i >= 20) break;
     }
     tbody._()._();
@@ -86,7 +100,7 @@ class AppsBlock extends HtmlBlock {
     if (list.rendering == Render.JS_ARRAY) {
       echo("<script type='text/javascript'>\n",
            "var appsData=");
-      list.toDataTableArrays(writer());
+      list.toDataTableArrays(reqState, writer());
       echo("\n</script>\n");
     }
   }

@@ -36,10 +36,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** An {@link OutputFormat} that writes {@link MapFile}s.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MapFileOutputFormat 

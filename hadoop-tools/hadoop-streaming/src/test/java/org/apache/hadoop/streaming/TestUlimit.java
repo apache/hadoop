@@ -31,6 +31,7 @@ import org.apache.hadoop.mapreduce.MapReduceTestUtil;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.StringUtils;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -52,7 +53,6 @@ public class TestUlimit {
   private static String SET_MEMORY_LIMIT = "786432"; // 768MB
 
   String[] genArgs(String memLimit) {
-    String strJobtracker = JTConfig.JT_IPC_ADDRESS + "=localhost:" + mr.createJobConf().get(JTConfig.JT_IPC_ADDRESS);
     String strNamenode = "fs.default.name=" + mr.createJobConf().get("fs.default.name");
     return new String[] {
       "-input", inputPath.toString(),
@@ -63,7 +63,6 @@ public class TestUlimit {
       "-jobconf", MRJobConfig.NUM_MAPS + "=1",
       "-jobconf", JobConf.MAPRED_MAP_TASK_ULIMIT + "=" + memLimit,
       "-jobconf", strNamenode,
-      "-jobconf", strJobtracker,
       "-jobconf", "stream.tmpdir=" + 
                    System.getProperty("test.build.data","/tmp"),
       "-jobconf", "mapred.jar=" + TestStreaming.STREAMING_JAR,
@@ -79,6 +78,7 @@ public class TestUlimit {
    * is expected to be a failure.  
    */
   @Test
+  @Ignore
   public void testCommandLine() {
     if (UtilTest.isCygwin()) {
       return;

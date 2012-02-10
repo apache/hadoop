@@ -31,10 +31,7 @@ import org.apache.hadoop.util.Progressable;
 /**
  * This class extends the MultipleOutputFormat, allowing to write the output data 
  * to different output files in sequence file output format. 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.output.MultipleOutputs} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MultipleSequenceFileOutputFormat <K,V>

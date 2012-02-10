@@ -369,6 +369,12 @@ class JobSubmitter {
       conf.set(toFullPropertyName(queue,
           QueueACL.ADMINISTER_JOBS.getAclName()), acl.getAclString());
 
+      // removing jobtoken referrals before copying the jobconf to HDFS
+      // as the tasks don't need this setting, actually they may break
+      // because of it if present as the referral will point to a
+      // different job.
+      TokenCache.cleanUpTokenReferral(conf);
+
       // Write job file to submit dir
       writeConf(conf, submitJobFile);
       

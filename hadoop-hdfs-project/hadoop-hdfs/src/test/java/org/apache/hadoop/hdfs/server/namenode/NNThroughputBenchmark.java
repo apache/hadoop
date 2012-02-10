@@ -44,9 +44,13 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -793,7 +797,10 @@ public class NNThroughputBenchmark {
       dnRegistration.setStorageInfo(new DataStorage(nsInfo, ""));
       DataNode.setNewStorageID(dnRegistration);
       // register datanode
-      dnRegistration = nameNodeProto.registerDatanode(dnRegistration);
+      
+      DatanodeStorage[] storages = { new DatanodeStorage(
+          dnRegistration.getStorageID(), DatanodeStorage.State.NORMAL) };
+      dnRegistration = nameNodeProto.registerDatanode(dnRegistration, storages);
     }
 
     /**
@@ -803,9 +810,10 @@ public class NNThroughputBenchmark {
     void sendHeartbeat() throws IOException {
       // register datanode
       // TODO:FEDERATION currently a single block pool is supported
+      StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
+          false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0)
-          .getCommands();
+          rep, 0, 0, 0).getCommands();
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -848,10 +856,10 @@ public class NNThroughputBenchmark {
     @SuppressWarnings("unused") // keep it for future blockReceived benchmark
     int replicateBlocks() throws IOException {
       // register datanode
-      // TODO:FEDERATION currently a single block pool is supported
+      StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
+          false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0)
-          .getCommands();
+          rep, 0, 0, 0).getCommands();
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {
@@ -881,11 +889,14 @@ public class NNThroughputBenchmark {
           receivedDNReg.setStorageInfo(
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
-          nameNodeProto.blockReceivedAndDeleted(receivedDNReg, nameNode
-              .getNamesystem().getBlockPoolId(),
-              new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(
+          ReceivedDeletedBlockInfo[] rdBlocks = {
+            new ReceivedDeletedBlockInfo(
                   blocks[i], ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
-                  null) });
+                  null) };
+          StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+              receivedDNReg.getStorageID(), rdBlocks) };
+          nameNodeProto.blockReceivedAndDeleted(receivedDNReg, nameNode
+              .getNamesystem().getBlockPoolId(), report);
         }
       }
       return blocks.length;
@@ -997,11 +1008,13 @@ public class NNThroughputBenchmark {
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
+          ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
+              loc.getBlock().getLocalBlock(),
+              ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
+          StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+              datanodes[dnIdx].dnRegistration.getStorageID(), rdBlocks) };
           nameNodeProto.blockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc
-              .getBlock().getBlockPoolId(),
-              new ReceivedDeletedBlockInfo[] { new ReceivedDeletedBlockInfo(loc
-                  .getBlock().getLocalBlock(),
-                  ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) });
+              .getBlock().getBlockPoolId(), report);
         }
       }
       return prevBlock;
@@ -1018,8 +1031,10 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       TinyDatanode dn = datanodes[daemonId];
       long start = System.currentTimeMillis();
+      StorageBlockReport[] report = { new StorageBlockReport(
+          dn.dnRegistration.getStorageID(), dn.getBlockReportList()) };
       nameNodeProto.blockReport(dn.dnRegistration, nameNode.getNamesystem()
-          .getBlockPoolId(), dn.getBlockReportList());
+          .getBlockPoolId(), report);
       long end = System.currentTimeMillis();
       return end-start;
     }

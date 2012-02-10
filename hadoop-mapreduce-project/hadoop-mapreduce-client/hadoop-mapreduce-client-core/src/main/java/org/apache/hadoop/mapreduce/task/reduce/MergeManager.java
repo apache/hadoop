@@ -46,7 +46,6 @@ import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Reducer;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Task;
-import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.IFile.Reader;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
@@ -68,7 +67,8 @@ public class MergeManager<K, V> {
   
   /* Maximum percentage of the in-memory limit that a single shuffle can 
    * consume*/ 
-  private static final float MAX_SINGLE_SHUFFLE_SEGMENT_FRACTION = 0.25f;
+  private static final float DEFAULT_SHUFFLE_MEMORY_LIMIT_PERCENT
+    = 0.25f;
 
   private final TaskAttemptID reduceId;
   
@@ -169,12 +169,22 @@ public class MergeManager<K, V> {
  
     this.ioSortFactor = jobConf.getInt(MRJobConfig.IO_SORT_FACTOR, 100);
 
+    final float singleShuffleMemoryLimitPercent =
+        jobConf.getFloat(MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT,
+            DEFAULT_SHUFFLE_MEMORY_LIMIT_PERCENT);
+    if (singleShuffleMemoryLimitPercent <= 0.0f
+        || singleShuffleMemoryLimitPercent > 1.0f) {
+      throw new IllegalArgumentException("Invalid value for "
+          + MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT + ": "
+          + singleShuffleMemoryLimitPercent);
+    }
+
     this.maxSingleShuffleLimit = 
-      (long)(memoryLimit * MAX_SINGLE_SHUFFLE_SEGMENT_FRACTION);
+      (long)(memoryLimit * singleShuffleMemoryLimitPercent);
     this.memToMemMergeOutputsThreshold = 
             jobConf.getInt(MRJobConfig.REDUCE_MEMTOMEM_THRESHOLD, ioSortFactor);
     this.mergeThreshold = (long)(this.memoryLimit * 
-                          jobConf.getFloat(MRJobConfig.SHUFFLE_MERGE_EPRCENT, 
+                          jobConf.getFloat(MRJobConfig.SHUFFLE_MERGE_PERCENT, 
                                            0.90f));
     LOG.info("MergerManager: memoryLimit=" + memoryLimit + ", " +
              "maxSingleShuffleLimit=" + maxSingleShuffleLimit + ", " +

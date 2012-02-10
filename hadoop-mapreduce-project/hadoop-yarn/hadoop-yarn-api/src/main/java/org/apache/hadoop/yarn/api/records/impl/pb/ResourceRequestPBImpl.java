@@ -20,19 +20,14 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 
 
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.api.records.impl.pb.PriorityPBImpl;
-import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.PriorityProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceRequestProtoOrBuilder;
 
-
-    
-public class ResourceRequestPBImpl extends ProtoBase<ResourceRequestProto> implements  ResourceRequest {
+public class ResourceRequestPBImpl extends  ResourceRequest {
   ResourceRequestProto proto = ResourceRequestProto.getDefaultInstance();
   ResourceRequestProto.Builder builder = null;
   boolean viaProto = false;
@@ -166,27 +161,6 @@ public class ResourceRequestPBImpl extends ProtoBase<ResourceRequestProto> imple
 
   private ResourceProto convertToProtoFormat(Resource t) {
     return ((ResourcePBImpl)t).getProto();
-  }
-
-  @Override
-  public int compareTo(ResourceRequest other) {
-    if (this.getPriority().compareTo(other.getPriority()) == 0) {
-      if (this.getHostName().equals(other.getHostName())) {
-        if (this.getCapability().equals(other.getCapability())) {
-          if (this.getNumContainers() == other.getNumContainers()) {
-            return 0;
-          } else {
-            return this.getNumContainers() - other.getNumContainers();
-          }
-        } else {
-          return this.getCapability().compareTo(other.getCapability());
-        }
-      } else {
-        return this.getHostName().compareTo(other.getHostName());
-      }
-    } else {
-      return this.getPriority().compareTo(other.getPriority());
-    }
   }
 
 }  

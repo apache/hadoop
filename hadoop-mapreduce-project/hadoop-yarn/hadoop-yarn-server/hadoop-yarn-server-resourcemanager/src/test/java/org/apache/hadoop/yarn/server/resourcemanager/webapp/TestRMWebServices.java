@@ -361,6 +361,7 @@ public class TestRMWebServices extends JerseyTest {
 
       verifyClusterMetrics(
           WebServicesTestUtils.getXmlInt(element, "appsSubmitted"),
+          WebServicesTestUtils.getXmlInt(element, "appsCompleted"),
           WebServicesTestUtils.getXmlInt(element, "reservedMB"),
           WebServicesTestUtils.getXmlInt(element, "availableMB"),
           WebServicesTestUtils.getXmlInt(element, "allocatedMB"),
@@ -379,8 +380,9 @@ public class TestRMWebServices extends JerseyTest {
       Exception {
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject clusterinfo = json.getJSONObject("clusterMetrics");
-    assertEquals("incorrect number of elements", 12, clusterinfo.length());
-    verifyClusterMetrics(clusterinfo.getInt("appsSubmitted"),
+    assertEquals("incorrect number of elements", 19, clusterinfo.length());
+    verifyClusterMetrics(
+        clusterinfo.getInt("appsSubmitted"), clusterinfo.getInt("appsCompleted"),
         clusterinfo.getInt("reservedMB"), clusterinfo.getInt("availableMB"),
         clusterinfo.getInt("allocatedMB"),
         clusterinfo.getInt("containersAllocated"),
@@ -390,7 +392,8 @@ public class TestRMWebServices extends JerseyTest {
         clusterinfo.getInt("rebootedNodes"),clusterinfo.getInt("activeNodes"));
   }
 
-  public void verifyClusterMetrics(int sub, int reservedMB, int availableMB,
+  public void verifyClusterMetrics(int submittedApps, int completedApps,
+      int reservedMB, int availableMB,
       int allocMB, int containersAlloc, int totalMB, int totalNodes,
       int lostNodes, int unhealthyNodes, int decommissionedNodes,
       int rebootedNodes, int activeNodes) throws JSONException, Exception {
@@ -398,19 +401,21 @@ public class TestRMWebServices extends JerseyTest {
     ResourceScheduler rs = rm.getResourceScheduler();
     QueueMetrics metrics = rs.getRootQueueMetrics();
     ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics();
-    final long MB_IN_GB = 1024;
 
-    long totalMBExpect = (metrics.getReservedGB() * MB_IN_GB)
-        + (metrics.getAvailableGB() * MB_IN_GB)
-        + (metrics.getAllocatedGB() * MB_IN_GB);
+    long totalMBExpect = 
+        metrics.getReservedMB()+ metrics.getAvailableMB() 
+        + metrics.getAllocatedMB();
 
-    assertEquals("appsSubmitted doesn't match", metrics.getAppsSubmitted(), sub);
+    assertEquals("appsSubmitted doesn't match", 
+        metrics.getAppsSubmitted(), submittedApps);
+    assertEquals("appsCompleted doesn't match", 
+        metrics.getAppsCompleted(), completedApps);
     assertEquals("reservedMB doesn't match",
-        metrics.getReservedGB() * MB_IN_GB, reservedMB);
-    assertEquals("availableMB doesn't match", metrics.getAvailableGB()
-        * MB_IN_GB, availableMB);
-    assertEquals("allocatedMB doesn't match", metrics.getAllocatedGB()
-        * MB_IN_GB, allocMB);
+        metrics.getReservedMB(), reservedMB);
+    assertEquals("availableMB doesn't match", 
+        metrics.getAvailableMB(), availableMB);
+    assertEquals("allocatedMB doesn't match", 
+        metrics.getAllocatedMB(), allocMB);
     assertEquals("containersAllocated doesn't match", 0, containersAlloc);
     assertEquals("totalMB doesn't match", totalMBExpect, totalMB);
     assertEquals(

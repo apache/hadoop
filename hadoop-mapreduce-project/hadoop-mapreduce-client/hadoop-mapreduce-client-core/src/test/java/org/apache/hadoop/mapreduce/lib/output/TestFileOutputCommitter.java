@@ -60,6 +60,22 @@ public class TestFileOutputCommitter extends TestCase {
   private Text val2 = new Text("val2");
 
   
+  private static void cleanup() throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = outDir.getFileSystem(conf);
+    fs.delete(outDir, true);
+  }
+  
+  @Override
+  public void setUp() throws IOException {
+    cleanup();
+  }
+  
+  @Override
+  public void tearDown() throws IOException {
+    cleanup();
+  }
+  
   private void writeOutput(RecordWriter theRecordWriter,
       TaskAttemptContext context) throws IOException, InterruptedException {
     NullWritable nullWritable = NullWritable.get();
@@ -114,11 +130,10 @@ public class TestFileOutputCommitter extends TestCase {
 
     // do commit
     committer.commitTask(tContext);
-    Path jobTempDir1 = new Path(outDir, 
-        FileOutputCommitter.getJobAttemptBaseDirName(
-            conf.getInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 0)));
-    assertTrue((new File(jobTempDir1.toString()).exists()));
-    validateContent(jobTempDir1);    
+    Path jobTempDir1 = committer.getCommittedTaskPath(tContext);
+    File jtd = new File(jobTempDir1.toUri().getPath());
+    assertTrue(jtd.exists());
+    validateContent(jtd);    
     
     //now while running the second app attempt, 
     //recover the task output from first attempt
@@ -128,15 +143,13 @@ public class TestFileOutputCommitter extends TestCase {
     JobContext jContext2 = new JobContextImpl(conf2, taskID.getJobID());
     TaskAttemptContext tContext2 = new TaskAttemptContextImpl(conf2, taskID);
     FileOutputCommitter committer2 = new FileOutputCommitter(outDir, tContext2);
-    committer.setupJob(tContext2);
-    Path jobTempDir2 = new Path(outDir, 
-        FileOutputCommitter.getJobAttemptBaseDirName(
-            conf2.getInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 0)));
-    assertTrue((new File(jobTempDir2.toString()).exists()));
+    committer2.setupJob(tContext2);
+    Path jobTempDir2 = committer2.getCommittedTaskPath(tContext2);
+    File jtd2 = new File(jobTempDir2.toUri().getPath());
     
-    tContext2.getConfiguration().setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 2);
     committer2.recoverTask(tContext2);
-    validateContent(jobTempDir2);
+    assertTrue(jtd2.exists());
+    validateContent(jtd2);
     
     committer2.commitJob(jContext2);
     validateContent(outDir);
@@ -144,7 +157,12 @@ public class TestFileOutputCommitter extends TestCase {
   }
 
   private void validateContent(Path dir) throws IOException {
-    File expectedFile = new File(new Path(dir, partFile).toString());
+    validateContent(new File(dir.toUri().getPath()));
+  }
+  
+  private void validateContent(File dir) throws IOException {
+    File expectedFile = new File(dir, partFile);
+    assertTrue("Could not find "+expectedFile, expectedFile.exists());
     StringBuffer expectedOutput = new StringBuffer();
     expectedOutput.append(key1).append('\t').append(val1).append("\n");
     expectedOutput.append(val1).append("\n");
@@ -259,7 +277,7 @@ public class TestFileOutputCommitter extends TestCase {
     assertFalse("task temp dir still exists", expectedFile.exists());
 
     committer.abortJob(jContext, JobStatus.State.FAILED);
-    expectedFile = new File(new Path(outDir, FileOutputCommitter.TEMP_DIR_NAME)
+    expectedFile = new File(new Path(outDir, FileOutputCommitter.PENDING_DIR_NAME)
         .toString());
     assertFalse("job temp dir still exists", expectedFile.exists());
     assertEquals("Output directory not empty", 0, new File(outDir.toString())
@@ -315,12 +333,10 @@ public class TestFileOutputCommitter extends TestCase {
     assertNotNull(th);
     assertTrue(th instanceof IOException);
     assertTrue(th.getMessage().contains("fake delete failed"));
-    File jobTmpDir = new File(new Path(outDir,
-        FileOutputCommitter.TEMP_DIR_NAME + Path.SEPARATOR +
-        conf.getInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 0) +
-        Path.SEPARATOR +
-        FileOutputCommitter.TEMP_DIR_NAME).toString());
-    File taskTmpDir = new File(jobTmpDir, "_" + taskID);
+    Path jtd = committer.getJobAttemptPath(jContext);
+    File jobTmpDir = new File(jtd.toUri().getPath());
+    Path ttd = committer.getTaskAttemptPath(tContext);
+    File taskTmpDir = new File(ttd.toUri().getPath());
     File expectedFile = new File(taskTmpDir, partFile);
     assertTrue(expectedFile + " does not exists", expectedFile.exists());
 

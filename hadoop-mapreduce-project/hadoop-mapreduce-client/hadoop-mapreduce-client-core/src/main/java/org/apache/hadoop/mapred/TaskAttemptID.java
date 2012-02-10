@@ -45,7 +45,6 @@ import org.apache.hadoop.mapreduce.TaskType;
  * @see JobID
  * @see TaskID
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TaskAttemptID extends org.apache.hadoop.mapreduce.TaskAttemptID {

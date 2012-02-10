@@ -472,8 +472,8 @@ public class Job extends JobContextImpl implements JobContext {
     sb.append("Job Tracking URL : ").append(status.getTrackingUrl());
     sb.append("\n");
     sb.append("Uber job : ").append(status.isUber()).append("\n");
-    sb.append("Number of maps: ").append(numMaps);
-    sb.append("Number of reduces: ").append(numReduces);
+    sb.append("Number of maps: ").append(numMaps).append("\n");
+    sb.append("Number of reduces: ").append(numReduces).append("\n");
     sb.append("map() completion: ");
     sb.append(status.getMapProgress()).append("\n");
     sb.append("reduce() completion: ");

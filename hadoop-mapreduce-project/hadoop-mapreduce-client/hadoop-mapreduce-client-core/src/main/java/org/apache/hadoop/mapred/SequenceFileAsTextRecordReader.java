@@ -31,11 +31,7 @@ import org.apache.hadoop.io.WritableComparable;
  * This class converts the input keys and values to their String forms by calling toString()
  * method. This class to SequenceFileAsTextInputFormat class is as LineRecordReader
  * class to TextInputFormat class.
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.input.SequenceFileAsTextRecordReader}
- * instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SequenceFileAsTextRecordReader

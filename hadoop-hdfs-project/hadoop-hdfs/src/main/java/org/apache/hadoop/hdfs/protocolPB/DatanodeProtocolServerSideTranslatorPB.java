@@ -29,7 +29,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportR
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockSynchronizationResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatRequestProto;
@@ -41,6 +40,9 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterData
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlockReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DatanodeIDProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.LocatedBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
@@ -49,9 +51,13 @@ import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
@@ -85,8 +91,12 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     DatanodeRegistration registration = PBHelper.convert(request
         .getRegistration());
     DatanodeRegistration registrationResp;
+    DatanodeStorage[] storages = new DatanodeStorage[request.getStoragesCount()];
+    for (int i = 0; i < request.getStoragesCount(); i++) {
+      storages[i] = PBHelper.convert(request.getStorages(i));
+    }
     try {
-      registrationResp = impl.registerDatanode(registration);
+      registrationResp = impl.registerDatanode(registration, storages);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -99,10 +109,17 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       HeartbeatRequestProto request) throws ServiceException {
     HeartbeatResponse response;
     try {
+      List<StorageReportProto> list = request.getReportsList();
+      StorageReport[] report = new StorageReport[list.size()];
+      int i = 0;
+      for (StorageReportProto p : list) {
+        report[i++] = new StorageReport(p.getStorageID(), p.getFailed(),
+            p.getCapacity(), p.getDfsUsed(), p.getRemaining(),
+            p.getBlockPoolUsed());
+      }
       response = impl.sendHeartbeat(PBHelper.convert(request.getRegistration()),
-          request.getCapacity(), request.getDfsUsed(), request.getRemaining(),
-          request.getBlockPoolUsed(), request.getXmitsInProgress(),
-          request.getXceiverCount(), request.getFailedVolumes());
+          report, request.getXmitsInProgress(), request.getXceiverCount(),
+          request.getFailedVolumes());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -124,14 +141,21 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   public BlockReportResponseProto blockReport(RpcController controller,
       BlockReportRequestProto request) throws ServiceException {
     DatanodeCommand cmd = null;
-    List<Long> blockIds = request.getBlocksList();
-    long[] blocks = new long[blockIds.size()];
-    for (int i = 0; i < blockIds.size(); i++) {
-      blocks[i] = blockIds.get(i);
+    StorageBlockReport[] report = 
+        new StorageBlockReport[request.getReportsCount()];
+    
+    int index = 0;
+    for (StorageBlockReportProto s : request.getReportsList()) {
+      List<Long> blockIds = s.getBlocksList();
+      long[] blocks = new long[blockIds.size()];
+      for (int i = 0; i < blockIds.size(); i++) {
+        blocks[i] = blockIds.get(i);
+      }
+      report[index++] = new StorageBlockReport(s.getStorageID(), blocks);
     }
     try {
       cmd = impl.blockReport(PBHelper.convert(request.getRegistration()),
-          request.getBlockPoolId(), blocks);
+          request.getBlockPoolId(), report);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -147,11 +171,18 @@ public class DatanodeProtocolServerSideTranslatorPB implements
   public BlockReceivedAndDeletedResponseProto blockReceivedAndDeleted(
       RpcController controller, BlockReceivedAndDeletedRequestProto request)
       throws ServiceException {
-    List<ReceivedDeletedBlockInfoProto> rdbip = request.getBlocksList();
-    ReceivedDeletedBlockInfo[] info = 
-        new ReceivedDeletedBlockInfo[rdbip.size()];
-    for (int i = 0; i < rdbip.size(); i++) {
-      info[i] = PBHelper.convert(rdbip.get(i));
+    List<StorageReceivedDeletedBlocksProto> sBlocks = request.getBlocksList();
+    StorageReceivedDeletedBlocks[] info = 
+        new StorageReceivedDeletedBlocks[sBlocks.size()];
+    for (int i = 0; i < sBlocks.size(); i++) {
+      StorageReceivedDeletedBlocksProto sBlock = sBlocks.get(i);
+      List<ReceivedDeletedBlockInfoProto> list = sBlock.getBlocksList();
+      ReceivedDeletedBlockInfo[] rdBlocks = 
+          new ReceivedDeletedBlockInfo[list.size()];
+      for (int j = 0; j < list.size(); j++) {
+        rdBlocks[j] = PBHelper.convert(list.get(j));
+      }
+      info[i] = new StorageReceivedDeletedBlocks(sBlock.getStorageID(), rdBlocks);
     }
     try {
       impl.blockReceivedAndDeleted(PBHelper.convert(request.getRegistration()),

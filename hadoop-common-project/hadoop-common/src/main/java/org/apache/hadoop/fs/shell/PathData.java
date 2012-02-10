@@ -27,7 +27,6 @@ import java.net.URISyntaxException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -169,19 +168,6 @@ public class PathData {
     }
   }
   
-  /**
-   * Return the corresponding crc data for a file.  Avoids exposing the fs
-   * contortions to the caller.  
-   * @return PathData of the crc file
-   * @throws IOException is anything goes wrong
-   */
-  public PathData getChecksumFile() throws IOException {
-    checkIfExists(FileTypeRequirement.SHOULD_NOT_BE_DIRECTORY);
-    ChecksumFileSystem srcFs = (ChecksumFileSystem)fs;
-    Path srcPath = srcFs.getChecksumFile(path);
-    return new PathData(srcFs.getRawFileSystem(), srcPath.toString());
-  }
-
   /**
    * Returns a temporary file for this PathData with the given extension.
    * The file will be deleted on exit.

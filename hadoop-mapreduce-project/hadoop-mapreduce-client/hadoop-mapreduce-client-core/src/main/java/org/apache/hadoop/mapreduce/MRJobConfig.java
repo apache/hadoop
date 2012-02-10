@@ -118,6 +118,8 @@ public interface MRJobConfig {
 
   public static final String USER_LOG_RETAIN_HOURS = "mapreduce.job.userlog.retain.hours";
 
+  public static final String MAPREDUCE_JOB_USER_CLASSPATH_FIRST = "mapreduce.job.user.classpath.first";
+
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
   public static final String IO_SORT_MB = "mapreduce.task.io.sort.mb";
@@ -228,7 +230,10 @@ public interface MRJobConfig {
 
   public static final String SHUFFLE_INPUT_BUFFER_PERCENT = "mapreduce.reduce.shuffle.input.buffer.percent";
 
-  public static final String SHUFFLE_MERGE_EPRCENT = "mapreduce.reduce.shuffle.merge.percent";
+  public static final String SHUFFLE_MEMORY_LIMIT_PERCENT
+    = "mapreduce.reduce.shuffle.memory.limit.percent";
+
+  public static final String SHUFFLE_MERGE_PERCENT = "mapreduce.reduce.shuffle.merge.percent";
 
   public static final String REDUCE_FAILURES_MAXPERCENT = "mapreduce.reduce.failures.maxpercent";
 
@@ -315,6 +320,13 @@ public interface MRJobConfig {
 
   public static final String MR_AM_PREFIX = MR_PREFIX + "am.";
 
+  /** The number of client retires to the AM - before reconnecting to the RM
+   * to fetch Application State. 
+   */
+  public static final String MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 
+    MR_PREFIX + "client-am.ipc.max-retries";
+  public static final int DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 3;
+  
   /** The staging directory for map reduce.*/
   public static final String MR_AM_STAGING_DIR = 
     MR_AM_PREFIX+"staging-dir";

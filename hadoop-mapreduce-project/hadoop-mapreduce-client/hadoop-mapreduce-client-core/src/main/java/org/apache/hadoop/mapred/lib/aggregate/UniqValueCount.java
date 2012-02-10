@@ -23,11 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * This class implements a value aggregator that dedupes a sequence of objects.
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.UniqValueCount} instead 
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class UniqValueCount 

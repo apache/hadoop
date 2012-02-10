@@ -32,10 +32,6 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapreduce.lib.jobcontrol.ControlledJob;
 
-/** 
- * @deprecated Use {@link ControlledJob} instead.  
- */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Job extends ControlledJob {

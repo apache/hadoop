@@ -49,6 +49,9 @@ public class TestMiniMRClientCluster {
   private static Path[] inFiles = new Path[5];
   private static MiniMRClientCluster mrCluster;
 
+  private class InternalClass {
+  }
+
   @BeforeClass
   public static void setup() throws IOException {
     final Configuration conf = new Configuration();
@@ -73,7 +76,7 @@ public class TestMiniMRClientCluster {
 
     // create the mini cluster to be used for the tests
     mrCluster = MiniMRClientClusterFactory.create(
-        TestMiniMRClientCluster.class, 1, new Configuration());
+        InternalClass.class, 1, new Configuration());
   }
 
   @AfterClass

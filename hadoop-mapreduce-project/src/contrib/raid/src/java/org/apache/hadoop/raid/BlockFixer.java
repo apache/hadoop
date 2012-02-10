@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset;
+import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.RaidBlockSender;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -646,7 +646,7 @@ public abstract class BlockFixer extends Configured implements Runnable {
       DataOutputStream mdOut = new DataOutputStream(mdOutBase);
       
       // First, write out the version.
-      mdOut.writeShort(FSDataset.METADATA_VERSION);
+      mdOut.writeShort(BlockMetadataHeader.VERSION);
       
       // Create a summer and write out its header.
       int bytesPerChecksum = conf.getInt("io.bytes.per.checksum", 512);

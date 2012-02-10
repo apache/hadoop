@@ -32,6 +32,10 @@ public class JobPage extends AppView {
     set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"
                : join("MapReduce Job ", $(JOB_ID)));
     commonPreHead(html);
+
+    // This is a job-summary page. Helps to refresh automatically.
+    html.meta_http("refresh", "10");
+
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
   }
 

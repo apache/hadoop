@@ -230,14 +230,34 @@ public class Credentials implements Writable {
  
   /**
    * Copy all of the credentials from one credential object into another.
+   * Existing secrets and tokens are overwritten.
    * @param other the credentials to copy
    */
   public void addAll(Credentials other) {
+    addAll(other, true);
+  }
+
+  /**
+   * Copy all of the credentials from one credential object into another.
+   * Existing secrets and tokens are not overwritten.
+   * @param other the credentials to copy
+   */
+  public void mergeAll(Credentials other) {
+    addAll(other, false);
+  }
+
+  private void addAll(Credentials other, boolean overwrite) {
     for(Map.Entry<Text, byte[]> secret: other.secretKeysMap.entrySet()) {
-      secretKeysMap.put(secret.getKey(), secret.getValue());
+      Text key = secret.getKey();
+      if (!secretKeysMap.containsKey(key) || overwrite) {
+        secretKeysMap.put(key, secret.getValue());
+      }
     }
     for(Map.Entry<Text, Token<?>> token: other.tokenMap.entrySet()){
-      tokenMap.put(token.getKey(), token.getValue());
+      Text key = token.getKey();
+      if (!tokenMap.containsKey(key) || overwrite) {
+        tokenMap.put(key, token.getValue());
+      }
     }
   }
 }

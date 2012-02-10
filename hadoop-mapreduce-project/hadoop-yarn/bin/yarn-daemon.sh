@@ -78,8 +78,11 @@ fi
 if [ "$YARN_LOG_DIR" = "" ]; then
   export YARN_LOG_DIR="$YARN_HOME/logs"
 fi
-mkdir -p "$YARN_LOG_DIR"
-chown $YARN_IDENT_STRING $YARN_LOG_DIR 
+
+if [ ! -w "$YARN_LOG_DIR" ] ; then
+  mkdir -p "$YARN_LOG_DIR"
+  chown $YARN_IDENT_STRING $YARN_LOG_DIR 
+fi
 
 if [ "$YARN_PID_DIR" = "" ]; then
   YARN_PID_DIR=/tmp
@@ -88,7 +91,6 @@ fi
 # some variables
 export YARN_LOGFILE=yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.log
 export YARN_ROOT_LOGGER=${YARN_ROOT_LOGGER:-INFO,DRFA}
-export YARN_JHS_LOGGER=${YARN_JHS_LOGGER:-INFO,JSA}
 log=$YARN_LOG_DIR/yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.out
 pid=$YARN_PID_DIR/yarn-$YARN_IDENT_STRING-$command.pid
 
@@ -101,7 +103,7 @@ case $startStop in
 
   (start)
 
-    mkdir -p "$YARN_PID_DIR"
+    [ -w "$YARN_PID_DIR" ] || mkdir -p "$YARN_PID_DIR"
 
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then

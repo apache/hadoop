@@ -33,12 +33,7 @@ import org.apache.hadoop.mapred.JobConf;
  * ValueAggregatorDescriptor objects at configuration time. For each input
  * key/value pair, the mapper will use those objects to create aggregation
  * id/value pairs.
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorDescriptor}
- * instead 
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public interface ValueAggregatorDescriptor extends 

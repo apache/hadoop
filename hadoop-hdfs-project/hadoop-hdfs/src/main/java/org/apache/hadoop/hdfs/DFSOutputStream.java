@@ -1538,7 +1538,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
    * write pipeline have failed. 
    * @return the number of valid replicas of the current block
    */
-  synchronized int getNumCurrentReplicas() throws IOException {
+  public synchronized int getNumCurrentReplicas() throws IOException {
     dfsClient.checkOpen();
     isClosed();
     if (streamer == null) {

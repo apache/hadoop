@@ -19,19 +19,24 @@
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -127,7 +132,7 @@ import org.apache.hadoop.yarn.util.RackResolver;
 /**
  * Implementation of TaskAttempt interface.
  */
-@SuppressWarnings({ "rawtypes", "deprecation" })
+@SuppressWarnings({ "rawtypes" })
 public abstract class TaskAttemptImpl implements
     org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt,
       EventHandler<TaskAttemptEvent> {
@@ -142,7 +147,7 @@ public abstract class TaskAttemptImpl implements
   protected final JobConf conf;
   protected final Path jobFile;
   protected final int partition;
-  protected final EventHandler eventHandler;
+  protected EventHandler eventHandler;
   private final TaskAttemptId attemptId;
   private final Clock clock;
   private final org.apache.hadoop.mapred.JobID oldJobId;
@@ -910,8 +915,10 @@ public abstract class TaskAttemptImpl implements
   @SuppressWarnings("unchecked")
   @Override
   public void handle(TaskAttemptEvent event) {
-    LOG.info("Processing " + event.getTaskAttemptID() +
-        " of type " + event.getType());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Processing " + event.getTaskAttemptID() + " of type "
+          + event.getType());
+    }
     writeLock.lock();
     try {
       final TaskAttemptState oldState = getState();
@@ -1054,7 +1061,7 @@ public abstract class TaskAttemptImpl implements
     }
   }
 
-  private static class RequestContainerTransition implements
+  static class RequestContainerTransition implements
       SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
     private final boolean rescheduled;
     public RequestContainerTransition(boolean rescheduled) {
@@ -1074,17 +1081,47 @@ public abstract class TaskAttemptImpl implements
                 taskAttempt.attemptId, 
                 taskAttempt.resourceCapability));
       } else {
-        int i = 0;
-        String[] racks = new String[taskAttempt.dataLocalHosts.length];
+        Set<String> racks = new HashSet<String>(); 
         for (String host : taskAttempt.dataLocalHosts) {
-          racks[i++] = RackResolver.resolve(host).getNetworkLocation();
+          racks.add(RackResolver.resolve(host).getNetworkLocation());
         }
-        taskAttempt.eventHandler.handle(
-            new ContainerRequestEvent(taskAttempt.attemptId, 
-                taskAttempt.resourceCapability, 
-                taskAttempt.dataLocalHosts, racks));
+        taskAttempt.eventHandler.handle(new ContainerRequestEvent(
+            taskAttempt.attemptId, taskAttempt.resourceCapability, taskAttempt
+                .resolveHosts(taskAttempt.dataLocalHosts), racks
+                .toArray(new String[racks.size()])));
       }
     }
+  }
+
+  protected String[] resolveHosts(String[] src) {
+    String[] result = new String[src.length];
+    for (int i = 0; i < src.length; i++) {
+      if (isIP(src[i])) {
+        result[i] = resolveHost(src[i]);
+      } else {
+        result[i] = src[i];
+      }
+    }
+    return result;
+  }
+
+  protected String resolveHost(String src) {
+    String result = src; // Fallback in case of failure.
+    try {
+      InetAddress addr = InetAddress.getByName(src);
+      result = addr.getHostName();
+    } catch (UnknownHostException e) {
+      LOG.warn("Failed to resolve address: " + src
+          + ". Continuing to use the same.");
+    }
+    return result;
+  }
+
+  private static final Pattern ipPattern = // Pattern for matching ip
+    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");
+  
+  protected boolean isIP(String src) {
+    return ipPattern.matcher(src).matches();
   }
 
   private static class ContainerAssignedTransition implements
@@ -1278,15 +1315,11 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptEvent event) {
       //set the finish time
       taskAttempt.setFinishTime();
-      String taskType = 
-          TypeConverter.fromYarn(taskAttempt.attemptId.getTaskId().getTaskType()).toString();
-      LOG.info("In TaskAttemptImpl taskType: " + taskType);
       long slotMillis = computeSlotMillis(taskAttempt);
-      JobCounterUpdateEvent jce =
-          new JobCounterUpdateEvent(taskAttempt.attemptId.getTaskId()
-              .getJobId());
+      TaskId taskId = taskAttempt.attemptId.getTaskId();
+      JobCounterUpdateEvent jce = new JobCounterUpdateEvent(taskId.getJobId());
       jce.addCounterUpdate(
-        taskAttempt.attemptId.getTaskId().getTaskType() == TaskType.MAP ? 
+        taskId.getTaskType() == TaskType.MAP ? 
           JobCounter.SLOTS_MILLIS_MAPS : JobCounter.SLOTS_MILLIS_REDUCES,
           slotMillis);
       taskAttempt.eventHandler.handle(jce);

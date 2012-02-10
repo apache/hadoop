@@ -29,9 +29,7 @@ import org.apache.hadoop.mapreduce.QueueState;
 /**
  * Class that contains the information regarding the Job Queues which are 
  * maintained by the Hadoop Map/Reduce framework.
- * @deprecated Use {@link QueueInfo} instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class JobQueueInfo extends QueueInfo {

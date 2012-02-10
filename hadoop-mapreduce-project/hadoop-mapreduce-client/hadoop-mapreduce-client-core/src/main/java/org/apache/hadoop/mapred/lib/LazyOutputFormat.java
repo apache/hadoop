@@ -32,10 +32,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A Convenience class that creates output lazily. 
- * @deprecated Use 
- *   {@link org.apache.hadoop.mapreduce.lib.output.LazyOutputFormat} instead.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class LazyOutputFormat<K, V> extends FilterOutputFormat<K, V> {

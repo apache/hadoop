@@ -266,16 +266,26 @@ public class FSDirectory implements Closeable {
                             short replication,
                             long modificationTime,
                             long atime,
-                            long preferredBlockSize) 
+                            long preferredBlockSize,
+                            boolean underConstruction,
+                            String clientName,
+                            String clientMachine)
       throws UnresolvedLinkException {
     INode newNode;
     assert hasWriteLock();
-    newNode = new INodeFile(permissions, new BlockInfo[0], replication,
-                            modificationTime, atime, preferredBlockSize);
-    writeLock();
+    if (underConstruction) {
+      newNode = new INodeFileUnderConstruction(
+          permissions, replication,
+          preferredBlockSize, modificationTime, clientName, 
+          clientMachine, null);
+    } else {
+      newNode = new INodeFile(permissions, 0, replication,
+                              modificationTime, atime, preferredBlockSize);
+    }
+    writeLock(); // TODO: this is silly, considering the assert above!
     try {
       try {
-        newNode = addNode(path, newNode, 0);
+        newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
       } catch (IOException e) {
         return null;
       }
@@ -416,8 +426,8 @@ public class FSDirectory implements Closeable {
     return true;
   }
   
-  void unprotectedRemoveBlock(String path,
-      INodeFileUnderConstruction fileNode, Block block) throws IOException {
+  void unprotectedRemoveBlock(String path, INodeFileUnderConstruction fileNode, 
+      Block block) throws IOException {
     // modify file-> block and blocksMap
     fileNode.removeLastBlock(block);
     getBlockManager().removeBlockFromMap(block);
@@ -430,8 +440,8 @@ public class FSDirectory implements Closeable {
 
     // update space consumed
     INode[] pathINodes = getExistingPathINodes(path);
-    updateCount(pathINodes, pathINodes.length - 1, 0,
-        - fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
+    updateCount(pathINodes, pathINodes.length-1, 0,
+        -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
   }
 
   /**

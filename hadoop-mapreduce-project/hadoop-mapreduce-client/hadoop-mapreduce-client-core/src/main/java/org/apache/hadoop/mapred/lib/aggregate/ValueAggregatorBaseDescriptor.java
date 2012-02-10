@@ -28,12 +28,7 @@ import org.apache.hadoop.mapred.JobConf;
 /** 
  * This class implements the common functionalities of 
  * the subclasses of ValueAggregatorDescriptor class.
- * 
- * @deprecated Use 
- * {@link org.apache.hadoop.mapreduce.lib.aggregate.ValueAggregatorBaseDescriptor}
- * instead
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class ValueAggregatorBaseDescriptor extends org.apache.hadoop.mapreduce.

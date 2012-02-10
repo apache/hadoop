@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -38,11 +40,10 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.BlockPoolSlice;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolumeSet;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
-import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -81,8 +82,8 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
                               CHECKSUM_NULL, 16*1024 );
     byte[] nullCrcHeader = checksum.getHeader();
     nullCrcFileData =  new byte[2 + nullCrcHeader.length];
-    nullCrcFileData[0] = (byte) ((FSDataset.METADATA_VERSION >>> 8) & 0xff);
-    nullCrcFileData[1] = (byte) (FSDataset.METADATA_VERSION & 0xff);
+    nullCrcFileData[0] = (byte) ((BlockMetadataHeader.VERSION >>> 8) & 0xff);
+    nullCrcFileData[1] = (byte) (BlockMetadataHeader.VERSION & 0xff);
     for (int i = 0; i < nullCrcHeader.length; i++) {
       nullCrcFileData[i+2] = nullCrcHeader[i];
     }
@@ -390,9 +391,7 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
       Iterable<Block> injectBlocks) throws IOException {
     ExtendedBlock blk = new ExtendedBlock();
     if (injectBlocks != null) {
-      int numInjectedBlocks = 0;
       for (Block b: injectBlocks) { // if any blocks in list is bad, reject list
-        numInjectedBlocks++;
         if (b == null) {
           throw new NullPointerException("Null blocks in block list");
         }
@@ -555,31 +554,27 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
     }
   }
 
+  private BInfo getBInfo(final ExtendedBlock b) {
+    final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
+    return map == null? null: map.get(b.getLocalBlock());
+  }
+
+  @Override // {@link FSDatasetInterface}
+  public boolean contains(ExtendedBlock block) {
+    return getBInfo(block) != null;
+  }
+
   @Override // FSDatasetInterface
   public synchronized boolean isValidBlock(ExtendedBlock b) {
-    final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
-    if (map == null) {
-      return false;
-    }
-    BInfo binfo = map.get(b.getLocalBlock());
-    if (binfo == null) {
-      return false;
-    }
-    return binfo.isFinalized();
+    final BInfo binfo = getBInfo(b);
+    return binfo != null && binfo.isFinalized();
   }
 
   /* check if a block is created but not finalized */
   @Override
   public synchronized boolean isValidRbw(ExtendedBlock b) {
-    final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
-    if (map == null) {
-      return false;
-    }
-    BInfo binfo = map.get(b.getLocalBlock());
-    if (binfo == null) {
-      return false;
-    }
-    return !binfo.isFinalized();  
+    final BInfo binfo = getBInfo(b);
+    return binfo != null && !binfo.isFinalized();  
   }
 
   @Override
@@ -994,8 +989,33 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
   }
 
   @Override
-  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b)
-      throws IOException {
-    throw new IOException("getBlockLocalPathInfo not supported.");
+  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public String[] getBlockPoolList() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void checkAndUpdate(String bpid, long blockId, File diskFile,
+      File diskMetaFile, FSVolumeInterface vol) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<FSVolumeInterface> getVolumes() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<Block> getFinalizedBlocks(String bpid) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Map<String, Object> getVolumeInfoMap() {
+    throw new UnsupportedOperationException();
   }
 }

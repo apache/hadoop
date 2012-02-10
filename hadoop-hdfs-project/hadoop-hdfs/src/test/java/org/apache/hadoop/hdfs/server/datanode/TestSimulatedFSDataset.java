@@ -101,7 +101,7 @@ public class TestSimulatedFSDataset extends TestCase {
     InputStream metaInput = fsdataset.getMetaDataInputStream(b);
     DataInputStream metaDataInput = new DataInputStream(metaInput);
     short version = metaDataInput.readShort();
-    assertEquals(FSDataset.METADATA_VERSION, version);
+    assertEquals(BlockMetadataHeader.VERSION, version);
     DataChecksum checksum = DataChecksum.newDataChecksum(metaDataInput);
     assertEquals(DataChecksum.CHECKSUM_NULL, checksum.getChecksumType());
     assertEquals(0, checksum.getChecksumSize());  

@@ -41,7 +41,9 @@ import org.apache.hadoop.io.IOUtils;
  */
 abstract class CommandWithDestination extends FsCommand {  
   protected PathData dst;
-  protected boolean overwrite = false;
+  private boolean overwrite = false;
+  private boolean verifyChecksum = true;
+  private boolean writeChecksum = true;
   
   /**
    * 
@@ -51,6 +53,14 @@ abstract class CommandWithDestination extends FsCommand {
    */
   protected void setOverwrite(boolean flag) {
     overwrite = flag;
+  }
+  
+  protected void setVerifyChecksum(boolean flag) {
+    verifyChecksum = flag;
+  }
+  
+  protected void setWriteChecksum(boolean flag) {
+    writeChecksum = flag;
   }
   
   /**
@@ -201,6 +211,7 @@ abstract class CommandWithDestination extends FsCommand {
    * @throws IOException if copy fails
    */ 
   protected void copyFileToTarget(PathData src, PathData target) throws IOException {
+    src.fs.setVerifyChecksum(verifyChecksum);
     copyStreamToTarget(src.fs.open(src.path), target);
   }
   
@@ -217,6 +228,7 @@ abstract class CommandWithDestination extends FsCommand {
     if (target.exists && (target.stat.isDirectory() || !overwrite)) {
       throw new PathExistsException(target.toString());
     }
+    target.fs.setWriteChecksum(writeChecksum);
     PathData tempFile = null;
     try {
       tempFile = target.createTempFile(target+"._COPYING_");
