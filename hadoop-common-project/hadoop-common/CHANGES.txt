@@ -13,11 +13,6 @@ Trunk (unreleased changes)
     (suresh)
 
   IMPROVEMENTS
-    HADOOP-8048. Allow merging of Credentials (Daryn Sharp via tgraves)
- 
-    HADOOP-8032. mvn site:stage-deploy should be able to use the scp protocol
-    to stage documents (Ravi Prakash via tgraves)
-
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
     not covered (Eric Charles via bobby)
 
@@ -159,6 +154,11 @@ Release 0.23.2 - UNRELEASED
   NEW FEATURES                                                                    
   
   IMPROVEMENTS
+
+    HADOOP-8048. Allow merging of Credentials (Daryn Sharp via tgraves)
+ 
+    HADOOP-8032. mvn site:stage-deploy should be able to use the scp protocol
+    to stage documents (Ravi Prakash via tgraves)
 
     HADOOP-7923. Automate the updating of version numbers in the doc system.
     (szetszwo)
