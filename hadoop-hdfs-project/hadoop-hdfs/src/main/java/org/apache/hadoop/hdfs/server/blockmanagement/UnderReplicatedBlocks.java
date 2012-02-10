@@ -190,7 +190,7 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     assert curReplicas >= 0 : "Negative replicas!";
     int priLevel = getPriority(block, curReplicas, decomissionedReplicas,
                                expectedReplicas);
-    if(priLevel != LEVEL && priorityQueues.get(priLevel).add(block)) {
+    if(priorityQueues.get(priLevel).add(block)) {
       if(NameNode.blockStateChangeLog.isDebugEnabled()) {
         NameNode.blockStateChangeLog.debug(
           "BLOCK* NameSystem.UnderReplicationBlock.add:"
@@ -293,10 +293,10 @@ class UnderReplicatedBlocks implements Iterable<Block> {
         " curPri  " + curPri +
         " oldPri  " + oldPri);
     }
-    if(oldPri != LEVEL && oldPri != curPri) {
+    if(oldPri != curPri) {
       remove(block, oldPri);
     }
-    if(curPri != LEVEL && priorityQueues.get(curPri).add(block)) {
+    if(priorityQueues.get(curPri).add(block)) {
       if(NameNode.blockStateChangeLog.isDebugEnabled()) {
         NameNode.blockStateChangeLog.debug(
           "BLOCK* NameSystem.UnderReplicationBlock.update:"

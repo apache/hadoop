@@ -34,6 +34,9 @@ Release 2.7.0 - UNRELEASED
     HDFS-6877. Avoid calling checkDisk when an HDFS volume is removed during a
     write. (Lei Xu via Colin P. McCabe)
 
+    HDFS-2486. Remove unnecessary priority level checks in
+    UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
