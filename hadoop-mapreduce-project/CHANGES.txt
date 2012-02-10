@@ -753,6 +753,9 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3770. Zombie.getJobConf() results into NPE. (amarrk)
 
+    MAPREDUCE-3843. Job summary log file found missing on the RM host 
+    (Anupam Seth via tgraves)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

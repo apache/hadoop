@@ -20,6 +20,9 @@
 #
 # Environment Variables
 #
+#   HADOOP_LOGFILE Hadoop log file.
+#   HADOOP_ROOT_LOGGER Hadoop root logger.
+#   HADOOP_JHS_LOGGER  Hadoop JobSummary logger.
 #   YARN_CONF_DIR  Alternate conf dir. Default is ${YARN_HOME}/conf.
 #   YARN_LOG_DIR   Where log files are stored.  PWD by default.
 #   YARN_MASTER    host:path where hadoop code should be rsync'd from
@@ -86,8 +89,9 @@ if [ "$YARN_PID_DIR" = "" ]; then
 fi
 
 # some variables
-export YARN_LOGFILE=yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.log
-export YARN_ROOT_LOGGER=${YARN_ROOT_LOGGER:-INFO,DRFA}
+export HADOOP_LOGFILE=yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.log
+export HADOOP_ROOT_LOGGER=${HADOOP_ROOT_LOGGER:-INFO,DRFA}
+export HADOOP_JHS_LOGGER=${HADOOP_JHS_LOGGER:-INFO,JSA}
 log=$YARN_LOG_DIR/yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.out
 pid=$YARN_PID_DIR/yarn-$YARN_IDENT_STRING-$command.pid
 

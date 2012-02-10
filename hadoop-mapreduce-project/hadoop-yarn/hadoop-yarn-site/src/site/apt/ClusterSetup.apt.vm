@@ -437,32 +437,32 @@ Hadoop MapReduce Next Generation - Cluster Setup
     Format a new distributed filesystem:
   
 ----
-  $ $HADOOP_PREFIX_HOME/bin/hdfs namenode -format <cluster_name>
+  $ $HADOOP_PREFIX/bin/hdfs namenode -format <cluster_name>
 ----
 
     Start the HDFS with the following command, run on the designated NameNode:
   
 ----
-  $ $HADOOP_PREFIX_HOME/bin/hdfs start namenode --config $HADOOP_CONF_DIR  
+  $ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start namenode
 ----    	  
 
     Run a script to start DataNodes on all slaves:
 
 ----
-  $ $HADOOP_PREFIX_HOME/bin/hdfs start datanode --config $HADOOP_CONF_DIR  
+  $ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start datanode
 ----    	  
   
     Start the YARN with the following command, run on the designated 
     ResourceManager:
   
 ----
-  $ $YARN_HOME/bin/yarn start resourcemanager --config $HADOOP_CONF_DIR  
+  $ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resourcemanager 
 ----    	  
 
     Run a script to start NodeManagers on all slaves:
 
 ----
-  $ $YARN_HOME/bin/yarn start nodemanager --config $HADOOP_CONF_DIR  
+  $ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager 
 ----    	  
 
     Start a standalone WebAppProxy server.  If multiple servers
@@ -476,7 +476,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
     designated server:
   
 ----
-  $ $YARN_HOME/bin/mapred start historyserver --config $YARN_CONF_DIR  
+  $ $HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh start historyserver --config $HADOOP_CONF_DIR  
 ----    	  
 
     * Hadoop Shutdown      
@@ -485,26 +485,26 @@ Hadoop MapReduce Next Generation - Cluster Setup
     NameNode:
   
 ----
-  $ $HADOOP_PREFIX_HOME/bin/hdfs stop namenode --config $HADOOP_CONF_DIR  
+  $ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop namenode
 ----    	  
 
     Run a script to stop DataNodes on all slaves:
 
 ----
-  $ $HADOOP_PREFIX_HOME/bin/hdfs stop datanode --config $HADOOP_CONF_DIR  
+  $ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop datanode
 ----    	  
   
     Stop the ResourceManager with the following command, run on the designated 
     ResourceManager:
   
 ----
-  $ $YARN_HOME/bin/yarn stop resourcemanager --config $HADOOP_CONF_DIR  
+  $ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcemanager 
 ----    	  
 
     Run a script to stop NodeManagers on all slaves:
 
 ----
-  $ $YARN_HOME/bin/yarn stop nodemanager --config $HADOOP_CONF_DIR  
+  $ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager 
 ----    	  
 
     Stop the WebAppProxy server. If multiple servers are used with load
@@ -519,7 +519,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
     designated server:
   
 ----
-  $ $YARN_HOME/bin/mapred stop historyserver --config $YARN_CONF_DIR  
+  $ $HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh stop historyserver --config $HADOOP_CONF_DIR  
 ----    	  
 
     
@@ -978,34 +978,34 @@ KVNO Timestamp         Principal
     Format a new distributed filesystem as <hdfs>:
   
 ----
-[hdfs]$ $HADOOP_PREFIX_HOME/bin/hdfs namenode -format <cluster_name>
+[hdfs]$ $HADOOP_PREFIX/bin/hdfs namenode -format <cluster_name>
 ----
 
     Start the HDFS with the following command, run on the designated NameNode
     as <hdfs>:
   
 ----
-[hdfs]$ $HADOOP_PREFIX_HOME/bin/hdfs start namenode --config $HADOOP_CONF_DIR  
+[hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start namenode
 ----    	  
 
     Run a script to start DataNodes on all slaves as <root> with a special
     environment variable <<<HADOOP_SECURE_DN_USER>>> set to <hdfs>:
 
 ----
-[root]$ HADOOP_SECURE_DN_USER=hdfs $HADOOP_PREFIX_HOME/bin/hdfs start datanode --config $HADOOP_CONF_DIR  
+[root]$ HADOOP_SECURE_DN_USER=hdfs $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs start datanode
 ----    	  
   
     Start the YARN with the following command, run on the designated 
     ResourceManager as <yarn>:
   
 ----
-[yarn]$ $YARN_HOME/bin/yarn start resourcemanager --config $HADOOP_CONF_DIR  
+[yarn]$ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start resourcemanager 
 ----    	  
 
     Run a script to start NodeManagers on all slaves as <yarn>:
 
 ----
-[yarn]$ $YARN_HOME/bin/yarn start nodemanager --config $HADOOP_CONF_DIR  
+[yarn]$ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR start nodemanager 
 ----    	  
 
     Start a standalone WebAppProxy server. Run on the WebAppProxy 
@@ -1020,7 +1020,7 @@ KVNO Timestamp         Principal
     designated server as <mapred>:
   
 ----
-[mapred]$ $YARN_HOME/bin/mapred start historyserver --config $YARN_CONF_DIR  
+[mapred]$ $HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh start historyserver --config $HADOOP_CONF_DIR  
 ----    	  
 
     * Hadoop Shutdown      
@@ -1029,26 +1029,26 @@ KVNO Timestamp         Principal
     as <hdfs>:
   
 ----
-[hdfs]$ $HADOOP_PREFIX_HOME/bin/hdfs stop namenode --config $HADOOP_CONF_DIR  
+[hdfs]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop namenode
 ----    	  
 
     Run a script to stop DataNodes on all slaves as <root>:
 
 ----
-[root]$ $HADOOP_PREFIX_HOME/bin/hdfs stop datanode --config $HADOOP_CONF_DIR  
+[root]$ $HADOOP_PREFIX/sbin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script hdfs stop datanode
 ----    	  
   
     Stop the ResourceManager with the following command, run on the designated 
     ResourceManager as <yarn>:
   
 ----
-[yarn]$ $YARN_HOME/bin/yarn stop resourcemanager --config $HADOOP_CONF_DIR  
+[yarn]$ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop resourcemanager 
 ----    	  
 
     Run a script to stop NodeManagers on all slaves as <yarn>:
 
 ----
-[yarn]$ $YARN_HOME/bin/yarn stop nodemanager --config $HADOOP_CONF_DIR  
+[yarn]$ $YARN_HOME/sbin/yarn-daemon.sh --config $HADOOP_CONF_DIR stop nodemanager 
 ----    	  
 
     Stop the WebAppProxy server. Run on the WebAppProxy  server as
@@ -1063,7 +1063,7 @@ KVNO Timestamp         Principal
     designated server as <mapred>:
 
 ----
-[mapred]$ $YARN_HOME/bin/mapred stop historyserver --config $YARN_CONF_DIR  
+[mapred]$ $HADOOP_PREFIX/sbin/mr-jobhistory-daemon.sh stop historyserver --config $HADOOP_CONF_DIR  
 ----    	  
     
 * {Web Interfaces}      
