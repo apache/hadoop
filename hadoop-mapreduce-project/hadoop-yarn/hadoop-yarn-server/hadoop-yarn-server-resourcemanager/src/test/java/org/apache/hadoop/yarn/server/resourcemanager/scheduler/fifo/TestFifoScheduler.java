@@ -29,6 +29,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
@@ -72,6 +73,13 @@ public class TestFifoScheduler {
         hostName, containerManagerPort, nmHttpPort, rackName, memory,
         resourceManager.getResourceTrackerService(), resourceManager
             .getRMContext());
+  }
+  
+  @Test
+  public void testFifoSchedulerCapacityWhenNoNMs() {
+    FifoScheduler scheduler = new FifoScheduler();
+    QueueInfo queueInfo = scheduler.getQueueInfo(null, false, false);
+    Assert.assertEquals(0.0f, queueInfo.getCurrentCapacity());
   }
   
   @Test

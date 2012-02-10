@@ -9,6 +9,8 @@ Release 0.23.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    MAPREDUCE-3680. FifoScheduler web service rest API can print out invalid 
+    JSON. (B Anil Kumar via tgraves)
 
 Release 0.23.1 - 2012-02-08 
 
@@ -35,8 +37,9 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests. 
                     (Vinay Thota via amarrk)
-  MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
-  (Ravi Prakash via bobby)
+
+    MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
+    (Ravi Prakash via bobby)
 
     MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
                     (Vinay Thota via amarrk)

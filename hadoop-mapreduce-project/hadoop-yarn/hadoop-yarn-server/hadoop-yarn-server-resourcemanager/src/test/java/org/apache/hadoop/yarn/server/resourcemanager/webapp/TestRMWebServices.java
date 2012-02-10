@@ -539,7 +539,7 @@ public class TestRMWebServices extends JerseyTest {
     assertEquals("type doesn't match", "fifoScheduler", type);
     assertEquals("qstate doesn't match", QueueState.RUNNING.toString(), state);
     assertEquals("capacity doesn't match", 1.0, capacity, 0.0);
-    assertEquals("usedCapacity doesn't match", Float.NaN, usedCapacity, 0.0);
+    assertEquals("usedCapacity doesn't match", 0.0, usedCapacity, 0.0);
     assertEquals("minQueueMemoryCapacity doesn't match", 1024, minQueueCapacity);
     assertEquals("maxQueueMemoryCapacity doesn't match", 10240,
         maxQueueCapacity);
