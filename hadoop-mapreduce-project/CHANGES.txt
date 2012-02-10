@@ -98,8 +98,11 @@ Release 0.23.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-  MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
-  (Ravi Prakash via bobby)
+    MAPREDUCE-3680. FifoScheduler web service rest API can print out invalid 
+    JSON. (B Anil Kumar via tgraves)
+
+    MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
+    (Ravi Prakash via bobby)
 
 Release 0.23.1 - 2012-02-08 
 
