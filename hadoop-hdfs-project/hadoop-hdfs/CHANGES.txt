@@ -13,6 +13,9 @@ Release 0.23.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-2931. Switch DataNode's BlockVolumeChoosingPolicy to private-audience.
+    (harsh via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
