@@ -800,6 +800,9 @@ Release 0.23.1 - 2012-02-08
     MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
     (Ravi Prakash via bobby)
 
+    MAPREDUCE-3843. Job summary log file found missing on the RM host 
+    (Anupam Seth via tgraves)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
