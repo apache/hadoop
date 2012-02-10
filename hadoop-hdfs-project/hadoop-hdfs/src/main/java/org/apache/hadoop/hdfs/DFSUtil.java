@@ -609,19 +609,6 @@ public class DFSUtil {
   }
 
   /**
-   * @param address address of format host:port
-   * @return InetSocketAddress for the address
-   */
-  public static InetSocketAddress getSocketAddress(String address) {
-    int colon = address.indexOf(":");
-    if (colon < 0) {
-      return new InetSocketAddress(address, 0);
-    }
-    return new InetSocketAddress(address.substring(0, colon), 
-        Integer.parseInt(address.substring(colon + 1)));
-  }
-
-  /**
    * Round bytes to GiB (gibibyte)
    * @param bytes number of bytes
    * @return number of GiB

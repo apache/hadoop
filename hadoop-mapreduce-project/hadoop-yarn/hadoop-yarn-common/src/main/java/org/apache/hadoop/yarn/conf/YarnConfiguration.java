@@ -20,8 +20,13 @@ package org.apache.hadoop.yarn.conf;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 
 public class YarnConfiguration extends Configuration {
   private static final Splitter ADDR_SPLITTER = Splitter.on(':').trimResults();
@@ -543,7 +548,25 @@ public class YarnConfiguration extends Configuration {
     // Use apps manager address to figure out the host for webapp
     addr = conf.get(YarnConfiguration.RM_ADDRESS, YarnConfiguration.DEFAULT_RM_ADDRESS);
     String host = ADDR_SPLITTER.split(addr).iterator().next();
-    return JOINER.join(host, ":", port);
+    String rmAddress = JOINER.join(host, ":", port);
+    InetSocketAddress address = NetUtils.createSocketAddr(
+        rmAddress, DEFAULT_RM_WEBAPP_PORT, RM_WEBAPP_ADDRESS);
+    StringBuffer sb = new StringBuffer();
+    InetAddress resolved = address.getAddress();
+    if (resolved == null || resolved.isAnyLocalAddress() || 
+        resolved.isLoopbackAddress()) {
+      String lh = host;
+      try {
+        lh = InetAddress.getLocalHost().getCanonicalHostName();
+      } catch (UnknownHostException e) {
+        //Ignore and fallback.
+      }
+      sb.append(lh);
+    } else {
+      sb.append(address.getHostName());
+    }
+    sb.append(":").append(address.getPort());
+    return sb.toString();
   }
   
   public static String getRMWebAppURL(Configuration conf) {

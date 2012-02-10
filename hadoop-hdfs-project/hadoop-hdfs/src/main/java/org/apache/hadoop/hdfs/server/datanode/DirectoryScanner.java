@@ -43,20 +43,19 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.util.Daemon;
 
 /**
  * Periodically scans the data directories for block and block metadata files.
- * Reconciles the differences with block information maintained in
- * {@link FSDataset}
+ * Reconciles the differences with block information maintained in the dataset.
  */
 @InterfaceAudience.Private
 public class DirectoryScanner implements Runnable {
   private static final Log LOG = LogFactory.getLog(DirectoryScanner.class);
 
   private final DataNode datanode;
-  private final FSDataset dataset;
+  private final FSDatasetInterface dataset;
   private final ExecutorService reportCompileThreadPool;
   private final ScheduledExecutorService masterThread;
   private final long scanPeriodMsecs;
@@ -158,13 +157,13 @@ public class DirectoryScanner implements Runnable {
     private final long blockId;
     private final File metaFile;
     private final File blockFile;
-    private final FSVolume volume;
+    private final FSVolumeInterface volume;
 
     ScanInfo(long blockId) {
       this(blockId, null, null, null);
     }
 
-    ScanInfo(long blockId, File blockFile, File metaFile, FSVolume vol) {
+    ScanInfo(long blockId, File blockFile, File metaFile, FSVolumeInterface vol) {
       this.blockId = blockId;
       this.metaFile = metaFile;
       this.blockFile = blockFile;
@@ -183,7 +182,7 @@ public class DirectoryScanner implements Runnable {
       return blockId;
     }
 
-    FSVolume getVolume() {
+    FSVolumeInterface getVolume() {
       return volume;
     }
 
@@ -220,7 +219,7 @@ public class DirectoryScanner implements Runnable {
     }
   }
 
-  DirectoryScanner(DataNode dn, FSDataset dataset, Configuration conf) {
+  DirectoryScanner(DataNode dn, FSDatasetInterface dataset, Configuration conf) {
     this.datanode = dn;
     this.dataset = dataset;
     int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
@@ -269,7 +268,7 @@ public class DirectoryScanner implements Runnable {
         return;
       }
 
-      String[] bpids = dataset.getBPIdlist();
+      String[] bpids = dataset.getBlockPoolList();
       for(String bpid : bpids) {
         UpgradeManagerDatanode um = 
           datanode.getUpgradeManagerDatanode(bpid);
@@ -411,17 +410,29 @@ public class DirectoryScanner implements Runnable {
     diffRecord.add(new ScanInfo(blockId));
   }
 
+  /** Is the given volume still valid in the dataset? */
+  private static boolean isValid(final FSDatasetInterface dataset,
+      final FSVolumeInterface volume) {
+    for (FSVolumeInterface vol : dataset.getVolumes()) {
+      if (vol == volume) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Get lists of blocks on the disk sorted by blockId, per blockpool */
   private Map<String, ScanInfo[]> getDiskReport() {
     // First get list of data directories
-    List<FSVolume> volumes = dataset.volumes.getVolumes();
+    final List<FSVolumeInterface> volumes = dataset.getVolumes();
     ArrayList<ScanInfoPerBlockPool> dirReports =
       new ArrayList<ScanInfoPerBlockPool>(volumes.size());
     
     Map<Integer, Future<ScanInfoPerBlockPool>> compilersInProgress =
       new HashMap<Integer, Future<ScanInfoPerBlockPool>>();
     for (int i = 0; i < volumes.size(); i++) {
-      if (!dataset.volumes.isValid(volumes.get(i))) { // volume is still valid
+      if (!isValid(dataset, volumes.get(i))) {
+        // volume is invalid
         dirReports.add(i, null);
       } else {
         ReportCompiler reportCompiler =
@@ -446,7 +457,8 @@ public class DirectoryScanner implements Runnable {
     // Compile consolidated report for all the volumes
     ScanInfoPerBlockPool list = new ScanInfoPerBlockPool();
     for (int i = 0; i < volumes.size(); i++) {
-      if (dataset.volumes.isValid(volumes.get(i))) { // volume is still valid
+      if (isValid(dataset, volumes.get(i))) {
+        // volume is still valid
         list.addAll(dirReports.get(i));
       }
     }
@@ -461,9 +473,9 @@ public class DirectoryScanner implements Runnable {
 
   private static class ReportCompiler 
   implements Callable<ScanInfoPerBlockPool> {
-    private FSVolume volume;
+    private FSVolumeInterface volume;
 
-    public ReportCompiler(FSVolume volume) {
+    public ReportCompiler(FSVolumeInterface volume) {
       this.volume = volume;
     }
 
@@ -473,14 +485,14 @@ public class DirectoryScanner implements Runnable {
       ScanInfoPerBlockPool result = new ScanInfoPerBlockPool(bpList.length);
       for (String bpid : bpList) {
         LinkedList<ScanInfo> report = new LinkedList<ScanInfo>();
-        File bpFinalizedDir = volume.getBlockPoolSlice(bpid).getFinalizedDir();
+        File bpFinalizedDir = volume.getFinalizedDir(bpid);
         result.put(bpid, compileReport(volume, bpFinalizedDir, report));
       }
       return result;
     }
 
     /** Compile list {@link ScanInfo} for the blocks in the directory <dir> */
-    private LinkedList<ScanInfo> compileReport(FSVolume vol, File dir,
+    private LinkedList<ScanInfo> compileReport(FSVolumeInterface vol, File dir,
         LinkedList<ScanInfo> report) {
       File[] files;
       try {

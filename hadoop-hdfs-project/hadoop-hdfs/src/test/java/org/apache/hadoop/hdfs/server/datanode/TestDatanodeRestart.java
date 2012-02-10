@@ -30,17 +30,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-
-import org.junit.Test;
 import org.junit.Assert;
+import org.junit.Test;
 
 /** Test if a datanode can correctly upgrade itself */
 public class TestDatanodeRestart {
@@ -98,8 +98,9 @@ public class TestDatanodeRestart {
       out.write(writeBuf);
       out.hflush();
       DataNode dn = cluster.getDataNodes().get(0);
-      for (FSVolume volume : ((FSDataset)dn.data).volumes.getVolumes()) {
-        File currentDir = volume.getDir().getParentFile();
+      for (FSVolumeInterface v : dn.data.getVolumes()) {
+        FSVolume volume = (FSVolume)v;
+        File currentDir = volume.getCurrentDir().getParentFile().getParentFile();
         File rbwDir = new File(currentDir, "rbw");
         for (File file : rbwDir.listFiles()) {
           if (isCorrupt && Block.isBlockFilename(file)) {
@@ -188,7 +189,7 @@ public class TestDatanodeRestart {
     } else {
       src = replicaInfo.getMetaFile();
     }
-    File dst = FSDataset.getUnlinkTmpFile(src);
+    File dst = DatanodeUtil.getUnlinkTmpFile(src);
     if (isRename) {
       src.renameTo(dst);
     } else {

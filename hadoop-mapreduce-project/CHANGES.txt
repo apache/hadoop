@@ -26,7 +26,17 @@ Release 0.23-PB - Unreleased
     MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
     for HDFS-2895. (Suresh Srinivas via vinodkv)
 
-Release 0.23.1 - Unreleased
+Release 0.23.2 - UNRELEASED
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.1 - 2012-02-08 
 
   NEW FEATURES                                                                    
 
@@ -48,6 +58,8 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests. 
                     (Vinay Thota via amarrk)
+  MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
+  (Ravi Prakash via bobby)
 
     MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
                     (Vinay Thota via amarrk)
@@ -79,6 +91,9 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3102. Changed NodeManager to fail fast when LinuxContainerExecutor
     has wrong configuration or permissions. (Hitesh Shah via vinodkv)
+
+    MAPREDUCE-3415. improve MiniMRYarnCluster & DistributedShell JAR
+    resolution. (tucu)
 
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides 
     client APIs cross MR1 and MR2. (Ahmed via tucu)
@@ -221,6 +236,8 @@ Release 0.23.1 - Unreleased
     acmurthy) 
 
   BUG FIXES
+    MAPREDUCE-3770. Zombie.getJobConf() results into NPE. (amarrk)
+
     MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
     (Dave Thompson via bobby)
 
@@ -720,7 +737,37 @@ Release 0.23.1 - Unreleased
 
     MAPREDUCE-3709. TestDistributedShell is failing. (Hitesh Shah via 
     mahadev)
+
+    MAPREDUCE-3436. JobHistory webapp address should use the host configured
+    in the jobhistory address. (Ahmed Radwan via sseth)
+
+    MAPREDUCE-3815. Fixed MR AM to always use hostnames and never IPs when
+    requesting containers so that scheduler can give off data local containers
+    correctly. (Siddarth Seth via vinodkv)
  
+    MAPREDUCE-3833. Fixed a bug in reinitiaziling of queues. (Jason Lowe via
+    acmurthy) 
+
+    MAPREDUCE-3826. Fixed a bug in RM web-ui which broke sorting. (Jonathan
+    Eagles via acmurthy)
+
+    MAPREDUCE-3823. Ensure counters are calculated only once after a job
+    finishes. (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-3827. Changed Counters to use ConcurrentSkipListMap for
+    performance. (vinodkv via acmurthy)  
+
+    MAPREDUCE-3822. Changed FS counter computation to use all occurences of
+    the same FS scheme, instead of randomly using one. (Mahadev Konar via
+    sseth)
+
+    MAPREDUCE-3834. Changed MR AM to not add the same rack entry multiple times
+    into the container request table when multiple hosts for a split happen to
+    be on the same rack. (Siddarth Seth via vinodkv)
+
+    MAPREDUCE-3828. Ensure that urls in single-node mode are correct. (sseth
+    via acmurthy) 
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES

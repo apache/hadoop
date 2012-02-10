@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -38,15 +40,15 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
+import org.junit.Before;
+import org.junit.Test;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
-import junit.framework.TestCase;
-
-public class TestBackupNode extends TestCase {
+public class TestBackupNode {
   public static final Log LOG = LogFactory.getLog(TestBackupNode.class);
 
   
@@ -57,8 +59,8 @@ public class TestBackupNode extends TestCase {
   
   static final String BASE_DIR = MiniDFSCluster.getBaseDirectory();
 
-  protected void setUp() throws Exception {
-    super.setUp();
+  @Before
+  public void setUp() throws Exception {
     File baseDir = new File(BASE_DIR);
     if(baseDir.exists())
       if(!(FileUtil.fullyDelete(baseDir)))
@@ -89,8 +91,7 @@ public class TestBackupNode extends TestCase {
     return (BackupNode)NameNode.createNameNode(new String[]{startupOpt.getName()}, c);
   }
 
-  void waitCheckpointDone(
-      MiniDFSCluster cluster, BackupNode backup, long txid) {
+  void waitCheckpointDone(MiniDFSCluster cluster, long txid) {
     long thisCheckpointTxId;
     do {
       try {
@@ -98,9 +99,8 @@ public class TestBackupNode extends TestCase {
             "checkpoint txid should increase above " + txid);
         Thread.sleep(1000);
       } catch (Exception e) {}
-      thisCheckpointTxId = backup.getFSImage().getStorage()
+      thisCheckpointTxId = cluster.getNameNode().getFSImage().getStorage()
         .getMostRecentCheckpointTxId();
-
     } while (thisCheckpointTxId < txid);
     
     // Check that the checkpoint got uploaded to NN successfully
@@ -108,6 +108,7 @@ public class TestBackupNode extends TestCase {
         Collections.singletonList((int)thisCheckpointTxId));
   }
 
+  @Test
   public void testCheckpointNode() throws Exception {
     testCheckpoint(StartupOption.CHECKPOINT);
   }
@@ -117,6 +118,7 @@ public class TestBackupNode extends TestCase {
    * and keep in sync, even while the NN rolls, checkpoints
    * occur, etc.
    */
+  @Test
   public void testBackupNodeTailsEdits() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -234,6 +236,7 @@ public class TestBackupNode extends TestCase {
     FSImageTestUtil.assertParallelFilesAreIdentical(dirs, ImmutableSet.of("VERSION"));
   }
   
+  @Test
   public void testBackupNode() throws Exception {
     testCheckpoint(StartupOption.BACKUP);
   }  
@@ -270,7 +273,7 @@ public class TestBackupNode extends TestCase {
       //
       long txid = cluster.getNameNodeRpc().getTransactionID();
       backup = startBackupNode(conf, op, 1);
-      waitCheckpointDone(cluster, backup, txid);
+      waitCheckpointDone(cluster, txid);
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
       assertTrue(e.getLocalizedMessage(), false);
@@ -305,7 +308,7 @@ public class TestBackupNode extends TestCase {
       //
       backup = startBackupNode(conf, op, 1);
       long txid = cluster.getNameNodeRpc().getTransactionID();
-      waitCheckpointDone(cluster, backup, txid);
+      waitCheckpointDone(cluster, txid);
 
       for (int i = 0; i < 10; i++) {
         fileSys.mkdirs(new Path("file_" + i));
@@ -313,11 +316,11 @@ public class TestBackupNode extends TestCase {
 
       txid = cluster.getNameNodeRpc().getTransactionID();
       backup.doCheckpoint();
-      waitCheckpointDone(cluster, backup, txid);
+      waitCheckpointDone(cluster, txid);
 
       txid = cluster.getNameNodeRpc().getTransactionID();
       backup.doCheckpoint();
-      waitCheckpointDone(cluster, backup, txid);
+      waitCheckpointDone(cluster, txid);
 
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);

@@ -119,7 +119,28 @@ Release 0.23-PB - Unreleased
     HDFS-2768. BackupNode stop can not close proxy connections because
     it is not a proxy instance. (Uma Maheswara Rao G via eli)
 
-Release 0.23.1 - UNRELEASED
+Release 0.23.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+    HDFS-2887. FSVolume, is a part of FSDatasetInterface implementation, should
+    not be referred outside FSDataset.  A new FSVolumeInterface is defined.
+    The BlockVolumeChoosingPolicy.chooseVolume(..) method signature is also
+    updated.  (szetszwo)
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+    HDFS-2923. Namenode IPC handler count uses the wrong configuration key
+    (todd)
+
+    HDFS-2764. TestBackupNode is racy. (atm)
+
+Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
 
@@ -133,6 +154,10 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2545. Change WebHDFS to support multiple namenodes in federation.
     (szetszwo)
+
+    HDFS-2178. Contributing Hoop to HDFS, replacement for HDFS proxy
+    with read/write capabilities. (tucu)
+
 
   IMPROVEMENTS
     HDFS-2560. Refactor BPOfferService to be a static inner class (todd)
@@ -167,9 +192,6 @@ Release 0.23.1 - UNRELEASED
     HDFS-2604. Add a log message to show if WebHDFS is enabled and a
     configuration section in the forrest doc.  (szetszwo)
 
-    HDFS-2178. Contributing Hoop to HDFS, replacement for HDFS proxy
-    with read/write capabilities. (tucu)
-
     HDFS-2511. Add dev script to generate HDFS protobufs. (tucu)
 
     HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
@@ -180,7 +202,8 @@ Release 0.23.1 - UNRELEASED
     HDFS-2335. DataNodeCluster and NNStorage always pull fresh entropy.
     (Uma Maheswara Rao G via eli)
 
-    HDFS-2574. Remove references to some deprecated properties in conf templates and defaults files. (Joe Crobak via harsh)
+    HDFS-2574. Remove references to some deprecated properties in conf
+    templates and defaults files. (Joe Crobak via harsh)
 
     HDFS-2722. HttpFs should not be using an int for block size. (harsh)
 
@@ -188,21 +211,22 @@ Release 0.23.1 - UNRELEASED
     suresh)
 
     HDFS-2349. Corruption detected during block transfers between DNs
-               should log a WARN instead of INFO. (harsh)
+    should log a WARN instead of INFO. (harsh)
 
-    HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
-
-    HDFS-2729. Update BlockManager's comments regarding the invalid block set (harsh)
+    HDFS-2729. Update BlockManager's comments regarding the invalid block
+    set (harsh)
  
-    HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream method (harsh)
+    HDFS-2726. Fix a logging issue under DFSClient's createBlockOutputStream
+    method (harsh)
 
     HDFS-554. Use System.arraycopy in BlockInfo.ensureCapacity. (harsh)
  
-    HDFS-1314. Make dfs.blocksize accept size-indicating prefixes (Sho Shimauchi via harsh)
+    HDFS-1314. Make dfs.blocksize accept size-indicating prefixes.
+    (Sho Shimauchi via harsh)
 
     HDFS-69. Improve the 'dfsadmin' commandline help. (harsh)
 
-    HDFS-2788. HdfsServerConstants#DN_KEEPALIVE_TIMEOUT is dead code (eli)
+    HDFS-2788. HdfsServerConstants#DN_KEEPALIVE_TIMEOUT is dead code. (eli)
 
     HDFS-362.  FSEditLog should not writes long and short as UTF8, and should
     not use ArrayWritable for writing non-array items.  (Uma Maheswara Rao G
@@ -215,7 +239,7 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-2818. Fix a missing space issue in HDFS webapps' title tags. (Devaraj K via harsh)
 
-    HDFS-2397. Undeprecate SecondaryNameNode (eli)
+    HDFS-2397. Undeprecate SecondaryNameNode. (eli)
 
     HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
     information. (Hitesh Shah via jitendra)
@@ -227,6 +251,9 @@ Release 0.23.1 - UNRELEASED
     (Robert Joseph Evans via jitendra)
 
     HDFS-2868. Expose xceiver counts via the DataNode MXBean. (harsh)
+
+    HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal
+    Lee via jitendra)
 
   OPTIMIZATIONS
 
@@ -319,11 +346,14 @@ Release 0.23.1 - UNRELEASED
 
     HDFS-442. dfsthroughput in test jar throws NPE (harsh)
 
-    HDFS-2836. HttpFSServer still has 2 javadoc warnings in trunk (revans2 via tucu)
+    HDFS-2836. HttpFSServer still has 2 javadoc warnings in trunk.
+    (revans2 via tucu)
 
-    HDFS-2837. mvn javadoc:javadoc not seeing LimitedPrivate class (revans2 via tucu)
+    HDFS-2837. mvn javadoc:javadoc not seeing LimitedPrivate class.
+    (revans2 via tucu)
 
-    HDFS-2840. TestHostnameFilter should work with localhost or localhost.localdomain (tucu)
+    HDFS-2840. TestHostnameFilter should work with localhost or 
+    localhost.localdomain (tucu)
 
     HDFS-2791. If block report races with closing of file, replica is
     incorrectly marked corrupt. (todd)

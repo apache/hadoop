@@ -25,7 +25,6 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FileUtil;
 
 /** Various commands for copy files */
@@ -103,42 +102,16 @@ class CopyCommands {
       "to the local name.  <src> is kept.  When copying multiple,\n" +
       "files, the destination must be a directory.";
 
-    /**
-     * The prefix for the tmp file used in copyToLocal.
-     * It must be at least three characters long, required by
-     * {@link java.io.File#createTempFile(String, String, File)}.
-     */
-    private boolean copyCrc;
-    private boolean verifyChecksum;
-
     @Override
     protected void processOptions(LinkedList<String> args)
     throws IOException {
       CommandFormat cf = new CommandFormat(
           1, Integer.MAX_VALUE, "crc", "ignoreCrc");
       cf.parse(args);
-      copyCrc = cf.getOpt("crc");
-      verifyChecksum = !cf.getOpt("ignoreCrc");
-      
+      setWriteChecksum(cf.getOpt("crc"));
+      setVerifyChecksum(!cf.getOpt("ignoreCrc"));
       setRecursive(true);
       getLocalDestination(args);
-    }
-
-    @Override
-    protected void copyFileToTarget(PathData src, PathData target)
-    throws IOException {
-      src.fs.setVerifyChecksum(verifyChecksum);
-
-      if (copyCrc && !(src.fs instanceof ChecksumFileSystem)) {
-        displayWarning(src.fs + ": Does not support checksums");
-        copyCrc = false;
-      }      
-
-      super.copyFileToTarget(src, target);
-      if (copyCrc) {
-        // should we delete real file if crc copy fails?
-        super.copyFileToTarget(src.getChecksumFile(), target.getChecksumFile());
-      }
     }
   }
 

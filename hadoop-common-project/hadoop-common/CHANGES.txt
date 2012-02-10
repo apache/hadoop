@@ -63,7 +63,29 @@ Release 0.23-PB - Unreleased
     HADOOP-7931. o.a.h.ipc.WritableRpcEngine should have a way to force
                  initialization (atm)
 
-Release 0.23.1 - Unreleased
+Release 0.23.2 - UNRELEASED
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+    HADOOP-8032. mvn site:stage-deploy should be able to use the scp protocol
+    to stage documents (Ravi Prakash via tgraves)
+
+    HADOOP-7923. Automate the updating of version numbers in the doc system.
+    (szetszwo)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HADOOP-8042  When copying a file out of HDFS, modifying it, and uploading
+    it back into HDFS, the put fails due to a CRC mismatch
+    (Daryn Sharp via bobby)
+
+    HADOOP-8035 Hadoop Maven site is inefficient and runs phases redundantly
+    (abayer via tucu)
+
+Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
 
@@ -166,8 +188,6 @@ Release 0.23.1 - Unreleased
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
   BUG FIXES
-   HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum
-   (Daryn Sharp via bobby)
 
    HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
    (Jon Eagles via bobby)
@@ -183,6 +203,14 @@ Release 0.23.1 - Unreleased
   
    HADOOP-7811. TestUserGroupInformation#testGetServerSideGroups test fails in chroot.
    (Jonathan Eagles via mahadev)
+
+   HADOOP-7813. Fix test-patch to use proper numerical comparison when checking
+   javadoc and findbugs warning counts. (Jonathan Eagles via tlipcon)
+
+   HADOOP-7841. Run tests with non-secure random. (tlipcon)
+
+    HADOOP-7851. Configuration.getClasses() never returns the default value. 
+                 (Uma Maheswara Rao G via amarrk)
 
    HADOOP-7787. Make source tarball use conventional name.
    (Bruno Mahé via tomwhite)
@@ -276,6 +304,9 @@ Release 0.23.1 - Unreleased
 
    HADOOP-8012. hadoop-daemon.sh and yarn-daemon.sh are trying to mkdir
    and chown log/pid dirs which can fail. (Roman Shaposhnik via eli)
+
+   HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum
+   (Daryn Sharp via bobby)
 
 Release 0.23.0 - 2011-11-01 
 

@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.spy;
+
 import java.util.Iterator;
 
 import junit.framework.Assert;
@@ -35,6 +39,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.junit.Test;
 
 /**
@@ -175,6 +180,41 @@ public class TestMRApp {
     app.waitForState(job, JobState.ERROR);
   }
 
+  private final class MRAppWithSpiedJob extends MRApp {
+    private JobImpl spiedJob;
+
+    private MRAppWithSpiedJob(int maps, int reduces, boolean autoComplete,
+        String testName, boolean cleanOnStart) {
+      super(maps, reduces, autoComplete, testName, cleanOnStart);
+    }
+
+    @Override
+    protected Job createJob(Configuration conf) {
+      spiedJob = spy((JobImpl) super.createJob(conf));
+      ((AppContext) getContext()).getAllJobs().put(spiedJob.getID(), spiedJob);
+      return spiedJob;
+    }
+
+    JobImpl getSpiedJob() {
+      return this.spiedJob;
+    }
+  }
+
+  @Test
+  public void testCountersOnJobFinish() throws Exception {
+    MRAppWithSpiedJob app =
+        new MRAppWithSpiedJob(1, 1, true, this.getClass().getName(), true);
+    JobImpl job = (JobImpl)app.submit(new Configuration());
+    app.waitForState(job, JobState.SUCCEEDED);
+    app.verifyCompleted();
+    System.out.println(job.getAllCounters());
+    // Just call getCounters
+    job.getAllCounters();
+    job.getAllCounters();
+    // Should be called only once
+    verify(job, times(1)).constructFinalFullcounters();
+  }
+
   @Test
   public void checkJobStateTypeConversion() {
     //verify that all states can be converted without 
@@ -200,5 +240,6 @@ public class TestMRApp {
     t.testCommitPending();
     t.testCompletedMapsForReduceSlowstart();
     t.testJobError();
+    t.testCountersOnJobFinish();
   }
 }

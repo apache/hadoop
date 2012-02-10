@@ -498,7 +498,7 @@ public class JspHelper {
     String namenodeAddressInUrl = request.getParameter(NAMENODE_ADDRESS);
     InetSocketAddress namenodeAddress = null;
     if (namenodeAddressInUrl != null) {
-      namenodeAddress = DFSUtil.getSocketAddress(namenodeAddressInUrl);
+      namenodeAddress = NetUtils.createSocketAddr(namenodeAddressInUrl);
     } else if (context != null) {
       namenodeAddress = NameNodeHttpServer.getNameNodeAddressFromContext(
           context); 

@@ -119,7 +119,8 @@ public class JobEndNotifier implements Configurable {
     boolean success = false;
     try {
       Log.info("Job end notification trying " + urlToNotify);
-      HttpURLConnection conn = (HttpURLConnection) urlToNotify.openConnection();
+      HttpURLConnection conn =
+        (HttpURLConnection) urlToNotify.openConnection(proxyToUse);
       conn.setConnectTimeout(5*1000);
       conn.setReadTimeout(5*1000);
       conn.setAllowUserInteraction(false);

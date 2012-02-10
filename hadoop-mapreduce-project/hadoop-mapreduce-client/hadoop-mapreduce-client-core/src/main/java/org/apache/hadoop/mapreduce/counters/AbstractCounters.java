@@ -18,19 +18,18 @@
 
 package org.apache.hadoop.mapreduce.counters;
 
+import static org.apache.hadoop.mapreduce.counters.CounterGroupFactory.getFrameworkGroupId;
+import static org.apache.hadoop.mapreduce.counters.CounterGroupFactory.isFrameworkGroup;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentSkipListMap;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
-
-import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
@@ -40,7 +39,10 @@ import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.TaskCounter;
-import static org.apache.hadoop.mapreduce.counters.CounterGroupFactory.*;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Maps;
 
 /**
  * An abstract class to provide common implementation for the Counters
@@ -61,8 +63,10 @@ public abstract class AbstractCounters<C extends Counter,
    * A cache from enum values to the associated counter.
    */
   private Map<Enum<?>, C> cache = Maps.newIdentityHashMap();
-  private Map<String, G> fgroups = Maps.newTreeMap(); // framework & fs groups
-  private Map<String, G> groups = Maps.newTreeMap();  // other groups
+  //framework & fs groups
+  private Map<String, G> fgroups = new ConcurrentSkipListMap<String, G>();
+  // other groups
+  private Map<String, G> groups = new ConcurrentSkipListMap<String, G>();
   private final CounterGroupFactory<C, G> groupFactory;
 
   // For framework counter serialization without strings
@@ -181,14 +185,13 @@ public abstract class AbstractCounters<C extends Counter,
    * @return Set of counter names.
    */
   public synchronized Iterable<String> getGroupNames() {
-    return Iterables.concat(ImmutableSet.copyOf(fgroups.keySet()),
-                            ImmutableSet.copyOf(groups.keySet()));
+    return Iterables.concat(fgroups.keySet(), groups.keySet());
   }
 
   @Override
-  public synchronized Iterator<G> iterator() {
-    return Iterators.concat(ImmutableSet.copyOf(fgroups.values()).iterator(),
-                            ImmutableSet.copyOf(groups.values()).iterator());
+  public Iterator<G> iterator() {
+    return Iterators.concat(fgroups.values().iterator(),
+                            groups.values().iterator());
   }
 
   /**
@@ -216,7 +219,7 @@ public abstract class AbstractCounters<C extends Counter,
   private String filterGroupName(String oldName) {
     String newName = legacyMap.get(oldName);
     if (newName == null) {
-      return limits.filterGroupName(oldName);
+      return Limits.filterGroupName(oldName);
     }
     LOG.warn("Group "+ oldName +" is deprecated. Use "+ newName +" instead");
     return newName;
