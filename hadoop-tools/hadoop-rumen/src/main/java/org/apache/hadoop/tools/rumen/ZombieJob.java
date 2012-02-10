@@ -229,7 +229,7 @@ public class ZombieJob implements JobStory {
   @Override
   public String getName() {
     JobName jobName = job.getJobName();
-    if (jobName == null) {
+    if (jobName == null || jobName.getValue() == null) {
       return "(name unknown)";
     } else {
       return jobName.getValue();
