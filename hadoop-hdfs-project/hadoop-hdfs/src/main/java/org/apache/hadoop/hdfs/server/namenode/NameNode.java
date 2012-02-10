@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -900,36 +901,45 @@ public class NameNode {
     }
   }
 
-  synchronized void monitorHealth() throws HealthCheckFailedException {
+  synchronized void monitorHealth() 
+      throws HealthCheckFailedException, AccessControlException {
+    namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
-      return; // no-op, if HA is not eanbled
+      return; // no-op, if HA is not enabled
     }
     // TODO:HA implement health check
     return;
   }
   
-  synchronized void transitionToActive() throws ServiceFailedException {
+  synchronized void transitionToActive() 
+      throws ServiceFailedException, AccessControlException {
+    namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
     state.setState(haContext, ACTIVE_STATE);
   }
   
-  synchronized void transitionToStandby() throws ServiceFailedException {
+  synchronized void transitionToStandby() 
+      throws ServiceFailedException, AccessControlException {
+    namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }
     state.setState(haContext, STANDBY_STATE);
   }
 
-  synchronized HAServiceState getServiceState() {
+  synchronized HAServiceState getServiceState() throws AccessControlException {
+    namesystem.checkSuperuserPrivilege();
     if (state == null) {
       return HAServiceState.INITIALIZING;
     }
     return state.getServiceState();
   }
 
-  synchronized boolean readyToBecomeActive() throws ServiceFailedException {
+  synchronized boolean readyToBecomeActive()
+      throws ServiceFailedException, AccessControlException {
+    namesystem.checkSuperuserPrivilege();
     if (!haEnabled) {
       throw new ServiceFailedException("HA for namenode is not enabled");
     }

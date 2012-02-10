@@ -988,27 +988,32 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // HAServiceProtocol
-  public synchronized void monitorHealth() throws HealthCheckFailedException {
+  public synchronized void monitorHealth() 
+      throws HealthCheckFailedException, AccessControlException {
     nn.monitorHealth();
   }
   
   @Override // HAServiceProtocol
-  public synchronized void transitionToActive() throws ServiceFailedException {
+  public synchronized void transitionToActive() 
+      throws ServiceFailedException, AccessControlException {
     nn.transitionToActive();
   }
   
   @Override // HAServiceProtocol
-  public synchronized void transitionToStandby() throws ServiceFailedException {
+  public synchronized void transitionToStandby() 
+      throws ServiceFailedException, AccessControlException {
     nn.transitionToStandby();
   }
 
   @Override // HAServiceProtocol
-  public synchronized HAServiceState getServiceState() {
+  public synchronized HAServiceState getServiceState() 
+      throws AccessControlException {
     return nn.getServiceState();
   }
 
   @Override // HAServiceProtocol
-  public synchronized boolean readyToBecomeActive() throws ServiceFailedException {
+  public synchronized boolean readyToBecomeActive() 
+      throws ServiceFailedException, AccessControlException {
     return nn.readyToBecomeActive();
   }
 

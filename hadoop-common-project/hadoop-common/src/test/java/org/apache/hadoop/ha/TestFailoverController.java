@@ -32,6 +32,7 @@ import static org.apache.hadoop.ha.TestNodeFencer.setupFencer;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -132,6 +133,31 @@ public class TestFailoverController {
     assertEquals(HAServiceState.ACTIVE, svc1.getServiceState());
     assertEquals(HAServiceState.ACTIVE, svc2.getServiceState());
   }
+
+  @Test
+  public void testFailoverWithoutPermission() throws Exception {
+    DummyService svc1 = new DummyService(HAServiceState.ACTIVE) {
+      @Override
+      public HAServiceState getServiceState() throws IOException {
+        throw new AccessControlException("Access denied");
+      }
+    };
+    DummyService svc2 = new DummyService(HAServiceState.STANDBY) {
+      @Override
+      public HAServiceState getServiceState() throws IOException {
+        throw new AccessControlException("Access denied");
+      }
+    };
+    NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
+
+    try {
+      FailoverController.failover(svc1,  svc1Addr,  svc2,  svc2Addr, fencer, false, false);
+      fail("Can't failover when access is denied");
+    } catch (FailoverFailedException ffe) {
+      assertTrue(ffe.getCause().getMessage().contains("Access denied"));
+    }
+  }
+
 
   @Test
   public void testFailoverToUnreadyService() throws Exception {

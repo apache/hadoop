@@ -194,3 +194,5 @@ HDFS-2915. HA: TestFailureOfSharedDir.testFailureOfSharedDir() has race conditio
 HDFS-2912. Namenode not shutting down when shared edits dir is inaccessible. (Bikas Saha via atm)
 
 HDFS-2922. HA: close out operation categories. (eli)
+
+HDFS-2917. HA: haadmin should not work if run by regular user (eli)

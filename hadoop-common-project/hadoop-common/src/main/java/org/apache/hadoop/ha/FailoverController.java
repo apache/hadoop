@@ -61,6 +61,7 @@ public class FailoverController {
                                         boolean forceActive)
       throws FailoverFailedException {
     HAServiceState toSvcState;
+
     try {
       toSvcState = toSvc.getServiceState();
     } catch (IOException e) {
@@ -68,10 +69,12 @@ public class FailoverController {
       LOG.error(msg, e);
       throw new FailoverFailedException(msg, e);
     }
+
     if (!toSvcState.equals(HAServiceState.STANDBY)) {
       throw new FailoverFailedException(
           "Can't failover to an active service");
     }
+
     try {
       HAServiceProtocolHelper.monitorHealth(toSvc);
     } catch (HealthCheckFailedException hce) {
@@ -81,6 +84,7 @@ public class FailoverController {
       throw new FailoverFailedException(
           "Got an IO exception", e);
     }
+
     try {
       if (!toSvc.readyToBecomeActive()) {
         if (!forceActive) {

@@ -249,7 +249,10 @@ public abstract class HAAdmin extends Configured implements Tool {
     try {
       return runCmd(argv);
     } catch (IllegalArgumentException iae) {
-      errOut.println("Illegal argument: " + iae.getMessage());
+      errOut.println("Illegal argument: " + iae.getLocalizedMessage());
+      return -1;
+    } catch (IOException ioe) {
+      errOut.println("Operation failed: " + ioe.getLocalizedMessage());
       return -1;
     }
   }

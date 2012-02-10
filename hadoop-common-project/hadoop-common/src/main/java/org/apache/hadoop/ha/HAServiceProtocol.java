@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
 
 import java.io.IOException;
@@ -75,10 +76,13 @@ public interface HAServiceProtocol extends VersionedProtocol {
    * 
    * @throws HealthCheckFailedException
    *           if the health check of a service fails.
+   * @throws AccessControlException
+   *           if access is denied.
    * @throws IOException
    *           if other errors happen
    */
   public void monitorHealth() throws HealthCheckFailedException,
+                                     AccessControlException,
                                      IOException;
 
   /**
@@ -87,10 +91,13 @@ public interface HAServiceProtocol extends VersionedProtocol {
    * 
    * @throws ServiceFailedException
    *           if transition from standby to active fails.
+   * @throws AccessControlException
+   *           if access is denied.
    * @throws IOException
    *           if other errors happen
    */
   public void transitionToActive() throws ServiceFailedException,
+                                          AccessControlException,
                                           IOException;
 
   /**
@@ -99,28 +106,37 @@ public interface HAServiceProtocol extends VersionedProtocol {
    * 
    * @throws ServiceFailedException
    *           if transition from active to standby fails.
+   * @throws AccessControlException
+   *           if access is denied.
    * @throws IOException
    *           if other errors happen
    */
   public void transitionToStandby() throws ServiceFailedException,
+                                           AccessControlException,
                                            IOException;
 
   /**
    * Return the current state of the service.
    * 
+   * @throws AccessControlException
+   *           if access is denied.
    * @throws IOException
    *           if other errors happen
    */
-  public HAServiceState getServiceState() throws IOException;
+  public HAServiceState getServiceState() throws AccessControlException,
+                                                 IOException;
 
   /**
    * Return true if the service is capable and ready to transition
    * from the standby state to the active state.
    * 
    * @return true if the service is ready to become active, false otherwise.
+   * @throws AccessControlException
+   *           if access is denied.
    * @throws IOException
    *           if other errors happen
    */
   public boolean readyToBecomeActive() throws ServiceFailedException,
+                                              AccessControlException,
                                               IOException;
 }
