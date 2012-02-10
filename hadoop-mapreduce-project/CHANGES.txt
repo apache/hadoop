@@ -3,15 +3,18 @@ Hadoop MapReduce Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+
     MAPREDUCE-3545. Remove Avro RPC. (suresh)
 
   NEW FEATURES
+
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
 
     MAPREDUCE-2669. Add new examples for Mean, Median, and Standard Deviation.
     (Plamen Jeliazkov via shv)
 
   IMPROVEMENTS
+
     MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
 
     MAPREDUCE-3597. [Rumen] Rumen should provide APIs to access all the 
@@ -51,10 +54,6 @@ Trunk (unreleased changes)
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
 
   BUG FIXES
-    MAPREDUCE-3770. Zombie.getJobConf() results into NPE. (amarrk)
-
-    MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
-    (Dave Thompson via bobby)
 
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
@@ -98,11 +97,9 @@ Release 0.23.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
     MAPREDUCE-3680. FifoScheduler web service rest API can print out invalid 
     JSON. (B Anil Kumar via tgraves)
-
-    MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
-    (Ravi Prakash via bobby)
 
 Release 0.23.1 - 2012-02-08 
 
@@ -744,6 +741,9 @@ Release 0.23.1 - 2012-02-08
     MAPREDUCE-3808. Fixed an NPE in FileOutputCommitter for jobs with maps
     but no reduces. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
+    (Dave Thompson via bobby)
+
     MAPREDUCE-3354. Changed scripts so that jobhistory server is started by
     bin/mapred instead of bin/yarn. (Jonathan Eagles via acmurthy) 
 
@@ -794,6 +794,11 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3828. Ensure that urls in single-node mode are correct. (sseth
     via acmurthy) 
+
+    MAPREDUCE-3770. Zombie.getJobConf() results into NPE. (amarrk)
+
+    MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
+    (Ravi Prakash via bobby)
 
 Release 0.23.0 - 2011-11-01 
 
