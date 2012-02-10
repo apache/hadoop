@@ -342,7 +342,10 @@ class CapacityTaskScheduler extends TaskScheduler {
           // tasktrackers to cover all pending tasks. If so we reserve the
           // current tasktracker for this job so that high memory jobs are not
           // starved
-          if ((getPendingTasks(j) != 0 && !hasSufficientReservedTaskTrackers(j))) {
+          if ((getPendingTasks(j) != 0 &&
+              !hasSufficientReservedTaskTrackers(j)) &&
+                (taskTracker.getAvailableSlots(type) !=
+                 getTTMaxSlotsForType(taskTrackerStatus, type))) {
             // Reserve all available slots on this tasktracker
             LOG.info(j.getJobID() + ": Reserving "
                 + taskTracker.getTrackerName()
@@ -1225,5 +1228,8 @@ class CapacityTaskScheduler extends TaskScheduler {
     return queue.toString();
   }
 
+  private static int getTTMaxSlotsForType(TaskTrackerStatus status, TaskType type) {
+      return (type == TaskType.MAP) ? status.getMaxMapSlots() : status.getMaxReduceSlots();
+  }
 }
 

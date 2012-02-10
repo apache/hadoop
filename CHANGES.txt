@@ -92,6 +92,8 @@ Release 1.1.0 - unreleased
     HDFS-2877. If locking of a storage dir fails, it will remove the other
     NN's lock file on exit. (todd)
 
+    MAPREDUCE-3789. CapacityTaskScheduler shouldn't perform unnecessary reservations, when used in heterogenous environments. (harsh)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
