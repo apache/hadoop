@@ -24,6 +24,8 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8035 Hadoop Maven site is inefficient and runs phases redundantly
     (abayer via tucu)
 
+    HADOOP-8051 HttpFS documentation it is not wired to the generated site (tucu)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
