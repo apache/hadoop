@@ -94,6 +94,8 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-3789. CapacityTaskScheduler shouldn't perform unnecessary reservations, when used in heterogenous environments. (harsh)
 
+    HDFS-2869. Fix an error in the webhdfs docs for the mkdir op (harsh)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
