@@ -24,6 +24,8 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2764. TestBackupNode is racy. (atm)
 
+    HDFS-2869. Fix an error in the webhdfs docs for the mkdir op (harsh)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
