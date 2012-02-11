@@ -249,6 +249,8 @@ Release 0.23.1 - 2012-02-08
    HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum
    (Daryn Sharp via bobby)
 
+   HADOOP-8055. Hadoop tarball distribution lacks a core-site.xml (harsh)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
