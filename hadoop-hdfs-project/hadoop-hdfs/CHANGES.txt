@@ -129,6 +129,9 @@ Trunk (unreleased changes)
     HDFS-2486. Remove unnecessary priority level checks in
     UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
+    (todd)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
