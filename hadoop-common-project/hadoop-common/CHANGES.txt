@@ -26,7 +26,11 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8051 HttpFS documentation it is not wired to the generated site (tucu)
 
-   HADOOP-8055. Hadoop tarball distribution lacks a core-site.xml (harsh)
+    HADOOP-8055. Hadoop tarball distribution lacks a core-site.xml (harsh)
+
+    HADOOP-8052. Hadoop Metrics2 should emit Float.MAX_VALUE (instead of 
+    Double.MAX_VALUE) to avoid making Ganglia's gmetad core. (Varun Kapoor
+    via mattf)
 
 Release 0.23.1 - 2012-02-08 
 
