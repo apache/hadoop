@@ -419,6 +419,7 @@ public class TestHAStateTransitions {
       DataOutputStream out = new DataOutputStream(new FileOutputStream(
           inProgressFile));
       EditLogFileOutputStream.writeHeader(out);
+      out.close();
     }
   }
   
