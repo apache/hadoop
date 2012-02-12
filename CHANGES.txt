@@ -159,7 +159,7 @@ Release 1.1.0 - unreleased
     HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
 
 
-Release 1.0.1 - 2012.02.08
+Release 1.0.1 - 2012.02.12
 
   NEW FEATURES
 
@@ -190,6 +190,10 @@ Release 1.0.1 - 2012.02.08
 
     HADOOP-8010. hadoop-config.sh errors when HADOOP_HOME_WARN_SUPPRESS is set 
     to true and HADOOP_HOME is present. (Roman Shaposhnik via mattf)
+
+    HADOOP-8052. Hadoop Metrics2 should emit Float.MAX_VALUE (instead of 
+    Double.MAX_VALUE) to avoid making Ganglia's gmetad core. (Varun Kapoor
+    via mattf)
 
 Release 1.0.0 - 2011.12.15
 

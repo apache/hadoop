@@ -141,8 +141,16 @@ public class SampleStat {
   @SuppressWarnings("PublicInnerClass")
   public static class MinMax {
 
-    private double min = Double.MAX_VALUE;
-    private double max = Double.MIN_VALUE;
+    // Float.MAX_VALUE is used rather than Double.MAX_VALUE, even though the
+    // min and max variables are of type double.
+    // Float.MAX_VALUE is big enough, and using Double.MAX_VALUE makes 
+    // Ganglia core due to buffer overflow.
+    // The same reasoning applies to the MIN_VALUE counterparts.
+    static final double DEFAULT_MIN_VALUE = Float.MAX_VALUE;
+    static final double DEFAULT_MAX_VALUE = Float.MIN_VALUE;
+
+    private double min = DEFAULT_MIN_VALUE;
+    private double max = DEFAULT_MAX_VALUE;
 
     public void add(double value) {
       if (value > max) max = value;
@@ -153,8 +161,8 @@ public class SampleStat {
     public double max() { return max; }
 
     public void reset() {
-      min = Double.MAX_VALUE;
-      max = Double.MIN_VALUE;
+      min = DEFAULT_MIN_VALUE;
+      max = DEFAULT_MAX_VALUE;
     }
 
     public void reset(MinMax other) {
