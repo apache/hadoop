@@ -15,20 +15,26 @@
 
 <a name="changes"/>
 <h2>Changes since Hadoop 1.0.0</h2>
-<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
 
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
 <ul>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8009">HADOOP-8009</a>.
      Critical improvement reported by tucu00 and fixed by tucu00 (build)<br>
      <b>Create hadoop-client and hadoop-minicluster artifacts for downstream projects </b><br>
-     <blockquote>                    Generate integration artifacts &quot;org.apache.hadoop:hadoop-client&quot; and &quot;org.apache.hadoop:hadoop-test&quot; containing all the jars needed to use Hadoop client APIs, and to run Hadoop Mini Clusters, respectively.  Push these artifacts to the maven repository when mvn-deploy, along with existing artifacts. 
+     <blockquote>                    Generate integration artifacts &quot;org.apache.hadoop:hadoop-client&quot; and &quot;org.apache.hadoop:hadoop-minicluster&quot; containing all the jars needed to use Hadoop client APIs, and to run Hadoop MiniClusters, respectively.  Push these artifacts to the maven repository when mvn-deploy, along with existing artifacts. 
 </blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8037">HADOOP-8037</a>.
      Blocker bug reported by mattf and fixed by gkesavan (build)<br>
      <b>Binary tarball does not preserve platform info for native builds, and RPMs fail to provide needed symlinks for libhadoop.so</b><br>
-     <blockquote>                    This fix is marked &quot;incompatible&quot; only because it changes the bin-tarball directory structure to be consistent with the source tarball directory structure.  Everything else (in particular, the source tarball and rpm directory structures) are unchanged.
+     <blockquote>                    This fix is marked &quot;incompatible&quot; only because it changes the bin-tarball directory structure to be consistent with the source tarball directory structure.  Everything else (in particular, the source tarball and rpm directory structures) are unchanged, except that the 64-bit rpms and debs now use lib64 instead of lib for native libraries.
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3184">MAPREDUCE-3184</a>.
+     Major improvement reported by tlipcon and fixed by tlipcon (jobtracker)<br>
+     <b>Improve handling of fetch failures when a tasktracker is not responding on HTTP</b><br>
+     <blockquote>                    The TaskTracker now has a thread which monitors for a known Jetty bug in which the selector thread starts spinning and map output can no longer be served. If the bug is detected, the TaskTracker will shut itself down. This feature can be disabled by setting mapred.tasktracker.jetty.cpu.check.enabled to false.
 </blockquote></li>
 
 </ul>
@@ -66,6 +72,11 @@
      <b>hadoop-config.sh spews error message when HADOOP_HOME_WARN_SUPPRESS is set to true and HADOOP_HOME is present</b><br>
      <blockquote>Running hadoop daemon commands when HADOOP_HOME_WARN_SUPPRESS is set to true and HADOOP_HOME is present produces:<br>{noformat}<br>  [: 76: true: unexpected operator<br>{noformat}</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8052">HADOOP-8052</a>.
+     Major bug reported by reznor and fixed by reznor (metrics)<br>
+     <b>Hadoop Metrics2 should emit Float.MAX_VALUE (instead of Double.MAX_VALUE) to avoid making Ganglia&apos;s gmetad core</b><br>
+     <blockquote>Ganglia&apos;s gmetad converts the doubles emitted by Hadoop&apos;s Metrics2 system to strings, and the buffer it uses is 256 bytes wide.<br><br>When the SampleStat.MinMax class (in org.apache.hadoop.metrics2.util) emits its default min value (currently initialized to Double.MAX_VALUE), it ends up causing a buffer overflow in gmetad, which causes it to core, effectively rendering Ganglia useless (for some, the core is continuous; for others who are more fortunate, it&apos;s only a one-time Hadoop-startup-time thi...</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2379">HDFS-2379</a>.
      Critical bug reported by tlipcon and fixed by tlipcon (data-node)<br>
      <b>0.20: Allow block reports to proceed without holding FSDataset lock</b><br>
@@ -75,6 +86,11 @@
      Minor improvement reported by hitesh and fixed by hitesh <br>
      <b>NamenodeMXBean does not account for svn revision in the version information</b><br>
      <blockquote>Unlike the jobtracker where both the UI and jmx information report the version as &quot;x.y.z, r&lt;svn revision&quot;, in case of the namenode, the UI displays x.y.z and svn revision info but the jmx output only contains the x.y.z version.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3343">MAPREDUCE-3343</a>.
+     Major bug reported by ahmed.radwan and fixed by zhaoyunjiong (mrv1)<br>
+     <b>TaskTracker Out of Memory because of distributed cache</b><br>
+     <blockquote>This Out of Memory happens when you run large number of jobs (using the distributed cache) on a TaskTracker. <br><br>Seems the basic issue is with the distributedCacheManager (instance of TrackerDistributedCacheManager in TaskTracker.java), this gets created during TaskTracker.initialize(), and it keeps references to TaskDistributedCacheManager for every submitted job via the jobArchives Map, also references to CacheStatus via cachedArchives map. I am not seeing these cleaned up between jobs, so th...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3607">MAPREDUCE-3607</a>.
      Major improvement reported by tomwhite and fixed by tomwhite (client)<br>
