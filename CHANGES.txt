@@ -122,10 +122,6 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-2850. Add test for MAPREDUCE-2413. (ravigummadi)
 
-    MAPREDUCE-3184. Add a thread to the TaskTracker which monitors for
-    spinning Jetty selector threads, and shuts down the daemon when one is
-    detected. (todd)
-
     HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
     (todd)
 
@@ -179,6 +175,10 @@ Release 1.0.1 - 2012.02.12
 
     HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for
     downstream projects. (Alejandro Abdelnur via mattf)
+
+    MAPREDUCE-3184. Add a thread to the TaskTracker which monitors for
+    spinning Jetty selector threads, and shuts down the daemon when one is
+    detected. (todd)
 
   BUG FIXES
 
