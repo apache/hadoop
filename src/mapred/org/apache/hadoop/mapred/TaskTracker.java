@@ -2074,8 +2074,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       runningJobs.remove(jobId);
     }
     getJobTokenSecretManager().removeTokenForJob(jobId.toString());  
-  }      
-    
+    distributedCacheManager.removeTaskDistributedCacheManager(jobId);
+  }
+
   /**
    * This job's files are no longer needed on this TT, remove them.
    *

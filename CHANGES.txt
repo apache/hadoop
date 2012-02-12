@@ -43,6 +43,9 @@ Release 1.0.1 - 2012.02.12
     Double.MAX_VALUE) to avoid making Ganglia's gmetad core. (Varun Kapoor
     via mattf)
 
+    MAPREDUCE-3343. TaskTracker Out of Memory because of distributed cache.
+    (Zhao Yunjiong).
+
 Release 1.0.0 - 2011.12.15
 
   NEW FEATURES
