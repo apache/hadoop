@@ -1192,13 +1192,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         try {
           Path jobInfoFile = getSystemFileForJob(jobId);
           FSDataInputStream in = fs.open(jobInfoFile);
-          JobInfo token = new JobInfo();
+          final JobInfo token = new JobInfo();
           token.readFields(in);
           in.close();
-          UserGroupInformation ugi = 
-            UserGroupInformation.createRemoteUser(token.getUser().toString());
-          submitJob(token.getJobID(), restartCount, 
-              ugi, token.getJobSubmitDir().toString(), true, null);
+          final UserGroupInformation ugi = 
+          UserGroupInformation.createRemoteUser(token.getUser().toString());
+          ugi.doAs(new PrivilegedExceptionAction<JobStatus>() {
+            public JobStatus run() throws IOException ,InterruptedException{
+               return submitJob(token.getJobID(), restartCount, 
+                        ugi, token.getJobSubmitDir().toString(), true, null);
+          }});
+          
           recovered++;
         } catch (Exception e) {
           LOG.warn("Could not recover job " + jobId, e);
