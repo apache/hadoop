@@ -347,7 +347,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.client.block.write.replace-datanode-on-failure.enable</name>
-  <value>ture</value>
+  <value>false</value>
   <description>
     If there is a datanode/network failure in the write pipeline,
     DFSClient will try to remove the failed datanode from the pipeline
@@ -355,7 +355,7 @@ creations/deletions), or "all".</description>
     the number of datanodes in the pipeline is decreased.  The feature is
     to add new datanodes to the pipeline.
 
-    This is a site-wise property to enable/disable the feature.
+    This is a site-wide property to enable/disable the feature.
 
     See also dfs.client.block.write.replace-datanode-on-failure.policy
   </description>
