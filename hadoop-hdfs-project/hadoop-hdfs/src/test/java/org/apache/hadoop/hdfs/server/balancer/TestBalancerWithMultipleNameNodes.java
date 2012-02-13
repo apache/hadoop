@@ -57,14 +57,12 @@ public class TestBalancerWithMultipleNameNodes {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.OFF);
     ((Log4JLogger)LogFactory.getLog(FSNamesystem.class)).getLogger().setLevel(Level.OFF);
-//    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.OFF);
   }
 
   
   private static final long CAPACITY = 500L;
   private static final String RACK0 = "/rack0";
   private static final String RACK1 = "/rack1";
-  private static final String RACK2 = "/rack2";
 
   private static final String FILE_NAME = "/tmp.txt";
   private static final Path FILE_PATH = new Path(FILE_NAME);
