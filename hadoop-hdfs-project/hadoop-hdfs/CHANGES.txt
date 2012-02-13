@@ -26,6 +26,9 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2869. Fix an error in the webhdfs docs for the mkdir op (harsh)
 
+    HDFS-776.  Fix exception handling in Balancer.  (Uma Maheswara Rao G
+    via szetszwo)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES

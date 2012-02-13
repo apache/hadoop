@@ -122,6 +122,10 @@ class NameNodeConnector {
     if (!isBlockTokenEnabled) {
       return BlockTokenSecretManager.DUMMY_TOKEN;
     } else {
+      if (!shouldRun) {
+        throw new IOException(
+            "Can not get access token. BlockKeyUpdater is not running");
+      }
       return blockTokenSecretManager.generateToken(null, eb,
           EnumSet.of(BlockTokenSecretManager.AccessMode.REPLACE,
           BlockTokenSecretManager.AccessMode.COPY));
@@ -217,16 +221,20 @@ class NameNodeConnector {
    */
   class BlockKeyUpdater implements Runnable {
     public void run() {
-      while (shouldRun) {
-        try {
-          blockTokenSecretManager.setKeys(namenode.getBlockKeys());
-        } catch (Exception e) {
-          LOG.error("Failed to set keys", e);
-        }
-        try {
+      try {
+        while (shouldRun) {
+          try {
+            blockTokenSecretManager.setKeys(namenode.getBlockKeys());
+          } catch (IOException e) {
+            LOG.error("Failed to set keys", e);
+          }
           Thread.sleep(keyUpdaterInterval);
-        } catch (InterruptedException ie) {
         }
+      } catch (InterruptedException e) {
+        LOG.info("InterruptedException in block key updater thread", e);
+      } catch (Throwable e) {
+        LOG.error("Exception in block key updater thread", e);
+        shouldRun = false;
       }
     }
   }
