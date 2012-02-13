@@ -129,6 +129,9 @@ Trunk (unreleased changes)
     HDFS-2486. Remove unnecessary priority level checks in
     UnderReplicatedBlocks.  (Uma Maheswara Rao G via szetszwo)
 
+    HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
+    (todd)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
@@ -216,6 +219,9 @@ Release 0.23.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-2931. Switch DataNode's BlockVolumeChoosingPolicy to private-audience.
+    (harsh via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -223,6 +229,14 @@ Release 0.23.2 - UNRELEASED
     (todd)
 
     HDFS-2764. TestBackupNode is racy. (atm)
+
+    HDFS-2869. Fix an error in the webhdfs docs for the mkdir op (harsh)
+
+    HDFS-776.  Fix exception handling in Balancer.  (Uma Maheswara Rao G
+    via szetszwo)
+
+    HDFS-2815. Namenode sometimes oes not come out of safemode during 
+    NN crash + restart. (Uma Maheswara Rao via suresh)
 
 Release 0.23.1 - 2012-02-08 
 

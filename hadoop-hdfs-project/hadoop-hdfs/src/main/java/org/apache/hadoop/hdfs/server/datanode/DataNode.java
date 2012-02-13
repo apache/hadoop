@@ -926,6 +926,14 @@ public class DataNode extends Configured
            SocketChannel.open().socket() : new Socket();                                   
   }
 
+  /**
+   * Connect to the NN. This is separated out for easier testing.
+   */
+  DatanodeProtocolClientSideTranslatorPB connectToNN(
+      InetSocketAddress nnAddr) throws IOException {
+    return new DatanodeProtocolClientSideTranslatorPB(nnAddr, conf);
+  }
+
   public static InterDatanodeProtocol createInterDataNodeProtocolProxy(
       DatanodeID datanodeid, final Configuration conf, final int socketTimeout)
     throws IOException {
@@ -1893,9 +1901,15 @@ public class DataNode extends Configured
       throws IOException {
     BPOfferService bpos = blockPoolManager.get(bpid);
     if (bpos == null) {
-      throw new IOException("cannot find a namnode proxy for bpid=" + bpid);
+      throw new IOException("No block pool offer service for bpid=" + bpid);
     }
-    return bpos.getActiveNN();
+    
+    DatanodeProtocolClientSideTranslatorPB activeNN = bpos.getActiveNN();
+    if (activeNN == null) {
+      throw new IOException(
+          "Block pool " + bpid + " has not recognized an active NN");
+    }
+    return activeNN;
   }
 
   /** Block synchronization */
@@ -1904,6 +1918,7 @@ public class DataNode extends Configured
     ExtendedBlock block = rBlock.getBlock();
     DatanodeProtocolClientSideTranslatorPB nn = getBPNamenode(block
         .getBlockPoolId());
+    assert nn != null;
     
     long recoveryId = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {
@@ -2236,5 +2251,4 @@ public class DataNode extends Configured
   boolean shouldRun() {
     return shouldRun;
   }
-
 }

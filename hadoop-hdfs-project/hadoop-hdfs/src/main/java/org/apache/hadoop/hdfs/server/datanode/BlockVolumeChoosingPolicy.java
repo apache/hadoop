@@ -28,10 +28,12 @@ import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterfa
  * BlockVolumeChoosingPolicy allows a DataNode to
  * specify what policy is to be used while choosing
  * a volume for a block request.
- * 
+ *
+ * Note: This is an evolving i/f and is only for
+ * advanced use.
+ *
  ***************************************************/
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface BlockVolumeChoosingPolicy {
 
   /**

@@ -255,7 +255,6 @@ class BPOfferService {
     }
   }
 
-
   //This must be called only by blockPoolManager
   void start() {
     for (BPServiceActor actor : bpServices) {
@@ -664,16 +663,6 @@ class BPOfferService {
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }
     return true;
-  }
-
-  /**
-   * Connect to the NN at the given address. This is separated out for ease
-   * of testing.
-   */
-  DatanodeProtocolClientSideTranslatorPB connectToNN(InetSocketAddress nnAddr)
-      throws IOException {
-    return new DatanodeProtocolClientSideTranslatorPB(nnAddr,
-        dn.getConf());
   }
 
 }

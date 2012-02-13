@@ -21,7 +21,6 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -259,29 +258,29 @@ public class TestBPOfferService {
 
       // Have NN1 claim active at txid 1
       mockHaStatuses[0] = new NNHAStatusHeartbeat(State.ACTIVE, 1);
-      waitForHeartbeats(bpos);
+      bpos.triggerHeartbeatForTests();
       assertSame(mockNN1, bpos.getActiveNN());
 
       // NN2 claims active at a higher txid
       mockHaStatuses[1] = new NNHAStatusHeartbeat(State.ACTIVE, 2);
-      waitForHeartbeats(bpos);
+      bpos.triggerHeartbeatForTests();
       assertSame(mockNN2, bpos.getActiveNN());
       
       // Even after another heartbeat from the first NN, it should
       // think NN2 is active, since it claimed a higher txid
-      waitForHeartbeats(bpos);
+      bpos.triggerHeartbeatForTests();
       assertSame(mockNN2, bpos.getActiveNN());
       
       // Even if NN2 goes to standby, DN shouldn't reset to talking to NN1,
       // because NN1's txid is lower than the last active txid. Instead,
       // it should consider neither active.
       mockHaStatuses[1] = new NNHAStatusHeartbeat(State.STANDBY, 2);
-      waitForHeartbeats(bpos);
+      bpos.triggerHeartbeatForTests();
       assertNull(bpos.getActiveNN());
       
       // Now if NN1 goes back to a higher txid, it should be considered active
       mockHaStatuses[0] = new NNHAStatusHeartbeat(State.ACTIVE, 3);
-      waitForHeartbeats(bpos);
+      bpos.triggerHeartbeatForTests();
       assertSame(mockNN1, bpos.getActiveNN());
 
     } finally {
@@ -302,28 +301,21 @@ public class TestBPOfferService {
   /**
    * Create a BPOfferService which registers with and heartbeats with the
    * specified namenode proxy objects.
+   * @throws IOException 
    */
   private BPOfferService setupBPOSForNNs(
-      DatanodeProtocolClientSideTranslatorPB ... nns) {
+      DatanodeProtocolClientSideTranslatorPB ... nns) throws IOException {
     // Set up some fake InetAddresses, then override the connectToNN
     // function to return the corresponding proxies.
 
     final Map<InetSocketAddress, DatanodeProtocolClientSideTranslatorPB> nnMap = Maps.newLinkedHashMap();
     for (int port = 0; port < nns.length; port++) {
       nnMap.put(new InetSocketAddress(port), nns[port]);
+      Mockito.doReturn(nns[port]).when(mockDn).connectToNN(
+          Mockito.eq(new InetSocketAddress(port)));
     }
 
-    return new BPOfferService(Lists.newArrayList(nnMap.keySet()), mockDn) {
-      @Override
-      DatanodeProtocolClientSideTranslatorPB  connectToNN(InetSocketAddress nnAddr)
-          throws IOException {
-        DatanodeProtocolClientSideTranslatorPB nn = nnMap.get(nnAddr);
-        if (nn == null) {
-          throw new AssertionError("bad NN addr: " + nnAddr);
-        }
-        return nn;
-      }
-    };
+    return new BPOfferService(Lists.newArrayList(nnMap.keySet()), mockDn);
   }
 
   private void waitForInitialization(final BPOfferService bpos)
@@ -354,30 +346,6 @@ public class TestBPOfferService {
       }
     }, 500, 10000);
   }
-  
-  private void waitForHeartbeats(BPOfferService bpos)
-    throws Exception {
-    final int countAtStart[];
-    synchronized (heartbeatCounts) {
-      countAtStart = Arrays.copyOf(
-          heartbeatCounts, heartbeatCounts.length);
-    }
-    bpos.triggerHeartbeatForTests();
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-      @Override
-      public Boolean get() {
-        synchronized (heartbeatCounts) {
-          for (int i = 0; i < countAtStart.length; i++) {
-            if (heartbeatCounts[i] <= countAtStart[i]) {
-              return false;
-            }
-          }
-          return true;
-        }
-      }
-    }, 200, 10000);
-  }
-
   
   private ReceivedDeletedBlockInfo[] waitForBlockReceived(
       ExtendedBlock fakeBlock,
