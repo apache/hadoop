@@ -2649,6 +2649,9 @@ Release 0.22.1 - Unreleased
 
   BUG FIXES
 
+    MAPREDUCE-3837. Job tracker is not able to recover jobs after crash.
+    (Mayank Bansal via shv) 
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
