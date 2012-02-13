@@ -29,6 +29,9 @@ Release 0.23.2 - UNRELEASED
     HDFS-776.  Fix exception handling in Balancer.  (Uma Maheswara Rao G
     via szetszwo)
 
+    HDFS-2815. Namenode sometimes oes not come out of safemode during 
+    NN crash + restart. (Uma Maheswara Rao via suresh)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES

@@ -1908,7 +1908,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       boolean enforcePermission)
       throws AccessControlException, SafeModeException, UnresolvedLinkException,
              IOException {
-    boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
 
     writeLock();
@@ -1926,10 +1925,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (!dir.delete(src, collectedBlocks)) {
         return false;
       }
-      deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
-      if (deleteNow) { // Perform small deletes right away
-        removeBlocks(collectedBlocks);
-      }
     } finally {
       writeUnlock();
     }
@@ -1938,9 +1933,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     writeLock();
     try {
-      if (!deleteNow) {
-        removeBlocks(collectedBlocks); // Incremental deletion of blocks
-      }
+      removeBlocks(collectedBlocks); // Incremental deletion of blocks
     } finally {
       writeUnlock();
     }
