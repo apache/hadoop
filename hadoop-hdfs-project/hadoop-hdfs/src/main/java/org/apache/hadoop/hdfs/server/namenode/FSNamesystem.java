@@ -2625,6 +2625,31 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
   }
+  
+  @Metric({"TransactionsSinceLastCheckpoint",
+      "Number of transactions since last checkpoint"})
+  public long getTransactionsSinceLastCheckpoint() {
+    return getEditLog().getLastWrittenTxId() -
+        getFSImage().getStorage().getMostRecentCheckpointTxId();
+  }
+  
+  @Metric({"TransactionsSinceLastLogRoll",
+      "Number of transactions since last edit log roll"})
+  public long getTransactionsSinceLastLogRoll() {
+    return (getEditLog().getLastWrittenTxId() -
+        getEditLog().getCurSegmentTxId()) + 1;
+  }
+  
+  @Metric({"LastWrittenTransactionId", "Transaction ID written to the edit log"})
+  public long getLastWrittenTransactionId() {
+    return getEditLog().getLastWrittenTxId();
+  }
+  
+  @Metric({"LastCheckpointTime",
+      "Time in milliseconds since the epoch of the last checkpoint"})
+  public long getLastCheckpointTime() {
+    return getFSImage().getStorage().getMostRecentCheckpointTime();
+  }
 
   /** @see ClientProtocol#getStats() */
   long[] getStats() {

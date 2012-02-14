@@ -11,6 +11,9 @@ Release 0.23.2 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-2943. Expose last checkpoint time and transaction stats as JMX
+    metrics. (atm)
+
   IMPROVEMENTS
 
     HDFS-2931. Switch DataNode's BlockVolumeChoosingPolicy to private-audience.

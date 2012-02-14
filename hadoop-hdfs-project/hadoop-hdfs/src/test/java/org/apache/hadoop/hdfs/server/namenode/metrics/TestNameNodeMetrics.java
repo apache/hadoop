@@ -20,12 +20,11 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.*;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -39,17 +38,21 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.test.MetricsAsserts;
 import org.apache.log4j.Level;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test for metrics published by the Namenode
  */
-public class TestNameNodeMetrics extends TestCase {
+public class TestNameNodeMetrics {
   private static final Configuration CONF = new HdfsConfiguration();
   private static final int DFS_REPLICATION_INTERVAL = 1;
   private static final Path TEST_ROOT_DIR_PATH = 
@@ -81,8 +84,8 @@ public class TestNameNodeMetrics extends TestCase {
     return new Path(TEST_ROOT_DIR_PATH, fileName);
   }
   
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(DATANODE_COUNT).build();
     cluster.waitActive();
     namesystem = cluster.getNamesystem();
@@ -90,8 +93,8 @@ public class TestNameNodeMetrics extends TestCase {
     fs = (DistributedFileSystem) cluster.getFileSystem();
   }
   
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     cluster.shutdown();
   }
   
@@ -115,6 +118,7 @@ public class TestNameNodeMetrics extends TestCase {
   }
   
   /** Test metrics associated with addition of a file */
+  @Test
   public void testFileAdd() throws Exception {
     // Add files with 100 blocks
     final Path file = getTestPath("testFileAdd");
@@ -161,6 +165,7 @@ public class TestNameNodeMetrics extends TestCase {
   }
   
   /** Corrupt a block and ensure metrics reflects it */
+  @Test
   public void testCorruptBlock() throws Exception {
     // Create a file with single block with two replicas
     final Path file = getTestPath("testCorruptBlock");
@@ -186,6 +191,7 @@ public class TestNameNodeMetrics extends TestCase {
   /** Create excess blocks by reducing the replication factor for
    * for a file and ensure metrics reflects it
    */
+  @Test
   public void testExcessBlocks() throws Exception {
     Path file = getTestPath("testExcessBlocks");
     createFile(file, 100, (short)2);
@@ -198,6 +204,7 @@ public class TestNameNodeMetrics extends TestCase {
   }
   
   /** Test to ensure metrics reflects missing blocks */
+  @Test
   public void testMissingBlock() throws Exception {
     // Create a file with single block with two replicas
     Path file = getTestPath("testMissingBlocks");
@@ -216,6 +223,7 @@ public class TestNameNodeMetrics extends TestCase {
     assertGauge("UnderReplicatedBlocks", 0L, getMetrics(NS_METRICS));
   }
   
+  @Test
   public void testRenameMetrics() throws Exception {
     Path src = getTestPath("src");
     createFile(src, 100, (short)1);
@@ -240,7 +248,8 @@ public class TestNameNodeMetrics extends TestCase {
    *    
    * @throws IOException in case of an error
    */
-  public void testGetBlockLocationMetric() throws Exception{
+  @Test
+  public void testGetBlockLocationMetric() throws Exception {
     Path file1_Path = new Path(TEST_ROOT_DIR_PATH, "file1.dat");
 
     // When cluster starts first time there are no file  (read,create,open)
@@ -267,5 +276,47 @@ public class TestNameNodeMetrics extends TestCase {
     readFile(fs, file1_Path);
     updateMetrics();
     assertCounter("GetBlockLocations", 3L, getMetrics(NN_METRICS));
+  }
+  
+  /**
+   * Test NN checkpoint and transaction-related metrics.
+   */
+  @Test
+  public void testTransactionAndCheckpointMetrics() throws Exception {
+    long lastCkptTime = MetricsAsserts.getLongGauge("LastCheckpointTime",
+        getMetrics(NS_METRICS));
+    
+    assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
+    assertGauge("LastWrittenTransactionId", 1L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastCheckpoint", 1L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastLogRoll", 1L, getMetrics(NS_METRICS));
+    
+    fs.mkdirs(new Path(TEST_ROOT_DIR_PATH, "/tmp"));
+    updateMetrics();
+    
+    assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
+    assertGauge("LastWrittenTransactionId", 2L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastCheckpoint", 2L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastLogRoll", 2L, getMetrics(NS_METRICS));
+    
+    cluster.getNameNodeRpc().rollEditLog();
+    updateMetrics();
+    
+    assertGauge("LastCheckpointTime", lastCkptTime, getMetrics(NS_METRICS));
+    assertGauge("LastWrittenTransactionId", 4L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastCheckpoint", 4L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastLogRoll", 1L, getMetrics(NS_METRICS));
+    
+    cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    cluster.getNameNodeRpc().saveNamespace();
+    cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    updateMetrics();
+    
+    long newLastCkptTime = MetricsAsserts.getLongGauge("LastCheckpointTime",
+        getMetrics(NS_METRICS));
+    assertTrue(lastCkptTime < newLastCkptTime);
+    assertGauge("LastWrittenTransactionId", 6L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastCheckpoint", 1L, getMetrics(NS_METRICS));
+    assertGauge("TransactionsSinceLastLogRoll", 1L, getMetrics(NS_METRICS));
   }
 }
