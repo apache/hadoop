@@ -200,3 +200,5 @@ HDFS-2939. TestHAStateTransitions fails on Windows. (Uma Maheswara Rao G via atm
 HDFS-2947. On startup NN throws an NPE in the metrics system. (atm)
 
 HDFS-2942. TestActiveStandbyElectorRealZK fails if build dir does not exist. (atm)
+
+HDFS-2948. NN throws NPE during shutdown if it fails to startup (todd)

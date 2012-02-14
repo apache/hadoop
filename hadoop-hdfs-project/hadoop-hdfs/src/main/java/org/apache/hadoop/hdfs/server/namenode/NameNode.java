@@ -974,7 +974,9 @@ public class NameNode {
 
     @Override
     public void stopActiveServices() throws IOException {
-      namesystem.stopActiveServices();
+      if (namesystem != null) {
+        namesystem.stopActiveServices();
+      }
       stopTrashEmptier();
     }
 
