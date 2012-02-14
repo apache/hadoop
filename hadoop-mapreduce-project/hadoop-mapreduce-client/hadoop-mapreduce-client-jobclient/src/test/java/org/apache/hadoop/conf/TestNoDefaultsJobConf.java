@@ -59,7 +59,7 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
 
     JobConf conf = new JobConf(false);
 
-    conf.set("fs.default.name", createJobConf().get("fs.default.name"));
+    conf.set("fs.defaultFS", createJobConf().get("fs.defaultFS"));
 
     conf.setJobName("mr");
 
