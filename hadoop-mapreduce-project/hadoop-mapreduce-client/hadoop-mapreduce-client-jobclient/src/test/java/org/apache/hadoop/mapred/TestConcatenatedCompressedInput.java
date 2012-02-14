@@ -69,7 +69,7 @@ public class TestConcatenatedCompressedInput {
 
   static {
     try {
-      defaultConf.set("fs.default.name", "file:///");
+      defaultConf.set("fs.defaultFS", "file:///");
       localFs = FileSystem.getLocal(defaultConf);
     } catch (IOException e) {
       throw new RuntimeException("init failure", e);

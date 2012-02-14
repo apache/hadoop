@@ -51,7 +51,10 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
     (Ravi Prakash via bobby)
-    
+
+    MAPREDUCE-3736. Variable substitution depth too large for fs.default.name 
+    causes jobs to fail (ahmed via tucu).
+ 
     MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
                     (Vinay Thota via amarrk)
 

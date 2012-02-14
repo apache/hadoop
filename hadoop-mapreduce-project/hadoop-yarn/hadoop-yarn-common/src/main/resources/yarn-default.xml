@@ -457,7 +457,7 @@
 
   <property>
     <name>mapreduce.job.hdfs-servers</name>
-    <value>${fs.default.name}</value>
+    <value>${fs.defaultFS}</value>
   </property>
 
   <!-- WebAppProxy Configuration-->
