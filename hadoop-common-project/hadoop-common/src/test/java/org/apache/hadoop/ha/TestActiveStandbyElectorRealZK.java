@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ha;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -39,6 +40,13 @@ public class TestActiveStandbyElectorRealZK extends ClientBase {
   static final int NUM_ELECTORS = 2;
   static ZooKeeper[] zkClient = new ZooKeeper[NUM_ELECTORS];
   static int currentClientIndex = 0;
+  
+  @Override
+  public void setUp() throws Exception {
+    // build.test.dir is used by zookeeper
+    new File(System.getProperty("build.test.dir", "build")).mkdirs();
+    super.setUp();
+  }
 
   class ActiveStandbyElectorTesterRealZK extends ActiveStandbyElector {
     ActiveStandbyElectorTesterRealZK(String hostPort, int timeout,
