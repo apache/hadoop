@@ -50,6 +50,7 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobFinishedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.jobhistory.JobInfoChangeEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobInitedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobSubmittedEvent;
@@ -133,7 +134,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
   private float cleanupWeight = 0.05f;
   private float mapWeight = 0.0f;
   private float reduceWeight = 0.0f;
-  private final Set<TaskId> completedTasksFromPreviousRun;
+  private final Map<TaskId, TaskInfo> completedTasksFromPreviousRun;
   private final List<AMInfo> amInfos;
   private final Lock readLock;
   private final Lock writeLock;
@@ -376,7 +377,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       TaskAttemptListener taskAttemptListener,
       JobTokenSecretManager jobTokenSecretManager,
       Credentials fsTokenCredentials, Clock clock,
-      Set<TaskId> completedTasksFromPreviousRun, MRAppMetrics metrics,
+      Map<TaskId, TaskInfo> completedTasksFromPreviousRun, MRAppMetrics metrics,
       OutputCommitter committer, boolean newApiCommitter, String userName,
       long appSubmitTime, List<AMInfo> amInfos) {
     this.applicationAttemptId = applicationAttemptId;

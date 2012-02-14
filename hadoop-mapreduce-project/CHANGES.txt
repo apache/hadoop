@@ -759,6 +759,9 @@ Release 0.23.1 - 2012-02-08
     MAPREDUCE-3843. Job summary log file found missing on the RM host 
     (Anupam Seth via tgraves)
 
+    MAPREDUCE-3846. Addressed MR AM hanging issues during AM restart and then
+    the recovery. (vinodkv)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
