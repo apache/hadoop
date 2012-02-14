@@ -1465,16 +1465,16 @@
   <!--                                                                    -->
   <!-- ================================================================== -->
   <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
-	  description="Build distribution">
+	  description="assembles multi-platform artifacts for distribution">
     <delete dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}"/>
-    <mkdir dir="${dist.dir}/lib"/>
-    <mkdir dir="${dist.dir}/libexec"/>
-    <mkdir dir="${dist.dir}/contrib"/>
     <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/contrib"/>
     <mkdir dir="${dist.dir}/docs"/>
     <mkdir dir="${dist.dir}/docs/api"/>
     <mkdir dir="${dist.dir}/docs/jdiff"/>
+    <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/libexec"/>
     <mkdir dir="${dist.dir}/sbin"/>
     <mkdir dir="${dist.dir}/share/${name}/templates/conf"/>
 
@@ -1592,7 +1592,8 @@
   <!-- ================================================================== -->
   <!-- Make release tarball                                               -->
   <!-- ================================================================== -->
-  <target name="tar" depends="package" description="Make release tarball">
+  <target name="tar" depends="package" description="Make multi-platform release tarballs, both source and binary">
+    <!-- build source tarball -->
     <macro_tar param.destfile="${build.dir}/${final.name}.tar.gz">
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
@@ -1615,15 +1616,38 @@
         </tarfileset>
       </param.listofitems>
     </macro_tar>
+    <!-- build multi-platform binary tarball -->
+    <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
+      <param.listofitems>
+        <tarfileset dir="${build.dir}" mode="664">
+          <exclude name="${final.name}/src/**" />
+          <exclude name="${final.name}/docs/**" />
+          <exclude name="${final.name}/bin/*" />
+          <exclude name="${final.name}/sbin/*" />
+          <exclude name="${final.name}/libexec/*" />
+          <exclude name="${final.name}/contrib/*/bin/*" />
+          <include name="${final.name}/**" />
+        </tarfileset>
+        <tarfileset dir="${build.dir}" mode="755">
+          <include name="${final.name}/bin/*" />
+          <include name="${final.name}/sbin/*" />
+          <include name="${final.name}/libexec/*" />
+          <include name="${final.name}/contrib/*/bin/*" />
+          <include name="${final.name}/src/contrib/ec2/bin/*" />
+          <include name="${final.name}/src/contrib/ec2/bin/image/*" />
+        </tarfileset>
+      </param.listofitems>
+    </macro_tar>
   </target>
 
   <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio" 
-		description="assembles artifacts for binary target">
+		description="assembles platform-specific artifacts for binary targets">
     <delete dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/bin"/>
     <mkdir dir="${dist.dir}/etc/hadoop"/>
     <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/lib64"/>
     <mkdir dir="${dist.dir}/libexec"/>
     <mkdir dir="${dist.dir}/sbin"/>
     <mkdir dir="${dist.dir}/share/${name}/contrib"/>
@@ -1647,19 +1671,19 @@
       </fileset>
     </copy>
 
+    <condition property="lib.data.model" value="lib64" else="lib" >
+      <and>
+        <equals arg1="${sun.arch.data.model}" arg2="64" />
+      </and>
+    </condition>
+
     <exec dir="${dist.dir}" executable="sh" failonerror="true">
       <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
       <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
-      <env key="DIST_LIB_DIR" value="${dist.dir}/native"/>
-      <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
+      <env key="DIST_LIB_DIR" value="${dist.dir}/${lib.data.model}"/>
+      <env key="NATIVE_PLATFORM" value="${build.platform}" />
+      <arg line="${native.src.dir}/packageBinNativeHadoop.sh"/>
     </exec>
-
-    <move todir="${dist.dir}/lib" flatten="true">
-      <fileset dir="${dist.dir}/native">
-        <include name="*/*"/>
-      </fileset>
-    </move>
-    <delete dir="${dist.dir}/native"/>
 
     <subant target="package">
       <!--Pass down the version in case its needed again and the target
@@ -1715,9 +1739,9 @@
       </fileset>
     </copy>
 
-    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+    <copy todir="${dist.dir}/${lib.data.model}" includeEmptyDirs="false" flatten="true">
       <fileset dir="${build.dir}/c++">
-        <include name="**/lib/*"/>
+        <include name="${build.platform}/lib/*"/>
       </fileset>
     </copy>
 
@@ -1737,7 +1761,7 @@
   </target>
 
   <target name="binary-system" depends="bin-package, jar-system, jar-test-system"
-     description="make system test package for deployment">
+     description="make platform-specific system test package for deployment">
     <copy todir="${system-test-build-dir}/${final.name}">
       <fileset dir="${dist.dir}">
       </fileset>
@@ -1747,7 +1771,7 @@
     <copy todir="${system-test-build-dir}/${final.name}"
       file="${system-test-build-dir}/${test.final.name}.jar" overwrite="true"/>
     <macro_tar 
-      param.destfile="${system-test-build-dir}/${final.name}-bin.tar.gz">
+      param.destfile="${system-test-build-dir}/${final.name}-${os.arch}-bin.tar.gz">
         <param.listofitems>
           <tarfileset dir="${system-test-build-dir}" mode="664">
             <exclude name="${final.name}/bin/*" />
@@ -1762,8 +1786,8 @@
       </macro_tar>
   </target>
   
-  <target name="binary" depends="bin-package" description="Make tarball without source and documentation">
-    <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
+  <target name="binary" depends="bin-package" description="Make platform-specific binary tarball without source and documentation">
+    <macro_tar param.destfile="${build.dir}/${final.name}-${os.arch}-bin.tar.gz">
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
@@ -1793,13 +1817,14 @@
     </macro_tar>
     <copy todir="${package.buildroot}/SOURCES">
       <fileset dir="${build.dir}">
-        <include name="${final.name}-bin.tar.gz" />
+        <include name="${final.name}-${os.arch}-bin.tar.gz" />
       </fileset>
     </copy>
     <copy file="${src.dir}/packages/rpm/spec/hadoop.spec" todir="${package.buildroot}/SPECS">
       <filterchain>
         <replacetokens>
           <token key="final.name" value="${final.name}" />
+          <token key="build.arch" value="${os.arch}" />
           <token key="version" value="${hadoop.version}" />
           <token key="package.release" value="${package.release}" />
           <token key="package.build.dir" value="${package.build.dir}" />
@@ -1822,7 +1847,7 @@
     <delete dir="${package.buildroot}" quiet="true" verbose="false"/>
   </target>
 
-  <target name="deb" depends="ant-tasks, binary" description="Make deb package">
+  <target name="deb" depends="ant-tasks, bin-package" description="Make deb package">
     <taskdef name="deb"
            classname="org.vafer.jdeb.ant.DebAntTask">
       <classpath refid="classpath" />

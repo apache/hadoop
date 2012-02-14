@@ -39,6 +39,7 @@
 # Build time settings
 %define _build_dir  @package.build.dir@
 %define _final_name @final.name@
+%define _build_arch @build.arch@
 %define debug_package %{nil}
 
 # Disable brp-java-repack-jars for aspect J
@@ -71,7 +72,7 @@ Group: Development/Libraries
 Name: %{name}
 Version: %{version}
 Release: %{release} 
-Source0: %{_final_name}-bin.tar.gz
+Source0: %{_final_name}-%{_build_arch}-bin.tar.gz
 Source1: %{_final_name}-script.tar.gz
 Prefix: %{_prefix}
 Prefix: %{_conf_dir}

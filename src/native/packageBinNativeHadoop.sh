@@ -16,7 +16,8 @@
 # limitations under the License.
 
 
-# packageNativeHadoop.sh - A simple script to help package native-hadoop libraries
+# packageBinNativeHadoop.sh - A simple script to help package a single set of 
+#     native-hadoop libraries for bin-packaging
 
 #
 # Note: 
@@ -24,42 +25,37 @@
 #  * BASE_NATIVE_LIB_DIR
 #  * BUILD_NATIVE_DIR
 #  * DIST_LIB_DIR
+#  * NATIVE_PLATFORM
 # All these are setup by build.xml.
 #
 
 TAR='tar cf -'
 UNTAR='tar xfBp -'
+platform=$NATIVE_PLATFORM
 
 # Copy the pre-built libraries in $BASE_NATIVE_LIB_DIR
 if [ -d $BASE_NATIVE_LIB_DIR ]
 then
-  for platform in `ls $BASE_NATIVE_LIB_DIR`
-  do
-    if [ ! -d $DIST_LIB_DIR/$platform ]
-    then
-      mkdir -p $DIST_LIB_DIR/$platform
-      echo "Created $DIST_LIB_DIR/$platform"
-    fi
-    echo "Copying libraries in $BASE_NATIVE_LIB_DIR/$platform to $DIST_LIB_DIR/$platform/"
-    cd $BASE_NATIVE_LIB_DIR/$platform/
-    $TAR *hadoop* | (cd $DIST_LIB_DIR/$platform/; $UNTAR)
-  done
+  echo "Copying libraries in $BASE_NATIVE_LIB_DIR/$platform to $DIST_LIB_DIR/"
+  if [ ! -d $BASE_NATIVE_LIB_DIR/$platform ]
+  then 
+    echo "ERROR: Platform $platform does not exist in $BASE_NATIVE_LIB_DIR"
+    exit -1
+  fi
+  cd $BASE_NATIVE_LIB_DIR/$platform/
+  $TAR *hadoop* | (cd $DIST_LIB_DIR/; $UNTAR)
 fi
 
 # Copy the custom-built libraries in $BUILD_NATIVE_DIR
 if [ -d $BUILD_NATIVE_DIR ]
 then 
-  for platform in `ls $BUILD_NATIVE_DIR`
-  do
-    if [ ! -d $DIST_LIB_DIR/$platform ]
-    then
-      mkdir -p $DIST_LIB_DIR/$platform
-      echo "Created $DIST_LIB_DIR/$platform"
-    fi
-    echo "Copying libraries in $BUILD_NATIVE_DIR/$platform/lib to $DIST_LIB_DIR/$platform/"
-    cd $BUILD_NATIVE_DIR/$platform/lib
-    $TAR *hadoop* | (cd $DIST_LIB_DIR/$platform/; $UNTAR)
-  done  
+  echo "Copying libraries in $BUILD_NATIVE_DIR/$platform/lib to $DIST_LIB_DIR/"
+  if [ ! -d $BUILD_NATIVE_DIR/$platform ]
+  then
+    echo "ERROR: Platform $platform does not exist in $BUILD_NATIVE_DIR"
+    exit -1
+  fi
+  cd $BUILD_NATIVE_DIR/$platform/lib
+  $TAR *hadoop* | (cd $DIST_LIB_DIR/; $UNTAR)
 fi
 
-#vim: ts=2: sw=2: et
