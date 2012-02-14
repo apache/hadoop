@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
@@ -153,8 +153,8 @@ public class RecoveryService extends CompositeService implements Recovery {
   }
 
   @Override
-  public Set<TaskId> getCompletedTasks() {
-    return completedTasks.keySet();
+  public Map<TaskId, TaskInfo> getCompletedTasks() {
+    return completedTasks;
   }
 
   @Override
@@ -189,7 +189,8 @@ public class RecoveryService extends CompositeService implements Recovery {
         getConfig());
     //read the previous history file
     historyFile = fc.makeQualified(JobHistoryUtils.getStagingJobHistoryFile(
-        histDirPath, jobName, (applicationAttemptId.getAttemptId() - 1)));          
+        histDirPath, jobName, (applicationAttemptId.getAttemptId() - 1)));  
+    LOG.info("History file is at " + historyFile);
     in = fc.open(historyFile);
     JobHistoryParser parser = new JobHistoryParser(in);
     jobInfo = parser.parse();
@@ -242,7 +243,7 @@ public class RecoveryService extends CompositeService implements Recovery {
         if (event.getType() == TaskAttemptEventType.TA_CONTAINER_LAUNCHED) {
           TaskAttemptInfo attInfo = getTaskAttemptInfo(((TaskAttemptEvent) event)
               .getTaskAttemptID());
-          LOG.info("Attempt start time " + attInfo.getStartTime());
+          LOG.info("Recovered Attempt start time " + attInfo.getStartTime());
           clock.setTime(attInfo.getStartTime());
 
         } else if (event.getType() == TaskAttemptEventType.TA_DONE
@@ -250,7 +251,7 @@ public class RecoveryService extends CompositeService implements Recovery {
             || event.getType() == TaskAttemptEventType.TA_KILL) {
           TaskAttemptInfo attInfo = getTaskAttemptInfo(((TaskAttemptEvent) event)
               .getTaskAttemptID());
-          LOG.info("Attempt finish time " + attInfo.getFinishTime());
+          LOG.info("Recovered Attempt finish time " + attInfo.getFinishTime());
           clock.setTime(attInfo.getFinishTime());
         }
 
@@ -380,17 +381,17 @@ public class RecoveryService extends CompositeService implements Recovery {
           }
           
           // send the done event
-          LOG.info("Sending done event to " + aId);
+          LOG.info("Sending done event to recovered attempt " + aId);
           actualHandler.handle(new TaskAttemptEvent(aId,
               TaskAttemptEventType.TA_DONE));
           break;
         case KILLED:
-          LOG.info("Sending kill event to " + aId);
+          LOG.info("Sending kill event to recovered attempt " + aId);
           actualHandler.handle(new TaskAttemptEvent(aId,
               TaskAttemptEventType.TA_KILL));
           break;
         default:
-          LOG.info("Sending fail event to " + aId);
+          LOG.info("Sending fail event to recovered attempt " + aId);
           actualHandler.handle(new TaskAttemptEvent(aId,
               TaskAttemptEventType.TA_FAILMSG));
           break;

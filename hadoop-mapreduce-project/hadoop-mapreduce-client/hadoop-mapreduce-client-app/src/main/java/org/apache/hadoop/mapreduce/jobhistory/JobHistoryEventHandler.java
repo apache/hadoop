@@ -244,7 +244,7 @@ public class JobHistoryEventHandler extends AbstractService
         while (!stopped && !Thread.currentThread().isInterrupted()) {
 
           // Log the size of the history-event-queue every so often.
-          if (eventCounter % 1000 == 0) {
+          if (eventCounter != 0 && eventCounter % 1000 == 0) {
             eventCounter = 0;
             LOG.info("Size of the JobHistory event queue is "
                 + eventQueue.size());
@@ -464,8 +464,10 @@ public class JobHistoryEventHandler extends AbstractService
         }
         processEventForJobSummary(event.getHistoryEvent(), mi.getJobSummary(),
             event.getJobID());
-        LOG.info("In HistoryEventHandler "
-            + event.getHistoryEvent().getEventType());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("In HistoryEventHandler "
+              + event.getHistoryEvent().getEventType());
+        }
       } catch (IOException e) {
         LOG.error("Error writing History Event: " + event.getHistoryEvent(),
             e);
