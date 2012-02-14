@@ -349,7 +349,7 @@ Hello, webhdfs user!
 <ul>
   <li>Submit a HTTP PUT request.
     <source>
-curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/&lt;PATH&gt;?op=MKDIRS[&amp;permission=&lt;OCTAL&gt;]"
+        curl -i -X PUT "http://&lt;HOST&gt;:&lt;PORT&gt;/webhdfs/v1/&lt;PATH&gt;?op=MKDIRS[&amp;permission=&lt;OCTAL&gt;]"
     </source>
 The client receives a response with a <a href="#boolean"><code>boolean</code> JSON object</a>:
     <source>
