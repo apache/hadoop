@@ -534,16 +534,16 @@ public class NameNode {
     String nsId = getNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
+    if (!haEnabled) {
+      state = ACTIVE_STATE;
+    } else {
+      state = STANDBY_STATE;;
+    }
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
     this.haContext = createHAContext();
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
       initialize(conf);
-      if (!haEnabled) {
-        state = ACTIVE_STATE;
-      } else {
-        state = STANDBY_STATE;;
-      }
       state.prepareToEnterState(haContext);
       state.enterState(haContext);
     } catch (IOException e) {
