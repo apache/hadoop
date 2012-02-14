@@ -14,6 +14,8 @@ Release 0.23.2 - UNRELEASED
     (szetszwo)
 
   OPTIMIZATIONS
+    HADOOP-8071. Avoid an extra packet in client code when nagling is
+    disabled. (todd)
 
   BUG FIXES
 
