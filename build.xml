@@ -2642,6 +2642,10 @@
      output.file="${hadoop-examples.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
     <sign-artifact input.file="${hadoop-streaming.jar}" 
      output.file="${hadoop-streaming.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-client.jar}" 
+     output.file="${hadoop-client.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-minicluster.jar}" 
+     output.file="${hadoop-minicluster.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
     <sign-artifact input.file="${hadoop-core.pom}" 
      output.file="${hadoop-core.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
     <sign-artifact input.file="${hadoop-test.pom}" 
