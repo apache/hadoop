@@ -8,6 +8,9 @@ Release 0.23.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's           
+    environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
