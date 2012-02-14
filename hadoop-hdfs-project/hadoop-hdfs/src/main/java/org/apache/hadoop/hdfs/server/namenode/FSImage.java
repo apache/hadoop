@@ -710,7 +710,7 @@ public class FSImage implements Closeable {
     long txId = loader.getLoadedImageTxId();
     LOG.info("Loaded image for txid " + txId + " from " + curFile);
     lastAppliedTxId = txId;
-    storage.setMostRecentCheckpointTxId(txId);
+    storage.setMostRecentCheckpointInfo(txId, curFile.lastModified());
   }
 
   /**
@@ -726,7 +726,7 @@ public class FSImage implements Closeable {
     saver.save(newFile, txid, source, compression);
     
     MD5FileUtils.saveMD5File(dstFile, saver.getSavedDigest());
-    storage.setMostRecentCheckpointTxId(txid);
+    storage.setMostRecentCheckpointInfo(txid, Util.now());
   }
 
   /**
@@ -988,7 +988,7 @@ public class FSImage implements Closeable {
     // advertise it as such to other checkpointers
     // from now on
     if (txid > storage.getMostRecentCheckpointTxId()) {
-      storage.setMostRecentCheckpointTxId(txid);
+      storage.setMostRecentCheckpointInfo(txid, Util.now());
     }
   }
 

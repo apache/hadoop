@@ -68,6 +68,8 @@ Release 0.23.2 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    HADOOP-8048. Allow merging of Credentials (Daryn Sharp via tgraves)
+ 
     HADOOP-8032. mvn site:stage-deploy should be able to use the scp protocol
     to stage documents (Ravi Prakash via tgraves)
 
@@ -75,6 +77,8 @@ Release 0.23.2 - UNRELEASED
     (szetszwo)
 
   OPTIMIZATIONS
+    HADOOP-8071. Avoid an extra packet in client code when nagling is
+    disabled. (todd)
 
   BUG FIXES
 
@@ -84,6 +88,14 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8035 Hadoop Maven site is inefficient and runs phases redundantly
     (abayer via tucu)
+
+    HADOOP-8051 HttpFS documentation it is not wired to the generated site (tucu)
+
+    HADOOP-8055. Hadoop tarball distribution lacks a core-site.xml (harsh)
+
+    HADOOP-8052. Hadoop Metrics2 should emit Float.MAX_VALUE (instead of 
+    Double.MAX_VALUE) to avoid making Ganglia's gmetad core. (Varun Kapoor
+    via mattf)
 
 Release 0.23.1 - 2012-02-08 
 

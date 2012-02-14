@@ -26,7 +26,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
@@ -48,6 +47,7 @@ import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.AMStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskInfo;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
@@ -123,7 +123,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
  * The information is shared across different components using AppContext.
  */
 
-@SuppressWarnings("deprecation")
+@SuppressWarnings("rawtypes")
 public class MRAppMaster extends CompositeService {
 
   private static final Log LOG = LogFactory.getLog(MRAppMaster.class);
@@ -138,7 +138,7 @@ public class MRAppMaster extends CompositeService {
   private final int nmPort;
   private final int nmHttpPort;
   protected final MRAppMetrics metrics;
-  private Set<TaskId> completedTasksFromPreviousRun;
+  private Map<TaskId, TaskInfo> completedTasksFromPreviousRun;
   private List<AMInfo> amInfos;
   private AppContext context;
   private Dispatcher dispatcher;
@@ -596,7 +596,7 @@ public class MRAppMaster extends CompositeService {
     return dispatcher;
   }
 
-  public Set<TaskId> getCompletedTaskFromPreviousRun() {
+  public Map<TaskId, TaskInfo> getCompletedTaskFromPreviousRun() {
     return completedTasksFromPreviousRun;
   }
 
@@ -737,7 +737,6 @@ public class MRAppMaster extends CompositeService {
       return jobs;
     }
 
-    @SuppressWarnings("rawtypes")
     @Override
     public EventHandler getEventHandler() {
       return dispatcher.getEventHandler();

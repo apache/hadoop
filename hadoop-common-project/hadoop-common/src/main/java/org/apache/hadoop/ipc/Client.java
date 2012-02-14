@@ -799,9 +799,12 @@ public class Client {
           header.write(d);
           call.rpcRequest.write(d);
           byte[] data = d.getData();
-          int dataLength = d.getLength();
-          out.writeInt(dataLength);      //first put the data length
-          out.write(data, 0, dataLength);//write the data
+          int dataLength = d.getLength() - 4;
+          data[0] = (byte)((dataLength >>> 24) & 0xff);
+          data[1] = (byte)((dataLength >>> 16) & 0xff);
+          data[2] = (byte)((dataLength >>> 8) & 0xff);
+          data[3] = (byte)(dataLength & 0xff);
+          out.write(data, 0, dataLength + 4);//write the data
           out.flush();
         }
       } catch(IOException e) {

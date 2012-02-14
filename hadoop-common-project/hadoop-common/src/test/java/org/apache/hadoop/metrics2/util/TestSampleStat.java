@@ -36,8 +36,8 @@ public class TestSampleStat {
     assertEquals("mean", 0.0, stat.mean(), EPSILON);
     assertEquals("variance", 0.0, stat.variance(), EPSILON);
     assertEquals("stddev", 0.0, stat.stddev(), EPSILON);
-    assertEquals("min", Double.MAX_VALUE, stat.min(), EPSILON);
-    assertEquals("max", Double.MIN_VALUE, stat.max(), EPSILON);
+    assertEquals("min", SampleStat.MinMax.DEFAULT_MIN_VALUE, stat.min(), EPSILON);
+    assertEquals("max", SampleStat.MinMax.DEFAULT_MAX_VALUE, stat.max(), EPSILON);
 
     stat.add(3);
     assertEquals("num samples", 1L, stat.numSamples());
@@ -60,8 +60,8 @@ public class TestSampleStat {
     assertEquals("mean", 0.0, stat.mean(), EPSILON);
     assertEquals("variance", 0.0, stat.variance(), EPSILON);
     assertEquals("stddev", 0.0, stat.stddev(), EPSILON);
-    assertEquals("min", Double.MAX_VALUE, stat.min(), EPSILON);
-    assertEquals("max", Double.MIN_VALUE, stat.max(), EPSILON);
+    assertEquals("min", SampleStat.MinMax.DEFAULT_MIN_VALUE, stat.min(), EPSILON);
+    assertEquals("max", SampleStat.MinMax.DEFAULT_MAX_VALUE, stat.max(), EPSILON);
   }
 
 }

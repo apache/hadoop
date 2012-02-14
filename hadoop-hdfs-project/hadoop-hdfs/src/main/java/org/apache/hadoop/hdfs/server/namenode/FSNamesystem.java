@@ -1933,7 +1933,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       boolean enforcePermission)
       throws AccessControlException, SafeModeException, UnresolvedLinkException,
              IOException {
-    boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
 
     writeLock();
@@ -1951,10 +1950,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (!dir.delete(src, collectedBlocks)) {
         return false;
       }
-      deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
-      if (deleteNow) { // Perform small deletes right away
-        removeBlocks(collectedBlocks);
-      }
     } finally {
       writeUnlock();
     }
@@ -1963,9 +1958,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     writeLock();
     try {
-      if (!deleteNow) {
-        removeBlocks(collectedBlocks); // Incremental deletion of blocks
-      }
+      removeBlocks(collectedBlocks); // Incremental deletion of blocks
     } finally {
       writeUnlock();
     }
@@ -2658,6 +2651,31 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric({"ExpiredHeartbeats", "Number of expired heartbeats"})
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
+  }
+  
+  @Metric({"TransactionsSinceLastCheckpoint",
+      "Number of transactions since last checkpoint"})
+  public long getTransactionsSinceLastCheckpoint() {
+    return getEditLog().getLastWrittenTxId() -
+        getFSImage().getStorage().getMostRecentCheckpointTxId();
+  }
+  
+  @Metric({"TransactionsSinceLastLogRoll",
+      "Number of transactions since last edit log roll"})
+  public long getTransactionsSinceLastLogRoll() {
+    return (getEditLog().getLastWrittenTxId() -
+        getEditLog().getCurSegmentTxId()) + 1;
+  }
+  
+  @Metric({"LastWrittenTransactionId", "Transaction ID written to the edit log"})
+  public long getLastWrittenTransactionId() {
+    return getEditLog().getLastWrittenTxId();
+  }
+  
+  @Metric({"LastCheckpointTime",
+      "Time in milliseconds since the epoch of the last checkpoint"})
+  public long getLastCheckpointTime() {
+    return getFSImage().getStorage().getMostRecentCheckpointTime();
   }
 
   /** @see ClientProtocol#getStats() */

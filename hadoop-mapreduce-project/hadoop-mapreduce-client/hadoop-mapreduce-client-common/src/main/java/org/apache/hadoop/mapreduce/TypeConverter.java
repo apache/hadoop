@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
-@SuppressWarnings("deprecation")
 public class TypeConverter {
 
   private static RecordFactory recordFactory;
@@ -116,8 +115,8 @@ public class TypeConverter {
   }
 
   public static org.apache.hadoop.mapred.TaskID fromYarn(TaskId id) {
-    return new org.apache.hadoop.mapred.TaskID(fromYarn(id.getJobId()), fromYarn(id.getTaskType()),
-        id.getId());
+    return new org.apache.hadoop.mapred.TaskID(fromYarn(id.getJobId()),
+      fromYarn(id.getTaskType()), id.getId());
   }
 
   public static TaskId toYarn(org.apache.hadoop.mapreduce.TaskID id) {

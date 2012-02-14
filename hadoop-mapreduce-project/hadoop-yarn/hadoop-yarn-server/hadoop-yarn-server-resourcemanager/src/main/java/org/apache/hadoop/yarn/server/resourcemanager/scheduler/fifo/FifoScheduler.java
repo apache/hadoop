@@ -148,7 +148,12 @@ public class FifoScheduler implements ResourceScheduler {
       QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
       queueInfo.setQueueName(DEFAULT_QUEUE.getQueueName());
       queueInfo.setCapacity(1.0f);
-      queueInfo.setCurrentCapacity((float)usedResource.getMemory() / clusterResource.getMemory());
+      if (clusterResource.getMemory() == 0) {
+        queueInfo.setCurrentCapacity(0.0f);
+      } else {
+        queueInfo.setCurrentCapacity((float) usedResource.getMemory()
+            / clusterResource.getMemory());
+      }
       queueInfo.setMaximumCapacity(1.0f);
       queueInfo.setChildQueues(new ArrayList<QueueInfo>());
       queueInfo.setQueueState(QueueState.RUNNING);
