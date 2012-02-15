@@ -44,14 +44,20 @@ public interface RetryPolicy {
     
     public final RetryDecision action;
     public final long delayMillis;
+    public final String reason;
     
     public RetryAction(RetryDecision action) {
-      this(action, 0);
+      this(action, 0, null);
     }
     
     public RetryAction(RetryDecision action, long delayTime) {
+      this(action, delayTime, null);
+    }
+    
+    public RetryAction(RetryDecision action, long delayTime, String reason) {
       this.action = action;
       this.delayMillis = delayTime;
+      this.reason = reason;
     }
     
     public enum RetryDecision {

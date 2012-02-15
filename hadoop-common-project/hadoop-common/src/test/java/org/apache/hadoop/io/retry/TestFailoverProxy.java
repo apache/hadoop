@@ -128,7 +128,7 @@ public class TestFailoverProxy {
         new FlipFlopProxyProvider(UnreliableInterface.class,
           new UnreliableImplementation("impl1"),
           new UnreliableImplementation("impl2")),
-        RetryPolicies.TRY_ONCE_DONT_FAIL);
+        RetryPolicies.TRY_ONCE_THEN_FAIL);
 
     unreliable.succeedsOnceThenFailsReturningString();
     try {
@@ -194,6 +194,27 @@ public class TestFailoverProxy {
     // Make sure we fail over since the first implementation threw an
     // IOException and this method is idempotent.
     assertEquals("impl2", unreliable.succeedsOnceThenFailsReturningStringIdempotent());
+  }
+  
+  /**
+   * Test that if a non-idempotent void function is called, and there is an exception,
+   * the exception is properly propagated
+   */
+  @Test
+  public void testExceptionPropagatedForNonIdempotentVoid() throws Exception {
+    UnreliableInterface unreliable = (UnreliableInterface)RetryProxy
+    .create(UnreliableInterface.class,
+        new FlipFlopProxyProvider(UnreliableInterface.class,
+          new UnreliableImplementation("impl1", TypeOfExceptionToFailWith.IO_EXCEPTION),
+          new UnreliableImplementation("impl2", TypeOfExceptionToFailWith.UNRELIABLE_EXCEPTION)),
+        RetryPolicies.failoverOnNetworkException(1));
+
+    try {
+      unreliable.nonIdempotentVoidFailsIfIdentifierDoesntMatch("impl2");
+      fail("did not throw an exception");
+    } catch (Exception e) {
+    }
+
   }
   
   private static class SynchronizedUnreliableImplementation extends UnreliableImplementation {

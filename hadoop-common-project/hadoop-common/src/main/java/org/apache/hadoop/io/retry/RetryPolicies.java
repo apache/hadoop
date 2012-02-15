@@ -56,14 +56,6 @@ public class RetryPolicies {
   
   /**
    * <p>
-   * Try once, and fail silently for <code>void</code> methods, or by
-   * re-throwing the exception for non-<code>void</code> methods.
-   * </p>
-   */
-  public static final RetryPolicy TRY_ONCE_DONT_FAIL = new TryOnceDontFail();
-  
-  /**
-   * <p>
    * Keep trying forever.
    * </p>
    */
@@ -154,12 +146,6 @@ public class RetryPolicies {
   static class TryOnceThenFail implements RetryPolicy {
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isMethodIdempotent) throws Exception {
-      throw e;
-    }
-  }
-  static class TryOnceDontFail implements RetryPolicy {
-    public RetryAction shouldRetry(Exception e, int retries, int failovers,
-        boolean isMethodIdempotent) throws Exception {
       return RetryAction.FAIL;
     }
   }
@@ -185,7 +171,7 @@ public class RetryPolicies {
     public RetryAction shouldRetry(Exception e, int retries, int failovers,
         boolean isMethodIdempotent) throws Exception {
       if (retries >= maxRetries) {
-        throw e;
+        return RetryAction.FAIL;
       }
       return new RetryAction(RetryAction.RetryDecision.RETRY,
           timeUnit.toMillis(calculateSleepTime(retries)));
@@ -325,9 +311,9 @@ public class RetryPolicies {
     public RetryAction shouldRetry(Exception e, int retries,
         int failovers, boolean isMethodIdempotent) throws Exception {
       if (failovers >= maxFailovers) {
-        LOG.info("Failovers (" + failovers + ") exceeded maximum allowed ("
+        return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
+            "failovers (" + failovers + ") exceeded maximum allowed ("
             + maxFailovers + ")");
-        return RetryAction.FAIL;
       }
       
       if (e instanceof ConnectException ||
@@ -345,7 +331,9 @@ public class RetryPolicies {
         if (isMethodIdempotent) {
           return RetryAction.FAILOVER_AND_RETRY;
         } else {
-          return RetryAction.FAIL;
+          return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
+              "the invoked method is not idempotent, and unable to determine " +
+              "whether it was invoked");
         }
       } else {
         return fallbackPolicy.shouldRetry(e, retries, failovers,

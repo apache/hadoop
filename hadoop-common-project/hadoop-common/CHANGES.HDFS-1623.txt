@@ -47,3 +47,5 @@ HADOOP-8038. Add 'ipc.client.connect.max.retries.on.timeouts' entry in
 core-default.xml file. (Uma Maheswara Rao G via atm)
 
 HADOOP-8041. Log a warning when a failover is first attempted (todd)
+
+HADOOP-8068. void methods can swallow exceptions when going through failover path (todd)

@@ -90,12 +90,12 @@ class RetryInvocationHandler implements RpcInvocationHandler {
         RetryAction action = policy.shouldRetry(e, retries++, invocationFailoverCount,
             isMethodIdempotent);
         if (action.action == RetryAction.RetryDecision.FAIL) {
-          LOG.warn("Exception while invoking " + method.getName()
-                   + " of " + currentProxy.getClass() + ". Not retrying.", e);
-          if (!method.getReturnType().equals(Void.TYPE)) {
-            throw e; // non-void methods can't fail without an exception
+          if (action.reason != null) {
+            LOG.warn("Exception while invoking " + 
+                currentProxy.getClass() + "." + method.getName() +
+                ". Not retrying because " + action.reason, e);
           }
-          return null;
+          throw e;
         } else { // retry or failover
           // avoid logging the failover if this is the first call on this
           // proxy object, and we successfully achieve the failover without

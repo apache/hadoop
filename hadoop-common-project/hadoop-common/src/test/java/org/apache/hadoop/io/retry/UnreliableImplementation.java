@@ -136,6 +136,18 @@ public class UnreliableImplementation implements UnreliableInterface {
       return null;
     }
   }
+  
+  @Override
+  public void nonIdempotentVoidFailsIfIdentifierDoesntMatch(String identifier)
+      throws UnreliableException, StandbyException, IOException {
+    if (this.identifier.equals(identifier)) {
+      return;
+    } else {
+      String message = "expected '" + this.identifier + "' but received '" +
+          identifier + "'";
+      throwAppropriateException(exceptionToFailWith, message);
+    }
+  }
 
   private static void throwAppropriateException(TypeOfExceptionToFailWith eType,
       String message) throws UnreliableException, StandbyException, IOException {
