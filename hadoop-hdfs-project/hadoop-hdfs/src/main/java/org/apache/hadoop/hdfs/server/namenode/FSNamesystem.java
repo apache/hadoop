@@ -1928,15 +1928,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-
-    getEditLog().logSync();
-
-    writeLock();
-    try {
-      removeBlocks(collectedBlocks); // Incremental deletion of blocks
-    } finally {
-      writeUnlock();
-    }
+    getEditLog().logSync(); 
+    removeBlocks(collectedBlocks); // Incremental deletion of blocks
     collectedBlocks.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* Namesystem.delete: "
@@ -1945,16 +1938,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
 
-  /** From the given list, incrementally remove the blocks from blockManager */
+  /** 
+   * From the given list, incrementally remove the blocks from blockManager
+   * Writelock is dropped and reacquired every BLOCK_DELETION_INCREMENT to
+   * ensure that other waiters on the lock can get in. See HDFS-2938
+   */
   private void removeBlocks(List<Block> blocks) {
-    assert hasWriteLock();
     int start = 0;
     int end = 0;
     while (start < blocks.size()) {
       end = BLOCK_DELETION_INCREMENT + start;
       end = end > blocks.size() ? blocks.size() : end;
-      for (int i=start; i<end; i++) {
-        blockManager.removeBlock(blocks.get(i));
+      writeLock();
+      try {
+        for (int i = start; i < end; i++) {
+          blockManager.removeBlock(blocks.get(i));
+        }
+      } finally {
+        writeUnlock();
       }
       start = end;
     }

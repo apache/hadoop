@@ -41,6 +41,9 @@ Release 0.23.2 - UNRELEASED
     HDFS-2525. Race between BlockPoolSliceScanner and append. (Brandon Li
     via jitendra)
 
+    HDFS-2938. Recursive delete of a large directory make namenode
+    unresponsive. (Hari Mankude via suresh)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
