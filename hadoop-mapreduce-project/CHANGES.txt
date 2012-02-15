@@ -94,6 +94,9 @@ Release 0.23.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's
+    environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -103,7 +106,10 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3852. Test TestLinuxResourceCalculatorPlugin failing. (Thomas 
     Graves via mahadev)
-    
+
+    MAPREDUCE-3736. Variable substitution depth too large for fs.default.name 
+    causes jobs to fail (ahmed via tucu).
+ 
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
@@ -811,6 +817,9 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3802. Added test to validate that AM can crash multiple times and
     still can recover successfully after MAPREDUCE-3846. (vinodkv)
+
+    MAPREDUCE-3858. Task attempt failure during commit results in task never completing.
+    (Tom White via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

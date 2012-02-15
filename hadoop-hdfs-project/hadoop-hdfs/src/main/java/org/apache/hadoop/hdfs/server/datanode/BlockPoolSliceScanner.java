@@ -51,11 +51,8 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 
 /**
- * Performs two types of scanning:
- * <li> Gets block files from the data directories and reconciles the
- * difference between the blocks on the disk and in memory.</li>
- * <li> Scans the data directories for block files under a block pool
- * and verifies that the files are not corrupt</li>
+ * Scans the block files under a block pool and verifies that the
+ * files are not corrupt.
  * This keeps track of blocks and their last verification times.
  * Currently it does not modify the metadata for block.
  */
@@ -426,6 +423,19 @@ class BlockPoolSliceScanner {
         // If the block does not exists anymore, then its not an error
         if (!dataset.contains(block)) {
           LOG.info(block + " is no longer in the dataset.");
+          deleteBlock(block.getLocalBlock());
+          return;
+        }
+
+        // If the block exists, the exception may due to a race with write:
+        // The BlockSender got an old block path in rbw. BlockReceiver removed
+        // the rbw block from rbw to finalized but BlockSender tried to open the
+        // file before BlockReceiver updated the VolumeMap. The state of the
+        // block can be changed again now, so ignore this error here. If there
+        // is a block really deleted by mistake, DirectoryScan should catch it.
+        if (e instanceof FileNotFoundException ) {
+          LOG.info("Verification failed for " + block +
+              ". It may be due to race with write.");
           deleteBlock(block.getLocalBlock());
           return;
         }

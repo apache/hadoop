@@ -832,6 +832,9 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     public TaskState transition(TaskImpl task, TaskEvent event) {
       task.failedAttempts++;
       TaskTAttemptEvent castEvent = (TaskTAttemptEvent) event;
+      if (castEvent.getTaskAttemptID().equals(task.commitAttempt)) {
+        task.commitAttempt = null;
+      }
       TaskAttempt attempt = task.attempts.get(castEvent.getTaskAttemptID());
       if (attempt.getAssignedContainerMgrAddress() != null) {
         //container was assigned
@@ -877,6 +880,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
     protected void unSucceed(TaskImpl task) {
       ++task.numberUncompletedAttempts;
+      task.commitAttempt = null;
       task.successfulAttempt = null;
     }
   }
