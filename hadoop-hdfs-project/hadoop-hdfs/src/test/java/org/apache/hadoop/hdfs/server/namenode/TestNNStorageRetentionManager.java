@@ -292,8 +292,9 @@ public class TestNNStorageRetentionManager {
       for (FakeRoot root : dirRoots.values()) {
         if (!root.type.isOfType(NameNodeDirType.EDITS)) continue;
         
+        // passing null NNStorage for unit test because it does not use it
         FileJournalManager fjm = new FileJournalManager(
-            root.mockStorageDir());
+            root.mockStorageDir(), null);
         fjm.purger = purger;
         jms.add(fjm);
       }

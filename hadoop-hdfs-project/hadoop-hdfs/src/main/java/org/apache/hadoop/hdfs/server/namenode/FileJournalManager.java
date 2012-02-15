@@ -52,6 +52,7 @@ class FileJournalManager implements JournalManager {
   private static final Log LOG = LogFactory.getLog(FileJournalManager.class);
 
   private final StorageDirectory sd;
+  private final NNStorage storage;
   private int outputBufferCapacity = 512*1024;
 
   private static final Pattern EDITS_REGEX = Pattern.compile(
@@ -65,8 +66,9 @@ class FileJournalManager implements JournalManager {
   StoragePurger purger
     = new NNStorageRetentionManager.DeletionStoragePurger();
 
-  public FileJournalManager(StorageDirectory sd) {
+  public FileJournalManager(StorageDirectory sd, NNStorage storage) {
     this.sd = sd;
+    this.storage = storage;
   }
 
   @Override 
@@ -75,11 +77,16 @@ class FileJournalManager implements JournalManager {
   @Override
   synchronized public EditLogOutputStream startLogSegment(long txid) 
       throws IOException {
-    currentInProgress = NNStorage.getInProgressEditsFile(sd, txid);
-    EditLogOutputStream stm = new EditLogFileOutputStream(currentInProgress,
-        outputBufferCapacity);
-    stm.create();
-    return stm;
+    try {
+      currentInProgress = NNStorage.getInProgressEditsFile(sd, txid);
+      EditLogOutputStream stm = new EditLogFileOutputStream(currentInProgress,
+          outputBufferCapacity);
+      stm.create();
+      return stm;
+    } catch (IOException e) {
+      storage.reportErrorsOnDirectory(sd);
+      throw e;
+    }
   }
 
   @Override
@@ -95,6 +102,7 @@ class FileJournalManager implements JournalManager {
         "Can't finalize edits file " + inprogressFile + " since finalized file " +
         "already exists");
     if (!inprogressFile.renameTo(dstFile)) {
+      storage.reportErrorsOnDirectory(sd);
       throw new IllegalStateException("Unable to finalize edits file " + inprogressFile);
     }
     if (inprogressFile.equals(currentInProgress)) {
