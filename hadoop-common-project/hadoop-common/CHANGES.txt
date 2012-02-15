@@ -38,6 +38,9 @@ Release 0.23.2 - UNRELEASED
     Double.MAX_VALUE) to avoid making Ganglia's gmetad core. (Varun Kapoor
     via mattf)
 
+    HADOOP-8074. Small bug in hadoop error message for unknown commands.
+    (Colin Patrick McCabe via eli)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
