@@ -17,6 +17,10 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8071. Avoid an extra packet in client code when nagling is
     disabled. (todd)
 
+    HADOOP-6502. Improve the performance of Configuration.getClassByName when
+    the class is not found by caching negative results.
+    (sharad, todd via todd)
+
   BUG FIXES
 
     HADOOP-8042  When copying a file out of HDFS, modifying it, and uploading
