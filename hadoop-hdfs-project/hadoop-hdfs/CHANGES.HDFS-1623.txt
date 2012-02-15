@@ -204,3 +204,5 @@ HDFS-2942. TestActiveStandbyElectorRealZK fails if build dir does not exist. (at
 HDFS-2948. NN throws NPE during shutdown if it fails to startup (todd)
 
 HDFS-2909. HA: Inaccessible shared edits dir not getting removed from FSImage storage dirs upon error. (Bikas Saha via jitendra)
+
+HDFS-2934. Allow configs to be scoped to all NNs in the nameservice. (todd)

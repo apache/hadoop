@@ -326,6 +326,39 @@ public class TestDFSUtil {
   }
 
   /**
+   * Regression test for HDFS-2934.
+   */
+  @Test
+  public void testSomeConfsNNSpecificSomeNSSpecific() {
+    final HdfsConfiguration conf = new HdfsConfiguration();
+
+    String key = DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY;
+    conf.set(key, "global-default");
+    conf.set(key + ".ns1", "ns1-override");
+    conf.set(key + ".ns1.nn1", "nn1-override");
+
+    // A namenode in another nameservice should get the global default.
+    Configuration newConf = new Configuration(conf);
+    NameNode.initializeGenericKeys(newConf, "ns2", "nn1");
+    assertEquals("global-default", newConf.get(key));
+    
+    // A namenode in another non-HA nameservice should get global default.
+    newConf = new Configuration(conf);
+    NameNode.initializeGenericKeys(newConf, "ns2", null);
+    assertEquals("global-default", newConf.get(key));    
+    
+    // A namenode in the same nameservice should get the ns setting
+    newConf = new Configuration(conf);
+    NameNode.initializeGenericKeys(newConf, "ns1", "nn2");
+    assertEquals("ns1-override", newConf.get(key));    
+
+    // The nn with the nn-specific setting should get its own override
+    newConf = new Configuration(conf);
+    NameNode.initializeGenericKeys(newConf, "ns1", "nn1");
+    assertEquals("nn1-override", newConf.get(key));    
+  }
+  
+  /**
    * Tests for empty configuration, an exception is thrown from
    * {@link DFSUtil#getNNServiceRpcAddresses(Configuration)}
    * {@link DFSUtil#getBackupNodeAddresses(Configuration)}

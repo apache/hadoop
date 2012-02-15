@@ -746,7 +746,10 @@ public class DFSUtil {
   /**
    * Sets the node specific setting into generic configuration key. Looks up
    * value of "key.nameserviceId.namenodeId" and if found sets that value into 
-   * generic key in the conf. Note that this only modifies the runtime conf.
+   * generic key in the conf. If this is not found, falls back to
+   * "key.nameserviceId" and then the unmodified key.
+   *
+   * Note that this only modifies the runtime conf.
    * 
    * @param conf
    *          Configuration object to lookup specific key and to set the value
@@ -764,6 +767,11 @@ public class DFSUtil {
       String nameserviceId, String nnId, String... keys) {
     for (String key : keys) {
       String value = conf.get(addKeySuffixes(key, nameserviceId, nnId));
+      if (value != null) {
+        conf.set(key, value);
+        continue;
+      }
+      value = conf.get(addKeySuffixes(key, nameserviceId));
       if (value != null) {
         conf.set(key, value);
       }
