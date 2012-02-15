@@ -210,6 +210,9 @@ Trunk (unreleased changes)
     dfs.client.block.write.replace-datanode-on-failure.enable to be mistakenly
     disabled. (atm)
 
+    HDFS-2525. Race between BlockPoolSliceScanner and append. (Brandon Li
+    via jitendra)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
