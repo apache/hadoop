@@ -794,6 +794,7 @@ public class Client {
           //for serializing the
           //data to be written
           d = new DataOutputBuffer();
+          d.writeInt(0); // placeholder for data length
           RpcPayloadHeader header = new RpcPayloadHeader(
               call.rpcKind, RpcPayloadOperation.RPC_FINAL_PAYLOAD, call.id);
           header.write(d);
