@@ -19,6 +19,9 @@ Release 0.23.2 - UNRELEASED
     HDFS-2931. Switch DataNode's BlockVolumeChoosingPolicy to private-audience.
     (harsh via szetszwo)
 
+    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO. (Brandon Li 
+    via jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
