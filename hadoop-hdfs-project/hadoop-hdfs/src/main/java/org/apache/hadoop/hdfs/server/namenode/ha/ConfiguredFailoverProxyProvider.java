@@ -27,7 +27,6 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -118,11 +117,10 @@ public class ConfiguredFailoverProxyProvider<T> implements
       try {
         if (NamenodeProtocol.class.equals(xface)) {
           current.namenode = DFSUtil.createNNProxyWithNamenodeProtocol(
-              current.address, conf, ugi);
+              current.address, conf, ugi, false);
         } else if (ClientProtocol.class.equals(xface)) {
-          // TODO(HA): This will create a NN proxy with an underlying retry
-          // proxy. We don't want this.
-          current.namenode = DFSUtil.createNamenode(current.address, conf, ugi);
+          current.namenode = DFSUtil.createNNProxyWithClientProtocol(
+              current.address, conf, ugi, false);
         } else {
           throw new IllegalStateException(
               "Upsupported protocol found when creating the proxy conection to NameNode. "
