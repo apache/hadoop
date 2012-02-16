@@ -3168,8 +3168,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric({"TransactionsSinceLastLogRoll",
       "Number of transactions since last edit log roll"})
   public long getTransactionsSinceLastLogRoll() {
-    return (getEditLog().getLastWrittenTxId() -
-        getEditLog().getCurSegmentTxId()) + 1;
+    if (isInStandbyState()) {
+      return 0;
+    } else {
+      return getEditLog().getLastWrittenTxId() -
+        getEditLog().getCurSegmentTxId() + 1;
+    }
   }
   
   @Metric({"LastWrittenTransactionId", "Transaction ID written to the edit log"})

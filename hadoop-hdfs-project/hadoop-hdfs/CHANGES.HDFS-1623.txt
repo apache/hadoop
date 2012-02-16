@@ -210,3 +210,5 @@ HDFS-2934. Allow configs to be scoped to all NNs in the nameservice. (todd)
 HDFS-2935. Shared edits dir property should be suffixed with nameservice and namenodeID (todd)
 
 HDFS-2928. ConfiguredFailoverProxyProvider should not create a NameNode proxy with an underlying retry proxy. (Uma Maheswara Rao G via atm)
+
+HDFS-2955. IllegalStateException during standby startup in getCurSegmentTxId. (Hari Mankude via atm)
