@@ -41,6 +41,9 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8074. Small bug in hadoop error message for unknown commands.
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8082 add hadoop-client and hadoop-minicluster to the 
+    dependency-management section. (tucu)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
