@@ -132,6 +132,9 @@ Trunk (unreleased changes)
     HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
     (todd)
 
+    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO. (Brandon Li
+    via jitendra) 
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
