@@ -21,6 +21,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3852. Test TestLinuxResourceCalculatorPlugin failing. (Thomas 
     Graves via mahadev)
 
+    MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
+    HTTPS parameters. (todd)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
