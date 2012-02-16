@@ -109,6 +109,9 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3736. Variable substitution depth too large for fs.default.name 
     causes jobs to fail (ahmed via tucu).
+
+    MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
+    HTTPS parameters. (todd)
  
 Release 0.23.1 - 2012-02-08 
 
