@@ -44,6 +44,8 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8082 add hadoop-client and hadoop-minicluster to the 
     dependency-management section. (tucu)
 
+    HADOOP-8066 The full docs build intermittently fails (abayer via tucu)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
