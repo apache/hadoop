@@ -7,6 +7,8 @@ Release 0.23.2 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    MAPREDUCE-3849. Change TokenCache's reading of the binary token file
+    (Daryn Sharp via bobby)
 
     MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's           
     environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)

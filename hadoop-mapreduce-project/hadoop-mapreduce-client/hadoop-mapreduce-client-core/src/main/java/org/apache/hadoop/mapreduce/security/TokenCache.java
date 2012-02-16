@@ -114,31 +114,10 @@ public class TokenCache {
       throw new IOException(
           "Can't get Master Kerberos principal for use as renewer");
     }
-    boolean readFile = true;
+    mergeBinaryTokens(credentials, conf);
 
     String fsName = fs.getCanonicalServiceName();
     if (TokenCache.getDelegationToken(credentials, fsName) == null) {
-      //TODO: Need to come up with a better place to put
-      //this block of code to do with reading the file
-      if (readFile) {
-        readFile = false;
-        String binaryTokenFilename =
-          conf.get(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY);
-        if (binaryTokenFilename != null) {
-          Credentials binary;
-          try {
-            binary = Credentials.readTokenStorageFile(
-                new Path("file:///" +  binaryTokenFilename), conf);
-          } catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-          credentials.addAll(binary);
-        }
-        if (TokenCache.getDelegationToken(credentials, fsName) != null) {
-          LOG.debug("DT for " + fsName  + " is already present");
-          return;
-        }
-      }
       List<Token<?>> tokens =
           fs.getDelegationTokens(delegTokenRenewer, credentials);
       if (tokens != null) {
@@ -161,6 +140,22 @@ public class TokenCache {
     }
   }
 
+  private static void mergeBinaryTokens(Credentials creds, Configuration conf) {
+    String binaryTokenFilename =
+        conf.get(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY);
+    if (binaryTokenFilename != null) {
+      Credentials binary;
+      try {
+        binary = Credentials.readTokenStorageFile(
+            new Path("file:///" +  binaryTokenFilename), conf);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      // supplement existing tokens with the tokens in the binary file
+      creds.mergeAll(binary);
+    }
+  }
+  
   /**
    * file name used on HDFS for generated job token
    */
