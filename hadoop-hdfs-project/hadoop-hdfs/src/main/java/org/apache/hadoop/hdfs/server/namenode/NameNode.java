@@ -995,7 +995,9 @@ public class NameNode {
     @Override
     public void stopStandbyServices() throws IOException {
       // TODO(HA): Are we guaranteed to be the only active here?
-      namesystem.stopStandbyServices();
+      if (namesystem != null) {
+        namesystem.stopStandbyServices();
+      }
     }
     
     @Override
