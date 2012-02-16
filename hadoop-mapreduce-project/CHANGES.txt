@@ -94,6 +94,9 @@ Release 0.23.2 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-3849. Change TokenCache's reading of the binary token file
+    (Daryn Sharp via bobby)
+
     MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's
     environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)
 
@@ -109,6 +112,9 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3736. Variable substitution depth too large for fs.default.name 
     causes jobs to fail (ahmed via tucu).
+
+    MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
+    HTTPS parameters. (todd)
  
 Release 0.23.1 - 2012-02-08 
 

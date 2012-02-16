@@ -738,9 +738,9 @@ KVNO Timestamp         Principal
 *-------------------------+-------------------------+------------------------+
 || Parameter              || Value                  || Notes                 |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.namenode.secondary.https-address>>> | <c_nn_host_fqdn:50090> | |
+| <<<dfs.namenode.secondary.http-address>>> | <c_nn_host_fqdn:50090> | |
 *-------------------------+-------------------------+------------------------+
-| <<<dfs.secondary.https.port>>> | <50090> | |
+| <<<dfs.namenode.secondary.https-port>>> | <50470> | |
 *-------------------------+-------------------------+------------------------+
 | <<<dfs.namenode.secondary.keytab.file>>> | | | 
 | | </etc/security/keytab/sn.service.keytab> | |
