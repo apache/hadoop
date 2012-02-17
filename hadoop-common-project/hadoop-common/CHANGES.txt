@@ -46,6 +46,8 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8066 The full docs build intermittently fails (abayer via tucu)
 
+    HADOOP-8083 javadoc generation for some modules is not done under target/ (tucu)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
