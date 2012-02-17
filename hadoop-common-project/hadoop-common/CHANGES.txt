@@ -174,6 +174,7 @@ Release 0.23.2 - UNRELEASED
     (sharad, todd via todd)
 
   BUG FIXES
+    HADOOP-8054 NPE with FilterFileSystem (Daryn Sharp via bobby)
 
     HADOOP-8042  When copying a file out of HDFS, modifying it, and uploading
     it back into HDFS, the put fails due to a CRC mismatch
@@ -195,6 +196,10 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8082 add hadoop-client and hadoop-minicluster to the 
     dependency-management section. (tucu)
+
+    HADOOP-8066 The full docs build intermittently fails (abayer via tucu)
+
+    HADOOP-8083 javadoc generation for some modules is not done under target/ (tucu)
 
 Release 0.23.1 - 2012-02-08 
 

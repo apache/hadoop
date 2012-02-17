@@ -55,6 +55,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
+                    sortFinished times when needed.
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
 
@@ -115,6 +117,10 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
     HTTPS parameters. (todd)
+
+    MAPREDUCE-3856. Instances of RunningJob class givs incorrect job tracking
+    urls when mutiple jobs are submitted from same client jvm. (Eric Payne via
+    sseth)
  
 Release 0.23.1 - 2012-02-08 
 

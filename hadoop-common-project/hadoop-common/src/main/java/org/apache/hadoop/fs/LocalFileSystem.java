@@ -48,13 +48,6 @@ public class LocalFileSystem extends ChecksumFileSystem {
     super(rawLocalFileSystem);
   }
     
-  @Override
-  public void initialize(URI uri, Configuration conf) throws IOException {
-    super.initialize(uri, conf);
-    // ctor didn't initialize the filtered fs
-    getRawFileSystem().initialize(uri, conf);
-  }
-  
   /** Convert a path to a File. */
   public File pathToFile(Path path) {
     return ((RawLocalFileSystem)fs).pathToFile(path);

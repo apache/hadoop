@@ -132,6 +132,9 @@ Trunk (unreleased changes)
     HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
     (todd)
 
+    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO. (Brandon Li
+    via jitendra) 
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
@@ -210,9 +213,6 @@ Trunk (unreleased changes)
     dfs.client.block.write.replace-datanode-on-failure.enable to be mistakenly
     disabled. (atm)
 
-    HDFS-2525. Race between BlockPoolSliceScanner and append. (Brandon Li
-    via jitendra)
-
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
@@ -250,6 +250,9 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2950. Secondary NN HTTPS address should be listed as a
     NAMESERVICE_SPECIFIC_KEY. (todd)
+
+    HDFS-2525. Race between BlockPoolSliceScanner and append. (Brandon Li
+    via jitendra)
 
     HDFS-2938. Recursive delete of a large directory make namenode
     unresponsive. (Hari Mankude via suresh)
