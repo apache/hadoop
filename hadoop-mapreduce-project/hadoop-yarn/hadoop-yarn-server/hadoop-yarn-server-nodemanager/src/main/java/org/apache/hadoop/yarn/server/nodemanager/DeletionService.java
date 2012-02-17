@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import static java.util.concurrent.TimeUnit.*;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -85,6 +86,7 @@ public class DeletionService extends AbstractService {
       sched = new ScheduledThreadPoolExecutor(YarnConfiguration.DEFAULT_NM_DELETE_THREAD_COUNT,
           tf);
     }
+    sched.setExecuteExistingDelayedTasksAfterShutdownPolicy(false);
     sched.setKeepAliveTime(60L, SECONDS);
     super.init(conf);
   }
@@ -92,12 +94,25 @@ public class DeletionService extends AbstractService {
   @Override
   public void stop() {
     sched.shutdown();
+    boolean terminated = false;
     try {
-      sched.awaitTermination(10, SECONDS);
+      terminated = sched.awaitTermination(10, SECONDS);
     } catch (InterruptedException e) {
+    }
+    if (terminated != true) {
       sched.shutdownNow();
     }
     super.stop();
+  }
+
+  /**
+   * Determine if the service has completely stopped.
+   * Used only by unit tests
+   * @return true if service has completely stopped
+   */
+  @Private
+  public boolean isTerminated() {
+    return getServiceState() == STATE.STOPPED && sched.isTerminated();
   }
 
   private class FileDeletion implements Runnable {

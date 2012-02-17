@@ -16,6 +16,8 @@ Release 0.23.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+    MAPREDUCE-3862.  Nodemanager can appear to hang on shutdown due to lingering
+    DeletionService threads (Jason Lowe via bobby)
 
     MAPREDUCE-3680. FifoScheduler web service rest API can print out invalid 
     JSON. (B Anil Kumar via tgraves)
