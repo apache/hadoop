@@ -26,6 +26,10 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
     HTTPS parameters. (todd)
 
+    MAPREDUCE-3856. Instances of RunningJob class givs incorrect job tracking
+    urls when mutiple jobs are submitted from same client jvm. (Eric Payne via
+    sseth)
+ 
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
