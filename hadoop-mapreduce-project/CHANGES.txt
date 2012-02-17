@@ -204,6 +204,9 @@ Release 0.23.1 - 2012-02-08
 
   BUG FIXES
 
+    MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
+                    sortFinished times when needed.
+
     MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
     (Dave Thompson via bobby)
 
