@@ -81,8 +81,7 @@ public class ClientServiceDelegate {
   private static final Log LOG = LogFactory.getLog(ClientServiceDelegate.class);
 
   // Caches for per-user NotRunningJobs
-  private static HashMap<JobState, HashMap<String, NotRunningJob>> notRunningJobs =
-      new HashMap<JobState, HashMap<String, NotRunningJob>>();
+  private HashMap<JobState, HashMap<String, NotRunningJob>> notRunningJobs;
 
   private final Configuration conf;
   private final JobID jobId;
@@ -108,6 +107,7 @@ public class ClientServiceDelegate {
     this.jobId = jobId;
     this.historyServerProxy = historyServerProxy;
     this.appId = TypeConverter.toYarn(jobId).getAppId();
+    notRunningJobs = new HashMap<JobState, HashMap<String, NotRunningJob>>();
   }
 
   // Get the instance of the NotRunningJob corresponding to the specified
