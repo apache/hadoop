@@ -40,12 +40,12 @@ public class TestViewFileSystemDelegation { //extends ViewFileSystemTestSetup {
 
   @BeforeClass
   public static void setup() throws Exception {
-    conf = ViewFileSystemTestSetup.configWithViewfsScheme();    
+    conf = ViewFileSystemTestSetup.createConfig();
     fs1 = setupFileSystem(new URI("fs1:/"), FakeFileSystem.class);
     fs2 = setupFileSystem(new URI("fs2:/"), FakeFileSystem.class);
     viewFs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
   }
-  
+
   static FakeFileSystem setupFileSystem(URI uri, Class clazz)
       throws Exception {
     String scheme = uri.getScheme();
