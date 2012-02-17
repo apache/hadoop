@@ -18,24 +18,39 @@
 
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.*;
+import static org.mockito.Mockito.*;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URI;
 import java.util.EnumSet;
 import java.util.Iterator;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-public class TestFilterFileSystem extends TestCase {
+public class TestFilterFileSystem {
 
   private static final Log LOG = FileSystem.LOG;
+  private static final Configuration conf = new Configuration();
 
+  @BeforeClass
+  public static void setup() {
+    conf.set("fs.flfs.impl", FilterLocalFileSystem.class.getName());
+    conf.setBoolean("fs.flfs.impl.disable.cache", true);
+    conf.setBoolean("fs.file.impl.disable.cache", true);
+  }
+  
   public static class DontCheck {
     public BlockLocation[] getFileBlockLocations(Path p, 
         long start, long len) { return null; }
@@ -153,6 +168,7 @@ public class TestFilterFileSystem extends TestCase {
     
   }
   
+  @Test
   public void testFilterFileSystem() throws Exception {
     for (Method m : FileSystem.class.getDeclaredMethods()) {
       if (Modifier.isStatic(m.getModifiers()))
@@ -176,4 +192,109 @@ public class TestFilterFileSystem extends TestCase {
     }
   }
   
+  @Test
+  public void testFilterEmbedInit() throws Exception {
+    FileSystem mockFs = createMockFs(false); // no conf = need init
+    checkInit(new FilterFileSystem(mockFs), true);
+  }
+
+  @Test
+  public void testFilterEmbedNoInit() throws Exception {
+    FileSystem mockFs = createMockFs(true); // has conf = skip init
+    checkInit(new FilterFileSystem(mockFs), false);
+  }
+
+  @Test
+  public void testLocalEmbedInit() throws Exception {
+    FileSystem mockFs = createMockFs(false); // no conf = need init
+    checkInit(new LocalFileSystem(mockFs), true);
+  }  
+  
+  @Test
+  public void testLocalEmbedNoInit() throws Exception {
+    FileSystem mockFs = createMockFs(true); // has conf = skip init
+    checkInit(new LocalFileSystem(mockFs), false);
+  }
+  
+  private FileSystem createMockFs(boolean useConf) {
+    FileSystem mockFs = mock(FileSystem.class);
+    when(mockFs.getUri()).thenReturn(URI.create("mock:/"));
+    when(mockFs.getConf()).thenReturn(useConf ? conf : null);
+    return mockFs;
+  }
+
+  @Test
+  public void testGetLocalFsSetsConfs() throws Exception {
+    LocalFileSystem lfs = FileSystem.getLocal(conf);
+    checkFsConf(lfs, conf, 2);
+  }
+
+  @Test
+  public void testGetFilterLocalFsSetsConfs() throws Exception {
+    FilterFileSystem flfs =
+        (FilterFileSystem) FileSystem.get(URI.create("flfs:/"), conf);
+    checkFsConf(flfs, conf, 3);
+  }
+
+  @Test
+  public void testInitLocalFsSetsConfs() throws Exception {
+    LocalFileSystem lfs = new LocalFileSystem();
+    checkFsConf(lfs, null, 2);
+    lfs.initialize(lfs.getUri(), conf);
+    checkFsConf(lfs, conf, 2);
+  }
+
+  @Test
+  public void testInitFilterFsSetsEmbedConf() throws Exception {
+    LocalFileSystem lfs = new LocalFileSystem();
+    checkFsConf(lfs, null, 2);
+    FilterFileSystem ffs = new FilterFileSystem(lfs);
+    assertEquals(lfs, ffs.getRawFileSystem());
+    checkFsConf(ffs, null, 3);
+    ffs.initialize(URI.create("filter:/"), conf);
+    checkFsConf(ffs, conf, 3);
+  }
+
+  @Test
+  public void testInitFilterLocalFsSetsEmbedConf() throws Exception {
+    FilterFileSystem flfs = new FilterLocalFileSystem();
+    assertEquals(LocalFileSystem.class, flfs.getRawFileSystem().getClass());
+    checkFsConf(flfs, null, 3);
+    flfs.initialize(URI.create("flfs:/"), conf);
+    checkFsConf(flfs, conf, 3);
+  }
+
+  private void checkInit(FilterFileSystem fs, boolean expectInit)
+      throws Exception {
+    URI uri = URI.create("filter:/");
+    fs.initialize(uri, conf);
+    
+    FileSystem embedFs = fs.getRawFileSystem();
+    if (expectInit) {
+      verify(embedFs, times(1)).initialize(eq(uri), eq(conf));
+    } else {
+      verify(embedFs, times(0)).initialize(any(URI.class), any(Configuration.class));
+    }
+  }
+
+  // check the given fs's conf, and all its filtered filesystems
+  private void checkFsConf(FileSystem fs, Configuration conf, int expectDepth) {
+    int depth = 0;
+    while (true) {
+      depth++; 
+      assertFalse("depth "+depth+">"+expectDepth, depth > expectDepth);
+      assertEquals(conf, fs.getConf());
+      if (!(fs instanceof FilterFileSystem)) {
+        break;
+      }
+      fs = ((FilterFileSystem) fs).getRawFileSystem();
+    }
+    assertEquals(expectDepth, depth);
+  }
+  
+  private static class FilterLocalFileSystem extends FilterFileSystem {
+    FilterLocalFileSystem() {
+      super(new LocalFileSystem());
+    }
+  }
 }

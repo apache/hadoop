@@ -22,6 +22,7 @@ Release 0.23.2 - UNRELEASED
     (sharad, todd via todd)
 
   BUG FIXES
+    HADOOP-8054 NPE with FilterFileSystem (Daryn Sharp via bobby)
 
     HADOOP-8042  When copying a file out of HDFS, modifying it, and uploading
     it back into HDFS, the put fails due to a CRC mismatch
