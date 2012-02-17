@@ -49,6 +49,9 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8083 javadoc generation for some modules is not done under target/ (tucu)
 
+    HADOOP-8036. TestViewFsTrash assumes the user's home directory is
+    2 levels deep. (Colin Patrick McCabe via eli)
+
 Release 0.23.1 - 2012-02-08 
 
   INCOMPATIBLE CHANGES
