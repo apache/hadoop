@@ -159,7 +159,7 @@ public class TestMRWithDistributedCache extends TestCase {
   public void testLocalJobRunner() throws Exception {
     Configuration c = new Configuration();
     c.set(JTConfig.JT_IPC_ADDRESS, "local");
-    c.set("fs.default.name", "file:///");
+    c.set("fs.defaultFS", "file:///");
     testWithConf(c);
   }
 

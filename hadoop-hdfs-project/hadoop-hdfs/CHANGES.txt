@@ -138,6 +138,9 @@ Release 0.23.2 - UNRELEASED
     HDFS-2931. Switch DataNode's BlockVolumeChoosingPolicy to private-audience.
     (harsh via szetszwo)
 
+    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO. (Brandon Li 
+    via jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -153,6 +156,15 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2815. Namenode sometimes oes not come out of safemode during 
     NN crash + restart. (Uma Maheswara Rao via suresh)
+
+    HDFS-2950. Secondary NN HTTPS address should be listed as a
+    NAMESERVICE_SPECIFIC_KEY. (todd)
+
+    HDFS-2525. Race between BlockPoolSliceScanner and append. (Brandon Li
+    via jitendra)
+
+    HDFS-2938. Recursive delete of a large directory make namenode
+    unresponsive. (Hari Mankude via suresh)
 
 Release 0.23.1 - 2012-02-08 
 

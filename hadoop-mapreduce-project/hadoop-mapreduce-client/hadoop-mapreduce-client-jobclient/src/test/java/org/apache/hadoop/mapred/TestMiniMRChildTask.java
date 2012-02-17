@@ -219,8 +219,8 @@ public class TestMiniMRChildTask {
       
       // check if X=$X:/abc works for LD_LIBRARY_PATH
       checkEnv("LD_LIBRARY_PATH", "/tmp", "append");
-      // check if X=/tmp works for an already existing parameter
-      checkEnv("HOME", "/tmp", "noappend");
+      // check if X=y works for an already existing parameter
+      checkEnv("LANG", "en_us_8859_1", "noappend");
       // check if X=/tmp for a new env variable
       checkEnv("MY_PATH", "/tmp", "noappend");
       // check if X=$X:/tmp works for a new env var and results into :/tmp
@@ -269,8 +269,8 @@ public class TestMiniMRChildTask {
       
       // check if X=$X:/abc works for LD_LIBRARY_PATH
       checkEnv("LD_LIBRARY_PATH", "/tmp", "append");
-      // check if X=/tmp works for an already existing parameter
-      checkEnv("HOME", "/tmp", "noappend");
+      // check if X=y works for an already existing parameter
+      checkEnv("LANG", "en_us_8859_1", "noappend");
       // check if X=/tmp for a new env variable
       checkEnv("MY_PATH", "/tmp", "noappend");
       // check if X=$X:/tmp works for a new env var and results into :/tmp
@@ -369,7 +369,7 @@ public class TestMiniMRChildTask {
    *   - x=y (x can be a already existing env variable or a new variable)
    *   - x=$x:y (replace $x with the current value of x)
    */
-
+  @Test
   public void testTaskEnv(){
     try {
       JobConf conf = new JobConf(mr.getConfig());
@@ -392,6 +392,7 @@ public class TestMiniMRChildTask {
    *   - x=y (x can be a already existing env variable or a new variable)
    *   - x=$x:y (replace $x with the current value of x)
    */
+  @Test
   public void testTaskOldEnv(){
     try {
       JobConf conf = new JobConf(mr.getConfig());
@@ -415,7 +416,7 @@ public class TestMiniMRChildTask {
               EnvCheckMapper.class, EnvCheckReducer.class);
     // test 
     //  - new SET of new var (MY_PATH)
-    //  - set of old var (HOME)
+    //  - set of old var (LANG)
     //  - append to an old var from modified env (LD_LIBRARY_PATH)
     //  - append to an old var from tt's env (PATH)
     //  - append to a new var (NEW_PATH)
@@ -432,10 +433,10 @@ public class TestMiniMRChildTask {
       mapTaskJavaOpts = reduceTaskJavaOpts = TASK_OPTS_VAL;
     }
     conf.set(mapTaskEnvKey, 
-             "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp," +
+             "MY_PATH=/tmp,LANG=en_us_8859_1,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp," +
              "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
     conf.set(reduceTaskEnvKey, 
-             "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp," +
+             "MY_PATH=/tmp,LANG=en_us_8859_1,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp," +
              "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
     conf.set("path", System.getenv("PATH"));
     conf.set(mapTaskJavaOptsKey, mapTaskJavaOpts);

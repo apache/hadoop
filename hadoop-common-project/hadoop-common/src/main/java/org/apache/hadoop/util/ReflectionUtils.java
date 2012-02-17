@@ -86,17 +86,22 @@ public class ReflectionUtils {
     //invoke configure on theObject
     try {
       Class<?> jobConfClass = 
-        conf.getClassByName("org.apache.hadoop.mapred.JobConf");
+        conf.getClassByNameOrNull("org.apache.hadoop.mapred.JobConf");
+      if (jobConfClass == null) {
+        return;
+      }
+      
       Class<?> jobConfigurableClass = 
-        conf.getClassByName("org.apache.hadoop.mapred.JobConfigurable");
-       if (jobConfClass.isAssignableFrom(conf.getClass()) &&
+        conf.getClassByNameOrNull("org.apache.hadoop.mapred.JobConfigurable");
+      if (jobConfigurableClass == null) {
+        return;
+      }
+      if (jobConfClass.isAssignableFrom(conf.getClass()) &&
             jobConfigurableClass.isAssignableFrom(theObject.getClass())) {
         Method configureMethod = 
           jobConfigurableClass.getMethod("configure", jobConfClass);
         configureMethod.invoke(theObject, conf);
       }
-    } catch (ClassNotFoundException e) {
-      //JobConf/JobConfigurable not in classpath. no need to configure
     } catch (Exception e) {
       throw new RuntimeException("Error in configuring object", e);
     }

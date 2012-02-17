@@ -80,7 +80,12 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8071. Avoid an extra packet in client code when nagling is
     disabled. (todd)
 
+    HADOOP-6502. Improve the performance of Configuration.getClassByName when
+    the class is not found by caching negative results.
+    (sharad, todd via todd)
+
   BUG FIXES
+    HADOOP-8054 NPE with FilterFileSystem (Daryn Sharp via bobby)
 
     HADOOP-8042  When copying a file out of HDFS, modifying it, and uploading
     it back into HDFS, the put fails due to a CRC mismatch
@@ -96,6 +101,16 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8052. Hadoop Metrics2 should emit Float.MAX_VALUE (instead of 
     Double.MAX_VALUE) to avoid making Ganglia's gmetad core. (Varun Kapoor
     via mattf)
+
+    HADOOP-8074. Small bug in hadoop error message for unknown commands.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8082 add hadoop-client and hadoop-minicluster to the 
+    dependency-management section. (tucu)
+
+    HADOOP-8066 The full docs build intermittently fails (abayer via tucu)
+
+    HADOOP-8083 javadoc generation for some modules is not done under target/ (tucu)
 
 Release 0.23.1 - 2012-02-08 
 

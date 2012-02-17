@@ -53,7 +53,7 @@ public class FileBench extends Configured implements Tool {
 "unless they are also explicitly included, as in \"-pln -zip\"\n" +
 "Note that CompressionType params only apply to SequenceFiles\n\n" +
 "Useful options to set:\n" +
-"-D fs.default.name=\"file:///\" \\\n" +
+"-D fs.defaultFS=\"file:///\" \\\n" +
 "-D fs.file.impl=org.apache.hadoop.fs.RawLocalFileSystem \\\n" +
 "-D filebench.file.bytes=$((10*1024*1024*1024)) \\\n" +
 "-D filebench.key.words=5 \\\n" +

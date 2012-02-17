@@ -238,7 +238,53 @@ public class TestShortCircuitLocalRead {
       cluster.shutdown();
     }
   }
+
+  @Test
+  public void testSkipWithVerifyChecksum() throws IOException {
+    int size = blockSize;
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY, false);
+    conf.set(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY,
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    if (simulatedStorage) {
+      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    }
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)
+        .format(true).build();
+    FileSystem fs = cluster.getFileSystem();
+    try {
+      // check that / exists
+      Path path = new Path("/");
+      assertTrue("/ should be a directory", fs.getFileStatus(path)
+          .isDirectory() == true);
+      
+      byte[] fileData = AppendTestUtil.randomBytes(seed, size*3);
+      // create a new file in home directory. Do not close it.
+      Path file1 = new Path("filelocal.dat");
+      FSDataOutputStream stm = createFile(fs, file1, 1);
   
+      // write to file
+      stm.write(fileData);
+      stm.close();
+      
+      // now test the skip function
+      FSDataInputStream instm = fs.open(file1);
+      byte[] actual = new byte[fileData.length];
+      // read something from the block first, otherwise BlockReaderLocal.skip()
+      // will not be invoked
+      int nread = instm.read(actual, 0, 3);
+      long skipped = 2*size+3;
+      instm.seek(skipped);
+      nread = instm.read(actual, (int)(skipped + nread), 3);
+      instm.close();
+        
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+     
   /**
    * Test to run benchmarks between shortcircuit read vs regular read with
    * specified number of threads simultaneously reading.

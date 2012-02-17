@@ -33,6 +33,11 @@ Release 0.23.2 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+    MAPREDUCE-3849. Change TokenCache's reading of the binary token file
+    (Daryn Sharp via bobby)
+
+    MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's           
+    environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)
 
   OPTIMIZATIONS
 
@@ -44,6 +49,13 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3852. Test TestLinuxResourceCalculatorPlugin failing. (Thomas 
     Graves via mahadev)
 
+    MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
+    HTTPS parameters. (todd)
+
+    MAPREDUCE-3856. Instances of RunningJob class givs incorrect job tracking
+    urls when mutiple jobs are submitted from same client jvm. (Eric Payne via
+    sseth)
+ 
 Release 0.23.1 - 2012-02-08 
 
   NEW FEATURES
@@ -72,7 +84,10 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
     (Ravi Prakash via bobby)
-    
+
+    MAPREDUCE-3736. Variable substitution depth too large for fs.default.name 
+    causes jobs to fail (ahmed via tucu).
+ 
     MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
                     (Vinay Thota via amarrk)
 
@@ -788,6 +803,9 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3802. Added test to validate that AM can crash multiple times and
     still can recover successfully after MAPREDUCE-3846. (vinodkv)
+
+    MAPREDUCE-3858. Task attempt failure during commit results in task never completing.
+    (Tom White via mahadev)
 
 Release 0.23.0 - 2011-11-01 
 

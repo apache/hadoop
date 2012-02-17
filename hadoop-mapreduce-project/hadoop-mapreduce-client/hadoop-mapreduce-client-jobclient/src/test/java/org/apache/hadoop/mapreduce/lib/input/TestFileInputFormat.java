@@ -45,9 +45,9 @@ public class TestFileInputFormat {
   @Test
   public void testAddInputPath() throws IOException {
     final Configuration conf = new Configuration();
-    conf.set("fs.default.name", "s3://abc:xyz@hostname/");
+    conf.set("fs.defaultFS", "s3://abc:xyz@hostname/");
     final Job j = Job.getInstance(conf);
-    j.getConfiguration().set("fs.default.name", "s3://abc:xyz@hostname/");
+    j.getConfiguration().set("fs.defaultFS", "s3://abc:xyz@hostname/");
 
     //setup default fs
     final FileSystem defaultfs = FileSystem.get(conf);
