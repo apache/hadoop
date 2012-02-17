@@ -275,6 +275,12 @@ public class LoggedTaskAttempt implements DeepCompare {
   void adjustTimes(long adjustment) {
     startTime += adjustment;
     finishTime += adjustment;
+
+    // For reduce attempts, adjust the different phases' finish times also 
+    if (sortFinished >= 0) {
+      shuffleFinished += adjustment;
+      sortFinished += adjustment;
+    }
   }
 
   public long getShuffleFinished() {

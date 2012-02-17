@@ -293,7 +293,7 @@
         <tr>
           <td><code>-output-duration</code></td>
           <td>This parameter defines the final runtime of the trace. 
-              Default value if <strong>1 hour</strong>.
+              Default value is <strong>1 hour</strong>.
           </td>
           <td>'<code>-output-duration 30m</code>' 
               implies that the resulting trace will have a max runtime of 
