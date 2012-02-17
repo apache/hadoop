@@ -49,6 +49,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocolHelper;
 import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
@@ -1590,8 +1591,7 @@ public class MiniDFSCluster {
   
   private HAServiceProtocol getHaServiceClient(int nnIndex) throws IOException {
     InetSocketAddress addr = nameNodes[nnIndex].nameNode.getServiceRpcAddress();
-    return RPC.getProxy(HAServiceProtocol.class,
-        HAServiceProtocol.versionID, addr, conf);
+    return new HAServiceProtocolClientSideTranslatorPB(addr, conf);
   }
   
   public void transitionToActive(int nnIndex) throws IOException,

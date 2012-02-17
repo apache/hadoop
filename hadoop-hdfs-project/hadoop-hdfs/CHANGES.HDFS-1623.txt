@@ -214,3 +214,5 @@ HDFS-2928. ConfiguredFailoverProxyProvider should not create a NameNode proxy wi
 HDFS-2955. IllegalStateException during standby startup in getCurSegmentTxId. (Hari Mankude via atm)
 
 HDFS-2937. TestDFSHAAdmin needs tests with MiniDFSCluster. (Brandon Li via suresh)
+
+HDFS-2586. Add protobuf service and implementation for HAServiceProtocol. (suresh via atm)

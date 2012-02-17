@@ -42,6 +42,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
+import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
+import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
@@ -194,6 +197,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
         new GetUserMappingsProtocolServerSideTranslatorPB(this);
     BlockingService getUserMappingService = GetUserMappingsProtocolService
         .newReflectiveBlockingService(getUserMappingXlator);
+    
+    HAServiceProtocolServerSideTranslatorPB haServiceProtocolXlator = 
+        new HAServiceProtocolServerSideTranslatorPB(this);
+    BlockingService haPbService = HAServiceProtocolService
+        .newReflectiveBlockingService(haServiceProtocolXlator);
 	  
     WritableRpcEngine.ensureInitialized();
     
@@ -209,8 +217,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
           dnSocketAddr.getHostName(), dnSocketAddr.getPort(), 
           serviceHandlerCount,
           false, conf, namesystem.getDelegationTokenSecretManager());
-      this.serviceRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
-          HAServiceProtocol.class, this);
+      DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
+          serviceRpcServer);
       DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
           serviceRpcServer);
       DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
@@ -234,8 +242,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
         clientNNPbService, socAddr.getHostName(),
             socAddr.getPort(), handlerCount, false, conf,
             namesystem.getDelegationTokenSecretManager());
-    this.clientRpcServer.addProtocol(RpcKind.RPC_WRITABLE,
-        HAServiceProtocol.class, this);
+    DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
+        clientRpcServer);
     DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
         clientRpcServer);
     DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,

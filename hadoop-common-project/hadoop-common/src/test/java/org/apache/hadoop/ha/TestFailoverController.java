@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysFailFencer;
 import static org.apache.hadoop.ha.TestNodeFencer.setupFencer;
@@ -285,8 +286,7 @@ public class TestFailoverController {
     Configuration conf = new Configuration();
     // Lower the timeout so we quickly fail to connect
     conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
-    return (HAServiceProtocol)RPC.getProxy(
-        HAServiceProtocol.class, HAServiceProtocol.versionID, addr, conf);
+    return new HAServiceProtocolClientSideTranslatorPB(addr, conf);
   }
 
   @Test

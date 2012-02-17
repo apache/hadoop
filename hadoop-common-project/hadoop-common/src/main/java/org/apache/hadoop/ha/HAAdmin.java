@@ -31,6 +31,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Tool;
@@ -239,9 +240,7 @@ public abstract class HAAdmin extends Configured implements Tool {
       throws IOException {
     String serviceAddr = getServiceAddr(serviceId);
     InetSocketAddress addr = NetUtils.createSocketAddr(serviceAddr);
-    return (HAServiceProtocol)RPC.getProxy(
-          HAServiceProtocol.class, HAServiceProtocol.versionID,
-          addr, getConf());
+    return new HAServiceProtocolClientSideTranslatorPB(addr, getConf());
   }
 
   @Override
