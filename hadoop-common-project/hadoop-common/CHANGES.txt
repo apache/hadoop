@@ -54,6 +54,9 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8046 Revert StaticMapping semantics to the existing ones, add DNS
     mapping diagnostics in progress (stevel)
 
+    HADOOP-8057 hadoop-setup-conf.sh not working because of some extra spaces.
+    (Vinayakumar B via stevel)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES

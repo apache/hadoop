@@ -246,7 +246,7 @@ OPTS=$(getopt \
   -l 'dfs-datanode-dir-perm:' \
   -l 'dfs-block-local-path-access-user:' \
   -l 'dfs-client-read-shortcircuit:' \
-  -l 'dfs-client-read-shortcircuit-skip-checksum:' \   
+  -l 'dfs-client-read-shortcircuit-skip-checksum:' \
   -o 'h' \
   -- "$@") 
   
