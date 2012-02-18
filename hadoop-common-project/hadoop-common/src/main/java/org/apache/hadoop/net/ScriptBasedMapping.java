@@ -66,9 +66,15 @@ public final class ScriptBasedMapping extends CachedDNSToSwitchMapping {
                      CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY ;
   /**
    * key to the argument count that the script supports
+   * {@value}
    */
   static final String SCRIPT_ARG_COUNT_KEY =
                      CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_NUMBER_ARGS_KEY ;
+  /**
+   * Text used in the {@link #toString()} method if there is no string
+   * {@value}
+   */
+  public static final String NO_SCRIPT = "no script";
 
   /**
    * Create an instance with the default configuration.
@@ -102,6 +108,11 @@ public final class ScriptBasedMapping extends CachedDNSToSwitchMapping {
   @Override
   public Configuration getConf() {
     return getRawMapping().getConf();
+  }
+
+  @Override
+  public String toString() {
+    return "script-based mapping with " + getRawMapping().toString();
   }
 
   /**
@@ -231,7 +242,7 @@ public final class ScriptBasedMapping extends CachedDNSToSwitchMapping {
           s.execute();
           allOutput.append(s.getOutput()).append(" ");
         } catch (Exception e) {
-          LOG.warn("Exception: ", e);
+          LOG.warn("Exception running " + s, e);
           return null;
         }
         loopCount++;
@@ -247,6 +258,11 @@ public final class ScriptBasedMapping extends CachedDNSToSwitchMapping {
     @Override
     public boolean isSingleSwitch() {
       return scriptName == null;
+    }
+
+    @Override
+    public String toString() {
+      return scriptName != null ? ("script " + scriptName) : NO_SCRIPT;
     }
   }
 }

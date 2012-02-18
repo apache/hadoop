@@ -51,6 +51,9 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8036. TestViewFsTrash assumes the user's home directory is
     2 levels deep. (Colin Patrick McCabe via eli)
 
+    HADOOP-8046 Revert StaticMapping semantics to the existing ones, add DNS
+    mapping diagnostics in progress (stevel)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
