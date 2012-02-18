@@ -80,6 +80,11 @@ public class FilterFileSystem extends FileSystem {
    */
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
+    // this is less than ideal, but existing filesystems sometimes neglect
+    // to initialize the embedded filesystem
+    if (fs.getConf() == null) {
+      fs.initialize(name, conf);
+    }
     String scheme = name.getScheme();
     if (!scheme.equals(fs.getUri().getScheme())) {
       swapScheme = scheme;
