@@ -213,6 +213,9 @@ Trunk (unreleased changes)
     dfs.client.block.write.replace-datanode-on-failure.enable to be mistakenly
     disabled. (atm)
 
+    HDFS-2968. Protocol translator for BlockRecoveryCommand broken when
+    multiple blocks need recovery. (todd)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
@@ -256,6 +259,8 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2938. Recursive delete of a large directory make namenode
     unresponsive. (Hari Mankude via suresh)
+
+    HDFS-2969. ExtendedBlock.equals is incorrectly implemented (todd)
 
 Release 0.23.1 - 2012-02-08 
 

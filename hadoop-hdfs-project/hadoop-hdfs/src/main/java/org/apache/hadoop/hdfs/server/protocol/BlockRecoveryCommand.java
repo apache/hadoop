@@ -32,6 +32,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
+import com.google.common.base.Joiner;
+
 /**
  * BlockRecoveryCommand is an instruction to a data-node to recover
  * the specified blocks.
@@ -137,6 +139,15 @@ public class BlockRecoveryCommand extends DatanodeCommand {
    */
   public void add(RecoveringBlock block) {
     recoveringBlocks.add(block);
+  }
+  
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("BlockRecoveryCommand(\n  ");
+    Joiner.on("\n  ").appendTo(sb, recoveringBlocks);
+    sb.append("\n)");
+    return sb.toString();
   }
 
   ///////////////////////////////////////////

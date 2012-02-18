@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeRegistrationProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -67,6 +69,10 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Test;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 
 /**
  * Tests for {@link PBHelper}
@@ -265,9 +271,12 @@ public class TestPBHelper {
       compare(logs.get(i), logs1.get(i));
     }
   }
-  
   public ExtendedBlock getExtendedBlock() {
-    return new ExtendedBlock("bpid", 1, 100, 2);
+    return getExtendedBlock(1);
+  }
+  
+  public ExtendedBlock getExtendedBlock(long blkid) {
+    return new ExtendedBlock("bpid", blkid, 100, 2);
   }
   
   public DatanodeInfo getDNInfo() {
@@ -317,6 +326,31 @@ public class TestPBHelper {
       compare(dnInfo[0], dnInfo1[0]);
     }
   }
+  
+  @Test
+  public void testConvertBlockRecoveryCommand() {
+    DatanodeInfo[] dnInfo = new DatanodeInfo[] { getDNInfo(), getDNInfo() };
+
+    List<RecoveringBlock> blks = ImmutableList.of(
+      new RecoveringBlock(getExtendedBlock(1), dnInfo, 3),
+      new RecoveringBlock(getExtendedBlock(2), dnInfo, 3)
+    );
+    
+    BlockRecoveryCommand cmd = new BlockRecoveryCommand(blks);
+    BlockRecoveryCommandProto proto = PBHelper.convert(cmd);
+    assertEquals(1, proto.getBlocks(0).getBlock().getB().getBlockId());
+    assertEquals(2, proto.getBlocks(1).getBlock().getB().getBlockId());
+    
+    BlockRecoveryCommand cmd2 = PBHelper.convert(proto);
+    
+    List<RecoveringBlock> cmd2Blks = Lists.newArrayList(
+        cmd2.getRecoveringBlocks());
+    assertEquals(blks.get(0).getBlock(), cmd2Blks.get(0).getBlock());
+    assertEquals(blks.get(1).getBlock(), cmd2Blks.get(1).getBlock());
+    assertEquals(Joiner.on(",").join(blks), Joiner.on(",").join(cmd2Blks));
+    assertEquals(cmd.toString(), cmd2.toString());
+  }
+  
   
   @Test
   public void testConvertText() {
