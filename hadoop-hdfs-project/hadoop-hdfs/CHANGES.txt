@@ -119,6 +119,9 @@ Release 0.23-PB - Unreleased
     HDFS-2768. BackupNode stop can not close proxy connections because
     it is not a proxy instance. (Uma Maheswara Rao G via eli)
 
+    HDFS-2968. Protocol translator for BlockRecoveryCommand broken when
+    multiple blocks need recovery. (todd)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
