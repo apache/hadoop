@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Release 0.23.1 - 2012-02-08 
+Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
 
@@ -752,6 +752,10 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3858. Task attempt failure during commit results in task never completing.
     (Tom White via mahadev)
+
+    MAPREDUCE-3856. Instances of RunningJob class givs incorrect job tracking
+    urls when mutiple jobs are submitted from same client jvm. (Eric Payne via 
+    sseth)
 
 Release 0.23.0 - 2011-11-01 
 
