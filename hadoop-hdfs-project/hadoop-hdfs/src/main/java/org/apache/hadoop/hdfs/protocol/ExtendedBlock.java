@@ -145,7 +145,7 @@ public class ExtendedBlock implements Writable {
       return false;
     }
     ExtendedBlock b = (ExtendedBlock)o;
-    return b.block.equals(block) || b.poolId.equals(poolId);
+    return b.block.equals(block) && b.poolId.equals(poolId);
   }
   
   @Override // Object
