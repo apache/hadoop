@@ -18,6 +18,7 @@
 package org.apache.hadoop.net;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -121,6 +122,22 @@ public class CachedDNSToSwitchMapping extends AbstractDNSToSwitchMapping {
     //now look up the entire list in the cache
     return getCachedHosts(names);
 
+  }
+
+  /**
+   * Get the (host x switch) map.
+   * @return a copy of the cached map of hosts to rack
+   */
+  @Override
+  public Map<String, String> getSwitchMap() {
+    Map<String, String > switchMap = new HashMap<String, String>(cache);
+    return switchMap;
+  }
+
+
+  @Override
+  public String toString() {
+    return "cached switch mapping relaying to " + rawMapping;
   }
 
   /**
