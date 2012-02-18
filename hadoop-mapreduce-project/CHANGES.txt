@@ -102,6 +102,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's
     environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)
 
+    MAPREDUCE-3877 Add a test to formalise the current state transitions
+    of the yarn lifecycle. (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
