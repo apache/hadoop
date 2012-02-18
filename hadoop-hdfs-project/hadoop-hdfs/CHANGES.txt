@@ -213,6 +213,9 @@ Trunk (unreleased changes)
     dfs.client.block.write.replace-datanode-on-failure.enable to be mistakenly
     disabled. (atm)
 
+    HDFS-2968. Protocol translator for BlockRecoveryCommand broken when
+    multiple blocks need recovery. (todd)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
