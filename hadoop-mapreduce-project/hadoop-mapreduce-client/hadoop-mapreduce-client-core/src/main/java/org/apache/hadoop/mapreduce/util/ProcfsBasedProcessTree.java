@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -91,12 +92,14 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   // to a test directory.
   private String procfsDir;
   
-  private Integer pid = -1;
+  static private String deadPid = "-1";
+  private String pid = deadPid;
+  static private Pattern numberPattern = Pattern.compile("[1-9][0-9]*");
   private Long cpuTime = 0L;
   private boolean setsidUsed = false;
   private long sleeptimeBeforeSigkill = DEFAULT_SLEEPTIME_BEFORE_SIGKILL;
 
-  private Map<Integer, ProcessInfo> processTree = new HashMap<Integer, ProcessInfo>();
+  private Map<String, ProcessInfo> processTree = new HashMap<String, ProcessInfo>();
 
   public ProcfsBasedProcessTree(String pid) {
     this(pid, false, DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
@@ -166,19 +169,19 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    * @return the process-tree with latest state.
    */
   public ProcfsBasedProcessTree getProcessTree() {
-    if (pid != -1) {
+    if (!pid.equals(deadPid)) {
       // Get the list of processes
-      List<Integer> processList = getProcessList();
+      List<String> processList = getProcessList();
 
-      Map<Integer, ProcessInfo> allProcessInfo = new HashMap<Integer, ProcessInfo>();
+      Map<String, ProcessInfo> allProcessInfo = new HashMap<String, ProcessInfo>();
       
       // cache the processTree to get the age for processes
-      Map<Integer, ProcessInfo> oldProcs = 
-              new HashMap<Integer, ProcessInfo>(processTree);
+      Map<String, ProcessInfo> oldProcs = 
+              new HashMap<String, ProcessInfo>(processTree);
       processTree.clear();
 
       ProcessInfo me = null;
-      for (Integer proc : processList) {
+      for (String proc : processList) {
         // Get information for each process
         ProcessInfo pInfo = new ProcessInfo(proc);
         if (constructProcessInfo(pInfo, procfsDir) != null) {
@@ -195,9 +198,9 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       }
 
       // Add each process to its parent.
-      for (Map.Entry<Integer, ProcessInfo> entry : allProcessInfo.entrySet()) {
-        Integer pID = entry.getKey();
-        if (pID != 1) {
+      for (Map.Entry<String, ProcessInfo> entry : allProcessInfo.entrySet()) {
+        String pID = entry.getKey();
+        if (!pID.equals("1")) {
           ProcessInfo pInfo = entry.getValue();
           ProcessInfo parentPInfo = allProcessInfo.get(pInfo.getPpid());
           if (parentPInfo != null) {
@@ -218,7 +221,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       }
 
       // update age values and compute the number of jiffies since last update
-      for (Map.Entry<Integer, ProcessInfo> procs : processTree.entrySet()) {
+      for (Map.Entry<String, ProcessInfo> procs : processTree.entrySet()) {
         ProcessInfo oldInfo = oldProcs.get(procs.getKey());
         if (procs.getValue() != null) {
           procs.getValue().updateJiffy(oldInfo);
@@ -242,10 +245,10 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    * @return true if the root-process is alive, false otherwise.
    */
   public boolean isAlive() {
-    if (pid == -1) {
+    if (pid.equals(deadPid)) {
       return false;
     } else {
-      return isAlive(pid.toString());
+      return isAlive(pid);
     }
   }
 
@@ -256,8 +259,8 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    *           alive, false otherwise.
    */
   public boolean isAnyProcessInTreeAlive() {
-    for (Integer pId : processTree.keySet()) {
-      if (isAlive(pId.toString())) {
+    for (String pId : processTree.keySet()) {
+      if (isAlive(pId)) {
         return true;
       }
     }
@@ -269,9 +272,8 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    * @param procfsDir  Procfs root dir
    */
   static boolean checkPidPgrpidForMatch(String pidStr, String procfsDir) {
-    Integer pId = Integer.parseInt(pidStr);
     // Get information for this process
-    ProcessInfo pInfo = new ProcessInfo(pId);
+    ProcessInfo pInfo = new ProcessInfo(pidStr);
     pInfo = constructProcessInfo(pInfo, procfsDir);
     if (pInfo == null) {
       // process group leader may have finished execution, but we still need to
@@ -279,14 +281,15 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       return true;
     }
 
+    String pgrpId = pInfo.getPgrpId().toString();
     //make sure that pId and its pgrpId match
-    if (!pInfo.getPgrpId().equals(pId)) {
-      LOG.warn("Unexpected: Process with PID " + pId +
-               " is not a process group leader.");
+    if (!pgrpId.equals(pidStr)) {
+      LOG.warn("Unexpected: Process with PID " + pidStr +
+               " is not a process group leader. pgrpId is: " + pInfo.getPgrpId());
       return false;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug(pId + " is a process group leader, as expected.");
+      LOG.debug(pidStr + " is a process group leader, as expected.");
     }
     return true;
   }
@@ -324,7 +327,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    */
   public void destroy(boolean inBackground) {
     LOG.debug("Killing ProcfsBasedProcessTree of " + pid);
-    if (pid == -1) {
+    if (pid.equals(deadPid)) {
       return;
     }
     if (isAlive(pid.toString())) {
@@ -347,7 +350,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   }
 
   private static final String PROCESSTREE_DUMP_FORMAT =
-      "\t|- %d %d %d %d %s %d %d %d %d %s\n";
+      "\t|- %s %s %d %d %s %d %d %d %d %s\n";
 
   /**
    * Get a dump of the process-tree.
@@ -458,34 +461,27 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     return cpuTime;
   }
 
-  private static Integer getValidPID(String pid) {
-    Integer retPid = -1;
-    try {
-      retPid = Integer.parseInt(pid);
-      if (retPid <= 0) {
-        retPid = -1;
-      }
-    } catch (NumberFormatException nfe) {
-      retPid = -1;
-    }
-    return retPid;
+  private static String getValidPID(String pid) {
+    if (pid == null) return deadPid;
+    Matcher m = numberPattern.matcher(pid);
+    if (m.matches()) return pid;
+    return deadPid;
   }
 
   /**
    * Get the list of all processes in the system.
    */
-  private List<Integer> getProcessList() {
+  private List<String> getProcessList() {
     String[] processDirs = (new File(procfsDir)).list();
-    List<Integer> processList = new ArrayList<Integer>();
+    List<String> processList = new ArrayList<String>();
 
     for (String dir : processDirs) {
+      Matcher m = numberPattern.matcher(dir);
+      if (!m.matches()) continue;
       try {
-        int pd = Integer.parseInt(dir);
         if ((new File(procfsDir, dir)).isDirectory()) {
-          processList.add(Integer.valueOf(pd));
+          processList.add(dir);
         }
-      } catch (NumberFormatException n) {
-        // skip this directory
       } catch (SecurityException s) {
         // skip this process
       }
@@ -511,7 +507,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     BufferedReader in = null;
     FileReader fReader = null;
     try {
-      File pidDir = new File(procfsDir, String.valueOf(pinfo.getPid()));
+      File pidDir = new File(procfsDir, pinfo.getPid());
       fReader = new FileReader(new File(pidDir, PROCFS_STAT_FILE));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
@@ -528,9 +524,9 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       boolean mat = m.find();
       if (mat) {
         // Set (name) (ppid) (pgrpId) (session) (utime) (stime) (vsize) (rss)
-        pinfo.updateProcessInfo(m.group(2), Integer.parseInt(m.group(3)),
+        pinfo.updateProcessInfo(m.group(2), m.group(3),
                 Integer.parseInt(m.group(4)), Integer.parseInt(m.group(5)),
-                Long.parseLong(m.group(7)), Long.parseLong(m.group(8)),
+                Long.parseLong(m.group(7)), new BigInteger(m.group(8)),
                 Long.parseLong(m.group(10)), Long.parseLong(m.group(11)));
       } else {
         LOG.warn("Unexpected: procfs stat file is not in the expected format"
@@ -562,7 +558,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    */
   public String toString() {
     StringBuffer pTree = new StringBuffer("[ ");
-    for (Integer p : processTree.keySet()) {
+    for (String p : processTree.keySet()) {
       pTree.append(p);
       pTree.append(" ");
     }
@@ -575,15 +571,16 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    * 
    */
   private static class ProcessInfo {
-    private Integer pid; // process-id
+    private String pid; // process-id
     private String name; // command name
     private Integer pgrpId; // process group-id
-    private Integer ppid; // parent process-id
+    private String ppid; // parent process-id
     private Integer sessionId; // session-id
     private Long vmem; // virtual memory usage
     private Long rssmemPage; // rss memory usage in # of pages
     private Long utime = 0L; // # of jiffies in user mode
-    private Long stime = 0L; // # of jiffies in kernel mode
+    private final BigInteger MAX_LONG = BigInteger.valueOf(Long.MAX_VALUE);
+    private BigInteger stime = new BigInteger("0"); // # of jiffies in kernel mode
     // how many times has this process been seen alive
     private int age; 
 
@@ -595,13 +592,13 @@ public class ProcfsBasedProcessTree extends ProcessTree {
 
     private List<ProcessInfo> children = new ArrayList<ProcessInfo>(); // list of children
 
-    public ProcessInfo(int pid) {
-      this.pid = Integer.valueOf(pid);
+    public ProcessInfo(String pid) {
+      this.pid = pid;
       // seeing this the first time.
       this.age = 1;
     }
 
-    public Integer getPid() {
+    public String getPid() {
       return pid;
     }
 
@@ -613,7 +610,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       return pgrpId;
     }
 
-    public Integer getPpid() {
+    public String getPpid() {
       return ppid;
     }
 
@@ -629,7 +626,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       return utime;
     }
 
-    public Long getStime() {
+    public BigInteger getStime() {
       return stime;
     }
 
@@ -652,8 +649,8 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       return false;
     }
 
-    public void updateProcessInfo(String name, Integer ppid, Integer pgrpId,
-        Integer sessionId, Long utime, Long stime, Long vmem, Long rssmem) {
+    public void updateProcessInfo(String name, String ppid, Integer pgrpId,
+        Integer sessionId, Long utime, BigInteger stime, Long vmem, Long rssmem) {
       this.name = name;
       this.ppid = ppid;
       this.pgrpId = pgrpId;
@@ -665,8 +662,19 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     }
 
     public void updateJiffy(ProcessInfo oldInfo) {
-      this.dtime = (oldInfo == null ? this.utime + this.stime
-              : (this.utime + this.stime) - (oldInfo.utime + oldInfo.stime));
+      if (oldInfo == null) {
+        BigInteger sum = this.stime.add(BigInteger.valueOf(this.utime));
+        if (sum.compareTo(MAX_LONG) > 0) {
+          this.dtime = 0L;
+          LOG.warn("Sum of stime (" + this.stime + ") and utime (" + this.utime
+              + ") is greater than " + Long.MAX_VALUE);
+        } else {
+          this.dtime = sum.longValue();
+        }
+        return;
+      }
+      this.dtime = (this.utime - oldInfo.utime +
+          this.stime.subtract(oldInfo.stime).longValue());
     }
 
     public void updateAge(ProcessInfo oldInfo) {
@@ -690,7 +698,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       FileReader fReader = null;
       try {
         fReader =
-            new FileReader(new File(new File(procfsDir, pid.toString()),
+            new FileReader(new File(new File(procfsDir, pid),
                 PROCFS_CMDLINE_FILE));
       } catch (FileNotFoundException f) {
         // The process vanished in the interim!
