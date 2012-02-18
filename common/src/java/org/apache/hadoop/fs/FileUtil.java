@@ -612,7 +612,7 @@ public class FileUtil {
         break;
       case OS_TYPE_MAC:
         hardLinkCommand = new String[] {"ln", null, null};
-        getLinkCountCommand = new String[] {"stat","-f%l"};
+        getLinkCountCommand = new String[] {"/usr/bin/stat","-f%l"};
         break;
       case OS_TYPE_UNIX:
       default:
