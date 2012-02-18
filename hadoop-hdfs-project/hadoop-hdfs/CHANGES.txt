@@ -49,7 +49,7 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2969. ExtendedBlock.equals is incorrectly implemented (todd)
 
-Release 0.23.1 - 2012-02-08 
+Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
 
