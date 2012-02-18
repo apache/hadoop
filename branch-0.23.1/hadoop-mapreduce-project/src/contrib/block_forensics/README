@@ -1,0 +1,25 @@
+This contribution consists of two components designed to make it easier to find information about lost or corrupt blocks.
+
+The first is a map reduce designed to search for one or more block ids in a set of log files. It exists in org.apache.hadoop.block_forensics.BlockSearch. Building this contribution generates a jar file that can be executed using:
+
+  bin/hadoop jar [jar location] [hdfs input path] [hdfs output dir] [comma delimited list of block ids]
+
+  For example, the command:
+    bin/hadoop jar /foo/bar/hadoop-0.1-block_forensics.jar /input/* /ouptut 2343,45245,75823
+  ... searches for any of blocks 2343, 45245, or 75823 in any of the files 
+   contained in the /input/ directory. 
+
+  
+  The output will be any line containing one of the provided block ids. While this tool is designed to be used with block ids, it can also be used for general text searching. 
+  
+The second component is a standalone java program that will repeatedly query the namenode at a given interval looking for corrupt replicas. If it finds a corrupt replica, it will launch the above map reduce job. The syntax is:
+
+  java BlockForensics http://[namenode]:[port]/corrupt_replicas_xml.jsp [sleep time between namenode query for corrupt blocks (in milliseconds)] [mapred jar location] [hdfs input path]
+
+  For example, the command:
+    java BlockForensics http://localhost:50070/corrupt_replicas_xml.jsp 30000
+                        /foo/bar/hadoop-0.1-block_forensics.jar /input/*
+  ... queries the namenode at localhost:50070 for corrupt replicas every 30
+      seconds and runs /foo/bar/hadoop-0.1-block_forensics.jar if any are found. 
+
+The map reduce job jar and the BlockForensics class can be found in your build/contrib/block_forensics and build/contrib/block_forensics/classes directories, respectively. 

@@ -1,0 +1,13 @@
+**/TestMiniMRChildTask.java
+**/TestMiniMRBringup.java
+**/TestMiniMRDFSCaching.java
+**/TestMiniMRDFSSort.java
+**/TestMiniMRWithDFSWithDistinctUsers.java
+**/TestLocalMRNotification.java
+**/TestMapReduceLocal.java
+**/TestReduceFetch.java
+**/TestReduceTask.java
+**/TestJobTrackerRestart.java
+**/TestJobTrackerRestartWithLostTracker.java
+**/TestJobTrackerSafeMode.java
+**/TestChild.java

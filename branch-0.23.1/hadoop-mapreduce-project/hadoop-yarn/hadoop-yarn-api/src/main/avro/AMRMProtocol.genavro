@@ -1,0 +1,27 @@
+@namespace("org.apache.hadoop.yarn")
+protocol AMRMProtocol {
+
+  import idl "yarn/yarn-api/src/main/avro/yarn-types.genavro";
+  
+   // Scheduler
+   record Priority {
+     int priority;
+   }
+  
+   record ResourceRequest {
+    Priority priority;
+    string hostName;
+    Resource capability;
+    int numContainers;
+  }
+  record AMResponse {
+    boolean reboot;
+    int responseId;
+    array<Container> containers;
+  }
+  
+  void registerApplicationMaster(ApplicationMaster applicationMaster) throws YarnRemoteException;
+  void finishApplicationMaster(ApplicationMaster applicationMaster) throws YarnRemoteException;
+  AMResponse allocate(ApplicationStatus status, array<ResourceRequest> ask, array<Container> release) throws YarnRemoteException;
+  
+ }

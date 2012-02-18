@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License. See accompanying LICENSE file.
+-->
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee">
+
+  <servlet>
+    <servlet-name>whoServlet</servlet-name>
+    <servlet-class>org.apache.hadoop.security.authentication.examples.WhoServlet</servlet-class>
+  </servlet>
+
+  <servlet-mapping>
+    <servlet-name>whoServlet</servlet-name>
+    <url-pattern>/anonymous/who</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>whoServlet</servlet-name>
+    <url-pattern>/simple/who</url-pattern>
+  </servlet-mapping>
+
+  <servlet-mapping>
+    <servlet-name>whoServlet</servlet-name>
+    <url-pattern>/kerberos/who</url-pattern>
+  </servlet-mapping>
+
+  <filter>
+    <filter-name>requestLoggerFilter</filter-name>
+    <filter-class>org.apache.hadoop.security.authentication.examples.RequestLoggerFilter</filter-class>
+  </filter>
+
+  <filter>
+    <filter-name>anonymousFilter</filter-name>
+    <filter-class>org.apache.hadoop.security.authentication.server.AuthenticationFilter</filter-class>
+    <init-param>
+      <param-name>type</param-name>
+      <param-value>simple</param-value>
+    </init-param>
+    <init-param>
+      <param-name>simple.anonymous.allowed</param-name>
+      <param-value>true</param-value>
+    </init-param>
+    <init-param>
+      <param-name>token.validity</param-name>
+      <param-value>30</param-value>
+    </init-param>
+  </filter>
+
+  <filter>
+    <filter-name>simpleFilter</filter-name>
+    <filter-class>org.apache.hadoop.security.authentication.server.AuthenticationFilter</filter-class>
+    <init-param>
+      <param-name>type</param-name>
+      <param-value>simple</param-value>
+    </init-param>
+    <init-param>
+      <param-name>simple.anonymous.allowed</param-name>
+      <param-value>false</param-value>
+    </init-param>
+    <init-param>
+      <param-name>token.validity</param-name>
+      <param-value>30</param-value>
+    </init-param>
+  </filter>
+
+  <filter>
+    <filter-name>kerberosFilter</filter-name>
+    <filter-class>org.apache.hadoop.security.authentication.server.AuthenticationFilter</filter-class>
+    <init-param>
+      <param-name>type</param-name>
+      <param-value>kerberos</param-value>
+    </init-param>
+    <init-param>
+      <param-name>kerberos.principal</param-name>
+      <param-value>HTTP/localhost@LOCALHOST</param-value>
+    </init-param>
+    <init-param>
+      <param-name>kerberos.keytab</param-name>
+      <param-value>/tmp/my.keytab</param-value>
+    </init-param>
+    <init-param>
+      <param-name>token.validity</param-name>
+      <param-value>30</param-value>
+    </init-param>
+  </filter>
+
+  <filter-mapping>
+    <filter-name>requestLoggerFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+
+  <filter-mapping>
+    <filter-name>anonymousFilter</filter-name>
+    <url-pattern>/anonymous/*</url-pattern>
+  </filter-mapping>
+
+  <filter-mapping>
+    <filter-name>simpleFilter</filter-name>
+    <url-pattern>/simple/*</url-pattern>
+  </filter-mapping>
+
+  <filter-mapping>
+    <filter-name>kerberosFilter</filter-name>
+    <url-pattern>/kerberos/*</url-pattern>
+  </filter-mapping>
+
+</web-app>

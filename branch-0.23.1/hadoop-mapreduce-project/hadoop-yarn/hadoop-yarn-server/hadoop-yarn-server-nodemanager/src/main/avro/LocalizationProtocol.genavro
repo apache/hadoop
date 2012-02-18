@@ -1,0 +1,11 @@
+@namespace("org.apache.hadoop.yarn")
+protocol LocalizationProtocol {
+
+  import idl "yarn/yarn-api/src/main/avro/yarn-types.genavro";
+
+  void successfulLocalization(string user, LocalResource resource, URL path) 
+    throws YarnRemoteException;
+
+  void failedLocalization(string user, LocalResource resource, YarnRemoteException path)
+    throws YarnRemoteException;
+}

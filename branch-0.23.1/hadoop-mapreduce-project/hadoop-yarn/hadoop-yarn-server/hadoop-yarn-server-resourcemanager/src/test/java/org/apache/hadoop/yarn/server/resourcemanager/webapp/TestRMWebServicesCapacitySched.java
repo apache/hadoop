@@ -1,0 +1,439 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.yarn.server.resourcemanager.webapp;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.StringReader;
+
+import javax.ws.rs.core.MediaType;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
+import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
+import org.codehaus.jettison.json.JSONArray;
+import org.codehaus.jettison.json.JSONException;
+import org.codehaus.jettison.json.JSONObject;
+import org.junit.Before;
+import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.servlet.GuiceServletContextListener;
+import com.google.inject.servlet.ServletModule;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import com.sun.jersey.test.framework.JerseyTest;
+import com.sun.jersey.test.framework.WebAppDescriptor;
+
+public class TestRMWebServicesCapacitySched extends JerseyTest {
+
+  private static MockRM rm;
+  private CapacitySchedulerConfiguration csConf;
+
+  private class QueueInfo {
+    float capacity;
+    float usedCapacity;
+    float maxCapacity;
+    float absoluteCapacity;
+    float absoluteMaxCapacity;
+    float utilization;
+    int numApplications;
+    String usedResources;
+    String queueName;
+    String state;
+  }
+
+  private class LeafQueueInfo extends QueueInfo {
+    int numActiveApplications;
+    int numPendingApplications;
+    int numContainers;
+    int maxApplications;
+    int maxApplicationsPerUser;
+    int maxActiveApplications;
+    int maxActiveApplicationsPerUser;
+    int userLimit;
+    float userLimitFactor;
+  }
+
+  private Injector injector = Guice.createInjector(new ServletModule() {
+    @Override
+    protected void configureServlets() {
+      bind(JAXBContextResolver.class);
+      bind(RMWebServices.class);
+      bind(GenericExceptionHandler.class);
+      csConf = new CapacitySchedulerConfiguration();
+      csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
+      setupQueueConfiguration(csConf);
+      rm = new MockRM(csConf);
+      bind(ResourceManager.class).toInstance(rm);
+      bind(RMContext.class).toInstance(rm.getRMContext());
+      bind(ApplicationACLsManager.class).toInstance(
+          rm.getApplicationACLsManager());
+      serve("/*").with(GuiceContainer.class);
+    }
+  });
+
+  public class GuiceServletConfig extends GuiceServletContextListener {
+
+    @Override
+    protected Injector getInjector() {
+      return injector;
+    }
+  }
+
+  private static void setupQueueConfiguration(
+      CapacitySchedulerConfiguration conf) {
+
+    // Define top-level queues
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a", "b" });
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
+
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    conf.setCapacity(A, 10);
+    conf.setMaximumCapacity(A, 50);
+
+    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+    conf.setCapacity(B, 90);
+
+    // Define 2nd-level queues
+    final String A1 = A + ".a1";
+    final String A2 = A + ".a2";
+    conf.setQueues(A, new String[] { "a1", "a2" });
+    conf.setCapacity(A1, 30);
+    conf.setMaximumCapacity(A1, 50);
+
+    conf.setUserLimitFactor(A1, 100.0f);
+    conf.setCapacity(A2, 70);
+    conf.setUserLimitFactor(A2, 100.0f);
+
+    final String B1 = B + ".b1";
+    final String B2 = B + ".b2";
+    final String B3 = B + ".b3";
+    conf.setQueues(B, new String[] { "b1", "b2", "b3" });
+    conf.setCapacity(B1, 50);
+    conf.setUserLimitFactor(B1, 100.0f);
+    conf.setCapacity(B2, 30);
+    conf.setUserLimitFactor(B2, 100.0f);
+    conf.setCapacity(B3, 20);
+    conf.setUserLimitFactor(B3, 100.0f);
+
+  }
+
+  @Before
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+  }
+
+  public TestRMWebServicesCapacitySched() {
+    super(new WebAppDescriptor.Builder(
+        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
+        .contextListenerClass(GuiceServletConfig.class)
+        .filterClass(com.google.inject.servlet.GuiceFilter.class)
+        .contextPath("jersey-guice-filter").servletPath("/").build());
+  }
+
+  @Test
+  public void testClusterScheduler() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    verifyClusterScheduler(json);
+  }
+
+  @Test
+  public void testClusterSchedulerSlash() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler/").accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    verifyClusterScheduler(json);
+  }
+
+  @Test
+  public void testClusterSchedulerDefault() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler").get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    verifyClusterScheduler(json);
+  }
+
+  @Test
+  public void testClusterSchedulerXML() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("scheduler/").accept(MediaType.APPLICATION_XML)
+        .get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
+    String xml = response.getEntity(String.class);
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = dbf.newDocumentBuilder();
+    InputSource is = new InputSource();
+    is.setCharacterStream(new StringReader(xml));
+    Document dom = db.parse(is);
+    NodeList scheduler = dom.getElementsByTagName("scheduler");
+    assertEquals("incorrect number of elements", 1, scheduler.getLength());
+    NodeList schedulerInfo = dom.getElementsByTagName("schedulerInfo");
+    assertEquals("incorrect number of elements", 1, schedulerInfo.getLength());
+    verifyClusterSchedulerXML(schedulerInfo);
+  }
+
+  public void verifyClusterSchedulerXML(NodeList nodes) throws Exception {
+
+    for (int i = 0; i < nodes.getLength(); i++) {
+      Element element = (Element) nodes.item(i);
+
+      verifyClusterSchedulerGeneric(
+          WebServicesTestUtils.getXmlAttrString(element, "xsi:type"),
+          WebServicesTestUtils.getXmlFloat(element, "usedCapacity"),
+          WebServicesTestUtils.getXmlFloat(element, "capacity"),
+          WebServicesTestUtils.getXmlFloat(element, "maxCapacity"),
+          WebServicesTestUtils.getXmlString(element, "queueName"));
+
+      NodeList queues = element.getElementsByTagName("queues");
+      for (int j = 0; j < queues.getLength(); j++) {
+        Element qElem = (Element) queues.item(j);
+        String qName = WebServicesTestUtils.getXmlString(qElem, "queueName");
+        String q = CapacitySchedulerConfiguration.ROOT + "." + qName;
+        verifySubQueueXML(qElem, q, 100, 100);
+      }
+    }
+  }
+
+  public void verifySubQueueXML(Element qElem, String q, 
+      float parentAbsCapacity, float parentAbsMaxCapacity)
+      throws Exception {
+    NodeList queues = qElem.getElementsByTagName("subQueues");
+    QueueInfo qi = (queues != null) ? new QueueInfo() : new LeafQueueInfo();
+    qi.capacity = WebServicesTestUtils.getXmlFloat(qElem, "capacity");
+    qi.usedCapacity =
+        WebServicesTestUtils.getXmlFloat(qElem, "usedCapacity");
+    qi.maxCapacity = WebServicesTestUtils.getXmlFloat(qElem, "maxCapacity");
+    qi.absoluteCapacity = WebServicesTestUtils.getXmlFloat(qElem, "absoluteCapacity");
+    qi.absoluteMaxCapacity =
+        WebServicesTestUtils.getXmlFloat(qElem, "absoluteMaxCapacity");
+    qi.utilization = WebServicesTestUtils.getXmlFloat(qElem, "utilization");
+    qi.numApplications =
+        WebServicesTestUtils.getXmlInt(qElem, "numApplications");
+    qi.usedResources =
+        WebServicesTestUtils.getXmlString(qElem, "usedResources");
+    qi.queueName = WebServicesTestUtils.getXmlString(qElem, "queueName");
+    qi.state = WebServicesTestUtils.getXmlString(qElem, "state");
+    verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
+
+    if (queues != null) {
+      for (int j = 0; j < queues.getLength(); j++) {
+        Element subqElem = (Element) queues.item(j);
+        String qName = WebServicesTestUtils.getXmlString(subqElem, "queueName");
+        String q2 = q + "." + qName;
+        verifySubQueueXML(subqElem, q2, 
+            qi.absoluteCapacity, qi.absoluteMaxCapacity);
+      }
+    } else {
+      LeafQueueInfo lqi = (LeafQueueInfo) qi;
+      lqi.numActiveApplications =
+          WebServicesTestUtils.getXmlInt(qElem, "numActiveApplications");
+      lqi.numPendingApplications =
+          WebServicesTestUtils.getXmlInt(qElem, "numPendingApplications");
+      lqi.numContainers =
+          WebServicesTestUtils.getXmlInt(qElem, "numContainers");
+      lqi.maxApplications =
+          WebServicesTestUtils.getXmlInt(qElem, "maxApplications");
+      lqi.maxApplicationsPerUser =
+          WebServicesTestUtils.getXmlInt(qElem, "maxApplicationsPerUser");
+      lqi.maxActiveApplications =
+          WebServicesTestUtils.getXmlInt(qElem, "maxActiveApplications");
+      lqi.maxActiveApplicationsPerUser =
+          WebServicesTestUtils.getXmlInt(qElem, "maxActiveApplicationsPerUser");
+      lqi.userLimit = WebServicesTestUtils.getXmlInt(qElem, "userLimit");
+      lqi.userLimitFactor =
+          WebServicesTestUtils.getXmlFloat(qElem, "userLimitFactor");
+      verifyLeafQueueGeneric(q, lqi);
+    }
+  }
+
+  private void verifyClusterScheduler(JSONObject json) throws JSONException,
+      Exception {
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject info = json.getJSONObject("scheduler");
+    assertEquals("incorrect number of elements", 1, info.length());
+    info = info.getJSONObject("schedulerInfo");
+    assertEquals("incorrect number of elements", 6, info.length());
+    verifyClusterSchedulerGeneric(info.getString("type"),
+        (float) info.getDouble("usedCapacity"),
+        (float) info.getDouble("capacity"),
+        (float) info.getDouble("maxCapacity"), info.getString("queueName"));
+
+    JSONArray arr = info.getJSONArray("queues");
+    assertEquals("incorrect number of elements", 2, arr.length());
+
+    // test subqueues
+    for (int i = 0; i < arr.length(); i++) {
+      JSONObject obj = arr.getJSONObject(i);
+      String q = CapacitySchedulerConfiguration.ROOT + "." + obj.getString("queueName");
+      verifySubQueue(obj, q, 100, 100);
+    }
+  }
+
+  private void verifyClusterSchedulerGeneric(String type, float usedCapacity,
+      float capacity, float maxCapacity, String queueName) throws Exception {
+
+    assertTrue("type doesn't match", "capacityScheduler".matches(type));
+    assertEquals("usedCapacity doesn't match", 0, usedCapacity, 1e-3f);
+    assertEquals("capacity doesn't match", 100, capacity, 1e-3f);
+    assertEquals("maxCapacity doesn't match", 100, maxCapacity, 1e-3f);
+    assertTrue("queueName doesn't match", "root".matches(queueName));
+  }
+
+  private void verifySubQueue(JSONObject info, String q, 
+      float parentAbsCapacity, float parentAbsMaxCapacity)
+      throws JSONException, Exception {
+    int numExpectedElements = 11;
+    boolean isParentQueue = true;
+    if (!info.has("subQueues")) {
+      numExpectedElements = 20;
+      isParentQueue = false;
+    }
+    assertEquals("incorrect number of elements", numExpectedElements, info.length());
+
+    QueueInfo qi = isParentQueue ? new QueueInfo() : new LeafQueueInfo();
+    qi.capacity = (float) info.getDouble("capacity");
+    qi.usedCapacity = (float) info.getDouble("usedCapacity");
+    qi.maxCapacity = (float) info.getDouble("maxCapacity");
+    qi.absoluteCapacity = (float) info.getDouble("absoluteCapacity");
+    qi.absoluteMaxCapacity = (float) info.getDouble("absoluteMaxCapacity");
+    qi.utilization = (float) info.getDouble("utilization");
+    qi.numApplications = info.getInt("numApplications");
+    qi.usedResources = info.getString("usedResources");
+    qi.queueName = info.getString("queueName");
+    qi.state = info.getString("state");
+
+    verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
+
+    if (isParentQueue) {
+      JSONArray arr = info.getJSONArray("subQueues");
+      // test subqueues
+      for (int i = 0; i < arr.length(); i++) {
+        JSONObject obj = arr.getJSONObject(i);
+        String q2 = q + "." + obj.getString("queueName");
+        verifySubQueue(obj, q2, qi.absoluteCapacity, qi.absoluteMaxCapacity);
+      }
+    } else {
+      LeafQueueInfo lqi = (LeafQueueInfo) qi;
+      lqi.numActiveApplications = info.getInt("numActiveApplications");
+      lqi.numPendingApplications = info.getInt("numPendingApplications");
+      lqi.numContainers = info.getInt("numContainers");
+      lqi.maxApplications = info.getInt("maxApplications");
+      lqi.maxApplicationsPerUser = info.getInt("maxApplicationsPerUser");
+      lqi.maxActiveApplications = info.getInt("maxActiveApplications");
+      lqi.maxActiveApplicationsPerUser = info.getInt("maxActiveApplicationsPerUser");
+      lqi.userLimit = info.getInt("userLimit");
+      lqi.userLimitFactor = (float) info.getDouble("userLimitFactor");
+      verifyLeafQueueGeneric(q, lqi);
+    }
+  }
+
+  private void verifySubQueueGeneric(String q, QueueInfo info,
+      float parentAbsCapacity, float parentAbsMaxCapacity) throws Exception {
+    String[] qArr = q.split("\\.");
+    assertTrue("q name invalid: " + q, qArr.length > 1);
+    String qshortName = qArr[qArr.length - 1];
+
+    assertEquals("usedCapacity doesn't match", 0, info.usedCapacity, 1e-3f);
+    assertEquals("capacity doesn't match", csConf.getCapacity(q),
+        info.capacity, 1e-3f);
+    float expectCapacity = csConf.getMaximumCapacity(q);
+    float expectAbsMaxCapacity = parentAbsMaxCapacity * (info.maxCapacity/100);
+    if (CapacitySchedulerConfiguration.UNDEFINED == expectCapacity) {
+      expectCapacity = 100;
+      expectAbsMaxCapacity = 100;
+    }
+    assertEquals("maxCapacity doesn't match", expectCapacity,
+        info.maxCapacity, 1e-3f);
+    assertEquals("absoluteCapacity doesn't match",
+        parentAbsCapacity * (info.capacity/100), info.absoluteCapacity, 1e-3f);
+    assertEquals("absoluteMaxCapacity doesn't match",
+        expectAbsMaxCapacity, info.absoluteMaxCapacity, 1e-3f);
+    assertEquals("utilization doesn't match", 0, info.utilization, 1e-3f);
+    assertEquals("numApplications doesn't match", 0, info.numApplications);
+    assertTrue("usedResources doesn't match",
+        info.usedResources.matches("memory: 0"));
+    assertTrue("queueName doesn't match, got: " + info.queueName
+        + " expected: " + q, qshortName.matches(info.queueName));
+    assertTrue("state doesn't match",
+        (csConf.getState(q).toString()).matches(info.state));
+
+  }
+
+  private void verifyLeafQueueGeneric(String q, LeafQueueInfo info)
+      throws Exception {
+    assertEquals("numActiveApplications doesn't match",
+        0, info.numActiveApplications);
+    assertEquals("numPendingApplications doesn't match",
+        0, info.numPendingApplications);
+    assertEquals("numContainers doesn't match",
+        0, info.numContainers);
+
+    int maxSystemApps = csConf.getMaximumSystemApplications();
+    int expectedMaxApps = (int)(maxSystemApps * (info.absoluteCapacity/100));
+    int expectedMaxAppsPerUser =
+      (int)(expectedMaxApps * (info.userLimit/100.0f) * info.userLimitFactor);
+
+    // TODO: would like to use integer comparisons here but can't due to
+    //       roundoff errors in absolute capacity calculations
+    assertEquals("maxApplications doesn't match",
+        (float)expectedMaxApps, (float)info.maxApplications, 1.0f);
+    assertEquals("maxApplicationsPerUser doesn't match",
+        (float)expectedMaxAppsPerUser,
+        (float)info.maxApplicationsPerUser, info.userLimitFactor);
+
+    assertTrue("maxActiveApplications doesn't match",
+        info.maxActiveApplications > 0);
+    assertTrue("maxActiveApplicationsPerUser doesn't match",
+        info.maxActiveApplicationsPerUser > 0);
+    assertEquals("userLimit doesn't match", csConf.getUserLimit(q),
+        info.userLimit);
+    assertEquals("userLimitFactor doesn't match",
+        csConf.getUserLimitFactor(q), info.userLimitFactor, 1e-3f);
+  }
+}

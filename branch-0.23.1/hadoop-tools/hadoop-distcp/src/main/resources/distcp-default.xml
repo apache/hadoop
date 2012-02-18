@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- Do not modify this file directly. Anything that need to be overwritten,
+     need to be done so, through -D switches or customized conf -->
+
+<configuration>
+
+    <property>
+        <name>distcp.dynamic.strategy.impl</name>
+        <value>org.apache.hadoop.tools.mapred.lib.DynamicInputFormat</value>
+        <description>Implementation of dynamic input format</description>
+    </property>
+
+    <property>
+        <name>distcp.static.strategy.impl</name>
+        <value>org.apache.hadoop.tools.mapred.UniformSizeInputFormat</value>
+        <description>Implementation of static input format</description>
+    </property>
+
+    <property>
+        <name>mapred.job.map.memory.mb</name>
+        <value>1024</value>
+    </property>
+
+    <property>
+        <name>mapred.job.reduce.memory.mb</name>
+        <value>1024</value>
+    </property>
+
+    <property>
+        <name>mapred.reducer.new-api</name>
+        <value>true</value>
+    </property>
+
+    <property>
+        <name>mapreduce.reduce.class</name>
+        <value>org.apache.hadoop.mapreduce.Reducer</value>
+    </property>
+
+</configuration>
