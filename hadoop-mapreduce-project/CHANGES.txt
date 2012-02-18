@@ -788,6 +788,8 @@ Release 0.23.1 - 2012-02-17
     urls when mutiple jobs are submitted from same client jvm. (Eric Payne via
     sseth)
 
+    MAPREDUCE-3880. Changed LCE binary to be 32-bit. (acmurthy)
+
 Release 0.23.0 - 2011-11-01 
 
   INCOMPATIBLE CHANGES
