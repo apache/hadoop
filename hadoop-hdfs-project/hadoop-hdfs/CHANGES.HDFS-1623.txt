@@ -216,3 +216,5 @@ HDFS-2955. IllegalStateException during standby startup in getCurSegmentTxId. (H
 HDFS-2937. TestDFSHAAdmin needs tests with MiniDFSCluster. (Brandon Li via suresh)
 
 HDFS-2586. Add protobuf service and implementation for HAServiceProtocol. (suresh via atm)
+
+HDFS-2952. NN should not start with upgrade option or with a pending an unfinalized upgrade. (atm)

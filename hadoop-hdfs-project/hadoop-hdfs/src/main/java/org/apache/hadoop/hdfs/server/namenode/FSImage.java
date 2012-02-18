@@ -340,8 +340,8 @@ public class FSImage implements Closeable {
         File prevDir = sd.getPreviousDir();
         File tmpDir = sd.getPreviousTmp();
         assert curDir.exists() : "Current directory must exist.";
-        assert !prevDir.exists() : "prvious directory must not exist.";
-        assert !tmpDir.exists() : "prvious.tmp directory must not exist.";
+        assert !prevDir.exists() : "previous directory must not exist.";
+        assert !tmpDir.exists() : "previous.tmp directory must not exist.";
         assert !editLog.isSegmentOpen() : "Edits log must not be open.";
 
         // rename current to tmp

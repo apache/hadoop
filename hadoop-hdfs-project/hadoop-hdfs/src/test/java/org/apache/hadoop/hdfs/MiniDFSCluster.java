@@ -1253,6 +1253,15 @@ public class MiniDFSCluster {
   }
   
   /**
+   * Restart all namenodes.
+   */
+  public synchronized void restartNameNodes() throws IOException {
+    for (int i = 0; i < nameNodes.length; i++) {
+      restartNameNode(i);
+    }
+  }
+  
+  /**
    * Restart the namenode.
    */
   public synchronized void restartNameNode() throws IOException {

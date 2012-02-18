@@ -539,7 +539,7 @@ public class NameNode {
     if (!haEnabled) {
       state = ACTIVE_STATE;
     } else {
-      state = STANDBY_STATE;;
+      state = STANDBY_STATE;
     }
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
     this.haContext = createHAContext();
@@ -814,6 +814,14 @@ public class NameNode {
       return null;
     }
     setStartupOption(conf, startOpt);
+    
+    if (HAUtil.isHAEnabled(conf, DFSUtil.getNamenodeNameServiceId(conf)) &&
+        (startOpt == StartupOption.UPGRADE ||
+         startOpt == StartupOption.ROLLBACK ||
+         startOpt == StartupOption.FINALIZE)) {
+      throw new HadoopIllegalArgumentException("Invalid startup option. " +
+          "Cannot perform DFS upgrade with HA enabled.");
+    }
 
     switch (startOpt) {
       case FORMAT:
