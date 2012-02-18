@@ -1,4 +1,4 @@
-Release 0.23.1 - 2012-02-08 
+Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
 
