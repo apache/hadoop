@@ -259,10 +259,10 @@ public class TaskDistributedCacheManager {
   public void setSizes(long[] sizes) throws IOException {
     int i = 0;
     for (CacheFile c: cacheFiles) {
-      if (!c.isPublic && c.type == CacheFile.FileType.ARCHIVE && 
-    	  c.status != null) {
-        distributedCacheManager.setSize(c.status, sizes[i++]);
+      if (!c.isPublic && c.status != null) {
+        distributedCacheManager.setSize(c.status, sizes[i]);
       }
+      i++;
     }
   }
 

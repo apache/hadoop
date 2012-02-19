@@ -77,6 +77,10 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   protected Path firstCacheFilePublic;
   protected Path secondCacheFile;
   protected Path secondCacheFilePublic;
+  protected Path firstCacheDirPublic;
+  protected Path firstCacheDirPrivate;
+  protected Path firstCacheFileInDirPublic;
+  protected Path firstCacheFileInDirPrivate;
   private FileSystem fs;
 
   protected LocalDirAllocator localDirAllocator = 
@@ -126,6 +130,15 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     createPublicTempFile(secondCacheFilePublic);
     createPrivateTempFile(firstCacheFile);
     createPrivateTempFile(secondCacheFile);
+
+    firstCacheDirPublic = new Path(TEST_ROOT_DIR, "firstcachedirPublic");
+    firstCacheDirPrivate = new Path(TEST_ROOT_DIR, "firstcachedirPrivate");
+    firstCacheFileInDirPublic = new Path(firstCacheDirPublic, "firstcacheFileinDirPublic.txt");
+    firstCacheFileInDirPrivate = new Path(firstCacheDirPrivate, "firstcacheFileinDirPrivate.txt");
+    createPublicTempDir(firstCacheDirPublic);
+    createPrivateTempDir(firstCacheDirPrivate);
+    createPublicTempFile(firstCacheFileInDirPublic);
+    createPrivateTempFile(firstCacheFileInDirPrivate);
   }
   
   protected void refreshConf(Configuration conf) throws IOException {
@@ -253,41 +266,79 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     TrackerDistributedCacheManager.determineCacheVisibilities(conf1);
 
     // Task localizing for first job
+    JobID jobId = new JobID("jt", 1);
     TaskDistributedCacheManager handle = manager
-        .newTaskDistributedCacheManager(new JobID("jt", 1), conf1);
+        .newTaskDistributedCacheManager(jobId, conf1);
     handle.setupCache(conf1, TaskTracker.getPublicDistributedCacheDir(), 
         TaskTracker.getPrivateDistributedCacheDir(userName));
-    JobLocalizer.downloadPrivateCache(conf1);
+    long[] sizes = JobLocalizer.downloadPrivateCache(conf1);
+    if (sizes != null) {
+      manager.setArchiveSizes(jobId, sizes);
+    }
     handle.release();
     for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
       assertEquals(0, manager.getReferenceCount(c.getStatus()));
+      long filesize = FileUtil.getDU(new File(c.getStatus().localizedLoadPath.getParent().toString()));
+      assertTrue("filesize is not greater than 0", filesize > 0);
+      assertEquals(filesize, c.getStatus().size);
+    }
+
+    // Test specifying directories to go into distributed cache and make
+    // their sizes are calculated properly.
+    Job job2 = new Job(conf);
+    Configuration conf2 = job2.getConfiguration();
+    conf1.set("user.name", userName);
+    DistributedCache.addCacheFile(firstCacheDirPublic.toUri(), conf2);
+    DistributedCache.addCacheFile(firstCacheDirPrivate.toUri(), conf2);
+
+    TrackerDistributedCacheManager.determineTimestamps(conf2);
+    TrackerDistributedCacheManager.determineCacheVisibilities(conf2);
+
+    // Task localizing for second job
+    JobID job2Id = new JobID("jt", 2);
+    handle = manager.newTaskDistributedCacheManager(job2Id, conf2);
+    handle.setupCache(conf2, TaskTracker.getPublicDistributedCacheDir(),
+        TaskTracker.getPrivateDistributedCacheDir(userName));
+    long[] sizes2 = JobLocalizer.downloadPrivateCache(conf2);
+    for (int j=0; j > sizes2.length; j++) {
+      LOG.info("size is: " + sizes2[j]);
+    }
+    if (sizes2 != null) {
+      manager.setArchiveSizes(job2Id, sizes2);
+    }
+    handle.release();
+    for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
+      assertEquals(0, manager.getReferenceCount(c.getStatus()));
+      long filesize = FileUtil.getDU(new File(c.getStatus().localizedLoadPath.getParent().toString()));
+      assertTrue("filesize is not greater than 0", filesize > 0);
+      assertEquals(filesize, c.getStatus().size);
     }
     
     Path thirdCacheFile = new Path(TEST_ROOT_DIR, "thirdcachefile");
     createPrivateTempFile(thirdCacheFile);
     
     // Configures another job with three regular files.
-    Job job2 = new Job(conf);
-    Configuration conf2 = job2.getConfiguration();
-    conf2.set("user.name", userName);
+    Job job3 = new Job(conf);
+    Configuration conf3 = job3.getConfiguration();
+    conf3.set("user.name", userName);
     // add a file that would get failed to localize
-    DistributedCache.addCacheFile(firstCacheFilePublic.toUri(), conf2);
+    DistributedCache.addCacheFile(firstCacheFilePublic.toUri(), conf3);
     // add a file that is already localized by different job
-    DistributedCache.addCacheFile(secondCacheFile.toUri(), conf2);
+    DistributedCache.addCacheFile(secondCacheFile.toUri(), conf3);
     // add a file that is never localized
-    DistributedCache.addCacheFile(thirdCacheFile.toUri(), conf2);
+    DistributedCache.addCacheFile(thirdCacheFile.toUri(), conf3);
     
-    TrackerDistributedCacheManager.determineTimestamps(conf2);
-    TrackerDistributedCacheManager.determineCacheVisibilities(conf2);
+    TrackerDistributedCacheManager.determineTimestamps(conf3);
+    TrackerDistributedCacheManager.determineCacheVisibilities(conf3);
 
-    // Task localizing for second job
+    // Task localizing for third job
     // localization for the "firstCacheFile" will fail.
-    handle = manager.newTaskDistributedCacheManager(new JobID("jt", 2), conf2);
+    handle = manager.newTaskDistributedCacheManager(new JobID("jt", 3), conf3);
     Throwable th = null;
     try {
-      handle.setupCache(conf2, TaskTracker.getPublicDistributedCacheDir(),
+      handle.setupCache(conf3, TaskTracker.getPublicDistributedCacheDir(),
           TaskTracker.getPrivateDistributedCacheDir(userName));
-      JobLocalizer.downloadPrivateCache(conf2);
+      JobLocalizer.downloadPrivateCache(conf3);
     } catch (IOException e) {
       th = e;
       LOG.info("Exception during setup", e);
@@ -939,6 +990,13 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     createTempFile(p, TEST_FILE_SIZE);
   }
   
+  static void createTempDir(Path p) throws IOException {
+    File dir = new File(p.toString());
+    dir.mkdirs();
+    FileSystem.LOG.info("created temp directory: " + p);
+
+  }
+
   static void createTempFile(Path p, int size) throws IOException {
     File f = new File(p.toString());
     FileOutputStream os = new FileOutputStream(f);
@@ -961,12 +1019,30 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     FileUtil.chmod(p.toString(), "0770",true);
   }
 
+  static void createPublicTempDir(Path p)
+  throws IOException, InterruptedException {
+    createTempDir(p);
+    FileUtil.chmod(p.toString(), "0777",true);
+  }
+
+  static void createPrivateTempDir(Path p)
+  throws IOException, InterruptedException {
+    createTempDir(p);
+    FileUtil.chmod(p.toString(), "0770",true);
+  }
+
   @Override
   protected void tearDown() throws IOException {
     new File(firstCacheFile.toString()).delete();
     new File(secondCacheFile.toString()).delete();
     new File(firstCacheFilePublic.toString()).delete();
     new File(secondCacheFilePublic.toString()).delete();
+
+    new File(firstCacheFileInDirPublic.toString()).delete();
+    new File(firstCacheFileInDirPrivate.toString()).delete();
+    new File(firstCacheDirPrivate.toString()).delete();
+    new File(firstCacheDirPublic.toString()).delete();
+
     FileUtil.fullyDelete(new File(TEST_ROOT_DIR));
   }
 

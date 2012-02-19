@@ -173,7 +173,7 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
 
   /**
    * The job initializer needs to report the sizes of the archive
-   * objects in the private distributed cache.
+   * objects and directories in the private distributed cache.
    * @param jobId the job to update
    * @param sizes the array of sizes that were computed
    * @throws IOException
