@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Release 1.0.1 - 2012.02.12
+Release 1.0.1 - 2012.02.19
 
   NEW FEATURES
 
@@ -48,6 +48,8 @@ Release 1.0.1 - 2012.02.12
 
     HADOOP-8037. Binary tarball does not preserve platform info for native builds,
     and RPMs fail to provide needed symlinks for libhadoop.so.  (Matt Foley)
+
+    HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
 
 
 Release 1.0.0 - 2011.12.15
