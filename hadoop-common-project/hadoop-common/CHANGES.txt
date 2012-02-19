@@ -60,6 +60,8 @@ Release 0.23.2 - UNRELEASED
     HADOOP-7680 TestHardLink fails on Mac OS X, when gnu stat is in path.
     (Milind Bhandarkar via stevel)
 
+    HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
