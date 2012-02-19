@@ -200,6 +200,8 @@ Release 1.0.1 - 2012.02.19
 
     HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
 
+    MAPREDUCE-3824. Distributed caches are not removed properly. (Thomas Graves
+    via mattf)
 
 Release 1.0.0 - 2011.12.15
 

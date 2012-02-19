@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -339,21 +340,25 @@ public class JobLocalizer {
    * @return the size of the archive objects
    */
   public static long[] downloadPrivateCache(Configuration conf) throws IOException {
-    downloadPrivateCacheObjects(conf,
+    long[] fileSizes = downloadPrivateCacheObjects(conf,
                                 DistributedCache.getCacheFiles(conf),
                                 DistributedCache.getLocalCacheFiles(conf),
                                 DistributedCache.getFileTimestamps(conf),
                                 TrackerDistributedCacheManager.
                                   getFileVisibilities(conf),
                                 false);
-    return 
-      downloadPrivateCacheObjects(conf,
+
+    long[] archiveSizes = downloadPrivateCacheObjects(conf,
                                   DistributedCache.getCacheArchives(conf),
                                   DistributedCache.getLocalCacheArchives(conf),
                                   DistributedCache.getArchiveTimestamps(conf),
                                   TrackerDistributedCacheManager.
                                     getArchiveVisibilities(conf),
                                   true);
+
+    // The order here matters - it has to match order of cache files
+    // in TaskDistributedCacheManager.
+    return ArrayUtils.addAll(fileSizes, archiveSizes);
   }
 
   public void localizeJobFiles(JobID jobid, JobConf jConf,
