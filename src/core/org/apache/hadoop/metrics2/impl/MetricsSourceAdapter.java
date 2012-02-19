@@ -92,17 +92,19 @@ class MetricsSourceAdapter implements DynamicMBean {
   }
 
   @Override
-  public synchronized Object getAttribute(String attribute)
+  public Object getAttribute(String attribute)
       throws AttributeNotFoundException, MBeanException, ReflectionException {
     updateJmxCache();
-    Attribute a = attrCache.get(attribute);
-    if (a == null) {
-      throw new AttributeNotFoundException(attribute +" not found");
+    synchronized(this) {
+      Attribute a = attrCache.get(attribute);
+      if (a == null) {
+        throw new AttributeNotFoundException(attribute +" not found");
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(attribute +": "+ a.getName() +"="+ a.getValue());
+      }
+      return a.getValue();
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(attribute +": "+ a.getName() +"="+ a.getValue());
-    }
-    return a.getValue();
   }
 
   public void setAttribute(Attribute attribute)
@@ -112,17 +114,19 @@ class MetricsSourceAdapter implements DynamicMBean {
   }
 
   @Override
-  public synchronized AttributeList getAttributes(String[] attributes) {
+  public AttributeList getAttributes(String[] attributes) {
     updateJmxCache();
-    AttributeList ret = new AttributeList();
-    for (String key : attributes) {
-      Attribute attr = attrCache.get(key);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(key +": "+ attr.getName() +"="+ attr.getValue());
+    synchronized(this) {
+      AttributeList ret = new AttributeList();
+      for (String key : attributes) {
+        Attribute attr = attrCache.get(key);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(key +": "+ attr.getName() +"="+ attr.getValue());
+        }
+        ret.add(attr);
       }
-      ret.add(attr);
+      return ret;
     }
-    return ret;
   }
 
   @Override
@@ -137,17 +141,32 @@ class MetricsSourceAdapter implements DynamicMBean {
   }
 
   @Override
-  public synchronized MBeanInfo getMBeanInfo() {
+  public MBeanInfo getMBeanInfo() {
     updateJmxCache();
     return infoCache;
   }
 
   private void updateJmxCache() {
-    if (System.currentTimeMillis() - jmxCacheTS >= jmxCacheTTL) {
-      if (lastRecs == null) {
-        MetricsBuilderImpl builder = new MetricsBuilderImpl();
-        getMetrics(builder, true);
+    boolean getAllMetrics = false;
+    synchronized(this) {
+      if (System.currentTimeMillis() - jmxCacheTS >= jmxCacheTTL) {
+        // temporarilly advance the expiry while updating the cache
+        jmxCacheTS = System.currentTimeMillis() + jmxCacheTTL;
+        if (lastRecs == null) {
+          getAllMetrics = true;
+        }
       }
+      else {
+        return;
+      }
+    }
+
+    if (getAllMetrics) {
+      MetricsBuilderImpl builder = new MetricsBuilderImpl();
+      getMetrics(builder, true);
+    }
+
+    synchronized(this) {
       int cacheSize = attrCache.size(); // because updateAttrCache changes it!
       int numMetrics = updateAttrCache();
       if (cacheSize < numMetrics) {
