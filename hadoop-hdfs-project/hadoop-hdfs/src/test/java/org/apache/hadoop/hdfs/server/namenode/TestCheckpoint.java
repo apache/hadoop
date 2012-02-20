@@ -655,6 +655,7 @@ public class TestCheckpoint extends TestCase {
     sdToLock.lock();
     try {      
       MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .format(false)
         .manageNameDfsDirs(false)
         .numDataNodes(0)
         .build();

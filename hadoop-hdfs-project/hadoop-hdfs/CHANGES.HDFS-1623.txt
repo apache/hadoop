@@ -218,3 +218,5 @@ HDFS-2937. TestDFSHAAdmin needs tests with MiniDFSCluster. (Brandon Li via sures
 HDFS-2586. Add protobuf service and implementation for HAServiceProtocol. (suresh via atm)
 
 HDFS-2952. NN should not start with upgrade option or with a pending an unfinalized upgrade. (atm)
+
+HDFS-2974. MiniDFSCluster does not delete standby NN name dirs during format. (atm)

@@ -626,6 +626,15 @@ public class MiniDFSCluster {
       for (NNConf nn : nameservice.getNNs()) {
         initNameNodeConf(conf, nsId, nn.getNnId(), manageNameDfsDirs,
             nnCounterForFormat);
+        Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
+        if (format) {
+          for (URI nameDirUri : namespaceDirs) {
+            File nameDir = new File(nameDirUri);
+            if (nameDir.exists() && !FileUtil.fullyDelete(nameDir)) {
+              throw new IOException("Could not fully delete " + nameDir);
+            }
+          }
+        }
         
         boolean formatThisOne = format;
         if (format && i++ > 0) {
@@ -635,14 +644,14 @@ public class MiniDFSCluster {
           // from the first one.
           formatThisOne = false;
           assert (null != prevNNDirs);
-          copyNameDirs(prevNNDirs, FSNamesystem.getNamespaceDirs(conf), conf);
+          copyNameDirs(prevNNDirs, namespaceDirs, conf);
         }
         
         nnCounterForFormat++;
         if (formatThisOne) {
           DFSTestUtil.formatNameNode(conf);
         }
-        prevNNDirs = FSNamesystem.getNamespaceDirs(conf);
+        prevNNDirs = namespaceDirs;
       }
 
       // Start all Namenodes
