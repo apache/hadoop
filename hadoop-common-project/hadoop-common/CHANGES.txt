@@ -86,6 +86,9 @@ Trunk (unreleased changes)
 
     HADOOP-8070. Add a standalone benchmark for RPC call performance. (todd)
 
+    HADOOP-8084. Updates ProtoBufRpc engine to not do an unnecessary copy 
+    for RPC request/response. (ddas)
+
   BUG FIXES
 
     HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc

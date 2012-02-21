@@ -18,8 +18,23 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
-import java.net.InetSocketAddress;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyShort;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Matchers.isNull;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,7 +48,6 @@ import java.util.Set;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -42,6 +56,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -60,7 +75,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
-import org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalResourceStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerAction;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
@@ -81,13 +95,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
-
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
-import static org.mockito.Mockito.*;
 
 public class TestResourceLocalizationService {
 
@@ -98,11 +108,11 @@ public class TestResourceLocalizationService {
   public void testLocalizationInit() throws Exception {
     final Configuration conf = new Configuration();
     AsyncDispatcher dispatcher = new AsyncDispatcher();
-    dispatcher.init(null);
+    dispatcher.init(new Configuration());
 
     ContainerExecutor exec = mock(ContainerExecutor.class);
     DeletionService delService = spy(new DeletionService(exec));
-    delService.init(null);
+    delService.init(new Configuration());
     delService.start();
 
     AbstractFileSystem spylfs =
@@ -371,7 +381,7 @@ public class TestResourceLocalizationService {
 
     DeletionService delServiceReal = new DeletionService(exec);
     DeletionService delService = spy(delServiceReal);
-    delService.init(null);
+    delService.init(new Configuration());
     delService.start();
 
     ResourceLocalizationService rawService =

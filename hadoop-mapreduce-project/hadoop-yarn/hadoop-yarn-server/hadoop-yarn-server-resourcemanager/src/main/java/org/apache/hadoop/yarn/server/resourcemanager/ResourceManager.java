@@ -131,6 +131,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     this.conf = conf;
 
+    this.conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
+
     this.rmDispatcher = createDispatcher();
     addIfService(this.rmDispatcher);
 
@@ -265,6 +267,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     private final BlockingQueue<SchedulerEvent> eventQueue =
       new LinkedBlockingQueue<SchedulerEvent>();
     private final Thread eventProcessor;
+    private volatile boolean stopped = false;
 
     public SchedulerEventDispatcher(ResourceScheduler scheduler) {
       super(SchedulerEventDispatcher.class.getName());
@@ -285,7 +288,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
         SchedulerEvent event;
 
-        while (!Thread.currentThread().isInterrupted()) {
+        while (!stopped && !Thread.currentThread().isInterrupted()) {
           try {
             event = eventQueue.take();
           } catch (InterruptedException e) {
@@ -296,9 +299,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
           try {
             scheduler.handle(event);
           } catch (Throwable t) {
-            LOG.error("Error in handling event type " + event.getType()
+            LOG.fatal("Error in handling event type " + event.getType()
                 + " to the scheduler", t);
-            return; // TODO: Kill RM.
+            if (getConfig().getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
+              Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR)) {
+              LOG.info("Exiting, bbye..");
+              System.exit(-1);
+            }
           }
         }
       }
@@ -306,6 +313,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     @Override
     public synchronized void stop() {
+      this.stopped = true;
       this.eventProcessor.interrupt();
       try {
         this.eventProcessor.join();

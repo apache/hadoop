@@ -216,24 +216,16 @@ public class RecoveryService extends CompositeService implements Recovery {
   protected Dispatcher createRecoveryDispatcher() {
     return new RecoveryDispatcher();
   }
-  
-  protected Dispatcher createRecoveryDispatcher(boolean exitOnException) {
-    return new RecoveryDispatcher(exitOnException);
-  }
 
   @SuppressWarnings("rawtypes")
   class RecoveryDispatcher extends AsyncDispatcher {
     private final EventHandler actualHandler;
     private final EventHandler handler;
 
-    RecoveryDispatcher(boolean exitOnException) {
-      super(exitOnException);
+    RecoveryDispatcher() {
+      super();
       actualHandler = super.getEventHandler();
       handler = new InterceptingEventHandler(actualHandler);
-    }
-
-    RecoveryDispatcher() {
-      this(false);
     }
 
     @Override
