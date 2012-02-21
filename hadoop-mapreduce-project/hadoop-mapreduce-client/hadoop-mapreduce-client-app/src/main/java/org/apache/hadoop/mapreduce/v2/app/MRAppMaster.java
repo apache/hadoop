@@ -381,6 +381,7 @@ public class MRAppMaster extends CompositeService {
       // this is the only job, so shut down the Appmaster
       // note in a workflow scenario, this may lead to creation of a new
       // job (FIXME?)
+      // Send job-end notification
       if (getConfig().get(MRJobConfig.MR_JOB_END_NOTIFICATION_URL) != null) {
         try {
           LOG.info("Job end notification started for jobID : "
@@ -407,7 +408,6 @@ public class MRAppMaster extends CompositeService {
         LOG.info("Calling stop for all the services");
         stop();
 
-        // Send job-end notification
       } catch (Throwable t) {
         LOG.warn("Graceful stop failed ", t);
       }
