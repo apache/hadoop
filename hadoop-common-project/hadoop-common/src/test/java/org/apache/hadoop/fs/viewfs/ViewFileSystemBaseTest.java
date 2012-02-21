@@ -89,7 +89,7 @@ public class ViewFileSystemBaseTest {
     
     // Set up the defaultMT in the config with our mount point links
     //Configuration conf = new Configuration();
-    conf = ViewFileSystemTestSetup.configWithViewfsScheme();
+    conf = ViewFileSystemTestSetup.createConfig();
     setupMountPoints();
     fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
   }

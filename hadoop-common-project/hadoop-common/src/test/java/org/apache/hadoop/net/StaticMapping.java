@@ -21,8 +21,10 @@ import org.apache.hadoop.conf.Configuration;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Implements the {@link DNSToSwitchMapping} via static mappings. Used
@@ -34,6 +36,10 @@ import java.util.Map;
  * When an instance of the class has its {@link #setConf(Configuration)}
  * method called, nodes listed in the configuration will be added to the map.
  * These do not get removed when the instance is garbage collected.
+ *
+ * The switch mapping policy of this class is the same as for the
+ * {@link ScriptBasedMapping} -the presence of a non-empty topology script.
+ * The script itself is not used.
  */
 public class StaticMapping extends AbstractDNSToSwitchMapping  {
 
@@ -109,12 +115,30 @@ public class StaticMapping extends AbstractDNSToSwitchMapping  {
   }
 
   /**
-   * Declare that this mapping is always multi-switch
+   * The switch policy of this mapping is driven by the same policy
+   * as the Scripted mapping: the presence of the script name in
+   * the configuration file
    * @return false, always
    */
   @Override
   public boolean isSingleSwitch() {
-    return false;
+    return isSingleSwitchByScriptPolicy();
+  }
+
+  /**
+   * Get a copy of the map (for diagnostics)
+   * @return a clone of the map or null for none known
+   */
+  @Override
+  public Map<String, String> getSwitchMap() {
+    synchronized (nameToRackMap) {
+      return new HashMap<String, String>(nameToRackMap);
+    }
+  }
+
+  @Override
+  public String toString() {
+    return "static mapping with single switch = " + isSingleSwitch();
   }
 
   /**

@@ -90,7 +90,6 @@ Release 0.23.2 - UNRELEASED
     (sharad, todd via todd)
 
   BUG FIXES
-    HADOOP-8054 NPE with FilterFileSystem (Daryn Sharp via bobby)
 
     HADOOP-8042  When copying a file out of HDFS, modifying it, and uploading
     it back into HDFS, the put fails due to a CRC mismatch
@@ -117,7 +116,21 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8083 javadoc generation for some modules is not done under target/ (tucu)
 
-Release 0.23.1 - 2012-02-08 
+    HADOOP-8036. TestViewFsTrash assumes the user's home directory is
+    2 levels deep. (Colin Patrick McCabe via eli)
+
+    HADOOP-8046 Revert StaticMapping semantics to the existing ones, add DNS
+    mapping diagnostics in progress (stevel)
+
+    HADOOP-8057 hadoop-setup-conf.sh not working because of some extra spaces.
+    (Vinayakumar B via stevel)
+
+    HADOOP-7680 TestHardLink fails on Mac OS X, when gnu stat is in path.
+    (Milind Bhandarkar via stevel)
+
+    HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
+
+Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
 
@@ -339,6 +352,8 @@ Release 0.23.1 - 2012-02-08
 
    HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum
    (Daryn Sharp via bobby)
+
+   HADOOP-8054 NPE with FilterFileSystem (Daryn Sharp via bobby)
 
 Release 0.23.0 - 2011-11-01 
 

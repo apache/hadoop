@@ -99,6 +99,8 @@ public class NodeManager extends CompositeService implements
   @Override
   public void init(Configuration conf) {
 
+    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
+
     Context context = new NMContext();
 
     // Create the secretManager if need be.

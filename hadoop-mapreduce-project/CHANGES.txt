@@ -39,9 +39,15 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's           
     environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)
 
+    MAPREDUCE-3877 Add a test to formalise the current state transitions
+    of the yarn lifecycle. (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-3862.  Nodemanager can appear to hang on shutdown due to lingering
+    DeletionService threads (Jason Lowe via bobby)
 
     MAPREDUCE-3680. FifoScheduler web service rest API can print out invalid 
     JSON. (B Anil Kumar via tgraves)
@@ -52,11 +58,16 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
     HTTPS parameters. (todd)
 
-    MAPREDUCE-3856. Instances of RunningJob class givs incorrect job tracking
-    urls when mutiple jobs are submitted from same client jvm. (Eric Payne via
-    sseth)
+    MAPREDUCE-3583. Change pid to String and stime to BigInteger in order to
+    avoid NumberFormatException caused by overflow.  (Zhihong Yu via szetszwo)
+
+    MAPREDUCE-3634. Fixed all daemons to crash instead of hanging around when
+    their EventHandlers get exceptions. (vinodkv)
+
+    MAPREDUCE-3798. Fixed failing TestJobCleanup.testCusomCleanup() and moved it
+    to the maven build. (Ravi Prakash via vinodkv)
  
-Release 0.23.1 - 2012-02-08 
+Release 0.23.1 - 2012-02-17 
 
   NEW FEATURES
 
@@ -806,6 +817,12 @@ Release 0.23.1 - 2012-02-08
 
     MAPREDUCE-3858. Task attempt failure during commit results in task never completing.
     (Tom White via mahadev)
+
+    MAPREDUCE-3856. Instances of RunningJob class givs incorrect job tracking
+    urls when mutiple jobs are submitted from same client jvm. (Eric Payne via
+    sseth)
+
+    MAPREDUCE-3880. Changed LCE binary to be 32-bit. (acmurthy)
 
 Release 0.23.0 - 2011-11-01 
 

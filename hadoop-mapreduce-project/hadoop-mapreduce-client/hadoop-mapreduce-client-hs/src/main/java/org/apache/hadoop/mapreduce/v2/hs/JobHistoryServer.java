@@ -30,6 +30,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.service.CompositeService;
 
 /******************************************************************
@@ -51,6 +52,9 @@ public class JobHistoryServer extends CompositeService {
   @Override
   public synchronized void init(Configuration conf) {
     Configuration config = new YarnConfiguration(conf);
+
+    config.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
+
     try {
       doSecureLogin(conf);
     } catch(IOException ie) {

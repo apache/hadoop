@@ -376,7 +376,7 @@ public class TestApplication {
 
     WrappedApplication(int id, long timestamp, String user, int numContainers) {
       dispatcher = new DrainDispatcher();
-      dispatcher.init(null);
+      dispatcher.init(new Configuration());
 
       localizerBus = mock(EventHandler.class);
       launcherBus = mock(EventHandler.class);
