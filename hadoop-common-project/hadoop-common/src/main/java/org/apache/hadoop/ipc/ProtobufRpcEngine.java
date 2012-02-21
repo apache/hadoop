@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputOutputStream;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
@@ -45,6 +46,7 @@ import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcResponseProto.Res
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -268,13 +270,13 @@ public class ProtobufRpcEngine implements RpcEngine {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(message.toByteArray().length);
-      out.write(message.toByteArray());
+      ((Message)message).writeDelimitedTo(
+          DataOutputOutputStream.constructOutputStream(out));
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int length = in.readInt();
+      int length = ProtoUtil.readRawVarint32(in);
       byte[] bytes = new byte[length];
       in.readFully(bytes);
       message = HadoopRpcRequestProto.parseFrom(bytes);
@@ -297,13 +299,13 @@ public class ProtobufRpcEngine implements RpcEngine {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(message.toByteArray().length);
-      out.write(message.toByteArray());
+      ((Message)message).writeDelimitedTo(
+          DataOutputOutputStream.constructOutputStream(out));      
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int length = in.readInt();
+      int length = ProtoUtil.readRawVarint32(in);
       byte[] bytes = new byte[length];
       in.readFully(bytes);
       message = HadoopRpcResponseProto.parseFrom(bytes);

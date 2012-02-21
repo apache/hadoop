@@ -47,6 +47,9 @@ Release 0.23-PB - Unreleased
 
     HADOOP-8070. Add a standalone benchmark for RPC call performance. (todd)
 
+    HADOOP-8084. Updates ProtoBufRpc engine to not do an unnecessary copy 
+    for RPC request/response. (ddas)
+
   BUG FIXES
 
     HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
