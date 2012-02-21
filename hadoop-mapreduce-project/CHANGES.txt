@@ -37,6 +37,9 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3634. Fixed all daemons to crash instead of hanging around when
     their EventHandlers get exceptions. (vinodkv)
+
+    MAPREDUCE-3798. Fixed failing TestJobCleanup.testCusomCleanup() and moved it
+    to the maven build. (Ravi Prakash via vinodkv)
  
 Release 0.23.1 - 2012-02-17 
 
