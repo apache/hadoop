@@ -17,6 +17,15 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.isA;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -29,19 +38,14 @@ import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.LocalizedResource;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerResourceRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceLocalizedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceReleaseEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
-
 import org.junit.Test;
-import static org.junit.Assert.*;
-
 import org.mockito.ArgumentMatcher;
-import static org.mockito.Mockito.*;
 
 public class TestLocalizedResource {
 
@@ -62,7 +66,7 @@ public class TestLocalizedResource {
   @SuppressWarnings("unchecked") // mocked generic
   public void testNotification() throws Exception {
     DrainDispatcher dispatcher = new DrainDispatcher();
-    dispatcher.init(null);
+    dispatcher.init(new Configuration());
     try {
       dispatcher.start();
       EventHandler<ContainerEvent> containerBus = mock(EventHandler.class);
@@ -175,7 +179,7 @@ public class TestLocalizedResource {
   @Test
   public void testDirectLocalization() throws Exception {
     DrainDispatcher dispatcher = new DrainDispatcher();
-    dispatcher.init(null);
+    dispatcher.init(new Configuration());
     try {
       dispatcher.start();
       LocalResource apiRsrc = createMockResource();

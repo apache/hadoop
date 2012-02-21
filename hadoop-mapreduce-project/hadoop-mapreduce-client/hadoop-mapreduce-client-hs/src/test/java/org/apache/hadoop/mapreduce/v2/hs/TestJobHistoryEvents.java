@@ -53,7 +53,6 @@ public class TestJobHistoryEvents {
   @Test
   public void testHistoryEvents() throws Exception {
     Configuration conf = new Configuration();
-    conf.set(MRJobConfig.USER_NAME, "test");
     MRApp app = new MRAppWithHistory(2, 1, true, this.getClass().getName(), true);
     app.submit(conf);
     Job job = app.getContext().getAllJobs().values().iterator().next();
@@ -102,7 +101,6 @@ public class TestJobHistoryEvents {
   public void testEventsFlushOnStop() throws Exception {
 
     Configuration conf = new Configuration();
-    conf.set(MRJobConfig.USER_NAME, "test");
     MRApp app = new MRAppWithSpecialHistoryHandler(1, 0, true, this
         .getClass().getName(), true);
     app.submit(conf);

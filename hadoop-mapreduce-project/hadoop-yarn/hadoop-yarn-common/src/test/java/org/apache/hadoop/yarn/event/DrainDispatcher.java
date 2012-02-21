@@ -17,10 +17,8 @@
 */
 package org.apache.hadoop.yarn.event;
 
-import java.util.HashMap;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("rawtypes")
 public class DrainDispatcher extends AsyncDispatcher {
@@ -36,7 +34,7 @@ public class DrainDispatcher extends AsyncDispatcher {
   }
 
   private DrainDispatcher(BlockingQueue<Event> eventQueue) {
-    super(new HashMap<Class<? extends Enum>, EventHandler>(), eventQueue, true);
+    super(eventQueue);
     this.queue = eventQueue;
   }
 

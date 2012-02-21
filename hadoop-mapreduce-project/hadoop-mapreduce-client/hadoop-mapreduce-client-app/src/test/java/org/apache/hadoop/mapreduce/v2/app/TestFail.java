@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherImpl;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
@@ -49,6 +51,7 @@ import org.junit.Test;
  * Tests the state machine with respect to Job/Task/TaskAttempt failure 
  * scenarios.
  */
+@SuppressWarnings("unchecked")
 public class TestFail {
 
   @Test
@@ -247,10 +250,17 @@ public class TestFail {
       //when attempt times out, heartbeat handler will send the lost event
       //leading to Attempt failure
       return new TaskAttemptListenerImpl(getContext(), null) {
+        @Override
         public void startRpcServer(){};
+        @Override
         public void stopRpcServer(){};
+        @Override
+        public InetSocketAddress getAddress() {
+          return NetUtils.createSocketAddr("localhost", 1234);
+        }
         public void init(Configuration conf) {
-          conf.setInt("mapreduce.task.timeout", 1*1000);//reduce timeout
+          conf.setInt(MRJobConfig.TASK_TIMEOUT, 1*1000);//reduce timeout
+          conf.setInt(MRJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 1*1000);
           super.init(conf);
         }
       };

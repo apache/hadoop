@@ -54,12 +54,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app.launcher.ContainerLauncherEvent;
-import org.apache.hadoop.mapreduce.v2.app.recover.Recovery;
-import org.apache.hadoop.mapreduce.v2.app.recover.RecoveryService;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.junit.Test;
 
@@ -725,13 +720,6 @@ public class TestRecovery {
     }
 
     @Override
-    protected Recovery createRecoveryService(AppContext appContext) {
-      return new RecoveryServiceWithCustomDispatcher(
-          appContext.getApplicationAttemptId(), appContext.getClock(),
-          getCommitter());
-    }
-
-    @Override
     protected ContainerLauncher createContainerLauncher(AppContext context) {
       MockContainerLauncher launcher = new MockContainerLauncher() {
         @Override
@@ -755,21 +743,6 @@ public class TestRecovery {
           getStartCount());
       return eventHandler;
     }
-  }
-
-  static class RecoveryServiceWithCustomDispatcher extends RecoveryService {
-
-    public RecoveryServiceWithCustomDispatcher(
-        ApplicationAttemptId applicationAttemptId, Clock clock,
-        OutputCommitter committer) {
-      super(applicationAttemptId, clock, committer);
-    }
-
-    @Override
-    public Dispatcher createRecoveryDispatcher() {
-      return super.createRecoveryDispatcher(false);
-    }
-
   }
 
   public static void main(String[] arg) throws Exception {

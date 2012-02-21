@@ -19,6 +19,7 @@ Release 0.23.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
     MAPREDUCE-3862.  Nodemanager can appear to hang on shutdown due to lingering
     DeletionService threads (Jason Lowe via bobby)
 
@@ -33,6 +34,9 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3583. Change pid to String and stime to BigInteger in order to
     avoid NumberFormatException caused by overflow.  (Zhihong Yu via szetszwo)
+
+    MAPREDUCE-3634. Fixed all daemons to crash instead of hanging around when
+    their EventHandlers get exceptions. (vinodkv)
  
 Release 0.23.1 - 2012-02-17 
 
