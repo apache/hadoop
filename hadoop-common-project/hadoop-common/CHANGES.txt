@@ -45,6 +45,8 @@ Release 0.23-PB - Unreleased
 
     HADOOP-7965. Support for protocol version and signature in PB. (jitendra)
 
+    HADOOP-8070. Add a standalone benchmark for RPC call performance. (todd)
+
   BUG FIXES
 
     HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
