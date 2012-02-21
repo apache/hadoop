@@ -188,6 +188,8 @@ public class MRAppMaster extends CompositeService {
   @Override
   public void init(final Configuration conf) {
 
+    conf.setBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY, true);
+
     downloadTokensAndSetupUGI(conf);
 
     context = new RunningAppContext(conf);

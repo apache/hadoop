@@ -334,7 +334,6 @@ public class ContainerLauncherImpl extends AbstractService implements
             LOG.error("Returning, interrupted : " + e);
             return;
           }
-
           int poolSize = launcherPool.getCorePoolSize();
 
           // See if we need up the pool size only if haven't reached the

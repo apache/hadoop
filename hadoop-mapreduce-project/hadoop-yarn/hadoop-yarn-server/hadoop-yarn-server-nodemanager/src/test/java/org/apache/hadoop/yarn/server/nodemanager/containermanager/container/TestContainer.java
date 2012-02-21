@@ -517,7 +517,7 @@ public class TestContainer {
     WrappedContainer(int appId, long timestamp, int id, String user,
         boolean withLocalRes, boolean withServiceData) {
       dispatcher = new DrainDispatcher();
-      dispatcher.init(null);
+      dispatcher.init(new Configuration());
 
       localizerBus = mock(EventHandler.class);
       launcherBus = mock(EventHandler.class);

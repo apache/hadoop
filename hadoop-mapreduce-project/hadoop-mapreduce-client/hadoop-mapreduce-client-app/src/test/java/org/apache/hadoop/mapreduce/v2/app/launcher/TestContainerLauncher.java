@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import junit.framework.Assert;
 
@@ -64,8 +65,6 @@ public class TestContainerLauncher {
       appId, 3);
     JobId jobId = MRBuilderUtils.newJobId(appId, 8);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 9, TaskType.MAP);
-    TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 0);
-    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 10);
 
     AppContext context = mock(AppContext.class);
     CustomContainerLauncher containerLauncher = new CustomContainerLauncher(
@@ -83,6 +82,8 @@ public class TestContainerLauncher {
 
     containerLauncher.expectedCorePoolSize = ContainerLauncherImpl.INITIAL_POOL_SIZE;
     for (int i = 0; i < 10; i++) {
+      ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, i);
+      TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, i);
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
         containerId, "host" + i + ":1234", null,
         ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
@@ -92,9 +93,21 @@ public class TestContainerLauncher {
     Assert.assertNull(containerLauncher.foundErrors);
 
     // Same set of hosts, so no change
-    containerLauncher.expectedCorePoolSize = ContainerLauncherImpl.INITIAL_POOL_SIZE;
     containerLauncher.finishEventHandling = true;
+    int timeOut = 0;
+    while (containerLauncher.numEventsProcessed.get() < 10 && timeOut++ < 200) {
+      LOG.info("Waiting for number of events processed to become " + 10
+          + ". It is now " + containerLauncher.numEventsProcessed.get()
+          + ". Timeout is " + timeOut);
+      Thread.sleep(1000);
+    }
+    Assert.assertEquals(10, containerLauncher.numEventsProcessed.get());
+    containerLauncher.finishEventHandling = false;
     for (int i = 0; i < 10; i++) {
+      ContainerId containerId =
+          BuilderUtils.newContainerId(appAttemptId, i + 10);
+      TaskAttemptId taskAttemptId =
+          MRBuilderUtils.newTaskAttemptId(taskId, i + 10);
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
         containerId, "host" + i + ":1234", null,
         ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
@@ -106,14 +119,16 @@ public class TestContainerLauncher {
     // Different hosts, there should be an increase in core-thread-pool size to
     // 21(11hosts+10buffer)
     // Core pool size should be 21 but the live pool size should be only 11.
-    containerLauncher.expectedCorePoolSize = 12 + ContainerLauncherImpl.INITIAL_POOL_SIZE;
-    for (int i = 1; i <= 2; i++) {
-      containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
-        containerId, "host1" + i + ":1234", null,
-        ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
-    }
-    waitForEvents(containerLauncher, 22);
-    Assert.assertEquals(12, threadPool.getPoolSize());
+    containerLauncher.expectedCorePoolSize =
+        11 + ContainerLauncherImpl.INITIAL_POOL_SIZE;
+    containerLauncher.finishEventHandling = false;
+    ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 21);
+    TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 21);
+    containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
+      containerId, "host11:1234", null,
+      ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
+    waitForEvents(containerLauncher, 21);
+    Assert.assertEquals(11, threadPool.getPoolSize());
     Assert.assertNull(containerLauncher.foundErrors);
 
     containerLauncher.stop();
@@ -172,15 +187,15 @@ public class TestContainerLauncher {
 
   private void waitForEvents(CustomContainerLauncher containerLauncher,
       int expectedNumEvents) throws InterruptedException {
-    int timeOut = 20;
-    while (expectedNumEvents != containerLauncher.numEventsProcessed
-        || timeOut++ < 20) {
+    int timeOut = 0;
+    while (containerLauncher.numEventsProcessing.get() < expectedNumEvents
+        && timeOut++ < 20) {
       LOG.info("Waiting for number of events to become " + expectedNumEvents
-          + ". It is now " + containerLauncher.numEventsProcessed);
+          + ". It is now " + containerLauncher.numEventsProcessing.get());
       Thread.sleep(1000);
     }
-    Assert
-      .assertEquals(expectedNumEvents, containerLauncher.numEventsProcessed);
+    Assert.assertEquals(expectedNumEvents,
+      containerLauncher.numEventsProcessing.get());
   }
 
   @Test
@@ -244,9 +259,11 @@ public class TestContainerLauncher {
   private final class CustomContainerLauncher extends ContainerLauncherImpl {
 
     private volatile int expectedCorePoolSize = 0;
-    private volatile int numEventsProcessed = 0;
+    private AtomicInteger numEventsProcessing = new AtomicInteger(0);
+    private AtomicInteger numEventsProcessed = new AtomicInteger(0);
     private volatile String foundErrors = null;
     private volatile boolean finishEventHandling;
+
     private CustomContainerLauncher(AppContext context) {
       super(context);
     }
@@ -255,8 +272,38 @@ public class TestContainerLauncher {
       return super.launcherPool;
     }
 
+    private final class CustomEventProcessor extends
+        ContainerLauncherImpl.EventProcessor {
+      private final ContainerLauncherEvent event;
+
+      private CustomEventProcessor(ContainerLauncherEvent event) {
+        super(event);
+        this.event = event;
+      }
+
+      @Override
+      public void run() {
+        // do nothing substantial
+
+        LOG.info("Processing the event " + event.toString());
+
+        numEventsProcessing.incrementAndGet();
+        // Stall
+        while (!finishEventHandling) {
+          synchronized (this) {
+            try {
+              wait(1000);
+            } catch (InterruptedException e) {
+              ;
+            }
+          }
+        }
+        numEventsProcessed.incrementAndGet();
+      }
+    }
+
     protected ContainerLauncherImpl.EventProcessor createEventProcessor(
-        ContainerLauncherEvent event) {
+        final ContainerLauncherEvent event) {
       // At this point of time, the EventProcessor is being created and so no
       // additional threads would have been created.
 
@@ -266,23 +313,7 @@ public class TestContainerLauncher {
             + launcherPool.getCorePoolSize();
       }
 
-      return new ContainerLauncherImpl.EventProcessor(event) {
-        @Override
-        public void run() {
-          // do nothing substantial
-          numEventsProcessed++;
-          // Stall
-          synchronized(this) {
-            try {
-              while(!finishEventHandling) {
-                wait(1000);
-              }
-            } catch (InterruptedException e) {
-              ;
-            }
-          }
-        }
-      };
+      return new CustomEventProcessor(event);
     }
   }
 

@@ -137,6 +137,7 @@ public class ContainerManagerImpl extends CompositeService implements
     this.context = context;
     this.dirsHandler = dirsHandler;
 
+    // ContainerManager level dispatcher.
     dispatcher = new AsyncDispatcher();
     this.deletionService = deletionContext;
     this.metrics = metrics;
