@@ -44,8 +44,8 @@ public class TestSimulatedFSDataset extends TestCase {
 
   protected void setUp() throws Exception {
     super.setUp();
-      conf = new HdfsConfiguration();
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    conf = new HdfsConfiguration();
+    SimulatedFSDataset.setFactory(conf);
   }
 
   protected void tearDown() throws Exception {
@@ -85,6 +85,18 @@ public class TestSimulatedFSDataset extends TestCase {
   }
   int addSomeBlocks(FSDatasetInterface fsdataset ) throws IOException {
     return addSomeBlocks(fsdataset, 1);
+  }
+  
+  public void testFSDatasetFactory() {
+    final Configuration conf = new Configuration();
+    FSDatasetInterface.Factory f = FSDatasetInterface.Factory.getFactory(conf);
+    assertEquals(FSDataset.Factory.class, f.getClass());
+    assertFalse(f.isSimulated());
+
+    SimulatedFSDataset.setFactory(conf);
+    FSDatasetInterface.Factory s = FSDatasetInterface.Factory.getFactory(conf);
+    assertEquals(SimulatedFSDataset.Factory.class, s.getClass());
+    assertTrue(s.isSimulated());
   }
 
   public void testGetMetaData() throws IOException {
@@ -287,8 +299,8 @@ public class TestSimulatedFSDataset extends TestCase {
     }
   }
   
-  private SimulatedFSDataset getSimulatedFSDataset() throws IOException {
-    SimulatedFSDataset fsdataset = new SimulatedFSDataset(conf); 
+  private SimulatedFSDataset getSimulatedFSDataset() {
+    SimulatedFSDataset fsdataset = new SimulatedFSDataset(null, null, conf); 
     fsdataset.addBlockPool(bpid, conf);
     return fsdataset;
   }

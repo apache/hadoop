@@ -34,7 +34,7 @@ public class TestDataNodeMetrics extends TestCase {
   
   public void testDataNodeMetrics() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    SimulatedFSDataset.setFactory(conf);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       FileSystem fs = cluster.getFileSystem();

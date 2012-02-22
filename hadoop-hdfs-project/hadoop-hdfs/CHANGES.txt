@@ -25,6 +25,9 @@ Release 0.23.2 - UNRELEASED
     HDFS-2725. hdfs script usage information is missing the information 
     about "dfs" command (Prashant Sharma via stevel)
 
+    HDFS-2907.  Add a conf property dfs.datanode.fsdataset.factory to make
+    FSDataset in Datanode pluggable.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
