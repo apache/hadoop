@@ -222,3 +222,5 @@ HDFS-2952. NN should not start with upgrade option or with a pending an unfinali
 HDFS-2974. MiniDFSCluster does not delete standby NN name dirs during format. (atm)
 
 HDFS-2929. Stress test and fixes for block synchronization (todd)
+
+HDFS-2972. Small optimization building incremental block report (todd)
