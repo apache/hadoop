@@ -22,19 +22,13 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
@@ -111,28 +105,16 @@ public class TestDNFencingWithReplication {
   
   @Test
   public void testFencingStress() throws Exception {
-    Configuration conf = new Configuration();
-    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setInt(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
-    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
-    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
-    // Increase max streams so that we re-replicate quickly.
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY, 1000);
+    HAStressTestHarness harness = new HAStressTestHarness();
+    harness.conf.setInt(
+        DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000);
 
-    
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-      .nnTopology(MiniDFSNNTopology.simpleHATopology())
-      .numDataNodes(3)
-      .build();
+    final MiniDFSCluster cluster = harness.startCluster();
     try {
       cluster.waitActive();
       cluster.transitionToActive(0);
       
-      final NameNode nn1 = cluster.getNameNode(0);
-      final NameNode nn2 = cluster.getNameNode(1);
-      
-      FileSystem fs = HATestUtil.configureFailoverFs(
-          cluster, conf);
+      FileSystem fs = harness.getFailoverFs();
       TestContext togglers = new TestContext();
       for (int i = 0; i < NUM_THREADS; i++) {
         Path p = new Path("/test-" + i);
@@ -143,51 +125,14 @@ public class TestDNFencingWithReplication {
       // Start a separate thread which will make sure that replication
       // happens quickly by triggering deletion reports and replication
       // work calculation frequently.
-      TestContext triggerCtx = new TestContext();
-      triggerCtx.addThread(new RepeatingTestThread(triggerCtx) {
-        
-        @Override
-        public void doAnAction() throws Exception {
-          for (DataNode dn : cluster.getDataNodes()) {
-            DataNodeAdapter.triggerDeletionReport(dn);
-            DataNodeAdapter.triggerHeartbeat(dn);
-          }
-          for (int i = 0; i < 2; i++) {
-            NameNode nn = cluster.getNameNode(i);
-            BlockManagerTestUtil.computeAllPendingWork(
-                nn.getNamesystem().getBlockManager());
-          }
-          Thread.sleep(500);
-        }
-      });
-      
-      triggerCtx.addThread(new RepeatingTestThread(triggerCtx) {
-        
-        @Override
-        public void doAnAction() throws Exception {
-          System.err.println("==============================\n" +
-              "Failing over from 0->1\n" +
-              "==================================");
-          cluster.transitionToStandby(0);
-          cluster.transitionToActive(1);
-          
-          Thread.sleep(5000);
-          System.err.println("==============================\n" +
-              "Failing over from 1->0\n" +
-              "==================================");
-
-          cluster.transitionToStandby(1);
-          cluster.transitionToActive(0);
-          Thread.sleep(5000);
-        }
-      });
-      
-      triggerCtx.startThreads();
+      harness.addReplicationTriggerThread(500);
+      harness.addFailoverThread(5000);
+      harness.startThreads();
       togglers.startThreads();
       
       togglers.waitFor(RUNTIME);
       togglers.stop();
-      triggerCtx.stop();
+      harness.stopThreads();
 
       // CHeck that the files can be read without throwing
       for (int i = 0; i < NUM_THREADS; i++) {
@@ -196,7 +141,7 @@ public class TestDNFencingWithReplication {
       }
     } finally {
       System.err.println("===========================\n\n\n\n");
-      cluster.shutdown();
+      harness.shutdown();
     }
 
   }

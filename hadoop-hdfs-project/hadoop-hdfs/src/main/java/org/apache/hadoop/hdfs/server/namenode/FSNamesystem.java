@@ -2826,12 +2826,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
-      if (haContext.getState().equals(NameNode.STANDBY_STATE)) {
-        // TODO(HA) we'll never get here, since we check for WRITE operation above!
-        // Need to implement tests, etc, for this - block recovery spanning
-        // failover.
-      }
-
+      // If a DN tries to commit to the standby, the recovery will
+      // fail, and the next retry will succeed on the new NN.
+  
       if (isInSafeMode()) {
         throw new SafeModeException(
           "Cannot commitBlockSynchronization while in safe mode",

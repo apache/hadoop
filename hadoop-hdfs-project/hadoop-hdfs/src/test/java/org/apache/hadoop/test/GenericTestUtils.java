@@ -110,7 +110,11 @@ public abstract class GenericTestUtils {
     
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
-  
+    private final CountDownLatch resultLatch = new CountDownLatch(1);
+    
+    // Result fields set after proceed() is called.
+    private volatile Throwable thrown;
+    private volatile Object returnValue;
     
     public DelayAnswer(Log log) {
       this.LOG = log;
@@ -145,7 +149,40 @@ public abstract class GenericTestUtils {
     }
 
     protected Object passThrough(InvocationOnMock invocation) throws Throwable {
-      return invocation.callRealMethod();
+      try {
+        Object ret = invocation.callRealMethod();
+        returnValue = ret;
+        return ret;
+      } catch (Throwable t) {
+        thrown = t;
+        throw t;
+      } finally {
+        resultLatch.countDown();
+      }
+    }
+    
+    /**
+     * After calling proceed(), this will wait until the call has
+     * completed and a result has been returned to the caller.
+     */
+    public void waitForResult() throws InterruptedException {
+      resultLatch.await();
+    }
+    
+    /**
+     * After the call has gone through, return any exception that
+     * was thrown, or null if no exception was thrown.
+     */
+    public Throwable getThrown() {
+      return thrown;
+    }
+    
+    /**
+     * After the call has gone through, return the call's return value,
+     * or null in case it was void or an exception was thrown.
+     */
+    public Object getReturnValue() {
+      return returnValue;
     }
   }
   

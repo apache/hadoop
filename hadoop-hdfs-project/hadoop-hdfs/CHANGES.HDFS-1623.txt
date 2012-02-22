@@ -220,3 +220,5 @@ HDFS-2586. Add protobuf service and implementation for HAServiceProtocol. (sures
 HDFS-2952. NN should not start with upgrade option or with a pending an unfinalized upgrade. (atm)
 
 HDFS-2974. MiniDFSCluster does not delete standby NN name dirs during format. (atm)
+
+HDFS-2929. Stress test and fixes for block synchronization (todd)

@@ -1804,6 +1804,13 @@ public class DataNode extends Configured
                                           long newLength) throws IOException {
     ReplicaInfo r = data.updateReplicaUnderRecovery(oldBlock,
         recoveryId, newLength);
+    // Notify the namenode of the updated block info. This is important
+    // for HA, since otherwise the standby node may lose track of the
+    // block locations until the next block report.
+    ExtendedBlock newBlock = new ExtendedBlock(oldBlock);
+    newBlock.setGenerationStamp(recoveryId);
+    newBlock.setNumBytes(newLength);
+    notifyNamenodeReceivedBlock(newBlock, "");
     return new ExtendedBlock(oldBlock.getBlockPoolId(), r);
   }
 
@@ -1930,7 +1937,6 @@ public class DataNode extends Configured
     // or their replicas have 0 length.
     // The block can be deleted.
     if (syncList.isEmpty()) {
-      // TODO: how does this work in HA??
       nn.commitBlockSynchronization(block, recoveryId, 0,
           true, true, DatanodeID.EMPTY_ARRAY);
       return;
