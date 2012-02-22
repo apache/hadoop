@@ -40,6 +40,8 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3798. Fixed failing TestJobCleanup.testCusomCleanup() and moved it
     to the maven build. (Ravi Prakash via vinodkv)
+
+    MAPREDUCE-3884. PWD should be first in the classpath of MR tasks (tucu)
  
 Release 0.23.1 - 2012-02-17 
 
