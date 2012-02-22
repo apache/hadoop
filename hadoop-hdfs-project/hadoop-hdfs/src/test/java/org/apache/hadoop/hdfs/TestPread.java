@@ -206,7 +206,7 @@ public class TestPread extends TestCase {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
     conf.setLong(DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY, 4096);
     if (simulatedStorage) {
-      conf.setBoolean(DFSConfigKeys.DFS_DATANODE_SIMULATEDDATASTORAGE_KEY, true);
+      SimulatedFSDataset.setFactory(conf);
     }
     if (disableTransferTo) {
       conf.setBoolean("dfs.datanode.transferTo.allowed", false);

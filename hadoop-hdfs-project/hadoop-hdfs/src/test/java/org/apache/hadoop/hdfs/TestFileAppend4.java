@@ -77,7 +77,7 @@ public class TestFileAppend4 {
   public void setUp() throws Exception {
     this.conf = new Configuration();
     if (simulatedStorage) {
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+      SimulatedFSDataset.setFactory(conf);
     }
     conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
 

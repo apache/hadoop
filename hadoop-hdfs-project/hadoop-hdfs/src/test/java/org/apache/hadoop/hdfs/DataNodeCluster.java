@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.CreateEditsLog;
 import org.apache.hadoop.net.DNS;
@@ -122,10 +123,9 @@ public class DataNodeCluster {
         }
         dataNodeDirs = args[i];
       } else if (args[i].equals("-simulated")) {
-        conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+        SimulatedFSDataset.setFactory(conf);
       } else if (args[i].equals("-inject")) {
-        if (!conf.getBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED,
-                                                                false) ) {
+        if (!FSDatasetInterface.Factory.getFactory(conf).isSimulated()) {
           System.out.print("-inject is valid only for simulated");
           printUsageExit(); 
         }
@@ -158,7 +158,7 @@ public class DataNodeCluster {
       System.exit(-1);
     }
     boolean simulated = 
-      conf.getBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, false);
+        FSDatasetInterface.Factory.getFactory(conf).isSimulated();
     System.out.println("Starting " + numDataNodes + 
           (simulated ? " Simulated " : " ") +
           " Data Nodes that will connect to Name Node at " + nameNodeAdr);

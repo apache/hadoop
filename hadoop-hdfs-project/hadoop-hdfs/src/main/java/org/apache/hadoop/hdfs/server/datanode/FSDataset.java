@@ -75,6 +75,16 @@ import org.apache.hadoop.util.ReflectionUtils;
  ***************************************************/
 @InterfaceAudience.Private
 class FSDataset implements FSDatasetInterface {
+  /**
+   * A factory for creating FSDataset objects.
+   */
+  static class Factory extends FSDatasetInterface.Factory {
+    @Override
+    public FSDatasetInterface createFSDatasetInterface(DataNode datanode,
+        DataStorage storage, Configuration conf) throws IOException {
+      return new FSDataset(datanode, storage, conf);
+    }
+  }
 
   /**
    * A node type that can be built into a tree reflecting the
@@ -1056,8 +1066,8 @@ class FSDataset implements FSDatasetInterface {
   /**
    * An FSDataset has a directory where it loads its data files.
    */
-  FSDataset(DataNode datanode, DataStorage storage, Configuration conf)
-      throws IOException {
+  private FSDataset(DataNode datanode, DataStorage storage, Configuration conf
+      ) throws IOException {
     this.datanode = datanode;
     this.maxBlocksPerDir = 
       conf.getInt(DFSConfigKeys.DFS_DATANODE_NUMBLOCKS_KEY,

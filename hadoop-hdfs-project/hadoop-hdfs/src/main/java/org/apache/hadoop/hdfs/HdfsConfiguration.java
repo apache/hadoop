@@ -88,7 +88,6 @@ public class HdfsConfiguration extends Configuration {
     deprecate("fs.checkpoint.period", DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY);
     deprecate("dfs.upgrade.permission", DFSConfigKeys.DFS_NAMENODE_UPGRADE_PERMISSION_KEY);
     deprecate("heartbeat.recheck.interval", DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY);
-    deprecate("StorageId", DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY);
     deprecate("dfs.https.client.keystore.resource", DFSConfigKeys.DFS_CLIENT_HTTPS_KEYSTORE_RESOURCE_KEY);
     deprecate("dfs.https.need.client.auth", DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY);
     deprecate("slave.host.name", DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY);
