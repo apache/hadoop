@@ -152,7 +152,20 @@ Release 1.1.0 - unreleased
     HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
 
 
-Release 1.0.1 - 2012.02.19
+Release 1.0.2 - unreleased
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+    HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
+
+    MAPREDUCE-3824. Distributed caches are not removed properly. (Thomas Graves
+    via mattf)
+
+Release 1.0.1 - 2012.02.14
 
   NEW FEATURES
 
@@ -197,11 +210,6 @@ Release 1.0.1 - 2012.02.19
 
     HADOOP-8037. Binary tarball does not preserve platform info for native builds,
     and RPMs fail to provide needed symlinks for libhadoop.so.  (Matt Foley)
-
-    HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
-
-    MAPREDUCE-3824. Distributed caches are not removed properly. (Thomas Graves
-    via mattf)
 
 Release 1.0.0 - 2011.12.15
 
