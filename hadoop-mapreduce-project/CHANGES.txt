@@ -26,6 +26,9 @@ Release 0.23-PB - Unreleased
     MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
     for HDFS-2895. (Suresh Srinivas via vinodkv)
 
+   MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas Graves 
+   via mahadev)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
