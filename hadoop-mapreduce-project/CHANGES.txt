@@ -42,6 +42,9 @@ Release 0.23.2 - UNRELEASED
     to the maven build. (Ravi Prakash via vinodkv)
 
     MAPREDUCE-3884. PWD should be first in the classpath of MR tasks (tucu)
+
+    MAPREDUCE-3878. Null user on filtered jobhistory job page (Jonathon Eagles
+    via tgraves)
  
 Release 0.23.1 - 2012-02-17 
 
