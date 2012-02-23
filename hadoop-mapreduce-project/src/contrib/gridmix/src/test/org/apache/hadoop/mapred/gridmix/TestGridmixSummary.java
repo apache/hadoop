@@ -193,7 +193,7 @@ public class TestGridmixSummary {
     es.update(null);
     assertEquals("ExecutionSummarizer init failed", 0, 
                  es.getSimulationStartTime());
-    testExecutionSummarizer(0, 0, 0, 0, 0, 0, es);
+    testExecutionSummarizer(0, 0, 0, 0, 0, 0, 0, es);
     
     long simStartTime = System.currentTimeMillis();
     es.start(null);
@@ -203,14 +203,24 @@ public class TestGridmixSummary {
                es.getSimulationStartTime() <= System.currentTimeMillis());
     
     // test with job stats
-    JobStats stats = generateFakeJobStats(1, 10, true);
+    JobStats stats = generateFakeJobStats(1, 10, true, false);
     es.update(stats);
-    testExecutionSummarizer(1, 10, 0, 1, 1, 0, es);
+    testExecutionSummarizer(1, 10, 0, 1, 1, 0, 0, es);
     
     // test with failed job 
-    stats = generateFakeJobStats(5, 1, false);
+    stats = generateFakeJobStats(5, 1, false, false);
     es.update(stats);
-    testExecutionSummarizer(6, 11, 0, 2, 1, 1, es);
+    testExecutionSummarizer(6, 11, 0, 2, 1, 1, 0, es);
+    
+    // test with successful but lost job 
+    stats = generateFakeJobStats(1, 1, true, true);
+    es.update(stats);
+    testExecutionSummarizer(7, 12, 0, 3, 1, 1, 1, es);
+    
+    // test with failed but lost job 
+    stats = generateFakeJobStats(2, 2, false, true);
+    es.update(stats);
+    testExecutionSummarizer(9, 14, 0, 4, 1, 1, 2, es);
     
     // test finalize
     //  define a fake job factory
@@ -306,7 +316,7 @@ public class TestGridmixSummary {
   // test the ExecutionSummarizer
   private static void testExecutionSummarizer(int numMaps, int numReds,
       int totalJobsInTrace, int totalJobSubmitted, int numSuccessfulJob, 
-      int numFailedJobs, ExecutionSummarizer es) {
+      int numFailedJobs, int numLostJobs, ExecutionSummarizer es) {
     assertEquals("ExecutionSummarizer test failed [num-maps]", 
                  numMaps, es.getNumMapTasksLaunched());
     assertEquals("ExecutionSummarizer test failed [num-reducers]", 
@@ -319,12 +329,14 @@ public class TestGridmixSummary {
                  numSuccessfulJob, es.getNumSuccessfulJobs());
     assertEquals("ExecutionSummarizer test failed [num-failed jobs]", 
                  numFailedJobs, es.getNumFailedJobs());
+    assertEquals("ExecutionSummarizer test failed [num-lost jobs]", 
+                 numLostJobs, es.getNumLostJobs());
   }
   
   // generate fake job stats
   @SuppressWarnings("deprecation")
   private static JobStats generateFakeJobStats(final int numMaps, 
-      final int numReds, final boolean isSuccessful) 
+      final int numReds, final boolean isSuccessful, final boolean lost) 
   throws IOException {
     // A fake job 
     Job fakeJob = new Job() {
@@ -335,6 +347,9 @@ public class TestGridmixSummary {
       
       @Override
       public boolean isSuccessful() throws IOException, InterruptedException {
+        if (lost) {
+          throw new IOException("Test failure!");
+        }
         return isSuccessful;
       };
     };

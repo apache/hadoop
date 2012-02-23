@@ -206,6 +206,22 @@ hadoop jar &lt;gridmix-jar&gt; org.apache.hadoop.mapred.gridmix.Gridmix \
               options using the values obtained from the original task (i.e via
               trace).
           </td>
+          </tr>
+          <tr>
+          <td>
+            <code>gridmix.job-monitor.thread-count</code>
+          </td>
+          <td>Total number of threads to use for polling for jobs' status. The
+              default value is 1.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <code>gridmix.job-monitor.sleep-time-ms</code>
+          </td>
+          <td>The time each Gridmix status poller thread will sleep before
+              starting the next cycle. The default value is 500 milliseconds.
+          </td>
         </tr>
       </table>
     </section>

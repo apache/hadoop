@@ -72,6 +72,7 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
       }
     };
 
+  private boolean submitted;
   protected final int seq;
   protected final Path outdir;
   protected final Job job;
@@ -412,6 +413,14 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
     return jobdesc;
   }
 
+  void setSubmitted() {
+    submitted = true;
+  }
+  
+  boolean isSubmitted() {
+    return submitted;
+  }
+  
   static void pushDescription(int seq, List<InputSplit> splits) {
     if (null != descCache.putIfAbsent(seq, splits)) {
       throw new IllegalArgumentException("Description exists for id " + seq);

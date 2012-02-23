@@ -14,6 +14,8 @@ Trunk (unreleased changes)
     (Plamen Jeliazkov via shv)
 
   IMPROVEMENTS
+    MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for 
+                    faster job submission. (amarrk)
 
     MAPREDUCE-3481. [Gridmix] Improve Gridmix STRESS mode. (amarrk)
 

@@ -24,36 +24,46 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobStatus;
 
 /**
- * Component accepting submitted, running jobs and responsible for
- * monitoring jobs for success and failure. Once a job is submitted, it is
- * polled for status until complete. If a job is complete, then the monitor
- * thread returns immediately to the queue. If not, the monitor will sleep
- * for some duration.
+ * Component accepting submitted, running {@link Statistics.JobStats} and 
+ * responsible for monitoring jobs for success and failure. Once a job is 
+ * submitted, it is polled for status until complete. If a job is complete, 
+ * then the monitor thread returns immediately to the queue. If not, the monitor
+ * will sleep for some duration.
+ * 
+ * {@link JobMonitor} can be configured to use multiple threads for polling
+ * the job statuses. Use {@link Gridmix#GRIDMIX_JOBMONITOR_THREADS} to specify
+ * the total number of monitoring threads. 
+ * 
+ * The duration for which a monitoring thread sleeps if the first job in the 
+ * queue is running can also be configured. Use 
+ * {@link Gridmix#GRIDMIX_JOBMONITOR_SLEEPTIME_MILLIS} to specify a custom 
+ * value.
  */
-class JobMonitor implements Gridmix.Component<Job> {
+class JobMonitor implements Gridmix.Component<JobStats> {
 
   public static final Log LOG = LogFactory.getLog(JobMonitor.class);
 
-  private final Queue<Job> mJobs;
-  private final MonitorThread mThread;
-  private final BlockingQueue<Job> runningJobs;
+  private final Queue<JobStats> mJobs;
+  private ExecutorService executor;
+  private int numPollingThreads;
+  private final BlockingQueue<JobStats> runningJobs;
   private final long pollDelayMillis;
   private Statistics statistics;
   private boolean graceful = false;
   private boolean shutdown = false;
-
-  public JobMonitor(Statistics statistics) {
-    this(5,TimeUnit.SECONDS, statistics);
-  }
 
   /**
    * Create a JobMonitor that sleeps for the specified duration after
@@ -62,30 +72,37 @@ class JobMonitor implements Gridmix.Component<Job> {
    * @param unit Time unit for pollDelaySec (rounded to milliseconds)
    * @param statistics StatCollector , listener to job completion.
    */
-  public JobMonitor(int pollDelay, TimeUnit unit, Statistics statistics) {
-    mThread = new MonitorThread();
-    runningJobs = new LinkedBlockingQueue<Job>();
-    mJobs = new LinkedList<Job>();
+  public JobMonitor(int pollDelay, TimeUnit unit, Statistics statistics, 
+                    int numPollingThreads) {
+    executor = Executors.newCachedThreadPool();
+    this.numPollingThreads = numPollingThreads;
+    runningJobs = new LinkedBlockingQueue<JobStats>();
+    mJobs = new LinkedList<JobStats>();
     this.pollDelayMillis = TimeUnit.MILLISECONDS.convert(pollDelay, unit);
     this.statistics = statistics;
   }
 
   /**
-   * Add a job to the polling queue.
+   * Add a running job's status to the polling queue.
    */
-  public void add(Job job) throws InterruptedException {
-    runningJobs.put(job);
+  public void add(JobStats job) throws InterruptedException {
+    synchronized (runningJobs) {
+      runningJobs.put(job);
+    }
   }
 
   /**
-   * Add a submission failed job , such that it can be communicated
+   * Add a submission failed job's status, such that it can be communicated
    * back to serial.
    * TODO: Cleaner solution for this problem
    * @param job
    */
-  public void submissionFailed(Job job) {
-    LOG.info("Job submission failed notification for job " + job.getJobID());
-    this.statistics.add(job);
+  public void submissionFailed(JobStats job) {
+    String jobID = job.getJob().getConfiguration().get(Gridmix.ORIGINAL_JOB_ID);
+    LOG.info("Job submission failed notification for job " + jobID);
+    synchronized (statistics) {
+      this.statistics.add(job);
+    }
   }
 
   /**
@@ -108,12 +125,9 @@ class JobMonitor implements Gridmix.Component<Job> {
    * @throws IllegalStateException If monitoring thread is still running.
    * @return Any jobs submitted and not known to have completed.
    */
-  List<Job> getRemainingJobs() {
-    if (mThread.isAlive()) {
-      LOG.warn("Internal error: Polling running monitor for jobs");
-    }
+  List<JobStats> getRemainingJobs() {
     synchronized (mJobs) {
-      return new ArrayList<Job>(mJobs);
+      return new ArrayList<JobStats>(mJobs);
     }
   }
 
@@ -123,19 +137,8 @@ class JobMonitor implements Gridmix.Component<Job> {
    */
   private class MonitorThread extends Thread {
 
-    public MonitorThread() {
-      super("GridmixJobMonitor");
-    }
-
-    /**
-     * Check a job for success or failure.
-     */
-    public void process(Job job) throws IOException, InterruptedException {
-      if (job.isSuccessful()) {
-        onSuccess(job);
-      } else {
-        onFailure(job);
-      }
+    public MonitorThread(int i) {
+      super("GridmixJobMonitor-" + i);
     }
 
     @Override
@@ -144,10 +147,12 @@ class JobMonitor implements Gridmix.Component<Job> {
       boolean shutdown;
       while (true) {
         try {
-          synchronized (mJobs) {
-            graceful = JobMonitor.this.graceful;
-            shutdown = JobMonitor.this.shutdown;
-            runningJobs.drainTo(mJobs);
+          synchronized (runningJobs) {
+            synchronized (mJobs) {
+              graceful = JobMonitor.this.graceful;
+              shutdown = JobMonitor.this.shutdown;
+              runningJobs.drainTo(mJobs);
+            }
           }
 
           // shutdown conditions; either shutdown requested and all jobs
@@ -155,26 +160,63 @@ class JobMonitor implements Gridmix.Component<Job> {
           // submitted jobs not in the monitored set
           if (shutdown) {
             if (!graceful) {
-              while (!runningJobs.isEmpty()) {
-                synchronized (mJobs) {
-                  runningJobs.drainTo(mJobs);
+              synchronized (runningJobs) {
+                while (!runningJobs.isEmpty()) {
+                  synchronized (mJobs) {
+                    runningJobs.drainTo(mJobs);
+                  }
                 }
               }
               break;
-            } else if (mJobs.isEmpty()) {
-              break;
+            }
+            
+            synchronized (mJobs) {
+              if (graceful && mJobs.isEmpty()) {
+                break;
+              }
             }
           }
-          while (!mJobs.isEmpty()) {
-            Job job;
-            synchronized (mJobs) {
-              job = mJobs.poll();
-            }
+          JobStats jobStats = null;
+          synchronized (mJobs) {
+            jobStats = mJobs.poll();
+          }
+          while (jobStats != null) {
+            Job job = jobStats.getJob();
+            
             try {
-              if (job.isComplete()) {
-                process(job);
-                statistics.add(job);
-                continue;
+              // get the job status
+              long start = System.currentTimeMillis();
+              JobStatus status = job.getStatus(); // cache the job status
+              long end = System.currentTimeMillis();
+              
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Status polling for job " + job.getJobID() + " took "
+                          + (end-start) + "ms.");
+              }
+              
+              // update the job progress
+              jobStats.updateJobStatus(status);
+              
+              // if the job is complete, let others know
+              if (status.isJobComplete()) {
+                if (status.getState() == JobStatus.State.SUCCEEDED) {
+                  onSuccess(job);
+                } else {
+                  onFailure(job);
+                }
+                synchronized (statistics) {
+                  statistics.add(jobStats);
+                }
+              } else {
+                // add the running job back and break
+                synchronized (mJobs) {
+                  if (!mJobs.offer(jobStats)) {
+                    LOG.error("Lost job " + (null == job.getJobName()
+                         ? "<unknown>" : job.getJobName())); // should never
+                                                             // happen
+                  }
+                }
+                break;
               }
             } catch (IOException e) {
               if (e.getCause() instanceof ClosedByInterruptException) {
@@ -186,18 +228,19 @@ class JobMonitor implements Gridmix.Component<Job> {
               } else {
                 LOG.warn("Lost job " + (null == job.getJobName()
                      ? "<unknown>" : job.getJobName()), e);
-                continue;
+                synchronized (statistics) {
+                  statistics.add(jobStats);
+                }
               }
             }
+            
+            // get the next job
             synchronized (mJobs) {
-              if (!mJobs.offer(job)) {
-                LOG.error("Lost job " + (null == job.getJobName()
-                     ? "<unknown>" : job.getJobName())); // should never
-                                                         // happen
-              }
+              jobStats = mJobs.poll();
             }
-            break;
           }
+          
+          // sleep for a while before checking again
           try {
             TimeUnit.MILLISECONDS.sleep(pollDelayMillis);
           } catch (InterruptedException e) {
@@ -215,7 +258,9 @@ class JobMonitor implements Gridmix.Component<Job> {
    * Start the internal, monitoring thread.
    */
   public void start() {
-    mThread.start();
+    for (int i = 0; i < numPollingThreads; ++i) {
+      executor.execute(new MonitorThread(i));
+    }
   }
 
   /**
@@ -224,7 +269,7 @@ class JobMonitor implements Gridmix.Component<Job> {
    * if no form of shutdown has been requested.
    */
   public void join(long millis) throws InterruptedException {
-    mThread.join(millis);
+    executor.awaitTermination(millis, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -236,7 +281,7 @@ class JobMonitor implements Gridmix.Component<Job> {
       graceful = false;
       shutdown = true;
     }
-    mThread.interrupt();
+    executor.shutdown();
   }
 
   /**
@@ -248,7 +293,7 @@ class JobMonitor implements Gridmix.Component<Job> {
       graceful = true;
       shutdown = true;
     }
-    mThread.interrupt();
+    executor.shutdown();
   }
 }
 

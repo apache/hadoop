@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.gridmix.GenerateData.DataStatistics;
+import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -93,6 +94,31 @@ public class Gridmix extends Configured implements Tool {
    */
   public static final String GRIDMIX_USR_RSV = "gridmix.user.resolve.class";
 
+  /**
+   * The configuration key which determines the duration for which the 
+   * job-monitor sleeps while polling for job status.
+   * This value should be specified in milliseconds.
+   */
+  public static final String GRIDMIX_JOBMONITOR_SLEEPTIME_MILLIS = 
+    "gridmix.job-monitor.sleep-time-ms";
+  
+  /**
+   * Default value for {@link #GRIDMIX_JOBMONITOR_SLEEPTIME_MILLIS}.
+   */
+  public static final int GRIDMIX_JOBMONITOR_SLEEPTIME_MILLIS_DEFAULT = 500;
+  
+  /**
+   * The configuration key which determines the total number of job-status
+   * monitoring threads.
+   */
+  public static final String GRIDMIX_JOBMONITOR_THREADS = 
+    "gridmix.job-monitor.thread-count";
+  
+  /**
+   * Default value for {@link #GRIDMIX_JOBMONITOR_THREADS}.
+   */
+  public static final int GRIDMIX_JOBMONITOR_THREADS_DEFAULT = 1;
+  
   /**
    * Configuration property set in simulated job's configuration whose value is
    * set to the corresponding original job's name. This is not configurable by
@@ -185,8 +211,13 @@ public class Gridmix extends Configured implements Tool {
     submitter.add(job);
 
     // TODO add listeners, use for job dependencies
-    TimeUnit.SECONDS.sleep(10);
     try {
+      while (!job.isSubmitted()) {
+        try {
+            Thread.sleep(100); // sleep
+          } catch (InterruptedException ie) {}
+      }
+      // wait for completion
       job.getJob().waitForCompletion(false);
     } catch (ClassNotFoundException e) {
       throw new IOException("Internal error", e);
@@ -241,7 +272,7 @@ public class Gridmix extends Configured implements Tool {
       GridmixJobSubmissionPolicy policy = getJobSubmissionPolicy(conf);
       LOG.info(" Submission policy is " + policy.name());
       statistics = new Statistics(conf, policy.getPollingInterval(), startFlag);
-      monitor = createJobMonitor(statistics);
+      monitor = createJobMonitor(statistics, conf);
       int noOfSubmitterThreads = 
         (policy == GridmixJobSubmissionPolicy.SERIAL) 
         ? 1
@@ -276,8 +307,13 @@ public class Gridmix extends Configured implements Tool {
     }
    }
 
-  protected JobMonitor createJobMonitor(Statistics stats) throws IOException {
-    return new JobMonitor(stats);
+  protected JobMonitor createJobMonitor(Statistics stats, Configuration conf) 
+  throws IOException {
+    int delay = conf.getInt(GRIDMIX_JOBMONITOR_SLEEPTIME_MILLIS, 
+                            GRIDMIX_JOBMONITOR_SLEEPTIME_MILLIS_DEFAULT);
+    int numThreads = conf.getInt(GRIDMIX_JOBMONITOR_THREADS, 
+                                 GRIDMIX_JOBMONITOR_THREADS_DEFAULT);
+    return new JobMonitor(delay, TimeUnit.MILLISECONDS, stats, numThreads);
   }
 
   protected JobSubmitter createJobSubmitter(JobMonitor monitor, int threads,
@@ -571,12 +607,13 @@ public class Gridmix extends Configured implements Tool {
         if (monitor == null) {
           return;
         }
-        List<Job> remainingJobs = monitor.getRemainingJobs();
+        List<JobStats> remainingJobs = monitor.getRemainingJobs();
         if (remainingJobs.isEmpty()) {
           return;
         }
         LOG.info("Killing running jobs...");
-        for (Job job : remainingJobs) {
+        for (JobStats stats : remainingJobs) {
+          Job job = stats.getJob();
           try {
             if (!job.isComplete()) {
               job.killJob();

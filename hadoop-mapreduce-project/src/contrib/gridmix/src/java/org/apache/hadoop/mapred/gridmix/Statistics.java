@@ -25,6 +25,7 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.gridmix.Gridmix.Component;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 
@@ -43,12 +44,12 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Component collecting the stats required by other components
  * to make decisions.
- * Single thread Collector tries to collec the stats.
- * Each of thread poll updates certain datastructure(Currently ClusterStats).
- * Components interested in these datastructure, need to register.
- * StatsCollector notifies each of the listeners.
+ * Single thread collector tries to collect the stats (currently cluster stats)
+ * and caches it internally.
+ * Components interested in these stats need to register themselves and will get
+ * notified either on every job completion event or some fixed time interval.
  */
-public class Statistics implements Component<Job> {
+public class Statistics implements Component<Statistics.JobStats> {
   public static final Log LOG = LogFactory.getLog(Statistics.class);
 
   private final StatCollector statistics = new StatCollector();
@@ -62,10 +63,16 @@ public class Statistics implements Component<Job> {
   private final List<StatListener<JobStats>> jobStatListeners =
     new CopyOnWriteArrayList<StatListener<JobStats>>();
 
-  //List of jobids and noofMaps for each job
-  private static final Map<Integer, JobStats> jobMaps =
-    new ConcurrentHashMap<Integer,JobStats>();
+  // A map of job-sequence-id to job-stats of submitted jobs
+  private static final Map<Integer, JobStats> submittedJobsMap =
+    new ConcurrentHashMap<Integer, JobStats>();
+  
+  // total number of map tasks submitted
+  private static volatile int numMapsSubmitted = 0;
 
+  // total number of reduce tasks submitted
+  private static volatile int numReducesSubmitted = 0;
+  
   private int completedJobsInCurrentInterval = 0;
   private final int jtPollingInterval;
   private volatile boolean shutdown = false;
@@ -92,41 +99,65 @@ public class Statistics implements Component<Job> {
     this.startFlag = startFlag;
   }
 
-  public void addJobStats(Job job, JobStory jobdesc) {
+  /**
+   * Generates a job stats.
+   */
+  public static JobStats generateJobStats(Job job, JobStory jobdesc) {
     int seq = GridmixJob.getJobSeqId(job);
-    if (seq < 0) {
-      LOG.info("Not tracking job " + job.getJobName()
-               + " as seq id is less than zero: " + seq);
-      return;
+    // bail out if job description is missing for a job to be simulated
+    if (seq >= 0 && jobdesc == null) {
+      throw new IllegalArgumentException("JobStory not available for job " 
+                                         + job.getJobID());
     }
     
-    int maps = 0;
-    int reds = 0;
-    if (jobdesc == null) {
-      throw new IllegalArgumentException(
-        " JobStory not available for job " + job.getJobName());
-    } else {
+    int maps = -1;
+    int reds = -1;
+    if (jobdesc != null) {
+      // Note that the ZombieJob will return a >= 0 value
       maps = jobdesc.getNumberMaps();
       reds = jobdesc.getNumberReduces();
     }
-    JobStats stats = new JobStats(maps, reds, job);
-    jobMaps.put(seq,stats);
+    return new JobStats(maps, reds, job);
+  }
+  
+  /**
+   * Add a submitted job for monitoring.
+   */
+  public void addJobStats(JobStats stats) {
+    int seq = GridmixJob.getJobSeqId(stats.getJob());
+    if (seq < 0) {
+      LOG.info("Not tracking job " + stats.getJob().getJobName()
+               + " as seq id is less than zero: " + seq);
+      return;
+    }
+    submittedJobsMap.put(seq, stats);
+    numMapsSubmitted += stats.getNoOfMaps();
+    numReducesSubmitted += stats.getNoOfReds();
   }
 
   /**
    * Used by JobMonitor to add the completed job.
    */
   @Override
-  public void add(Job job) {
-    //This thread will be notified initially by jobmonitor incase of
+  public void add(Statistics.JobStats job) {
+    //This thread will be notified initially by job-monitor incase of
     //data generation. Ignore that as we are getting once the input is
     //generated.
     if (!statistics.isAlive()) {
       return;
     }
-    JobStats stat = jobMaps.remove(GridmixJob.getJobSeqId(job));
-
-    if (stat == null) return;
+    JobStats stat = submittedJobsMap.remove(GridmixJob.getJobSeqId(job.getJob()));
+    
+    // stat cannot be null
+    if (stat == null) {
+      LOG.error("[Statistics] Missing entry for job " 
+                + job.getJob().getJobID());
+      return;
+    }
+    
+    // update the total number of submitted map/reduce task count
+    numMapsSubmitted -= stat.getNoOfMaps();
+    numReducesSubmitted -= stat.getNoOfReds();
     
     completedJobsInCurrentInterval++;
     //check if we have reached the maximum level of job completions.
@@ -238,7 +269,7 @@ public class Statistics implements Component<Job> {
   @Override
   public void shutdown() {
     shutdown = true;
-    jobMaps.clear();
+    submittedJobsMap.clear();
     clusterStatlisteners.clear();
     jobStatListeners.clear();
     statistics.interrupt();
@@ -247,7 +278,7 @@ public class Statistics implements Component<Job> {
   @Override
   public void abort() {
     shutdown = true;
-    jobMaps.clear();
+    submittedJobsMap.clear();
     clusterStatlisteners.clear();
     jobStatListeners.clear();
     statistics.interrupt();
@@ -259,9 +290,10 @@ public class Statistics implements Component<Job> {
    * TODO: In future we need to extend this to send more information.
    */
   static class JobStats {
-    private int noOfMaps;
-    private int noOfReds;
-    private Job job;
+    private final int noOfMaps;
+    private final int noOfReds;
+    private JobStatus currentStatus;
+    private final Job job;
 
     public JobStats(int noOfMaps,int numOfReds, Job job){
       this.job = job;
@@ -283,6 +315,20 @@ public class Statistics implements Component<Job> {
      */
     public Job getJob() {
       return job;
+    }
+    
+    /**
+     * Update the job statistics.
+     */
+    public synchronized void updateJobStatus(JobStatus status) {
+      this.currentStatus = status;
+    }
+    
+    /**
+     * Get the current job status.
+     */
+    public synchronized JobStatus getJobStatus() {
+      return currentStatus;
     }
   }
 
@@ -316,15 +362,28 @@ public class Statistics implements Component<Job> {
     }
 
     int getNumRunningJob() {
-      return jobMaps.size();
+      return submittedJobsMap.size();
     }
 
     /**
      * @return runningWatitingJobs
      */
     static Collection<JobStats> getRunningJobStats() {
-      return jobMaps.values();
+      return submittedJobsMap.values();
     }
 
+    /**
+     * Returns the total number of submitted map tasks
+     */
+    static int getSubmittedMapTasks() {
+      return numMapsSubmitted;
+    }
+    
+    /**
+     * Returns the total number of submitted reduce tasks
+     */
+    static int getSubmittedReduceTasks() {
+      return numReducesSubmitted;
+    }
   }
 }
