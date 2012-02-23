@@ -226,3 +226,5 @@ HDFS-2929. Stress test and fixes for block synchronization (todd)
 HDFS-2972. Small optimization building incremental block report (todd)
 
 HDFS-2973. Re-enable NO_ACK optimization for block deletion. (todd)
+
+HDFS-2922. HA: close out operation categories (eli)

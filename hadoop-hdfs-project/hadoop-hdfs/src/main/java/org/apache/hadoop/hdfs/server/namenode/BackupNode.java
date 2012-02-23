@@ -407,6 +407,9 @@ public class BackupNode extends NameNode {
     @Override // NameNode
     public void checkOperation(OperationCategory op)
         throws StandbyException {
+      if (op == OperationCategory.UNCHECKED) {
+        return;
+      }
       if (OperationCategory.JOURNAL != op &&
           !(OperationCategory.READ == op && allowStaleStandbyReads)) {
         String msg = "Operation category " + op

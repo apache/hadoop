@@ -114,6 +114,8 @@ public class NameNode {
    * Categories of operations supported by the namenode.
    */
   public static enum OperationCategory {
+    /** Operations that are state agnostic */
+    UNCHECKED,
     /** Read operation that does not change the namespace state */
     READ,
     /** Write operation that changes the namespace state */
