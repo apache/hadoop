@@ -459,7 +459,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
       DatanodeInfo[] nodes = blocks[i].getLocations();
       for (int j = 0; j < nodes.length; j++) {
         DatanodeInfo dn = nodes[j];
-        namesystem.getBlockManager().findAndMarkBlockAsCorrupt(blk, dn);
+        namesystem.getBlockManager().findAndMarkBlockAsCorrupt(blk, dn,
+            "client machine reported it");
       }
     }
   }
