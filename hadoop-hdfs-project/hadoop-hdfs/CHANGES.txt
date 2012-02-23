@@ -57,6 +57,10 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2969. ExtendedBlock.equals is incorrectly implemented (todd)
 
+    HDFS-2944. Typo in hdfs-default.xml causes
+    dfs.client.block.write.replace-datanode-on-failure.enable to be mistakenly
+    disabled. (atm)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
