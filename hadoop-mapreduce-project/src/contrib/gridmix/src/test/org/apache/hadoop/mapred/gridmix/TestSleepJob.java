@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -74,7 +75,7 @@ public class TestSleepJob {
     private final int expected;
 
     public TestMonitor(int expected, Statistics stats) {
-      super(stats);
+      super(5, TimeUnit.SECONDS, stats, 1);
       this.expected = expected;
       retiredJobs = new LinkedBlockingQueue<Job>();
     }
@@ -102,7 +103,7 @@ public class TestSleepJob {
     private TestMonitor monitor;
 
     @Override
-    protected JobMonitor createJobMonitor(Statistics stats) {
+    protected JobMonitor createJobMonitor(Statistics stats, Configuration c) {
       monitor = new TestMonitor(NJOBS + 1, stats);
       return monitor;
     }

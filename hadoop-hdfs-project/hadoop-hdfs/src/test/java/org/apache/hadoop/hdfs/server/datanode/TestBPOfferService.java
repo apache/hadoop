@@ -94,7 +94,7 @@ public class TestBPOfferService {
     .when(mockDn).getMetrics();
 
     // Set up a simulated dataset with our fake BP
-    mockFSDataset = Mockito.spy(new SimulatedFSDataset(conf));
+    mockFSDataset = Mockito.spy(new SimulatedFSDataset(null, null, conf));
     mockFSDataset.addBlockPool(FAKE_BPID, conf);
 
     // Wire the dataset to the DN.

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +36,8 @@ import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -179,19 +182,33 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T> 
   
   protected JobStory getNextJobFiltered() throws IOException {
     JobStory job = getNextJobFromTrace();
+    // filter out the following jobs
+    //    - unsuccessful jobs
+    //    - jobs with missing submit-time
+    //    - reduce only jobs
+    // These jobs are not yet supported in Gridmix
     while (job != null &&
       (job.getOutcome() != Pre21JobHistoryConstants.Values.SUCCESS ||
-        job.getSubmissionTime() < 0)) {
+        job.getSubmissionTime() < 0 || job.getNumberMaps() == 0)) {
       if (LOG.isDebugEnabled()) {
-        String reason = null;
+        List<String> reason = new ArrayList<String>();
         if (job.getOutcome() != Pre21JobHistoryConstants.Values.SUCCESS) {
-          reason = "STATE (" + job.getOutcome().name() + ") ";
+          reason.add("STATE (" + job.getOutcome().name() + ")");
         }
         if (job.getSubmissionTime() < 0) {
-          reason += "SUBMISSION-TIME (" + job.getSubmissionTime() + ")";
+          reason.add("SUBMISSION-TIME (" + job.getSubmissionTime() + ")");
         }
+        if (job.getNumberMaps() == 0) {
+          reason.add("ZERO-MAPS-JOB");
+        }
+        
+        // TODO This should never happen. Probably we missed something!
+        if (reason.size() == 0) {
+          reason.add("N/A");
+        }
+        
         LOG.debug("Ignoring job " + job.getJobID() + " from the input trace."
-                  + " Reason: " + reason == null ? "N/A" : reason);
+                  + " Reason: " + StringUtils.join(reason, ","));
       }
       job = getNextJobFromTrace();
     }

@@ -82,7 +82,7 @@ public class TestFileAppend2 extends TestCase {
   public void testSimpleAppend() throws IOException {
     final Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+      SimulatedFSDataset.setFactory(conf);
     }
     conf.setInt(DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY, 50);
     conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);

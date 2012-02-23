@@ -4413,7 +4413,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         DatanodeInfo[] nodes = blocks[i].getLocations();
         for (int j = 0; j < nodes.length; j++) {
           DatanodeInfo dn = nodes[j];
-          blockManager.findAndMarkBlockAsCorrupt(blk, dn);
+          blockManager.findAndMarkBlockAsCorrupt(blk, dn,
+              "client machine reported it");
         }
       }
     } finally {

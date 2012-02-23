@@ -174,7 +174,8 @@ public class TestNameNodeMetrics {
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
     cluster.getNamesystem().writeLock();
     try {
-      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
+      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
+          "TEST");
     } finally {
       cluster.getNamesystem().writeUnlock();
     }
@@ -218,7 +219,8 @@ public class TestNameNodeMetrics {
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
     cluster.getNamesystem().writeLock();
     try {
-      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
+      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
+          "TEST");
     } finally {
       cluster.getNamesystem().writeUnlock();
     }

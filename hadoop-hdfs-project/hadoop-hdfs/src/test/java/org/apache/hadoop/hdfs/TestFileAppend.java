@@ -107,7 +107,7 @@ public class TestFileAppend{
   public void testCopyOnWrite() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+      SimulatedFSDataset.setFactory(conf);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
@@ -178,7 +178,7 @@ public class TestFileAppend{
   public void testSimpleFlush() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+      SimulatedFSDataset.setFactory(conf);
     }
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -234,7 +234,7 @@ public class TestFileAppend{
   public void testComplexFlush() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+      SimulatedFSDataset.setFactory(conf);
     }
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -283,7 +283,7 @@ public class TestFileAppend{
   public void testFileNotFound() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+      SimulatedFSDataset.setFactory(conf);
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();

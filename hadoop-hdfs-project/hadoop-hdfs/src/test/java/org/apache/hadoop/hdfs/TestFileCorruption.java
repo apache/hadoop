@@ -150,7 +150,7 @@ public class TestFileCorruption extends TestCase {
       ns.writeLock();
       try {
         cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(
-            blk, new DatanodeInfo(dnR));
+            blk, new DatanodeInfo(dnR), "TEST");
       } finally {
         ns.writeUnlock();
       }
