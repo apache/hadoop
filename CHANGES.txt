@@ -165,6 +165,9 @@ Release 1.0.2 - unreleased
     MAPREDUCE-3824. Distributed caches are not removed properly. (Thomas Graves
     via mattf)
 
+    MAPREDUCE-3583. Change pid to String and stime to BigInteger in order to
+    avoid NumberFormatException caused by overflow.  (Zhihong Yu via szetszwo)
+
 Release 1.0.1 - 2012.02.14
 
   NEW FEATURES
