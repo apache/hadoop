@@ -347,7 +347,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.client.block.write.replace-datanode-on-failure.enable</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     If there is a datanode/network failure in the write pipeline,
     DFSClient will try to remove the failed datanode from the pipeline
