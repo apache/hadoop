@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +31,6 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -63,21 +61,33 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  * 
  * Note the synchronization is coarse grained - it is at each method. 
  */
+public class SimulatedFSDataset implements FSDatasetInterface {
+  static class Factory extends FSDatasetInterface.Factory {
+    @Override
+    public FSDatasetInterface createFSDatasetInterface(DataNode datanode,
+        DataStorage storage, Configuration conf) throws IOException {
+      return new SimulatedFSDataset(datanode, storage, conf);
+    }
 
-public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
+    @Override
+    public boolean isSimulated() {
+      return true;
+    }
+  }
   
-  public static final String CONFIG_PROPERTY_SIMULATED =
-                                    "dfs.datanode.simulateddatastorage";
+  public static void setFactory(Configuration conf) {
+    conf.set(DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
+        Factory.class.getName());
+  }
+  
   public static final String CONFIG_PROPERTY_CAPACITY =
-                            "dfs.datanode.simulateddatastorage.capacity";
+      "dfs.datanode.simulateddatastorage.capacity";
   
   public static final long DEFAULT_CAPACITY = 2L<<40; // 1 terabyte
-  public static final byte DEFAULT_DATABYTE = 9; // 1 terabyte
-  byte simulatedDataByte = DEFAULT_DATABYTE;
-  Configuration conf = null;
+  public static final byte DEFAULT_DATABYTE = 9;
   
-  static byte[] nullCrcFileData;
-  {
+  static final byte[] nullCrcFileData;
+  static {
     DataChecksum checksum = DataChecksum.newDataChecksum( DataChecksum.
                               CHECKSUM_NULL, 16*1024 );
     byte[] nullCrcHeader = checksum.getHeader();
@@ -360,31 +370,22 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
     }
   }
   
-  private Map<String, Map<Block, BInfo>> blockMap = null;
-  private SimulatedStorage storage = null;
-  private String storageId;
+  private final Map<String, Map<Block, BInfo>> blockMap
+      = new HashMap<String, Map<Block,BInfo>>();
+  private final SimulatedStorage storage;
+  private final String storageId;
   
-  public SimulatedFSDataset(Configuration conf) throws IOException {
-    setConf(conf);
-  }
-  
-  // Constructor used for constructing the object using reflection
-  @SuppressWarnings("unused")
-  private SimulatedFSDataset() { // real construction when setConf called..
-  }
-  
-  public Configuration getConf() {
-    return conf;
-  }
-
-  public void setConf(Configuration iconf)  {
-    conf = iconf;
-    storageId = conf.get(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY, "unknownStorageId" +
-                                        new Random().nextInt());
+  public SimulatedFSDataset(DataNode datanode, DataStorage storage,
+      Configuration conf) {
+    if (storage != null) {
+      storage.createStorageID(datanode.getPort());
+      this.storageId = storage.getStorageID();
+    } else {
+      this.storageId = "unknownStorageId" + new Random().nextInt();
+    }
     registerMBean(storageId);
-    storage = new SimulatedStorage(
+    this.storage = new SimulatedStorage(
         conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY));
-    blockMap = new HashMap<String, Map<Block,BInfo>>(); 
   }
 
   public synchronized void injectBlocks(String bpid,
@@ -441,23 +442,16 @@ public class SimulatedFSDataset  implements FSDatasetInterface, Configurable{
 
   @Override
   public synchronized BlockListAsLongs getBlockReport(String bpid) {
+    final List<Block> blocks = new ArrayList<Block>();
     final Map<Block, BInfo> map = blockMap.get(bpid);
-    Block[] blockTable = new Block[map.size()];
     if (map != null) {
-      int count = 0;
       for (BInfo b : map.values()) {
         if (b.isFinalized()) {
-          blockTable[count++] = b.theBlock;
+          blocks.add(b.theBlock);
         }
       }
-      if (count != blockTable.length) {
-        blockTable = Arrays.copyOf(blockTable, count);
-      }
-    } else {
-      blockTable = new Block[0];
     }
-    return new BlockListAsLongs(
-        new ArrayList<Block>(Arrays.asList(blockTable)), null);
+    return new BlockListAsLongs(blocks, null);
   }
 
   @Override // FSDatasetMBean

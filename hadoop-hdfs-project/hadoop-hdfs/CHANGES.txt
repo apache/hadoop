@@ -147,6 +147,11 @@ Release 0.23.2 - UNRELEASED
     HDFS-2725. hdfs script usage information is missing the information 
     about "dfs" command (Prashant Sharma via stevel)
 
+    HDFS-2907.  Add a conf property dfs.datanode.fsdataset.factory to make
+    FSDataset in Datanode pluggable.  (szetszwo)
+
+    HDFS-2985. Improve logging when replicas are marked as corrupt. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -173,6 +178,14 @@ Release 0.23.2 - UNRELEASED
     unresponsive. (Hari Mankude via suresh)
 
     HDFS-2969. ExtendedBlock.equals is incorrectly implemented (todd)
+
+    HDFS-2944. Typo in hdfs-default.xml causes
+    dfs.client.block.write.replace-datanode-on-failure.enable to be mistakenly
+    disabled. (atm)
+
+    HDFS-2981. In hdfs-default.xml, the default value of
+    dfs.client.block.write.replace-datanode-on-failure.enable should be true.
+    (szetszwo)
 
 Release 0.23.1 - 2012-02-17 
 

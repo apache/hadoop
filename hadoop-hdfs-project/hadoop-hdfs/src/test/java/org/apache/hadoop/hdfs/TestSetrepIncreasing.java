@@ -28,7 +28,7 @@ public class TestSetrepIncreasing extends TestCase {
   static void setrep(int fromREP, int toREP, boolean simulatedStorage) throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
-      conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+      SimulatedFSDataset.setFactory(conf);
     }
     conf.set(DFSConfigKeys.DFS_REPLICATION_KEY, "" + fromREP);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
