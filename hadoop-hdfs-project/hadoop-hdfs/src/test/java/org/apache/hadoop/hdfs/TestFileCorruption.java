@@ -147,7 +147,7 @@ public class TestFileCorruption extends TestCase {
       DatanodeRegistration dnR = 
         DataNodeTestUtils.getDNRegistrationForBP(dataNode, blk.getBlockPoolId());
       cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(
-          blk, new DatanodeInfo(dnR));
+          blk, new DatanodeInfo(dnR), "TEST");
       
       // open the file
       fs.open(FILE_PATH);

@@ -83,14 +83,14 @@ public class TestCorruptReplicaInfo extends TestCase {
       DatanodeDescriptor dn1 = new DatanodeDescriptor();
       DatanodeDescriptor dn2 = new DatanodeDescriptor();
       
-      crm.addToCorruptReplicasMap(getBlock(0), dn1);
+      crm.addToCorruptReplicasMap(getBlock(0), dn1, "TEST");
       assertEquals("Number of corrupt blocks not returning correctly",
                    1, crm.size());
-      crm.addToCorruptReplicasMap(getBlock(1), dn1);
+      crm.addToCorruptReplicasMap(getBlock(1), dn1, "TEST");
       assertEquals("Number of corrupt blocks not returning correctly",
                    2, crm.size());
       
-      crm.addToCorruptReplicasMap(getBlock(1), dn2);
+      crm.addToCorruptReplicasMap(getBlock(1), dn2, "TEST");
       assertEquals("Number of corrupt blocks not returning correctly",
                    2, crm.size());
       
@@ -103,7 +103,7 @@ public class TestCorruptReplicaInfo extends TestCase {
                    0, crm.size());
       
       for (Long block_id: block_ids) {
-        crm.addToCorruptReplicasMap(getBlock(block_id), dn1);
+        crm.addToCorruptReplicasMap(getBlock(block_id), dn1, "TEST");
       }
             
       assertEquals("Number of corrupt blocks not returning correctly",
