@@ -311,8 +311,9 @@ public class TestHASafeMode {
     // It will initially have all of the blocks necessary.
     assertSafeMode(nn1, 10, 10);
 
-    // Delete those blocks while the SBN is in safe mode - this
-    // should reduce it back below the threshold
+    // Delete those blocks while the SBN is in safe mode.
+    // This doesn't affect the SBN, since deletions are not
+    // ACKed when due to block removals.
     banner("Removing the blocks without rolling the edit log");
     fs.delete(new Path("/test"), true);
     BlockManagerTestUtil.computeAllPendingWork(
@@ -323,8 +324,10 @@ public class TestHASafeMode {
     HATestUtil.waitForDNDeletions(cluster);
     cluster.triggerDeletionReports();
 
-    assertSafeMode(nn1, 0, 10);
+    assertSafeMode(nn1, 10, 10);
 
+    // When we catch up to active namespace, it will restore back
+    // to 0 blocks.
     banner("Waiting for standby to catch up to active namespace");
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
 
@@ -372,8 +375,9 @@ public class TestHASafeMode {
       IOUtils.closeStream(stm);
     }
     
-    // Delete those blocks while the SBN is in safe mode - this
-    // should reduce it back below the threshold
+    // Delete those blocks while the SBN is in safe mode.
+    // This will not ACK the deletions to the SBN, so it won't
+    // notice until we roll the edit log.
     banner("Removing the blocks without rolling the edit log");
     fs.delete(new Path("/test"), true);
     BlockManagerTestUtil.computeAllPendingWork(
@@ -384,8 +388,9 @@ public class TestHASafeMode {
     HATestUtil.waitForDNDeletions(cluster);
     cluster.triggerDeletionReports();
 
-    assertSafeMode(nn1, 0, 4);
+    assertSafeMode(nn1, 4, 4);
 
+    // When we roll the edit log, the deletions will go through.
     banner("Waiting for standby to catch up to active namespace");
     HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
 

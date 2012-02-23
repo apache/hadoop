@@ -61,6 +61,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -2672,10 +2673,10 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
   public void removeBlock(Block block) {
     assert namesystem.hasWriteLock();
-    // TODO(HA): the following causes some problems for HA:
-    // the SBN doesn't get block deletions until the next
-    // BR...
-    // block.setNumBytes(BlockCommand.NO_ACK);
+    // No need to ACK blocks that are being removed entirely
+    // from the namespace, since the removal of the associated
+    // file already removes them from the block map below.
+    block.setNumBytes(BlockCommand.NO_ACK);
     addToInvalidates(block);
     corruptReplicas.removeFromCorruptReplicasMap(block);
     blocksMap.removeBlock(block);
