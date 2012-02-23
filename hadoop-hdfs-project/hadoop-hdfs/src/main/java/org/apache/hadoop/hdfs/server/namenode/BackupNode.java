@@ -407,7 +407,8 @@ public class BackupNode extends NameNode {
     @Override // NameNode
     public void checkOperation(OperationCategory op)
         throws StandbyException {
-      if (op == OperationCategory.UNCHECKED) {
+      if (op == OperationCategory.UNCHECKED ||
+          op == OperationCategory.CHECKPOINT) {
         return;
       }
       if (OperationCategory.JOURNAL != op &&
