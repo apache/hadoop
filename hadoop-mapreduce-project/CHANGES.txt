@@ -45,6 +45,9 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3878. Null user on filtered jobhistory job page (Jonathon Eagles
     via tgraves)
+
+    MAPREDUCE-3738. MM can hang during shutdown if AppLogAggregatorImpl thread
+    dies unexpectedly (Jason Lowe via sseth)
  
 Release 0.23.1 - 2012-02-17 
 
