@@ -607,6 +607,13 @@ public class NetUtils {
   }
   
   /**
+   * Compose a "host:port" string from the address.
+   */
+  public static String getHostPortString(InetSocketAddress addr) {
+    return addr.getHostName() + ":" + addr.getPort();
+  }
+  
+  /**
    * Checks if {@code host} is a local host name and return {@link InetAddress}
    * corresponding to that address.
    * 
