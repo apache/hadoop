@@ -20,6 +20,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3866. Fixed the bin/yarn script to not print the command line
     unnecessarily. (vinodkv)
 
+    MAPREDUCE-3730. Modified RM to allow restarted NMs to be able to join the
+    cluster without waiting for expiry. (Jason Lowe via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES

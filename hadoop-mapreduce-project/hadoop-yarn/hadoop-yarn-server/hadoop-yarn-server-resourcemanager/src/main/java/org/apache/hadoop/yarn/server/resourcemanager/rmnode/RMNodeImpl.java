@@ -110,9 +110,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                                            RMNodeEventType,
                                            RMNodeEvent>(RMNodeState.NEW)
   
-     //Transitions from RUNNING state
+     //Transitions from NEW state
      .addTransition(RMNodeState.NEW, RMNodeState.RUNNING, 
          RMNodeEventType.STARTED, new AddNodeTransition())
+
+     //Transitions from RUNNING state
      .addTransition(RMNodeState.RUNNING, 
          EnumSet.of(RMNodeState.RUNNING, RMNodeState.UNHEALTHY),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenHealthyTransition())
@@ -129,11 +131,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
      .addTransition(RMNodeState.RUNNING, RMNodeState.RUNNING,
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
+     .addTransition(RMNodeState.RUNNING, RMNodeState.RUNNING,
+         RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
 
      //Transitions from UNHEALTHY state
      .addTransition(RMNodeState.UNHEALTHY, 
          EnumSet.of(RMNodeState.UNHEALTHY, RMNodeState.RUNNING),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenUnHealthyTransition())
+     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
+         RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
          
      // create the topology tables
      .installTopology(); 
@@ -372,6 +378,39 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
   
+  public static class ReconnectNodeTransition implements
+      SingleArcTransition<RMNodeImpl, RMNodeEvent> {
+
+    @Override
+    public void transition(RMNodeImpl rmNode, RMNodeEvent event) {
+      // Kill containers since node is rejoining.
+      rmNode.context.getDispatcher().getEventHandler().handle(
+          new NodeRemovedSchedulerEvent(rmNode));
+
+      RMNode newNode = ((RMNodeReconnectEvent)event).getReconnectedNode();
+      if (rmNode.getTotalCapability().equals(newNode.getTotalCapability())
+          && rmNode.getHttpPort() == newNode.getHttpPort()) {
+        // Reset heartbeat ID since node just restarted.
+        rmNode.getLastHeartBeatResponse().setResponseId(0);
+        rmNode.context.getDispatcher().getEventHandler().handle(
+            new NodeAddedSchedulerEvent(rmNode));
+      } else {
+        // Reconnected node differs, so replace old node and start new node
+        switch (rmNode.getState()) {
+        case RUNNING:
+          ClusterMetrics.getMetrics().decrNumActiveNodes();
+          break;
+        case UNHEALTHY:
+          ClusterMetrics.getMetrics().decrNumUnhealthyNMs();
+          break;
+        }
+        rmNode.context.getRMNodes().put(newNode.getNodeID(), newNode);
+        rmNode.context.getDispatcher().getEventHandler().handle(
+            new RMNodeEvent(newNode.getNodeID(), RMNodeEventType.STARTED));
+      }
+    }
+  }
+
   public static class CleanUpAppTransition
     implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
