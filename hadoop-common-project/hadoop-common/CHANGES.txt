@@ -50,6 +50,9 @@ Release 0.23-PB - Unreleased
     HADOOP-8084. Updates ProtoBufRpc engine to not do an unnecessary copy 
     for RPC request/response. (ddas)
 
+    HADOOP-8085. Add RPC metrics to ProtobufRpcEngine. (Hari Mankude via
+    suresh)
+
   BUG FIXES
 
     HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
