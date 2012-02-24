@@ -379,6 +379,24 @@ public class ProtobufRpcEngine implements RpcEngine {
      * Protobuf invoker for {@link RpcInvoker}
      */
     static class ProtoBufRpcInvoker implements RpcInvoker {
+      private static ProtoClassProtoImpl getProtocolImpl(RPC.Server server,
+          String protoName, long version) throws IOException {
+        ProtoNameVer pv = new ProtoNameVer(protoName, version);
+        ProtoClassProtoImpl impl = 
+            server.getProtocolImplMap(RpcKind.RPC_PROTOCOL_BUFFER).get(pv);
+        if (impl == null) { // no match for Protocol AND Version
+          VerProtocolImpl highest = 
+              server.getHighestSupportedProtocol(RpcKind.RPC_PROTOCOL_BUFFER, 
+                  protoName);
+          if (highest == null) {
+            throw new IOException("Unknown protocol: " + protoName);
+          }
+          // protocol supported but not the version that client wants
+          throw new RPC.VersionMismatch(protoName, version,
+              highest.version);
+        }
+        return impl;
+      }
 
       @Override 
       /**
@@ -409,21 +427,8 @@ public class ProtobufRpcEngine implements RpcEngine {
         if (server.verbose)
           LOG.info("Call: protocol=" + protocol + ", method=" + methodName);
         
-        ProtoNameVer pv = new ProtoNameVer(protoName, clientVersion);
-        ProtoClassProtoImpl protocolImpl = 
-            server.getProtocolImplMap(RpcKind.RPC_PROTOCOL_BUFFER).get(pv);
-        if (protocolImpl == null) { // no match for Protocol AND Version
-          VerProtocolImpl highest = 
-              server.getHighestSupportedProtocol(RpcKind.RPC_PROTOCOL_BUFFER, 
-                  protoName);
-          if (highest == null) {
-            throw new IOException("Unknown protocol: " + protoName);
-          }
-          // protocol supported but not the version that client wants
-          throw new RPC.VersionMismatch(protoName, clientVersion,
-              highest.version);
-        }
-        
+        ProtoClassProtoImpl protocolImpl = getProtocolImpl(server, protoName,
+            clientVersion);
         BlockingService service = (BlockingService) protocolImpl.protocolImpl;
         MethodDescriptor methodDescriptor = service.getDescriptorForType()
             .findMethodByName(methodName);
@@ -438,7 +443,19 @@ public class ProtobufRpcEngine implements RpcEngine {
             .mergeFrom(rpcRequest.getRequest()).build();
         Message result;
         try {
+          long startTime = System.currentTimeMillis();
+          server.rpcDetailedMetrics.init(protocolImpl.protocolClass);
           result = service.callBlockingMethod(methodDescriptor, null, param);
+          int processingTime = (int) (System.currentTimeMillis() - startTime);
+          int qTime = (int) (startTime - receiveTime);
+          if (LOG.isDebugEnabled()) {
+            LOG.info("Served: " + methodName + " queueTime= " + qTime +
+                      " procesingTime= " + processingTime);
+          }
+          server.rpcMetrics.addRpcQueueTime(qTime);
+          server.rpcMetrics.addRpcProcessingTime(processingTime);
+          server.rpcDetailedMetrics.addProcessingTime(methodName,
+              processingTime);
         } catch (ServiceException e) {
           Throwable cause = e.getCause();
           return handleException(cause != null ? cause : e);

@@ -89,6 +89,9 @@ Trunk (unreleased changes)
     HADOOP-8084. Updates ProtoBufRpc engine to not do an unnecessary copy 
     for RPC request/response. (ddas)
 
+    HADOOP-8085. Add RPC metrics to ProtobufRpcEngine. (Hari Mankude via
+    suresh)
+
   BUG FIXES
 
     HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
