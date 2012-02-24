@@ -65,6 +65,8 @@ Release 0.23.2 - UNRELEASED
     dfs.client.block.write.replace-datanode-on-failure.enable should be true.
     (szetszwo)
 
+    HDFS-3008. Negative caching of local addrs doesn't work. (eli)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
