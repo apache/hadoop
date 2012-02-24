@@ -542,17 +542,19 @@ public class DFSClient implements java.io.Closeable {
   private static boolean isLocalAddress(InetSocketAddress targetAddr) {
     InetAddress addr = targetAddr.getAddress();
     Boolean cached = localAddrMap.get(addr.getHostAddress());
-    if (cached != null && cached) {
+    if (cached != null) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Address " + targetAddr + " is local");
+        LOG.trace("Address " + targetAddr +
+                  (cached ? " is local" : " is not local"));
       }
-      return true;
+      return cached;
     }
     
     boolean local = NetUtils.isLocalAddress(addr);
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Address " + targetAddr + " is local");
+      LOG.trace("Address " + targetAddr +
+                (local ? " is local" : " is not local"));
     }
     localAddrMap.put(addr.getHostAddress(), local);
     return local;
