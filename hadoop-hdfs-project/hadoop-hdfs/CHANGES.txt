@@ -132,11 +132,14 @@ Trunk (unreleased changes)
     HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
     (todd)
 
-    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO. (Brandon Li
-    via jitendra)
+    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO.
+    (Brandon Li via jitendra) 
 
     HDFS-3003. Remove getHostPortString() from NameNode, replace it with
     NetUtils.getHostPortString(). (Brandon Li via atm)
+
+    HDFS-3009. Remove duplicate code in DFSClient#isLocalAddress by using 
+    NetUtils. (Hari Mankude via suresh)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
