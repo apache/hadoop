@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregatio
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.when;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
@@ -69,6 +70,7 @@ import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogReader;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
@@ -535,5 +537,32 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     appAcls.put(ApplicationAccessType.MODIFY_APP, "user group");
     appAcls.put(ApplicationAccessType.VIEW_APP, "*");
     return appAcls;
+  }
+
+  @Test(timeout=20000)
+  @SuppressWarnings("unchecked")
+  public void testStopAfterError() throws Exception {
+    DeletionService delSrvc = mock(DeletionService.class);
+
+    // get the AppLogAggregationImpl thread to crash
+    LocalDirsHandlerService mockedDirSvc = mock(LocalDirsHandlerService.class);
+    when(mockedDirSvc.getLogDirs()).thenThrow(new RuntimeException());
+
+    DrainDispatcher dispatcher = createDispatcher();
+    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, appEventHandler);
+
+    LogAggregationService logAggregationService =
+        new LogAggregationService(dispatcher, this.context, delSrvc,
+                                  mockedDirSvc);
+    logAggregationService.init(this.conf);
+    logAggregationService.start();
+
+    ApplicationId application1 = BuilderUtils.newApplicationId(1234, 1);
+    logAggregationService.handle(new LogHandlerAppStartedEvent(
+            application1, this.user, null,
+            ContainerLogsRetentionPolicy.ALL_CONTAINERS, this.acls));
+
+    logAggregationService.stop();
   }
 }
