@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.ipc;
 
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -28,6 +31,7 @@ import org.apache.hadoop.ipc.protobuf.TestProtos.EmptyRequestProto;
 import org.apache.hadoop.ipc.protobuf.TestProtos.EmptyResponseProto;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpc2Proto;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -187,5 +191,14 @@ public class TestProtoBufRpc {
         .setMessage("hello").build();
     EchoResponseProto echoResponse = client.echo2(null, echoRequest);
     Assert.assertEquals(echoResponse.getMessage(), "hello");
+    
+    // Ensure RPC metrics are updated
+    MetricsRecordBuilder rpcMetrics = getMetrics(server.getRpcMetrics().name());
+    assertCounterGt("RpcQueueTimeNumOps", 0L, rpcMetrics);
+    assertCounterGt("RpcProcessingTimeNumOps", 0L, rpcMetrics);
+    
+    MetricsRecordBuilder rpcDetailedMetrics = 
+        getMetrics(server.getRpcDetailedMetrics().name());
+    assertCounterGt("Echo2NumOps", 0L, rpcDetailedMetrics);
   }
 }

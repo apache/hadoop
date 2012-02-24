@@ -317,10 +317,15 @@ public abstract class Server {
    * Returns a handle to the rpcMetrics (required in tests)
    * @return rpc metrics
    */
+  @VisibleForTesting
   public RpcMetrics getRpcMetrics() {
     return rpcMetrics;
   }
 
+  @VisibleForTesting
+  public RpcDetailedMetrics getRpcDetailedMetrics() {
+    return rpcDetailedMetrics;
+  }
   
   @VisibleForTesting
   Iterable<? extends Thread> getHandlers() {
