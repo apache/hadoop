@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeReconnectEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
@@ -177,16 +178,16 @@ public class ResourceTrackerService extends AbstractService implements
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
         resolve(host), capability);
 
-    if (this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode) != null) {
-      LOG.info("Duplicate registration from the node at: " + host
-          + ", Sending SHUTDOWN Signal to the NodeManager");
-      regResponse.setNodeAction(NodeAction.SHUTDOWN);
-      response.setRegistrationResponse(regResponse);
-      return response;
+    RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
+    if (oldNode == null) {
+      this.rmContext.getDispatcher().getEventHandler().handle(
+          new RMNodeEvent(nodeId, RMNodeEventType.STARTED));
+    } else {
+      LOG.info("Reconnect from the node at: " + host);
+      this.nmLivelinessMonitor.unregister(nodeId);
+      this.rmContext.getDispatcher().getEventHandler().handle(
+          new RMNodeReconnectEvent(nodeId, rmNode));
     }
-
-    this.rmContext.getDispatcher().getEventHandler().handle(
-        new RMNodeEvent(nodeId, RMNodeEventType.STARTED));
 
     this.nmLivelinessMonitor.register(nodeId);
 

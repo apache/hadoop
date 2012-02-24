@@ -731,6 +731,9 @@ public class FifoScheduler implements ResourceScheduler {
 
   private synchronized void removeNode(RMNode nodeInfo) {
     SchedulerNode node = getNode(nodeInfo.getNodeID());
+    if (node == null) {
+      return;
+    }
     // Kill running containers
     for(RMContainer container : node.getRunningContainers()) {
       containerCompleted(container, 
@@ -744,7 +747,7 @@ public class FifoScheduler implements ResourceScheduler {
     this.nodes.remove(nodeInfo.getNodeID());
     
     // Update cluster metrics
-    Resources.subtractFrom(clusterResource, nodeInfo.getTotalCapability());
+    Resources.subtractFrom(clusterResource, node.getRMNode().getTotalCapability());
   }
 
   @Override
