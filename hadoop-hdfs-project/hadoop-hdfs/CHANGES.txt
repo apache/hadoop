@@ -141,6 +141,9 @@ Trunk (unreleased changes)
     HDFS-3009. Remove duplicate code in DFSClient#isLocalAddress by using 
     NetUtils. (Hari Mankude via suresh)
 
+    HDFS-3002. TestNameNodeMetrics need not wait for metrics update.
+    (suresh)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
     namenode state. (Tomasz Nykiel via hairong)
