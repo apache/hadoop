@@ -425,7 +425,7 @@ public class DFSUtil {
     // Use default address as fall back
     String defaultAddress;
     try {
-      defaultAddress = NameNode.getHostPortString(NameNode.getAddress(conf));
+      defaultAddress = NetUtils.getHostPortString(NameNode.getAddress(conf));
     } catch (IllegalArgumentException e) {
       defaultAddress = null;
     }

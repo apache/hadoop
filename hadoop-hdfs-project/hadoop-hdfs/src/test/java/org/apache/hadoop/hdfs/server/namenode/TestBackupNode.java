@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
@@ -330,7 +331,7 @@ public class TestBackupNode {
       InetSocketAddress add = backup.getNameNodeAddress();
       // Write to BN
       FileSystem bnFS = FileSystem.get(new Path("hdfs://"
-          + NameNode.getHostPortString(add)).toUri(), conf);
+          + NetUtils.getHostPortString(add)).toUri(), conf);
       boolean canWrite = true;
       try {
         TestCheckpoint.writeFile(bnFS, file3, replication);

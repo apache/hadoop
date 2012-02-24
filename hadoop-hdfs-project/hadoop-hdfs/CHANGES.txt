@@ -133,7 +133,10 @@ Trunk (unreleased changes)
     (todd)
 
     HDFS-2655. BlockReaderLocal#skip performs unnecessary IO. (Brandon Li
-    via jitendra) 
+    via jitendra)
+
+    HDFS-3003. Remove getHostPortString() from NameNode, replace it with
+    NetUtils.getHostPortString(). (Brandon Li via atm)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the

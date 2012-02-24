@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.net.NetUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mortbay.jetty.InclusiveByteRange;
@@ -263,7 +264,7 @@ public class TestStreamFile {
 
     Mockito.doReturn(CONF).when(mockServletContext).getAttribute(
         JspHelper.CURRENT_CONF);
-    Mockito.doReturn(NameNode.getHostPortString(NameNode.getAddress(CONF)))
+    Mockito.doReturn(NetUtils.getHostPortString(NameNode.getAddress(CONF)))
       .when(mockHttpServletRequest).getParameter("nnaddr");
     Mockito.doReturn(testFile.toString()).when(mockHttpServletRequest)
       .getPathInfo();

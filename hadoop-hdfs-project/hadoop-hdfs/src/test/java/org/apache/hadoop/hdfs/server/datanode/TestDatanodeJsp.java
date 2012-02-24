@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ServletUtil;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -134,7 +135,7 @@ public class TestDatanodeJsp {
     Mockito.doReturn("100").when(reqMock).getParameter("chunkSizeToView");
     Mockito.doReturn("1").when(reqMock).getParameter("startOffset");
     Mockito.doReturn("1024").when(reqMock).getParameter("blockSize");
-    Mockito.doReturn(NameNode.getHostPortString(NameNode.getAddress(CONF)))
+    Mockito.doReturn(NetUtils.getHostPortString(NameNode.getAddress(CONF)))
         .when(reqMock).getParameter("nnaddr");
     Mockito.doReturn(testFile.toString()).when(reqMock).getPathInfo();
   }
