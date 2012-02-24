@@ -55,6 +55,10 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3738. MM can hang during shutdown if AppLogAggregatorImpl thread
     dies unexpectedly (Jason Lowe via sseth)
+
+    MAPREDUCE-3904 Job history produced with mapreduce.cluster.acls.enabled
+    false can not be viewed with mapreduce.cluster.acls.enabled true 
+    (Jonathon Eagles via tgraves)
  
 Release 0.23.1 - 2012-02-17 
 
