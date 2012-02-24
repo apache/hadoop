@@ -14,6 +14,7 @@ Trunk (unreleased changes)
     (Plamen Jeliazkov via shv)
 
   IMPROVEMENTS
+
     MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for 
                     faster job submission. (amarrk)
 
@@ -106,6 +107,9 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3877 Add a test to formalise the current state transitions
     of the yarn lifecycle. (stevel)
+
+    MAPREDUCE-3866. Fixed the bin/yarn script to not print the command line
+    unnecessarily. (vinodkv)
 
   OPTIMIZATIONS
 
