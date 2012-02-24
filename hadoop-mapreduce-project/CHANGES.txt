@@ -7,6 +7,7 @@ Release 0.23.2 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
     MAPREDUCE-3849. Change TokenCache's reading of the binary token file
     (Daryn Sharp via bobby)
 
@@ -15,6 +16,9 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3877 Add a test to formalise the current state transitions
     of the yarn lifecycle. (stevel)
+
+    MAPREDUCE-3866. Fixed the bin/yarn script to not print the command line
+    unnecessarily. (vinodkv)
 
   OPTIMIZATIONS
 
