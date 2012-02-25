@@ -93,10 +93,23 @@ Trunk (unreleased changes)
     MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
     for HDFS-2895. (Suresh Srinivas via vinodkv)
 
-Release 0.23.2 - UNRELEASED 
+Release 0.23.3 - UNRELEASED 
+
+  INCOMPATIBLE CHANGES
 
   NEW FEATURES                                                                    
+  
+  IMPROVEMENTS
 
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.2 - UNRELEASED 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES                                                                    
   IMPROVEMENTS
 
     MAPREDUCE-3849. Change TokenCache's reading of the binary token file
