@@ -365,6 +365,11 @@ public class FilterFileSystem extends FileSystem {
   public void setVerifyChecksum(boolean verifyChecksum) {
     fs.setVerifyChecksum(verifyChecksum);
   }
+  
+  @Override
+  public void setWriteChecksum(boolean writeChecksum) {
+    fs.setVerifyChecksum(writeChecksum);
+  }
 
   @Override
   public Configuration getConf() {

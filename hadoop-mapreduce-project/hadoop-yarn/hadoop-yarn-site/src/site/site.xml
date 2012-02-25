@@ -11,7 +11,7 @@
  See the License for the specific language governing permissions and
  limitations under the License. See accompanying LICENSE file.
 -->
-<project name="Apache Hadoop 0.23">
+<project name="Apache Hadoop ${project.version}">
 
   <skin>
     <groupId>org.apache.maven.skins</groupId>

@@ -73,7 +73,7 @@ public class TestViewFsFileStatusHdfs {
 
    long len = FileSystemTestHelper.createFile(fHdfs, testfilename);
 
-    Configuration conf = ViewFileSystemTestSetup.configWithViewfsScheme();
+    Configuration conf = ViewFileSystemTestSetup.createConfig();
     ConfigUtil.addLink(conf, "/tmp", new URI(fHdfs.getUri().toString() + "/tmp"));
     FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
     assertEquals(ViewFileSystem.class, vfs.getClass());

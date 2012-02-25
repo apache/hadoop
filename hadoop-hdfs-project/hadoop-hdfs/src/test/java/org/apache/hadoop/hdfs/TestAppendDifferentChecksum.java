@@ -47,12 +47,6 @@ public class TestAppendDifferentChecksum {
   public static void setupCluster() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
-    
-    // disable block scanner, since otherwise this test can trigger
-    // HDFS-2525, which is a different bug than we're trying to unit test
-    // here! When HDFS-2525 is fixed, this can be removed.
-    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
-
     conf.set("fs.hdfs.impl.disable.cache", "true");
     cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(1)

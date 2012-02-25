@@ -269,7 +269,15 @@ public class FsShell extends Configured implements Tool {
   
   private void displayError(String cmd, String message) {
     for (String line : message.split("\n")) {
-      System.err.println(cmd.substring(1) + ": " + line);
+      System.err.println(cmd + ": " + line);
+      if (cmd.charAt(0) != '-') {
+        Command instance = null;
+        instance = commandFactory.getInstance("-" + cmd);
+        if (instance != null) {
+          System.err.println("Did you mean -" + cmd + "?  This command " +
+              "begins with a dash.");
+        }
+      }
     }
   }
   

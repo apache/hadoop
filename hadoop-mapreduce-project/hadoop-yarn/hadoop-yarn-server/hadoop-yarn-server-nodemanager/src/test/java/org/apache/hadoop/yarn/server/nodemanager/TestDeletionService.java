@@ -27,12 +27,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.DefaultContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 
 
 import org.junit.AfterClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+
 import static org.junit.Assert.*;
 
 public class TestDeletionService {
@@ -107,11 +110,17 @@ public class TestDeletionService {
         del.delete((Long.parseLong(p.getName()) % 2) == 0 ? null : "dingo",
             p, null);
       }
+
+      int msecToWait = 20 * 1000;
+      for (Path p : dirs) {
+        while (msecToWait > 0 && lfs.util().exists(p)) {
+          Thread.sleep(100);
+          msecToWait -= 100;
+        }
+        assertFalse(lfs.util().exists(p));
+      }
     } finally {
       del.stop();
-    }
-    for (Path p : dirs) {
-      assertFalse(lfs.util().exists(p));
     }
   }
 
@@ -137,14 +146,35 @@ public class TestDeletionService {
         del.delete((Long.parseLong(p.getName()) % 2) == 0 ? null : "dingo",
             p, baseDirs.toArray(new Path[4]));
       }
+
+      int msecToWait = 20 * 1000;
+      for (Path p : baseDirs) {
+        for (Path q : content) {
+          Path fp = new Path(p, q);
+          while (msecToWait > 0 && lfs.util().exists(fp)) {
+            Thread.sleep(100);
+            msecToWait -= 100;
+          }
+          assertFalse(lfs.util().exists(fp));
+        }
+      }
     } finally {
       del.stop();
     }
-    for (Path p : baseDirs) {
-      for (Path q : content) {
-        assertFalse(lfs.util().exists(new Path(p, q)));
-      }
-    }
   }
 
+  @Test
+  public void testStopWithDelayedTasks() throws Exception {
+    DeletionService del = new DeletionService(Mockito.mock(ContainerExecutor.class));
+    Configuration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, 60);
+    del.init(conf);
+    del.start();
+    try {
+      del.delete("dingo", new Path("/does/not/exist"));
+    } finally {
+      del.stop();
+    }
+    assertTrue(del.isTerminated());
+  }
 }

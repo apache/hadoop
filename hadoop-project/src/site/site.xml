@@ -55,6 +55,7 @@
     <menu name="HDFS" inherit="top">
       <item name="Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
       <item name="WebHDFS REST API" href="hadoop-yarn/hadoop-yarn-site/WebHDFS.html"/>
+      <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>
     </menu>
 
     <menu name="MapReduce" inherit="top">

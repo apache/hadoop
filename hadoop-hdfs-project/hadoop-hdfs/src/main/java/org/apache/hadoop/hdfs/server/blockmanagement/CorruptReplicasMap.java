@@ -44,25 +44,37 @@ public class CorruptReplicasMap{
    *
    * @param blk Block to be added to CorruptReplicasMap
    * @param dn DatanodeDescriptor which holds the corrupt replica
+   * @param reason a textual reason (for logging purposes)
    */
-  public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn) {
+  public void addToCorruptReplicasMap(Block blk, DatanodeDescriptor dn,
+      String reason) {
     Collection<DatanodeDescriptor> nodes = getNodes(blk);
     if (nodes == null) {
       nodes = new TreeSet<DatanodeDescriptor>();
       corruptReplicasMap.put(blk, nodes);
     }
+    
+    String reasonText;
+    if (reason != null) {
+      reasonText = " because " + reason;
+    } else {
+      reasonText = "";
+    }
+    
     if (!nodes.contains(dn)) {
       nodes.add(dn);
       NameNode.stateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
                                    blk.getBlockName() +
                                    " added as corrupt on " + dn.getName() +
-                                   " by " + Server.getRemoteIp());
+                                   " by " + Server.getRemoteIp() +
+                                   reasonText);
     } else {
       NameNode.stateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
                                    "duplicate requested for " + 
                                    blk.getBlockName() + " to add as corrupt " +
                                    "on " + dn.getName() +
-                                   " by " + Server.getRemoteIp());
+                                   " by " + Server.getRemoteIp() +
+                                   reasonText);
     }
   }
 

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -27,10 +28,17 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -167,10 +175,37 @@ public class TestFifoScheduler {
     testMinimumAllocation(conf);
   }
 
+  @Test
+  public void testReconnectedNode() throws Exception {
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    conf.setQueues("default", new String[] {"default"});
+    conf.setCapacity("default", 100);
+    FifoScheduler fs = new FifoScheduler();
+    fs.reinitialize(conf, null, null);
+
+    RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);
+    RMNode n2 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 2);
+
+    fs.handle(new NodeAddedSchedulerEvent(n1));
+    fs.handle(new NodeAddedSchedulerEvent(n2));
+    List<ContainerStatus> emptyList = new ArrayList<ContainerStatus>();
+    fs.handle(new NodeUpdateSchedulerEvent(n1, emptyList, emptyList));
+    Assert.assertEquals(6 * GB, fs.getRootQueueMetrics().getAvailableMB());
+
+    // reconnect n1 with downgraded memory
+    n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(2 * GB), 1);
+    fs.handle(new NodeRemovedSchedulerEvent(n1));
+    fs.handle(new NodeAddedSchedulerEvent(n1));
+    fs.handle(new NodeUpdateSchedulerEvent(n1, emptyList, emptyList));
+
+    Assert.assertEquals(4 * GB, fs.getRootQueueMetrics().getAvailableMB());
+  }
+
   public static void main(String[] args) throws Exception {
     TestFifoScheduler t = new TestFifoScheduler();
     t.test();
     t.testDefaultMinimumAllocation();
     t.testNonDefaultMinimumAllocation();
+    t.testReconnectedNode();
   }
 }

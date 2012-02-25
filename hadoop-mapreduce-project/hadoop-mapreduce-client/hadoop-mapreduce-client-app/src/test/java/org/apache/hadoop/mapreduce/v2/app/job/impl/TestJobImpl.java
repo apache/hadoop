@@ -191,5 +191,16 @@ public class TestJobImpl {
         null, null, null, true, null, 0, null);
     Assert.assertTrue(job4.checkAccess(ugi1, JobACL.VIEW_JOB));
     Assert.assertTrue(job4.checkAccess(ugi2, JobACL.VIEW_JOB));
+
+    // Setup configuration access without security enabled
+    Configuration conf5 = new Configuration();
+    conf5.setBoolean(MRConfig.MR_ACLS_ENABLED, true);
+    conf5.set(MRJobConfig.JOB_ACL_VIEW_JOB, "");
+
+    // Verify access
+    JobImpl job5 = new JobImpl(jobId, null, conf5, null, null, null, null, null,
+        null, null, null, true, null, 0, null);
+    Assert.assertTrue(job5.checkAccess(ugi1, null));
+    Assert.assertTrue(job5.checkAccess(ugi2, null));
   }
 }

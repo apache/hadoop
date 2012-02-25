@@ -19,13 +19,17 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
@@ -35,6 +39,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlo
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
@@ -46,8 +51,68 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  */
 @InterfaceAudience.Private
 public interface FSDatasetInterface extends FSDatasetMBean {
-  
-  
+  /**
+   * A factory for creating FSDatasetInterface objects.
+   */
+  public abstract class Factory {
+    /** @return the configured factory. */
+    public static Factory getFactory(Configuration conf) {
+      final Class<? extends Factory> clazz = conf.getClass(
+          DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
+          FSDataset.Factory.class,
+          Factory.class);
+      return ReflectionUtils.newInstance(clazz, conf);
+    }
+
+    /** Create a FSDatasetInterface object. */
+    public abstract FSDatasetInterface createFSDatasetInterface(
+        DataNode datanode, DataStorage storage, Configuration conf
+        ) throws IOException;
+
+    /** Does the factory create simulated objects? */
+    public boolean isSimulated() {
+      return false;
+    }
+  }
+
+  /**
+   * This is an interface for the underlying volume.
+   * @see org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume
+   */
+  interface FSVolumeInterface {
+    /** @return a list of block pools. */
+    public String[] getBlockPoolList();
+
+    /** @return the available storage space in bytes. */
+    public long getAvailable() throws IOException;
+
+    /** @return the directory for the block pool. */
+    public File getDirectory(String bpid) throws IOException;
+
+    /** @return the directory for the finalized blocks in the block pool. */
+    public File getFinalizedDir(String bpid) throws IOException;
+  }
+
+  /** @return a list of volumes. */
+  public List<FSVolumeInterface> getVolumes();
+
+  /** @return a volume information map (name => info). */
+  public Map<String, Object> getVolumeInfoMap();
+
+  /** @return a list of block pools. */
+  public String[] getBlockPoolList();
+
+  /** @return a list of finalized blocks for the given block pool. */
+  public List<Block> getFinalizedBlocks(String bpid);
+
+  /**
+   * Check whether the in-memory block record matches the block on the disk,
+   * and, in case that they are not matched, update the record or mark it
+   * as corrupted.
+   */
+  public void checkAndUpdate(String bpid, long blockId, File diskFile,
+      File diskMetaFile, FSVolumeInterface vol);
+
   /**
    * Returns the length of the metadata file of the specified block
    * @param b - the block for which the metadata length is desired

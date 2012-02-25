@@ -527,7 +527,7 @@ public class TestProcfsBasedProcessTree {
 
       // Let us not create stat file for pid 100.
       Assert.assertTrue(ProcfsBasedProcessTree.checkPidPgrpidForMatch(
-            Integer.valueOf(pid), procfsRootDir.getAbsolutePath()));
+            pid, procfsRootDir.getAbsolutePath()));
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }
@@ -662,8 +662,8 @@ public class TestProcfsBasedProcessTree {
    */
   private static boolean isAnyProcessInTreeAlive(
       ProcfsBasedProcessTree processTree) {
-    for (Integer pId : processTree.getCurrentProcessIDs()) {
-      if (isAlive(pId.toString())) {
+    for (String pId : processTree.getCurrentProcessIDs()) {
+      if (isAlive(pId)) {
         return true;
       }
     }

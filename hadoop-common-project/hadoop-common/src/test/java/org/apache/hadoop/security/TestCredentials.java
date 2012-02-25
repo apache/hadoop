@@ -137,4 +137,81 @@ public class TestCredentials {
     }
     tmpFileName.delete();
   }
+
+  static Text secret[] = {
+      new Text("secret1"),
+      new Text("secret2"),
+      new Text("secret3"),
+      new Text("secret4")
+  };
+  static Text service[] = {
+      new Text("service1"),
+      new Text("service2"),
+      new Text("service3"),
+      new Text("service4")
+  };
+  static Token<?> token[] = {
+      new Token<TokenIdentifier>(),
+      new Token<TokenIdentifier>(),
+      new Token<TokenIdentifier>(),
+      new Token<TokenIdentifier>()
+  };
+  
+  @Test
+  public void addAll() {
+    Credentials creds = new Credentials();
+    creds.addToken(service[0], token[0]);
+    creds.addToken(service[1], token[1]);
+    creds.addSecretKey(secret[0], secret[0].getBytes());
+    creds.addSecretKey(secret[1], secret[1].getBytes());
+
+    Credentials credsToAdd = new Credentials();
+    // one duplicate with different value, one new
+    credsToAdd.addToken(service[0], token[3]);
+    credsToAdd.addToken(service[2], token[2]);
+    credsToAdd.addSecretKey(secret[0], secret[3].getBytes());
+    credsToAdd.addSecretKey(secret[2], secret[2].getBytes());
+    
+    creds.addAll(credsToAdd);
+    assertEquals(3, creds.numberOfTokens());
+    assertEquals(3, creds.numberOfSecretKeys());
+    // existing token & secret should be overwritten
+    assertEquals(token[3], creds.getToken(service[0]));
+    assertEquals(secret[3], new Text(creds.getSecretKey(secret[0])));
+    // non-duplicate token & secret should be present
+    assertEquals(token[1], creds.getToken(service[1]));
+    assertEquals(secret[1], new Text(creds.getSecretKey(secret[1])));
+    // new token & secret should be added
+    assertEquals(token[2], creds.getToken(service[2]));
+    assertEquals(secret[2], new Text(creds.getSecretKey(secret[2])));
+  }
+
+  @Test
+  public void mergeAll() {
+    Credentials creds = new Credentials();
+    creds.addToken(service[0], token[0]);
+    creds.addToken(service[1], token[1]);
+    creds.addSecretKey(secret[0], secret[0].getBytes());
+    creds.addSecretKey(secret[1], secret[1].getBytes());
+    
+    Credentials credsToAdd = new Credentials();
+    // one duplicate with different value, one new
+    credsToAdd.addToken(service[0], token[3]);
+    credsToAdd.addToken(service[2], token[2]);
+    credsToAdd.addSecretKey(secret[0], secret[3].getBytes());
+    credsToAdd.addSecretKey(secret[2], secret[2].getBytes());
+    
+    creds.mergeAll(credsToAdd);
+    assertEquals(3, creds.numberOfTokens());
+    assertEquals(3, creds.numberOfSecretKeys());
+    // existing token & secret should not be overwritten
+    assertEquals(token[0], creds.getToken(service[0]));
+    assertEquals(secret[0], new Text(creds.getSecretKey(secret[0])));
+    // non-duplicate token & secret should be present
+    assertEquals(token[1], creds.getToken(service[1]));
+    assertEquals(secret[1], new Text(creds.getSecretKey(secret[1])));
+    // new token & secret should be added
+    assertEquals(token[2], creds.getToken(service[2]));
+    assertEquals(secret[2], new Text(creds.getSecretKey(secret[2])));
  }
+}

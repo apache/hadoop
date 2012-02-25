@@ -1,3 +1,87 @@
+Hadoop HDFS Change Log
+
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+    HDFS-2887. FSVolume, is a part of FSDatasetInterface implementation, should
+    not be referred outside FSDataset.  A new FSVolumeInterface is defined.
+    The BlockVolumeChoosingPolicy.chooseVolume(..) method signature is also
+    updated.  (szetszwo)
+
+  NEW FEATURES
+
+    HDFS-2943. Expose last checkpoint time and transaction stats as JMX
+    metrics. (atm)
+
+  IMPROVEMENTS
+
+    HDFS-2931. Switch DataNode's BlockVolumeChoosingPolicy to private-audience.
+    (harsh via szetszwo)
+
+    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO. (Brandon Li 
+    via jitendra)
+
+    HDFS-2725. hdfs script usage information is missing the information 
+    about "dfs" command (Prashant Sharma via stevel)
+
+    HDFS-2907.  Add a conf property dfs.datanode.fsdataset.factory to make
+    FSDataset in Datanode pluggable.  (szetszwo)
+
+    HDFS-2985. Improve logging when replicas are marked as corrupt. (todd)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+    HDFS-2923. Namenode IPC handler count uses the wrong configuration key
+    (todd)
+
+    HDFS-2764. TestBackupNode is racy. (atm)
+
+    HDFS-2869. Fix an error in the webhdfs docs for the mkdir op (harsh)
+
+    HDFS-776.  Fix exception handling in Balancer.  (Uma Maheswara Rao G
+    via szetszwo)
+
+    HDFS-2815. Namenode sometimes oes not come out of safemode during 
+    NN crash + restart. (Uma Maheswara Rao via suresh)
+
+    HDFS-2950. Secondary NN HTTPS address should be listed as a
+    NAMESERVICE_SPECIFIC_KEY. (todd)
+
+    HDFS-2525. Race between BlockPoolSliceScanner and append. (Brandon Li
+    via jitendra)
+
+    HDFS-2938. Recursive delete of a large directory make namenode
+    unresponsive. (Hari Mankude via suresh)
+
+    HDFS-2969. ExtendedBlock.equals is incorrectly implemented (todd)
+
+    HDFS-2944. Typo in hdfs-default.xml causes
+    dfs.client.block.write.replace-datanode-on-failure.enable to be mistakenly
+    disabled. (atm)
+
+    HDFS-2981. In hdfs-default.xml, the default value of
+    dfs.client.block.write.replace-datanode-on-failure.enable should be true.
+    (szetszwo)
+
+    HDFS-3008. Negative caching of local addrs doesn't work. (eli)
+
+    HDFS-3006. In WebHDFS, when the return body is empty, set the Content-Type
+    to application/octet-stream instead of application/json.  (szetszwo)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
@@ -228,11 +312,6 @@ Release 0.23.1 - 2012-02-17
 
     HDFS-2893. The start/stop scripts don't start/stop the 2NN when
     using the default configuration. (eli)
-
-    HDFS-2923. Namenode IPC handler count uses the wrong configuration key.
-    (Todd Lipcon)
-
-    HDFS-2869. Fix an error in the webhdfs docs for the mkdir op (harsh)
 
 Release 0.23.0 - 2011-11-01 
 

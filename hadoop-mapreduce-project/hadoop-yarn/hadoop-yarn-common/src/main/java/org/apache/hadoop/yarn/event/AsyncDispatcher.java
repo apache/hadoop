@@ -27,6 +27,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -48,22 +49,13 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   private boolean exitOnDispatchException;
 
   public AsyncDispatcher() {
-    this(new HashMap<Class<? extends Enum>, EventHandler>(),
-         new LinkedBlockingQueue<Event>(), true);
-  }
-  
-  public AsyncDispatcher(boolean exitOnException) {
-    this(new HashMap<Class<? extends Enum>, EventHandler>(),
-         new LinkedBlockingQueue<Event>(), exitOnException);
+    this(new LinkedBlockingQueue<Event>());
   }
 
-  AsyncDispatcher(
-      Map<Class<? extends Enum>, EventHandler> eventDispatchers,
-      BlockingQueue<Event> eventQueue, boolean exitOnException) {
+  public AsyncDispatcher(BlockingQueue<Event> eventQueue) {
     super("Dispatcher");
     this.eventQueue = eventQueue;
-    this.eventDispatchers = eventDispatchers;
-    this.exitOnDispatchException = exitOnException;
+    this.eventDispatchers = new HashMap<Class<? extends Enum>, EventHandler>();
   }
 
   Runnable createThread() {
@@ -87,6 +79,14 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
   }
 
   @Override
+  public synchronized void init(Configuration conf) {
+    this.exitOnDispatchException =
+        conf.getBoolean(Dispatcher.DISPATCHER_EXIT_ON_ERROR_KEY,
+          Dispatcher.DEFAULT_DISPATCHER_EXIT_ON_ERROR);
+    super.init(conf);
+  }
+
+  @Override
   public void start() {
     //start all the components
     super.start();
@@ -103,7 +103,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       try {
         eventHandlingThread.join();
       } catch (InterruptedException ie) {
-        LOG.debug("Interrupted Exception while stopping", ie);
+        LOG.warn("Interrupted Exception while stopping", ie);
       }
     }
 
@@ -126,8 +126,9 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     }
     catch (Throwable t) {
       //TODO Maybe log the state of the queue
-      LOG.fatal("Error in dispatcher thread. Exiting..", t);
+      LOG.fatal("Error in dispatcher thread", t);
       if (exitOnDispatchException) {
+        LOG.info("Exiting, bbye..");
         System.exit(-1);
       }
     }
@@ -177,6 +178,7 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
       try {
         eventQueue.put(event);
       } catch (InterruptedException e) {
+        LOG.warn("AsyncDispatcher thread interrupted", e);
         throw new YarnException(e);
       }
     };

@@ -64,7 +64,7 @@ public class HardLink {
       //override getLinkCountCommand for the particular Unix variant
       //Linux is already set as the default - {"stat","-c%h", null}
       if (osType == OSType.OS_TYPE_MAC) {
-        String[] linkCountCmdTemplate = {"stat","-f%l", null};
+        String[] linkCountCmdTemplate = {"/usr/bin/stat","-f%l", null};
         HardLinkCGUnix.setLinkCountCmdTemplate(linkCountCmdTemplate);
       } else if (osType == OSType.OS_TYPE_SOLARIS) {
         String[] linkCountCmdTemplate = {"ls","-l", null};

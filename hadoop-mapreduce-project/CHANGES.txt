@@ -1,5 +1,80 @@
 Hadoop MapReduce Change Log
 
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.2 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    MAPREDUCE-3849. Change TokenCache's reading of the binary token file
+    (Daryn Sharp via bobby)
+
+    MAPREDUCE-3854. Fixed and reenabled tests related to MR child JVM's           
+    environmental variables in TestMiniMRChildTask. (Tom White via vinodkv)
+
+    MAPREDUCE-3877 Add a test to formalise the current state transitions
+    of the yarn lifecycle. (stevel)
+
+    MAPREDUCE-3866. Fixed the bin/yarn script to not print the command line
+    unnecessarily. (vinodkv)
+
+    MAPREDUCE-3730. Modified RM to allow restarted NMs to be able to join the
+    cluster without waiting for expiry. (Jason Lowe via vinodkv)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-3918  proc_historyserver no longer in command line arguments for
+    HistoryServer (Jon Eagles via bobby)
+
+    MAPREDUCE-3862.  Nodemanager can appear to hang on shutdown due to lingering
+    DeletionService threads (Jason Lowe via bobby)
+
+    MAPREDUCE-3680. FifoScheduler web service rest API can print out invalid 
+    JSON. (B Anil Kumar via tgraves)
+
+    MAPREDUCE-3852. Test TestLinuxResourceCalculatorPlugin failing. (Thomas 
+    Graves via mahadev)
+
+    MAPREDUCE-3864. Fix cluster setup docs for correct SecondaryNameNode
+    HTTPS parameters. (todd)
+
+    MAPREDUCE-3583. Change pid to String and stime to BigInteger in order to
+    avoid NumberFormatException caused by overflow.  (Zhihong Yu via szetszwo)
+
+    MAPREDUCE-3634. Fixed all daemons to crash instead of hanging around when
+    their EventHandlers get exceptions. (vinodkv)
+
+    MAPREDUCE-3798. Fixed failing TestJobCleanup.testCusomCleanup() and moved it
+    to the maven build. (Ravi Prakash via vinodkv)
+
+    MAPREDUCE-3884. PWD should be first in the classpath of MR tasks (tucu)
+
+    MAPREDUCE-3878. Null user on filtered jobhistory job page (Jonathon Eagles
+    via tgraves)
+
+    MAPREDUCE-3738. MM can hang during shutdown if AppLogAggregatorImpl thread
+    dies unexpectedly (Jason Lowe via sseth)
+
+    MAPREDUCE-3904 Job history produced with mapreduce.cluster.acls.enabled
+    false can not be viewed with mapreduce.cluster.acls.enabled true 
+    (Jonathon Eagles via tgraves)
+ 
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
@@ -28,6 +103,12 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3375. [Gridmix] Memory Emulation system tests. 
                     (Vinay Thota via amarrk)
 
+    MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
+    (Ravi Prakash via bobby)
+
+    MAPREDUCE-3736. Variable substitution depth too large for fs.default.name 
+    causes jobs to fail (ahmed via tucu).
+ 
     MAPREDUCE-2733. [Gridmix] Gridmix3 cpu emulation system tests. 
                     (Vinay Thota via amarrk)
 
@@ -204,12 +285,6 @@ Release 0.23.1 - 2012-02-17
 
   BUG FIXES
 
-    MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
-                    sortFinished times when needed.
-
-    MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
-    (Dave Thompson via bobby)
-
     MAPREDUCE-2784. [Gridmix] Bug fixes in ExecutionSummarizer and 
                     ResourceUsageMatcher. (amarrk)
 
@@ -223,7 +298,8 @@ Release 0.23.1 - 2012-02-17
 
     MAPREDUCE-3412. Fix 'ant docs'. (amarrk)
 
-    MAPREDUCE-3346 [Rumen] LoggedTaskAttempt#getHostName() returns null. (amarrk)
+    MAPREDUCE-3346 [Rumen] LoggedTaskAttempt#getHostName() returns null.
+                   (amarrk)
 
     MAPREDUCE-3221. Reenabled the previously ignored test in TestSubmitJob
     and fixed bugs in it. (Devaraj K via vinodkv)
@@ -687,6 +763,9 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3808. Fixed an NPE in FileOutputCommitter for jobs with maps
     but no reduces. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-3804. yarn webapp interface vulnerable to cross scripting attacks
+    (Dave Thompson via bobby)
+
     MAPREDUCE-3354. Changed scripts so that jobhistory server is started by
     bin/mapred instead of bin/yarn. (Jonathan Eagles via acmurthy) 
 
@@ -699,7 +778,6 @@ Release 0.23.1 - 2012-02-17
     MAPREDUCE-3697. Support binary compatibility for Counters after
     MAPREDUCE-901. (mahadev via acmurthy) 
 
-  
     MAPREDUCE-3817. Fixed bin/mapred to allow running of distcp and archive
     jobs. (Arpit Gupta via acmurthy) 
 
@@ -738,9 +816,6 @@ Release 0.23.1 - 2012-02-17
 
     MAPREDUCE-3770. Zombie.getJobConf() results into NPE. (amarrk)
 
-    MAPREDUCE-3840.  JobEndNotifier doesn't use the proxyToUse during connecting
-    (Ravi Prakash via bobby)
-
     MAPREDUCE-3843. Job summary log file found missing on the RM host 
     (Anupam Seth via tgraves)
 
@@ -754,7 +829,7 @@ Release 0.23.1 - 2012-02-17
     (Tom White via mahadev)
 
     MAPREDUCE-3856. Instances of RunningJob class givs incorrect job tracking
-    urls when mutiple jobs are submitted from same client jvm. (Eric Payne via 
+    urls when mutiple jobs are submitted from same client jvm. (Eric Payne via
     sseth)
 
     MAPREDUCE-3880. Changed LCE binary to be 32-bit. (acmurthy)
@@ -2648,6 +2723,9 @@ Release 0.22.1 - Unreleased
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-3837. Job tracker is not able to recover jobs after crash.
+    (Mayank Bansal via shv) 
 
 Release 0.22.0 - 2011-11-29
 

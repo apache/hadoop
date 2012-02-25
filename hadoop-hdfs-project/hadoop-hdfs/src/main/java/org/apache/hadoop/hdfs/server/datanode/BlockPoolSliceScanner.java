@@ -46,17 +46,13 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 
 /**
- * Performs two types of scanning:
- * <li> Gets block files from the data directories and reconciles the
- * difference between the blocks on the disk and in memory in
- * {@link FSDataset}</li>
- * <li> Scans the data directories for block files under a block pool
- * and verifies that the files are not corrupt</li>
+ * Scans the block files under a block pool and verifies that the
+ * files are not corrupt.
  * This keeps track of blocks and their last verification times.
  * Currently it does not modify the metadata for block.
  */
@@ -78,7 +74,7 @@ class BlockPoolSliceScanner {
 
   private long scanPeriod = DEFAULT_SCAN_PERIOD_HOURS * 3600 * 1000;
   private DataNode datanode;
-  private FSDataset dataset;
+  private final FSDatasetInterface dataset;
   
   // sorted set
   private TreeSet<BlockScanInfo> blockInfoSet;
@@ -137,8 +133,8 @@ class BlockPoolSliceScanner {
     }
   }
   
-  BlockPoolSliceScanner(DataNode datanode, FSDataset dataset, Configuration conf,
-      String bpid) {
+  BlockPoolSliceScanner(DataNode datanode, FSDatasetInterface dataset,
+      Configuration conf, String bpid) {
     this.datanode = datanode;
     this.dataset = dataset;
     this.blockPoolId  = bpid;
@@ -220,16 +216,16 @@ class BlockPoolSliceScanner {
      * otherwise, pick the first directory.
      */
     File dir = null;
-    List<FSVolume> volumes = dataset.volumes.getVolumes();
-    for (FSDataset.FSVolume vol : dataset.volumes.getVolumes()) {
-      File bpDir = vol.getBlockPoolSlice(blockPoolId).getDirectory();
+    List<FSVolumeInterface> volumes = dataset.getVolumes();
+    for (FSVolumeInterface vol : volumes) {
+      File bpDir = vol.getDirectory(blockPoolId);
       if (LogFileHandler.isFilePresent(bpDir, verificationLogFile)) {
         dir = bpDir;
         break;
       }
     }
     if (dir == null) {
-      dir = volumes.get(0).getBlockPoolSlice(blockPoolId).getDirectory();
+      dir = volumes.get(0).getDirectory(blockPoolId);
     }
     
     try {
@@ -431,6 +427,19 @@ class BlockPoolSliceScanner {
           return;
         }
 
+        // If the block exists, the exception may due to a race with write:
+        // The BlockSender got an old block path in rbw. BlockReceiver removed
+        // the rbw block from rbw to finalized but BlockSender tried to open the
+        // file before BlockReceiver updated the VolumeMap. The state of the
+        // block can be changed again now, so ignore this error here. If there
+        // is a block really deleted by mistake, DirectoryScan should catch it.
+        if (e instanceof FileNotFoundException ) {
+          LOG.info("Verification failed for " + block +
+              ". It may be due to race with write.");
+          deleteBlock(block.getLocalBlock());
+          return;
+        }
+
         LOG.warn((second ? "Second " : "First ") + "Verification failed for "
             + block, e);
         
@@ -577,8 +586,8 @@ class BlockPoolSliceScanner {
     bytesLeft += len;
   }
 
-  static File getCurrentFile(FSVolume vol, String bpid) throws IOException {
-    return LogFileHandler.getCurrentFile(vol.getBlockPoolSlice(bpid).getDirectory(),
+  static File getCurrentFile(FSVolumeInterface vol, String bpid) throws IOException {
+    return LogFileHandler.getCurrentFile(vol.getDirectory(bpid),
         BlockPoolSliceScanner.verificationLogFile);
   }
   

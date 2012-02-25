@@ -22,16 +22,18 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 
 /**************************************************
  * BlockVolumeChoosingPolicy allows a DataNode to
  * specify what policy is to be used while choosing
  * a volume for a block request.
- * 
+ *
+ * Note: This is an evolving i/f and is only for
+ * advanced use.
+ *
  ***************************************************/
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public interface BlockVolumeChoosingPolicy {
 
   /**
@@ -46,7 +48,7 @@ public interface BlockVolumeChoosingPolicy {
    * @return the chosen volume to store the block.
    * @throws IOException when disks are unavailable or are full.
    */
-  public FSVolume chooseVolume(List<FSVolume> volumes, long blockSize)
+  public FSVolumeInterface chooseVolume(List<FSVolumeInterface> volumes, long blockSize)
     throws IOException;
 
 }

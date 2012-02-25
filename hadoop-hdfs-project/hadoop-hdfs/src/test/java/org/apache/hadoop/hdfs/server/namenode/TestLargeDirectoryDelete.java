@@ -117,8 +117,11 @@ public class TestLargeDirectoryDelete {
           try {
             int blockcount = getBlockCount();
             if (blockcount < TOTAL_BLOCKS && blockcount > 0) {
-              synchronized(mc.getNamesystem()) {
+              mc.getNamesystem().writeLock();
+              try {
                 lockOps++;
+              } finally {
+                mc.getNamesystem().writeUnlock();
               }
               Thread.sleep(1);
             }

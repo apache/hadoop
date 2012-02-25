@@ -35,7 +35,6 @@ import org.mortbay.log.Log;
 public class TestViewFsTrash {
   FileSystem fsTarget;  // the target file system - the mount will point here
   FileSystem fsView;
-  Path targetTestRoot;
   Configuration conf;
 
   static class TestLFS extends LocalFileSystem {
@@ -55,52 +54,19 @@ public class TestViewFsTrash {
   @Before
   public void setUp() throws Exception {
     fsTarget = FileSystem.getLocal(new Configuration());
-    targetTestRoot = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget);
-    // In case previous test was killed before cleanup
-    fsTarget.delete(targetTestRoot, true);
-    // cleanup trash from previous run if it stuck around
-    fsTarget.delete(new Path(fsTarget.getHomeDirectory(), ".Trash/Current"),
-        true);
-    
-    fsTarget.mkdirs(targetTestRoot);
-    fsTarget.mkdirs(new Path(targetTestRoot,"dir1"));
-    
-    
-    // Now we use the mount fs to set links to user and dir
-    // in the test root
-    
-    // Set up the defaultMT in the config with our mount point links
-
-
-    conf = ViewFileSystemTestSetup.configWithViewfsScheme();
-    
-    // create a link for home directory so that trash path works
-    // set up viewfs's home dir root to point to home dir root on target
-    // But home dir is different on linux, mac etc.
-    // Figure it out by calling home dir on target
-
-    String homeDirRoot = fsTarget.getHomeDirectory()
-        .getParent().toUri().getPath();
-    ConfigUtil.addLink(conf, homeDirRoot,
-        fsTarget.makeQualified(new Path(homeDirRoot)).toUri());
-    ConfigUtil.setHomeDirConf(conf, homeDirRoot);
-    Log.info("Home dir base " + homeDirRoot);
-
-    fsView = ViewFileSystemTestSetup.setupForViewFs(conf, fsTarget);
-
-    // set working dir so that relative paths
-    //fsView.setWorkingDirectory(new Path(fsTarget.getWorkingDirectory().toUri().getPath()));
+    fsTarget.mkdirs(new Path(FileSystemTestHelper.
+        getTestRootPath(fsTarget), "dir1"));
+    conf = ViewFileSystemTestSetup.createConfig();
+    fsView = ViewFileSystemTestSetup.setupForViewFileSystem(conf, fsTarget);
     conf.set("fs.defaultFS", FsConstants.VIEWFS_URI.toString());
   }
  
-
   @After
   public void tearDown() throws Exception {
-    fsTarget.delete(targetTestRoot, true);
+    ViewFileSystemTestSetup.tearDown(fsTarget);
     fsTarget.delete(new Path(fsTarget.getHomeDirectory(), ".Trash/Current"),
         true);
   }
-
   
   @Test
   public void testTrash() throws IOException {

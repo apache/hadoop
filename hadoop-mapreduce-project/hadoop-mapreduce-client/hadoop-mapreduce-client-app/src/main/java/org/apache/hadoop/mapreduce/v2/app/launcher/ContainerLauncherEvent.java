@@ -61,7 +61,8 @@ public class ContainerLauncherEvent
 
   @Override
   public String toString() {
-    return super.toString() + " for taskAttempt " + taskAttemptID;
+    return super.toString() + " for container " + containerID + " taskAttempt "
+        + taskAttemptID;
   }
 
   @Override

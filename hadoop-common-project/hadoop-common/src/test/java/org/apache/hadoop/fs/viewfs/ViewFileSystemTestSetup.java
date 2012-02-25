@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.viewfs.ConfigUtil;
+import org.mortbay.log.Log;
 
 
 /**
@@ -46,32 +47,21 @@ public class ViewFileSystemTestSetup {
    * @return return the ViewFS File context to be used for tests
    * @throws Exception
    */
-  static public FileSystem setupForViewFs(Configuration conf, FileSystem fsTarget) throws Exception {
+  static public FileSystem setupForViewFileSystem(Configuration conf, FileSystem fsTarget) throws Exception {
     /**
      * create the test root on local_fs - the  mount table will point here
      */
-    Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
-    // In case previous test was killed before cleanup
-    fsTarget.delete(targetOfTests, true);
-    
-    fsTarget.mkdirs(targetOfTests);
-  
+    fsTarget.mkdirs(FileSystemTestHelper.getTestRootPath(fsTarget));
 
-    // Now set up a link from viewfs to targetfs for the first component of
-    // path of testdir. For example, if testdir is /user/<userid>/xx then
-    // a link from /user to targetfs://user.
-    
-    String testDir = FileSystemTestHelper.getTestRootPath(fsTarget).toUri().getPath();
-    int indexOf2ndSlash = testDir.indexOf('/', 1);
-    String testDirFirstComponent = testDir.substring(0, indexOf2ndSlash);
-    
-    
-    ConfigUtil.addLink(conf, testDirFirstComponent,
-        fsTarget.makeQualified(new Path(testDirFirstComponent)).toUri()); 
-    
+    // viewFs://home => fsTarget://home
+    String homeDirRoot = fsTarget.getHomeDirectory()
+        .getParent().toUri().getPath();
+    ConfigUtil.addLink(conf, homeDirRoot,
+        fsTarget.makeQualified(new Path(homeDirRoot)).toUri());
+    ConfigUtil.setHomeDirConf(conf, homeDirRoot);
+    Log.info("Home dir base " + homeDirRoot);
+
     FileSystem fsView = FileSystem.get(FsConstants.VIEWFS_URI, conf);
-    //System.out.println("SRCOfTests = "+ getTestRootPath(fs, "test"));
-    //System.out.println("TargetOfTests = "+ targetOfTests.toUri());
     return fsView;
   }
 
@@ -79,12 +69,12 @@ public class ViewFileSystemTestSetup {
    * 
    * delete the test directory in the target  fs
    */
-  static public void tearDownForViewFs(FileSystem fsTarget) throws Exception {
+  static public void tearDown(FileSystem fsTarget) throws Exception {
     Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
     fsTarget.delete(targetOfTests, true);
   }
   
-  public static Configuration configWithViewfsScheme() {
+  public static Configuration createConfig() {
     Configuration conf = new Configuration();
     conf.set("fs.viewfs.impl", ViewFileSystem.class.getName());
     return conf; 

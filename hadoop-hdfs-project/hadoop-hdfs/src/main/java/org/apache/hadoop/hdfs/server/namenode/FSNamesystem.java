@@ -1908,7 +1908,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       boolean enforcePermission)
       throws AccessControlException, SafeModeException, UnresolvedLinkException,
              IOException {
-    boolean deleteNow = false;
     ArrayList<Block> collectedBlocks = new ArrayList<Block>();
 
     writeLock();
@@ -1926,24 +1925,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (!dir.delete(src, collectedBlocks)) {
         return false;
       }
-      deleteNow = collectedBlocks.size() <= BLOCK_DELETION_INCREMENT;
-      if (deleteNow) { // Perform small deletes right away
-        removeBlocks(collectedBlocks);
-      }
     } finally {
       writeUnlock();
     }
-
-    getEditLog().logSync();
-
-    writeLock();
-    try {
-      if (!deleteNow) {
-        removeBlocks(collectedBlocks); // Incremental deletion of blocks
-      }
-    } finally {
-      writeUnlock();
-    }
+    getEditLog().logSync(); 
+    removeBlocks(collectedBlocks); // Incremental deletion of blocks
     collectedBlocks.clear();
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* Namesystem.delete: "
@@ -1952,16 +1938,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return true;
   }
 
-  /** From the given list, incrementally remove the blocks from blockManager */
+  /** 
+   * From the given list, incrementally remove the blocks from blockManager
+   * Writelock is dropped and reacquired every BLOCK_DELETION_INCREMENT to
+   * ensure that other waiters on the lock can get in. See HDFS-2938
+   */
   private void removeBlocks(List<Block> blocks) {
-    assert hasWriteLock();
     int start = 0;
     int end = 0;
     while (start < blocks.size()) {
       end = BLOCK_DELETION_INCREMENT + start;
       end = end > blocks.size() ? blocks.size() : end;
-      for (int i=start; i<end; i++) {
-        blockManager.removeBlock(blocks.get(i));
+      writeLock();
+      try {
+        for (int i = start; i < end; i++) {
+          blockManager.removeBlock(blocks.get(i));
+        }
+      } finally {
+        writeUnlock();
       }
       start = end;
     }
@@ -2631,6 +2625,31 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @Metric({"ExpiredHeartbeats", "Number of expired heartbeats"})
   public int getExpiredHeartbeats() {
     return datanodeStatistics.getExpiredHeartbeats();
+  }
+  
+  @Metric({"TransactionsSinceLastCheckpoint",
+      "Number of transactions since last checkpoint"})
+  public long getTransactionsSinceLastCheckpoint() {
+    return getEditLog().getLastWrittenTxId() -
+        getFSImage().getStorage().getMostRecentCheckpointTxId();
+  }
+  
+  @Metric({"TransactionsSinceLastLogRoll",
+      "Number of transactions since last edit log roll"})
+  public long getTransactionsSinceLastLogRoll() {
+    return (getEditLog().getLastWrittenTxId() -
+        getEditLog().getCurSegmentTxId()) + 1;
+  }
+  
+  @Metric({"LastWrittenTransactionId", "Transaction ID written to the edit log"})
+  public long getLastWrittenTransactionId() {
+    return getEditLog().getLastWrittenTxId();
+  }
+  
+  @Metric({"LastCheckpointTime",
+      "Time in milliseconds since the epoch of the last checkpoint"})
+  public long getLastCheckpointTime() {
+    return getFSImage().getStorage().getMostRecentCheckpointTime();
   }
 
   /** @see ClientProtocol#getStats() */

@@ -125,6 +125,11 @@ public class NNStorage extends Storage implements Closeable {
    * that have since been written to the edit log.
    */
   protected long mostRecentCheckpointTxId = HdfsConstants.INVALID_TXID;
+  
+  /**
+   * Time of the last checkpoint, in milliseconds since the epoch.
+   */
+  private long mostRecentCheckpointTime = 0;
 
   /**
    * list of failed (and thus removed) storages
@@ -417,17 +422,28 @@ public class NNStorage extends Storage implements Closeable {
   }
 
   /**
-   * Set the transaction ID of the last checkpoint
+   * Set the transaction ID and time of the last checkpoint
+   * 
+   * @param txid transaction id of the last checkpoint
+   * @param time time of the last checkpoint, in millis since the epoch
    */
-  void setMostRecentCheckpointTxId(long txid) {
+  void setMostRecentCheckpointInfo(long txid, long time) {
     this.mostRecentCheckpointTxId = txid;
+    this.mostRecentCheckpointTime = time;
   }
 
   /**
-   * Return the transaction ID of the last checkpoint.
+   * @return the transaction ID of the last checkpoint.
    */
   long getMostRecentCheckpointTxId() {
     return mostRecentCheckpointTxId;
+  }
+  
+  /**
+   * @return the time of the most recent checkpoint in millis since the epoch.
+   */
+  long getMostRecentCheckpointTime() {
+    return mostRecentCheckpointTime;
   }
 
   /**

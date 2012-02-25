@@ -1,5 +1,85 @@
 Hadoop Change Log
 
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.23.2 - UNRELEASED
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8048. Allow merging of Credentials (Daryn Sharp via tgraves)
+ 
+    HADOOP-8032. mvn site:stage-deploy should be able to use the scp protocol
+    to stage documents (Ravi Prakash via tgraves)
+
+    HADOOP-7923. Automate the updating of version numbers in the doc system.
+    (szetszwo)
+
+  OPTIMIZATIONS
+
+    HADOOP-8071. Avoid an extra packet in client code when nagling is
+    disabled. (todd)
+
+    HADOOP-6502. Improve the performance of Configuration.getClassByName when
+    the class is not found by caching negative results.
+    (sharad, todd via todd)
+
+  BUG FIXES
+
+    HADOOP-7660. Maven generated .classpath doesnot includes 
+    "target/generated-test-source/java" as source directory.
+    (Laxman via bobby)
+
+    HADOOP-8042  When copying a file out of HDFS, modifying it, and uploading
+    it back into HDFS, the put fails due to a CRC mismatch
+    (Daryn Sharp via bobby)
+
+    HADOOP-8035 Hadoop Maven site is inefficient and runs phases redundantly
+    (abayer via tucu)
+
+    HADOOP-8051 HttpFS documentation it is not wired to the generated site (tucu)
+
+    HADOOP-8055. Hadoop tarball distribution lacks a core-site.xml (harsh)
+
+    HADOOP-8052. Hadoop Metrics2 should emit Float.MAX_VALUE (instead of 
+    Double.MAX_VALUE) to avoid making Ganglia's gmetad core. (Varun Kapoor
+    via mattf)
+
+    HADOOP-8074. Small bug in hadoop error message for unknown commands.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8082 add hadoop-client and hadoop-minicluster to the 
+    dependency-management section. (tucu)
+
+    HADOOP-8066 The full docs build intermittently fails (abayer via tucu)
+
+    HADOOP-8083 javadoc generation for some modules is not done under target/ (tucu)
+
+    HADOOP-8036. TestViewFsTrash assumes the user's home directory is
+    2 levels deep. (Colin Patrick McCabe via eli)
+
+    HADOOP-8046 Revert StaticMapping semantics to the existing ones, add DNS
+    mapping diagnostics in progress (stevel)
+
+    HADOOP-8057 hadoop-setup-conf.sh not working because of some extra spaces.
+    (Vinayakumar B via stevel)
+
+    HADOOP-7680 TestHardLink fails on Mac OS X, when gnu stat is in path.
+    (Milind Bhandarkar via stevel)
+
+    HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
@@ -222,12 +302,6 @@ Release 0.23.1 - 2012-02-17
 
    HADOOP-8013. ViewFileSystem does not honor setVerifyChecksum
    (Daryn Sharp via bobby)
-
-   HADOOP-8055. Hadoop tarball distribution lacks a core-site.xml (harsh)
-
-   HADOOP-8052. Hadoop Metrics2 should emit Float.MAX_VALUE 
-   (instead of Double.MAX_VALUE) to avoid making Ganglia's gmetad core.
-   (Varun Kapoor via Matt)
 
    HADOOP-8054 NPE with FilterFileSystem (Daryn Sharp via bobby)
 

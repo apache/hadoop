@@ -1024,7 +1024,7 @@ public class JHLogAnalyzer {
       if(testFile != null) {
         LOG.info("Start JHLA test ============ ");
         LocalFileSystem lfs = FileSystem.getLocal(conf);
-        conf.set("fs.default.name", "file:///");
+        conf.set("fs.defaultFS", "file:///");
         JHLAMapper map = new JHLAMapper(conf);
         map.parseLogFile(lfs, new Path(testFile), 0L,
                          new LoggingCollector(), Reporter.NULL);

@@ -27,12 +27,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * DataBlockScanner manages block scanning for all the block pools. For each
@@ -44,7 +44,7 @@ import org.apache.commons.logging.LogFactory;
 public class DataBlockScanner implements Runnable {
   public static final Log LOG = LogFactory.getLog(DataBlockScanner.class);
   private final DataNode datanode;
-  private final FSDataset dataset;
+  private final FSDatasetInterface dataset;
   private final Configuration conf;
   
   /**
@@ -55,7 +55,7 @@ public class DataBlockScanner implements Runnable {
     new TreeMap<String, BlockPoolSliceScanner>();
   Thread blockScannerThread = null;
   
-  DataBlockScanner(DataNode datanode, FSDataset dataset, Configuration conf) {
+  DataBlockScanner(DataNode datanode, FSDatasetInterface dataset, Configuration conf) {
     this.datanode = datanode;
     this.dataset = dataset;
     this.conf = conf;
@@ -135,7 +135,7 @@ public class DataBlockScanner implements Runnable {
               .iterator();
           while (bpidIterator.hasNext()) {
             String bpid = bpidIterator.next();
-            for (FSDataset.FSVolume vol : dataset.volumes.getVolumes()) {
+            for (FSDatasetInterface.FSVolumeInterface vol : dataset.getVolumes()) {
               try {
                 File currFile = BlockPoolSliceScanner.getCurrentFile(vol, bpid);
                 if (currFile.exists()) {

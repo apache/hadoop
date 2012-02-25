@@ -666,7 +666,10 @@ implements ResourceScheduler, CapacitySchedulerContext {
 
   private synchronized void removeNode(RMNode nodeInfo) {
     SchedulerNode node = this.nodes.get(nodeInfo.getNodeID());
-    Resources.subtractFrom(clusterResource, nodeInfo.getTotalCapability());
+    if (node == null) {
+      return;
+    }
+    Resources.subtractFrom(clusterResource, node.getRMNode().getTotalCapability());
     root.updateClusterResource(clusterResource);
     --numNodeManagers;
 
