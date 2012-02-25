@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.mapreduce.v2.util;
 
-import static org.apache.hadoop.yarn.util.StringHelper._join;
-import static org.apache.hadoop.yarn.util.StringHelper._split;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -30,7 +27,6 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -39,7 +35,11 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -50,12 +50,10 @@ import org.apache.hadoop.yarn.ContainerLogAppender;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
@@ -65,64 +63,28 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 @Private
 @Unstable
 public class MRApps extends Apps {
-  public static final String JOB = "job";
-  public static final String TASK = "task";
-  public static final String ATTEMPT = "attempt";
-
   public static String toString(JobId jid) {
-    return _join(JOB, jid.getAppId().getClusterTimestamp(), jid.getAppId().getId(), jid.getId());
+    return jid.toString();
   }
 
   public static JobId toJobID(String jid) {
-    Iterator<String> it = _split(jid).iterator();
-    return toJobID(JOB, jid, it);
-  }
-
-  // mostly useful for parsing task/attempt id like strings
-  public static JobId toJobID(String prefix, String s, Iterator<String> it) {
-    ApplicationId appId = toAppID(prefix, s, it);
-    shouldHaveNext(prefix, s, it);
-    JobId jobId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class);
-    jobId.setAppId(appId);
-    jobId.setId(Integer.parseInt(it.next()));
-    return jobId;
+    return TypeConverter.toYarn(JobID.forName(jid));
   }
 
   public static String toString(TaskId tid) {
-    return _join("task", tid.getJobId().getAppId().getClusterTimestamp(), tid.getJobId().getAppId().getId(),
-                 tid.getJobId().getId(), taskSymbol(tid.getTaskType()), tid.getId());
+    return tid.toString();
   }
 
   public static TaskId toTaskID(String tid) {
-    Iterator<String> it = _split(tid).iterator();
-    return toTaskID(TASK, tid, it);
-  }
-
-  public static TaskId toTaskID(String prefix, String s, Iterator<String> it) {
-    JobId jid = toJobID(prefix, s, it);
-    shouldHaveNext(prefix, s, it);
-    TaskId tid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class);
-    tid.setJobId(jid);
-    tid.setTaskType(taskType(it.next()));
-    shouldHaveNext(prefix, s, it);
-    tid.setId(Integer.parseInt(it.next()));
-    return tid;
+    return TypeConverter.toYarn(TaskID.forName(tid));
   }
 
   public static String toString(TaskAttemptId taid) {
-    return _join("attempt", taid.getTaskId().getJobId().getAppId().getClusterTimestamp(),
-                 taid.getTaskId().getJobId().getAppId().getId(), taid.getTaskId().getJobId().getId(),
-                 taskSymbol(taid.getTaskId().getTaskType()), taid.getTaskId().getId(), taid.getId());
+    return taid.toString(); 
   }
 
   public static TaskAttemptId toTaskAttemptID(String taid) {
-    Iterator<String> it = _split(taid).iterator();
-    TaskId tid = toTaskID(ATTEMPT, taid, it);
-    shouldHaveNext(ATTEMPT, taid, it);
-    TaskAttemptId taId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptId.class);
-    taId.setTaskId(tid);
-    taId.setId(Integer.parseInt(it.next()));
-    return taId;
+    return TypeConverter.toYarn(TaskAttemptID.forName(taid));
   }
 
   public static String taskSymbol(TaskType type) {

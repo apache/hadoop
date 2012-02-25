@@ -43,18 +43,18 @@ public class TestMRApps {
   @Test public void testJobIDtoString() {
     JobId jid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class);
     jid.setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
-    assertEquals("job_0_0_0", MRApps.toString(jid));
+    assertEquals("job_0_0000", MRApps.toString(jid));
   }
 
   @Test public void testToJobID() {
-    JobId jid = MRApps.toJobID("job_1_1_1");
+    JobId jid = MRApps.toJobID("job_1_1");
     assertEquals(1, jid.getAppId().getClusterTimestamp());
     assertEquals(1, jid.getAppId().getId());
-    assertEquals(1, jid.getId());
+    assertEquals(1, jid.getId()); // tests against some proto.id and not a job.id field
   }
 
-  @Test(expected=YarnException.class) public void testJobIDShort() {
-    MRApps.toJobID("job_0_0");
+  @Test(expected=IllegalArgumentException.class) public void testJobIDShort() {
+    MRApps.toJobID("job_0_0_0");
   }
 
   //TODO_get.set
@@ -68,29 +68,29 @@ public class TestMRApps {
     type = TaskType.REDUCE;
     System.err.println(type);
     System.err.println(tid.getTaskType());
-    assertEquals("task_0_0_0_m_0", MRApps.toString(tid));
+    assertEquals("task_0_0000_m_000000", MRApps.toString(tid));
     tid.setTaskType(TaskType.REDUCE);
-    assertEquals("task_0_0_0_r_0", MRApps.toString(tid));
+    assertEquals("task_0_0000_r_000000", MRApps.toString(tid));
   }
 
   @Test public void testToTaskID() {
-    TaskId tid = MRApps.toTaskID("task_1_2_3_r_4");
+    TaskId tid = MRApps.toTaskID("task_1_2_r_3");
     assertEquals(1, tid.getJobId().getAppId().getClusterTimestamp());
     assertEquals(2, tid.getJobId().getAppId().getId());
-    assertEquals(3, tid.getJobId().getId());
+    assertEquals(2, tid.getJobId().getId());
     assertEquals(TaskType.REDUCE, tid.getTaskType());
-    assertEquals(4, tid.getId());
+    assertEquals(3, tid.getId());
 
-    tid = MRApps.toTaskID("task_1_2_3_m_4");
+    tid = MRApps.toTaskID("task_1_2_m_3");
     assertEquals(TaskType.MAP, tid.getTaskType());
   }
 
-  @Test(expected=YarnException.class) public void testTaskIDShort() {
-    MRApps.toTaskID("task_0_0_0_m");
+  @Test(expected=IllegalArgumentException.class) public void testTaskIDShort() {
+    MRApps.toTaskID("task_0_0000_m");
   }
 
-  @Test(expected=YarnException.class) public void testTaskIDBadType() {
-    MRApps.toTaskID("task_0_0_0_x_0");
+  @Test(expected=IllegalArgumentException.class) public void testTaskIDBadType() {
+    MRApps.toTaskID("task_0_0000_x_000000");
   }
 
   //TODO_get.set
@@ -100,19 +100,19 @@ public class TestMRApps {
     taid.getTaskId().setTaskType(TaskType.MAP);
     taid.getTaskId().setJobId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class));
     taid.getTaskId().getJobId().setAppId(RecordFactoryProvider.getRecordFactory(null).newRecordInstance(ApplicationId.class));
-    assertEquals("attempt_0_0_0_m_0_0", MRApps.toString(taid));
+    assertEquals("attempt_0_0000_m_000000_0", MRApps.toString(taid));
   }
 
   @Test public void testToTaskAttemptID() {
-    TaskAttemptId taid = MRApps.toTaskAttemptID("attempt_0_1_2_m_3_4");
+    TaskAttemptId taid = MRApps.toTaskAttemptID("attempt_0_1_m_2_3");
     assertEquals(0, taid.getTaskId().getJobId().getAppId().getClusterTimestamp());
     assertEquals(1, taid.getTaskId().getJobId().getAppId().getId());
-    assertEquals(2, taid.getTaskId().getJobId().getId());
-    assertEquals(3, taid.getTaskId().getId());
-    assertEquals(4, taid.getId());
+    assertEquals(1, taid.getTaskId().getJobId().getId());
+    assertEquals(2, taid.getTaskId().getId());
+    assertEquals(3, taid.getId());
   }
 
-  @Test(expected=YarnException.class) public void testTaskAttemptIDShort() {
+  @Test(expected=IllegalArgumentException.class) public void testTaskAttemptIDShort() {
     MRApps.toTaskAttemptID("attempt_0_0_0_m_0");
   }
 
