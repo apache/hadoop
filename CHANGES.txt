@@ -16,6 +16,9 @@ Release 1.0.2 - unreleased
     MAPREDUCE-3583. Change pid to String and stime to BigInteger in order to
     avoid NumberFormatException caused by overflow.  (Zhihong Yu via szetszwo)
 
+    HDFS-3006. In WebHDFS, when the return body is empty, set the Content-Type
+    to application/octet-stream instead of application/json.  (szetszwo)
+
 Release 1.0.1 - 2012.02.14
 
   NEW FEATURES
