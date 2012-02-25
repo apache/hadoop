@@ -166,4 +166,12 @@ public interface NameNodeMXBean {
    * @return the block pool id
    */
   public String getBlockPoolId();
+
+  /**
+   * Get status information about the directories storing image and edits logs
+   * of the NN.
+   * 
+   * @return the name dir status information, as a JSON string.
+   */
+  public String getNameDirStatuses();
 }
