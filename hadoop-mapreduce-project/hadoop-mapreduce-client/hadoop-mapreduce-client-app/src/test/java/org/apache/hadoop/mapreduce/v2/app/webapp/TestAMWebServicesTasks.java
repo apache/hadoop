@@ -424,7 +424,8 @@ public class TestAMWebServicesTasks extends JerseyTest {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringMatch("exception message",
-            "java.lang.Exception: Error parsing task ID: bogustaskid", message);
+            "java.lang.Exception: TaskId string : "
+                + "bogustaskid is not properly formed", message);
         WebServicesTestUtils.checkStringMatch("exception type",
             "NotFoundException", type);
         WebServicesTestUtils.checkStringMatch("exception classname",
@@ -439,7 +440,7 @@ public class TestAMWebServicesTasks extends JerseyTest {
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-      String tid = "task_1234_0_0_m_0";
+      String tid = "task_0_0000_m_000000";
       try {
         r.path("ws").path("v1").path("mapreduce").path("jobs").path(jobId)
             .path("tasks").path(tid).get(JSONObject.class);
@@ -455,7 +456,7 @@ public class TestAMWebServicesTasks extends JerseyTest {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringMatch("exception message",
-            "java.lang.Exception: task not found with id task_1234_0_0_m_0",
+            "java.lang.Exception: task not found with id task_0_0000_m_000000",
             message);
         WebServicesTestUtils.checkStringMatch("exception type",
             "NotFoundException", type);
@@ -471,7 +472,7 @@ public class TestAMWebServicesTasks extends JerseyTest {
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-      String tid = "task_1234_0_0_d_0";
+      String tid = "task_0_0000_d_000000";
       try {
         r.path("ws").path("v1").path("mapreduce").path("jobs").path(jobId)
             .path("tasks").path(tid).get(JSONObject.class);
@@ -487,7 +488,8 @@ public class TestAMWebServicesTasks extends JerseyTest {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringMatch("exception message",
-            "java.lang.Exception: Unknown task symbol: d", message);
+            "java.lang.Exception: Bad TaskType identifier. TaskId string : "
+                + "task_0_0000_d_000000 is not properly formed.", message);
         WebServicesTestUtils.checkStringMatch("exception type",
             "NotFoundException", type);
         WebServicesTestUtils.checkStringMatch("exception classname",
@@ -502,7 +504,7 @@ public class TestAMWebServicesTasks extends JerseyTest {
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-      String tid = "task_1234_0_m_0";
+      String tid = "task_0_m_000000";
       try {
         r.path("ws").path("v1").path("mapreduce").path("jobs").path(jobId)
             .path("tasks").path(tid).get(JSONObject.class);
@@ -518,7 +520,8 @@ public class TestAMWebServicesTasks extends JerseyTest {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringMatch("exception message",
-            "java.lang.Exception: For input string: \"m\"", message);
+            "java.lang.Exception: TaskId string : "
+                + "task_0_m_000000 is not properly formed", message);
         WebServicesTestUtils.checkStringMatch("exception type",
             "NotFoundException", type);
         WebServicesTestUtils.checkStringMatch("exception classname",
@@ -533,7 +536,7 @@ public class TestAMWebServicesTasks extends JerseyTest {
     Map<JobId, Job> jobsMap = appContext.getAllJobs();
     for (JobId id : jobsMap.keySet()) {
       String jobId = MRApps.toString(id);
-      String tid = "task_1234_0_0_m";
+      String tid = "task_0_0000_m";
       try {
         r.path("ws").path("v1").path("mapreduce").path("jobs").path(jobId)
             .path("tasks").path(tid).get(JSONObject.class);
@@ -549,8 +552,8 @@ public class TestAMWebServicesTasks extends JerseyTest {
         String type = exception.getString("exception");
         String classname = exception.getString("javaClassName");
         WebServicesTestUtils.checkStringMatch("exception message",
-            "java.lang.Exception: Error parsing task ID: task_1234_0_0_m",
-            message);
+            "java.lang.Exception: TaskId string : "
+                + "task_0_0000_m is not properly formed", message);
         WebServicesTestUtils.checkStringMatch("exception type",
             "NotFoundException", type);
         WebServicesTestUtils.checkStringMatch("exception classname",

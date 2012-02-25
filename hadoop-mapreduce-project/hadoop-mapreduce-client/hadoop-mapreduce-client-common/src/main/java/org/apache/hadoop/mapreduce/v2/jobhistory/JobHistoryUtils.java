@@ -506,11 +506,9 @@ public class JobHistoryUtils {
       sb.append(address.getHostName());
     }
     sb.append(":").append(address.getPort());
-    sb.append("/jobhistory/job/"); // TODO This will change when the history server
-                            // understands apps.
-    // TOOD Use JobId toString once UI stops using _id_id
-    sb.append("job_").append(appId.getClusterTimestamp());
-    sb.append("_").append(appId.getId()).append("_").append(appId.getId());
+    sb.append("/jobhistory/job/");
+    JobID jobId = TypeConverter.fromYarn(appId);
+    sb.append(jobId.toString());
     return sb.toString();
   }
 }
