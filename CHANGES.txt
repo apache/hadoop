@@ -6,6 +6,9 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-3118. Backport Gridmix and Rumen features to
                     branch-0.20-security (Ravi Gummadi via amarrk)
+
+    HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
+
   BUG FIXES
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
