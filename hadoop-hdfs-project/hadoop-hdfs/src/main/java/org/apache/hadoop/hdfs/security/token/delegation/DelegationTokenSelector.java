@@ -59,6 +59,11 @@ public class DelegationTokenSelector
         new InetSocketAddress(nnAddr.getHostName(), nnRpcPort));
     return INSTANCE.selectToken(serviceName, ugi.getTokens());
   }
+  
+  public static Token<DelegationTokenIdentifier> selectHdfsDelegationToken(
+      Text serviceName, UserGroupInformation ugi) {
+    return INSTANCE.selectToken(serviceName, ugi.getTokens());
+  }
 
   public DelegationTokenSelector() {
     super(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);

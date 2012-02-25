@@ -230,3 +230,5 @@ HDFS-2973. Re-enable NO_ACK optimization for block deletion. (todd)
 HDFS-2922. HA: close out operation categories (eli)
 
 HDFS-2993. HA: BackupNode#checkOperation should permit CHECKPOINT operations (eli)
+
+HDFS-2904. Client support for getting delegation tokens. (todd)

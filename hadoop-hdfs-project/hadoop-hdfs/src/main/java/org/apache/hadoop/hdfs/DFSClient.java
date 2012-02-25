@@ -30,6 +30,7 @@ import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -60,6 +61,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+
+import org.apache.hadoop.hdfs.HAUtil.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -107,6 +110,8 @@ import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
+import com.google.common.base.Preconditions;
+
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
  * perform basic file tasks.  It uses the ClientProtocol
@@ -124,7 +129,9 @@ public class DFSClient implements java.io.Closeable {
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   final ClientProtocol namenode;
-  private final InetSocketAddress nnAddress;
+  /* The service used for delegation tokens */
+  private Text dtService;
+
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   private volatile FsServerDefaults serverDefaults;
@@ -308,29 +315,22 @@ public class DFSClient implements java.io.Closeable {
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
     
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
-    ClientProtocol failoverNNProxy = (ClientProtocol) HAUtil
-        .createFailoverProxy(conf, nameNodeUri, ClientProtocol.class);
-    if (nameNodeUri != null && failoverNNProxy != null) {
-      this.namenode = failoverNNProxy;
-      nnAddress = null;
-    } else if (nameNodeUri != null && rpcNamenode == null) {
-      this.namenode = DFSUtil.createNamenode(NameNode.getAddress(nameNodeUri), conf);
-
-      // TODO(HA): This doesn't really apply in the case of HA. Need to get smart
-      // about tokens in an HA setup, generally.
-      nnAddress = NameNode.getAddress(nameNodeUri);
-    } else if (nameNodeUri == null && rpcNamenode != null) {
-      //This case is used for testing.
+    
+    
+    if (rpcNamenode != null) {
+      // This case is used for testing.
+      Preconditions.checkArgument(nameNodeUri == null);
       this.namenode = rpcNamenode;
-
-      // TODO(HA): This doesn't really apply in the case of HA. Need to get smart
-      // about tokens in an HA setup, generally.
-      nnAddress = null; 
+      dtService = null;
     } else {
-      throw new IllegalArgumentException(
-          "Expecting exactly one of nameNodeUri and rpcNamenode being null: "
-          + "nameNodeUri=" + nameNodeUri + ", rpcNamenode=" + rpcNamenode);
+      Preconditions.checkArgument(nameNodeUri != null,
+          "null URI");
+      ProxyAndInfo<ClientProtocol> proxyInfo =
+        HAUtil.createProxy(conf, nameNodeUri, ClientProtocol.class);
+      this.dtService = proxyInfo.getDelegationTokenService();
+      this.namenode = proxyInfo.getProxy();
     }
+
     // read directly from the block file if configured.
     this.shortCircuitLocalReads = conf.getBoolean(
         DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
@@ -523,11 +523,13 @@ public class DFSClient implements java.io.Closeable {
    */
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    Token<DelegationTokenIdentifier> result =
+    assert dtService != null;
+    Token<DelegationTokenIdentifier> token =
       namenode.getDelegationToken(renewer);
-    SecurityUtil.setTokenService(result, nnAddress);
-    LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(result));
-    return result;
+    token.setService(this.dtService);
+
+    LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(token));
+    return token;
   }
 
   /**
@@ -658,13 +660,8 @@ public class DFSClient implements java.io.Closeable {
     @Override
     public long renew(Token<?> token, Configuration conf) throws IOException {
       Token<DelegationTokenIdentifier> delToken = 
-          (Token<DelegationTokenIdentifier>) token;
-      LOG.info("Renewing " + 
-               DelegationTokenIdentifier.stringifyToken(delToken));
-      ClientProtocol nn = 
-        DFSUtil.createNamenode
-           (SecurityUtil.getTokenServiceAddr(delToken),
-            conf, UserGroupInformation.getCurrentUser());
+        (Token<DelegationTokenIdentifier>) token;
+      ClientProtocol nn = getNNProxy(delToken, conf);
       try {
         return nn.renewDelegationToken(delToken);
       } catch (RemoteException re) {
@@ -680,15 +677,38 @@ public class DFSClient implements java.io.Closeable {
           (Token<DelegationTokenIdentifier>) token;
       LOG.info("Cancelling " + 
                DelegationTokenIdentifier.stringifyToken(delToken));
-      ClientProtocol nn = DFSUtil.createNamenode(
-          SecurityUtil.getTokenServiceAddr(delToken), conf,
-          UserGroupInformation.getCurrentUser());
+      ClientProtocol nn = getNNProxy(delToken, conf);
       try {
         nn.cancelDelegationToken(delToken);
       } catch (RemoteException re) {
         throw re.unwrapRemoteException(InvalidToken.class,
             AccessControlException.class);
       }
+    }
+    
+    private static ClientProtocol getNNProxy(
+        Token<DelegationTokenIdentifier> token, Configuration conf)
+        throws IOException {
+      URI uri = HAUtil.getServiceUriFromToken(token);
+      if (HAUtil.isTokenForLogicalUri(token) &&
+          !HAUtil.isLogicalUri(conf, uri)) {
+        // If the token is for a logical nameservice, but the configuration
+        // we have disagrees about that, we can't actually renew it.
+        // This can be the case in MR, for example, if the RM doesn't
+        // have all of the HA clusters configured in its configuration.
+        throw new IOException("Unable to map logical nameservice URI '" +
+            uri + "' to a NameNode. Local configuration does not have " +
+            "a failover proxy provider configured.");
+      }
+      
+      ProxyAndInfo<ClientProtocol> info =
+        HAUtil.createProxy(conf, uri, ClientProtocol.class);
+      assert info.getDelegationTokenService().equals(token.getService()) :
+        "Returned service '" + info.getDelegationTokenService().toString() +
+        "' doesn't match expected service '" +
+        token.getService().toString() + "'";
+        
+      return info.getProxy();
     }
 
     @Override

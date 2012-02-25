@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
@@ -95,6 +96,11 @@ public class ConfiguredFailoverProxyProvider<T> implements
       
       for (InetSocketAddress address : addressesInNN.values()) {
         proxies.add(new AddressRpcProxyPair<T>(address));
+        
+        // The client may have a delegation token set for the logical
+        // URI of the cluster. Clone this token to apply to each of the
+        // underlying IPC addresses so that the IPC code can find it.
+        HAUtil.cloneDelegationTokenForLogicalUri(ugi, uri, address);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);

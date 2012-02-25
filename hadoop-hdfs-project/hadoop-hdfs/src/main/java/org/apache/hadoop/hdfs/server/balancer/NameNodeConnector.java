@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -44,7 +43,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 
@@ -76,21 +74,13 @@ class NameNodeConnector {
       Configuration conf) throws IOException {
     this.namenodeAddress = Lists.newArrayList(haNNs).get(0);
     URI nameNodeUri = NameNode.getUri(this.namenodeAddress);
-    NamenodeProtocol failoverNamenode = (NamenodeProtocol) HAUtil
-        .createFailoverProxy(conf, nameNodeUri, NamenodeProtocol.class);
-    if (null != failoverNamenode) {
-      this.namenode = failoverNamenode;
-    } else {
-      this.namenode = DFSUtil.createNNProxyWithNamenodeProtocol(
-          this.namenodeAddress, conf, UserGroupInformation.getCurrentUser());
-    }
-    ClientProtocol failOverClient = (ClientProtocol) HAUtil
-        .createFailoverProxy(conf, nameNodeUri, ClientProtocol.class);
-    if (null != failOverClient) {
-      this.client = failOverClient;
-    } else {
-      this.client = DFSUtil.createNamenode(conf);
-    }
+    
+    this.namenode =
+      HAUtil.createProxy(conf, nameNodeUri, NamenodeProtocol.class)
+        .getProxy();
+    this.client =
+      HAUtil.createProxy(conf, nameNodeUri, ClientProtocol.class)
+        .getProxy();
     this.fs = FileSystem.get(nameNodeUri, conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
