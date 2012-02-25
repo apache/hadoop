@@ -28,6 +28,7 @@ public enum RMNodeEventType {
   // ResourceTrackerService
   STATUS_UPDATE,
   REBOOTING,
+  RECONNECTED,
 
   // Source: Application
   CLEANUP_APP,

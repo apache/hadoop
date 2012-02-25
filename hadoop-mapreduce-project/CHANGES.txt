@@ -36,6 +36,7 @@ Release 0.23.2 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
     MAPREDUCE-3849. Change TokenCache's reading of the binary token file
     (Daryn Sharp via bobby)
 
@@ -45,9 +46,17 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3877 Add a test to formalise the current state transitions
     of the yarn lifecycle. (stevel)
 
+    MAPREDUCE-3866. Fixed the bin/yarn script to not print the command line
+    unnecessarily. (vinodkv)
+
+    MAPREDUCE-3730. Modified RM to allow restarted NMs to be able to join the
+    cluster without waiting for expiry. (Jason Lowe via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
+    MAPREDUCE-3918  proc_historyserver no longer in command line arguments for
+    HistoryServer (Jon Eagles via bobby)
 
     MAPREDUCE-3862.  Nodemanager can appear to hang on shutdown due to lingering
     DeletionService threads (Jason Lowe via bobby)
@@ -74,6 +83,13 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3878. Null user on filtered jobhistory job page (Jonathon Eagles
     via tgraves)
+
+    MAPREDUCE-3738. MM can hang during shutdown if AppLogAggregatorImpl thread
+    dies unexpectedly (Jason Lowe via sseth)
+
+    MAPREDUCE-3904 Job history produced with mapreduce.cluster.acls.enabled
+    false can not be viewed with mapreduce.cluster.acls.enabled true 
+    (Jonathon Eagles via tgraves)
  
 Release 0.23.1 - 2012-02-17 
 

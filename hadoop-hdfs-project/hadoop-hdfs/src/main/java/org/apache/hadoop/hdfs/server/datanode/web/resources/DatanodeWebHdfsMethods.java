@@ -117,7 +117,7 @@ public class DatanodeWebHdfsMethods {
   @PUT
   @Path("/")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response putRoot(
       final InputStream in,
       @Context final UserGroupInformation ugi,
@@ -147,7 +147,7 @@ public class DatanodeWebHdfsMethods {
   @PUT
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response put(
       final InputStream in,
       @Context final UserGroupInformation ugi,
@@ -209,7 +209,7 @@ public class DatanodeWebHdfsMethods {
       final InetSocketAddress nnHttpAddr = NameNode.getHttpAddress(conf);
       final URI uri = new URI(WebHdfsFileSystem.SCHEME, null,
           nnHttpAddr.getHostName(), nnHttpAddr.getPort(), fullpath, null, null);
-      return Response.created(uri).type(MediaType.APPLICATION_JSON).build();
+      return Response.created(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
@@ -222,7 +222,7 @@ public class DatanodeWebHdfsMethods {
   @POST
   @Path("/")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response postRoot(
       final InputStream in,
       @Context final UserGroupInformation ugi,
@@ -243,7 +243,7 @@ public class DatanodeWebHdfsMethods {
   @POST
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response post(
       final InputStream in,
       @Context final UserGroupInformation ugi,
@@ -287,7 +287,7 @@ public class DatanodeWebHdfsMethods {
         IOUtils.cleanup(LOG, out);
         IOUtils.cleanup(LOG, dfsclient);
       }
-      return Response.ok().type(MediaType.APPLICATION_JSON).build();
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
