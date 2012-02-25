@@ -408,36 +408,40 @@ public class TestHsWebServicesAttempts extends JerseyTest {
   public void testTaskAttemptIdBogus() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric("bogusid",
-        "java.lang.Exception: Error parsing attempt ID: bogusid");
+        "java.lang.Exception: TaskAttemptId string : "
+            + "bogusid is not properly formed");
   }
 
   @Test
   public void testTaskAttemptIdNonExist() throws JSONException, Exception {
 
     testTaskAttemptIdErrorGeneric(
-        "attempt_12345_0_0_r_1_0",
-        "java.lang.Exception: Error getting info on task attempt id attempt_12345_0_0_r_1_0");
+        "attempt_0_1234_m_000000_0",
+        "java.lang.Exception: Error getting info on task attempt id attempt_0_1234_m_000000_0");
   }
 
   @Test
   public void testTaskAttemptIdInvalid() throws JSONException, Exception {
 
-    testTaskAttemptIdErrorGeneric("attempt_12345_0_0_d_1_0",
-        "java.lang.Exception: Unknown task symbol: d");
+    testTaskAttemptIdErrorGeneric("attempt_0_1234_d_000000_0",
+        "java.lang.Exception: Bad TaskType identifier. TaskAttemptId string : "
+            + "attempt_0_1234_d_000000_0 is not properly formed.");
   }
 
   @Test
   public void testTaskAttemptIdInvalid2() throws JSONException, Exception {
 
-    testTaskAttemptIdErrorGeneric("attempt_12345_0_r_1_0",
-        "java.lang.Exception: For input string: \"r\"");
+    testTaskAttemptIdErrorGeneric("attempt_1234_m_000000_0",
+        "java.lang.Exception: TaskAttemptId string : "
+            + "attempt_1234_m_000000_0 is not properly formed");
   }
 
   @Test
   public void testTaskAttemptIdInvalid3() throws JSONException, Exception {
 
-    testTaskAttemptIdErrorGeneric("attempt_12345_0_0_r_1",
-        "java.lang.Exception: Error parsing attempt ID: attempt_12345_0_0_r_1");
+    testTaskAttemptIdErrorGeneric("attempt_0_1234_m_000000",
+        "java.lang.Exception: TaskAttemptId string : "
+            + "attempt_0_1234_m_000000 is not properly formed");
   }
 
   private void testTaskAttemptIdErrorGeneric(String attid, String error)

@@ -35,6 +35,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3730. Modified RM to allow restarted NMs to be able to join the
     cluster without waiting for expiry. (Jason Lowe via vinodkv)
 
+    MAPREDUCE-2793. Corrected AppIDs, JobIDs, TaskAttemptIDs to be of correct
+    format on the web pages. (Bikas Saha via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
