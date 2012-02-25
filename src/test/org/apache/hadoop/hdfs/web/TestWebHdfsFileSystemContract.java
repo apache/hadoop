@@ -27,6 +27,7 @@ import java.net.URL;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -335,6 +336,8 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       conn.setRequestMethod(op.getType().toString());
       conn.connect();
       assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
+      assertEquals(0, conn.getContentLength());
+      assertEquals(MediaType.APPLICATION_OCTET_STREAM, conn.getContentType());
       assertEquals((short)0755, webhdfs.getFileStatus(dir).getPermission().toShort());
       conn.disconnect();
     }
