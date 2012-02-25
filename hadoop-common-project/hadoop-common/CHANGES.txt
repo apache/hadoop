@@ -1,10 +1,23 @@
 Hadoop Change Log
 
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.2 - UNRELEASED
 
   NEW FEATURES
 
   IMPROVEMENTS
+
     HADOOP-8048. Allow merging of Credentials (Daryn Sharp via tgraves)
  
     HADOOP-8032. mvn site:stage-deploy should be able to use the scp protocol
@@ -14,6 +27,7 @@ Release 0.23.2 - UNRELEASED
     (szetszwo)
 
   OPTIMIZATIONS
+
     HADOOP-8071. Avoid an extra packet in client code when nagling is
     disabled. (todd)
 

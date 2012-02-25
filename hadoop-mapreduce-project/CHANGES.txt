@@ -1,5 +1,17 @@
 Hadoop MapReduce Change Log
 
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -26,6 +38,7 @@ Release 0.23.2 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
     MAPREDUCE-3918  proc_historyserver no longer in command line arguments for
     HistoryServer (Jon Eagles via bobby)
 
