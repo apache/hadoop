@@ -215,7 +215,7 @@ public class NamenodeWebHdfsMethods {
   @PUT
   @Path("/")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response putRoot(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -263,7 +263,7 @@ public class NamenodeWebHdfsMethods {
   @PUT
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response put(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -324,7 +324,7 @@ public class NamenodeWebHdfsMethods {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
           fullpath, op.getValue(), -1L,
           permission, overwrite, bufferSize, replication, blockSize);
-      return Response.temporaryRedirect(uri).build();
+      return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     } 
     case MKDIRS:
     {
@@ -336,7 +336,7 @@ public class NamenodeWebHdfsMethods {
     {
       np.createSymlink(destination.getValue(), fullpath,
           PermissionParam.getDefaultFsPermission(), createParent.getValue());
-      return Response.ok().type(MediaType.APPLICATION_JSON).build();
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case RENAME:
     {
@@ -348,7 +348,7 @@ public class NamenodeWebHdfsMethods {
       } else {
         np.rename2(fullpath, destination.getValue(),
             s.toArray(new Options.Rename[s.size()]));
-        return Response.ok().type(MediaType.APPLICATION_JSON).build();
+        return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
       }
     }
     case SETREPLICATION:
@@ -364,17 +364,17 @@ public class NamenodeWebHdfsMethods {
       }
 
       np.setOwner(fullpath, owner.getValue(), group.getValue());
-      return Response.ok().type(MediaType.APPLICATION_JSON).build();
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case SETPERMISSION:
     {
       np.setPermission(fullpath, permission.getFsPermission());
-      return Response.ok().type(MediaType.APPLICATION_JSON).build();
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case SETTIMES:
     {
       np.setTimes(fullpath, modificationTime.getValue(), accessTime.getValue());
-      return Response.ok().type(MediaType.APPLICATION_JSON).build();
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case RENEWDELEGATIONTOKEN:
     {
@@ -389,7 +389,7 @@ public class NamenodeWebHdfsMethods {
       final Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>();
       token.decodeFromUrlString(delegationTokenArgument.getValue());
       np.cancelDelegationToken(token);
-      return Response.ok().type(MediaType.APPLICATION_JSON).build();
+      return Response.ok().type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
@@ -406,7 +406,7 @@ public class NamenodeWebHdfsMethods {
   @POST
   @Path("/")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response postRoot(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -427,7 +427,7 @@ public class NamenodeWebHdfsMethods {
   @POST
   @Path("{" + UriFsPathParam.NAME + ":.*}")
   @Consumes({"*/*"})
-  @Produces({MediaType.APPLICATION_JSON})
+  @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
   public Response post(
       @Context final UserGroupInformation ugi,
       @QueryParam(DelegationParam.NAME) @DefaultValue(DelegationParam.DEFAULT)
@@ -459,7 +459,7 @@ public class NamenodeWebHdfsMethods {
     {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
           fullpath, op.getValue(), -1L, bufferSize);
-      return Response.temporaryRedirect(uri).build();
+      return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
@@ -542,7 +542,7 @@ public class NamenodeWebHdfsMethods {
     {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
           fullpath, op.getValue(), offset.getValue(), offset, length, bufferSize);
-      return Response.temporaryRedirect(uri).build();
+      return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case GET_BLOCK_LOCATIONS:
     {
@@ -578,7 +578,7 @@ public class NamenodeWebHdfsMethods {
     {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
           fullpath, op.getValue(), -1L);
-      return Response.temporaryRedirect(uri).build();
+      return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case GETDELEGATIONTOKEN:
     {
