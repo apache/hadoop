@@ -119,10 +119,11 @@ public class TestLeafQueue {
   private static final String B = "b";
   private static final String C = "c";
   private static final String C1 = "c1";
+  private static final String D = "d";
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C});
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
     conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     conf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     conf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
@@ -133,7 +134,7 @@ public class TestLeafQueue {
     conf.setAcl(Q_A, QueueACL.SUBMIT_APPLICATIONS, "*");
     
     final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
-    conf.setCapacity(Q_B, 90);
+    conf.setCapacity(Q_B, 80);
     conf.setMaximumCapacity(Q_B, 99);
     conf.setAcl(Q_B, QueueACL.SUBMIT_APPLICATIONS, "*");
 
@@ -146,6 +147,11 @@ public class TestLeafQueue {
 
     final String Q_C1 = Q_C + "." + C1;
     conf.setCapacity(Q_C1, 100);
+
+    final String Q_D = CapacitySchedulerConfiguration.ROOT + "." + D;
+    conf.setCapacity(Q_D, 10);
+    conf.setMaximumCapacity(Q_D, 11);
+    conf.setAcl(Q_D, QueueACL.SUBMIT_APPLICATIONS, "user_d");
     
   }
 
@@ -202,8 +208,8 @@ public class TestLeafQueue {
 	  assertEquals(0.2, a.getAbsoluteMaximumCapacity(), epsilon);
 	  
 	  LeafQueue b = stubLeafQueue((LeafQueue)queues.get(B));
-	  assertEquals(0.9, b.getCapacity(), epsilon);
-	  assertEquals(0.9, b.getAbsoluteCapacity(), epsilon);
+	  assertEquals(0.80, b.getCapacity(), epsilon);
+	  assertEquals(0.80, b.getAbsoluteCapacity(), epsilon);
 	  assertEquals(0.99, b.getMaximumCapacity(), epsilon);
 	  assertEquals(0.99, b.getAbsoluteMaximumCapacity(), epsilon);
 
@@ -257,8 +263,33 @@ public class TestLeafQueue {
     
     // Only 1 container
     a.assignContainers(clusterResource, node_0);
-    assertEquals(7*GB, a.getMetrics().getAvailableMB());
+    assertEquals(6*GB, a.getMetrics().getAvailableMB());
   }
+
+  @Test
+  public void testUserQueueAcl() throws Exception {
+
+    // Manipulate queue 'a'
+    LeafQueue d = stubLeafQueue((LeafQueue) queues.get(D));
+
+    // Users
+    final String user_d = "user_d";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 = TestUtils
+        .getMockApplicationAttemptId(0, 1);
+    SchedulerApp app_0 = new SchedulerApp(appAttemptId_0, user_d, d, null,
+        rmContext, null);
+    d.submitApplication(app_0, user_d, D);
+
+    // Attempt the same application again
+    final ApplicationAttemptId appAttemptId_1 = TestUtils
+        .getMockApplicationAttemptId(0, 2);
+    SchedulerApp app_1 = new SchedulerApp(appAttemptId_1, user_d, d, null,
+        rmContext, null);
+    d.submitApplication(app_1, user_d, D); // same user
+  }
+
 
   @Test
   public void testAppAttemptMetrics() throws Exception {
