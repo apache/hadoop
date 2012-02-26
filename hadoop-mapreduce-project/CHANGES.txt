@@ -80,6 +80,10 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-3910. Fixed a bug in CapacityScheduler LeafQueue which was causing
     app-submission to fail. (John George via vinodkv)
+
+    MAPREDUCE-3686. Fixed two bugs in Counters because of which web app displays
+    zero counter values for framework counters. (Bhallamudi Venkata Siva Kamesh
+    via vinodkv)
  
 Release 0.23.1 - 2012-02-17 
 
