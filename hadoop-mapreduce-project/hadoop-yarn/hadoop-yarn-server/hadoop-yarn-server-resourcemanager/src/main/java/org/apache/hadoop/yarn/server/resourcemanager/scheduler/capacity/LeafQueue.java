@@ -572,12 +572,7 @@ public class LeafQueue implements CSQueue {
     // Careful! Locking order is important!
 
     // Check queue ACLs
-    UserGroupInformation userUgi;
-    try {
-      userUgi = UserGroupInformation.getCurrentUser();
-    } catch (IOException ioe) {
-      throw new AccessControlException(ioe);
-    }
+    UserGroupInformation userUgi = UserGroupInformation.createRemoteUser(userName);
     if (!hasAccess(QueueACL.SUBMIT_APPLICATIONS, userUgi)) {
       throw new AccessControlException("User " + userName + " cannot submit" +
           " applications to queue " + getQueuePath());
