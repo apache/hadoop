@@ -77,6 +77,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3904 Job history produced with mapreduce.cluster.acls.enabled
     false can not be viewed with mapreduce.cluster.acls.enabled true 
     (Jonathon Eagles via tgraves)
+
+    MAPREDUCE-3910. Fixed a bug in CapacityScheduler LeafQueue which was causing
+    app-submission to fail. (John George via vinodkv)
  
 Release 0.23.1 - 2012-02-17 
 
