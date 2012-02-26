@@ -122,6 +122,20 @@ Release 0.23-PB - Unreleased
     HDFS-2968. Protocol translator for BlockRecoveryCommand broken when
     multiple blocks need recovery. (todd)
 
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

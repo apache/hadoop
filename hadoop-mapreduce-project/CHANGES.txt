@@ -29,6 +29,18 @@ Release 0.23-PB - Unreleased
    MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas Graves 
    via mahadev)
 
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -52,9 +64,13 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3730. Modified RM to allow restarted NMs to be able to join the
     cluster without waiting for expiry. (Jason Lowe via vinodkv)
 
+    MAPREDUCE-2793. Corrected AppIDs, JobIDs, TaskAttemptIDs to be of correct
+    format on the web pages. (Bikas Saha via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
     MAPREDUCE-3918  proc_historyserver no longer in command line arguments for
     HistoryServer (Jon Eagles via bobby)
 
@@ -90,6 +106,13 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3904 Job history produced with mapreduce.cluster.acls.enabled
     false can not be viewed with mapreduce.cluster.acls.enabled true 
     (Jonathon Eagles via tgraves)
+
+    MAPREDUCE-3910. Fixed a bug in CapacityScheduler LeafQueue which was causing
+    app-submission to fail. (John George via vinodkv)
+
+    MAPREDUCE-3686. Fixed two bugs in Counters because of which web app displays
+    zero counter values for framework counters. (Bhallamudi Venkata Siva Kamesh
+    via vinodkv)
  
 Release 0.23.1 - 2012-02-17 
 

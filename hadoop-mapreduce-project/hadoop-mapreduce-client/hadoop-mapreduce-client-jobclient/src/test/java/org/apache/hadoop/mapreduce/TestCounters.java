@@ -70,6 +70,29 @@ public class TestCounters {
       testMaxGroups(new Counters());
     }
   }
+  
+  @Test
+  public void testCountersIncrement() {
+    Counters fCounters = new Counters();
+    Counter fCounter = fCounters.findCounter(FRAMEWORK_COUNTER);
+    fCounter.setValue(100);
+    Counter gCounter = fCounters.findCounter("test", "foo");
+    gCounter.setValue(200);
+
+    Counters counters = new Counters();
+    counters.incrAllCounters(fCounters);
+    Counter counter;
+    for (CounterGroup cg : fCounters) {
+      CounterGroup group = counters.getGroup(cg.getName());
+      if (group.getName().equals("test")) {
+        counter = counters.findCounter("test", "foo");
+        assertEquals(200, counter.getValue());
+      } else {
+        counter = counters.findCounter(FRAMEWORK_COUNTER);
+        assertEquals(100, counter.getValue());
+      }
+    }
+  }
 
   static final Enum<?> FRAMEWORK_COUNTER = TaskCounter.CPU_MILLISECONDS;
   static final long FRAMEWORK_COUNTER_VALUE = 8;

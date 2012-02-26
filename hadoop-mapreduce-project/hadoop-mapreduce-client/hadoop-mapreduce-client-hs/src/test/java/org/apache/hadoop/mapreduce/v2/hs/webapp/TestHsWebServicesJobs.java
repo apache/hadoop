@@ -367,7 +367,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
 
     try {
       r.path("ws").path("v1").path("history").path("mapreduce").path("jobs")
-          .path("job_1234_1_2").get(JSONObject.class);
+          .path("job_0_1234").get(JSONObject.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -380,7 +380,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "java.lang.Exception: job, job_1234_1_2, is not found", message);
+          "java.lang.Exception: job, job_0_1234, is not found", message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",
@@ -399,7 +399,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -423,7 +423,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
       assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -447,7 +447,7 @@ public class TestHsWebServicesJobs extends JerseyTest {
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
-      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(Status.NOT_FOUND, response.getClientResponseStatus());
       assertEquals(MediaType.APPLICATION_XML_TYPE, response.getType());
       String msg = response.getEntity(String.class);
       System.out.println(msg);
@@ -468,11 +468,12 @@ public class TestHsWebServicesJobs extends JerseyTest {
 
   private void verifyJobIdInvalid(String message, String type, String classname) {
     WebServicesTestUtils.checkStringMatch("exception message",
-        "For input string: \"foo\"", message);
+        "java.lang.Exception: JobId string : job_foo is not properly formed",
+        message);
     WebServicesTestUtils.checkStringMatch("exception type",
-        "NumberFormatException", type);
+        "NotFoundException", type);
     WebServicesTestUtils.checkStringMatch("exception classname",
-        "java.lang.NumberFormatException", classname);
+        "org.apache.hadoop.yarn.webapp.NotFoundException", classname);
   }
 
   @Test
@@ -494,7 +495,8 @@ public class TestHsWebServicesJobs extends JerseyTest {
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
       WebServicesTestUtils.checkStringMatch("exception message",
-          "java.lang.Exception: Error parsing job ID: bogusfoo", message);
+          "java.lang.Exception: JobId string : "
+              + "bogusfoo is not properly formed", message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "NotFoundException", type);
       WebServicesTestUtils.checkStringMatch("exception classname",

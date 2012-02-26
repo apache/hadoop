@@ -184,6 +184,7 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
     throws IllegalArgumentException {
     if(str == null)
       return null;
+    String exceptionMsg = null;
     try {
       String[] parts = str.split("_");
       if(parts.length == 5) {
@@ -196,13 +197,17 @@ public class TaskID extends org.apache.hadoop.mapred.ID {
                                                      Integer.parseInt(parts[2]),
                                                      t, 
                                                      Integer.parseInt(parts[4]));
-          } else throw new Exception();
+          } else
+            exceptionMsg = "Bad TaskType identifier. TaskId string : " + str
+                + " is not properly formed.";
         }
       }
     }catch (Exception ex) {//fall below
     }
-    throw new IllegalArgumentException("TaskId string : " + str 
-        + " is not properly formed");
+    if (exceptionMsg == null) {
+      exceptionMsg = "TaskId string : " + str + " is not properly formed";
+    }
+    throw new IllegalArgumentException(exceptionMsg);
   }
   /**
    * Gets the character representing the {@link TaskType}
