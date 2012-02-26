@@ -326,12 +326,10 @@ public abstract class AbstractCounters<C extends Counter,
    */
   public synchronized void incrAllCounters(AbstractCounters<C, G> other) {
     for(G right : other) {
-      G left = groups.get(right.getName());
+      String groupName = right.getName();
+      G left = (isFrameworkGroup(groupName) ? fgroups : groups).get(groupName);
       if (left == null) {
-        limits.checkGroups(groups.size() + 1);
-        left = groupFactory.newGroup(right.getName(), right.getDisplayName(),
-                                     limits);
-        groups.put(right.getName(), left);
+        left = addGroup(groupName, right.getDisplayName());
       }
       left.incrAllCounters(right);
     }
