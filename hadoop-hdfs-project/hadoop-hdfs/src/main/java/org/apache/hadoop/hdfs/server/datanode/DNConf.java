@@ -55,6 +55,7 @@ class DNConf {
   final long readaheadLength;
   final long heartBeatInterval;
   final long blockReportInterval;
+  final long deleteReportInterval;
   final long initialBlockReportDelay;
   final int writePacketSize;
 
@@ -105,6 +106,7 @@ class DNConf {
     heartBeatInterval = conf.getLong(DFS_HEARTBEAT_INTERVAL_KEY,
         DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000L;
     
+    this.deleteReportInterval = 100 * heartBeatInterval;
     // do we need to sync block file contents to disk when blockfile is closed?
     this.syncOnClose = conf.getBoolean(DFS_DATANODE_SYNCONCLOSE_KEY, 
         DFS_DATANODE_SYNCONCLOSE_DEFAULT);

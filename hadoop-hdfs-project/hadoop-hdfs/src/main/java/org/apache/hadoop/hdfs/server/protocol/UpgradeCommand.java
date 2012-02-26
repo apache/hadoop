@@ -40,9 +40,11 @@ import org.apache.hadoop.io.WritableFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class UpgradeCommand extends DatanodeCommand {
-  final static int UC_ACTION_UNKNOWN = DatanodeProtocol.DNA_UNKNOWN;
-  public final static int UC_ACTION_REPORT_STATUS = 100; // report upgrade status
-  public final static int UC_ACTION_START_UPGRADE = 101; // start upgrade
+  public final static int UC_ACTION_UNKNOWN = DatanodeProtocol.DNA_UNKNOWN;
+  public final static int UC_ACTION_REPORT_STATUS = 
+      DatanodeProtocol.DNA_UC_ACTION_REPORT_STATUS;
+  public final static int UC_ACTION_START_UPGRADE =
+      DatanodeProtocol.DNA_UC_ACTION_START_UPGRADE;
 
   private int version;
   private short upgradeStatus;

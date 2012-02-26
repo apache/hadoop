@@ -646,7 +646,7 @@ public class NamenodeFsck {
       return (float) (totalReplicas) / (float) totalBlocks;
     }
     
-    /** {@inheritDoc} */
+    @Override
     public String toString() {
       StringBuilder res = new StringBuilder();
       res.append("Status: ").append((isHealthy() ? "HEALTHY" : "CORRUPT"))

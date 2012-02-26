@@ -83,7 +83,6 @@ class EditLogFileOutputStream extends EditLogOutputStream {
     return JournalType.FILE;
   }
 
-  /** {@inheritDoc} */
   @Override
   void write(FSEditLogOp op) throws IOException {
     doubleBuf.writeOp(op);

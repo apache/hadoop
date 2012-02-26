@@ -28,6 +28,17 @@ import java.io.IOException;
  * into the #{@link EditLogOutputStream}.
  */
 abstract class EditLogInputStream implements JournalStream, Closeable {
+  /** 
+   * @return the first transaction which will be found in this stream
+   */
+  public abstract long getFirstTxId() throws IOException;
+  
+  /** 
+   * @return the last transaction which will be found in this stream
+   */
+  public abstract long getLastTxId() throws IOException;
+
+
   /**
    * Close the stream.
    * @throws IOException if an error occurred while closing

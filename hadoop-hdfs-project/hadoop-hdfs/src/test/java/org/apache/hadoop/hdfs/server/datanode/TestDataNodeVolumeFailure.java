@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -144,8 +145,9 @@ public class TestDataNodeVolumeFailure {
     DataNode dn = cluster.getDataNodes().get(1); //corresponds to dir data3
     String bpid = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(bpid);
-    long[] bReport = dn.getFSDataset().getBlockReport(bpid).getBlockListAsLongs();
-    cluster.getNameNodeRpc().blockReport(dnR, bpid, bReport);
+    StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
+        dn.getFSDataset().getBlockReport(bpid).getBlockListAsLongs()) };
+    cluster.getNameNodeRpc().blockReport(dnR, bpid, report);
 
     // verify number of blocks and files...
     verify(filename, filesize);
