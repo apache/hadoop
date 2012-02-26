@@ -756,10 +756,10 @@ public class MiniDFSCluster {
     // After the NN has started, set back the bound ports into
     // the conf
     conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId, nnId), NameNode
+        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId, nnId), NetUtils
         .getHostPortString(nn.getNameNodeAddress()));
     conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId, nnId), NameNode
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId, nnId), NetUtils
         .getHostPortString(nn.getHttpAddress()));
     DFSUtil.setGenericConf(conf, nameserviceId, nnId,
         DFS_NAMENODE_HTTP_ADDRESS_KEY);
@@ -779,7 +779,7 @@ public class MiniDFSCluster {
    */
   public URI getURI(int nnIndex) {
     InetSocketAddress addr = nameNodes[nnIndex].nameNode.getNameNodeAddress();
-    String hostPort = NameNode.getHostPortString(addr);
+    String hostPort = NetUtils.getHostPortString(addr);
     URI uri = null;
     try {
       uri = new URI("hdfs://" + hostPort);

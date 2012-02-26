@@ -576,26 +576,19 @@ public class DFSClient implements java.io.Closeable {
   private static boolean isLocalAddress(InetSocketAddress targetAddr) {
     InetAddress addr = targetAddr.getAddress();
     Boolean cached = localAddrMap.get(addr.getHostAddress());
-    if (cached != null && cached) {
+    if (cached != null) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Address " + targetAddr + " is local");
+        LOG.trace("Address " + targetAddr +
+                  (cached ? " is local" : " is not local"));
       }
-      return true;
+      return cached;
     }
+    
+    boolean local = NetUtils.isLocalAddress(addr);
 
-    // Check if the address is any local or loop back
-    boolean local = addr.isAnyLocalAddress() || addr.isLoopbackAddress();
-
-    // Check if the address is defined on any interface
-    if (!local) {
-      try {
-        local = NetworkInterface.getByInetAddress(addr) != null;
-      } catch (SocketException e) {
-        local = false;
-      }
-    }
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Address " + targetAddr + " is local");
+      LOG.trace("Address " + targetAddr +
+                (local ? " is local" : " is not local"));
     }
     localAddrMap.put(addr.getHostAddress(), local);
     return local;

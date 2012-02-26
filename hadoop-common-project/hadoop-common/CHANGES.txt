@@ -3,6 +3,7 @@ Hadoop Change Log
 Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
+  
     HADOOP-7920. Remove Avro Rpc. (suresh)
 
   NEW FEATURES
@@ -160,7 +161,21 @@ Trunk (unreleased changes)
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
+Release 0.23.3 - UNRELEASED 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES                                                                    
+  
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.2 - UNRELEASED 
+
+  INCOMPATIBLE CHANGES
 
   NEW FEATURES                                                                    
   

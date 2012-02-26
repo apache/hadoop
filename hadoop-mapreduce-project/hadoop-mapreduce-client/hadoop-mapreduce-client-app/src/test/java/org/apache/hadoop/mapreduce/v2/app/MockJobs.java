@@ -106,6 +106,20 @@ public class MockJobs extends MockApps {
     return newAppName();
   }
 
+  /**
+   * Create numJobs in a map with jobs having appId==jobId
+   */
+  public static Map<JobId, Job> newJobs(int numJobs, int numTasksPerJob,
+      int numAttemptsPerTask) {
+    Map<JobId, Job> map = Maps.newHashMap();
+    for (int j = 0; j < numJobs; ++j) {
+      ApplicationId appID = MockJobs.newAppID(j);
+      Job job = newJob(appID, j, numTasksPerJob, numAttemptsPerTask);
+      map.put(job.getID(), job);
+    }
+    return map;
+  }
+  
   public static Map<JobId, Job> newJobs(ApplicationId appID, int numJobsPerApp,
       int numTasksPerJob, int numAttemptsPerTask) {
     Map<JobId, Job> map = Maps.newHashMap();

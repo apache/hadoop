@@ -72,30 +72,26 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
   private static HsWebApp webApp;
 
   static class TestAppContext implements AppContext {
-    final ApplicationAttemptId appAttemptID;
-    final ApplicationId appID;
     final String user = MockJobs.newUserName();
     final Map<JobId, Job> jobs;
     final long startTime = System.currentTimeMillis();
 
-    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
-      appID = MockJobs.newAppID(appid);
-      appAttemptID = MockJobs.newAppAttemptID(appID, 0);
-      jobs = MockJobs.newJobs(appID, numJobs, numTasks, numAttempts);
+    TestAppContext(int numJobs, int numTasks, int numAttempts) {
+      jobs = MockJobs.newJobs(numJobs, numTasks, numAttempts);
     }
 
     TestAppContext() {
-      this(0, 3, 2, 1);
+      this(3, 2, 1);
     }
 
     @Override
     public ApplicationAttemptId getApplicationAttemptId() {
-      return appAttemptID;
+      return null;
     }
 
     @Override
     public ApplicationId getApplicationID() {
-      return appID;
+      return null;
     }
 
     @Override

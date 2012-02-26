@@ -31,12 +31,17 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.After;
 import org.junit.Test;
@@ -189,7 +194,7 @@ public class TestResourceTrackerService {
     conf.set("yarn.resourcemanager.nodes.exclude-path", hostFile
         .getAbsolutePath());
 
-    MockRM rm = new MockRM(conf);
+    rm = new MockRM(conf);
     rm.start();
 
     MockNM nm1 = rm.registerNode("host1:1234", 5120);
@@ -221,6 +226,61 @@ public class TestResourceTrackerService {
         .getNodeHealthStatus().getIsNodeHealthy() == health);
     Assert.assertEquals("Unhealthy metrics not incremented", count,
         ClusterMetrics.getMetrics().getUnhealthyNMs());
+  }
+
+  @Test
+  public void testReconnectNode() throws Exception {
+    final DrainDispatcher dispatcher = new DrainDispatcher();
+    MockRM rm = new MockRM() {
+      @Override
+      protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {
+        return new SchedulerEventDispatcher(this.scheduler) {
+          @Override
+          public void handle(SchedulerEvent event) {
+            scheduler.handle(event);
+          }
+        };
+      }
+
+      @Override
+      protected Dispatcher createDispatcher() {
+        return dispatcher;
+      }
+    };
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("host1:1234", 5120);
+    MockNM nm2 = rm.registerNode("host2:5678", 5120);
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(false);
+    checkUnealthyNMCount(rm, nm2, true, 1);
+    final int expectedNMs = ClusterMetrics.getMetrics().getNumActiveNMs();
+    QueueMetrics metrics = rm.getResourceScheduler().getRootQueueMetrics();
+    Assert.assertEquals(5120 + 5120, metrics.getAvailableMB());
+
+    // reconnect of healthy node
+    nm1 = rm.registerNode("host1:1234", 5120);
+    HeartbeatResponse response = nm1.nodeHeartbeat(true);
+    Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
+    dispatcher.await();
+    Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
+    checkUnealthyNMCount(rm, nm2, true, 1);
+
+    // reconnect of unhealthy node
+    nm2 = rm.registerNode("host2:5678", 5120);
+    response = nm2.nodeHeartbeat(false);
+    Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
+    dispatcher.await();
+    Assert.assertEquals(expectedNMs, ClusterMetrics.getMetrics().getNumActiveNMs());
+    checkUnealthyNMCount(rm, nm2, true, 1);
+
+    // reconnect of node with changed capability
+    nm1 = rm.registerNode("host2:5678", 10240);
+    dispatcher.await();
+    response = nm2.nodeHeartbeat(true);
+    dispatcher.await();
+    Assert.assertTrue(NodeAction.NORMAL.equals(response.getNodeAction()));
+    Assert.assertEquals(5120 + 10240, metrics.getAvailableMB());
   }
 
   private void writeToHostsFile(String... hosts) throws IOException {

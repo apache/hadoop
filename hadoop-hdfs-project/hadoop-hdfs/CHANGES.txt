@@ -1,10 +1,13 @@
 Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
+
   INCOMPATIBLE CHANGES
+    
     HDFS-2676. Remove Avro RPC. (suresh)
 
   NEW FEATURES
+  
     HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
     via hairong)
 
@@ -132,8 +135,17 @@ Trunk (unreleased changes)
     HDFS-2878. Fix TestBlockRecovery and move it back into main test directory.
     (todd)
 
-    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO. (Brandon Li
-    via jitendra) 
+    HDFS-2655. BlockReaderLocal#skip performs unnecessary IO.
+    (Brandon Li via jitendra) 
+
+    HDFS-3003. Remove getHostPortString() from NameNode, replace it with
+    NetUtils.getHostPortString(). (Brandon Li via atm)
+
+    HDFS-3009. Remove duplicate code in DFSClient#isLocalAddress by using 
+    NetUtils. (Hari Mankude via suresh)
+
+    HDFS-3002. TestNameNodeMetrics need not wait for metrics update.
+    (suresh)
 
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -212,6 +224,20 @@ Trunk (unreleased changes)
     HDFS-2968. Protocol translator for BlockRecoveryCommand broken when
     multiple blocks need recovery. (todd)
 
+Release 0.23.3 - UNRELEASED 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
+  
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
@@ -273,6 +299,11 @@ Release 0.23.2 - UNRELEASED
     HDFS-2981. In hdfs-default.xml, the default value of
     dfs.client.block.write.replace-datanode-on-failure.enable should be true.
     (szetszwo)
+
+    HDFS-3008. Negative caching of local addrs doesn't work. (eli)
+
+    HDFS-3006. In WebHDFS, when the return body is empty, set the Content-Type
+    to application/octet-stream instead of application/json.  (szetszwo)
 
 Release 0.23.1 - 2012-02-17 
 

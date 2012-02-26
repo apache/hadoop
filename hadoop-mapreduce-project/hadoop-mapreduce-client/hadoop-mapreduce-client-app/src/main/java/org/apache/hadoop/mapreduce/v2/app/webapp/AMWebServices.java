@@ -99,6 +99,14 @@ public class AMWebServices {
     try {
       jobId = MRApps.toJobID(jid);
     } catch (YarnException e) {
+      // TODO: after MAPREDUCE-2793 YarnException is probably not expected here
+      // anymore but keeping it for now just in case other stuff starts failing.
+      // Also, the webservice should ideally return BadRequest (HTTP:400) when
+      // the id is malformed instead of NotFound (HTTP:404). The webserver on
+      // top of which AMWebServices is built seems to automatically do that for
+      // unhandled exceptions
+      throw new NotFoundException(e.getMessage());
+    } catch (IllegalArgumentException e) {
       throw new NotFoundException(e.getMessage());
     }
     if (jobId == null) {
@@ -121,10 +129,18 @@ public class AMWebServices {
     try {
       taskID = MRApps.toTaskID(tid);
     } catch (YarnException e) {
+      // TODO: after MAPREDUCE-2793 YarnException is probably not expected here
+      // anymore but keeping it for now just in case other stuff starts failing.
+      // Also, the webservice should ideally return BadRequest (HTTP:400) when
+      // the id is malformed instead of NotFound (HTTP:404). The webserver on
+      // top of which AMWebServices is built seems to automatically do that for
+      // unhandled exceptions
       throw new NotFoundException(e.getMessage());
     } catch (NumberFormatException ne) {
       throw new NotFoundException(ne.getMessage());
-    }
+    } catch (IllegalArgumentException e) {
+      throw new NotFoundException(e.getMessage());
+    } 
     if (taskID == null) {
       throw new NotFoundException("taskid " + tid + " not found or invalid");
     }
@@ -146,9 +162,17 @@ public class AMWebServices {
     try {
       attemptId = MRApps.toTaskAttemptID(attId);
     } catch (YarnException e) {
+      // TODO: after MAPREDUCE-2793 YarnException is probably not expected here
+      // anymore but keeping it for now just in case other stuff starts failing.
+      // Also, the webservice should ideally return BadRequest (HTTP:400) when
+      // the id is malformed instead of NotFound (HTTP:404). The webserver on
+      // top of which AMWebServices is built seems to automatically do that for
+      // unhandled exceptions
       throw new NotFoundException(e.getMessage());
     } catch (NumberFormatException ne) {
       throw new NotFoundException(ne.getMessage());
+    } catch (IllegalArgumentException e) {
+      throw new NotFoundException(e.getMessage());
     }
     if (attemptId == null) {
       throw new NotFoundException("task attempt id " + attId
