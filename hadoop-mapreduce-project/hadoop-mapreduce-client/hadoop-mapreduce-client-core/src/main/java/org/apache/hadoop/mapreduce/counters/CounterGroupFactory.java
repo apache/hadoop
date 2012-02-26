@@ -107,6 +107,8 @@ public abstract class CounterGroupFactory<C extends Counter,
     if (gf != null) return gf.newGroup(name);
     if (name.equals(FS_GROUP_NAME)) {
       return newFileSystemGroup();
+    } else if (s2i.get(name) != null) {
+      return newFrameworkGroup(s2i.get(name));
     }
     return newGenericGroup(name, displayName, limits);
   }
