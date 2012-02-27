@@ -4,8 +4,6 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
-    MAPREDUCE-3545. Remove Avro RPC. (suresh)
-
   NEW FEATURES
 
     MAPREDUCE-778. Rumen Anonymizer. (Amar Kamat and Chris Douglas via amarrk)
@@ -32,12 +30,6 @@ Trunk (unreleased changes)
     MAPREDUCE-3008. Improvements to cumulative CPU emulation for short running
                     tasks in Gridmix. (amarrk)
 
-    MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols
-                   including multuple versions of the same protocol (sanjay Radia)
-
-    MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
-                    process (atm)
-
     MAPREDUCE-2836. Provide option to fail jobs when submitted to non-existent
     fair scheduler pools. (Ahmed Radwan via todd)
 
@@ -50,13 +42,7 @@ Trunk (unreleased changes)
     MAPREDUCE-3169. Create a new MiniMRCluster equivalent which only provides
     client APIs cross MR1 and MR2 (Ahmed via tucu)
 
-    HADOOP-7862   MR changes to work with HADOOP 7862:
-    Move the support for multiple protocols to lower layer so that Writable,
-    PB and Avro can all use it (Sanjay)
-
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
-
-    MAPREDUCE-3909 Javadoc the Service interfaces (stevel)
 
   BUG FIXES
 
@@ -89,23 +75,40 @@ Trunk (unreleased changes)
     MAPREDUCE-3664. Federation Documentation has incorrect configuration example.
     (Brandon Li via jitendra)
 
-    MAPREDUCE-3740. Fixed broken mapreduce compilation after the patch for
-    HADOOP-7965. (Devaraj K via vinodkv)
-
-    MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
-    for HDFS-2895. (Suresh Srinivas via vinodkv)
-
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+    MAPREDUCE-3545. Remove Avro RPC. (suresh)
 
   NEW FEATURES
 
   IMPROVEMENTS
 
+    MAPREDUCE-2887. Due to HADOOP-7524, change RPC to allow multiple protocols
+    including multuple versions of the same protocol (Sanjay Radia)
+
+    MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
+    process (atm)
+
+    HADOOP-7862. MR changes to work with HADOOP 7862: Move the support for
+    multiple protocols to lower layer so that Writable, PB and Avro can all
+    use it (Sanjay Radia)
+
+    MAPREDUCE-3909 Javadoc the Service interfaces (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-3740. Fixed broken mapreduce compilation after the patch for
+    HADOOP-7965. (Devaraj K via vinodkv) 
+
+    MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
+    for HDFS-2895. (Suresh Srinivas via vinodkv)
+
+    MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas
+    Graves via mahadev)
 
 Release 0.23.2 - UNRELEASED
 
@@ -2269,9 +2272,6 @@ Release 0.23.0 - 2011-11-01
     MAPREDUCE-2948. Hadoop streaming test failure, post MR-2767 (mahadev)
 
     MAPREDUCE-2908. Fix all findbugs warnings. (vinodkv via acmurthy)
-
-    MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas Graves
-    via mahadev)
 
     MAPREDUCE-2947. Fixed race condition in AuxiliaryServices. (vinodkv via
     acmurthy)
