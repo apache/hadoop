@@ -177,8 +177,10 @@ public class TestRMWebApp {
   public static ResourceManager mockRm(RMContext rmContext) throws IOException {
     ResourceManager rm = mock(ResourceManager.class);
     ResourceScheduler rs = mockCapacityScheduler();
+    ApplicationACLsManager aclMgr = mockAppACLsManager();
     when(rm.getResourceScheduler()).thenReturn(rs);
     when(rm.getRMContext()).thenReturn(rmContext);
+    when(rm.getApplicationACLsManager()).thenReturn(aclMgr);
     return rm;
   }
 
@@ -190,6 +192,11 @@ public class TestRMWebApp {
     CapacityScheduler cs = new CapacityScheduler();
     cs.reinitialize(conf, null, null);
     return cs;
+  }
+
+  public static ApplicationACLsManager mockAppACLsManager() {
+    Configuration conf = new Configuration();
+    return new ApplicationACLsManager(conf);
   }
 
   static void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
@@ -271,7 +278,7 @@ public class TestRMWebApp {
   public static void main(String[] args) throws Exception {
     // For manual testing
     WebApps.$for("yarn", new TestRMWebApp()).at(8888).inDevMode().
-        start(new RMWebApp(mockRm(101, 8, 8, 8*GiB))).joinThread();
+        start(new RMWebApp(mockRm(2500, 8, 8, 8*GiB))).joinThread();
     WebApps.$for("yarn", new TestRMWebApp()).at(8888).inDevMode().
         start(new RMWebApp(mockFifoRm(10, 1, 4, 8*GiB))).joinThread();
   }
