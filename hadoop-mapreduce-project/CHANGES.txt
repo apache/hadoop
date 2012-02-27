@@ -56,6 +56,8 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
 
+    MAPREDUCE-3909 Javadoc the Service interfaces (stevel)
+
   BUG FIXES
 
     MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
