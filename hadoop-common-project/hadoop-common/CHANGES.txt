@@ -4,9 +4,9 @@ Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
-  NEW FEATURES
-
     HADOOP-7920. Remove Avro Rpc. (suresh)
+
+  NEW FEATURES
 
     HADOOP-7773. Add support for protocol buffer based RPC engine.
     (suresh)
@@ -16,25 +16,23 @@ Release 0.23.3 - UNRELEASED
 
   IMPROVEMENTS
 
-    HADOOP-7524 Change RPC to allow multiple protocols including multuple
+    HADOOP-7524. Change RPC to allow multiple protocols including multuple
     versions of the same protocol (sanjay Radia)
 
     HADOOP-7607. Simplify the RPC proxy cleanup process. (atm)
 
-    HADOOP-7635. RetryInvocationHandler should release underlying resources on
-    close (atm)
-
-    HADOOP-7687 Make getProtocolSignature public  (sanjay)
+    HADOOP-7687. Make getProtocolSignature public  (sanjay)
 
     HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
     interface introduced in HADOOP-7524.  (cutting)
 
-    HADOOP-7716 RPC protocol registration on SS does not log the protocol name
+    HADOOP-7716. RPC protocol registration on SS does not log the protocol name
     (only the class which may be different) (sanjay)
 
-    HADOOP-7776 Make the Ipc-Header in a RPC-Payload an explicit header (sanjay)
+    HADOOP-7776. Make the Ipc-Header in a RPC-Payload an explicit header.
+    (sanjay)
 
-    HADOOP-7862  Move the support for multiple protocols to lower layer so
+    HADOOP-7862. Move the support for multiple protocols to lower layer so
     that Writable, PB and Avro can all use it (Sanjay)
 
     HADOOP-7876. Provided access to encoded key in DelegationKey for
@@ -44,9 +42,6 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-7957. Classes deriving GetGroupsBase should be able to override 
     proxy creation. (jitendra)
-
-    HADOOP-7968. Errant println left in RPC.getHighestSupportedProtocol (Sho
-    Shimauchi via harsh)
 
     HADOOP-7965. Support for protocol version and signature in PB. (jitendra)
 
@@ -62,8 +57,11 @@ Release 0.23.3 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-7635. RetryInvocationHandler should release underlying resources on
+    close. (atm)
+
     HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
-    error (atm)
+    error. (atm)
 
     HADOOP-7833. Fix findbugs warnings in protobuf generated code.
     (John Lee via suresh)
@@ -71,12 +69,15 @@ Release 0.23.3 - UNRELEASED
     HADOOP-7897. ProtobufRpcEngine client side exception mechanism is not
     consistent with WritableRpcEngine. (suresh)
 
-    HADOOP-7913 Fix bug in ProtoBufRpcEngine  (sanjay)
+    HADOOP-7913. Fix bug in ProtoBufRpcEngine.  (sanjay)
 
-    HADOOP-7892. IPC logs too verbose after "RpcKind" introduction (todd)
+    HADOOP-7892. IPC logs too verbose after "RpcKind" introduction. (todd)
+
+    HADOOP-7968. Errant println left in RPC.getHighestSupportedProtocol. (Sho
+    Shimauchi via harsh)
 
     HADOOP-7931. o.a.h.ipc.WritableRpcEngine should have a way to force
-    initialization (atm)
+    initialization. (atm)
 
 Release 0.23.2 - UNRELEASED
 
