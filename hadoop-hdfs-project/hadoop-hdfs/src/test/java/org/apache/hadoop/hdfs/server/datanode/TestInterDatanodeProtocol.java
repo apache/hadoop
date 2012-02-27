@@ -28,6 +28,7 @@ import java.net.SocketTimeoutException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 
@@ -81,7 +82,7 @@ public class TestInterDatanodeProtocol {
     }
 
     @Override
-    public Writable call(Class<?> protocol, Writable param, long receiveTime)
+    public Writable call(RpcKind rpcKind, String protocol, Writable param, long receiveTime)
         throws IOException {
       if (sleep) {
         // sleep a bit
@@ -149,7 +150,6 @@ public class TestInterDatanodeProtocol {
       DataNode datanode = cluster.getDataNode(datanodeinfo[0].getIpcPort());
       InterDatanodeProtocol idp = DataNode.createInterDataNodeProtocolProxy(
           datanodeinfo[0], conf, datanode.getDnConf().socketTimeout);
-      assertTrue(datanode != null);
       
       //stop block scanner, so we could compare lastScanTime
       if (datanode.blockScanner != null) {
@@ -346,8 +346,8 @@ public class TestInterDatanodeProtocol {
   /** Test to verify that InterDatanode RPC timesout as expected when
    *  the server DN does not respond.
    */
-  @Test
-  public void testInterDNProtocolTimeout() throws Exception {
+  @Test(expected=SocketTimeoutException.class)
+  public void testInterDNProtocolTimeout() throws Throwable {
     final Server server = new TestServer(1, true);
     server.start();
 
@@ -360,10 +360,9 @@ public class TestInterDatanodeProtocol {
     try {
       proxy = DataNode.createInterDataNodeProtocolProxy(
           dInfo, conf, 500);
-      proxy.initReplicaRecovery(null);
+      proxy.initReplicaRecovery(new RecoveringBlock(
+          new ExtendedBlock("bpid", 1), null, 100));
       fail ("Expected SocketTimeoutException exception, but did not get.");
-    } catch (SocketTimeoutException e) {
-      DataNode.LOG.info("Got expected Exception: SocketTimeoutException" + e);
     } finally {
       if (proxy != null) {
         RPC.stopProxy(proxy);

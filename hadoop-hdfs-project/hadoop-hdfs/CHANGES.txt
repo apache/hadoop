@@ -4,15 +4,128 @@ Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HDFS-2676. Remove Avro RPC. (suresh)
+
   NEW FEATURES
 
     HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
 
+    HDFS-395.  DFS Scalability: Incremental block reports. (Tomasz Nykiel
+    via hairong)
+
+    HDFS-2517. Add protobuf service for JounralProtocol. (suresh)
+
+    HDFS-2518. Add protobuf service for NamenodeProtocol. (suresh)
+
+    HDFS-2520. Add protobuf service for InterDatanodeProtocol. (suresh)
+
+    HDFS-2519. Add protobuf service for DatanodeProtocol. (suresh)
+
+    HDFS-2581. Implement protobuf service for JournalProtocol. (suresh)
+
+    HDFS-2618. Implement protobuf service for NamenodeProtocol. (suresh)
+
+    HDFS-2629. Implement protobuf service for InterDatanodeProtocol. (suresh)
+
+    HDFS-2636. Implement protobuf service for ClientDatanodeProtocol. (suresh)
+
+    HDFS-2642. Protobuf translators for DatanodeProtocol. (jitendra)
+
+    HDFS-2647. Used protobuf based RPC for InterDatanodeProtocol, 
+    ClientDatanodeProtocol, JournalProtocol, NamenodeProtocol. (suresh)
+
+    HDFS-2666. Fix TestBackupNode failure. (suresh)
+
+    HDFS-2663. Optional protobuf parameters are not handled correctly.
+    (suresh)
+
+    HDFS-2661. Enable protobuf RPC for DatanodeProtocol. (jitendra)
+
+    HDFS-2697. Move RefreshAuthPolicy, RefreshUserMappings, GetUserMappings 
+    protocol to protocol buffers. (jitendra)
+
+    HDFS-2880. Protobuf changes in DatanodeProtocol to add multiple storages.
+    (suresh)
+
+    HDFS-2899. Service protocol changes in DatanodeProtocol to add multiple 
+    storages. (suresh)
+
   IMPROVEMENTS
+
+    HDFS-2018. Move all journal stream management code into one place.
+               (Ivan Kelly via jitendra)
+
+    HDFS-2223. Untangle depencencies between NN components (todd)
+
+    HDFS-2351 Change Namenode and Datanode to register each of their protocols seperately (Sanjay Radia)
+
+    HDFS-2337. DFSClient shouldn't keep multiple RPC proxy references (atm)
+ 
+    HDFS-2181. Separate HDFS Client wire protocol data types (sanjay)
+
+    HDFS-2459. Separate datatypes for Journal Protocol. (suresh)
+
+    HDFS-2480. Separate datatypes for NamenodeProtocol. (suresh)
+
+    HDFS-2489. Move Finalize and Register to separate file out of
+    DatanodeCommand.java. (suresh)
+
+    HDFS-2488. Separate datatypes for InterDatanodeProtocol. (suresh)
+
+    HDFS-2496. Separate datatypes for DatanodeProtocol. (suresh)
+
+    HDFS-2479 HDFS Client Data Types in Protocol Buffers (sanjay)
+
+    HADOOP-7862   Hdfs changes to work with HADOOP 7862: 
+    Move the support for multiple protocols to lower layer so that Writable,
+    PB and Avro can all use it (Sanjay)
+
+    HDFS-2597 ClientNameNodeProtocol in Protocol Buffers (sanjay)
+
+    HDFS-2651 ClientNameNodeProtocol Translators for Protocol Buffers (sanjay)
+
+    HDFS-2650. Replace @inheritDoc with @Override. (Hari Mankude via suresh).
+
+    HDFS-2669 Enable protobuf rpc for ClientNamenodeProtocol
+
+    HDFS-2801. Provide a method in client side translators to check for a 
+    methods supported in underlying protocol. (jitendra)
+
+    HDFS-2895. Remove Writable wire protocol types and translators to
+    complete transition to protocol buffers. (suresh)
 
   OPTIMIZATIONS
 
   BUG FIXES
+ 
+    HDFS-2481 Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol (sanjay)
+
+    HDFS-2497 Fix TestBackupNode failure. (suresh)
+
+    HDFS-2499. RPC client is created incorrectly introduced in HDFS-2459.
+    (suresh)
+
+    HDFS-2526. (Client)NamenodeProtocolTranslatorR23 do not need to keep a
+    reference to rpcProxyWithoutRetry (atm)
+
+    HDFS-2532. TestDfsOverAvroRpc timing out in trunk (Uma Maheswara Rao G
+    via todd)
+
+    HDFS-2694. Removal of Avro broke non-PB NN services. (atm)
+
+    HDFS-2687. Tests failing with ClassCastException post protobuf RPC
+    changes. (suresh)
+
+    HDFS-2700. Fix failing TestDataNodeMultipleRegistrations in trunk
+    (Uma Maheswara Rao G via todd)
+
+    HDFS-2739. SecondaryNameNode doesn't start up. (jitendra)
+
+    HDFS-2768. BackupNode stop can not close proxy connections because
+    it is not a proxy instance. (Uma Maheswara Rao G via eli)
+
+    HDFS-2968. Protocol translator for BlockRecoveryCommand broken when
+    multiple blocks need recovery. (todd)
 
 Release 0.23.2 - UNRELEASED
 

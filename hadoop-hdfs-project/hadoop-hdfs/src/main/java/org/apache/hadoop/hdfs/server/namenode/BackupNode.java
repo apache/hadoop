@@ -28,16 +28,24 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalProtocolService;
+import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.JournalProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+
+import com.google.protobuf.BlockingService;
 
 /**
  * BackupNode.
@@ -61,7 +69,7 @@ public class BackupNode extends NameNode {
   private static final String BN_SERVICE_RPC_ADDRESS_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY;
 
   /** Name-node proxy */
-  NamenodeProtocol namenode;
+  NamenodeProtocolTranslatorPB namenode;
   /** Name-node RPC address */
   String nnRpcAddress;
   /** Name-node HTTP address */
@@ -123,6 +131,7 @@ public class BackupNode extends NameNode {
   protected void loadNamesystem(Configuration conf) throws IOException {
     BackupImage bnImage = new BackupImage(conf);
     this.namesystem = new FSNamesystem(conf, bnImage);
+    bnImage.setNamesystem(namesystem);
     bnImage.recoverCreateRead();
   }
 
@@ -175,7 +184,9 @@ public class BackupNode extends NameNode {
       }
     }
     // Stop the RPC client
-    RPC.stopProxy(namenode);
+    if (namenode != null) {
+      IOUtils.cleanup(LOG, namenode);
+    }
     namenode = null;
     // Stop the checkpoint manager
     if(checkpointManager != null) {
@@ -186,12 +197,19 @@ public class BackupNode extends NameNode {
     super.stop();
   }
 
-  static class BackupNodeRpcServer extends NameNodeRpcServer implements JournalProtocol {
+  static class BackupNodeRpcServer extends NameNodeRpcServer implements
+      JournalProtocol {
     private final String nnRpcAddress;
     
     private BackupNodeRpcServer(Configuration conf, BackupNode nn)
         throws IOException {
       super(conf, nn);
+      JournalProtocolServerSideTranslatorPB journalProtocolTranslator = 
+          new JournalProtocolServerSideTranslatorPB(this);
+      BlockingService service = JournalProtocolService
+          .newReflectiveBlockingService(journalProtocolTranslator);
+      DFSUtil.addPBProtocol(conf, JournalProtocolPB.class, service,
+          this.clientRpcServer);
       nnRpcAddress = nn.nnRpcAddress;
     }
 
@@ -200,9 +218,8 @@ public class BackupNode extends NameNode {
         throws IOException {
       if (protocol.equals(JournalProtocol.class.getName())) {
         return JournalProtocol.versionID;
-      } else {
-        return super.getProtocolVersion(protocol, clientVersion);
       }
+      return super.getProtocolVersion(protocol, clientVersion);
     }
   
     /////////////////////////////////////////////////////
@@ -244,7 +261,7 @@ public class BackupNode extends NameNode {
       verifyRequest(nnReg);
       if(!nnRpcAddress.equals(nnReg.getAddress()))
         throw new IOException("Journal request from unexpected name-node: "
-            + nnReg.getAddress() + " expecting " + rpcAddress);
+            + nnReg.getAddress() + " expecting " + clientRpcAddress);
       getBNImage().journal(firstTxId, numTxns, records);
     }
   
@@ -278,9 +295,8 @@ public class BackupNode extends NameNode {
   private NamespaceInfo handshake(Configuration conf) throws IOException {
     // connect to name node
     InetSocketAddress nnAddress = NameNode.getServiceAddress(conf, true);
-    this.namenode =
-      (NamenodeProtocol) RPC.waitForProxy(NamenodeProtocol.class,
-          NamenodeProtocol.versionID, nnAddress, conf);
+    this.namenode = new NamenodeProtocolTranslatorPB(nnAddress, conf,
+        UserGroupInformation.getCurrentUser());
     this.nnRpcAddress = getHostPortString(nnAddress);
     this.nnHttpAddress = getHostPortString(super.getHttpServerAddress(conf));
     // get version and id info from the name-node
@@ -293,7 +309,9 @@ public class BackupNode extends NameNode {
         LOG.info("Problem connecting to server: " + nnAddress);
         try {
           Thread.sleep(1000);
-        } catch (InterruptedException ie) {}
+        } catch (InterruptedException ie) {
+          LOG.warn("Encountered exception ", e);
+        }
       }
     }
     return nsInfo;
@@ -342,7 +360,9 @@ public class BackupNode extends NameNode {
         LOG.info("Problem connecting to name-node: " + nnRpcAddress);
         try {
           Thread.sleep(1000);
-        } catch (InterruptedException ie) {}
+        } catch (InterruptedException ie) {
+          LOG.warn("Encountered exception ", e);
+        }
       }
     }
 

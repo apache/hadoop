@@ -44,6 +44,16 @@ import org.apache.hadoop.io.WritableFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class BlockCommand extends DatanodeCommand {
+  
+  /**
+   * This constant is used to indicate that the block deletion does not need
+   * explicit ACK from the datanode. When a block is put into the list of blocks
+   * to be deleted, it's size is set to this constant. We assume that no block
+   * would actually have this size. Otherwise, we would miss ACKs for blocks
+   * with such size. Positive number is used for compatibility reasons.
+   */
+  public static final long NO_ACK = Long.MAX_VALUE;
+  
   String poolId;
   Block blocks[];
   DatanodeInfo targets[][];
@@ -57,7 +67,6 @@ public class BlockCommand extends DatanodeCommand {
   public BlockCommand(int action, String poolId,
       List<BlockTargetPair> blocktargetlist) {
     super(action);
-
     this.poolId = poolId;
     blocks = new Block[blocktargetlist.size()]; 
     targets = new DatanodeInfo[blocks.length][];
@@ -75,12 +84,21 @@ public class BlockCommand extends DatanodeCommand {
    * @param blocks blocks related to the action
    */
   public BlockCommand(int action, String poolId, Block blocks[]) {
+    this(action, poolId, blocks, EMPTY_TARGET);
+  }
+
+  /**
+   * Create BlockCommand for the given action
+   * @param blocks blocks related to the action
+   */
+  public BlockCommand(int action, String poolId, Block[] blocks,
+      DatanodeInfo[][] targets) {
     super(action);
     this.poolId = poolId;
     this.blocks = blocks;
-    this.targets = EMPTY_TARGET;
+    this.targets = targets;
   }
-
+  
   public String getBlockPoolId() {
     return poolId;
   }

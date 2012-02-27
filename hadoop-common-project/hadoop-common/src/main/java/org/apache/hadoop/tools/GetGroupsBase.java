@@ -94,7 +94,7 @@ public abstract class GetGroupsBase extends Configured implements Tool {
    * @return A {@link GetUserMappingsProtocol} client proxy.
    * @throws IOException
    */
-  private GetUserMappingsProtocol getUgmProtocol() throws IOException {
+  protected GetUserMappingsProtocol getUgmProtocol() throws IOException {
     GetUserMappingsProtocol userGroupMappingProtocol =
       RPC.getProxy(GetUserMappingsProtocol.class, 
           GetUserMappingsProtocol.versionID,

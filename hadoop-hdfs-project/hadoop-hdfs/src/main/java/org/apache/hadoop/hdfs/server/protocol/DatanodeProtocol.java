@@ -22,14 +22,11 @@ import java.io.*;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
-
-import org.apache.avro.reflect.Nullable;
 
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
@@ -45,7 +42,15 @@ import org.apache.avro.reflect.Nullable;
 @InterfaceAudience.Private
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 28: Add Balancer Bandwidth Command protocol.
+   * This class is used by both the Namenode (client) and BackupNode (server) 
+   * to insulate from the protocol serialization.
+   * 
+   * If you are adding/changing DN's interface then you need to 
+   * change both this class and ALSO related protocol buffer
+   * wire protocol definition in DatanodeProtocol.proto.
+   * 
+   * For more details on protocol buffer wire protocol, please see 
+   * .../org/apache/hadoop/hdfs/protocolPB/overview.html
    */
   public static final long versionID = 28L;
   
@@ -68,18 +73,23 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
   final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
   final static int DNA_BALANCERBANDWIDTHUPDATE = 8; // update balancer bandwidth
+  final static int DNA_UC_ACTION_REPORT_STATUS = 100; // Report upgrade status
+  final static int DNA_UC_ACTION_START_UPGRADE = 101; // start upgrade
 
   /** 
    * Register Datanode.
    *
    * @see org.apache.hadoop.hdfs.server.namenode.FSNamesystem#registerDatanode(DatanodeRegistration)
-   * 
+   * @param registration datanode registration information
+   * @param storages list of storages on the datanode``
    * @return updated {@link org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration}, which contains 
    * new storageID if the datanode did not have one and
    * registration ID for further communication.
    */
-  public DatanodeRegistration registerDatanode(DatanodeRegistration registration
-                                       ) throws IOException;
+  public DatanodeRegistration registerDatanode(
+      DatanodeRegistration registration, DatanodeStorage[] storages)
+      throws IOException;
+  
   /**
    * sendHeartbeat() tells the NameNode that the DataNode is still
    * alive and well.  Includes some status info, too. 
@@ -88,20 +98,14 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * A DatanodeCommand tells the DataNode to invalidate local block(s), 
    * or to copy them to other DataNodes, etc.
    * @param registration datanode registration information
-   * @param capacity total storage capacity available at the datanode
-   * @param dfsUsed storage used by HDFS
-   * @param remaining remaining storage available for HDFS
-   * @param blockPoolUsed storage used by the block pool
+   * @param reports utilization report per storage
    * @param xmitsInProgress number of transfers from this datanode to others
    * @param xceiverCount number of active transceiver threads
    * @param failedVolumes number of failed volumes
    * @throws IOException on error
    */
-  @Nullable
   public DatanodeCommand[] sendHeartbeat(DatanodeRegistration registration,
-                                       long capacity,
-                                       long dfsUsed, long remaining,
-                                       long blockPoolUsed,
+                                       StorageReport[] reports,
                                        int xmitsInProgress,
                                        int xceiverCount,
                                        int failedVolumes) throws IOException;
@@ -114,7 +118,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * infrequently afterwards.
    * @param registration
    * @param poolId - the block pool ID for the blocks
-   * @param blocks - the block list as an array of longs.
+   * @param reports - report of blocks per storage
    *     Each block is represented as 2 longs.
    *     This is done instead of Block[] to reduce memory used by block reports.
    *     
@@ -122,21 +126,22 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public DatanodeCommand blockReport(DatanodeRegistration registration,
-                                     String poolId,
-                                     long[] blocks) throws IOException;
+      String poolId, StorageBlockReport[] reports) throws IOException;
     
   /**
-   * blockReceived() allows the DataNode to tell the NameNode about
-   * recently-received block data, with a hint for pereferred replica
-   * to be deleted when there is any excessive blocks.
+   * blockReceivedAndDeleted() allows the DataNode to tell the NameNode about
+   * recently-received and -deleted block data. 
+   * 
+   * For the case of received blocks, a hint for preferred replica to be 
+   * deleted when there is any excessive blocks is provided.
    * For example, whenever client code
    * writes a new Block here, or another DataNode copies a Block to
    * this DataNode, it will call blockReceived().
    */
-  public void blockReceived(DatanodeRegistration registration,
+  public void blockReceivedAndDeleted(DatanodeRegistration registration,
                             String poolId,
-                            Block blocks[],
-                            String[] delHints) throws IOException;
+                            StorageReceivedDeletedBlocks[] rcvdAndDeletedBlocks)
+                            throws IOException;
 
   /**
    * errorReport() tells the NameNode about something that has gone

@@ -53,9 +53,7 @@ public class CorruptFileBlocks implements Writable {
     return cookie;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  
   @Override
   public void readFields(DataInput in) throws IOException {
     int fileCount = in.readInt();
@@ -66,9 +64,7 @@ public class CorruptFileBlocks implements Writable {
     cookie = Text.readString(in);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(files.length);
@@ -78,9 +74,8 @@ public class CorruptFileBlocks implements Writable {
     Text.writeString(out, cookie);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+ 
+  @Override
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;
@@ -93,9 +88,8 @@ public class CorruptFileBlocks implements Writable {
       Arrays.equals(files, other.files);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  
+  @Override
   public int hashCode() {
     int result = cookie.hashCode();
 

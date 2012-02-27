@@ -758,8 +758,6 @@ public class TestRuntimeEstimators {
   }
 
   class MyAppContext implements AppContext {
-    // I'll be making Avro objects by hand.  Please don't do that very often.
-
     private final ApplicationAttemptId myAppAttemptID;
     private final ApplicationId myApplicationID;
     private final JobId myJobID;

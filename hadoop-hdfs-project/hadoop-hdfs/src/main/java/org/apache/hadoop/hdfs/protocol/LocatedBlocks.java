@@ -31,8 +31,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
-import org.apache.avro.reflect.Nullable;
-
 /**
  * Collection of blocks with their locations and the file length.
  */
@@ -42,7 +40,6 @@ public class LocatedBlocks implements Writable {
   private long fileLength;
   private List<LocatedBlock> blocks; // array of blocks with prioritized locations
   private boolean underConstruction;
-  @Nullable
   private LocatedBlock lastLocatedBlock = null;
   private boolean isLastBlockComplete = false;
 
@@ -225,7 +222,6 @@ public class LocatedBlocks implements Writable {
     }
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(getClass().getSimpleName());

@@ -36,8 +36,6 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.avro.reflect.Nullable;
-
 /** 
  * DatanodeInfo represents the status of a DataNode.
  * This object is used for communication in the
@@ -57,7 +55,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /** HostName as supplied by the datanode during registration as its 
    * name. Namenode uses datanode IP address as the name.
    */
-  @Nullable
   protected String hostName = null;
   
   // administrative states of a datanode
@@ -75,11 +72,16 @@ public class DatanodeInfo extends DatanodeID implements Node {
     public String toString() {
       return value;
     }
+    
+    public static AdminStates fromValue(final String value) {
+      for (AdminStates as : AdminStates.values()) {
+        if (as.value.equals(value)) return as;
+      }
+      return NORMAL;
+    }
   }
 
-  @Nullable
   protected AdminStates adminState;
-
 
   public DatanodeInfo() {
     super();
@@ -110,10 +112,19 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.adminState = null;    
   }
   
-  protected DatanodeInfo(DatanodeID nodeID, String location, String hostName) {
+  public DatanodeInfo(DatanodeID nodeID, String location, String hostName) {
     this(nodeID);
     this.location = location;
     this.hostName = hostName;
+  }
+  
+  public DatanodeInfo(DatanodeID nodeID, String location, String hostName,
+      final long capacity, final long dfsUsed, final long remaining,
+      final long blockPoolUsed, final long lastUpdate, final int xceiverCount,
+      final AdminStates adminState) {
+    this(nodeID.getName(), nodeID.getStorageID(), nodeID.getInfoPort(), nodeID
+        .getIpcPort(), capacity, dfsUsed, remaining, blockPoolUsed, lastUpdate,
+        xceiverCount, location, hostName, adminState);
   }
 
   /** Constructor */
@@ -366,7 +377,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
        });
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
@@ -384,7 +395,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     WritableUtils.writeEnum(out, getAdminState());
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 

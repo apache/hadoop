@@ -4,13 +4,34 @@ Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    MAPREDUCE-3545. Remove Avro RPC. (suresh)
+
   NEW FEATURES
 
   IMPROVEMENTS
 
+    MAPREDUCE-2887 due to HADOOP-7524 Change RPC to allow multiple protocols
+    including multuple versions of the same protocol (sanjay Radia)
+
+    MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
+    process (atm)
+
+    HADOOP-7862   MR changes to work with HADOOP 7862: 
+    Move the support for multiple protocols to lower layer so that Writable,
+    PB and Avro can all use it (Sanjay)
+
+    MAPREDUCE-3740. Fixed broken mapreduce compilation after the patch for
+    HADOOP-7965. (Devaraj K via vinodkv) 
+
   OPTIMIZATIONS
 
   BUG FIXES
+
+    MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
+    for HDFS-2895. (Suresh Srinivas via vinodkv)
+
+    MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas
+    Graves via mahadev)
 
 Release 0.23.2 - UNRELEASED
 
@@ -86,8 +107,6 @@ Release 0.23.2 - UNRELEASED
     via vinodkv)
  
 Release 0.23.1 - 2012-02-17 
-
-  INCOMPATIBLE CHANGES
 
   NEW FEATURES
 

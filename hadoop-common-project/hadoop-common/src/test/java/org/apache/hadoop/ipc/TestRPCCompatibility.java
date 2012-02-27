@@ -31,6 +31,10 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
+import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureRequestProto;
+import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureResponseProto;
+import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolSignatureProto;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.After;
 import org.junit.Test;
@@ -39,7 +43,7 @@ import org.junit.Test;
 public class TestRPCCompatibility {
   private static final String ADDRESS = "0.0.0.0";
   private static InetSocketAddress addr;
-  private static Server server;
+  private static RPC.Server server;
   private ProtocolProxy<?> proxy;
 
   public static final Log LOG =
@@ -52,10 +56,14 @@ public class TestRPCCompatibility {
     void ping() throws IOException;    
   }
   
-  public interface TestProtocol1 extends TestProtocol0 {
+  public interface TestProtocol1 extends VersionedProtocol, TestProtocol0 {
     String echo(String value) throws IOException;
   }
 
+  
+  // TestProtocol2 is a compatible impl of TestProtocol1 - hence use its name
+  @ProtocolInfo(protocolName=
+      "org.apache.hadoop.ipc.TestRPCCompatibility$TestProtocol1")
   public interface TestProtocol2 extends TestProtocol1 {
     int echo(int value)  throws IOException;
   }
@@ -89,28 +97,44 @@ public class TestRPCCompatibility {
   public static class TestImpl1 extends TestImpl0 implements TestProtocol1 {
     @Override
     public String echo(String value) { return value; }
+    @Override
+    public long getProtocolVersion(String protocol,
+        long clientVersion) throws IOException {
+        return TestProtocol1.versionID;
+    }
   }
 
   public static class TestImpl2 extends TestImpl1 implements TestProtocol2 {
     @Override
     public int echo(int value) { return value; }
+
+    @Override
+    public long getProtocolVersion(String protocol,
+        long clientVersion) throws IOException {
+      return TestProtocol2.versionID;
+    }
+
   }
   
   @After
   public void tearDown() throws IOException {
     if (proxy != null) {
       RPC.stopProxy(proxy.getProxy());
+      proxy = null;
     }
     if (server != null) {
       server.stop();
+      server = null;
     }
   }
   
   @Test  // old client vs new server
   public void testVersion0ClientVersion1Server() throws Exception {
     // create a server with two handlers
+    TestImpl1 impl = new TestImpl1();
     server = RPC.getServer(TestProtocol1.class,
-                              new TestImpl1(), ADDRESS, 0, 2, false, conf, null);
+                            impl, ADDRESS, 0, 2, false, conf, null);
+    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -154,8 +178,10 @@ public class TestRPCCompatibility {
     
     public int echo(int value) throws IOException, NumberFormatException {
       if (serverInfo.isMethodSupported("echo", int.class)) {
+System.out.println("echo int is supported");
         return -value;  // use version 3 echo long
       } else { // server is version 2
+System.out.println("echo int is NOT supported");
         return Integer.parseInt(proxy2.echo(String.valueOf(value)));
       }
     }
@@ -172,8 +198,10 @@ public class TestRPCCompatibility {
   @Test // Compatible new client & old server
   public void testVersion2ClientVersion1Server() throws Exception {
     // create a server with two handlers
+    TestImpl1 impl = new TestImpl1();
     server = RPC.getServer(TestProtocol1.class,
-                              new TestImpl1(), ADDRESS, 0, 2, false, conf, null);
+                              impl, ADDRESS, 0, 2, false, conf, null);
+    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -189,9 +217,12 @@ public class TestRPCCompatibility {
   
   @Test // equal version client and server
   public void testVersion2ClientVersion2Server() throws Exception {
+    ProtocolSignature.resetCache();
     // create a server with two handlers
+    TestImpl2 impl = new TestImpl2();
     server = RPC.getServer(TestProtocol2.class,
-                              new TestImpl2(), ADDRESS, 0, 2, false, conf, null);
+                             impl, ADDRESS, 0, 2, false, conf, null);
+    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -250,14 +281,16 @@ public class TestRPCCompatibility {
     assertEquals(hash1, hash2);
   }
   
+  @ProtocolInfo(protocolName=
+      "org.apache.hadoop.ipc.TestRPCCompatibility$TestProtocol1")
   public interface TestProtocol4 extends TestProtocol2 {
-    public static final long versionID = 1L;
+    public static final long versionID = 4L;
     int echo(int value)  throws IOException;
   }
   
   @Test
   public void testVersionMismatch() throws IOException {
-    server = RPC.getServer(TestProtocol2.class, new TestImpl0(), ADDRESS, 0, 2,
+    server = RPC.getServer(TestProtocol2.class, new TestImpl2(), ADDRESS, 0, 2,
         false, conf, null);
     server.start();
     addr = NetUtils.getConnectAddress(server);
@@ -268,7 +301,76 @@ public class TestRPCCompatibility {
       proxy.echo(21);
       fail("The call must throw VersionMismatch exception");
     } catch (IOException ex) {
-      Assert.assertTrue(ex.getMessage().contains("VersionMismatch"));
+      Assert.assertTrue("Expected version mismatch but got " + ex.getMessage(), 
+          ex.getMessage().contains("VersionMismatch"));
     }
+  }
+  
+  @Test
+  public void testIsMethodSupported() throws IOException {
+    server = RPC.getServer(TestProtocol2.class, new TestImpl2(), ADDRESS, 0, 2,
+        false, conf, null);
+    server.start();
+    addr = NetUtils.getConnectAddress(server);
+
+    TestProtocol2 proxy = RPC.getProxy(TestProtocol2.class,
+        TestProtocol2.versionID, addr, conf);
+    boolean supported = RpcClientUtil.isMethodSupported(proxy,
+        TestProtocol2.class, RpcKind.RPC_WRITABLE,
+        RPC.getProtocolVersion(TestProtocol2.class), "echo");
+    Assert.assertTrue(supported);
+    supported = RpcClientUtil.isMethodSupported(proxy,
+        TestProtocol2.class, RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.getProtocolVersion(TestProtocol2.class), "echo");
+    Assert.assertFalse(supported);
+  }
+
+  /**
+   * Verify that ProtocolMetaInfoServerSideTranslatorPB correctly looks up
+   * the server registry to extract protocol signatures and versions.
+   */
+  @Test
+  public void testProtocolMetaInfoSSTranslatorPB() throws Exception {
+    TestImpl1 impl = new TestImpl1();
+    server = RPC.getServer(TestProtocol1.class, impl, ADDRESS, 0, 2, false,
+        conf, null);
+    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
+    server.start();
+
+    ProtocolMetaInfoServerSideTranslatorPB xlator = 
+        new ProtocolMetaInfoServerSideTranslatorPB(server);
+
+    GetProtocolSignatureResponseProto resp = xlator.getProtocolSignature(
+        null,
+        createGetProtocolSigRequestProto(TestProtocol1.class,
+            RpcKind.RPC_PROTOCOL_BUFFER));
+    //No signatures should be found
+    Assert.assertEquals(0, resp.getProtocolSignatureCount());
+    resp = xlator.getProtocolSignature(
+        null,
+        createGetProtocolSigRequestProto(TestProtocol1.class,
+            RpcKind.RPC_WRITABLE));
+    Assert.assertEquals(1, resp.getProtocolSignatureCount());
+    ProtocolSignatureProto sig = resp.getProtocolSignatureList().get(0);
+    Assert.assertEquals(TestProtocol1.versionID, sig.getVersion());
+    boolean found = false;
+    int expected = ProtocolSignature.getFingerprint(TestProtocol1.class
+        .getMethod("echo", String.class));
+    for (int m : sig.getMethodsList()) {
+      if (expected == m) {
+        found = true;
+        break;
+      }
+    }
+    Assert.assertTrue(found);
+  }
+  
+  private GetProtocolSignatureRequestProto createGetProtocolSigRequestProto(
+      Class<?> protocol, RpcKind rpcKind) {
+    GetProtocolSignatureRequestProto.Builder builder = 
+        GetProtocolSignatureRequestProto.newBuilder();
+    builder.setProtocol(protocol.getName());
+    builder.setRpcKind(rpcKind.toString());
+    return builder.build();
   }
 }

@@ -173,6 +173,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 
 /***************************************************
@@ -297,12 +298,43 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // lock to protect FSNamesystem.
   private ReentrantReadWriteLock fsLock;
 
+  
   /**
-   * FSNamesystem constructor.
+   * Instantiates an FSNamesystem loaded from the image and edits
+   * directories specified in the passed Configuration.
+   * 
+   * @param conf the Configuration which specifies the storage directories
+   *             from which to load
+   * @return an FSNamesystem which contains the loaded namespace
+   * @throws IOException if loading fails
    */
-  FSNamesystem(Configuration conf) throws IOException {
+  public static FSNamesystem loadFromDisk(Configuration conf) throws IOException {
+    FSImage fsImage = new FSImage(conf);
+    FSNamesystem namesystem = new FSNamesystem(conf, fsImage);
+
+    long loadStart = now();
+    StartupOption startOpt = NameNode.getStartupOption(conf);
+    namesystem.loadFSImage(startOpt, fsImage);
+    long timeTakenToLoadFSImage = now() - loadStart;
+    LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
+    NameNode.getNameNodeMetrics().setFsImageLoadTime(
+                              (int) timeTakenToLoadFSImage);
+    return namesystem;
+  }
+
+  /**
+   * Create an FSNamesystem associated with the specified image.
+   * 
+   * Note that this does not load any data off of disk -- if you would
+   * like that behavior, use {@link #loadFromDisk(Configuration)}
+
+   * @param fnImage The FSImage to associate with
+   * @param conf configuration
+   * @throws IOException on bad configuration
+   */
+  FSNamesystem(Configuration conf, FSImage fsImage) throws IOException {
     try {
-      initialize(conf, null);
+      initialize(conf, fsImage);
     } catch(IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
@@ -318,27 +350,39 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     resourceRecheckInterval = conf.getLong(
         DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
         DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT);
-    nnResourceChecker = new NameNodeResourceChecker(conf);
-    checkAvailableResources();
     this.systemStart = now();
     this.blockManager = new BlockManager(this, this, conf);
     this.datanodeStatistics = blockManager.getDatanodeManager().getDatanodeStatistics();
     this.fsLock = new ReentrantReadWriteLock(true); // fair locking
     setConfigurationParameters(conf);
     dtSecretManager = createDelegationTokenSecretManager(conf);
-    this.registerMBean(); // register the MBean for the FSNamesystemState
-    if(fsImage == null) {
-      this.dir = new FSDirectory(this, conf);
-      StartupOption startOpt = NameNode.getStartupOption(conf);
-      this.dir.loadFSImage(startOpt);
-      long timeTakenToLoadFSImage = now() - systemStart;
-      LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
-      NameNode.getNameNodeMetrics().setFsImageLoadTime(
-                                (int) timeTakenToLoadFSImage);
-    } else {
-      this.dir = new FSDirectory(fsImage, this, conf);
-    }
+    this.dir = new FSDirectory(fsImage, this, conf);
     this.safeMode = new SafeModeInfo(conf);
+  }
+
+  void loadFSImage(StartupOption startOpt, FSImage fsImage)
+      throws IOException {
+    // format before starting up if requested
+    if (startOpt == StartupOption.FORMAT) {
+      
+      fsImage.format(this, fsImage.getStorage().determineClusterId());// reuse current id
+
+      startOpt = StartupOption.REGULAR;
+    }
+    boolean success = false;
+    try {
+      if (fsImage.recoverTransitionRead(startOpt, this)) {
+        fsImage.saveNamespace(this);
+      }
+      fsImage.openEditLog();
+      
+      success = true;
+    } finally {
+      if (!success) {
+        fsImage.close();
+      }
+    }
+    dir.imageLoadComplete();
   }
 
   void activateSecretManager() throws IOException {
@@ -351,8 +395,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Activate FSNamesystem daemons.
    */
   void activate(Configuration conf) throws IOException {
+    this.registerMBean(); // register the MBean for the FSNamesystemState
+
     writeLock();
     try {
+      nnResourceChecker = new NameNodeResourceChecker(conf);
+      checkAvailableResources();
+
       setBlockTotal();
       blockManager.activate(conf);
 
@@ -436,37 +485,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   /**
-   * dirs is a list of directories where the filesystem directory state 
-   * is stored
-   */
-  FSNamesystem(FSImage fsImage, Configuration conf) throws IOException {
-    this.fsLock = new ReentrantReadWriteLock(true);
-    this.blockManager = new BlockManager(this, this, conf);
-    setConfigurationParameters(conf);
-    this.dir = new FSDirectory(fsImage, this, conf);
-    dtSecretManager = createDelegationTokenSecretManager(conf);
-  }
-
-  /**
-   * Create FSNamesystem for {@link BackupNode}.
-   * Should do everything that would be done for the NameNode,
-   * except for loading the image.
-   * 
-   * @param bnImage {@link BackupImage}
-   * @param conf configuration
-   * @throws IOException
-   */
-  FSNamesystem(Configuration conf, BackupImage bnImage) throws IOException {
-    try {
-      initialize(conf, bnImage);
-    } catch(IOException e) {
-      LOG.error(getClass().getSimpleName() + " initialization failed.", e);
-      close();
-      throw e;
-    }
-  }
-
-  /**
    * Initializes some of the members from configuration
    */
   private void setConfigurationParameters(Configuration conf) 
@@ -514,13 +532,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   NamespaceInfo getNamespaceInfo() {
     readLock();
     try {
-      return new NamespaceInfo(dir.fsImage.getStorage().getNamespaceID(),
-          getClusterId(), getBlockPoolId(),
-          dir.fsImage.getStorage().getCTime(),
-          upgradeManager.getUpgradeVersion());
+      return unprotectedGetNamespaceInfo();
     } finally {
       readUnlock();
     }
+  }
+
+  /**
+   * Version of {@see #getNamespaceInfo()} that is not protected by a lock.
+   */
+  NamespaceInfo unprotectedGetNamespaceInfo() {
+    return new NamespaceInfo(dir.fsImage.getStorage().getNamespaceID(),
+        getClusterId(), getBlockPoolId(),
+        dir.fsImage.getStorage().getCTime(),
+        upgradeManager.getUpgradeVersion());
   }
 
   /**
@@ -2567,6 +2592,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   private void checkAvailableResources() throws IOException {
+    Preconditions.checkState(nnResourceChecker != null,
+        "nnResourceChecker not initialized");
     hasResourcesAvailable = nnResourceChecker.hasAvailableDiskSpace();
   }
 
@@ -2752,7 +2779,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new IOException("Safe mode should be turned ON " +
                               "in order to create namespace image.");
       }
-      getFSImage().saveNamespace();
+      getFSImage().saveNamespace(this);
       LOG.info("New namespace image has been created.");
     } finally {
       readUnlock();
