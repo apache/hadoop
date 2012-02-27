@@ -23,6 +23,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3740. Fixed broken mapreduce compilation after the patch for
     HADOOP-7965. (Devaraj K via vinodkv) 
 
+    MAPREDUCE-3909 Javadoc the Service interfaces (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
