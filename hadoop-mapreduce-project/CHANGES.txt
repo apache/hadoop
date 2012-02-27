@@ -105,6 +105,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3686. Fixed two bugs in Counters because of which web app displays
     zero counter values for framework counters. (Bhallamudi Venkata Siva Kamesh
     via vinodkv)
+
+    MAPREDUCE-3913. RM application webpage is unresponsive after 2000 jobs 
+    (Jason Lowe via tgraves)
  
 Release 0.23.1 - 2012-02-17 
 

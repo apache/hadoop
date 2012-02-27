@@ -30,7 +30,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 public class RmView extends TwoColumnLayout {
   static final int MAX_DISPLAY_ROWS = 100;  // direct table rendering
   static final int MAX_FAST_ROWS = 1000;    // inline js array
-  static final int MAX_INLINE_ROWS = 2000;  // ajax load
 
   @Override
   protected void preHead(Page.HTML<_> html) {
@@ -80,11 +79,6 @@ public class RmView extends TwoColumnLayout {
     }
     if (list.apps.size() > MAX_FAST_ROWS) {
       tableInitProgress(init, list.apps.size() * 6);
-    }
-    if (list.apps.size() > MAX_INLINE_ROWS) {
-      list.rendering = Render.JS_LOAD;
-      return init.append(", sAjaxSource:'").append(url("apps", "json")).
-          append("'}").toString();
     }
     list.rendering = Render.JS_ARRAY;
     return init.append(", aaData:appsData}").toString();
