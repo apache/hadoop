@@ -1,0 +1,44 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<head>
+   <title>Namenode Client Protocols Compatible with the version
+    of Hadoop Release 23</title>
+</head>
+<body>
+<p>
+This package is for ALL versions of HDFS protocols that use writable data types
+and are compatible with the version of the protocol that was
+ shipped with Release 23 of Hadoop.
+</p>
+
+Compatibility should be maintained:
+<ul>
+<li> Do NOT delete any methods </li>
+<li> Do NOT change the signatures of any method:
+ do not  change parameters, parameter types
+or exceptions thrown by the method.</li>
+</ul>
+<p>
+You can add new methods and new types. If you need to  change a method's
+signature, please add a new method instead.
+When you add new methods and new types do NOT change the version number.
+<p> 
+Version number is changed ONLY when compatibility is broken (which
+should be very rare and a big deal).
+</p>

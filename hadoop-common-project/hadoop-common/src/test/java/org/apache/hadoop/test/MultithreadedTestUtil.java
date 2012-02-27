@@ -164,6 +164,10 @@ public abstract class MultithreadedTestUtil {
       }
       checkException();
     }
+
+    public Iterable<? extends Thread> getTestThreads() {
+      return testThreads;
+    }
   }
 
   /**

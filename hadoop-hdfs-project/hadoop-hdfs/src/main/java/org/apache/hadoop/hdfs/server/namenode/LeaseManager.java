@@ -245,13 +245,13 @@ public class LeaseManager {
       return paths.remove(src);
     }
 
-    /** {@inheritDoc} */
+    @Override
     public String toString() {
       return "[Lease.  Holder: " + holder
           + ", pendingcreates: " + paths.size() + "]";
     }
   
-    /** {@inheritDoc} */
+    @Override
     public int compareTo(Lease o) {
       Lease l1 = this;
       Lease l2 = o;
@@ -266,7 +266,7 @@ public class LeaseManager {
       }
     }
   
-    /** {@inheritDoc} */
+    @Override
     public boolean equals(Object o) {
       if (!(o instanceof Lease)) {
         return false;
@@ -279,7 +279,7 @@ public class LeaseManager {
       return false;
     }
   
-    /** {@inheritDoc} */
+    @Override
     public int hashCode() {
       return holder.hashCode();
     }
@@ -429,7 +429,7 @@ public class LeaseManager {
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public synchronized String toString() {
     return getClass().getSimpleName() + "= {"
         + "\n leases=" + leases

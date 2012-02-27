@@ -36,6 +36,11 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.junit.After;
 import org.junit.Test;
 
@@ -104,21 +109,24 @@ public class TestDeadDatanode {
 
     DatanodeProtocol dnp = cluster.getNameNodeRpc();
     
-    Block[] blocks = new Block[] { new Block(0) };
-    String[] delHints = new String[] { "" };
+    ReceivedDeletedBlockInfo[] blocks = { new ReceivedDeletedBlockInfo(
+        new Block(0), "") };
+    StorageReceivedDeletedBlocks[] storageBlocks = { 
+        new StorageReceivedDeletedBlocks(reg.getStorageID(), blocks) };
     
     // Ensure blockReceived call from dead datanode is rejected with IOException
     try {
-      dnp.blockReceived(reg, poolId, blocks, delHints);
+      dnp.blockReceivedAndDeleted(reg, poolId, storageBlocks);
       Assert.fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected
     }
 
     // Ensure blockReport from dead datanode is rejected with IOException
-    long[] blockReport = new long[] { 0L, 0L, 0L };
+    StorageBlockReport[] report = { new StorageBlockReport(reg.getStorageID(),
+        new long[] { 0L, 0L, 0L }) };
     try {
-      dnp.blockReport(reg, poolId, blockReport);
+      dnp.blockReport(reg, poolId, report);
       Assert.fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected
@@ -126,9 +134,11 @@ public class TestDeadDatanode {
 
     // Ensure heartbeat from dead datanode is rejected with a command
     // that asks datanode to register again
-    DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, 0, 0, 0, 0, 0, 0, 0);
+    StorageReport[] rep = { new StorageReport(reg.getStorageID(), false, 0, 0,
+        0, 0) };
+    DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, rep, 0, 0, 0);
     Assert.assertEquals(1, cmd.length);
-    Assert.assertEquals(cmd[0].getAction(), DatanodeCommand.REGISTER
+    Assert.assertEquals(cmd[0].getAction(), RegisterCommand.REGISTER
         .getAction());
   }
 }

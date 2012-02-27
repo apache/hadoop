@@ -24,9 +24,8 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.junit.Test;
@@ -49,7 +48,8 @@ public class TestDatanodeRegister {
 
     NamespaceInfo fakeNSInfo = mock(NamespaceInfo.class);
     when(fakeNSInfo.getBuildVersion()).thenReturn("NSBuildVersion");
-    DatanodeProtocol fakeDNProt = mock(DatanodeProtocol.class);
+    DatanodeProtocolClientSideTranslatorPB fakeDNProt = 
+        mock(DatanodeProtocolClientSideTranslatorPB.class);
     when(fakeDNProt.versionRequest()).thenReturn(fakeNSInfo);
 
     bpos.setNameNode( fakeDNProt );

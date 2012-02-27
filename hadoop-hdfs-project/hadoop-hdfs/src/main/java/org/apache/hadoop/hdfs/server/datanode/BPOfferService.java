@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -45,11 +46,17 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
+import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
+import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
-import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
@@ -86,15 +93,17 @@ class BPOfferService implements Runnable {
   DatanodeRegistration bpRegistration;
   
   long lastBlockReport = 0;
+  long lastDeletedReport = 0;
 
   boolean resetBlockReportTime = true;
 
   Thread bpThread;
-  DatanodeProtocol bpNamenode;
+  DatanodeProtocolClientSideTranslatorPB bpNamenode;
   private long lastHeartbeat = 0;
   private volatile boolean initialized = false;
-  private final LinkedList<Block> receivedBlockList = new LinkedList<Block>();
-  private final LinkedList<String> delHints = new LinkedList<String>();
+  private final LinkedList<ReceivedDeletedBlockInfo> receivedAndDeletedBlockList 
+  	= new LinkedList<ReceivedDeletedBlockInfo>();
+  private volatile int pendingReceivedRequests = 0;
   private volatile boolean shouldServiceRun = true;
   UpgradeManagerDatanode upgradeManager = null;
   private final DataNode dn;
@@ -160,7 +169,7 @@ class BPOfferService implements Runnable {
    * Used to inject a spy NN in the unit tests.
    */
   @VisibleForTesting
-  void setNameNode(DatanodeProtocol dnProtocol) {
+  void setNameNode(DatanodeProtocolClientSideTranslatorPB dnProtocol) {
     bpNamenode = dnProtocol;
   }
 
@@ -220,8 +229,8 @@ class BPOfferService implements Runnable {
 
   private void connectToNNAndHandshake() throws IOException {
     // get NN proxy
-    bpNamenode = (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
-          DatanodeProtocol.versionID, nnAddr, dn.getConf());
+    bpNamenode = new DatanodeProtocolClientSideTranslatorPB(nnAddr,
+        dn.getConf());
 
     // First phase of the handshake with NN - get the namespace
     // info.
@@ -270,39 +279,32 @@ class BPOfferService implements Runnable {
    * Report received blocks and delete hints to the Namenode
    * @throws IOException
    */
-  private void reportReceivedBlocks() throws IOException {
-    //check if there are newly received blocks
-    Block [] blockArray=null;
-    String [] delHintArray=null;
-    synchronized(receivedBlockList) {
-      synchronized(delHints){
-        int numBlocks = receivedBlockList.size();
-        if (numBlocks > 0) {
-          if(numBlocks!=delHints.size()) {
-            LOG.warn("Panic: receiveBlockList and delHints are not of " +
-            "the same length" );
-          }
-          //
-          // Send newly-received blockids to namenode
-          //
-          blockArray = receivedBlockList.toArray(new Block[numBlocks]);
-          delHintArray = delHints.toArray(new String[numBlocks]);
-        }
+  private void reportReceivedDeletedBlocks() throws IOException {
+
+    // check if there are newly received blocks
+    ReceivedDeletedBlockInfo[] receivedAndDeletedBlockArray = null;
+    int currentReceivedRequestsCounter;
+    synchronized (receivedAndDeletedBlockList) {
+      currentReceivedRequestsCounter = pendingReceivedRequests;
+      int numBlocks = receivedAndDeletedBlockList.size();
+      if (numBlocks > 0) {
+        //
+        // Send newly-received and deleted blockids to namenode
+        //
+        receivedAndDeletedBlockArray = receivedAndDeletedBlockList
+            .toArray(new ReceivedDeletedBlockInfo[numBlocks]);
       }
     }
-    if (blockArray != null) {
-      if(delHintArray == null || delHintArray.length != blockArray.length ) {
-        LOG.warn("Panic: block array & delHintArray are not the same" );
-      }
-      bpNamenode.blockReceived(bpRegistration, getBlockPoolId(), blockArray,
-          delHintArray);
-      synchronized(receivedBlockList) {
-        synchronized(delHints){
-          for(int i=0; i<blockArray.length; i++) {
-            receivedBlockList.remove(blockArray[i]);
-            delHints.remove(delHintArray[i]);
-          }
+    if (receivedAndDeletedBlockArray != null) {
+      StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
+          bpRegistration.getStorageID(), receivedAndDeletedBlockArray) };
+      bpNamenode.blockReceivedAndDeleted(bpRegistration, getBlockPoolId(),
+          report);
+      synchronized (receivedAndDeletedBlockList) {
+        for (int i = 0; i < receivedAndDeletedBlockArray.length; i++) {
+          receivedAndDeletedBlockList.remove(receivedAndDeletedBlockArray[i]);
         }
+        pendingReceivedRequests -= currentReceivedRequestsCounter;
       }
     }
   }
@@ -313,26 +315,42 @@ class BPOfferService implements Runnable {
    * client? For now we don't.
    */
   void notifyNamenodeReceivedBlock(ExtendedBlock block, String delHint) {
-    if(block==null || delHint==null) {
-      throw new IllegalArgumentException(
-          block==null?"Block is null":"delHint is null");
+    if (block == null || delHint == null) {
+      throw new IllegalArgumentException(block == null ? "Block is null"
+          : "delHint is null");
     }
-    
+
     if (!block.getBlockPoolId().equals(getBlockPoolId())) {
       LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + " vs. "
           + getBlockPoolId());
       return;
     }
-    
-    synchronized (receivedBlockList) {
-      synchronized (delHints) {
-        receivedBlockList.add(block.getLocalBlock());
-        delHints.add(delHint);
-        receivedBlockList.notifyAll();
-      }
+
+    synchronized (receivedAndDeletedBlockList) {
+      receivedAndDeletedBlockList.add(new ReceivedDeletedBlockInfo(block
+          .getLocalBlock(), delHint));
+      pendingReceivedRequests++;
+      receivedAndDeletedBlockList.notifyAll();
     }
   }
 
+  void notifyNamenodeDeletedBlock(ExtendedBlock block) {
+    if (block == null) {
+      throw new IllegalArgumentException("Block is null");
+    }
+
+    if (!block.getBlockPoolId().equals(getBlockPoolId())) {
+      LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + " vs. "
+          + getBlockPoolId());
+      return;
+    }
+
+    synchronized (receivedAndDeletedBlockList) {
+      receivedAndDeletedBlockList.add(new ReceivedDeletedBlockInfo(block
+          .getLocalBlock(), ReceivedDeletedBlockInfo.TODELETE_HINT));
+    }
+  }
+  
 
   /**
    * Report the list blocks to the Namenode
@@ -350,8 +368,9 @@ class BPOfferService implements Runnable {
 
       // Send block report
       long brSendStartTime = now();
-      cmd = bpNamenode.blockReport(bpRegistration, getBlockPoolId(), bReport
-          .getBlockListAsLongs());
+      StorageBlockReport[] report = { new StorageBlockReport(
+          bpRegistration.getStorageID(), bReport.getBlockListAsLongs()) };
+      cmd = bpNamenode.blockReport(bpRegistration, getBlockPoolId(), report);
 
       // Log the block report processing stats from Datanode perspective
       long brSendCost = now() - brSendStartTime;
@@ -383,11 +402,11 @@ class BPOfferService implements Runnable {
   
   
   DatanodeCommand [] sendHeartBeat() throws IOException {
-    return bpNamenode.sendHeartbeat(bpRegistration,
-        dn.data.getCapacity(),
-        dn.data.getDfsUsed(),
-        dn.data.getRemaining(),
-        dn.data.getBlockPoolUsed(getBlockPoolId()),
+    // reports number of failed volumes
+    StorageReport[] report = { new StorageReport(bpRegistration.getStorageID(),
+        false, dn.data.getCapacity(), dn.data.getDfsUsed(),
+        dn.data.getRemaining(), dn.data.getBlockPoolUsed(getBlockPoolId())) };
+    return bpNamenode.sendHeartbeat(bpRegistration, report,
         dn.xmitsInProgress.get(),
         dn.getXceiverCount(), dn.data.getNumFailedVolumes());
   }
@@ -433,7 +452,7 @@ class BPOfferService implements Runnable {
     if(upgradeManager != null)
       upgradeManager.shutdownUpgrade();
     shouldServiceRun = false;
-    RPC.stopProxy(bpNamenode);
+    IOUtils.cleanup(LOG, bpNamenode);
     dn.shutdownBlockPool(this);
   }
 
@@ -442,7 +461,8 @@ class BPOfferService implements Runnable {
    * forever calling remote NameNode functions.
    */
   private void offerService() throws Exception {
-    LOG.info("For namenode " + nnAddr + " using BLOCKREPORT_INTERVAL of "
+    LOG.info("For namenode " + nnAddr + " using DELETEREPORT_INTERVAL of "
+        + dnConf.deleteReportInterval + " msec " + " BLOCKREPORT_INTERVAL of "
         + dnConf.blockReportInterval + "msec" + " Initial delay: "
         + dnConf.initialBlockReportDelay + "msec" + "; heartBeatInterval="
         + dnConf.heartBeatInterval);
@@ -480,8 +500,11 @@ class BPOfferService implements Runnable {
             }
           }
         }
-
-        reportReceivedBlocks();
+        if (pendingReceivedRequests > 0
+            || (startTime - lastDeletedReport > dnConf.deleteReportInterval)) {
+          reportReceivedDeletedBlocks();
+          lastDeletedReport = startTime;
+        }
 
         DatanodeCommand cmd = blockReport();
         processCommand(cmd);
@@ -497,10 +520,10 @@ class BPOfferService implements Runnable {
         //
         long waitTime = dnConf.heartBeatInterval - 
         (System.currentTimeMillis() - lastHeartbeat);
-        synchronized(receivedBlockList) {
-          if (waitTime > 0 && receivedBlockList.size() == 0) {
+        synchronized(receivedAndDeletedBlockList) {
+          if (waitTime > 0 && pendingReceivedRequests == 0) {
             try {
-              receivedBlockList.wait(waitTime);
+            	receivedAndDeletedBlockList.wait(waitTime);
             } catch (InterruptedException ie) {
               LOG.warn("BPOfferService for " + this + " interrupted");
             }
@@ -553,7 +576,8 @@ class BPOfferService implements Runnable {
     while (shouldRun()) {
       try {
         // Use returned registration from namenode with updated machine name.
-        bpRegistration = bpNamenode.registerDatanode(bpRegistration);
+        bpRegistration = bpNamenode.registerDatanode(bpRegistration,
+            new DatanodeStorage[0]);
         break;
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + nnAddr);
@@ -699,7 +723,7 @@ class BPOfferService implements Runnable {
       }
       break;
     case DatanodeProtocol.DNA_FINALIZE:
-      String bp = ((DatanodeCommand.Finalize) cmd).getBlockPoolId(); 
+      String bp = ((FinalizeCommand) cmd).getBlockPoolId(); 
       assert getBlockPoolId().equals(bp) :
         "BP " + getBlockPoolId() + " received DNA_FINALIZE " +
         "for other block pool " + bp;
@@ -764,12 +788,12 @@ class BPOfferService implements Runnable {
   }
 
   @VisibleForTesting
-  DatanodeProtocol getBpNamenode() {
+  DatanodeProtocolClientSideTranslatorPB getBpNamenode() {
     return bpNamenode;
   }
 
   @VisibleForTesting
-  void setBpNamenode(DatanodeProtocol bpNamenode) {
+  void setBpNamenode(DatanodeProtocolClientSideTranslatorPB bpNamenode) {
     this.bpNamenode = bpNamenode;
   }
 }

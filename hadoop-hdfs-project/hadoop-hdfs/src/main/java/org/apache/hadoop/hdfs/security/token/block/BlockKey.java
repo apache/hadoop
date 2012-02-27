@@ -36,4 +36,8 @@ public class BlockKey extends DelegationKey {
   public BlockKey(int keyId, long expiryDate, SecretKey key) {
     super(keyId, expiryDate, key);
   }
+  
+  public BlockKey(int keyId, long expiryDate, byte[] encodedKey) {
+    super(keyId, expiryDate, encodedKey);
+  }
 }

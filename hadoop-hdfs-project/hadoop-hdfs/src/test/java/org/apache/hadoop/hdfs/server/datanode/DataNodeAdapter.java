@@ -19,9 +19,8 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.mockito.Mockito;
 
 import com.google.common.base.Preconditions;
@@ -57,7 +56,7 @@ public class DataNodeAdapter {
    * the given NameNode. This can be used to delay or wait for
    * RPC calls on the datanode->NN path.
    */
-  public static DatanodeProtocol spyOnBposToNN(
+  public static DatanodeProtocolClientSideTranslatorPB spyOnBposToNN(
       DataNode dn, NameNode nn) {
     String bpid = nn.getNamesystem().getBlockPoolId();
     
@@ -71,12 +70,8 @@ public class DataNodeAdapter {
     Preconditions.checkArgument(bpos != null,
         "No such bpid: %s", bpid);
 
-    // When protobufs are merged, the following can be converted
-    // to a simple spy. Because you can't spy on proxy objects,
-    // we have to use the DelegateAnswer trick.
-    DatanodeProtocol origNN = bpos.getBpNamenode();
-    DatanodeProtocol spy = Mockito.mock(DatanodeProtocol.class,
-        new GenericTestUtils.DelegateAnswer(origNN));
+    DatanodeProtocolClientSideTranslatorPB origNN = bpos.getBpNamenode();
+    DatanodeProtocolClientSideTranslatorPB spy = Mockito.spy(origNN);
 
     bpos.setBpNamenode(spy);
     return spy;

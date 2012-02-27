@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
@@ -58,7 +59,6 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.MD5Hash;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
@@ -123,8 +123,10 @@ public class SecondaryNameNode implements Runnable {
   /** checkpoint once every this many transactions, regardless of time */
   private long checkpointTxnCount;
 
+  private FSNamesystem namesystem;
 
-  /** {@inheritDoc} */
+
+  @Override
   public String toString() {
     return getClass().getSimpleName() + " Status" 
       + "\nName Node Address    : " + nameNodeAddr   
@@ -214,9 +216,8 @@ public class SecondaryNameNode implements Runnable {
     nameNodeAddr = NameNode.getServiceAddress(conf, true);
 
     this.conf = conf;
-    this.namenode =
-        (NamenodeProtocol) RPC.waitForProxy(NamenodeProtocol.class,
-            NamenodeProtocol.versionID, nameNodeAddr, conf);
+    this.namenode = new NamenodeProtocolTranslatorPB(nameNodeAddr, conf,
+        UserGroupInformation.getCurrentUser());
 
     // initialize checkpoint directories
     fsName = getInfoServer();
@@ -226,6 +227,8 @@ public class SecondaryNameNode implements Runnable {
                                   "/tmp/hadoop/dfs/namesecondary");    
     checkpointImage = new CheckpointStorage(conf, checkpointDirs, checkpointEditsDirs);
     checkpointImage.recoverCreate(commandLineOpts.shouldFormat());
+    
+    namesystem = new FSNamesystem(conf, checkpointImage);
 
     // Initialize other scheduling parameters from the configuration
     checkpointCheckPeriod = conf.getLong(
@@ -527,7 +530,7 @@ public class SecondaryNameNode implements Runnable {
 
     boolean loadImage = downloadCheckpointFiles(
         fsName, checkpointImage, sig, manifest);   // Fetch fsimage and edits
-    doMerge(sig, manifest, loadImage, checkpointImage);
+    doMerge(sig, manifest, loadImage, checkpointImage, namesystem);
     
     //
     // Upload the new image into the NameNode. Then tell the Namenode
@@ -757,8 +760,7 @@ public class SecondaryNameNode implements Runnable {
     CheckpointStorage(Configuration conf, 
                       Collection<URI> imageDirs,
                       Collection<URI> editsDirs) throws IOException {
-      super(conf, (FSNamesystem)null, imageDirs, editsDirs);
-      setFSNamesystem(new FSNamesystem(this, conf));
+      super(conf, imageDirs, editsDirs);
       
       // the 2NN never writes edits -- it only downloads them. So
       // we shouldn't have any editLog instance. Setting to null
@@ -844,7 +846,8 @@ public class SecondaryNameNode implements Runnable {
     
   static void doMerge(
       CheckpointSignature sig, RemoteEditLogManifest manifest,
-      boolean loadImage, FSImage dstImage) throws IOException {   
+      boolean loadImage, FSImage dstImage, FSNamesystem dstNamesystem)
+      throws IOException {   
     NNStorage dstStorage = dstImage.getStorage();
     
     dstStorage.setStorageInfo(sig);
@@ -855,11 +858,11 @@ public class SecondaryNameNode implements Runnable {
             sig.mostRecentCheckpointTxId + " even though it should have " +
             "just been downloaded");
       }
-      dstImage.reloadFromImageFile(file);
+      dstImage.reloadFromImageFile(file, dstNamesystem);
     }
     
-    Checkpointer.rollForwardByApplyingLogs(manifest, dstImage);
-    dstImage.saveFSImageInAllDirs(dstImage.getLastAppliedTxId());
+    Checkpointer.rollForwardByApplyingLogs(manifest, dstImage, dstNamesystem);
+    dstImage.saveFSImageInAllDirs(dstNamesystem, dstImage.getLastAppliedTxId());
     dstStorage.writeAll();
   }
 }

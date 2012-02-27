@@ -112,7 +112,6 @@ public class BlockInfoUnderConstruction extends BlockInfo {
       return (this == obj) || super.equals(obj);
     }
 
-    /** {@inheritDoc} */
     @Override
     public String toString() {
       final StringBuilder b = new StringBuilder(getClass().getSimpleName());
@@ -268,7 +267,6 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     return (this == obj) || super.equals(obj);
   }
 
-  /** {@inheritDoc} */
   @Override
   public String toString() {
     final StringBuilder b = new StringBuilder(super.toString());

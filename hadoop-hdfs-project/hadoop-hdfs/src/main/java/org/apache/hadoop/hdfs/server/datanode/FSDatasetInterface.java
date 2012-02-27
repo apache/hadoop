@@ -257,7 +257,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
       this.checksumIn = checksumIn;
     }
 
-    /** {@inheritDoc} */
+    @Override
     public void close() {
       IOUtils.closeStream(dataIn);
       IOUtils.closeStream(checksumIn);

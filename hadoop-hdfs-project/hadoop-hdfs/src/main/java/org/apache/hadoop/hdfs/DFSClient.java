@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -123,7 +124,6 @@ public class DFSClient implements java.io.Closeable {
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   final ClientProtocol namenode;
-  final ClientProtocol rpcNamenode;
   private final InetSocketAddress nnAddress;
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
@@ -291,11 +291,10 @@ public class DFSClient implements java.io.Closeable {
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
     if (nameNodeAddr != null && rpcNamenode == null) {
-      this.rpcNamenode = DFSUtil.createRPCNamenode(nameNodeAddr, conf, ugi);
-      this.namenode = DFSUtil.createNamenode(this.rpcNamenode);
+      this.namenode = DFSUtil.createNamenode(nameNodeAddr, conf, ugi);
     } else if (nameNodeAddr == null && rpcNamenode != null) {
       //This case is used for testing.
-      this.namenode = this.rpcNamenode = rpcNamenode;
+      this.namenode = rpcNamenode;
     } else {
       throw new IllegalArgumentException(
           "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
@@ -386,12 +385,31 @@ public class DFSClient implements java.io.Closeable {
     }
     return false;
   }
-
+  
+  /**
+   * Close connections the Namenode.
+   * The namenode variable is either a rpcProxy passed by a test or 
+   * created using the protocolTranslator which is closeable.
+   * If closeable then call close, else close using RPC.stopProxy().
+   */
+  void closeConnectionToNamenode() {
+    if (namenode instanceof Closeable) {
+      try {
+        ((Closeable) namenode).close();
+        return;
+      } catch (IOException e) {
+        // fall through - lets try the stopProxy
+        LOG.warn("Exception closing namenode, stopping the proxy");
+      }     
+    }
+    RPC.stopProxy(namenode);
+  }
+  
   /** Abort and release resources held.  Ignore all errors. */
   void abort() {
     clientRunning = false;
     closeAllFilesBeingWritten(true);
-    RPC.stopProxy(rpcNamenode); // close connections to the namenode
+    closeConnectionToNamenode();
   }
 
   /** Close/abort all files being written. */
@@ -431,7 +449,7 @@ public class DFSClient implements java.io.Closeable {
       clientRunning = false;
       leaserenewer.closeClient(this);
       // close connections to the namenode
-      RPC.stopProxy(rpcNamenode);
+      closeConnectionToNamenode();
     }
   }
 
@@ -614,7 +632,7 @@ public class DFSClient implements java.io.Closeable {
       LOG.info("Renewing " + 
                DelegationTokenIdentifier.stringifyToken(delToken));
       ClientProtocol nn = 
-        DFSUtil.createRPCNamenode
+        DFSUtil.createNamenode
            (SecurityUtil.getTokenServiceAddr(delToken),
             conf, UserGroupInformation.getCurrentUser());
       try {
@@ -632,7 +650,7 @@ public class DFSClient implements java.io.Closeable {
           (Token<DelegationTokenIdentifier>) token;
       LOG.info("Cancelling " + 
                DelegationTokenIdentifier.stringifyToken(delToken));
-      ClientProtocol nn = DFSUtil.createRPCNamenode(
+      ClientProtocol nn = DFSUtil.createNamenode(
           SecurityUtil.getTokenServiceAddr(delToken), conf,
           UserGroupInformation.getCurrentUser());
       try {
@@ -1460,7 +1478,8 @@ public class DFSClient implements java.io.Closeable {
    * 
    * @see ClientProtocol#restoreFailedStorage(String arg)
    */
-  boolean restoreFailedStorage(String arg) throws AccessControlException {
+  boolean restoreFailedStorage(String arg)
+      throws AccessControlException, IOException{
     return namenode.restoreFailedStorage(arg);
   }
 
@@ -1678,8 +1697,7 @@ public class DFSClient implements java.io.Closeable {
     }
   }
   
-  boolean shouldTryShortCircuitRead(InetSocketAddress targetAddr)
-      throws IOException {
+  boolean shouldTryShortCircuitRead(InetSocketAddress targetAddr) {
     if (shortCircuitLocalReads && isLocalAddress(targetAddr)) {
       return true;
     }
@@ -1702,7 +1720,7 @@ public class DFSClient implements java.io.Closeable {
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public String toString() {
     return getClass().getSimpleName() + "[clientName=" + clientName
         + ", ugi=" + ugi + "]"; 

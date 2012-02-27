@@ -558,11 +558,6 @@
         <version>1.5.3</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro-ipc</artifactId>
-        <version>1.5.3</version>
-      </dependency>
-      <dependency>
         <groupId>net.sf.kosmosfs</groupId>
         <artifactId>kfs</artifactId>
         <version>0.3</version>
