@@ -120,6 +120,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3922. Fixed build to not compile 32bit container-executor binary
     by default on all platforms. (Hitesh Shah via vinodkv)
 
+    MAPREDUCE-3790 Broken pipe on streaming job can lead to truncated output for
+    a successful job (Jason Lowe via bobby)
+
 Release 0.23.1 - 2012-02-17 
 
   NEW FEATURES
