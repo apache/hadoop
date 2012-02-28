@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -114,13 +115,18 @@ public class BlockInfoUnderConstruction extends BlockInfo {
 
     @Override
     public String toString() {
-      final StringBuilder b = new StringBuilder(getClass().getSimpleName());
-      b.append("[")
-       .append(expectedLocation)
-       .append("|")
-       .append(state)
-       .append("]");
+      final StringBuilder b = new StringBuilder(50);
+      appendStringTo(b);
       return b.toString();
+    }
+    
+    @Override
+    public void appendStringTo(StringBuilder sb) {
+      sb.append("ReplicaUnderConstruction[")
+        .append(expectedLocation)
+        .append("|")
+        .append(state)
+        .append("]");
     }
   }
 
@@ -269,11 +275,29 @@ public class BlockInfoUnderConstruction extends BlockInfo {
 
   @Override
   public String toString() {
-    final StringBuilder b = new StringBuilder(super.toString());
-    b.append("{blockUCState=").append(blockUCState)
-     .append(", primaryNodeIndex=").append(primaryNodeIndex)
-     .append(", replicas=").append(replicas)
-     .append("}");
+    final StringBuilder b = new StringBuilder(100);
+    appendStringTo(b);
     return b.toString();
+  }
+
+  @Override
+  public void appendStringTo(StringBuilder sb) {
+    super.appendStringTo(sb);
+    appendUCParts(sb);
+  }
+
+  private void appendUCParts(StringBuilder sb) {
+    sb.append("{blockUCState=").append(blockUCState)
+      .append(", primaryNodeIndex=").append(primaryNodeIndex)
+      .append(", replicas=[");
+    Iterator<ReplicaUnderConstruction> iter = replicas.iterator();
+    if (iter.hasNext()) {
+      iter.next().appendStringTo(sb);
+      while (iter.hasNext()) {
+        sb.append(", ");
+        iter.next().appendStringTo(sb);
+      }
+    }
+    sb.append("]}");
   }
 }
