@@ -56,6 +56,10 @@ Release 0.23.3 - UNRELEASED
     HADOOP-7621. alfredo config should be in a file not readable by users
                  (Alejandro Abdelnur via atm)
 
+    HADOOP-8098. KerberosAuthenticatorHandler should use _HOST replacement to 
+    resolve principal name (tucu)
+
+>>>>>>> .merge-right.r1294757
   OPTIMIZATIONS
 
   BUG FIXES

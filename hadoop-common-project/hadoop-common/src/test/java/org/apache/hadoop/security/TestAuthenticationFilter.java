@@ -18,9 +18,11 @@ package org.apache.hadoop.security;
 
 
 import junit.framework.TestCase;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -48,6 +50,8 @@ public class TestAuthenticationFilter extends TestCase {
              AuthenticationFilterInitializer.SIGNATURE_SECRET_FILE, 
              secretFile.getAbsolutePath());
 
+    conf.set(HttpServer.BIND_ADDRESS, "barhost");
+    
     FilterContainer container = Mockito.mock(FilterContainer.class);
     Mockito.doAnswer(
       new Answer() {
@@ -67,7 +71,7 @@ public class TestAuthenticationFilter extends TestCase {
           assertEquals("hadoop", conf.get("signature.secret"));
           assertNull(conf.get("cookie.domain"));
           assertEquals("true", conf.get("simple.anonymous.allowed"));
-          assertEquals("HTTP/localhost@LOCALHOST",
+          assertEquals("HTTP/barhost@LOCALHOST",
                        conf.get("kerberos.principal"));
           assertEquals(System.getProperty("user.home") +
                        "/hadoop.keytab", conf.get("kerberos.keytab"));

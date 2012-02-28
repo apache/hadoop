@@ -833,7 +833,7 @@
 
 <property>
   <name>hadoop.http.authentication.kerberos.principal</name>
-  <value>HTTP/localhost@LOCALHOST</value>
+  <value>HTTP/_HOST@LOCALHOST</value>
   <description>
     Indicates the Kerberos principal to be used for HTTP endpoint.
     The principal MUST start with 'HTTP/' as per Kerberos HTTP SPNEGO specification.
