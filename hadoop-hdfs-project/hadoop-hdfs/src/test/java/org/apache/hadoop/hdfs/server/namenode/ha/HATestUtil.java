@@ -150,6 +150,11 @@ public abstract class HATestUtil {
     return fs;
   }
   
+  public static void setFailoverConfigurations(MiniDFSCluster cluster,
+      Configuration conf) {
+    setFailoverConfigurations(cluster, conf, getLogicalHostname(cluster));
+  }
+  
   /** Sets the required configurations for performing failover of default namespace. */
   public static void setFailoverConfigurations(MiniDFSCluster cluster,
       Configuration conf, String logicalName) {

@@ -21,8 +21,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -34,6 +37,7 @@ import org.apache.hadoop.util.ToolRunner;
  * HDFS implementation of a tool for getting the groups which a given user
  * belongs to.
  */
+@InterfaceAudience.Private
 public class GetGroups extends GetGroupsBase {
 
   static{
@@ -41,11 +45,11 @@ public class GetGroups extends GetGroupsBase {
   }
 
   
-  GetGroups(Configuration conf) {
+  public GetGroups(Configuration conf) {
     super(conf);
   }
 
-  GetGroups(Configuration conf, PrintStream out) {
+  public GetGroups(Configuration conf, PrintStream out) {
     super(conf, out);
   }
   
@@ -57,9 +61,8 @@ public class GetGroups extends GetGroupsBase {
   
   @Override
   protected GetUserMappingsProtocol getUgmProtocol() throws IOException {
-    return new GetUserMappingsProtocolClientSideTranslatorPB(
-        NameNode.getAddress(getConf()), UserGroupInformation.getCurrentUser(),
-        getConf());
+    return NameNodeProxies.createProxy(getConf(), FileSystem.getDefaultUri(getConf()),
+        GetUserMappingsProtocol.class).getProxy();
   }
 
   public static void main(String[] argv) throws Exception {

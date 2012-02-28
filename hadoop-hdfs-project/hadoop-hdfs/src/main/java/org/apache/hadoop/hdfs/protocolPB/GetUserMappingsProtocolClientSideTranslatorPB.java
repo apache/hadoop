@@ -20,22 +20,15 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserResponseProto;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 
 import com.google.protobuf.RpcController;
@@ -47,16 +40,10 @@ public class GetUserMappingsProtocolClientSideTranslatorPB implements
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   private final GetUserMappingsProtocolPB rpcProxy;
-
+  
   public GetUserMappingsProtocolClientSideTranslatorPB(
-      InetSocketAddress nameNodeAddr, UserGroupInformation ugi,
-      Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, GetUserMappingsProtocolPB.class,
-        ProtobufRpcEngine.class);
-    rpcProxy = RPC.getProxy(GetUserMappingsProtocolPB.class,
-        RPC.getProtocolVersion(GetUserMappingsProtocolPB.class),
-        NameNode.getAddress(conf), ugi, conf,
-        NetUtils.getSocketFactory(conf, GetUserMappingsProtocol.class));
+      GetUserMappingsProtocolPB rpcProxy) {
+    this.rpcProxy = rpcProxy;
   }
 
   @Override

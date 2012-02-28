@@ -19,17 +19,14 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -52,12 +49,9 @@ public class JournalProtocolTranslatorPB implements ProtocolMetaInterface,
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   private final JournalProtocolPB rpcProxy;
-
-  public JournalProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
-      Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, JournalProtocolPB.class, ProtobufRpcEngine.class);
-    rpcProxy = RPC.getProxy(JournalProtocolPB.class,
-        RPC.getProtocolVersion(JournalProtocolPB.class), nameNodeAddr, conf);
+  
+  public JournalProtocolTranslatorPB(JournalProtocolPB rpcProxy) {
+    this.rpcProxy = rpcProxy;
   }
 
   @Override

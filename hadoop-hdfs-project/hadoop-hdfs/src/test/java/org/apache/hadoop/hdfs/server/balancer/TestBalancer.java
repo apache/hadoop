@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -100,7 +101,8 @@ public class TestBalancer extends TestCase {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numNodes).build();
     try {
       cluster.waitActive();
-      client = DFSUtil.createNamenode(conf);
+      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
+          ClientProtocol.class).getProxy();
 
       short replicationFactor = (short)(numNodes-1);
       long fileLen = size/replicationFactor;
@@ -194,7 +196,8 @@ public class TestBalancer extends TestCase {
                                               .simulatedCapacities(capacities)
                                               .build();
     cluster.waitActive();
-    client = DFSUtil.createNamenode(conf);
+    client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
+        ClientProtocol.class).getProxy();
 
     for(int i = 0; i < blocksDN.length; i++)
       cluster.injectBlocks(i, Arrays.asList(blocksDN[i]));
@@ -308,7 +311,8 @@ public class TestBalancer extends TestCase {
                                 .build();
     try {
       cluster.waitActive();
-      client = DFSUtil.createNamenode(conf);
+      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
+          ClientProtocol.class).getProxy();
 
       long totalCapacity = sum(capacities);
       
@@ -400,7 +404,8 @@ public class TestBalancer extends TestCase {
                                 .build();
     try {
       cluster.waitActive();
-      client = DFSUtil.createNamenode(conf);
+      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
+          ClientProtocol.class).getProxy();
 
       long totalCapacity = sum(capacities);
 

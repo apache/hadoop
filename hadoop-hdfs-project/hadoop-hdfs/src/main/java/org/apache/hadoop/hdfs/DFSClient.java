@@ -62,7 +62,6 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
-import org.apache.hadoop.hdfs.HAUtil.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -325,8 +324,8 @@ public class DFSClient implements java.io.Closeable {
     } else {
       Preconditions.checkArgument(nameNodeUri != null,
           "null URI");
-      ProxyAndInfo<ClientProtocol> proxyInfo =
-        HAUtil.createProxy(conf, nameNodeUri, ClientProtocol.class);
+      NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo =
+        NameNodeProxies.createProxy(conf, nameNodeUri, ClientProtocol.class);
       this.dtService = proxyInfo.getDelegationTokenService();
       this.namenode = proxyInfo.getProxy();
     }
@@ -694,8 +693,8 @@ public class DFSClient implements java.io.Closeable {
             "a failover proxy provider configured.");
       }
       
-      ProxyAndInfo<ClientProtocol> info =
-        HAUtil.createProxy(conf, uri, ClientProtocol.class);
+      NameNodeProxies.ProxyAndInfo<ClientProtocol> info =
+        NameNodeProxies.createProxy(conf, uri, ClientProtocol.class);
       assert info.getDelegationTokenService().equals(token.getService()) :
         "Returned service '" + info.getDelegationTokenService().toString() +
         "' doesn't match expected service '" +

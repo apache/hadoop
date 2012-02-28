@@ -26,13 +26,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolServerSideTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NetUtils;
@@ -71,7 +70,7 @@ public class BackupNode extends NameNode {
   private static final String BN_SERVICE_RPC_ADDRESS_KEY = DFSConfigKeys.DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY;
 
   /** Name-node proxy */
-  NamenodeProtocolTranslatorPB namenode;
+  NamenodeProtocol namenode;
   /** Name-node RPC address */
   String nnRpcAddress;
   /** Name-node HTTP address */
@@ -192,7 +191,7 @@ public class BackupNode extends NameNode {
     }
     // Stop the RPC client
     if (namenode != null) {
-      IOUtils.cleanup(LOG, namenode);
+      RPC.stopProxy(namenode);
     }
     namenode = null;
     // Stop the checkpoint manager
@@ -285,8 +284,9 @@ public class BackupNode extends NameNode {
   private NamespaceInfo handshake(Configuration conf) throws IOException {
     // connect to name node
     InetSocketAddress nnAddress = NameNode.getServiceAddress(conf, true);
-    this.namenode = new NamenodeProtocolTranslatorPB(nnAddress, conf,
-        UserGroupInformation.getCurrentUser());
+    this.namenode = NameNodeProxies.createNonHAProxy(conf, nnAddress,
+        NamenodeProtocol.class, UserGroupInformation.getCurrentUser(),
+        true).getProxy();
     this.nnRpcAddress = NetUtils.getHostPortString(nnAddress);
     this.nnHttpAddress = NetUtils.getHostPortString(super.getHttpServerAddress(conf));
     // get version and id info from the name-node

@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -76,10 +76,10 @@ class NameNodeConnector {
     URI nameNodeUri = NameNode.getUri(this.namenodeAddress);
     
     this.namenode =
-      HAUtil.createProxy(conf, nameNodeUri, NamenodeProtocol.class)
+      NameNodeProxies.createProxy(conf, nameNodeUri, NamenodeProtocol.class)
         .getProxy();
     this.client =
-      HAUtil.createProxy(conf, nameNodeUri, ClientProtocol.class)
+      NameNodeProxies.createProxy(conf, nameNodeUri, ClientProtocol.class)
         .getProxy();
     this.fs = FileSystem.get(nameNodeUri, conf);
 

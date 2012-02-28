@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -31,18 +30,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSClient.Conf;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.retry.FailoverProxyProvider;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -186,70 +178,6 @@ public class HAUtil {
     conf.setBoolean("dfs.ha.allow.stale.reads", val);
   }
  
-  /** Creates the Failover proxy provider instance*/
-  @SuppressWarnings("unchecked")
-  private static <T> FailoverProxyProvider<T> createFailoverProxyProvider(
-      Configuration conf, Class<FailoverProxyProvider<T>> failoverProxyProviderClass,
-      Class<T> xface, URI nameNodeUri) throws IOException {
-    Preconditions.checkArgument(
-        xface.isAssignableFrom(NamenodeProtocols.class),
-        "Interface %s is not a NameNode protocol", xface);
-    try {
-      Constructor<FailoverProxyProvider<T>> ctor = failoverProxyProviderClass
-          .getConstructor(Configuration.class, URI.class, Class.class);
-      FailoverProxyProvider<?> provider = ctor.newInstance(conf, nameNodeUri,
-          xface);
-      return (FailoverProxyProvider<T>) provider;
-    } catch (Exception e) {
-      String message = "Couldn't create proxy provider " + failoverProxyProviderClass;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(message, e);
-      }
-      if (e.getCause() instanceof IOException) {
-        throw (IOException) e.getCause();
-      } else {
-        throw new IOException(message, e);
-      }
-    }
-  }
-
-  /** Gets the configured Failover proxy provider's class */
-  private static <T> Class<FailoverProxyProvider<T>> getFailoverProxyProviderClass(
-      Configuration conf, URI nameNodeUri, Class<T> xface) throws IOException {
-    if (nameNodeUri == null) {
-      return null;
-    }
-    String host = nameNodeUri.getHost();
-
-    String configKey = DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "."
-        + host;
-    try {
-      @SuppressWarnings("unchecked")
-      Class<FailoverProxyProvider<T>> ret = (Class<FailoverProxyProvider<T>>) conf
-          .getClass(configKey, null, FailoverProxyProvider.class);
-      if (ret != null) {
-        // If we found a proxy provider, then this URI should be a logical NN.
-        // Given that, it shouldn't have a non-default port number.
-        int port = nameNodeUri.getPort();
-        if (port > 0 && port != NameNode.DEFAULT_PORT) {
-          throw new IOException("Port " + port + " specified in URI "
-              + nameNodeUri + " but host '" + host
-              + "' is a logical (HA) namenode"
-              + " and does not use port information.");
-        }
-      }
-      return ret;
-    } catch (RuntimeException e) {
-      if (e.getCause() instanceof ClassNotFoundException) {
-        throw new IOException("Could not load failover proxy provider class "
-            + conf.get(configKey) + " which is configured for authority "
-            + nameNodeUri, e);
-      } else {
-        throw e;
-      }
-    }
-  }
-  
   /**
    * @return true if the given nameNodeUri appears to be a logical URI.
    * This is the case if there is a failover proxy provider configured
@@ -263,60 +191,6 @@ public class HAUtil {
     return conf.get(configKey) != null;
   }
 
-  /**
-   * Creates the namenode proxy with the passed Protocol.
-   * @param conf the configuration containing the required IPC
-   * properties, client failover configurations, etc.
-   * @param nameNodeUri the URI pointing either to a specific NameNode
-   * or to a logical nameservice.
-   * @param xface the IPC interface which should be created
-   * @return an object containing both the proxy and the associated
-   * delegation token service it corresponds to
-   **/
-  @SuppressWarnings("unchecked")
-  public static <T> ProxyAndInfo<T> createProxy(
-      Configuration conf, URI nameNodeUri,
-      Class<T> xface) throws IOException {
-    Class<FailoverProxyProvider<T>> failoverProxyProviderClass =
-        HAUtil.getFailoverProxyProviderClass(conf, nameNodeUri, xface);
-
-    if (failoverProxyProviderClass == null) {
-      // Non-HA case
-      return createNonHAProxy(conf, nameNodeUri, xface);
-    } else {
-      // HA case
-      FailoverProxyProvider<T> failoverProxyProvider = HAUtil
-          .createFailoverProxyProvider(conf, failoverProxyProviderClass, xface,
-              nameNodeUri);
-      Conf config = new Conf(conf);
-      T proxy = (T) RetryProxy.create(xface, failoverProxyProvider, RetryPolicies
-          .failoverOnNetworkException(RetryPolicies.TRY_ONCE_THEN_FAIL,
-              config.maxFailoverAttempts, config.failoverSleepBaseMillis,
-              config.failoverSleepMaxMillis));
-      
-      Text dtService = buildTokenServiceForLogicalUri(nameNodeUri);
-      return new ProxyAndInfo<T>(proxy, dtService);
-    }
-  }
-  
-  @SuppressWarnings("unchecked")
-  private static <T> ProxyAndInfo<T> createNonHAProxy(
-      Configuration conf, URI nameNodeUri, Class<T> xface) throws IOException {
-    InetSocketAddress nnAddr = NameNode.getAddress(nameNodeUri);
-    Text dtService = SecurityUtil.buildTokenService(nnAddr);
-
-    if (xface == ClientProtocol.class) {
-      T proxy = (T)DFSUtil.createNamenode(nnAddr, conf);
-      return new ProxyAndInfo<T>(proxy, dtService);
-    } else if (xface == NamenodeProtocol.class) {
-      T proxy = (T) DFSUtil.createNNProxyWithNamenodeProtocol(
-          nnAddr, conf, UserGroupInformation.getCurrentUser());
-      return new ProxyAndInfo<T>(proxy, dtService);
-    } else {
-      throw new AssertionError("Unsupported proxy type: " + xface);
-    }
-  }
-    
   /**
    * Parse the HDFS URI out of the provided token.
    * @throws IOException if the token is invalid
@@ -382,28 +256,5 @@ public class HAUtil {
     ugi.addToken(specificToken);
     LOG.debug("Mapped HA service delegation token for logical URI " +
         haUri + " to namenode " + singleNNAddr);
-  }
-  
-  /**
-   * Wrapper for a client proxy as well as its associated service ID.
-   * This is simply used as a tuple-like return type for
-   * {@link HAUtil#createProxy(Configuration, URI, Class)}.
-   */
-  public static class ProxyAndInfo<PROXYTYPE> {
-    private final PROXYTYPE proxy;
-    private final Text dtService;
-    
-    public ProxyAndInfo(PROXYTYPE proxy, Text dtService) {
-      this.proxy = proxy;
-      this.dtService = dtService;
-    }
-    
-    public PROXYTYPE getProxy() {
-      return proxy;
-    }
-    
-    public Text getDelegationTokenService() {
-      return dtService;
-    }
   }
 }

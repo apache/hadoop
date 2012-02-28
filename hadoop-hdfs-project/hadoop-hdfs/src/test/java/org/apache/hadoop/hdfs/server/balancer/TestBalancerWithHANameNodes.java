@@ -23,10 +23,12 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -71,12 +73,13 @@ public class TestBalancerWithHANameNodes {
     cluster = new MiniDFSCluster.Builder(conf).nnTopology(simpleHATopology)
         .numDataNodes(capacities.length).racks(racks).simulatedCapacities(
             capacities).build();
+    HATestUtil.setFailoverConfigurations(cluster, conf);
     try {
       cluster.waitActive();
       cluster.transitionToActive(1);
       Thread.sleep(500);
-      client = DFSUtil.createNamenode(cluster.getNameNode(1)
-          .getNameNodeAddress(), conf);
+      client = NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
+          ClientProtocol.class).getProxy();
       long totalCapacity = TestBalancer.sum(capacities);
       // fill up the cluster to be 30% full
       long totalUsedSpace = totalCapacity * 3 / 10;

@@ -20,12 +20,10 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -34,7 +32,6 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -59,15 +56,12 @@ import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AbandonBlockRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddBlockRequestProto;
@@ -135,27 +129,9 @@ public class ClientNamenodeProtocolTranslatorPB implements
     ProtocolMetaInterface, ClientProtocol, Closeable, ProtocolTranslator {
   final private ClientNamenodeProtocolPB rpcProxy;
 
-  public ClientNamenodeProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
-      Configuration conf, UserGroupInformation ugi) throws IOException {
-    this(getNamenodeRetryProxy(nameNodeAddr, conf, ugi));
-  }
-
   public ClientNamenodeProtocolTranslatorPB(ClientNamenodeProtocolPB proxy)
       throws IOException {
     rpcProxy = proxy;
-  }
-  
-  private static ClientNamenodeProtocolPB getNamenodeRetryProxy(
-      InetSocketAddress nameNodeAddr, Configuration conf,
-      UserGroupInformation ugi) throws IOException {
-    RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
-        ProtobufRpcEngine.class);
-    ClientNamenodeProtocolPB proxy = RPC.getProxy(
-        ClientNamenodeProtocolPB.class, RPC
-            .getProtocolVersion(ClientNamenodeProtocolPB.class), nameNodeAddr,
-        ugi, conf, NetUtils.getSocketFactory(conf,
-            ClientNamenodeProtocolPB.class));
-    return DFSUtil.createNameNodeProxyWithRetries(proxy);
   }
   
   public void close() {

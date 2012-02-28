@@ -32,8 +32,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.retry.FailoverProxyProvider;
 import org.apache.hadoop.ipc.RPC;
@@ -121,18 +120,8 @@ public class ConfiguredFailoverProxyProvider<T> implements
     AddressRpcProxyPair current = proxies.get(currentProxyIndex);
     if (current.namenode == null) {
       try {
-        if (NamenodeProtocol.class.equals(xface)) {
-          current.namenode = DFSUtil.createNNProxyWithNamenodeProtocol(
-              current.address, conf, ugi, false);
-        } else if (ClientProtocol.class.equals(xface)) {
-          current.namenode = DFSUtil.createNNProxyWithClientProtocol(
-              current.address, conf, ugi, false);
-        } else {
-          throw new IllegalStateException(
-              "Upsupported protocol found when creating the proxy conection to NameNode. "
-                  + ((xface != null) ? xface.getClass().getName() : xface)
-                  + " is not supported by " + this.getClass().getName());
-        }
+        current.namenode = NameNodeProxies.createNonHAProxy(conf,
+            current.address, xface, ugi, false).getProxy();
       } catch (IOException e) {
         LOG.error("Failed to create RPC proxy to NameNode", e);
         throw new RuntimeException(e);
