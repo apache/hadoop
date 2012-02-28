@@ -1756,9 +1756,7 @@ public class BlockManager {
     if (added) {
       curReplicaDelta = 1;
       if (logEveryBlock) {
-        NameNode.stateChangeLog.info("BLOCK* addStoredBlock: "
-            + "blockMap updated: " + node.getName() + " is added to " + 
-            storedBlock + " size " + storedBlock.getNumBytes());
+        logAddStoredBlock(storedBlock, node);
       }
     } else {
       curReplicaDelta = 0;
@@ -1818,6 +1816,20 @@ public class BlockManager {
     return storedBlock;
   }
 
+  private void logAddStoredBlock(BlockInfo storedBlock, DatanodeDescriptor node) {
+    if (!NameNode.stateChangeLog.isInfoEnabled()) {
+      return;
+    }
+    
+    StringBuilder sb = new StringBuilder(500);
+    sb.append("BLOCK* addStoredBlock: blockMap updated: ")
+      .append(node.getName())
+      .append(" is added to ");
+    storedBlock.appendStringTo(sb);
+    sb.append(" size " )
+      .append(storedBlock.getNumBytes());
+    NameNode.stateChangeLog.info(sb);
+  }
   /**
    * Invalidate corrupt replicas.
    * <p>

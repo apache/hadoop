@@ -160,6 +160,8 @@ Release 0.23.2 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
+
   BUG FIXES
     HDFS-2923. Namenode IPC handler count uses the wrong configuration key
     (todd)
