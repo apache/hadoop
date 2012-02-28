@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 public class MRBuilderUtils {
@@ -39,6 +40,11 @@ public class MRBuilderUtils {
     jobId.setAppId(appId);
     jobId.setId(id);
     return jobId;
+  }
+
+  public static JobId newJobId(long clusterTs, int appIdInt, int id) {
+    ApplicationId appId = BuilderUtils.newApplicationId(clusterTs, appIdInt);
+    return MRBuilderUtils.newJobId(appId, id);
   }
 
   public static TaskId newTaskId(JobId jobId, int id, TaskType taskType) {

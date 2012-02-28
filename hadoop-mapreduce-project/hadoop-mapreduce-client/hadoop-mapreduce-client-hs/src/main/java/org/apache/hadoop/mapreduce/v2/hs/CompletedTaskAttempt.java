@@ -30,25 +30,21 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.Records;
 
 public class CompletedTaskAttempt implements TaskAttempt {
 
   private final TaskAttemptInfo attemptInfo;
   private final TaskAttemptId attemptId;
-  private Counters counters;
   private final TaskAttemptState state;
-  private final TaskAttemptReport report;
   private final List<String> diagnostics = new ArrayList<String>();
+  private TaskAttemptReport report;
 
   private String localDiagMessage;
 
   CompletedTaskAttempt(TaskId taskId, TaskAttemptInfo attemptInfo) {
     this.attemptInfo = attemptInfo;
     this.attemptId = TypeConverter.toYarn(attemptInfo.getAttemptId());
-    if (attemptInfo.getCounters() != null) {
-      this.counters = attemptInfo.getCounters();
-    }
     if (attemptInfo.getTaskStatus() != null) {
       this.state = TaskAttemptState.valueOf(attemptInfo.getTaskStatus());
     } else {
@@ -56,37 +52,9 @@ public class CompletedTaskAttempt implements TaskAttempt {
       localDiagMessage = "Attmpt state missing from History : marked as KILLED";
       diagnostics.add(localDiagMessage);
     }
-    
     if (attemptInfo.getError() != null) {
       diagnostics.add(attemptInfo.getError());
     }
-    
-    report = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskAttemptReport.class);
-    
-    report.setTaskAttemptId(attemptId);
-    report.setTaskAttemptState(state);
-    report.setProgress(getProgress());
-    report.setStartTime(attemptInfo.getStartTime());
-    
-    report.setFinishTime(attemptInfo.getFinishTime());
-    report.setShuffleFinishTime(attemptInfo.getShuffleFinishTime());
-    report.setSortFinishTime(attemptInfo.getSortFinishTime());
-    if (localDiagMessage != null) {
-      report.setDiagnosticInfo(attemptInfo.getError() + ", " + localDiagMessage);
-    } else {
-    report.setDiagnosticInfo(attemptInfo.getError());
-    }
-//    report.setPhase(attemptInfo.get); //TODO
-    report.setStateString(attemptInfo.getState());
-    report.setCounters(TypeConverter.toYarn(getCounters()));
-    report.setContainerId(attemptInfo.getContainerId());
-    if (attemptInfo.getHostname() == null) {
-      report.setNodeManagerHost("UNKNOWN");
-    } else {
-      report.setNodeManagerHost(attemptInfo.getHostname());
-      report.setNodeManagerPort(attemptInfo.getPort());
-    }
-    report.setNodeManagerHttpPort(attemptInfo.getHttpPort());
   }
 
   @Override
@@ -111,7 +79,7 @@ public class CompletedTaskAttempt implements TaskAttempt {
 
   @Override
   public Counters getCounters() {
-    return counters;
+    return attemptInfo.getCounters();
   }
 
   @Override
@@ -125,7 +93,10 @@ public class CompletedTaskAttempt implements TaskAttempt {
   }
 
   @Override
-  public TaskAttemptReport getReport() {
+  public synchronized TaskAttemptReport getReport() {
+    if (report == null) {
+      constructTaskAttemptReport();
+    }
     return report;
   }
 
@@ -146,26 +117,55 @@ public class CompletedTaskAttempt implements TaskAttempt {
 
   @Override
   public long getLaunchTime() {
-    return report.getStartTime();
+    return attemptInfo.getStartTime();
   }
 
   @Override
   public long getFinishTime() {
-    return report.getFinishTime();
+    return attemptInfo.getFinishTime();
   }
   
   @Override
   public long getShuffleFinishTime() {
-    return report.getShuffleFinishTime();
+    return attemptInfo.getShuffleFinishTime();
   }
 
   @Override
   public long getSortFinishTime() {
-    return report.getSortFinishTime();
+    return attemptInfo.getSortFinishTime();
   }
 
   @Override
   public int getShufflePort() {
-    throw new UnsupportedOperationException("Not supported yet.");
+    return attemptInfo.getShufflePort();
+  }
+
+  private void constructTaskAttemptReport() {
+    report = Records.newRecord(TaskAttemptReport.class);
+
+    report.setTaskAttemptId(attemptId);
+    report.setTaskAttemptState(state);
+    report.setProgress(getProgress());
+    report.setStartTime(attemptInfo.getStartTime());
+    report.setFinishTime(attemptInfo.getFinishTime());
+    report.setShuffleFinishTime(attemptInfo.getShuffleFinishTime());
+    report.setSortFinishTime(attemptInfo.getSortFinishTime());
+    if (localDiagMessage != null) {
+      report
+          .setDiagnosticInfo(attemptInfo.getError() + ", " + localDiagMessage);
+    } else {
+      report.setDiagnosticInfo(attemptInfo.getError());
+    }
+    // report.setPhase(attemptInfo.get); //TODO
+    report.setStateString(attemptInfo.getState());
+    report.setCounters(TypeConverter.toYarn(getCounters()));
+    report.setContainerId(attemptInfo.getContainerId());
+    if (attemptInfo.getHostname() == null) {
+      report.setNodeManagerHost("UNKNOWN");
+    } else {
+      report.setNodeManagerHost(attemptInfo.getHostname());
+      report.setNodeManagerPort(attemptInfo.getPort());
+    }
+    report.setNodeManagerHttpPort(attemptInfo.getHttpPort());
   }
 }

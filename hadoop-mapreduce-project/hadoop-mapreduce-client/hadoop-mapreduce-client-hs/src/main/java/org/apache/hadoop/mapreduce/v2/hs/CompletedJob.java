@@ -19,13 +19,16 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.JobInfo;
@@ -54,7 +58,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.Records;
 
 
 /**
@@ -64,50 +68,31 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
   
   static final Log LOG = LogFactory.getLog(CompletedJob.class);
-  private final Counters counters;
   private final Configuration conf;
-  private final JobId jobId;
-  private final List<String> diagnostics = new ArrayList<String>();
-  private final JobReport report;
-  private final Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
-  private final Map<TaskId, Task> mapTasks = new HashMap<TaskId, Task>();
-  private final Map<TaskId, Task> reduceTasks = new HashMap<TaskId, Task>();
-  private final String user;
+  private final JobId jobId; //Can be picked from JobInfo with a conversion.
+  private final String user; //Can be picked up from JobInfo
   private final Path confFile;
-  private JobACLsManager aclsMgr;
-  private List<TaskAttemptCompletionEvent> completionEvents = null;
   private JobInfo jobInfo;
-
+  private JobReport report;
+  AtomicBoolean tasksLoaded = new AtomicBoolean(false);
+  private Lock tasksLock = new ReentrantLock();
+  private Map<TaskId, Task> tasks = new HashMap<TaskId, Task>();
+  private Map<TaskId, Task> mapTasks = new HashMap<TaskId, Task>();
+  private Map<TaskId, Task> reduceTasks = new HashMap<TaskId, Task>();
+  private List<TaskAttemptCompletionEvent> completionEvents = null;
+  private JobACLsManager aclsMgr;
+  
+  
   public CompletedJob(Configuration conf, JobId jobId, Path historyFile, 
       boolean loadTasks, String userName, Path confFile, JobACLsManager aclsMgr) 
           throws IOException {
     LOG.info("Loading job: " + jobId + " from file: " + historyFile);
     this.conf = conf;
     this.jobId = jobId;
+    this.user = userName;
     this.confFile = confFile;
     this.aclsMgr = aclsMgr;
-    
     loadFullHistoryData(loadTasks, historyFile);
-    user = userName;
-    counters = jobInfo.getTotalCounters();
-    diagnostics.add(jobInfo.getErrorInfo());
-    report =
-        RecordFactoryProvider.getRecordFactory(null).newRecordInstance(
-            JobReport.class);
-    report.setJobId(jobId);
-    report.setJobState(JobState.valueOf(jobInfo.getJobStatus()));
-    report.setSubmitTime(jobInfo.getSubmitTime());
-    report.setStartTime(jobInfo.getLaunchTime());
-    report.setFinishTime(jobInfo.getFinishTime());
-    report.setJobName(jobInfo.getJobname());
-    report.setUser(jobInfo.getUsername());
-    report.setMapProgress((float) getCompletedMaps() / getTotalMaps());
-    report.setReduceProgress((float) getCompletedReduces() / getTotalReduces());
-    report.setJobFile(confFile.toString());
-    report.setTrackingUrl(JobHistoryUtils.getHistoryUrl(conf, TypeConverter
-        .toYarn(TypeConverter.fromYarn(jobId)).getAppId()));
-    report.setAMInfos(getAMInfos());
-    report.setIsUber(isUber());
   }
 
   @Override
@@ -122,7 +107,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public Counters getAllCounters() {
-    return counters;
+    return jobInfo.getTotalCounters();
   }
 
   @Override
@@ -131,8 +116,34 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   @Override
-  public JobReport getReport() {
+  public synchronized JobReport getReport() {
+    if (report == null) {
+      constructJobReport();
+    }
     return report;
+  }
+
+  private void constructJobReport() {
+    report = Records.newRecord(JobReport.class);
+    report.setJobId(jobId);
+    report.setJobState(JobState.valueOf(jobInfo.getJobStatus()));
+    report.setSubmitTime(jobInfo.getSubmitTime());
+    report.setStartTime(jobInfo.getLaunchTime());
+    report.setFinishTime(jobInfo.getFinishTime());
+    report.setJobName(jobInfo.getJobname());
+    report.setUser(jobInfo.getUsername());
+    report.setMapProgress((float) getCompletedMaps() / getTotalMaps());
+    report.setReduceProgress((float) getCompletedReduces() / getTotalReduces());
+    report.setJobFile(confFile.toString());
+    String historyUrl = "N/A";
+    try {
+      historyUrl = JobHistoryUtils.getHistoryUrl(conf, jobId.getAppId());
+    } catch (UnknownHostException e) {
+      //Ignore.
+    }
+    report.setTrackingUrl(historyUrl);
+    report.setAMInfos(getAMInfos());
+    report.setIsUber(isUber());
   }
 
   @Override
@@ -142,16 +153,23 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public JobState getState() {
-    return report.getJobState();
+    return JobState.valueOf(jobInfo.getJobStatus());
   }
 
   @Override
   public Task getTask(TaskId taskId) {
-    return tasks.get(taskId);
+    if (tasksLoaded.get()) {
+      return tasks.get(taskId);
+    } else {
+      TaskID oldTaskId = TypeConverter.fromYarn(taskId);
+      CompletedTask completedTask =
+          new CompletedTask(taskId, jobInfo.getAllTasks().get(oldTaskId));
+      return completedTask;
+    }
   }
 
   @Override
-  public TaskAttemptCompletionEvent[] getTaskAttemptCompletionEvents(
+  public synchronized TaskAttemptCompletionEvent[] getTaskAttemptCompletionEvents(
       int fromEventId, int maxEvents) {
     if (completionEvents == null) {
       constructTaskAttemptCompletionEvents();
@@ -167,6 +185,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   }
 
   private void constructTaskAttemptCompletionEvents() {
+    loadAllTasks();
     completionEvents = new LinkedList<TaskAttemptCompletionEvent>();
     List<TaskAttempt> allTaskAttempts = new LinkedList<TaskAttempt>();
     for (TaskId taskId : tasks.keySet()) {
@@ -205,8 +224,8 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     int eventId = 0;
     for (TaskAttempt taskAttempt : allTaskAttempts) {
 
-      TaskAttemptCompletionEvent tace = RecordFactoryProvider.getRecordFactory(
-          null).newRecordInstance(TaskAttemptCompletionEvent.class);
+      TaskAttemptCompletionEvent tace =
+          Records.newRecord(TaskAttemptCompletionEvent.class);
 
       int attemptRunTime = -1;
       if (taskAttempt.getLaunchTime() != 0 && taskAttempt.getFinishTime() != 0) {
@@ -237,15 +256,42 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public Map<TaskId, Task> getTasks() {
+    loadAllTasks();
     return tasks;
+  }
+
+  private void loadAllTasks() {
+    if (tasksLoaded.get()) {
+      return;
+    }
+    tasksLock.lock();
+    try {
+      if (tasksLoaded.get()) {
+        return;
+      }
+      for (Map.Entry<TaskID, TaskInfo> entry : jobInfo.getAllTasks().entrySet()) {
+        TaskId yarnTaskID = TypeConverter.toYarn(entry.getKey());
+        TaskInfo taskInfo = entry.getValue();
+        Task task = new CompletedTask(yarnTaskID, taskInfo);
+        tasks.put(yarnTaskID, task);
+        if (task.getType() == TaskType.MAP) {
+          mapTasks.put(task.getID(), task);
+        } else if (task.getType() == TaskType.REDUCE) {
+          reduceTasks.put(task.getID(), task);
+        }
+      }
+      tasksLoaded.set(true);
+    } finally {
+      tasksLock.unlock();
+    }
   }
 
   //History data is leisurely loaded when task level data is requested
   private synchronized void loadFullHistoryData(boolean loadTasks,
       Path historyFileAbsolute) throws IOException {
     LOG.info("Loading history file: [" + historyFileAbsolute + "]");
-    if (jobInfo != null) {
-      return; //data already loaded
+    if (this.jobInfo != null) {
+      return;
     }
     
     if (historyFileAbsolute != null) {
@@ -254,7 +300,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
         parser =
             new JobHistoryParser(historyFileAbsolute.getFileSystem(conf),
                 historyFileAbsolute);
-        jobInfo = parser.parse();
+        this.jobInfo = parser.parse();
       } catch (IOException e) {
         throw new YarnException("Could not load history file "
             + historyFileAbsolute, e);
@@ -268,27 +314,15 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     } else {
       throw new IOException("History file not found");
     }
-    
     if (loadTasks) {
-    for (Map.Entry<org.apache.hadoop.mapreduce.TaskID, TaskInfo> entry : jobInfo
-        .getAllTasks().entrySet()) {
-      TaskId yarnTaskID = TypeConverter.toYarn(entry.getKey());
-      TaskInfo taskInfo = entry.getValue();
-      Task task = new CompletedTask(yarnTaskID, taskInfo);
-      tasks.put(yarnTaskID, task);
-      if (task.getType() == TaskType.MAP) {
-        mapTasks.put(task.getID(), task);
-      } else if (task.getType() == TaskType.REDUCE) {
-        reduceTasks.put(task.getID(), task);
-      }
-    }
-    }
-    LOG.info("TaskInfo loaded");
+      loadAllTasks();
+      LOG.info("TaskInfo loaded");
+    }    
   }
 
   @Override
   public List<String> getDiagnostics() {
-    return diagnostics;
+    return Collections.singletonList(jobInfo.getErrorInfo());
   }
 
   @Override
@@ -318,6 +352,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
 
   @Override
   public Map<TaskId, Task> getTasks(TaskType taskType) {
+    loadAllTasks();
     if (TaskType.MAP.equals(taskType)) {
       return mapTasks;
     } else {//we have only two types of tasks

@@ -63,6 +63,9 @@ Release 0.23.2 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-3901. Modified JobHistory records in YARN to lazily load job and
+    task reports so as to improve UI response times. (Siddarth Seth via vinodkv)
+
   BUG FIXES
 
     MAPREDUCE-3918  proc_historyserver no longer in command line arguments for
