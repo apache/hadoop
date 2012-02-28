@@ -138,15 +138,14 @@ public class TestParentQueue {
     when(queue).assignContainers(eq(clusterResource), eq(node));
   }
   
-  private float computeQueueUsedCapacity(CSQueue queue, 
+  private float computeQueueAbsoluteUsedCapacity(CSQueue queue, 
       int expectedMemory, Resource clusterResource) {
     return (
-        ((float)expectedMemory / clusterResource.getMemory()) *
-        queue.getParent().getAbsoluteCapacity()
+        ((float)expectedMemory / (float)clusterResource.getMemory())
       );
   }
   
-  private float computeQueueUtilization(CSQueue queue, 
+  private float computeQueueUsedCapacity(CSQueue queue,
       int expectedMemory, Resource clusterResource) {
     return (expectedMemory / 
         (clusterResource.getMemory() * queue.getAbsoluteCapacity()));
@@ -156,8 +155,8 @@ public class TestParentQueue {
   private void verifyQueueMetrics(CSQueue queue, 
       int expectedMemory, Resource clusterResource) {
     assertEquals(
-        computeQueueUtilization(queue, expectedMemory, clusterResource), 
-        queue.getUtilization(), 
+        computeQueueAbsoluteUsedCapacity(queue, expectedMemory, clusterResource), 
+        queue.getAbsoluteUsedCapacity(), 
         DELTA);
     assertEquals(
         computeQueueUsedCapacity(queue, expectedMemory, clusterResource), 

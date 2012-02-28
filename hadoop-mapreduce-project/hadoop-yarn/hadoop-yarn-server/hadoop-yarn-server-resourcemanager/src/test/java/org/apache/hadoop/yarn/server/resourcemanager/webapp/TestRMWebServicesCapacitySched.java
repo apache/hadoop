@@ -68,7 +68,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     float maxCapacity;
     float absoluteCapacity;
     float absoluteMaxCapacity;
-    float utilization;
+    float absoluteUsedCapacity;
     int numApplications;
     String usedResources;
     String queueName;
@@ -252,7 +252,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     qi.absoluteCapacity = WebServicesTestUtils.getXmlFloat(qElem, "absoluteCapacity");
     qi.absoluteMaxCapacity =
         WebServicesTestUtils.getXmlFloat(qElem, "absoluteMaxCapacity");
-    qi.utilization = WebServicesTestUtils.getXmlFloat(qElem, "utilization");
+    qi.absoluteUsedCapacity =
+      WebServicesTestUtils.getXmlFloat(qElem, "absoluteUsedCapacity");
     qi.numApplications =
         WebServicesTestUtils.getXmlInt(qElem, "numApplications");
     qi.usedResources =
@@ -342,7 +343,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     qi.maxCapacity = (float) info.getDouble("maxCapacity");
     qi.absoluteCapacity = (float) info.getDouble("absoluteCapacity");
     qi.absoluteMaxCapacity = (float) info.getDouble("absoluteMaxCapacity");
-    qi.utilization = (float) info.getDouble("utilization");
+    qi.absoluteUsedCapacity = (float) info.getDouble("absoluteUsedCapacity");
     qi.numApplications = info.getInt("numApplications");
     qi.usedResources = info.getString("usedResources");
     qi.queueName = info.getString("queueName");
@@ -394,7 +395,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
         parentAbsCapacity * (info.capacity/100), info.absoluteCapacity, 1e-3f);
     assertEquals("absoluteMaxCapacity doesn't match",
         expectAbsMaxCapacity, info.absoluteMaxCapacity, 1e-3f);
-    assertEquals("utilization doesn't match", 0, info.utilization, 1e-3f);
+    assertEquals("absoluteUsedCapacity doesn't match",
+        0, info.absoluteUsedCapacity, 1e-3f);
     assertEquals("numApplications doesn't match", 0, info.numApplications);
     assertTrue("usedResources doesn't match",
         info.usedResources.matches("memory: 0"));

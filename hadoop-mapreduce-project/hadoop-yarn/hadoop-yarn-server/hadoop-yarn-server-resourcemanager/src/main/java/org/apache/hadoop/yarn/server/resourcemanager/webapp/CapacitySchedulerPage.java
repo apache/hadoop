@@ -67,12 +67,9 @@ class CapacitySchedulerPage extends RmView {
     protected void render(Block html) {
       ResponseInfo ri = info("\'" + lqinfo.getQueuePath().substring(5) + "\' Queue Status").
           _("Queue State:", lqinfo.getQueueState()).
-          _("Capacity:", percent(lqinfo.getCapacity() / 100)).
-          _("Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
           _("Used Capacity:", percent(lqinfo.getUsedCapacity() / 100)).
           _("Absolute Capacity:", percent(lqinfo.getAbsoluteCapacity() / 100)).
           _("Absolute Max Capacity:", percent(lqinfo.getAbsoluteMaxCapacity() / 100)).
-          _("Utilization:", percent(lqinfo.getUtilization() / 100)).
           _("Used Resources:", lqinfo.getUsedResources().toString()).
           _("Num Active Applications:", Integer.toString(lqinfo.getNumActiveApplications())).
           _("Num Pending Applications:", Integer.toString(lqinfo.getNumPendingApplications())).
@@ -81,8 +78,10 @@ class CapacitySchedulerPage extends RmView {
           _("Max Applications Per User:", Integer.toString(lqinfo.getMaxApplicationsPerUser())).
           _("Max Active Applications:", Integer.toString(lqinfo.getMaxActiveApplications())).
           _("Max Active Applications Per User:", Integer.toString(lqinfo.getMaxActiveApplicationsPerUser())).
-          _("User Limit:", Integer.toString(lqinfo.getUserLimit()) + "%").
-          _("User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor()));
+          _("Configured Capacity:", percent(lqinfo.getCapacity() / 100)).
+          _("Configured Max Capacity:", percent(lqinfo.getMaxCapacity() / 100)).
+          _("Configured Minimum User Limit Percent:", Integer.toString(lqinfo.getUserLimit()) + "%").
+          _("Configured User Limit Factor:", String.format("%.1f", lqinfo.getUserLimitFactor()));
 
       html._(InfoBlock.class);
 
@@ -103,20 +102,20 @@ class CapacitySchedulerPage extends RmView {
       ArrayList<CapacitySchedulerQueueInfo> subQueues =
           (csqinfo.qinfo == null) ? csqinfo.csinfo.getSubQueues()
               : csqinfo.qinfo.getSubQueues();
-      UL<Hamlet> ul = html.ul();
+      UL<Hamlet> ul = html.ul("#pq");
       for (CapacitySchedulerQueueInfo info : subQueues) {
         float used = info.getUsedCapacity() / 100;
-        float set = info.getCapacity() / 100;
-        float max = info.getMaxCapacity() / 100;
+        float absCap = info.getAbsoluteCapacity() / 100;
+        float absMaxCap = info.getAbsoluteMaxCapacity() / 100;
+        float absUsedCap = info.getAbsoluteUsedCapacity() / 100;
         LI<UL<Hamlet>> li = ul.
           li().
-            a(_Q).$style(width(max * Q_MAX_WIDTH)).
-              $title(join("capacity:", percent(set), " used:", percent(used),
-                          " max capacity:", percent(max))).
-              span().$style(join(Q_GIVEN, ";font-size:1px;", width(set/max))).
+            a(_Q).$style(width(absMaxCap * Q_MAX_WIDTH)).
+              $title(join("Absolute Capacity:", percent(absCap))).
+              span().$style(join(Q_GIVEN, ";font-size:1px;", width(absCap/absMaxCap))).
                 _('.')._().
-              span().$style(join(width(used*set/max),
-                ";font-size:1px;left:0%;", used > 1 ? Q_OVER : Q_UNDER)).
+              span().$style(join(width(absUsedCap/absMaxCap),
+                ";font-size:1px;left:0%;", absUsedCap > absCap ? Q_OVER : Q_UNDER)).
                 _('.')._().
               span(".q", info.getQueuePath().substring(5))._().
             span().$class("qstats").$style(left(Q_STATS_POS)).
@@ -180,7 +179,6 @@ class CapacitySchedulerPage extends RmView {
           _().
           li().
             a(_Q).$style(width(Q_MAX_WIDTH)).
-              $title(join("used:", percent(used))).
               span().$style(join(width(used), ";left:0%;",
                   used > 1 ? Q_OVER : Q_UNDER))._(".")._().
               span(".q", "root")._().
@@ -211,8 +209,7 @@ class CapacitySchedulerPage extends RmView {
         _("$(function() {",
           "  $('#cs a span').addClass('ui-corner-all').css('position', 'absolute');",
           "  $('#cs').bind('loaded.jstree', function (e, data) {",
-          "    data.inst.open_all();",
-          "    data.inst.close_node('#lq', true);",
+          "    data.inst.open_node('#pq', true);",
           "   }).",
           "    jstree({",
           "    core: { animation: 188, html_titles: true },",
