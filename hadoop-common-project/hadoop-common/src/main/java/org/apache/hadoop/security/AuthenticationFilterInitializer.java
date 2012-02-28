@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.security;
 
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -46,7 +48,7 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
   static final String PREFIX = "hadoop.http.authentication.";
 
   static final String SIGNATURE_SECRET_FILE = AuthenticationFilter.SIGNATURE_SECRET + ".file";
-  
+
   /**
    * Initializes hadoop-auth AuthenticationFilter.
    * <p/>
@@ -90,7 +92,20 @@ public class AuthenticationFilterInitializer extends FilterInitializer {
     } catch (IOException ex) {
       throw new RuntimeException("Could not read HTTP signature secret file: " + signatureSecretFile);            
     }
-    
+
+    //Resolve _HOST into bind address
+    String bindAddress = conf.get(HttpServer.BIND_ADDRESS);
+    String principal = filterConfig.get(KerberosAuthenticationHandler.PRINCIPAL);
+    if (principal != null) {
+      try {
+        principal = SecurityUtil.getServerPrincipal(principal, bindAddress);
+      }
+      catch (IOException ex) {
+        throw new RuntimeException("Could not resolve Kerberos principal name: " + ex.toString(), ex);
+      }
+      filterConfig.put(KerberosAuthenticationHandler.PRINCIPAL, principal);
+    }
+
     container.addFilter("authentication",
                         AuthenticationFilter.class.getName(),
                         filterConfig);

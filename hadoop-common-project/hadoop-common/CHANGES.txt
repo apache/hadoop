@@ -154,6 +154,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8085. Add RPC metrics to ProtobufRpcEngine. (Hari Mankude via
     suresh)
 
+    HADOOP-8098. KerberosAuthenticatorHandler should use _HOST replacement to 
+    resolve principal name (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

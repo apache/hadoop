@@ -100,6 +100,8 @@ public class HttpServer implements FilterContainer {
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   static final String ADMINS_ACL = "admins.acl";
 
+  public static final String BIND_ADDRESS = "bind.address";
+
   private AccessControlList adminsAcl;
 
   protected final Server webServer;
@@ -243,6 +245,8 @@ public class HttpServer implements FilterContainer {
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
     if (initializers != null) {
+      conf = new Configuration(conf);
+      conf.set(BIND_ADDRESS, bindAddress);
       for(FilterInitializer c : initializers) {
         c.initFilter(this, conf);
       }
