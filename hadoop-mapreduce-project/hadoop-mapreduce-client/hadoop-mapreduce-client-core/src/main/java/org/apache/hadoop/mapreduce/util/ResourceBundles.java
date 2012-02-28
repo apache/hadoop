@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.util;
 
+import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.MissingResourceException;
 
@@ -33,7 +34,8 @@ public class ResourceBundles {
    * @throws MissingResourceException
    */
   public static ResourceBundle getBundle(String bundleName) {
-    return ResourceBundle.getBundle(bundleName.replace('$', '_'));
+    return ResourceBundle.getBundle(bundleName.replace('$', '_'),
+        Locale.getDefault(), Thread.currentThread().getContextClassLoader());
   }
 
   /**
