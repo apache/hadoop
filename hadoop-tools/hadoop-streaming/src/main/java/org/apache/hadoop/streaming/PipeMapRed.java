@@ -521,11 +521,15 @@ public abstract class PipeMapRed {
         LOG.info("mapRedFinished");
         return;
       }
-      try {
-        if (clientOut_ != null) {
+      if (clientOut_ != null) {
+        try {
           clientOut_.flush();
           clientOut_.close();
+        } catch (IOException io) {
+          LOG.warn(io);
         }
+      }
+      try {
         waitOutputThreads();
       } catch (IOException io) {
         LOG.warn(io);
