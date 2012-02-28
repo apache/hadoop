@@ -819,6 +819,7 @@ public class FSEditLog  {
   @VisibleForTesting
   synchronized void setRuntimeForTesting(Runtime runtime) {
     this.runtime = runtime;
+    this.journalSet.setRuntimeForTesting(runtime);
   }
   
   /**
