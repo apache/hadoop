@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,9 +118,8 @@ public class JobHistory extends AbstractService implements HistoryContext   {
   
   //Maintains a list of known done subdirectories. Not currently used.
   private final Set<Path> existingDoneSubdirs = new HashSet<Path>();
-  
-  private final SortedMap<JobId, Job> loadedJobCache = 
-    new ConcurrentSkipListMap<JobId, Job>();
+
+  private Map<JobId, Job> loadedJobCache = null;
 
   /**
    * Maintains a mapping between intermediate user directories and the last 
@@ -167,6 +167,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
    * .....${DONE_DIR}/VERSION_STRING/YYYY/MM/DD/HH/SERIAL_NUM/jh{index_entries}.jhist
    */
 
+  @SuppressWarnings("serial")
   @Override
   public void init(Configuration conf) throws YarnException {
     LOG.info("JobHistory Init");
@@ -224,6 +225,16 @@ public class JobHistory extends AbstractService implements HistoryContext   {
             DEFAULT_MOVE_THREAD_INTERVAL);
     numMoveThreads = conf.getInt(JHAdminConfig.MR_HISTORY_MOVE_THREAD_COUNT,
         DEFAULT_MOVE_THREAD_COUNT);
+    
+    loadedJobCache =
+        Collections.synchronizedMap(new LinkedHashMap<JobId, Job>(
+            loadedJobCacheSize + 1, 0.75f, true) {
+          @Override
+          public boolean removeEldestEntry(final Map.Entry<JobId, Job> eldest) {
+            return super.size() > loadedJobCacheSize;
+          }
+        });
+    
     try {
       initExisting();
     } catch (IOException e) {
@@ -465,9 +476,6 @@ public class JobHistory extends AbstractService implements HistoryContext   {
       LOG.debug("Adding "+job.getID()+" to loaded job cache");
     }
     loadedJobCache.put(job.getID(), job);
-    if (loadedJobCache.size() > loadedJobCacheSize ) {
-      loadedJobCache.remove(loadedJobCache.firstKey());
-    }
   }
   
   
@@ -655,7 +663,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     synchronized(metaInfo) {
       try {
         Job job = new CompletedJob(conf, metaInfo.getJobIndexInfo().getJobId(), 
-            metaInfo.getHistoryFile(), true, metaInfo.getJobIndexInfo().getUser(),
+            metaInfo.getHistoryFile(), false, metaInfo.getJobIndexInfo().getUser(),
             metaInfo.getConfFile(), this.aclsMgr);
         addToLoadedJobCache(job);
         return job;
@@ -938,7 +946,7 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     LOG.debug("Called getAllJobs()");
     return getAllJobsInternal();
   }
-  
+
   static class MetaInfo {
     private Path historyFile;
     private Path confFile; 
