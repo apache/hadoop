@@ -20,10 +20,13 @@ package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryParser.TaskAttemptInfo;
@@ -35,59 +38,24 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.util.Records;
 
 public class CompletedTask implements Task {
 
-
-  private final TaskType type;
-  private Counters counters;
-  private final long startTime;
-  private final long finishTime;
-  private TaskState state;
   private final TaskId taskId;
-  private final TaskReport report;
+  private final TaskInfo taskInfo;
+  private TaskReport report;
+  private TaskAttemptId successfulAttempt;
+  private List<String> reportDiagnostics = new LinkedList<String>();
+  private Lock taskAttemptsLock = new ReentrantLock();
+  private AtomicBoolean taskAttemptsLoaded = new AtomicBoolean(false);
   private final Map<TaskAttemptId, TaskAttempt> attempts =
     new LinkedHashMap<TaskAttemptId, TaskAttempt>();
-  
-  private static final Log LOG = LogFactory.getLog(CompletedTask.class);
 
   CompletedTask(TaskId taskId, TaskInfo taskInfo) {
     //TODO JobHistoryParser.handleTaskFailedAttempt should use state from the event.
-    LOG.debug("HandlingTaskId: [" + taskId + "]");
+    this.taskInfo = taskInfo;
     this.taskId = taskId;
-    this.startTime = taskInfo.getStartTime();
-    this.finishTime = taskInfo.getFinishTime();
-    this.type = TypeConverter.toYarn(taskInfo.getTaskType());
-    if (taskInfo.getCounters() != null)
-      this.counters = taskInfo.getCounters();
-    if (taskInfo.getTaskStatus() != null) {
-      this.state = TaskState.valueOf(taskInfo.getTaskStatus());
-    } else {
-      this.state = TaskState.KILLED;
-    }
-    report = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskReport.class);
-    for (TaskAttemptInfo attemptHistory : taskInfo.getAllTaskAttempts()
-        .values()) {
-      CompletedTaskAttempt attempt = new CompletedTaskAttempt(taskId, 
-          attemptHistory);
-      report.addAllDiagnostics(attempt.getDiagnostics()); //TODO TMI?
-      attempts.put(attempt.getID(), attempt);
-      if (attemptHistory.getTaskStatus() != null
-          && attemptHistory.getTaskStatus().equals(
-              TaskState.SUCCEEDED.toString())
-          && report.getSuccessfulAttempt() == null) {
-        report.setSuccessfulAttempt(TypeConverter.toYarn(attemptHistory
-            .getAttemptId()));
-      }
-    }
-    report.setTaskId(taskId);
-    report.setStartTime(startTime);
-    report.setFinishTime(finishTime);
-    report.setTaskState(state);
-    report.setProgress(getProgress());
-    report.setCounters(TypeConverter.toYarn(getCounters()));
-    report.addAllRunningAttempts(new ArrayList<TaskAttemptId>(attempts.keySet()));
   }
 
   @Override
@@ -97,17 +65,19 @@ public class CompletedTask implements Task {
 
   @Override
   public TaskAttempt getAttempt(TaskAttemptId attemptID) {
+    loadAllTaskAttempts();
     return attempts.get(attemptID);
   }
 
   @Override
   public Map<TaskAttemptId, TaskAttempt> getAttempts() {
+    loadAllTaskAttempts();
     return attempts;
   }
 
   @Override
   public Counters getCounters() {
-    return counters;
+    return taskInfo.getCounters();
   }
 
   @Override
@@ -121,13 +91,18 @@ public class CompletedTask implements Task {
   }
 
   @Override
-  public TaskReport getReport() {
+  public synchronized TaskReport getReport() {
+    if (report == null) {
+      constructTaskReport();
+    }
     return report;
   }
+  
 
+  
   @Override
   public TaskType getType() {
-    return type;
+    return TypeConverter.toYarn(taskInfo.getTaskType());
   }
 
   @Override
@@ -137,7 +112,54 @@ public class CompletedTask implements Task {
 
   @Override
   public TaskState getState() {
-    return state;
+    return taskInfo.getTaskStatus() == null ? TaskState.KILLED : TaskState
+        .valueOf(taskInfo.getTaskStatus());
   }
 
+  private void constructTaskReport() {
+    loadAllTaskAttempts();
+    this.report = Records.newRecord(TaskReport.class);
+    report.setTaskId(taskId);
+    report.setStartTime(taskInfo.getStartTime());
+    report.setFinishTime(taskInfo.getFinishTime());
+    report.setTaskState(getState());
+    report.setProgress(getProgress());
+    report.setCounters(TypeConverter.toYarn(getCounters()));
+    if (successfulAttempt != null) {
+      report.setSuccessfulAttempt(successfulAttempt);
+    }
+    report.addAllDiagnostics(reportDiagnostics);
+    report
+        .addAllRunningAttempts(new ArrayList<TaskAttemptId>(attempts.keySet()));
+  }
+
+  private void loadAllTaskAttempts() {
+    if (taskAttemptsLoaded.get()) {
+      return;
+    }
+    taskAttemptsLock.lock();
+    try {
+      if (taskAttemptsLoaded.get()) {
+        return;
+      }
+
+      for (TaskAttemptInfo attemptHistory : taskInfo.getAllTaskAttempts()
+          .values()) {
+        CompletedTaskAttempt attempt =
+            new CompletedTaskAttempt(taskId, attemptHistory);
+        reportDiagnostics.addAll(attempt.getDiagnostics());
+        attempts.put(attempt.getID(), attempt);
+        if (successfulAttempt == null
+            && attemptHistory.getTaskStatus() != null
+            && attemptHistory.getTaskStatus().equals(
+                TaskState.SUCCEEDED.toString())) {
+          successfulAttempt =
+              TypeConverter.toYarn(attemptHistory.getAttemptId());
+        }
+      }
+      taskAttemptsLoaded.set(true);
+    } finally {
+      taskAttemptsLock.unlock();
+    }
+  }
 }
