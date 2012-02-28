@@ -91,9 +91,9 @@ implements ResourceScheduler, CapacitySchedulerContext {
   static final Comparator<CSQueue> queueComparator = new Comparator<CSQueue>() {
     @Override
     public int compare(CSQueue q1, CSQueue q2) {
-      if (q1.getUtilization() < q2.getUtilization()) {
+      if (q1.getUsedCapacity() < q2.getUsedCapacity()) {
         return -1;
-      } else if (q1.getUtilization() > q2.getUtilization()) {
+      } else if (q1.getUsedCapacity() > q2.getUsedCapacity()) {
         return 1;
       }
 
