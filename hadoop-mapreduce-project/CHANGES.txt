@@ -66,6 +66,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3901. Modified JobHistory records in YARN to lazily load job and
     task reports so as to improve UI response times. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-2855. Passing a cached class-loader to ResourceBundle creator to
+    minimize counter names lookup time. (Siddarth Seth via vinodkv)
+
   BUG FIXES
 
     MAPREDUCE-3918  proc_historyserver no longer in command line arguments for
