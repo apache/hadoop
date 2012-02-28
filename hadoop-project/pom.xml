@@ -47,6 +47,9 @@
 
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
+    
+    <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
+    <test.build.data>${test.build.dir}</test.build.data>
   </properties>
 
   <dependencyManagement>

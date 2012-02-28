@@ -53,6 +53,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8085. Add RPC metrics to ProtobufRpcEngine. (Hari Mankude via
     suresh)
 
+    HADOOP-7621. alfredo config should be in a file not readable by users
+                 (Alejandro Abdelnur via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
