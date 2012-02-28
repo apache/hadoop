@@ -384,10 +384,10 @@ public class TestAccessControlList {
     assertTrue(acl.isAllAllowed());
 
     UserGroupInformation drwho =
-      UserGroupInformation.createUserForTesting("drwho@APACHE.ORG",
+      UserGroupInformation.createUserForTesting("drwho@EXAMPLE.COM",
           new String[] { "aliens" });
     UserGroupInformation drwho2 =
-      UserGroupInformation.createUserForTesting("drwho2@APACHE.ORG",
+      UserGroupInformation.createUserForTesting("drwho2@EXAMPLE.COM",
           new String[] { "tardis" });
 
     acl.addUser("drwho");
@@ -413,16 +413,16 @@ public class TestAccessControlList {
     AccessControlList acl;
 
     UserGroupInformation drwho =
-        UserGroupInformation.createUserForTesting("drwho@APACHE.ORG",
+        UserGroupInformation.createUserForTesting("drwho@EXAMPLE.COM",
             new String[] { "aliens", "humanoids", "timelord" });
     UserGroupInformation susan =
-        UserGroupInformation.createUserForTesting("susan@APACHE.ORG",
+        UserGroupInformation.createUserForTesting("susan@EXAMPLE.COM",
             new String[] { "aliens", "humanoids", "timelord" });
     UserGroupInformation barbara =
-        UserGroupInformation.createUserForTesting("barbara@APACHE.ORG",
+        UserGroupInformation.createUserForTesting("barbara@EXAMPLE.COM",
             new String[] { "humans", "teachers" });
     UserGroupInformation ian =
-        UserGroupInformation.createUserForTesting("ian@APACHE.ORG",
+        UserGroupInformation.createUserForTesting("ian@EXAMPLE.COM",
             new String[] { "humans", "teachers" });
 
     acl = new AccessControlList("drwho humanoids");

@@ -201,6 +201,8 @@ Release 0.23.3 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
+
   BUG FIXES
 
     HDFS-2481. Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol.

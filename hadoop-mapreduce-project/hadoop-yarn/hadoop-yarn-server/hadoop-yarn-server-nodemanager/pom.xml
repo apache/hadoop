@@ -28,6 +28,7 @@
     <!-- Basedir eeded for generating FindBugs warnings using parent pom -->
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
     <container-executor.conf.dir>/etc/hadoop</container-executor.conf.dir>
+    <container-executor.additional_cflags></container-executor.additional_cflags>
   </properties>
 
   <dependencies>
@@ -74,7 +75,7 @@
               <configureEnvironment>
                 <property>
                   <name>CFLAGS</name>
-                  <value>-DHADOOP_CONF_DIR=${container-executor.conf.dir} -m32</value>
+                  <value>-DHADOOP_CONF_DIR=${container-executor.conf.dir} ${container-executor.additional_cflags}</value>
                 </property>
               </configureEnvironment>
               <configureWorkDir>${project.build.directory}/native/container-executor</configureWorkDir>
