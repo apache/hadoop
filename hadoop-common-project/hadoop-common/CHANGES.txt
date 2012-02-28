@@ -86,7 +86,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-7931. o.a.h.ipc.WritableRpcEngine should have a way to force
     initialization. (atm)
 
-Release 0.23.2 - UNRELEASED
+    HADOOP-8104. Inconsistent Jackson versions (tucu)
+
+Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
 
