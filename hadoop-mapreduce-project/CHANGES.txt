@@ -117,6 +117,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3913. RM application webpage is unresponsive after 2000 jobs 
     (Jason Lowe via tgraves)
  
+    MAPREDUCE-3922. Fixed build to not compile 32bit container-executor binary
+    by default on all platforms. (Hitesh Shah via vinodkv)
+
 Release 0.23.1 - 2012-02-17 
 
   NEW FEATURES
