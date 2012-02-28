@@ -126,6 +126,10 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3816. capacity scheduler web ui bar graphs for used capacity wrong
     (tgraves via bobby)
 
+    MAPREDUCE-3930. Fixed an NPE while accessing the AM page/webservice for a 
+    task attempt without an assigned container. (Robert Joseph Evans via
+    sseth)
+
 Release 0.23.1 - 2012-02-17 
 
   NEW FEATURES

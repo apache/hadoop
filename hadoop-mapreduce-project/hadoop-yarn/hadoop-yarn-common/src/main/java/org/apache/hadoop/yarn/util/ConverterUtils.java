@@ -142,7 +142,7 @@ public class ConverterUtils {
   }
 
   public static String toString(ContainerId cId) {
-    return cId.toString();
+    return cId == null ? null : cId.toString();
   }
 
   public static NodeId toNodeId(String nodeIdStr) {
