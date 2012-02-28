@@ -60,6 +60,8 @@ Trunk (unreleased changes)
     HDFS-3002. TestNameNodeMetrics need not wait for metrics update.
     (suresh)
 
+    HDFS-3016. Security in unit tests. (Jaimin Jetly via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
