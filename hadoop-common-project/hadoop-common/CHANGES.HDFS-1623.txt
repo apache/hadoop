@@ -49,3 +49,5 @@ core-default.xml file. (Uma Maheswara Rao G via atm)
 HADOOP-8041. Log a warning when a failover is first attempted (todd)
 
 HADOOP-8068. void methods can swallow exceptions when going through failover path (todd)
+
+HADOOP-8116. RetriableCommand is using RetryPolicy incorrectly after HADOOP-7896. (atm)
