@@ -130,7 +130,11 @@ Release 0.23.2 - UNRELEASED
     task attempt without an assigned container. (Robert Joseph Evans via
     sseth)
 
-Release 0.23.1 - 2012-02-17 
+    MAPREDUCE-3931. Changed PB implementation of LocalResource to take locks
+    so that race conditions don't fail tasks by inadvertantly changing the
+    timestamps. (Siddarth Seth via vinodkv)
+
+Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
 
