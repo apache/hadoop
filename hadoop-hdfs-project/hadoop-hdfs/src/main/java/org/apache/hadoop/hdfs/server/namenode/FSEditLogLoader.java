@@ -206,13 +206,22 @@ public class FSEditLogLoader {
               fsDir.updateFile(oldFile, addCloseOp.path, blocks,
                   addCloseOp.mtime, addCloseOp.atime);
               if(addCloseOp.opCode == FSEditLogOpCodes.OP_CLOSE) {  // OP_CLOSE
-                assert oldFile.isUnderConstruction() : 
-                  "File is not under construction: " + addCloseOp.path;
+                if (!oldFile.isUnderConstruction() &&
+                    logVersion <= LayoutVersion.BUGFIX_HDFS_2991_VERSION) {
+                  // There was a bug (HDFS-2991) in hadoop < 0.23.1 where OP_CLOSE
+                  // could show up twice in a row. But after that version, this
+                  // should be fixed, so we should treat it as an error.
+                  throw new IOException(
+                      "File is not under construction: " + addCloseOp.path);
+                }
                 fsNamesys.getBlockManager().completeBlock(
                     oldFile, blocks.length-1, true);
-                INodeFile newFile =
-                  ((INodeFileUnderConstruction)oldFile).convertToInodeFile();
-                fsDir.replaceNode(addCloseOp.path, oldFile, newFile);
+                
+                if (oldFile.isUnderConstruction()) {
+                  INodeFile newFile =
+                    ((INodeFileUnderConstruction)oldFile).convertToInodeFile();
+                  fsDir.replaceNode(addCloseOp.path, oldFile, newFile);
+                }
               } else if(! oldFile.isUnderConstruction()) {  // OP_ADD for append
                 INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
                     oldFile.getLocalNameBytes(),
@@ -231,8 +240,10 @@ public class FSEditLogLoader {
             if(addCloseOp.opCode == FSEditLogOpCodes.OP_ADD) {
               fsNamesys.leaseManager.addLease(addCloseOp.clientName, addCloseOp.path);
             } else {  // Ops.OP_CLOSE
-              fsNamesys.leaseManager.removeLease(
-                  ((INodeFileUnderConstruction)oldFile).getClientName(), addCloseOp.path);
+              if (oldFile.isUnderConstruction()) {
+                fsNamesys.leaseManager.removeLease(
+                    ((INodeFileUnderConstruction)oldFile).getClientName(), addCloseOp.path);
+              }
             }
             break;
           }

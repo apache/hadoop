@@ -45,6 +45,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public class LayoutVersion {
  
   /**
+   * Version in which HDFS-2991 was fixed. This bug caused OP_ADD to
+   * sometimes be skipped for append() calls. If we see such a case when
+   * loading the edits, but the version is known to have that bug, we
+   * workaround the issue. Otherwise we should consider it a corruption
+   * and bail.
+   */
+  public static final int BUGFIX_HDFS_2991_VERSION = -40;
+
+  /**
    * Enums for features that change the layout version.
    * <br><br>
    * To add a new layout version:

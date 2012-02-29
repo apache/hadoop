@@ -244,8 +244,6 @@ public class FSDirectory implements Closeable {
                                    +" to the file system");
       return null;
     }
-    // add create file record to log, record new generation stamp
-    fsImage.getEditLog().logOpenFile(path, newNode);
 
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "

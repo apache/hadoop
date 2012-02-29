@@ -1256,9 +1256,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                         clientNode);
         dir.replaceNode(src, node, cons);
         leaseManager.addLease(cons.getClientName(), src);
-
+        
         // convert last block to under-construction
-        return blockManager.convertLastBlockToUnderConstruction(cons);
+        LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
+
+        // add append file record to log, record lease, etc.
+        getEditLog().logOpenFile(src, cons);
+        return ret;
       } else {
        // Now we can add the name to the filesystem. This file has no
        // blocks associated with it.
@@ -1274,6 +1278,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                 "Unable to add file to namespace.");
         }
         leaseManager.addLease(newNode.getClientName(), src);
+
+        // record file record in log, record new generation stamp
+        getEditLog().logOpenFile(src, newNode);
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: "
                                      +"add "+src+" to namespace for "+holder);

@@ -200,6 +200,8 @@ Release 0.23.2 - UNRELEASED
     HDFS-3006. In WebHDFS, when the return body is empty, set the Content-Type
     to application/octet-stream instead of application/json.  (szetszwo)
 
+    HDFS-2991. Fix case where OP_ADD would not be logged in append(). (todd)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
