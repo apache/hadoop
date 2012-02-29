@@ -93,7 +93,7 @@ public class TestNMWebServicesContainers extends JerseyTest {
     protected void configureServlets() {
       nmContext = new NodeManager.NMContext();
       nmContext.getNodeId().setHost("testhost.foo.com");
-      nmContext.getNodeId().setPort(9999);
+      nmContext.getNodeId().setPort(8042);
       resourceView = new ResourceView() {
         @Override
         public long getVmemAllocatedForContainers() {

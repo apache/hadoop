@@ -104,7 +104,7 @@ public class MRApp extends MRAppMaster {
   
   public static String NM_HOST = "localhost";
   public static int NM_PORT = 1234;
-  public static int NM_HTTP_PORT = 9999;
+  public static int NM_HTTP_PORT = 8042;
 
   private static final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);

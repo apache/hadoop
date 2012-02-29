@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.junit.Test;
 
@@ -35,4 +36,17 @@ public class TestConverterUtils {
     assertEquals(expectedPath, actualPath);
   }
 
+  @Test
+  public void testContainerId() throws URISyntaxException {
+    ContainerId id = BuilderUtils.newContainerId(0, 0, 0, 0);
+    String cid = ConverterUtils.toString(id);
+    assertEquals("container_0_0000_00_000000", cid);
+    ContainerId gen = ConverterUtils.toContainerId(cid);
+    assertEquals(gen, id);
+  }
+
+  @Test
+  public void testContainerIdNull() throws URISyntaxException {
+    assertNull(ConverterUtils.toString((ContainerId)null));
+  }  
 }

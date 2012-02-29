@@ -313,11 +313,11 @@ ResourceManager REST API's.
 *---------------+--------------+-------------------------------+
 | type | string | Scheduler type - capacityScheduler|
 *---------------+--------------+-------------------------------+
-| capacity | float | Queue capacity in percentage relative to its parent queue |
+| capacity | float | Configured queue capacity in percentage relative to its parent queue |
 *---------------+--------------+-------------------------------+
-| usedCapacity | float | Used queue capacity in percentage relative its to parent queue |
+| usedCapacity | float | Used queue capacity in percentage |
 *---------------+--------------+-------------------------------+
-| maxCapacity | float | Maximum queue capacity in percentage relative to its parent queue |
+| maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue|
 *---------------+--------------+-------------------------------+
 | queueName | string | Name of the queue |
 *---------------+--------------+-------------------------------+
@@ -329,17 +329,17 @@ ResourceManager REST API's.
 *---------------+--------------+-------------------------------+
 || Item         || Data Type   || Description                   |
 *---------------+--------------+-------------------------------+
-| capacity | float | Queue capacity in percentage relative to its parent queue |
+| capacity | float | Configured queue capacity in percentage relative to its parent queue |
 *---------------+--------------+-------------------------------+
-| usedCapacity | float | Used queue capacity in percentage relative its to parent queue |
+| usedCapacity | float | Used queue capacity in percentage |
 *---------------+--------------+-------------------------------+
-| maxCapacity | float | Maximum queue capacity in percentage relative to its parent queue |
+| maxCapacity | float | Configured maximum queue capacity in percentage relative to its parent queue |
 *---------------+--------------+-------------------------------+
 | absoluteCapacity | float | Absolute capacity percentage this queue can use of entire cluster | 
 *---------------+--------------+-------------------------------+
 | absoluteMaxCapacity | float | Absolute maximum capacity percentage this queue can use of the entire cluster | 
 *---------------+--------------+-------------------------------+
-| utilization | float | Queue utilization percentage relative to the entire cluster |
+| absoluteUsedCapacity | float | Absolute used capacity percentage this queue is using of the entire cluster |
 *---------------+--------------+-------------------------------+
 | numApplications | int | The number of applications currently in the queue |
 *---------------+--------------+-------------------------------+
@@ -421,7 +421,7 @@ ResourceManager REST API's.
                "absoluteMaxCapacity" : 90,
                "maxActiveApplications" : 1,
                "numActiveApplications" : 0,
-               "utilization" : 0,
+               "absoluteUsedCapacity" : 0,
                "userLimit" : 100,
                "absoluteCapacity" : 70,
                "maxActiveApplicationsPerUser" : 1,
@@ -431,7 +431,7 @@ ResourceManager REST API's.
             },
             {
                "queueName" : "test",
-               "utilization" : 0,
+               "absoluteUsedCapacity" : 0,
                "absoluteCapacity" : 20,
                "usedCapacity" : 0,
                "capacity" : 20,
@@ -450,7 +450,7 @@ ResourceManager REST API's.
                      "absoluteMaxCapacity" : 16.000002,
                      "maxActiveApplications" : 1,
                      "numActiveApplications" : 0,
-                     "utilization" : 0,
+                     "absoluteUsedCapacity" : 0,
                      "userLimit" : 100,
                      "absoluteCapacity" : 12,
                      "maxActiveApplicationsPerUser" : 1,
@@ -472,7 +472,7 @@ ResourceManager REST API's.
                      "absoluteMaxCapacity" : 100,
                      "maxActiveApplications" : 1,
                      "numActiveApplications" : 0,
-                     "utilization" : 0,
+                     "absoluteUsedCapacity" : 0,
                      "userLimit" : 100,
                      "absoluteCapacity" : 8.000001,
                      "maxActiveApplicationsPerUser" : 1,
@@ -489,7 +489,7 @@ ResourceManager REST API's.
             },
             {
                "queueName" : "test2",
-               "utilization" : 0,
+               "absoluteUsedCapacity" : 0,
                "absoluteCapacity" : 10,
                "usedCapacity" : 0,
                "capacity" : 10,
@@ -508,7 +508,7 @@ ResourceManager REST API's.
                      "absoluteMaxCapacity" : 100,
                      "maxActiveApplications" : 1,
                      "numActiveApplications" : 0,
-                     "utilization" : 0,
+                     "absoluteUsedCapacity" : 0,
                      "userLimit" : 100,
                      "absoluteCapacity" : 5,
                      "maxActiveApplicationsPerUser" : 1,
@@ -530,7 +530,7 @@ ResourceManager REST API's.
                      "absoluteMaxCapacity" : 100,
                      "maxActiveApplications" : 1,
                      "numActiveApplications" : 0,
-                     "utilization" : 0,
+                     "absoluteUsedCapacity" : 0,
                      "userLimit" : 100,
                      "absoluteCapacity" : 4.0000005,
                      "maxActiveApplicationsPerUser" : 1,
@@ -552,7 +552,7 @@ ResourceManager REST API's.
                      "absoluteMaxCapacity" : 100,
                      "maxActiveApplications" : 1,
                      "numActiveApplications" : 0,
-                     "utilization" : 0,
+                     "absoluteUsedCapacity" : 0,
                      "userLimit" : 100,
                      "absoluteCapacity" : 1.0000001,
                      "maxActiveApplicationsPerUser" : 1,
@@ -609,7 +609,7 @@ ResourceManager REST API's.
       <maxCapacity>90.0</maxCapacity>
       <absoluteCapacity>70.0</absoluteCapacity>
       <absoluteMaxCapacity>90.0</absoluteMaxCapacity>
-      <utilization>0.0</utilization>
+      <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
       <numApplications>0</numApplications>
       <usedResources>memory: 0</usedResources>
       <queueName>default</queueName>
@@ -630,7 +630,7 @@ ResourceManager REST API's.
       <maxCapacity>80.0</maxCapacity>
       <absoluteCapacity>20.0</absoluteCapacity>
       <absoluteMaxCapacity>80.0</absoluteMaxCapacity>
-      <utilization>0.0</utilization>
+      <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
       <numApplications>0</numApplications>
       <usedResources>memory: 0</usedResources>
       <queueName>test</queueName>
@@ -641,7 +641,7 @@ ResourceManager REST API's.
         <maxCapacity>80.0</maxCapacity>
         <absoluteCapacity>12.0</absoluteCapacity>
         <absoluteMaxCapacity>16.000002</absoluteMaxCapacity>
-        <utilization>0.0</utilization>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>0</numApplications>
         <usedResources>memory: 0</usedResources>
         <queueName>a1</queueName>
@@ -662,7 +662,7 @@ ResourceManager REST API's.
         <maxCapacity>100.0</maxCapacity>
         <absoluteCapacity>8.000001</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
-        <utilization>0.0</utilization>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>0</numApplications>
         <usedResources>memory: 0</usedResources>
         <queueName>a2</queueName>
@@ -684,7 +684,7 @@ ResourceManager REST API's.
       <maxCapacity>15.000001</maxCapacity>
       <absoluteCapacity>10.0</absoluteCapacity>
       <absoluteMaxCapacity>15.000001</absoluteMaxCapacity>
-      <utilization>0.0</utilization>
+      <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
       <numApplications>0</numApplications>
       <usedResources>memory: 0</usedResources>
      <queueName>test2</queueName>
@@ -695,7 +695,7 @@ ResourceManager REST API's.
         <maxCapacity>100.0</maxCapacity>
         <absoluteCapacity>5.0</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
-        <utilization>0.0</utilization>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>0</numApplications>
         <usedResources>memory: 0</usedResources>
         <queueName>A4</queueName>
@@ -716,7 +716,7 @@ ResourceManager REST API's.
         <maxCapacity>100.0</maxCapacity>
         <absoluteCapacity>4.0000005</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
-        <utilization>0.0</utilization>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>0</numApplications>
         <usedResources>memory: 0</usedResources>
         <queueName>a3</queueName>
@@ -737,7 +737,7 @@ ResourceManager REST API's.
         <maxCapacity>100.0</maxCapacity>
         <absoluteCapacity>1.0000001</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
-        <utilization>0.0</utilization>
+        <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <numApplications>0</numApplications>
         <usedResources>memory: 0</usedResources>
         <queueName>a4</queueName>
@@ -939,14 +939,14 @@ ResourceManager REST API's.
     [
        {
           "finishedTime" : 1326815598530,
-          "amContainerLogs" : "http://host.domain.com:9999/node/containerlogs/container_1326815542473_0001_01_000001",
+          "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001_01_000001",
           "trackingUI" : "History",
           "state" : "FINISHED",
           "user" : "user1",
           "id" : "application_1326815542473_0001",
           "clusterId" : 1326815542473,
           "finalStatus" : "SUCCEEDED",
-          "amHostHttpAddress" : "host.domain.com:9999",
+          "amHostHttpAddress" : "host.domain.com:8042",
           "progress" : 100,
           "name" : "word count",
           "startedTime" : 1326815573334,
@@ -957,14 +957,14 @@ ResourceManager REST API's.
        },
        {
           "finishedTime" : 1326815789546,
-          "amContainerLogs" : "http://host.domain.com:9999/node/containerlogs/container_1326815542473_0002_01_000001",
+          "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001",
           "trackingUI" : "History",
           "state" : "FINISHED",
           "user" : "user1",
           "id" : "application_1326815542473_0002",
           "clusterId" : 1326815542473,
           "finalStatus" : "SUCCEEDED",
-          "amHostHttpAddress" : "host.domain.com:9999",
+          "amHostHttpAddress" : "host.domain.com:8042",
           "progress" : 100,
           "name" : "Sleep job",
           "startedTime" : 1326815641380,
@@ -1017,9 +1017,9 @@ ResourceManager REST API's.
     <startedTime>1326815573334</startedTime>
     <finishedTime>1326815598530</finishedTime>
     <elapsedTime>25196</elapsedTime>
-    <amContainerLogs>http://host.domain.com:9999/node/containerlogs/container_1326815542473_0001
+    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001
 _01_000001</amContainerLogs>
-    <amHostHttpAddress>host.domain.com:9999</amHostHttpAddress>
+    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
   </app>
   <app>
     <id>application_1326815542473_0002</id>
@@ -1036,8 +1036,8 @@ _01_000001</amContainerLogs>
     <startedTime>1326815641380</startedTime>
     <finishedTime>1326815789546</finishedTime>
     <elapsedTime>148166</elapsedTime>
-    <amContainerLogs>http://host.domain.com:9999/node/containerlogs/container_1326815542473_0002_01_000001</amContainerLogs>
-    <amHostHttpAddress>host.domain.com:9999</amHostHttpAddress>
+    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001</amContainerLogs>
+    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
   </app>
 </apps>
 
@@ -1132,14 +1132,14 @@ _01_000001</amContainerLogs>
 {
    "app" : {
       "finishedTime" : 1326824991300,
-      "amContainerLogs" : "http://host.domain.com:9999/node/containerlogs/container_1326821518301_0005_01_000001",
+      "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001",
       "trackingUI" : "History",
       "state" : "FINISHED",
       "user" : "user1",
       "id" : "application_1326821518301_0005",
       "clusterId" : 1326821518301,
       "finalStatus" : "SUCCEEDED",
-      "amHostHttpAddress" : "host.domain.com:9999",
+      "amHostHttpAddress" : "host.domain.com:8042",
       "progress" : 100,
       "name" : "Sleep job",
       "startedTime" : 1326824544552,
@@ -1188,8 +1188,8 @@ _01_000001</amContainerLogs>
   <startedTime>1326824544552</startedTime>
   <finishedTime>1326824991300</finishedTime>
   <elapsedTime>446748</elapsedTime>
-  <amContainerLogs>http://host.domain.com:9999/node/containerlogs/container_1326821518301_0005_01_000001</amContainerLogs>
-  <amHostHttpAddress>host.domain.com:9999</amHostHttpAddress>
+  <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001</amContainerLogs>
+  <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
 </app>
 +---+
 

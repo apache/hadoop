@@ -22,9 +22,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserResponseProto;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
-import org.apache.hadoop.ipc.ProtocolSignature;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 
 import com.google.protobuf.RpcController;
@@ -38,42 +35,6 @@ public class GetUserMappingsProtocolServerSideTranslatorPB implements
   public GetUserMappingsProtocolServerSideTranslatorPB(
       GetUserMappingsProtocol impl) {
     this.impl = impl;
-  }
-
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    return RPC.getProtocolVersion(GetUserMappingsProtocolPB.class);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    /**
-     * Don't forward this to the server. The protocol version and signature is
-     * that of {@link GetUserMappingsProtocol}
-     */
-    if (!protocol.equals(RPC
-        .getProtocolName(GetUserMappingsProtocolPB.class))) {
-      throw new IOException("Namenode Serverside implements "
-          + RPC.getProtocolName(GetUserMappingsProtocolPB.class)
-          + ". The following requested protocol is unknown: " + protocol);
-    }
-
-    return ProtocolSignature.getProtocolSignature(clientMethodsHash,
-        RPC.getProtocolVersion(GetUserMappingsProtocolPB.class),
-        GetUserMappingsProtocolPB.class);
-  }
-
-  @Override
-  public ProtocolSignatureWritable getProtocolSignature2(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    /**
-     * Don't forward this to the server. The protocol version and signature is
-     * that of {@link GetUserMappingsProtocolPB}
-     */
-    return ProtocolSignatureWritable.convert(this.getProtocolSignature(
-        protocol, clientVersion, clientMethodsHash));
   }
 
   @Override

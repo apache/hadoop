@@ -87,7 +87,7 @@ public class TestNMWebServices extends JerseyTest {
     protected void configureServlets() {
       nmContext = new NodeManager.NMContext();
       nmContext.getNodeId().setHost("testhost.foo.com");
-      nmContext.getNodeId().setPort(9999);
+      nmContext.getNodeId().setPort(8042);
       resourceView = new ResourceView() {
         @Override
         public long getVmemAllocatedForContainers() {
@@ -330,7 +330,7 @@ public class TestNMWebServices extends JerseyTest {
       String hadoopVersion, String resourceManagerVersionBuiltOn,
       String resourceManagerBuildVersion, String resourceManagerVersion) {
 
-    WebServicesTestUtils.checkStringMatch("id", "testhost.foo.com:9999", id);
+    WebServicesTestUtils.checkStringMatch("id", "testhost.foo.com:8042", id);
     WebServicesTestUtils.checkStringMatch("healthReport", "Healthy",
         healthReport);
     assertEquals("totalVmemAllocatedContainersMB incorrect", 15872,

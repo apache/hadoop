@@ -110,6 +110,11 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas
     Graves via mahadev)
 
+    MAPREDUCE-3933. Failures because MALLOC_ARENA_MAX is not set (ahmed via tucu)
+
+    MAPREDUCE-3728. ShuffleHandler can't access results when configured in a
+    secure mode (ahmed via tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -197,8 +202,32 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3922. Fixed build to not compile 32bit container-executor binary
     by default on all platforms. (Hitesh Shah via vinodkv)
 
-    MAPREDUCE-3790 Broken pipe on streaming job can lead to truncated output for
+    MAPREDUCE-3790. Broken pipe on streaming job can lead to truncated output for
     a successful job (Jason Lowe via bobby)
+
+    MAPREDUCE-3816. capacity scheduler web ui bar graphs for used capacity wrong
+    (tgraves via bobby)
+
+    MAPREDUCE-3930. Fixed an NPE while accessing the AM page/webservice for a 
+    task attempt without an assigned container. (Robert Joseph Evans via
+    sseth)
+
+    MAPREDUCE-3931. Changed PB implementation of LocalResource to take locks
+    so that race conditions don't fail tasks by inadvertantly changing the
+    timestamps. (Siddarth Seth via vinodkv)
+
+    MAPREDUCE-3687.  If AM dies before it returns new tracking URL, proxy
+    redirects to http://N/A/ and doesn't return error code (Ravi Prakash via
+    bobby)
+ 
+    MAPREDUCE-3920. Revise yarn default port number selection 
+    (Dave Thompson via tgraves)
+
+    MAPREDUCE-3903. Add support for mapreduce admin users. (Thomas Graves via
+    sseth)
+
+    MAPREDUCE-3706. Fix circular redirect error in job-attempts page. (bobby
+    via acmurthy)
 
 Release 0.23.1 - 2012-02-17
 

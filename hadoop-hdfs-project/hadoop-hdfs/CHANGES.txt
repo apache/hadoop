@@ -60,6 +60,14 @@ Trunk (unreleased changes)
     HDFS-3002. TestNameNodeMetrics need not wait for metrics update.
     (suresh)
 
+    HDFS-3016. Security in unit tests. (Jaimin Jetly via jitendra)
+
+    HDFS-3014. FSEditLogOp and its subclasses should have toString() method.
+    (Sho Shimauchi via atm)
+
+    HDFS-3030. Remove getProtocolVersion and getProtocolSignature from translators.
+    (jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -199,6 +207,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-2895. Remove Writable wire protocol types and translators to
     complete transition to protocol buffers. (suresh)
 
+    HDFS-2992. Edit log failure trace should include transaction ID of
+    error.  (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -238,6 +249,8 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-2968. Protocol translator for BlockRecoveryCommand broken when
     multiple blocks need recovery. (todd)
+
+    HDFS-3020. Fix editlog to automatically sync when buffer is full. (todd)
 
 Release 0.23.2 - UNRELEASED 
 
@@ -305,6 +318,11 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-3006. In WebHDFS, when the return body is empty, set the Content-Type
     to application/octet-stream instead of application/json.  (szetszwo)
+
+    HDFS-2991. Fix case where OP_ADD would not be logged in append(). (todd)
+
+    HDFS-3012. Exception while renewing delegation token. (Bobby Evans via
+    jitendra)
 
 Release 0.23.1 - 2012-02-17 
 

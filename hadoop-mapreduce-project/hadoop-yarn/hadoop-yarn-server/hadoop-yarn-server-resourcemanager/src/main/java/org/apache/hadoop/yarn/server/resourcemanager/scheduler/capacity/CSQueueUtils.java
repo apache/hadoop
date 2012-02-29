@@ -23,21 +23,25 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 class CSQueueUtils {
   
+  final static float EPSILON = 0.0001f;
+  
   public static void checkMaxCapacity(String queueName, 
       float capacity, float maximumCapacity) {
-    if (maximumCapacity < 0.0f || maximumCapacity > 1.0f || 
-        maximumCapacity < capacity) {
+    if (maximumCapacity < 0.0f || maximumCapacity > 1.0f) {
       throw new IllegalArgumentException(
           "Illegal value  of maximumCapacity " + maximumCapacity + 
           " used in call to setMaxCapacity for queue " + queueName);
     }
-    if (maximumCapacity < capacity) {
-      throw new IllegalArgumentException(
-          "Illegal call to setMaxCapacity. " +
-          "Queue '" + queueName + "' has " +
-          "capacity (" + capacity + ") greater than " + 
-          "maximumCapacity (" + maximumCapacity + ")" );
     }
+
+  public static void checkAbsoluteCapacities(String queueName,
+      float absCapacity, float absMaxCapacity) {
+    if (absMaxCapacity < (absCapacity - EPSILON)) {
+      throw new IllegalArgumentException("Illegal call to setMaxCapacity. "
+          + "Queue '" + queueName + "' has " + "an absolute capacity (" + absCapacity
+          + ") greater than " + "its absolute maximumCapacity (" + absMaxCapacity
+          + ")");
+  }
   }
 
   public static float computeAbsoluteMaximumCapacity(
@@ -75,18 +79,16 @@ class CSQueueUtils {
     final int usedMemory = childQueue.getUsedResources().getMemory();
     
     float queueLimit = 0.0f;
-    float utilization = 0.0f;
+    float absoluteUsedCapacity = 0.0f;
     float usedCapacity = 0.0f;
     if (clusterMemory > 0) {
       queueLimit = clusterMemory * childQueue.getAbsoluteCapacity();
-      final float parentAbsoluteCapacity = 
-          (parentQueue == null) ? 1.0f : parentQueue.getAbsoluteCapacity();
-      utilization = (usedMemory / queueLimit);
-      usedCapacity = (usedMemory / (clusterMemory * parentAbsoluteCapacity));
+      absoluteUsedCapacity = ((float)usedMemory / (float)clusterMemory);
+      usedCapacity = (usedMemory / queueLimit);
     }
     
-    childQueue.setUtilization(utilization);
     childQueue.setUsedCapacity(usedCapacity);
+    childQueue.setAbsoluteUsedCapacity(absoluteUsedCapacity);
     
     int available = 
         Math.max((roundUp(minimumAllocation, (int)queueLimit) - usedMemory), 0); 

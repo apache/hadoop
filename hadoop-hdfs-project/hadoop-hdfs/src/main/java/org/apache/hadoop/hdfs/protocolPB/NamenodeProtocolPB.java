@@ -18,14 +18,10 @@
 
 package org.apache.hadoop.hdfs.protocolPB;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.ipc.ProtocolInfo;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
 /**
@@ -43,12 +39,5 @@ import org.apache.hadoop.security.KerberosInfo;
     protocolVersion = 1)
 @InterfaceAudience.Private
 public interface NamenodeProtocolPB extends
-    NamenodeProtocolService.BlockingInterface, VersionedProtocol {
-  /**
-   * This method is defined to get the protocol signature using 
-   * the R23 protocol - hence we have added the suffix of 2 the method name
-   * to avoid conflict.
-   */
-  public ProtocolSignatureWritable getProtocolSignature2(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException;
+    NamenodeProtocolService.BlockingInterface {
 }

@@ -32,14 +32,14 @@ import org.apache.hadoop.yarn.util.ProtoUtils;
 
 
     
-public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto> implements LocalResource {
+public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto>
+    implements LocalResource {
   LocalResourceProto proto = LocalResourceProto.getDefaultInstance();
   LocalResourceProto.Builder builder = null;
   boolean viaProto = false;
-  
+
   private URL url = null;
-  
-  
+
   public LocalResourcePBImpl() {
     builder = LocalResourceProto.newBuilder();
   }
@@ -48,60 +48,55 @@ public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto> implement
     this.proto = proto;
     viaProto = true;
   }
-  
-  public LocalResourceProto getProto() {
-    mergeLocalToProto();
+
+  public synchronized LocalResourceProto getProto() {
+    mergeLocalToBuilder();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  private void mergeLocalToBuilder() {
-    if (this.url != null) {
+  private synchronized void mergeLocalToBuilder() {
+    LocalResourceProtoOrBuilder l = viaProto ? proto : builder;
+    if (this.url != null
+        && !(l.getResource().equals(((URLPBImpl) url).getProto()))) {
+      maybeInitBuilder();
+      l = builder;
       builder.setResource(convertToProtoFormat(this.url));
     }
   }
 
-  private void mergeLocalToProto() {
-    if (viaProto) 
-      maybeInitBuilder();
-    mergeLocalToBuilder();
-    proto = builder.build();
-    viaProto = true;
-  }
-
-  private void maybeInitBuilder() {
+  private synchronized void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = LocalResourceProto.newBuilder(proto);
     }
     viaProto = false;
   }
-    
-  
+
   @Override
-  public long getSize() {
+  public synchronized long getSize() {
     LocalResourceProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getSize());
   }
 
   @Override
-  public void setSize(long size) {
+  public synchronized void setSize(long size) {
     maybeInitBuilder();
     builder.setSize((size));
   }
   @Override
-  public long getTimestamp() {
+  public synchronized long getTimestamp() {
     LocalResourceProtoOrBuilder p = viaProto ? proto : builder;
     return (p.getTimestamp());
   }
 
   @Override
-  public void setTimestamp(long timestamp) {
+  public synchronized void setTimestamp(long timestamp) {
     maybeInitBuilder();
     builder.setTimestamp((timestamp));
   }
   @Override
-  public LocalResourceType getType() {
+  public synchronized LocalResourceType getType() {
     LocalResourceProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasType()) {
       return null;
@@ -110,7 +105,7 @@ public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto> implement
   }
 
   @Override
-  public void setType(LocalResourceType type) {
+  public synchronized void setType(LocalResourceType type) {
     maybeInitBuilder();
     if (type == null) {
       builder.clearType();
@@ -119,7 +114,7 @@ public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto> implement
     builder.setType(convertToProtoFormat(type));
   }
   @Override
-  public URL getResource() {
+  public synchronized URL getResource() {
     LocalResourceProtoOrBuilder p = viaProto ? proto : builder;
     if (this.url != null) {
       return this.url;
@@ -132,14 +127,14 @@ public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto> implement
   }
 
   @Override
-  public void setResource(URL resource) {
+  public synchronized void setResource(URL resource) {
     maybeInitBuilder();
     if (resource == null) 
       builder.clearResource();
     this.url = resource;
   }
   @Override
-  public LocalResourceVisibility getVisibility() {
+  public synchronized LocalResourceVisibility getVisibility() {
     LocalResourceProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasVisibility()) {
       return null;
@@ -148,7 +143,7 @@ public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto> implement
   }
 
   @Override
-  public void setVisibility(LocalResourceVisibility visibility) {
+  public synchronized void setVisibility(LocalResourceVisibility visibility) {
     maybeInitBuilder();
     if (visibility == null) {
       builder.clearVisibility();
@@ -180,7 +175,4 @@ public class LocalResourcePBImpl extends ProtoBase<LocalResourceProto> implement
   private LocalResourceVisibility convertFromProtoFormat(LocalResourceVisibilityProto e) {
     return ProtoUtils.convertFromProtoFormat(e);
   }
-
-
-
 }  

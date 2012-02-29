@@ -30,10 +30,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetRep
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.GetReplicaVisibleLengthResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.RefreshNamenodesResponseProto;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
-import org.apache.hadoop.ipc.ProtocolSignature;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.VersionedProtocol;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -109,51 +105,5 @@ public class ClientDatanodeProtocolServerSideTranslatorPB implements
         .setBlock(PBHelper.convert(resp.getBlock()))
         .setLocalPath(resp.getBlockPath()).setLocalMetaPath(resp.getMetaPath())
         .build();
-  }
-
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    return RPC.getProtocolVersion(ClientDatanodeProtocolPB.class);
-  }
-
-  /**
-   * The client side will redirect getProtocolSignature to
-   * getProtocolSignature2.
-   * 
-   * However the RPC layer below on the Server side will call getProtocolVersion
-   * and possibly in the future getProtocolSignature. Hence we still implement
-   * it even though the end client will never call this method.
-   * 
-   * @see VersionedProtocol#getProtocolVersion
-   */
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    /**
-     * Don't forward this to the server. The protocol version and signature is
-     * that of {@link ClientDatanodeProtocol}
-     */
-    if (!protocol.equals(RPC.getProtocolName(ClientDatanodeProtocol.class))) {
-      throw new IOException("Namenode Serverside implements " +
-          RPC.getProtocolName(ClientDatanodeProtocol.class) +
-          ". The following requested protocol is unknown: " + protocol);
-    }
-
-    return ProtocolSignature.getProtocolSignature(clientMethodsHash,
-        RPC.getProtocolVersion(ClientDatanodeProtocolPB.class),
-        ClientDatanodeProtocolPB.class);
-  }
-
-
-  @Override
-  public ProtocolSignatureWritable getProtocolSignature2(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    /**
-     * Don't forward this to the server. The protocol version and signature is
-     * that of {@link ClientDatanodeProtocol}
-     */
-    return ProtocolSignatureWritable.convert(
-        this.getProtocolSignature(protocol, clientVersion, clientMethodsHash));
   }
 }

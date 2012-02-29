@@ -91,10 +91,16 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public float getAbsoluteMaximumCapacity();
   
   /**
-   * Get the currently utilized capacity of the queue 
-   * relative to it's parent queue.
-   * @return the currently utilized capacity of the queue 
-   *         relative to it's parent queue
+   * Get the current absolute used capacity of the queue
+   * relative to the entire cluster.
+   * @return queue absolute used capacity
+   */
+  public float getAbsoluteUsedCapacity();
+
+  /**
+   * Get the current used capacity of the queue
+   * and it's children (if any).
+   * @return queue used capacity
    */
   public float getUsedCapacity();
   
@@ -105,26 +111,17 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
   public void setUsedCapacity(float usedCapacity);
   
   /**
+   * Set absolute used capacity of the queue.
+   * @param absUsedCapacity absolute used capacity of the queue
+   */
+  public void setAbsoluteUsedCapacity(float absUsedCapacity);
+
+  /**
    * Get the currently utilized resources in the cluster 
    * by the queue and children (if any).
    * @return used resources by the queue and it's children 
    */
   public Resource getUsedResources();
-  
-  /**
-   * Get the current <em>utilization</em> of the queue 
-   * and it's children (if any).
-   * Utilization is defined as the ratio of 
-   * <em>used-capacity over configured-capacity</em> of the queue.
-   * @return queue utilization
-   */
-  public float getUtilization();
-  
-  /**
-   * Get the current <em>utilization</em> of the queue.
-   * @param utilization queue utilization
-   */
-  public void setUtilization(float utilization);
   
   /**
    * Get the current run-state of the queue

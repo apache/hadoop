@@ -52,6 +52,11 @@ Trunk (unreleased changes)
     HADOOP-8078. Add capability to turn on security in unit tests. (Jaimin Jetly
     via jitendra)
 
+    HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the 
+    client side translator and server side implementation. (jitendra)
+
+    HADOOP-7557 Make IPC header be extensible (sanjay radia)
+
   BUG FIXES
 
     HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
@@ -157,6 +162,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8098. KerberosAuthenticatorHandler should use _HOST replacement to 
     resolve principal name (tucu)
 
+    HADOOP-8118.  In metrics2.util.MBeans, change log level to trace for the
+    stack trace of InstanceAlreadyExistsException.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -182,6 +190,13 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-7931. o.a.h.ipc.WritableRpcEngine should have a way to force
     initialization. (atm)
+
+    HADOOP-8104. Inconsistent Jackson versions (tucu)
+
+    HADOOP-7940. The Text.clear() method does not clear the bytes as intended. (Csaba Miklos via harsh)
+
+    HADOOP-8119. Fix javac warnings in TestAuthenticationFilter in hadoop-auth.
+    (szetszwo)
 
 Release 0.23.2 - UNRELEASED 
 

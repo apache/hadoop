@@ -61,7 +61,7 @@
   <property>
     <description>The address of the applications manager interface in the RM.</description>
     <name>yarn.resourcemanager.address</name>
-    <value>0.0.0.0:8040</value>
+    <value>0.0.0.0:8032</value>
   </property>
 
   <property>
@@ -101,7 +101,7 @@
 
   <property>
     <name>yarn.resourcemanager.resource-tracker.address</name>
-    <value>0.0.0.0:8025</value>
+    <value>0.0.0.0:8031</value>
   </property>
 
   <property>
@@ -119,7 +119,7 @@
   <property>
     <description>The address of the RM admin interface.</description>
     <name>yarn.resourcemanager.admin.address</name>
-    <value>0.0.0.0:8141</value>
+    <value>0.0.0.0:8033</value>
   </property>
 
   <property>
@@ -274,7 +274,7 @@
   <property>
     <description>Address where the localizer IPC is.</description>
     <name>yarn.nodemanager.localizer.address</name>
-    <value>0.0.0.0:4344</value>
+    <value>0.0.0.0:8040</value>
   </property>
 
   <property>
@@ -355,7 +355,7 @@
   <property>
     <description>NM Webapp address.</description>
     <name>yarn.nodemanager.webapp.address</name>
-    <value>0.0.0.0:9999</value>
+    <value>0.0.0.0:8042</value>
   </property>
 
   <property>

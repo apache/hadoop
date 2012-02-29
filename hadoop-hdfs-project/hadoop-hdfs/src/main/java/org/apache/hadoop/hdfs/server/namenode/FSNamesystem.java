@@ -1639,6 +1639,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                                 "Unable to add file to namespace.");
         }
         leaseManager.addLease(newNode.getClientName(), src);
+
+        // record file record in log, record new generation stamp
+        getEditLog().logOpenFile(src, newNode);
         if (NameNode.stateChangeLog.isDebugEnabled()) {
           NameNode.stateChangeLog.debug("DIR* NameSystem.startFile: "
                                      +"add "+src+" to namespace for "+holder);
@@ -1684,11 +1687,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     dir.replaceNode(src, node, cons);
     leaseManager.addLease(cons.getClientName(), src);
     
+    LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
     if (writeToEditLog) {
       getEditLog().logOpenFile(src, cons);
     }
-
-    return blockManager.convertLastBlockToUnderConstruction(cons);
+    return ret;
   }
 
   /**

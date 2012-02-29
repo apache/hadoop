@@ -41,14 +41,14 @@ public class TestAuthenticationFilter extends TestCase {
     FilterConfig config = Mockito.mock(FilterConfig.class);
     Mockito.when(config.getInitParameter(AuthenticationFilter.CONFIG_PREFIX)).thenReturn("");
     Mockito.when(config.getInitParameter("a")).thenReturn("A");
-    Mockito.when(config.getInitParameterNames()).thenReturn(new Vector(Arrays.asList("a")).elements());
+    Mockito.when(config.getInitParameterNames()).thenReturn(new Vector<String>(Arrays.asList("a")).elements());
     Properties props = filter.getConfiguration("", config);
     assertEquals("A", props.getProperty("a"));
 
     config = Mockito.mock(FilterConfig.class);
     Mockito.when(config.getInitParameter(AuthenticationFilter.CONFIG_PREFIX)).thenReturn("foo");
     Mockito.when(config.getInitParameter("foo.a")).thenReturn("A");
-    Mockito.when(config.getInitParameterNames()).thenReturn(new Vector(Arrays.asList("foo.a")).elements());
+    Mockito.when(config.getInitParameterNames()).thenReturn(new Vector<String>(Arrays.asList("foo.a")).elements());
     props = filter.getConfiguration("foo.", config);
     assertEquals("A", props.getProperty("a"));
   }
@@ -57,7 +57,7 @@ public class TestAuthenticationFilter extends TestCase {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
       FilterConfig config = Mockito.mock(FilterConfig.class);
-      Mockito.when(config.getInitParameterNames()).thenReturn(new Vector().elements());
+      Mockito.when(config.getInitParameterNames()).thenReturn(new Vector<String>().elements());
       filter.init(config);
       fail();
     } catch (ServletException ex) {
@@ -119,7 +119,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn("simple");
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TOKEN_VALIDITY)).thenReturn("1000");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.AUTH_TOKEN_VALIDITY)).elements());
       filter.init(config);
       assertEquals(PseudoAuthenticationHandler.class, filter.getAuthenticationHandler().getClass());
@@ -138,7 +138,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn("simple");
       Mockito.when(config.getInitParameter(AuthenticationFilter.SIGNATURE_SECRET)).thenReturn("secret");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.SIGNATURE_SECRET)).elements());
       filter.init(config);
       assertFalse(filter.isRandomSecret());
@@ -154,7 +154,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.COOKIE_DOMAIN)).thenReturn(".foo.com");
       Mockito.when(config.getInitParameter(AuthenticationFilter.COOKIE_PATH)).thenReturn("/bar");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.COOKIE_DOMAIN,
                                  AuthenticationFilter.COOKIE_PATH)).elements());
       filter.init(config);
@@ -173,7 +173,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn(
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
       filter.init(config);
       assertTrue(DummyAuthenticationHandler.init);
     } finally {
@@ -187,7 +187,7 @@ public class TestAuthenticationFilter extends TestCase {
       FilterConfig config = Mockito.mock(FilterConfig.class);
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn("kerberos");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
       filter.init(config);
     } catch (ServletException ex) {
       // Expected
@@ -204,7 +204,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn(
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
       filter.init(config);
 
       HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
@@ -225,7 +225,7 @@ public class TestAuthenticationFilter extends TestCase {
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameter(AuthenticationFilter.SIGNATURE_SECRET)).thenReturn("secret");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.SIGNATURE_SECRET)).elements());
       filter.init(config);
 
@@ -254,7 +254,7 @@ public class TestAuthenticationFilter extends TestCase {
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameter(AuthenticationFilter.SIGNATURE_SECRET)).thenReturn("secret");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.SIGNATURE_SECRET)).elements());
       filter.init(config);
 
@@ -288,7 +288,7 @@ public class TestAuthenticationFilter extends TestCase {
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameter(AuthenticationFilter.SIGNATURE_SECRET)).thenReturn("secret");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.SIGNATURE_SECRET)).elements());
       filter.init(config);
 
@@ -321,7 +321,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn(
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
       filter.init(config);
 
       HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
@@ -332,7 +332,7 @@ public class TestAuthenticationFilter extends TestCase {
       FilterChain chain = Mockito.mock(FilterChain.class);
 
       Mockito.doAnswer(
-        new Answer() {
+        new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
             fail();
@@ -358,7 +358,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TOKEN_VALIDITY)).thenReturn("1000");
       Mockito.when(config.getInitParameter(AuthenticationFilter.SIGNATURE_SECRET)).thenReturn("secret");
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.AUTH_TOKEN_VALIDITY,
                                  AuthenticationFilter.SIGNATURE_SECRET)).elements());
 
@@ -366,7 +366,7 @@ public class TestAuthenticationFilter extends TestCase {
         Mockito.when(config.getInitParameter(AuthenticationFilter.COOKIE_DOMAIN)).thenReturn(".foo.com");
         Mockito.when(config.getInitParameter(AuthenticationFilter.COOKIE_PATH)).thenReturn("/bar");
         Mockito.when(config.getInitParameterNames()).thenReturn(
-          new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
+          new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                    AuthenticationFilter.AUTH_TOKEN_VALIDITY,
                                    AuthenticationFilter.SIGNATURE_SECRET,
                                    AuthenticationFilter.COOKIE_DOMAIN,
@@ -387,7 +387,7 @@ public class TestAuthenticationFilter extends TestCase {
       final boolean[] calledDoFilter = new boolean[1];
 
       Mockito.doAnswer(
-        new Answer() {
+        new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
             calledDoFilter[0] = true;
@@ -398,7 +398,7 @@ public class TestAuthenticationFilter extends TestCase {
 
       final Cookie[] setCookie = new Cookie[1];
       Mockito.doAnswer(
-        new Answer() {
+        new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
             Object[] args = invocation.getArguments();
@@ -451,7 +451,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn(
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
       filter.init(config);
 
       HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
@@ -470,7 +470,7 @@ public class TestAuthenticationFilter extends TestCase {
       FilterChain chain = Mockito.mock(FilterChain.class);
 
       Mockito.doAnswer(
-        new Answer() {
+        new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
             Object[] args = invocation.getArguments();
@@ -496,7 +496,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn(
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
       filter.init(config);
 
       HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
@@ -515,7 +515,7 @@ public class TestAuthenticationFilter extends TestCase {
       FilterChain chain = Mockito.mock(FilterChain.class);
 
       Mockito.doAnswer(
-        new Answer() {
+        new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
             fail();
@@ -526,7 +526,7 @@ public class TestAuthenticationFilter extends TestCase {
 
       final Cookie[] setCookie = new Cookie[1];
       Mockito.doAnswer(
-        new Answer() {
+        new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
             Object[] args = invocation.getArguments();
@@ -556,7 +556,7 @@ public class TestAuthenticationFilter extends TestCase {
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn(
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameterNames()).thenReturn(
-        new Vector(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
+        new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE)).elements());
       filter.init(config);
 
       HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
@@ -575,7 +575,7 @@ public class TestAuthenticationFilter extends TestCase {
       FilterChain chain = Mockito.mock(FilterChain.class);
 
       Mockito.doAnswer(
-        new Answer() {
+        new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
             fail();
@@ -586,7 +586,7 @@ public class TestAuthenticationFilter extends TestCase {
 
       final Cookie[] setCookie = new Cookie[1];
       Mockito.doAnswer(
-        new Answer() {
+        new Answer<Object>() {
           @Override
           public Object answer(InvocationOnMock invocation) throws Throwable {
             Object[] args = invocation.getArguments();

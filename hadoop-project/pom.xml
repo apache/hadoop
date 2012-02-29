@@ -538,6 +538,21 @@
         <version>1.8.8</version>
       </dependency>
       <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-core-asl</artifactId>
+        <version>1.8.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-jaxrs</artifactId>
+        <version>1.8.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-xc</artifactId>
+        <version>1.8.8</version>
+      </dependency>
+      <dependency>
         <groupId>org.aspectj</groupId>
         <artifactId>aspectjtools</artifactId>
         <version>1.6.5</version>
@@ -782,6 +797,7 @@
           <argLine>-Xmx1024m</argLine>
           <environmentVariables>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib</LD_LIBRARY_PATH>
+            <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
           <systemPropertyVariables>
 

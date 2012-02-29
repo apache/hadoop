@@ -15,32 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.tools;
+
+package org.apache.hadoop.ipc;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.ipc.VersionedProtocol;
-
 /**
- * Protocol implemented by the Name Node and Job Tracker which maps users to
- * groups.
+ * IPC exception is thrown by IPC layer when the IPC
+ * connection cannot be established.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-@InterfaceStability.Evolving
-public interface GetUserMappingsProtocol {
+public class IpcException extends IOException {
+  private static final long serialVersionUID = 1L;
   
-  /**
-   * Version 1: Initial version.
-   */
-  public static final long versionID = 1L;
-  
-  /**
-   * Get the groups which are mapped to the given user.
-   * @param user The user to get the groups for.
-   * @return The set of groups the user belongs to.
-   * @throws IOException
-   */
-  public String[] getGroupsForUser(String user) throws IOException;
+  final String errMsg;
+  public IpcException(final String err) {
+    errMsg = err; 
+  }
 }

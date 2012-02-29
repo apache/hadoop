@@ -36,7 +36,7 @@ import org.apache.hadoop.security.KerberosInfo;
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
     clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface NamenodeProtocol extends VersionedProtocol {
+public interface NamenodeProtocol {
   /**
    * Until version 6L, this class served as both
    * the client interface to the NN AND the RPC protocol used to 

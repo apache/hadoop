@@ -80,7 +80,7 @@ public class TestPBLocalizerRPC {
 
   @Test
   public void testLocalizerRPC() throws Exception {
-    InetSocketAddress locAddr = new InetSocketAddress("0.0.0.0", 4344);
+    InetSocketAddress locAddr = new InetSocketAddress("0.0.0.0", 8040);
     LocalizerService server = new LocalizerService(locAddr);
     try {
       server.start();

@@ -88,7 +88,7 @@ public class YarnConfiguration extends Configuration {
   /** The address of the applications manager interface in the RM.*/
   public static final String RM_ADDRESS = 
     RM_PREFIX + "address";
-  public static final int DEFAULT_RM_PORT = 8040;
+  public static final int DEFAULT_RM_PORT = 8032;
   public static final String DEFAULT_RM_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_PORT;
 
@@ -123,7 +123,7 @@ public class YarnConfiguration extends Configuration {
   
   public static final String RM_RESOURCE_TRACKER_ADDRESS =
     RM_PREFIX + "resource-tracker.address";
-  public static final int DEFAULT_RM_RESOURCE_TRACKER_PORT = 8025;
+  public static final int DEFAULT_RM_RESOURCE_TRACKER_PORT = 8031;
   public static final String DEFAULT_RM_RESOURCE_TRACKER_ADDRESS =
     "0.0.0.0:" + DEFAULT_RM_RESOURCE_TRACKER_PORT;
 
@@ -140,7 +140,7 @@ public class YarnConfiguration extends Configuration {
   /** Are acls enabled.*/
   public static final String YARN_ACL_ENABLE = 
     YARN_PREFIX + "acl.enable";
-  public static final boolean DEFAULT_YARN_ACL_ENABLE = true;
+  public static final boolean DEFAULT_YARN_ACL_ENABLE = false;
   
   /** ACL of who can be admin of YARN cluster.*/
   public static final String YARN_ADMIN_ACL = 
@@ -153,7 +153,7 @@ public class YarnConfiguration extends Configuration {
   /** The address of the RM admin interface.*/
   public static final String RM_ADMIN_ADDRESS = 
     RM_PREFIX + "admin.address";
-  public static final int DEFAULT_RM_ADMIN_PORT = 8141;
+  public static final int DEFAULT_RM_ADMIN_PORT = 8033;
   public static final String DEFAULT_RM_ADMIN_ADDRESS = "0.0.0.0:" +
       DEFAULT_RM_ADMIN_PORT;
   
@@ -285,7 +285,7 @@ public class YarnConfiguration extends Configuration {
   /** Address where the localizer IPC is.*/
   public static final String NM_LOCALIZER_ADDRESS =
     NM_PREFIX + "localizer.address";
-  public static final int DEFAULT_NM_LOCALIZER_PORT = 4344;
+  public static final int DEFAULT_NM_LOCALIZER_PORT = 8040;
   public static final String DEFAULT_NM_LOCALIZER_ADDRESS = "0.0.0.0:" +
     DEFAULT_NM_LOCALIZER_PORT;
   
@@ -366,7 +366,7 @@ public class YarnConfiguration extends Configuration {
   
   /** NM Webapp address.**/
   public static final String NM_WEBAPP_ADDRESS = NM_PREFIX + "webapp.address";
-  public static final int DEFAULT_NM_WEBAPP_PORT = 9999;
+  public static final int DEFAULT_NM_WEBAPP_PORT = 8042;
   public static final String DEFAULT_NM_WEBAPP_ADDRESS = "0.0.0.0:" +
     DEFAULT_NM_WEBAPP_PORT;
   

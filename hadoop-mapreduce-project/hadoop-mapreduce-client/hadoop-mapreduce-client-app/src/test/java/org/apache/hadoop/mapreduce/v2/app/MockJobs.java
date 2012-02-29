@@ -98,7 +98,7 @@ public class MockJobs extends MockApps {
 
   public static final String NM_HOST = "localhost";
   public static final int NM_PORT = 1234;
-  public static final int NM_HTTP_PORT = 9999;
+  public static final int NM_HTTP_PORT = 8042;
 
   static final int DT = 1000000; // ms
 
@@ -284,7 +284,7 @@ public class MockJobs extends MockApps {
 
       @Override
       public String getNodeHttpAddress() {
-        return "localhost:9999";
+        return "localhost:8042";
       }
 
       @Override

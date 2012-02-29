@@ -112,9 +112,8 @@ public class FSEditLogLoader {
     long recentOpcodeOffsets[] = new long[4];
     Arrays.fill(recentOpcodeOffsets, -1);
 
+    long txId = expectedStartingTxId - 1;
     try {
-      long txId = expectedStartingTxId - 1;
-
       try {
         while (true) {
           FSEditLogOp op;
@@ -123,7 +122,8 @@ public class FSEditLogLoader {
               break;
             }
           } catch (IOException ioe) {
-            String errorMessage = formatEditLogReplayError(in, recentOpcodeOffsets);
+            long badTxId = txId + 1; // because txId hasn't been incremented yet
+            String errorMessage = formatEditLogReplayError(in, recentOpcodeOffsets, badTxId);
             FSImage.LOG.error(errorMessage);
             throw new EditLogInputException(errorMessage,
                 ioe, numEdits);
@@ -131,12 +131,12 @@ public class FSEditLogLoader {
           recentOpcodeOffsets[(int)(numEdits % recentOpcodeOffsets.length)] =
             in.getPosition();
           if (LayoutVersion.supports(Feature.STORED_TXIDS, logVersion)) {
-            long thisTxId = op.txid;
-            if (thisTxId != txId + 1) {
+            long expectedTxId = txId + 1;
+            txId = op.txid;
+            if (txId != expectedTxId) {
               throw new IOException("Expected transaction ID " +
-                  (txId + 1) + " but got " + thisTxId);
+                  expectedTxId + " but got " + txId);
             }
-            txId = thisTxId;
           }
 
           incrOpCount(op.opCode, opCounts);
@@ -145,7 +145,7 @@ public class FSEditLogLoader {
           } catch (Throwable t) {
             // Catch Throwable because in the case of a truly corrupt edits log, any
             // sort of error might be thrown (NumberFormat, NullPointer, EOF, etc.)
-            String errorMessage = formatEditLogReplayError(in, recentOpcodeOffsets);
+            String errorMessage = formatEditLogReplayError(in, recentOpcodeOffsets, txId);
             FSImage.LOG.error(errorMessage);
             throw new IOException(errorMessage, t);
           }
@@ -265,12 +265,22 @@ public class FSEditLogLoader {
       updateBlocks(fsDir, addCloseOp, oldFile);
 
       // Now close the file
-      INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
+      if (!oldFile.isUnderConstruction() &&
+          logVersion <= LayoutVersion.BUGFIX_HDFS_2991_VERSION) {
+        // There was a bug (HDFS-2991) in hadoop < 0.23.1 where OP_CLOSE
+        // could show up twice in a row. But after that version, this
+        // should be fixed, so we should treat it as an error.
+        throw new IOException(
+            "File is not under construction: " + addCloseOp.path);
+      }
       // One might expect that you could use removeLease(holder, path) here,
       // but OP_CLOSE doesn't serialize the holder. So, remove by path.
-      fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
-      INodeFile newFile = ucFile.convertToInodeFile();
-      fsDir.replaceNode(addCloseOp.path, ucFile, newFile);
+      if (oldFile.isUnderConstruction()) {
+        INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
+        fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
+        INodeFile newFile = ucFile.convertToInodeFile();
+        fsDir.replaceNode(addCloseOp.path, ucFile, newFile);
+      }
       break;
     }
     case OP_SET_REPLICATION: {
@@ -431,9 +441,10 @@ public class FSEditLogLoader {
   }
   
   private static String formatEditLogReplayError(EditLogInputStream in,
-      long recentOpcodeOffsets[]) {
+      long recentOpcodeOffsets[], long txid) {
     StringBuilder sb = new StringBuilder();
     sb.append("Error replaying edit log at offset " + in.getPosition());
+    sb.append(" on transaction ID ").append(txid);
     if (recentOpcodeOffsets[0] != -1) {
       Arrays.sort(recentOpcodeOffsets);
       sb.append("\nRecent opcode offsets:");

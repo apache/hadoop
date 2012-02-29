@@ -89,7 +89,7 @@ public class TestContainerLocalizer {
     final String user = "yak";
     final String appId = "app_RM_0";
     final String cId = "container_0";
-    final InetSocketAddress nmAddr = new InetSocketAddress("foobar", 4344);
+    final InetSocketAddress nmAddr = new InetSocketAddress("foobar", 8040);
     final List<Path> localDirs = new ArrayList<Path>();
     for (int i = 0; i < 4; ++i) {
       localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));
@@ -177,9 +177,6 @@ public class TestContainerLocalizer {
       // $x/usercache/$user/appcache/$appId/filecache
       Path appcache = new Path(appDir, ContainerLocalizer.FILECACHE);
       verify(spylfs).mkdir(eq(appcache), isA(FsPermission.class), eq(false));
-      // $x/usercache/$user/appcache/$appId/output
-      Path appOutput = new Path(appDir, ContainerLocalizer.OUTPUTDIR);
-      verify(spylfs).mkdir(eq(appOutput), isA(FsPermission.class), eq(false));
     }
 
     // verify tokens read at expected location

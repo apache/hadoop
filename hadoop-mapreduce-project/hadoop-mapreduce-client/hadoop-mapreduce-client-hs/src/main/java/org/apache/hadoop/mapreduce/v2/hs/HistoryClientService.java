@@ -192,7 +192,6 @@ public class HistoryClientService extends AbstractService {
         throw RPCUtil.getRemoteException("Unknown job " + jobID);
       }
       JobACL operation = JobACL.VIEW_JOB;
-      //TODO disable check access for now.
       checkAccess(job, operation);
       return job;
     }
@@ -324,9 +323,7 @@ public class HistoryClientService extends AbstractService {
 
     private void checkAccess(Job job, JobACL jobOperation)
         throws YarnRemoteException {
-      if (!UserGroupInformation.isSecurityEnabled()) {
-        return;
-      }
+
       UserGroupInformation callerUGI;
       try {
         callerUGI = UserGroupInformation.getCurrentUser();
