@@ -140,7 +140,7 @@ public class TestDefaultContainerExecutor {
 //    final String appId = "app_RM_0";
 //    final Path logDir = new Path(basedir, "logs");
 //    final Path nmLocal = new Path(basedir, "nmPrivate/" + user + "/" + appId);
-//    final InetSocketAddress nmAddr = new InetSocketAddress("foobar", 4344);
+//    final InetSocketAddress nmAddr = new InetSocketAddress("foobar", 8040);
 //    System.out.println("NMLOCAL: " + nmLocal);
 //    Random r = new Random();
 //

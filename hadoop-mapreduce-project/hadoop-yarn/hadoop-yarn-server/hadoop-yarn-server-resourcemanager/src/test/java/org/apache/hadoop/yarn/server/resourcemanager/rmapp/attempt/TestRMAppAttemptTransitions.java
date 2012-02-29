@@ -481,7 +481,7 @@ public class TestRMAppAttemptTransitions {
   public void testUnregisterToKilledFinish() {
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
-    runApplicationAttempt(amContainer, "host", 9999, "oldtrackingurl");
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl");
     String trackingUrl = "newtrackingurl";
     String diagnostics = "Killed by user";
     FinalApplicationStatus finalStatus = FinalApplicationStatus.KILLED;
@@ -498,7 +498,7 @@ public class TestRMAppAttemptTransitions {
   public void testUnregisterToSuccessfulFinish() {
     Container amContainer = allocateApplicationAttempt();
     launchApplicationAttempt(amContainer);
-    runApplicationAttempt(amContainer, "host", 9999, "oldtrackingurl");
+    runApplicationAttempt(amContainer, "host", 8042, "oldtrackingurl");
     String trackingUrl = "mytrackingurl";
     String diagnostics = "Successful";
     FinalApplicationStatus finalStatus = FinalApplicationStatus.SUCCEEDED;

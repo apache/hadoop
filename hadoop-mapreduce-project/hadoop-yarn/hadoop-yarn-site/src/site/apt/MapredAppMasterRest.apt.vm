@@ -602,11 +602,11 @@ MapReduce Application Master REST API's.
    "jobAttempts" : {
       "jobAttempt" : [
          {    
-            "nodeId" : "host.domain.com:45454",
-            "nodeHttpAddress" : "host.domain.com:9999",
+            "nodeId" : "host.domain.com:8041",
+            "nodeHttpAddress" : "host.domain.com:8042",
             "startTime" : 1326238773493,
             "id" : 1, 
-            "logsLink" : "http://host.domain.com:9999/node/containerlogs/container_1326232085508_0004_01_000001",
+            "logsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326232085508_0004_01_000001",
             "containerId" : "container_1326232085508_0004_01_000001"
          }  
       ]
@@ -638,12 +638,12 @@ MapReduce Application Master REST API's.
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <jobAttempts>
   <jobAttempt>
-    <nodeHttpAddress>host.domain.com:9999</nodeHttpAddress>
-    <nodeId>host.domain.com:45454</nodeId>
+    <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
+    <nodeId>host.domain.com:8041</nodeId>
     <id>1</id>
     <startTime>1326238773493</startTime>
     <containerId>container_1326232085508_0004_01_000001</containerId>
-    <logsLink>http://host.domain.com:9999/node/containerlogs/container_1326232085508_0004_01_000001</logsLink>
+    <logsLink>http://host.domain.com:8042/node/containerlogs/container_1326232085508_0004_01_000001</logsLink>
   </jobAttempt>
 </jobAttempts>
 +---+
@@ -2095,7 +2095,7 @@ MapReduce Application Master REST API's.
             "mergeFinishTime" : 1326238780099,
             "rack" : "/98.139.92.0",
             "elapsedReduceTime" : 0,
-            "nodeHttpAddress" : "host.domain.com:9999",
+            "nodeHttpAddress" : "host.domain.com:8042",
             "type" : "REDUCE",
             "startTime" : 1326238777460,
             "id" : "attempt_1326232085508_4_4_r_0_0",
@@ -2137,7 +2137,7 @@ MapReduce Application Master REST API's.
     <id>attempt_1326232085508_4_4_r_0_0</id>
     <rack>/98.139.92.0</rack>
     <state>RUNNING</state>
-    <nodeHttpAddress>host.domain.com:9999</nodeHttpAddress>
+    <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
     <type>REDUCE</type>
     <assignedContainerId>container_1326232085508_0004_01_000003</assignedContainerId>
     <shuffleFinishTime>1326238780052</shuffleFinishTime>
@@ -2251,7 +2251,7 @@ MapReduce Application Master REST API's.
       "mergeFinishTime" : 1326238780099,
       "rack" : "/98.139.92.0",
       "elapsedReduceTime" : 0,
-      "nodeHttpAddress" : "host.domain.com:9999",
+      "nodeHttpAddress" : "host.domain.com:8042",
       "startTime" : 1326238777460,
       "id" : "attempt_1326232085508_4_4_r_0_0",
       "type" : "REDUCE",
@@ -2290,7 +2290,7 @@ MapReduce Application Master REST API's.
   <id>attempt_1326232085508_4_4_r_0_0</id>
   <rack>/98.139.92.0</rack>
   <state>RUNNING</state>
-  <nodeHttpAddress>host.domain.com:9999</nodeHttpAddress>
+  <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
   <type>REDUCE</type>
   <assignedContainerId>container_1326232085508_0004_01_000003</assignedContainerId>
   <shuffleFinishTime>1326238780052</shuffleFinishTime>

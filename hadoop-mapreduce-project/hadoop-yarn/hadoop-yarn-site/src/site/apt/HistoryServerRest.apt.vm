@@ -642,11 +642,11 @@ History Server REST API's.
    "jobAttempts" : {
       "jobAttempt" : [
          {
-            "nodeId" : "host.domain.com:45454",
-            "nodeHttpAddress" : "host.domain.com:9999",
+            "nodeId" : "host.domain.com:8041",
+            "nodeHttpAddress" : "host.domain.com:8042",
             "startTime" : 1326381444693,
             "id" : 1,
-            "logsLink" : "http://host.domain.com:19888/jobhistory/logs/host.domain.com:45454/container_1326381300833_0002_01_000001/job_1326381300833_2_2/user1",
+            "logsLink" : "http://host.domain.com:19888/jobhistory/logs/host.domain.com:8041/container_1326381300833_0002_01_000001/job_1326381300833_2_2/user1",
             "containerId" : "container_1326381300833_0002_01_000001"
          }
       ]
@@ -678,12 +678,12 @@ History Server REST API's.
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <jobAttempts>
   <jobAttempt>
-    <nodeHttpAddress>host.domain.com:9999</nodeHttpAddress>
-    <nodeId>host.domain.com:45454</nodeId>
+    <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
+    <nodeId>host.domain.com:8041</nodeId>
     <id>1</id>
     <startTime>1326381444693</startTime>
     <containerId>container_1326381300833_0002_01_000001</containerId>
-    <logsLink>http://host.domain.com:19888/jobhistory/logs/host.domain.com:45454/container_1326381300833_0002_01_000001/job_1326381300833_2_2/user1</logsLink>
+    <logsLink>http://host.domain.com:19888/jobhistory/logs/host.domain.com:8041/container_1326381300833_0002_01_000001/job_1326381300833_2_2/user1</logsLink>
   </jobAttempt>
 </jobAttempts>
 +---+
@@ -2138,7 +2138,7 @@ History Server REST API's.
             "state" : "SUCCEEDED",
             "diagnostics" : "",
             "rack" : "/98.139.92.0",
-            "nodeHttpAddress" : "host.domain.com:9999",
+            "nodeHttpAddress" : "host.domain.com:8042",
             "startTime" : 1326381450680,
             "id" : "attempt_1326381300833_2_2_m_0_0",
             "type" : "MAP",
@@ -2180,7 +2180,7 @@ History Server REST API's.
     <id>attempt_1326381300833_2_2_m_0_0</id>
     <rack>/98.139.92.0</rack>
     <state>SUCCEEDED</state>
-    <nodeHttpAddress>host.domain.com:9999</nodeHttpAddress>
+    <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
     <diagnostics/>
     <type>MAP</type>
     <assignedContainerId>container_1326381300833_0002_01_000002</assignedContainerId>
@@ -2287,7 +2287,7 @@ History Server REST API's.
       "state" : "SUCCEEDED",
       "diagnostics" : "",
       "rack" : "/98.139.92.0",
-      "nodeHttpAddress" : "host.domain.com:9999",
+      "nodeHttpAddress" : "host.domain.com:8042",
       "startTime" : 1326381450680,
       "id" : "attempt_1326381300833_2_2_m_0_0",
       "type" : "MAP",
@@ -2326,7 +2326,7 @@ History Server REST API's.
   <id>attempt_1326381300833_2_2_m_0_0</id>
   <rack>/98.139.92.0</rack>
   <state>SUCCEEDED</state>
-  <nodeHttpAddress>host.domain.com:9999</nodeHttpAddress>
+  <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
   <diagnostics/>
   <type>MAP</type>
   <assignedContainerId>container_1326381300833_0002_01_000002</assignedContainerId>

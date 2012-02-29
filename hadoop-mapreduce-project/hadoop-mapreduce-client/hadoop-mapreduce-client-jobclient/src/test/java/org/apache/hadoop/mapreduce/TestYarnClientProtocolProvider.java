@@ -92,7 +92,7 @@ public class TestYarnClientProtocolProvider extends TestCase {
       rmDTToken.setIdentifier(ByteBuffer.wrap(new byte[2]));
       rmDTToken.setKind("Testclusterkind");
       rmDTToken.setPassword(ByteBuffer.wrap("testcluster".getBytes()));
-      rmDTToken.setService("0.0.0.0:8040");
+      rmDTToken.setService("0.0.0.0:8032");
       getDTResponse.setRMDelegationToken(rmDTToken);
       ClientRMProtocol cRMProtocol = mock(ClientRMProtocol.class);
       when(cRMProtocol.getDelegationToken(any(

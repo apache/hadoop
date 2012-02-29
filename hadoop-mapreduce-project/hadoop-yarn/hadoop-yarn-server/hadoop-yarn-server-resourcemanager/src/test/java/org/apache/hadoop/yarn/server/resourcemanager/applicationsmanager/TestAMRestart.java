@@ -163,7 +163,7 @@ public class TestAMRestart {
 //      container.setContainerToken(recordFactory.newRecordInstance(ContainerToken.class));
 //      container.setNodeId(recordFactory.newRecordInstance(NodeId.class));
 //      container.setContainerManagerAddress("localhost");
-//      container.setNodeHttpAddress("localhost:9999");
+//      container.setNodeHttpAddress("localhost:8042");
 //      container.setId(recordFactory.newRecordInstance(ContainerId.class));
 //      container.getId().setAppId(appID);
 //      container.getId().setId(count);
