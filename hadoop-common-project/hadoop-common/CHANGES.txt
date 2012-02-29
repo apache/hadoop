@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     HADOOP-8078. Add capability to turn on security in unit tests. (Jaimin Jetly
     via jitendra)
 
+    HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the 
+    client side translator and server side implementation. (jitendra)
+
   BUG FIXES
 
     HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
