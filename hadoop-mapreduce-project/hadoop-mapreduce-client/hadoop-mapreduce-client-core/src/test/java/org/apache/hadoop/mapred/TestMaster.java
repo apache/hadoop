@@ -54,7 +54,7 @@ public class TestMaster {
     }
 
     // Change master address to a valid value
-    conf.set(MRConfig.MASTER_ADDRESS, "bar.com:9999");    
+    conf.set(MRConfig.MASTER_ADDRESS, "bar.com:8042");    
     masterHostname = Master.getMasterAddress(conf).getHostName();
     assertEquals(masterHostname, "bar.com");
 

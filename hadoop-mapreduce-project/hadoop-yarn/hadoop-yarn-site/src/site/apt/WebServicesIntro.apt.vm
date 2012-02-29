@@ -182,7 +182,7 @@ Note that the order of the fields within response body is not specified and migh
   The client prints information about the job submitted along with the application id, similar to:
 
 +---+
-12/01/18 04:25:15 INFO mapred.ResourceMgrDelegate: Submitted application application_1326821518301_0010 to ResourceManager at host.domain.com/10.10.10.10:8040
+12/01/18 04:25:15 INFO mapred.ResourceMgrDelegate: Submitted application application_1326821518301_0010 to ResourceManager at host.domain.com/10.10.10.10:8032
 12/01/18 04:25:15 INFO mapreduce.Job: Running job: job_1326821518301_0010
 12/01/18 04:25:21 INFO mapred.ClientServiceDelegate: The url to track the job: host.domain.com:8088/proxy/application_1326821518301_0010/
 12/01/18 04:25:22 INFO mapreduce.Job: Job job_1326821518301_0010 running in uber mode : false
@@ -201,14 +201,14 @@ curl --compressed -H "Accept: application/json" -X GET "http://host.domain.com:8
 {
    "app" : {
       "finishedTime" : 0,
-      "amContainerLogs" : "http://host.domain.com:9999/node/containerlogs/container_1326821518301_0010_01_000001",
+      "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0010_01_000001",
       "trackingUI" : "ApplicationMaster",
       "state" : "RUNNING",
       "user" : "user1",
       "id" : "application_1326821518301_0010",
       "clusterId" : 1326821518301,
       "finalStatus" : "UNDEFINED",
-      "amHostHttpAddress" : "host.domain.com:9999",
+      "amHostHttpAddress" : "host.domain.com:8042",
       "progress" : 82.44703,
       "name" : "Sleep job",
       "startedTime" : 1326860715335,
@@ -338,7 +338,7 @@ curl --compressed -H "Accept: application/json" -X GET "http://host.domain.com:8
             "mergeFinishTime" : 1326860735536,
             "rack" : "/10.10.10.0",
             "elapsedReduceTime" : 0,
-            "nodeHttpAddress" : "host.domain.com:9999",
+            "nodeHttpAddress" : "host.domain.com:8042",
             "type" : "REDUCE",
             "startTime" : 1326860732984,
             "id" : "attempt_1326821518301_10_10_r_0_0",
@@ -575,14 +575,14 @@ curl --compressed -H "Accept: application/json" -X GET "http://host.domain.com:8
 {
    "app" : {
       "finishedTime" : 1326861991282,
-      "amContainerLogs" : "http://host.domain.com:9999/node/containerlogs/container_1326821518301_0010_01_000001",
+      "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0010_01_000001",
       "trackingUI" : "History",
       "state" : "FINISHED",
       "user" : "user1",
       "id" : "application_1326821518301_0010",
       "clusterId" : 1326821518301,
       "finalStatus" : "SUCCEEDED",
-      "amHostHttpAddress" : "host.domain.com:9999",
+      "amHostHttpAddress" : "host.domain.com:8042",
       "progress" : 100,
       "name" : "Sleep job",
       "startedTime" : 1326860715335,

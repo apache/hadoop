@@ -939,14 +939,14 @@ ResourceManager REST API's.
     [
        {
           "finishedTime" : 1326815598530,
-          "amContainerLogs" : "http://host.domain.com:9999/node/containerlogs/container_1326815542473_0001_01_000001",
+          "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001_01_000001",
           "trackingUI" : "History",
           "state" : "FINISHED",
           "user" : "user1",
           "id" : "application_1326815542473_0001",
           "clusterId" : 1326815542473,
           "finalStatus" : "SUCCEEDED",
-          "amHostHttpAddress" : "host.domain.com:9999",
+          "amHostHttpAddress" : "host.domain.com:8042",
           "progress" : 100,
           "name" : "word count",
           "startedTime" : 1326815573334,
@@ -957,14 +957,14 @@ ResourceManager REST API's.
        },
        {
           "finishedTime" : 1326815789546,
-          "amContainerLogs" : "http://host.domain.com:9999/node/containerlogs/container_1326815542473_0002_01_000001",
+          "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001",
           "trackingUI" : "History",
           "state" : "FINISHED",
           "user" : "user1",
           "id" : "application_1326815542473_0002",
           "clusterId" : 1326815542473,
           "finalStatus" : "SUCCEEDED",
-          "amHostHttpAddress" : "host.domain.com:9999",
+          "amHostHttpAddress" : "host.domain.com:8042",
           "progress" : 100,
           "name" : "Sleep job",
           "startedTime" : 1326815641380,
@@ -1017,9 +1017,9 @@ ResourceManager REST API's.
     <startedTime>1326815573334</startedTime>
     <finishedTime>1326815598530</finishedTime>
     <elapsedTime>25196</elapsedTime>
-    <amContainerLogs>http://host.domain.com:9999/node/containerlogs/container_1326815542473_0001
+    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0001
 _01_000001</amContainerLogs>
-    <amHostHttpAddress>host.domain.com:9999</amHostHttpAddress>
+    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
   </app>
   <app>
     <id>application_1326815542473_0002</id>
@@ -1036,8 +1036,8 @@ _01_000001</amContainerLogs>
     <startedTime>1326815641380</startedTime>
     <finishedTime>1326815789546</finishedTime>
     <elapsedTime>148166</elapsedTime>
-    <amContainerLogs>http://host.domain.com:9999/node/containerlogs/container_1326815542473_0002_01_000001</amContainerLogs>
-    <amHostHttpAddress>host.domain.com:9999</amHostHttpAddress>
+    <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326815542473_0002_01_000001</amContainerLogs>
+    <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
   </app>
 </apps>
 
@@ -1132,14 +1132,14 @@ _01_000001</amContainerLogs>
 {
    "app" : {
       "finishedTime" : 1326824991300,
-      "amContainerLogs" : "http://host.domain.com:9999/node/containerlogs/container_1326821518301_0005_01_000001",
+      "amContainerLogs" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001",
       "trackingUI" : "History",
       "state" : "FINISHED",
       "user" : "user1",
       "id" : "application_1326821518301_0005",
       "clusterId" : 1326821518301,
       "finalStatus" : "SUCCEEDED",
-      "amHostHttpAddress" : "host.domain.com:9999",
+      "amHostHttpAddress" : "host.domain.com:8042",
       "progress" : 100,
       "name" : "Sleep job",
       "startedTime" : 1326824544552,
@@ -1188,8 +1188,8 @@ _01_000001</amContainerLogs>
   <startedTime>1326824544552</startedTime>
   <finishedTime>1326824991300</finishedTime>
   <elapsedTime>446748</elapsedTime>
-  <amContainerLogs>http://host.domain.com:9999/node/containerlogs/container_1326821518301_0005_01_000001</amContainerLogs>
-  <amHostHttpAddress>host.domain.com:9999</amHostHttpAddress>
+  <amContainerLogs>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001</amContainerLogs>
+  <amHostHttpAddress>host.domain.com:8042</amHostHttpAddress>
 </app>
 +---+
 

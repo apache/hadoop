@@ -155,7 +155,7 @@ public class MRAppBenchmark {
                   nodeId.setPort(1234);
                   container.setNodeId(nodeId);
                   container.setContainerToken(null);
-                  container.setNodeHttpAddress("localhost:9999");
+                  container.setNodeHttpAddress("localhost:8042");
                   getContext().getEventHandler()
                       .handle(
                       new TaskAttemptContainerAssignedEvent(event
