@@ -131,6 +131,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-2968. Protocol translator for BlockRecoveryCommand broken when
     multiple blocks need recovery. (todd)
 
+    HDFS-3020. Fix editlog to automatically sync when buffer is full. (todd)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

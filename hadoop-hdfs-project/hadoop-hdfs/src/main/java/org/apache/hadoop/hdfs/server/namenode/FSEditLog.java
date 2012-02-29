@@ -730,6 +730,14 @@ public class FSEditLog  {
   synchronized void setRuntimeForTesting(Runtime runtime) {
     this.runtime = runtime;
   }
+
+  /**
+   * Used only by tests.
+   */
+  @VisibleForTesting
+  void setMetricsForTests(NameNodeMetrics metrics) {
+    this.metrics = metrics;
+  }
   
   /**
    * Return a manifest of what finalized edit logs are available
