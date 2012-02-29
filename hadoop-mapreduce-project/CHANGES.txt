@@ -35,6 +35,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas
     Graves via mahadev)
 
+    MAPREDUCE-3933. Failures because MALLOC_ARENA_MAX is not set (ahmed via tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
