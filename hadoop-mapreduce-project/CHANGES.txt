@@ -134,6 +134,10 @@ Release 0.23.2 - UNRELEASED
     so that race conditions don't fail tasks by inadvertantly changing the
     timestamps. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-3687.  If AM dies before it returns new tracking URL, proxy
+    redirects to http://N/A/ and doesn't return error code (Ravi Prakash via
+    bobby)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
