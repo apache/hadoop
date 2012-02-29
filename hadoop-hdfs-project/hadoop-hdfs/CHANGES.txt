@@ -62,6 +62,9 @@ Trunk (unreleased changes)
 
     HDFS-3016. Security in unit tests. (Jaimin Jetly via jitendra)
 
+    HDFS-3014. FSEditLogOp and its subclasses should have toString() method.
+    (Sho Shimauchi via atm)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
