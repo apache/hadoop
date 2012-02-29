@@ -90,15 +90,17 @@ public class TestFSEditLogLoader {
     }
     rwf.close();
     
-    String expectedErrorMessage = "^Error replaying edit log at offset \\d+\n";
-    expectedErrorMessage += "Recent opcode offsets: (\\d+\\s*){4}$";
+    StringBuilder bld = new StringBuilder();
+    bld.append("^Error replaying edit log at offset \\d+");
+    bld.append("On transaction ID \\d+\n");
+    bld.append("Recent opcode offsets: (\\d+\\s*){4}$");
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)
           .format(false).build();
       fail("should not be able to start");
     } catch (IOException e) {
       assertTrue("error message contains opcodes message",
-          e.getMessage().matches(expectedErrorMessage));
+          e.getMessage().matches(bld.toString()));
     }
   }
   

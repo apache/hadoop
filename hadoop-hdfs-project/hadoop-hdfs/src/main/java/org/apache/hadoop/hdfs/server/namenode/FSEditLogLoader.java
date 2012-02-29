@@ -117,21 +117,20 @@ public class FSEditLogLoader {
     long recentOpcodeOffsets[] = new long[4];
     Arrays.fill(recentOpcodeOffsets, -1);
 
+    long txId = expectedStartingTxId - 1;
     try {
-      long txId = expectedStartingTxId - 1;
-
       try {
         FSEditLogOp op;
         while ((op = in.readOp()) != null) {
           recentOpcodeOffsets[numEdits % recentOpcodeOffsets.length] =
             in.getPosition();
           if (LayoutVersion.supports(Feature.STORED_TXIDS, logVersion)) {
-            long thisTxId = op.txid;
-            if (thisTxId != txId + 1) {
+            long expectedTxId = txId + 1;
+            txId = op.txid;
+            if (txId != expectedTxId) {
               throw new IOException("Expected transaction ID " +
-                  (txId + 1) + " but got " + thisTxId);
+                  expectedTxId + " but got " + txId);
             }
-            txId = thisTxId;
           }
 
           numEdits++;
@@ -415,6 +414,7 @@ public class FSEditLogLoader {
       // sort of error might be thrown (NumberFormat, NullPointer, EOF, etc.)
       StringBuilder sb = new StringBuilder();
       sb.append("Error replaying edit log at offset " + in.getPosition());
+      sb.append("On transaction ID ").append(txId);
       if (recentOpcodeOffsets[0] != -1) {
         Arrays.sort(recentOpcodeOffsets);
         sb.append("\nRecent opcode offsets:");
