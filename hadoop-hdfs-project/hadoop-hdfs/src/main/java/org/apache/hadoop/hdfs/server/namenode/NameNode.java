@@ -920,8 +920,11 @@ public class NameNode {
     if (!haEnabled) {
       return; // no-op, if HA is not enabled
     }
-    // TODO(HA): implement health check
-    return;
+    getNamesystem().checkAvailableResources();
+    if (!getNamesystem().nameNodeHasResourcesAvailable()) {
+      throw new HealthCheckFailedException(
+          "The NameNode has no resources available");
+    }
   }
   
   synchronized void transitionToActive() 

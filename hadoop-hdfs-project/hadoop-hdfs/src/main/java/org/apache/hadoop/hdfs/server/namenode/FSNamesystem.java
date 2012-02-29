@@ -3082,7 +3082,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    *
    * @return true if there were sufficient resources available, false otherwise.
    */
-  private boolean nameNodeHasResourcesAvailable() {
+  boolean nameNodeHasResourcesAvailable() {
     return hasResourcesAvailable;
   }
 
@@ -3090,7 +3090,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Perform resource checks and cache the results.
    * @throws IOException
    */
-  private void checkAvailableResources() throws IOException {
+  void checkAvailableResources() {
     Preconditions.checkState(nnResourceChecker != null,
         "nnResourceChecker not initialized");
     hasResourcesAvailable = nnResourceChecker.hasAvailableDiskSpace();
@@ -5187,5 +5187,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   @VisibleForTesting
   public SafeModeInfo getSafeModeInfoForTests() {
     return safeMode;
+  }
+  
+  @VisibleForTesting
+  public void setNNResourceChecker(NameNodeResourceChecker nnResourceChecker) {
+    this.nnResourceChecker = nnResourceChecker;
   }
 }

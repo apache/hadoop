@@ -1145,7 +1145,14 @@ public class MiniDFSCluster {
    */
   public NamenodeProtocols getNameNodeRpc() {
     checkSingleNameNode();
-    return getNameNode(0).getRpcServer();
+    return getNameNodeRpc(0);
+  }
+  
+  /**
+   * Get an instance of the NameNode's RPC handler.
+   */
+  public NamenodeProtocols getNameNodeRpc(int nnIndex) {
+    return getNameNode(nnIndex).getRpcServer();
   }
   
   /**
