@@ -117,6 +117,9 @@ Trunk (unreleased changes)
     HDFS-2908. Add apache license header for StorageReport.java. (Brandon Li
     via jitendra)
 
+    HDFS-3012. Exception while renewing delegation token. (Bobby Evans via
+    jitendra)
+
 Release 0.23.3 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
