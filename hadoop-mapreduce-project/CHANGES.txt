@@ -149,6 +149,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3903. Add support for mapreduce admin users. (Thomas Graves via
     sseth)
 
+    MAPREDUCE-3706. Fix circular redirect error in job-attempts page. (bobby
+    via acmurthy)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
