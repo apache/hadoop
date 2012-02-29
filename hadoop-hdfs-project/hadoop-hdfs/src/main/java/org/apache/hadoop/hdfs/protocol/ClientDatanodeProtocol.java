@@ -36,7 +36,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 @TokenInfo(BlockTokenSelector.class)
-public interface ClientDatanodeProtocol extends VersionedProtocol {
+public interface ClientDatanodeProtocol {
   /**
    * Until version 9, this class ClientDatanodeProtocol served as both
    * the client interface to the DN AND the RPC protocol used to 

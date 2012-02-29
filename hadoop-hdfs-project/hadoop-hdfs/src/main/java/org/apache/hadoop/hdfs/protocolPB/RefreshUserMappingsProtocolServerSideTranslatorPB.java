@@ -24,9 +24,6 @@ import org.apache.hadoop.hdfs.protocol.proto.RefreshUserMappingsProtocolProtos.R
 import org.apache.hadoop.hdfs.protocol.proto.RefreshUserMappingsProtocolProtos.RefreshSuperUserGroupsConfigurationResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.RefreshUserMappingsProtocolProtos.RefreshUserToGroupsMappingsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.RefreshUserMappingsProtocolProtos.RefreshUserToGroupsMappingsResponseProto;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
-import org.apache.hadoop.ipc.ProtocolSignature;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 
 import com.google.protobuf.RpcController;
@@ -65,41 +62,5 @@ public class RefreshUserMappingsProtocolServerSideTranslatorPB implements Refres
     }
     return RefreshSuperUserGroupsConfigurationResponseProto.newBuilder()
         .build();
-  }
-
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    return RPC.getProtocolVersion(RefreshUserMappingsProtocolPB.class);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    /**
-     * Don't forward this to the server. The protocol version and signature is
-     * that of {@link RefreshUserMappingsProtocol}
-     */
-    if (!protocol.equals(RPC
-        .getProtocolName(RefreshUserMappingsProtocolPB.class))) {
-      throw new IOException("Namenode Serverside implements "
-          + RPC.getProtocolName(RefreshUserMappingsProtocolPB.class)
-          + ". The following requested protocol is unknown: " + protocol);
-    }
-
-    return ProtocolSignature.getProtocolSignature(clientMethodsHash,
-        RPC.getProtocolVersion(RefreshUserMappingsProtocolPB.class),
-        RefreshUserMappingsProtocolPB.class);
-  }
-
-  @Override
-  public ProtocolSignatureWritable getProtocolSignature2(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    /**
-     * Don't forward this to the server. The protocol version and signature is
-     * that of {@link RefreshUserMappingsProtocolPB}
-     */
-    return ProtocolSignatureWritable.convert(this.getProtocolSignature(
-        protocol, clientVersion, clientMethodsHash));
   }
 }

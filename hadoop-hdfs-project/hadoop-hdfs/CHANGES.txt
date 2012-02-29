@@ -65,6 +65,9 @@ Trunk (unreleased changes)
     HDFS-3014. FSEditLogOp and its subclasses should have toString() method.
     (Sho Shimauchi via atm)
 
+    HDFS-3030. Remove getProtocolVersion and getProtocolSignature from translators.
+    (jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

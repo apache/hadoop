@@ -136,19 +136,6 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     return (DatanodeProtocolPB) RetryProxy.create(DatanodeProtocolPB.class,
         rpcNamenode, methodNameToPolicyMap);
   }
-  
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    return rpcProxy.getProtocolVersion(protocol, clientVersion);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocolName,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    return ProtocolSignatureWritable.convert(rpcProxy.getProtocolSignature2(
-        protocolName, clientVersion, clientMethodsHash));
-  }
 
   @Override
   public void close() throws IOException {

@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
@@ -59,7 +58,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @TokenInfo(DelegationTokenSelector.class)
-public interface ClientProtocol extends VersionedProtocol {
+public interface ClientProtocol {
 
   /**
    * Until version 69, this class ClientProtocol served as both

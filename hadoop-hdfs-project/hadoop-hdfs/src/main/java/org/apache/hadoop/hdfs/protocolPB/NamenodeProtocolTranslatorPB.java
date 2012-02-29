@@ -103,19 +103,6 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   }
 
   @Override
-  public ProtocolSignature getProtocolSignature(String protocolName,
-      long clientVersion, int clientMethodHash) throws IOException {
-    return ProtocolSignatureWritable.convert(rpcProxy.getProtocolSignature2(
-        protocolName, clientVersion, clientMethodHash));
-  }
-
-  @Override
-  public long getProtocolVersion(String protocolName, long clientVersion)
-      throws IOException {
-    return rpcProxy.getProtocolVersion(protocolName, clientVersion);
-  }
-
-  @Override
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
       throws IOException {
     GetBlocksRequestProto req = GetBlocksRequestProto.newBuilder()

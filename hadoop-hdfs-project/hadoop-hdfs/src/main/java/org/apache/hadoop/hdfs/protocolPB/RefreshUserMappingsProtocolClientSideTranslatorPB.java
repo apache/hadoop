@@ -60,19 +60,6 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
   }
 
   @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    return rpcProxy.getProtocolVersion(protocol, clientVersion);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    return ProtocolSignatureWritable.convert(rpcProxy.getProtocolSignature2(
-        protocol, clientVersion, clientMethodsHash));
-  }
-
-  @Override
   public void close() throws IOException {
     RPC.stopProxy(rpcProxy);
   }

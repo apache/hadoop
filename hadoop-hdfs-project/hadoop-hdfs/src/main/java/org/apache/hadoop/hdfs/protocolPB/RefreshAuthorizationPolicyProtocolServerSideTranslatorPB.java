@@ -22,9 +22,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.proto.RefreshAuthorizationPolicyProtocolProtos.RefreshServiceAclRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.RefreshAuthorizationPolicyProtocolProtos.RefreshServiceAclResponseProto;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
-import org.apache.hadoop.ipc.ProtocolSignature;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 
 import com.google.protobuf.RpcController;
@@ -38,42 +35,6 @@ public class RefreshAuthorizationPolicyProtocolServerSideTranslatorPB implements
   public RefreshAuthorizationPolicyProtocolServerSideTranslatorPB(
       RefreshAuthorizationPolicyProtocol impl) {
     this.impl = impl;
-  }
-
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    return RPC.getProtocolVersion(RefreshAuthorizationPolicyProtocolPB.class);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    /**
-     * Don't forward this to the server. The protocol version and signature is
-     * that of {@link RefreshAuthorizationPolicyProtocol}
-     */
-    if (!protocol.equals(RPC
-        .getProtocolName(RefreshAuthorizationPolicyProtocolPB.class))) {
-      throw new IOException("Namenode Serverside implements "
-          + RPC.getProtocolName(RefreshAuthorizationPolicyProtocolPB.class)
-          + ". The following requested protocol is unknown: " + protocol);
-    }
-
-    return ProtocolSignature.getProtocolSignature(clientMethodsHash,
-        RPC.getProtocolVersion(RefreshAuthorizationPolicyProtocolPB.class),
-        RefreshAuthorizationPolicyProtocolPB.class);
-  }
-
-  @Override
-  public ProtocolSignatureWritable getProtocolSignature2(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    /**
-     * Don't forward this to the server. The protocol version and signature is
-     * that of {@link RefreshAuthorizationPolicyProtocolPB}
-     */
-    return ProtocolSignatureWritable.convert(this.getProtocolSignature(
-        protocol, clientVersion, clientMethodsHash));
   }
 
   @Override

@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -221,15 +220,6 @@ public class BackupNode extends NameNode {
       DFSUtil.addPBProtocol(conf, JournalProtocolPB.class, service,
           this.clientRpcServer);
       nnRpcAddress = nn.nnRpcAddress;
-    }
-
-    @Override
-    public long getProtocolVersion(String protocol, long clientVersion)
-        throws IOException {
-      if (protocol.equals(JournalProtocol.class.getName())) {
-        return JournalProtocol.versionID;
-      }
-      return super.getProtocolVersion(protocol, clientVersion);
     }
   
     /////////////////////////////////////////////////////

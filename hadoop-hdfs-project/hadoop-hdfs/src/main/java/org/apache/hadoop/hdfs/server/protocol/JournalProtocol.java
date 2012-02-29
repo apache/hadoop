@@ -32,7 +32,7 @@ import org.apache.hadoop.security.KerberosInfo;
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
     clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface JournalProtocol extends VersionedProtocol {
+public interface JournalProtocol {
   /**
    * 
    * This class is used by both the Namenode (client) and BackupNode (server) 
