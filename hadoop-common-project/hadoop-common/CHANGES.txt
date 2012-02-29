@@ -59,7 +59,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8098. KerberosAuthenticatorHandler should use _HOST replacement to 
     resolve principal name (tucu)
 
->>>>>>> .merge-right.r1294757
+    HADOOP-8118.  In metrics2.util.MBeans, change log level to trace for the
+    stack trace of InstanceAlreadyExistsException.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
