@@ -146,6 +146,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3920. Revise yarn default port number selection 
     (Dave Thompson via tgraves)
 
+    MAPREDUCE-3903. Add support for mapreduce admin users. (Thomas Graves via
+    sseth)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES

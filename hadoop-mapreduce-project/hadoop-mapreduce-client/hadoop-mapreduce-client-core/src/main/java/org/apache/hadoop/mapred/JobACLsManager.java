@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -31,9 +33,12 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 @InterfaceAudience.Private
 public class JobACLsManager {
 
+  static final Log LOG = LogFactory.getLog(JobACLsManager.class);
   Configuration conf;
+  private final AccessControlList adminAcl;
 
   public JobACLsManager(Configuration conf) {
+    adminAcl = new AccessControlList(conf.get(MRConfig.MR_ADMINS, " "));
     this.conf = conf;
   }
 
@@ -72,6 +77,18 @@ public class JobACLsManager {
   }
 
   /**
+    * Is the calling user an admin for the mapreduce cluster
+    * i.e. member of mapreduce.cluster.administrators
+    * @return true, if user is an admin
+    */
+   boolean isMRAdmin(UserGroupInformation callerUGI) {
+     if (adminAcl.isUserAllowed(callerUGI)) {
+       return true;
+     }
+     return false;
+   }
+
+  /**
    * If authorization is enabled, checks whether the user (in the callerUGI)
    * is authorized to perform the operation specified by 'jobOperation' on
    * the job by checking if the user is jobOwner or part of job ACL for the
@@ -89,13 +106,18 @@ public class JobACLsManager {
   public boolean checkAccess(UserGroupInformation callerUGI,
       JobACL jobOperation, String jobOwner, AccessControlList jobACL) {
 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("checkAccess job acls, jobOwner: " + jobOwner + " jobacl: "
+          + jobOperation.toString() + " user: " + callerUGI.getShortUserName());
+    }
     String user = callerUGI.getShortUserName();
     if (!areACLsEnabled()) {
       return true;
     }
 
     // Allow Job-owner for any operation on the job
-    if (user.equals(jobOwner)
+    if (isMRAdmin(callerUGI)
+        || user.equals(jobOwner)
         || jobACL.isUserAllowed(callerUGI)) {
       return true;
     }

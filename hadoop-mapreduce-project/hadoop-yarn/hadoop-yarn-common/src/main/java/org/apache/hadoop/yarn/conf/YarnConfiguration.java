@@ -140,7 +140,7 @@ public class YarnConfiguration extends Configuration {
   /** Are acls enabled.*/
   public static final String YARN_ACL_ENABLE = 
     YARN_PREFIX + "acl.enable";
-  public static final boolean DEFAULT_YARN_ACL_ENABLE = true;
+  public static final boolean DEFAULT_YARN_ACL_ENABLE = false;
   
   /** ACL of who can be admin of YARN cluster.*/
   public static final String YARN_ADMIN_ACL = 
