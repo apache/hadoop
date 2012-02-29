@@ -185,7 +185,7 @@ Hadoop MapReduce Next Generation - Cluster Setup
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.acl.enable>>> | | |
 | | <<<true>>> / <<<false>>> | |
-| | | Enable ACLs? Defaults to <true>. |
+| | | Enable ACLs? Defaults to <false>. |
 *-------------------------+-------------------------+------------------------+
 | <<<yarn.admin.acl>>> | | |
 | | Admin ACL | |
