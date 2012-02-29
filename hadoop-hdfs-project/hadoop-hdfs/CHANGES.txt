@@ -90,6 +90,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-2895. Remove Writable wire protocol types and translators to
     complete transition to protocol buffers. (suresh)
 
+    HDFS-2992. Edit log failure trace should include transaction ID of
+    error.  (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
