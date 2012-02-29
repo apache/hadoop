@@ -238,3 +238,5 @@ HDFS-3013. HA: NameNode format doesn't pick up dfs.namenode.name.dir.NameService
 HDFS-3019. Fix silent failure of TestEditLogJournalFailures (todd)
 
 HDFS-2958. Sweep for remaining proxy construction which doesn't go through failover path. (atm)
+
+HDFS-2920. fix remaining TODO items. (atm and todd)

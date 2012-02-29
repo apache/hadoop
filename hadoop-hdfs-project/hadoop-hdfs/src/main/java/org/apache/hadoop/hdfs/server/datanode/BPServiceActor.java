@@ -538,8 +538,8 @@ class BPServiceActor implements Runnable {
         DatanodeCommand cmd = blockReport();
         processCommand(new DatanodeCommand[]{ cmd });
 
-        // Now safe to start scanning the block pool
-        // TODO(HA): this doesn't seem quite right
+        // Now safe to start scanning the block pool.
+        // If it has already been started, this is a no-op.
         if (dn.blockScanner != null) {
           dn.blockScanner.addBlockPool(bpos.getBlockPoolId());
         }

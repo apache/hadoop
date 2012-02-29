@@ -266,8 +266,8 @@ public class FSEditLogLoader {
 
       // Now close the file
       INodeFileUnderConstruction ucFile = (INodeFileUnderConstruction) oldFile;
-      // TODO: we could use removeLease(holder, path) here, but OP_CLOSE
-      // doesn't seem to serialize the holder... unclear why!
+      // One might expect that you could use removeLease(holder, path) here,
+      // but OP_CLOSE doesn't serialize the holder. So, remove by path.
       fsNamesys.leaseManager.removeLeaseWithPrefixPath(addCloseOp.path);
       INodeFile newFile = ucFile.convertToInodeFile();
       fsDir.replaceNode(addCloseOp.path, ucFile, newFile);

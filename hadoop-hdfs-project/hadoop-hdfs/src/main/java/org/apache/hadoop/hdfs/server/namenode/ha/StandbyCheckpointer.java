@@ -176,7 +176,7 @@ public class StandbyCheckpointer {
   public void cancelAndPreventCheckpoints() throws ServiceFailedException {
     try {
       thread.preventCheckpointsFor(PREVENT_AFTER_CANCEL_MS);
-      // TODO: there is a really narrow race here if we are just
+      // TODO(HA): there is a really narrow race here if we are just
       // about to start a checkpoint - this won't cancel it!
       namesystem.getFSImage().cancelSaveNamespace(
           "About to exit standby state");

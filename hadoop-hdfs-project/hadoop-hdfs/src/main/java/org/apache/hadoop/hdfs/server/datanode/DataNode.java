@@ -566,6 +566,23 @@ public class DataNode extends Configured
   }
   
   /**
+   * Try to send an error report to the NNs associated with the given
+   * block pool.
+   * @param bpid the block pool ID
+   * @param errCode error code to send
+   * @param errMsg textual message to send
+   */
+  void trySendErrorReport(String bpid, int errCode, String errMsg) {
+    BPOfferService bpos = blockPoolManager.get(bpid);
+    if (bpos == null) {
+      throw new IllegalArgumentException("Bad block pool: " + bpid);
+    }
+    bpos.trySendErrorReport(errCode, errMsg);
+  }
+
+
+  
+  /**
    * Return the BPOfferService instance corresponding to the given block.
    * @param block
    * @return the BPOS
@@ -874,7 +891,7 @@ public class DataNode extends Configured
     // TODO: all the BPs should have the same name as each other, they all come
     // from getName() here! and the use cases only are in tests where they just
     // call with getName(). So we could probably just make this method return
-    // the first BPOS's registration
+    // the first BPOS's registration. See HDFS-2609.
     BPOfferService [] bposArray = blockPoolManager.getAllNamenodeThreads();
     for (BPOfferService bpos : bposArray) {
       if(bpos.bpRegistration.getName().equals(mName))
@@ -919,22 +936,6 @@ public class DataNode extends Configured
     } catch (InterruptedException ie) {
       throw new IOException(ie.getMessage());
     }
-  }
-
-  /**
-   * get the name node address based on the block pool id
-   * @param bpid block pool ID
-   * @return namenode address corresponding to the bpid
-   */
-  public InetSocketAddress getNameNodeAddr(String bpid) {
-    // TODO(HA) this function doesn't make sense! used by upgrade code
-    // Should it return just the active one or simply return the BPService.
-    BPOfferService bp = blockPoolManager.get(bpid);
-    if (bp != null) {
-      return bp.getNNSocketAddress();
-    }
-    LOG.warn("No name node address found for block pool ID " + bpid);
-    return null;
   }
   
   public InetSocketAddress getSelfAddr() {
@@ -1869,7 +1870,7 @@ public class DataNode extends Configured
    * @return Namenode corresponding to the bpid
    * @throws IOException
    */
-  public DatanodeProtocolClientSideTranslatorPB getBPNamenode(String bpid)
+  public DatanodeProtocolClientSideTranslatorPB getActiveNamenodeForBP(String bpid)
       throws IOException {
     BPOfferService bpos = blockPoolManager.get(bpid);
     if (bpos == null) {
@@ -1888,9 +1889,13 @@ public class DataNode extends Configured
   void syncBlock(RecoveringBlock rBlock,
                          List<BlockRecord> syncList) throws IOException {
     ExtendedBlock block = rBlock.getBlock();
-    DatanodeProtocolClientSideTranslatorPB nn = getBPNamenode(block
-        .getBlockPoolId());
-    assert nn != null;
+    DatanodeProtocolClientSideTranslatorPB nn =
+      getActiveNamenodeForBP(block.getBlockPoolId());
+    if (nn == null) {
+      throw new IOException(
+          "Unable to synchronize block " + rBlock + ", since this DN "
+          + " has not acknowledged any NN as active.");
+    }
     
     long recoveryId = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {
@@ -2111,14 +2116,19 @@ public class DataNode extends Configured
 
   /**
    * Returned information is a JSON representation of a map with 
-   * name node host name as the key and block pool Id as the value
+   * name node host name as the key and block pool Id as the value.
+   * Note that, if there are multiple NNs in an NA nameservice,
+   * a given block pool may be represented twice.
    */
   @Override // DataNodeMXBean
   public String getNamenodeAddresses() {
     final Map<String, String> info = new HashMap<String, String>();
     for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
       if (bpos != null) {
-        info.put(bpos.getNNSocketAddress().getHostName(), bpos.getBlockPoolId());
+        for (BPServiceActor actor : bpos.getBPServiceActors()) {
+          info.put(actor.getNNSocketAddress().getHostName(),
+              bpos.getBlockPoolId());
+        }
       }
     }
     return JSON.toString(info);
@@ -2167,11 +2177,18 @@ public class DataNode extends Configured
 
   /**
    * @param addr rpc address of the namenode
-   * @return true - if BPOfferService corresponding to the namenode is alive
+   * @return true if the datanode is connected to a NameNode at the
+   * given address
    */
-  public boolean isBPServiceAlive(InetSocketAddress addr) {
-    BPOfferService bp = blockPoolManager.get(addr);
-    return bp != null ? bp.isAlive() : false;
+  public boolean isConnectedToNN(InetSocketAddress addr) {
+    for (BPOfferService bpos : getAllBpOs()) {
+      for (BPServiceActor bpsa : bpos.getBPServiceActors()) {
+        if (addr.equals(bpsa.getNNSocketAddress())) {
+          return bpsa.isAlive();
+        }
+      }
+    }
+    return false;
   }
   
   /**

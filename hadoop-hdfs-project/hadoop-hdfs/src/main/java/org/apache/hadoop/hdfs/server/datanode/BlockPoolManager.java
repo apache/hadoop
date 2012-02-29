@@ -86,16 +86,6 @@ class BlockPoolManager {
     return bpByBlockPoolId.get(bpid);
   }
   
-  // TODO(HA) would be good to kill this
-  synchronized BPOfferService get(InetSocketAddress addr) {
-    for (BPOfferService bpos : offerServices) {
-      if (bpos.containsNN(addr)) {
-        return bpos;
-      }
-    }
-    return null;
-  }
-
   synchronized void remove(BPOfferService t) {
     offerServices.remove(t);
     bpByBlockPoolId.remove(t.getBlockPoolId());

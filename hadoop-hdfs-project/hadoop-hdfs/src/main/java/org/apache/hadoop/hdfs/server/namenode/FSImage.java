@@ -226,7 +226,6 @@ public class FSImage implements Closeable {
       }
     }
 
-    // TODO(HA): Have to figure out a story for the first 3 of these.
     // 3. Do transitions
     switch(startOpt) {
     case UPGRADE:
@@ -261,7 +260,6 @@ public class FSImage implements Closeable {
       StorageState curState;
       try {
         curState = sd.analyzeStorage(startOpt, storage);
-        // TODO(HA): Fix this.
         String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
         if (curState != StorageState.NORMAL && HAUtil.isHAEnabled(conf, nameserviceId)) {
           throw new IOException("Cannot start an HA namenode with name dirs " +
@@ -637,8 +635,6 @@ public class FSImage implements Closeable {
     
     // update the txid for the edit log
     editLog.setNextTxId(storage.getMostRecentCheckpointTxId() + numLoaded + 1);
-    // TODO(HA): This should probably always return false when HA is enabled and
-    // we're coming up in standby state.
     return needToSave;
   }
 
@@ -697,8 +693,6 @@ public class FSImage implements Closeable {
     } finally {
       FSEditLog.closeAllStreams(editStreams);
       // update the counts
-      // TODO(HA): this may be very slow -- we probably want to
-      // update them as we go for HA.
       target.dir.updateCountForINodeWithQuota();   
     }
     

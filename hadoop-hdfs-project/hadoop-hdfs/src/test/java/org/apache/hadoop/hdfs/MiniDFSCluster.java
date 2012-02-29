@@ -1696,9 +1696,9 @@ public class MiniDFSCluster {
     // If a datanode failed to start, then do not wait
     for (DataNodeProperties dn : dataNodes) {
       // the datanode thread communicating with the namenode should be alive
-      if (!dn.datanode.isBPServiceAlive(addr)) {
-        LOG.warn("BPOfferService failed to start in datanode " + dn.datanode
-            + " for namenode at " + addr);
+      if (!dn.datanode.isConnectedToNN(addr)) {
+        LOG.warn("BPOfferService in datanode " + dn.datanode
+            + " failed to connect to namenode at " + addr);
         return false;
       }
     }

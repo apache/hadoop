@@ -694,7 +694,6 @@ public interface ClientProtocol extends VersionedProtocol {
    * 
    * @throws IOException
    */
-  //TODO(HA): Should this be @Idempotent?
   public void finalizeUpgrade() throws IOException;
 
   /**
@@ -704,7 +703,6 @@ public interface ClientProtocol extends VersionedProtocol {
    * @return upgrade status information or null if no upgrades are in progress
    * @throws IOException
    */
-  //TODO(HA): Should this be @Idempotent?
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) 
       throws IOException;
 
@@ -737,7 +735,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * @param bandwidth Blanacer bandwidth in bytes per second for this datanode.
    * @throws IOException
    */
-  //TODO(HA): Should this be @Idempotent?
+  @Idempotent
   public void setBalancerBandwidth(long bandwidth) throws IOException;
   
   /**

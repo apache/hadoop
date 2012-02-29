@@ -179,7 +179,7 @@ public class TestPipelinesFailover {
 
       // write another block and a half
       AppendTestUtil.write(stm, BLOCK_AND_A_HALF, BLOCK_AND_A_HALF);
-      stm.hflush(); // TODO: see above
+      stm.hflush();
       
       LOG.info("Failing back to NN 0");
       cluster.transitionToStandby(0);
@@ -188,7 +188,7 @@ public class TestPipelinesFailover {
       cluster.stopDataNode(1);
       
       AppendTestUtil.write(stm, BLOCK_AND_A_HALF*2, BLOCK_AND_A_HALF);
-      stm.hflush(); // TODO: see above
+      stm.hflush();
       
       
       stm.close();

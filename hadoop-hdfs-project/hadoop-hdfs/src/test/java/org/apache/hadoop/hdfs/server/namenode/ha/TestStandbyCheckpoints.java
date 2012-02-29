@@ -127,9 +127,6 @@ public class TestStandbyCheckpoints {
     List<File> dirs = Lists.newArrayList();
     dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0));
     dirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
-    // TODO: this failed once because it caught a ckpt file -- maybe
-    // this is possible if one of the NNs is really fast and the other is slow?
-    // need to loop this to suss out the race.
     FSImageTestUtil.assertParallelFilesAreIdentical(dirs, ImmutableSet.<String>of());
   }
   

@@ -383,19 +383,12 @@ class BPOfferService {
 
     bpServices.remove(actor);
 
-    // TODO: synchronization should be a little better here
     if (bpServices.isEmpty()) {
       dn.shutdownBlockPool(this);
       
       if(upgradeManager != null)
         upgradeManager.shutdownUpgrade();
     }
-  }
-
-  @Deprecated
-  synchronized InetSocketAddress getNNSocketAddress() {
-    // TODO(HA) this doesn't make sense anymore
-    return bpServiceToActive.getNNSocketAddress();
   }
 
   /**
@@ -432,11 +425,9 @@ class BPOfferService {
   }
 
   /**
-   * TODO: this is still used in a few places where we need to sort out
-   * what to do in HA!
-   * @return a proxy to the active NN
+   * @return a proxy to the active NN, or null if the BPOS has not
+   * acknowledged any NN as active yet.
    */
-  @Deprecated
   synchronized DatanodeProtocolClientSideTranslatorPB getActiveNN() {
     if (bpServiceToActive != null) {
       return bpServiceToActive.bpNamenode;
@@ -596,6 +587,7 @@ class BPOfferService {
       break;
     case DatanodeProtocol.DNA_SHUTDOWN:
       // TODO: DNA_SHUTDOWN appears to be unused - the NN never sends this command
+      // See HDFS-2987.
       throw new UnsupportedOperationException("Received unimplemented DNA_SHUTDOWN");
     case DatanodeProtocol.DNA_REGISTER:
       // namenode requested a registration - at start or if NN lost contact

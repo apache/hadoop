@@ -461,7 +461,7 @@ public class TestBlockRecovery {
         initReplicaRecovery(any(RecoveringBlock.class));
     Daemon d = spyDN.recoverBlocks(initRecoveringBlocks());
     d.join();
-    DatanodeProtocol dnP = dn.getBPNamenode(POOL_ID);
+    DatanodeProtocol dnP = dn.getActiveNamenodeForBP(POOL_ID);
     verify(dnP).commitBlockSynchronization(
         block, RECOVERY_ID, 0, true, true, DatanodeID.EMPTY_ARRAY);
   }
@@ -518,7 +518,7 @@ public class TestBlockRecovery {
     } catch (IOException e) {
       e.getMessage().startsWith("Cannot recover ");
     }
-    DatanodeProtocol namenode = dn.getBPNamenode(POOL_ID);
+    DatanodeProtocol namenode = dn.getActiveNamenodeForBP(POOL_ID);
     verify(namenode, never()).commitBlockSynchronization(
         any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
         anyBoolean(), any(DatanodeID[].class));
@@ -547,7 +547,7 @@ public class TestBlockRecovery {
       } catch (IOException e) {
         e.getMessage().startsWith("Cannot recover ");
       }
-      DatanodeProtocol namenode = dn.getBPNamenode(POOL_ID);
+      DatanodeProtocol namenode = dn.getActiveNamenodeForBP(POOL_ID);
       verify(namenode, never()).commitBlockSynchronization(
           any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
           anyBoolean(), any(DatanodeID[].class));

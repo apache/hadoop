@@ -580,6 +580,12 @@ public class RPC {
    * @param proxy the RPC proxy object to be stopped
    */
   public static void stopProxy(Object proxy) {
+    if (proxy instanceof ProtocolTranslator) {
+      RPC.stopProxy(((ProtocolTranslator)proxy)
+          .getUnderlyingProxyObject());
+      return;
+    }
+    
     InvocationHandler invocationHandler = null;
     try {
       invocationHandler = Proxy.getInvocationHandler(proxy);

@@ -920,7 +920,7 @@ public class NameNode {
     if (!haEnabled) {
       return; // no-op, if HA is not enabled
     }
-    // TODO:HA implement health check
+    // TODO(HA): implement health check
     return;
   }
   
@@ -963,7 +963,7 @@ public class NameNode {
   /**
    * Class used as expose {@link NameNode} as context to {@link HAState}
    * 
-   * TODO:HA
+   * TODO(HA):
    * When entering and exiting state, on failing to start services,
    * appropriate action is needed todo either shutdown the node or recover
    * from failure.
@@ -1005,7 +1005,6 @@ public class NameNode {
     
     @Override
     public void stopStandbyServices() throws IOException {
-      // TODO(HA): Are we guaranteed to be the only active here?
       if (namesystem != null) {
         namesystem.stopStandbyServices();
       }

@@ -282,18 +282,13 @@ public class FSDirectory implements Closeable {
       newNode = new INodeFile(permissions, 0, replication,
                               modificationTime, atime, preferredBlockSize);
     }
-    writeLock(); // TODO: this is silly, considering the assert above!
-    try {
-      try {
-        newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
-      } catch (IOException e) {
-        return null;
-      }
-      return newNode;
-    } finally {
-      writeUnlock();
-    }
 
+    try {
+      newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
+    } catch (IOException e) {
+      return null;
+    }
+    return newNode;
   }
 
   INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,

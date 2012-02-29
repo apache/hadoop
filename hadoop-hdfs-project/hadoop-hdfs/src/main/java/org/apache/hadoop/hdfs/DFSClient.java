@@ -418,22 +418,9 @@ public class DFSClient implements java.io.Closeable {
   
   /**
    * Close connections the Namenode.
-   * The namenode variable is either a rpcProxy passed by a test or 
-   * created using the protocolTranslator which is closeable.
-   * If closeable then call close, else close using RPC.stopProxy().
    */
   void closeConnectionToNamenode() {
-    if (namenode instanceof Closeable) {
-      try {
-        ((Closeable) namenode).close();
-        return;
-      } catch (IOException e) {
-        // fall through - lets try the stopProxy
-        LOG.warn("Exception closing namenode, stopping the proxy");
-      }     
-    } else {
-      RPC.stopProxy(namenode);
-    }
+    RPC.stopProxy(namenode);
   }
   
   /** Abort and release resources held.  Ignore all errors. */

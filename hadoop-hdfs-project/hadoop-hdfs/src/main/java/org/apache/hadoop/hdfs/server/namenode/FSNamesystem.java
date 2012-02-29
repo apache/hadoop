@@ -533,7 +533,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
       if (!editLog.isOpenForWrite()) {
         // During startup, we're already open for write during initialization.
-        // TODO(HA): consider adding a startup state?
         editLog.initJournalsForWrite();
         // May need to recover
         editLog.recoverUnclosedStreams();
@@ -912,7 +911,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       // using finally to ensure we also wait for lease daemon
       try {
-        // TODO: these lines spew lots of warnings about "already stopped" logs, etc
         stopActiveServices();
         stopStandbyServices();
         if (dir != null) {
