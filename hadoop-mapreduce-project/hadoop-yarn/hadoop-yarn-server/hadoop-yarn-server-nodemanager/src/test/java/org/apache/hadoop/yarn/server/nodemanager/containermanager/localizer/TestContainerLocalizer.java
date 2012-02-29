@@ -89,7 +89,7 @@ public class TestContainerLocalizer {
     final String user = "yak";
     final String appId = "app_RM_0";
     final String cId = "container_0";
-    final InetSocketAddress nmAddr = new InetSocketAddress("foobar", 4344);
+    final InetSocketAddress nmAddr = new InetSocketAddress("foobar", 8040);
     final List<Path> localDirs = new ArrayList<Path>();
     for (int i = 0; i < 4; ++i) {
       localDirs.add(lfs.makeQualified(new Path(basedir, i + "")));

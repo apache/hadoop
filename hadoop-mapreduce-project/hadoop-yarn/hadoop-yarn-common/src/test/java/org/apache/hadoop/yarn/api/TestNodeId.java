@@ -27,10 +27,10 @@ import org.junit.Test;
 public class TestNodeId {
   @Test
   public void testNodeId() {
-    NodeId nodeId1 = createNodeId("10.18.52.124", 45454);
-    NodeId nodeId2 = createNodeId("10.18.52.125", 45452);
-    NodeId nodeId3 = createNodeId("10.18.52.124", 45454);
-    NodeId nodeId4 = createNodeId("10.18.52.124", 45453);
+    NodeId nodeId1 = createNodeId("10.18.52.124", 8041);
+    NodeId nodeId2 = createNodeId("10.18.52.125", 8038);
+    NodeId nodeId3 = createNodeId("10.18.52.124", 8041);
+    NodeId nodeId4 = createNodeId("10.18.52.124", 8039);
 
     Assert.assertTrue(nodeId1.equals(nodeId3));
     Assert.assertFalse(nodeId1.equals(nodeId2));
@@ -44,7 +44,7 @@ public class TestNodeId {
     Assert.assertFalse(nodeId1.hashCode() == nodeId2.hashCode());
     Assert.assertFalse(nodeId3.hashCode() == nodeId4.hashCode());
 
-    Assert.assertEquals("10.18.52.124:45454", nodeId1.toString());
+    Assert.assertEquals("10.18.52.124:8041", nodeId1.toString());
   }
 
   private NodeId createNodeId(String host, int port) {

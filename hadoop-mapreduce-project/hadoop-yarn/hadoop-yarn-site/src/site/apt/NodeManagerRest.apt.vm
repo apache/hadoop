@@ -116,7 +116,7 @@ NodeManager REST API's.
       "totalPmemAllocatedContainersMB" : 8192,
       "nodeManagerVersionBuiltOn" : "Mon Jan  9 15:01:59 UTC 2012",
       "nodeManagerVersion" : "0.23.1-SNAPSHOT",
-      "id" : "host.domain.com:45454",
+      "id" : "host.domain.com:8041",
       "hadoopBuildVersion" : "0.23.1-SNAPSHOT from 1228292 by user1 source checksum 3eba233f2248a089e9b28841a784dd00",
       "nodeHostName" : "host.domain.com",
       "hadoopVersion" : "0.23.1-SNAPSHOT"
@@ -158,7 +158,7 @@ NodeManager REST API's.
   <hadoopVersion>0.23.1-SNAPSHOT</hadoopVersion>
   <hadoopBuildVersion>0.23.1-SNAPSHOT from 1228292 by user1 source checksum 3eba233f2248a089e9b28841a784dd00</hadoopBuildVersion>
   <hadoopVersionBuiltOn>Mon Jan  9 14:58:42 UTC 2012</hadoopVersionBuiltOn>
-  <id>host.domain.com:45454</id>
+  <id>host.domain.com:8041</id>
   <nodeHostName>host.domain.com</nodeHostName>
 </nodeInfo>
 +---+
@@ -446,21 +446,21 @@ NodeManager REST API's.
    "containers" : {
       "container" : [
          {
-            "nodeId" : "host.domain.com:45454",
+            "nodeId" : "host.domain.com:8041",
             "totalMemoryNeededMB" : 2048,
             "state" : "RUNNING",
             "diagnostics" : "",
-            "containerLogsLink" : "http://host.domain.com:9999/node/containerlogs/container_1326121700862_0006_01_000001/user1",
+            "containerLogsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326121700862_0006_01_000001/user1",
             "user" : "user1",
             "id" : "container_1326121700862_0006_01_000001",
             "exitCode" : -1000
          },
          {
-            "nodeId" : "host.domain.com:45454",
+            "nodeId" : "host.domain.com:8041",
             "totalMemoryNeededMB" : 2048,
             "state" : "RUNNING",
             "diagnostics" : "",
-            "containerLogsLink" : "http://host.domain.com:9999/node/containerlogs/container_1326121700862_0006_01_000003/user1",
+            "containerLogsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326121700862_0006_01_000003/user1",
             "user" : "user1",
             "id" : "container_1326121700862_0006_01_000003",
             "exitCode" : -1000
@@ -500,8 +500,8 @@ NodeManager REST API's.
     <diagnostics/>
     <user>user1</user>
     <totalMemoryNeededMB>2048</totalMemoryNeededMB>
-    <containerLogsLink>http://host.domain.com:9999/node/containerlogs/container_1326121700862_0006_01_000001/user1</containerLogsLink>
-    <nodeId>host.domain.com:45454</nodeId>
+    <containerLogsLink>http://host.domain.com:8042/node/containerlogs/container_1326121700862_0006_01_000001/user1</containerLogsLink>
+    <nodeId>host.domain.com:8041</nodeId>
   </container>
   <container>
     <id>container_1326121700862_0006_01_000003</id>
@@ -510,8 +510,8 @@ NodeManager REST API's.
     <diagnostics>Container killed by the ApplicationMaster.</diagnostics>
     <user>user1</user>
     <totalMemoryNeededMB>2048</totalMemoryNeededMB>
-    <containerLogsLink>http://host.domain.com:9999/node/containerlogs/container_1326121700862_0006_01_000003/user1</containerLogsLink>
-    <nodeId>host.domain.com:45454</nodeId>
+    <containerLogsLink>http://host.domain.com:8042/node/containerlogs/container_1326121700862_0006_01_000003/user1</containerLogsLink>
+    <nodeId>host.domain.com:8041</nodeId>
   </container>
 </containers>
 +---+
@@ -587,11 +587,11 @@ NodeManager REST API's.
 +---+
 {
    "container" : {
-      "nodeId" : "host.domain.com:45454",
+      "nodeId" : "host.domain.com:8041",
       "totalMemoryNeededMB" : 2048,
       "state" : "RUNNING",
       "diagnostics" : "",
-      "containerLogsLink" : "http://host.domain.com:9999/node/containerlogs/container_1326121700862_0007_01_000001/user1",
+      "containerLogsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326121700862_0007_01_000001/user1",
       "user" : "user1",
       "id" : "container_1326121700862_0007_01_000001",
       "exitCode" : -1000
@@ -628,8 +628,8 @@ NodeManager REST API's.
   <diagnostics/>
   <user>user1</user>
   <totalMemoryNeededMB>2048</totalMemoryNeededMB>
-  <containerLogsLink>http://host.domain.com:9999/node/containerlogs/container_1326121700862_0007_01_000001/user1</containerLogsLink>
-  <nodeId>host.domain.com:45454</nodeId>
+  <containerLogsLink>http://host.domain.com:8042/node/containerlogs/container_1326121700862_0007_01_000001/user1</containerLogsLink>
+  <nodeId>host.domain.com:8041</nodeId>
 </container>
 +---+
 
