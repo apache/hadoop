@@ -88,6 +88,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8104. Inconsistent Jackson versions (tucu)
 
+    HADOOP-7940. The Text.clear() method does not clear the bytes as intended. (Csaba Miklos via harsh)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES

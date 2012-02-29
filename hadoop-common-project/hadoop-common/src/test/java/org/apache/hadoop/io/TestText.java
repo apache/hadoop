@@ -192,6 +192,16 @@ public class TestText extends TestCase {
     assertTrue(text.find("\u20ac", 5)==11);
   }
 
+  public void testClear() {
+	Text text = new Text();
+	assertEquals("", text.toString());
+	assertEquals(0, text.getBytes().length);
+	text = new Text("abcd\u20acbdcd\u20ac");
+	text.clear();
+	assertEquals("", text.toString());
+	assertEquals(0, text.getBytes().length);
+  }
+
   public void testFindAfterUpdatingContents() throws Exception {
     Text text = new Text("abcd");
     text.set("a".getBytes());
