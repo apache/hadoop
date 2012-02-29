@@ -207,6 +207,9 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2991. Fix case where OP_ADD would not be logged in append(). (todd)
 
+    HDFS-3012. Exception while renewing delegation token. (Bobby Evans via
+    jitendra)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES

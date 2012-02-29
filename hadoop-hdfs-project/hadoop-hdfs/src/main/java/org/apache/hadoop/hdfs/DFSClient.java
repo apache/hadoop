@@ -619,6 +619,12 @@ public class DFSClient implements java.io.Closeable {
   @InterfaceAudience.Private
   public static class Renewer extends TokenRenewer {
     
+    static {
+      //Ensure that HDFS Configuration files are loaded before trying to use
+      // the renewer.
+      HdfsConfiguration.init();
+    }
+    
     @Override
     public boolean handleKind(Text kind) {
       return DelegationTokenIdentifier.HDFS_DELEGATION_KIND.equals(kind);
