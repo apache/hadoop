@@ -237,7 +237,11 @@ public class WebAppProxyServlet extends HttpServlet {
       }
       URI trackingUri = ProxyUriUtils.getUriFromAMUrl(
           applicationReport.getOriginalTrackingUrl());
-      
+      if(applicationReport.getOriginalTrackingUrl().equals("N/A")) {
+        notFound(resp, "The MRAppMaster died before writing anything.");
+        return;
+      }
+
       String runningUser = applicationReport.getUser();
       if(checkUser && !runningUser.equals(remoteUser)) {
         LOG.info("Asking "+remoteUser+" if they want to connect to the " +
