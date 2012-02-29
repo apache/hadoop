@@ -242,3 +242,5 @@ HDFS-2958. Sweep for remaining proxy construction which doesn't go through failo
 HDFS-2920. fix remaining TODO items. (atm and todd)
 
 HDFS-3027. Implement a simple NN health check. (atm)
+
+HDFS-2979. Balancer should use logical uri for creating failover proxy with HA enabled. (atm)

@@ -21,9 +21,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.Collection;
 import java.util.EnumSet;
 
 import org.apache.commons.logging.Log;
@@ -38,15 +36,12 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
-
-import com.google.common.collect.Lists;
 
 /**
  * The class provides utilities for {@link Balancer} to access a NameNode
@@ -56,7 +51,7 @@ class NameNodeConnector {
   private static final Log LOG = Balancer.LOG;
   private static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
 
-  final InetSocketAddress namenodeAddress;
+  final URI nameNodeUri;
   final String blockpoolID;
 
   final NamenodeProtocol namenode;
@@ -70,10 +65,9 @@ class NameNodeConnector {
   private BlockTokenSecretManager blockTokenSecretManager;
   private Daemon keyupdaterthread; // AccessKeyUpdater thread
 
-  NameNodeConnector(Collection<InetSocketAddress> haNNs,
+  NameNodeConnector(URI nameNodeUri,
       Configuration conf) throws IOException {
-    this.namenodeAddress = Lists.newArrayList(haNNs).get(0);
-    URI nameNodeUri = NameNode.getUri(this.namenodeAddress);
+    this.nameNodeUri = nameNodeUri;
     
     this.namenode =
       NameNodeProxies.createProxy(conf, nameNodeUri, NamenodeProtocol.class)
@@ -186,7 +180,7 @@ class NameNodeConnector {
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + "[namenodeAddress=" + namenodeAddress
+    return getClass().getSimpleName() + "[namenodeUri=" + nameNodeUri
         + ", id=" + blockpoolID
         + "]";
   }

@@ -526,21 +526,21 @@ public class NameNode {
 
   protected NameNode(Configuration conf, NamenodeRole role) 
       throws IOException { 
-    this.conf = conf;
+    this.conf = new Configuration(conf);
     this.role = role;
-    String nsId = getNameServiceId(conf);
-    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
-    this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
+    String nsId = getNameServiceId(this.conf);
+    String namenodeId = HAUtil.getNameNodeId(this.conf, nsId);
+    this.haEnabled = HAUtil.isHAEnabled(this.conf, nsId);
     if (!haEnabled) {
       state = ACTIVE_STATE;
     } else {
       state = STANDBY_STATE;
     }
-    this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
+    this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(this.conf);
     this.haContext = createHAContext();
     try {
-      initializeGenericKeys(conf, nsId, namenodeId);
-      initialize(conf);
+      initializeGenericKeys(this.conf, nsId, namenodeId);
+      initialize(this.conf);
       state.prepareToEnterState(haContext);
       state.enterState(haContext);
     } catch (IOException e) {
@@ -651,6 +651,7 @@ public class NameNode {
       throws IOException {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    conf = new Configuration(conf);
     initializeGenericKeys(conf, nsId, namenodeId);
 
     if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
@@ -697,6 +698,7 @@ public class NameNode {
   private static boolean finalize(Configuration conf,
                                boolean isConfirmationNeeded
                                ) throws IOException {
+    conf = new Configuration(conf);
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);

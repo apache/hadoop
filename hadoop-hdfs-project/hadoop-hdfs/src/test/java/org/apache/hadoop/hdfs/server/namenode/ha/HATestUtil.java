@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
@@ -186,6 +187,12 @@ public abstract class HATestUtil {
 
   public static String getLogicalHostname(MiniDFSCluster cluster) {
     return String.format(LOGICAL_HOSTNAME, cluster.getInstanceId());
+  }
+  
+  public static URI getLogicalUri(MiniDFSCluster cluster)
+      throws URISyntaxException {
+    return new URI(HdfsConstants.HDFS_URI_SCHEME + "://" +
+        getLogicalHostname(cluster));
   }
   
   public static void waitForCheckpoint(MiniDFSCluster cluster, int nnIdx,

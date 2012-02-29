@@ -28,9 +28,11 @@ import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import javax.net.SocketFactory;
@@ -43,6 +45,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
@@ -604,6 +607,68 @@ public class DFSUtil {
       return "ConfiguredNNAddress[nsId=" + nameserviceId + ";" +
         "nnId=" + namenodeId + ";addr=" + addr + "]";
     }
+  }
+  
+  /**
+   * Get a URI for each configured nameservice. If a nameservice is
+   * HA-enabled, then the logical URI of the nameservice is returned. If the
+   * nameservice is not HA-enabled, then a URI corresponding to an RPC address
+   * of the single NN for that nameservice is returned, preferring the service
+   * RPC address over the client RPC address.
+   * 
+   * @param conf configuration
+   * @return a collection of all configured NN URIs, preferring service
+   *         addresses
+   */
+  public static Collection<URI> getNsServiceRpcUris(Configuration conf) {
+    return getNameServiceUris(conf,
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+  }
+
+  /**
+   * Get a URI for each configured nameservice. If a nameservice is
+   * HA-enabled, then the logical URI of the nameservice is returned. If the
+   * nameservice is not HA-enabled, then a URI corresponding to the address of
+   * the single NN for that nameservice is returned.
+   * 
+   * @param conf configuration
+   * @param keys configuration keys to try in order to get the URI for non-HA
+   *        nameservices
+   * @return a collection of all configured NN URIs
+   */
+  public static Collection<URI> getNameServiceUris(Configuration conf,
+      String... keys) {
+    Set<URI> ret = new HashSet<URI>();
+    for (String nsId : getNameServiceIds(conf)) {
+      if (HAUtil.isHAEnabled(conf, nsId)) {
+        // Add the logical URI of the nameservice.
+        try {
+          ret.add(new URI(HdfsConstants.HDFS_URI_SCHEME + "://" + nsId));
+        } catch (URISyntaxException ue) {
+          throw new IllegalArgumentException(ue);
+        }
+      } else {
+        // Add the URI corresponding to the address of the NN.
+        for (String key : keys) {
+          String addr = conf.get(concatSuffixes(key, nsId));
+          if (addr != null) {
+            ret.add(createUri(HdfsConstants.HDFS_URI_SCHEME,
+                NetUtils.createSocketAddr(addr)));
+            break;
+          }
+        }
+      }
+    }
+    // Add the generic configuration keys.
+    for (String key : keys) {
+      String addr = conf.get(key);
+      if (addr != null) {
+        ret.add(createUri("hdfs", NetUtils.createSocketAddr(addr)));
+        break;
+      }
+    }
+    return ret;
   }
 
   /**
