@@ -371,8 +371,6 @@ public class ContainerLocalizer {
       Path appFileCacheDir = new Path(appBase, FILECACHE);
       appsFileCacheDirs[i] = appFileCacheDir.toString();
       lfs.mkdir(appFileCacheDir, null, false);
-      // $x/usercache/$user/appcache/$appId/output
-      lfs.mkdir(new Path(appBase, OUTPUTDIR), null, false);
     }
     conf.setStrings(String.format(APPCACHE_CTXT_FMT, appId), appsFileCacheDirs);
     conf.setStrings(String.format(USERCACHE_CTXT_FMT, appId), usersFileCacheDirs);
