@@ -38,7 +38,9 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.httpclient.cookie.CookiePolicy;
 import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.params.HttpClientParams;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
@@ -124,7 +126,10 @@ public class WebAppProxyServlet extends HttpServlet {
       HttpServletResponse resp, URI link,Cookie c) throws IOException {
     org.apache.commons.httpclient.URI uri = 
       new org.apache.commons.httpclient.URI(link.toString(), false);
-    HttpClient client = new HttpClient();
+    HttpClientParams params = new HttpClientParams();
+    params.setCookiePolicy(CookiePolicy.BROWSER_COMPATIBILITY);
+    params.setBooleanParameter(HttpClientParams.ALLOW_CIRCULAR_REDIRECTS, true);
+    HttpClient client = new HttpClient(params);
     HttpMethod method = new GetMethod(uri.getEscapedURI());
 
     @SuppressWarnings("unchecked")
