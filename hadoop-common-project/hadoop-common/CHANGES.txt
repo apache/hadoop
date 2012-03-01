@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-8124. Remove the deprecated FSDataOutputStream constructor,
+    FSDataOutputStream.sync() and Syncable.sync().  (szetszwo)
+
   NEW FEATURES
 
   IMPROVEMENTS

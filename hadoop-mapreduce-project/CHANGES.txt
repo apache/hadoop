@@ -44,6 +44,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
 
+    MAPREDUCE-3956. Remove the use of the deprecated Syncable.sync() method from
+    TeraOutputFormat in the terasort example.  (szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and

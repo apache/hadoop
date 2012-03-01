@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
+
   NEW FEATURES
 
     HDFS-2430. The number of failed or low-resource volumes the NN can tolerate

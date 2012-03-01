@@ -1410,12 +1410,6 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       }
     }
   }
-
-  @Override
-  @Deprecated
-  public synchronized void sync() throws IOException {
-    hflush();
-  }
   
   /**
    * Flushes out to all replicas of the block. The data is in the buffers
