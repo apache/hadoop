@@ -18,10 +18,9 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-import java.net.URI;
-import java.util.Collection;
+import java.net.InetSocketAddress;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -68,12 +67,12 @@ public class TestBalancerWithHANameNodes {
     int numOfDatanodes = capacities.length;
     NNConf nn1Conf = new MiniDFSNNTopology.NNConf("nn1");
     nn1Conf.setIpcPort(NameNode.DEFAULT_PORT);
-    cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleHATopology())
-        .numDataNodes(capacities.length)
-        .racks(racks)
-        .simulatedCapacities(capacities)
-        .build();
+    MiniDFSNNTopology simpleHATopology = new MiniDFSNNTopology()
+        .addNameservice(new MiniDFSNNTopology.NSConf(null).addNN(nn1Conf)
+            .addNN(new MiniDFSNNTopology.NNConf("nn2")));
+    cluster = new MiniDFSCluster.Builder(conf).nnTopology(simpleHATopology)
+        .numDataNodes(capacities.length).racks(racks).simulatedCapacities(
+            capacities).build();
     HATestUtil.setFailoverConfigurations(cluster, conf);
     try {
       cluster.waitActive();
@@ -90,12 +89,14 @@ public class TestBalancerWithHANameNodes {
       // start up an empty node with the same capacity and on the same rack
       cluster.startDataNodes(conf, 1, true, null, new String[] { newNodeRack },
           new long[] { newNodeCapacity });
+
+      HATestUtil.setFailoverConfigurations(cluster, conf, NameNode.getUri(
+          cluster.getNameNode(0).getNameNodeAddress()).getHost());
       totalCapacity += newNodeCapacity;
       TestBalancer.waitForHeartBeat(totalUsedSpace, totalCapacity, client,
           cluster);
-      Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
-      assertEquals(1, namenodes.size());
-      assertTrue(namenodes.contains(HATestUtil.getLogicalUri(cluster)));
+      Map<String, Map<String, InetSocketAddress>> namenodes = DFSUtil
+          .getNNServiceRpcAddresses(conf);
       final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
       assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
       TestBalancer.waitForBalancer(totalUsedSpace, totalCapacity, client,
