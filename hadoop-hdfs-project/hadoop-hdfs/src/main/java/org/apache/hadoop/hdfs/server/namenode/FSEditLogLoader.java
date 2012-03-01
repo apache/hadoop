@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddCloseOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.BlockListUpdatingOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ClearNSQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.ConcatDeleteOp;
@@ -55,6 +56,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetQuotaOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SetReplicationOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.SymlinkOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.TimesOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.Holder;
@@ -242,6 +244,10 @@ public class FSEditLogLoader {
       // Fall-through for case 2.
       // Regardless of whether it's a new file or an updated file,
       // update the block list.
+      
+      // Update the salient file attributes.
+      newFile.setAccessTime(addCloseOp.atime);
+      newFile.setModificationTimeForce(addCloseOp.mtime);
       updateBlocks(fsDir, addCloseOp, newFile);
       break;
     }
@@ -283,6 +289,24 @@ public class FSEditLogLoader {
       }
       break;
     }
+    case OP_UPDATE_BLOCKS: {
+      UpdateBlocksOp updateOp = (UpdateBlocksOp)op;
+      if (FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug(op.opCode + ": " + updateOp.path +
+            " numblocks : " + updateOp.blocks.length);
+      }
+      INodeFile oldFile = getINodeFile(fsDir, updateOp.path);
+      if (oldFile == null) {
+        throw new IOException(
+            "Operation trying to update blocks in non-existent file " +
+            updateOp.path);
+      }
+      
+      // Update in-memory data structures
+      updateBlocks(fsDir, updateOp, oldFile);
+      break;
+    }
+      
     case OP_SET_REPLICATION: {
       SetReplicationOp setReplicationOp = (SetReplicationOp)op;
       short replication = fsNamesys.getBlockManager().adjustReplication(
@@ -472,32 +496,29 @@ public class FSEditLogLoader {
    * Update in-memory data structures with new block information.
    * @throws IOException
    */
-  private void updateBlocks(FSDirectory fsDir, AddCloseOp addCloseOp,
+  private void updateBlocks(FSDirectory fsDir, BlockListUpdatingOp op,
       INodeFile file) throws IOException {
-    
-    // Update the salient file attributes.
-    file.setAccessTime(addCloseOp.atime);
-    file.setModificationTimeForce(addCloseOp.mtime);
-    
     // Update its block list
     BlockInfo[] oldBlocks = file.getBlocks();
+    Block[] newBlocks = op.getBlocks();
+    String path = op.getPath();
     
     // Are we only updating the last block's gen stamp.
-    boolean isGenStampUpdate = oldBlocks.length == addCloseOp.blocks.length;
+    boolean isGenStampUpdate = oldBlocks.length == newBlocks.length;
     
     // First, update blocks in common
-    for (int i = 0; i < oldBlocks.length && i < addCloseOp.blocks.length; i++) {
+    for (int i = 0; i < oldBlocks.length && i < newBlocks.length; i++) {
       BlockInfo oldBlock = oldBlocks[i];
-      Block newBlock = addCloseOp.blocks[i];
+      Block newBlock = newBlocks[i];
       
-      boolean isLastBlock = i == addCloseOp.blocks.length - 1;
+      boolean isLastBlock = i == newBlocks.length - 1;
       if (oldBlock.getBlockId() != newBlock.getBlockId() ||
           (oldBlock.getGenerationStamp() != newBlock.getGenerationStamp() && 
               !(isGenStampUpdate && isLastBlock))) {
         throw new IOException("Mismatched block IDs or generation stamps, " + 
             "attempting to replace block " + oldBlock + " with " + newBlock +
-            " as block # " + i + "/" + addCloseOp.blocks.length + " of " +
-            addCloseOp.path);
+            " as block # " + i + "/" + newBlocks.length + " of " +
+            path);
       }
       
       oldBlock.setNumBytes(newBlock.getNumBytes());
@@ -506,7 +527,7 @@ public class FSEditLogLoader {
       oldBlock.setGenerationStamp(newBlock.getGenerationStamp());
       
       if (oldBlock instanceof BlockInfoUnderConstruction &&
-          (!isLastBlock || addCloseOp.opCode == FSEditLogOpCodes.OP_CLOSE)) {
+          (!isLastBlock || op.shouldCompleteLastBlock())) {
         changeMade = true;
         fsNamesys.getBlockManager().forceCompleteBlock(
             (INodeFileUnderConstruction)file,
@@ -520,24 +541,27 @@ public class FSEditLogLoader {
       }
     }
     
-    if (addCloseOp.blocks.length < oldBlocks.length) {
+    if (newBlocks.length < oldBlocks.length) {
       // We're removing a block from the file, e.g. abandonBlock(...)
       if (!file.isUnderConstruction()) {
         throw new IOException("Trying to remove a block from file " +
-            addCloseOp.path + " which is not under construction.");
+            path + " which is not under construction.");
       }
-      if (addCloseOp.blocks.length != oldBlocks.length - 1) {
+      if (newBlocks.length != oldBlocks.length - 1) {
         throw new IOException("Trying to remove more than one block from file "
-            + addCloseOp.path);
+            + path);
       }
-      fsDir.unprotectedRemoveBlock(addCloseOp.path,
+      fsDir.unprotectedRemoveBlock(path,
           (INodeFileUnderConstruction)file, oldBlocks[oldBlocks.length - 1]);
-    } else if (addCloseOp.blocks.length > oldBlocks.length) {
+    } else if (newBlocks.length > oldBlocks.length) {
       // We're adding blocks
-      for (int i = oldBlocks.length; i < addCloseOp.blocks.length; i++) {
-        Block newBlock = addCloseOp.blocks[i];
+      for (int i = oldBlocks.length; i < newBlocks.length; i++) {
+        Block newBlock = newBlocks[i];
         BlockInfo newBI;
-        if (addCloseOp.opCode == FSEditLogOpCodes.OP_ADD){
+        if (!op.shouldCompleteLastBlock()) {
+          // TODO: shouldn't this only be true for the last block?
+          // what about an old-version fsync() where fsync isn't called
+          // until several blocks in?
           newBI = new BlockInfoUnderConstruction(
               newBlock, file.getReplication());
         } else {

@@ -626,6 +626,13 @@ public class FSEditLog  {
     logEdit(op);
   }
   
+  public void logUpdateBlocks(String path, INodeFileUnderConstruction file) {
+    UpdateBlocksOp op = UpdateBlocksOp.getInstance()
+      .setPath(path)
+      .setBlocks(file.getBlocks());
+    logEdit(op);
+  }
+  
   /** 
    * Add create directory record to edit log
    */

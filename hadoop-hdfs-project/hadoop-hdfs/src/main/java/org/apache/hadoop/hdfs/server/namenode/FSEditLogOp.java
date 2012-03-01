@@ -101,6 +101,7 @@ public abstract class FSEditLogOp {
                       new LogSegmentOp(OP_START_LOG_SEGMENT));
         instances.put(OP_END_LOG_SEGMENT,
                       new LogSegmentOp(OP_END_LOG_SEGMENT));
+        instances.put(OP_UPDATE_BLOCKS, new UpdateBlocksOp());
         return instances;
       }
   };
@@ -128,8 +129,14 @@ public abstract class FSEditLogOp {
   abstract void writeFields(DataOutputStream out)
       throws IOException;
 
+  static interface BlockListUpdatingOp {
+    Block[] getBlocks();
+    String getPath();
+    boolean shouldCompleteLastBlock();
+  }
+  
   @SuppressWarnings("unchecked")
-  static abstract class AddCloseOp extends FSEditLogOp {
+  static abstract class AddCloseOp extends FSEditLogOp implements BlockListUpdatingOp {
     int length;
     String path;
     short replication;
@@ -150,6 +157,10 @@ public abstract class FSEditLogOp {
     <T extends AddCloseOp> T setPath(String path) {
       this.path = path;
       return (T)this;
+    }
+    
+    public String getPath() {
+      return path;
     }
 
     <T extends AddCloseOp> T setReplication(short replication) {
@@ -175,6 +186,10 @@ public abstract class FSEditLogOp {
     <T extends AddCloseOp> T setBlocks(Block[] blocks) {
       this.blocks = blocks;
       return (T)this;
+    }
+    
+    public Block[] getBlocks() {
+      return blocks;
     }
 
     <T extends AddCloseOp> T setPermissionStatus(PermissionStatus permissions) {
@@ -347,6 +362,10 @@ public abstract class FSEditLogOp {
       return (AddOp)opInstances.get().get(OP_ADD);
     }
 
+    public boolean shouldCompleteLastBlock() {
+      return false;
+    }
+
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
@@ -365,12 +384,78 @@ public abstract class FSEditLogOp {
       return (CloseOp)opInstances.get().get(OP_CLOSE);
     }
 
+    public boolean shouldCompleteLastBlock() {
+      return true;
+    }
+
     @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
       builder.append("CloseOp ");
       builder.append(stringifyMembers());
       return builder.toString();
+    }
+  }
+  
+  static class UpdateBlocksOp extends FSEditLogOp implements BlockListUpdatingOp {
+    String path;
+    Block[] blocks;
+    
+    private UpdateBlocksOp() {
+      super(OP_UPDATE_BLOCKS);
+    }
+    
+    static UpdateBlocksOp getInstance() {
+      return (UpdateBlocksOp)opInstances.get()
+        .get(OP_UPDATE_BLOCKS);
+    }
+    
+    
+    UpdateBlocksOp setPath(String path) {
+      this.path = path;
+      return this;
+    }
+    
+    public String getPath() {
+      return path;
+    }
+
+    UpdateBlocksOp setBlocks(Block[] blocks) {
+      this.blocks = blocks;
+      return this;
+    }
+    
+    public Block[] getBlocks() {
+      return blocks;
+    }
+
+    @Override
+    void writeFields(DataOutputStream out) throws IOException {
+      FSImageSerialization.writeString(path, out);
+      FSImageSerialization.writeCompactBlockArray(blocks, out);
+    }
+    
+    @Override
+    void readFields(DataInputStream in, int logVersion) throws IOException {
+      path = FSImageSerialization.readString(in);
+      this.blocks = FSImageSerialization.readCompactBlockArray(
+          in, logVersion);
+    }
+
+    @Override
+    public boolean shouldCompleteLastBlock() {
+      return false;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("UpdateBlocksOp [path=")
+        .append(path)
+        .append(", blocks=")
+        .append(Arrays.toString(blocks))
+        .append("]");
+      return sb.toString();
     }
   }
 

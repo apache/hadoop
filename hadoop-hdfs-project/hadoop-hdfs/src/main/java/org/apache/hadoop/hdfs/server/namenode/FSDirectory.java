@@ -369,7 +369,7 @@ public class FSDirectory implements Closeable {
 
     writeLock();
     try {
-      fsImage.getEditLog().logOpenFile(path, file);
+      fsImage.getEditLog().logUpdateBlocks(path, file);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
             +path+" with "+ file.getBlocks().length 
