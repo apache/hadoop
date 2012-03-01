@@ -34,6 +34,8 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DataOutputOutputStream;
+import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtocolMetaInfoPB;
@@ -46,6 +48,7 @@ import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.ipc.RpcProtos.ProtoSpecificRpcRequest;
 import org.apache.hadoop.yarn.ipc.RpcProtos.ProtoSpecificRpcResponse;
@@ -213,13 +216,13 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(message.toByteArray().length);
-      out.write(message.toByteArray());
+      ((Message)message).writeDelimitedTo(
+          DataOutputOutputStream.constructOutputStream(out));
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int length = in.readInt();
+      int length = ProtoUtil.readRawVarint32(in);
       byte[] bytes = new byte[length];
       in.readFully(bytes);
       message = ProtoSpecificRpcRequest.parseFrom(bytes);
@@ -241,13 +244,13 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      out.writeInt(message.toByteArray().length);
-      out.write(message.toByteArray());
+      ((Message)message).writeDelimitedTo(
+          DataOutputOutputStream.constructOutputStream(out));      
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int length = in.readInt();
+      int length = ProtoUtil.readRawVarint32(in);
       byte[] bytes = new byte[length];
       in.readFully(bytes);
       message = ProtoSpecificRpcResponse.parseFrom(bytes);
