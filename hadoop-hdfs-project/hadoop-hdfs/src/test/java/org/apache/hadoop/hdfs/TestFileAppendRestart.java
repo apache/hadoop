@@ -99,27 +99,30 @@ public class TestFileAppendRestart {
 
       counts = FSImageTestUtil.countEditLogOpTypes(editLog);
       // OP_ADD to create file
-      // OP_ADD for first block
+      // OP_UPDATE_BLOCKS for first block
       // OP_CLOSE to close file
       // OP_ADD to reopen file
-      // OP_ADD for second block
+      // OP_UPDATE_BLOCKS for second block
       // OP_CLOSE to close file
-      assertEquals(4, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_UPDATE_BLOCKS).held);
       assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
 
       Path p2 = new Path("/not-block-boundaries");
       writeAndAppend(fs, p2, BLOCK_SIZE/2, BLOCK_SIZE);
       counts = FSImageTestUtil.countEditLogOpTypes(editLog);
       // OP_ADD to create file
-      // OP_ADD for first block
+      // OP_UPDATE_BLOCKS for first block
       // OP_CLOSE to close file
       // OP_ADD to re-establish the lease
-      // OP_ADD from the updatePipeline call (increments genstamp of last block)
-      // OP_ADD at the start of the second block
+      // OP_UPDATE_BLOCKS from the updatePipeline call (increments genstamp of last block)
+      // OP_UPDATE_BLOCKS at the start of the second block
       // OP_CLOSE to close file
-      // Total: 5 OP_ADDs and 2 OP_CLOSEs in addition to the ones above
-      assertEquals(9, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
-      assertEquals(4, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
+      // Total: 2 OP_ADDs, 3 OP_UPDATE_BLOCKS, and 2 OP_CLOSEs in addition
+      //        to the ones above
+      assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(2+3, (int)counts.get(FSEditLogOpCodes.OP_UPDATE_BLOCKS).held);
+      assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
       
       cluster.restartNameNode();
       
