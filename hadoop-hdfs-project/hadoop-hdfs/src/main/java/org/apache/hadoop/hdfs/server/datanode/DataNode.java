@@ -704,9 +704,12 @@ public class DataNode extends Configured
                     // DatanodeProtocol namenode,
                      SecureResources resources
                      ) throws IOException {
-    if(UserGroupInformation.isSecurityEnabled() && resources == null)
-      throw new RuntimeException("Cannot start secure cluster without " +
-      "privileged resources.");
+    if(UserGroupInformation.isSecurityEnabled() && resources == null) {
+      if (!conf.getBoolean("ignore.secure.ports.for.testing", false)) {
+        throw new RuntimeException("Cannot start secure cluster without "
+            + "privileged resources.");
+      }
+    }
 
     // settings global for all BPs in the Data Node
     this.secureResources = resources;
@@ -1853,25 +1856,6 @@ public class DataNode extends Configured
     ReplicaInfo r = data.updateReplicaUnderRecovery(oldBlock,
         recoveryId, newLength);
     return new ExtendedBlock(oldBlock.getBlockPoolId(), r);
-  }
-
-  @Override
-  public long getProtocolVersion(String protocol, long clientVersion
-      ) throws IOException {
-    if (protocol.equals(InterDatanodeProtocol.class.getName())) {
-      return InterDatanodeProtocol.versionID; 
-    } else if (protocol.equals(ClientDatanodeProtocol.class.getName())) {
-      return ClientDatanodeProtocol.versionID; 
-    }
-    throw new IOException("Unknown protocol to " + getClass().getSimpleName()
-        + ": " + protocol);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    return ProtocolSignature.getProtocolSignature(
-        this, protocol, clientVersion, clientMethodsHash);
   }
 
   /** A convenient class used in block recovery */

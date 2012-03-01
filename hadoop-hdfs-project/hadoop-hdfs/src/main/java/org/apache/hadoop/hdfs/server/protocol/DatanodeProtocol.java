@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
 /**********************************************************************
@@ -40,7 +39,7 @@ import org.apache.hadoop.security.KerberosInfo;
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, 
     clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface DatanodeProtocol extends VersionedProtocol {
+public interface DatanodeProtocol {
   /**
    * This class is used by both the Namenode (client) and BackupNode (server) 
    * to insulate from the protocol serialization.

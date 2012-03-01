@@ -93,6 +93,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-2992. Edit log failure trace should include transaction ID of
     error.  (Colin Patrick McCabe via eli)
 
+    HDFS-3030. Remove getProtocolVersion and getProtocolSignature from 
+    translators. (jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
