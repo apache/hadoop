@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
 import static org.junit.Assert.assertEquals;
 
 import java.io.BufferedOutputStream;
@@ -38,9 +40,11 @@ import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +56,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
+import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -73,6 +78,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+
+import com.google.common.base.Joiner;
 
 /** Utilities for HDFS tests */
 public class DFSTestUtil {
@@ -680,5 +687,22 @@ public class DFSTestUtil {
     out.flush();
 
     return BlockOpResponseProto.parseDelimitedFrom(in);
+  }
+  
+  public static void setFederatedConfiguration(MiniDFSCluster cluster,
+      Configuration conf) {
+    Set<String> nameservices = new HashSet<String>();
+    for (NameNodeInfo info : cluster.getNameNodeInfos()) {
+      assert info.nameserviceId != null;
+      nameservices.add(info.nameserviceId);
+      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
+          info.nameserviceId), DFSUtil.createUri(HdfsConstants.HDFS_URI_SCHEME,
+              info.nameNode.getNameNodeAddress()).toString());
+      conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+          info.nameserviceId), DFSUtil.createUri(HdfsConstants.HDFS_URI_SCHEME,
+              info.nameNode.getNameNodeAddress()).toString());
+    }
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, Joiner.on(",")
+        .join(nameservices));
   }
 }

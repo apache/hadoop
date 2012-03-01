@@ -316,8 +316,13 @@ public class MiniDFSCluster {
   static class NameNodeInfo {
     final NameNode nameNode;
     final Configuration conf;
-    NameNodeInfo(NameNode nn, Configuration conf) {
+    final String nameserviceId;
+    final String nnId;
+    NameNodeInfo(NameNode nn, String nameserviceId, String nnId,
+        Configuration conf) {
       this.nameNode = nn;
+      this.nameserviceId = nameserviceId;
+      this.nnId = nnId;
       this.conf = conf;
     }
   }
@@ -674,6 +679,10 @@ public class MiniDFSCluster {
     return fileAsURI(new File(baseDir, "shared-edits-" +
         minNN + "-through-" + maxNN));
   }
+  
+  public NameNodeInfo[] getNameNodeInfos() {
+    return this.nameNodes;
+  }
 
   private void initNameNodeConf(Configuration conf,
       String nameserviceId, String nnId,
@@ -763,7 +772,8 @@ public class MiniDFSCluster {
         .getHostPortString(nn.getHttpAddress()));
     DFSUtil.setGenericConf(conf, nameserviceId, nnId,
         DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    nameNodes[nnIndex] = new NameNodeInfo(nn, new Configuration(conf));
+    nameNodes[nnIndex] = new NameNodeInfo(nn, nameserviceId, nnId,
+        new Configuration(conf));
   }
 
   /**
@@ -1264,7 +1274,7 @@ public class MiniDFSCluster {
       nn.stop();
       nn.join();
       Configuration conf = nameNodes[nnIndex].conf;
-      nameNodes[nnIndex] = new NameNodeInfo(null, conf);
+      nameNodes[nnIndex] = new NameNodeInfo(null, null, null, conf);
     }
   }
   
@@ -1307,10 +1317,12 @@ public class MiniDFSCluster {
    */
   public synchronized void restartNameNode(int nnIndex, boolean waitActive)
       throws IOException {
+    String nameserviceId = nameNodes[nnIndex].nameserviceId;
+    String nnId = nameNodes[nnIndex].nnId;
     Configuration conf = nameNodes[nnIndex].conf;
     shutdownNameNode(nnIndex);
     NameNode nn = NameNode.createNameNode(new String[] {}, conf);
-    nameNodes[nnIndex] = new NameNodeInfo(nn, conf);
+    nameNodes[nnIndex] = new NameNodeInfo(nn, nameserviceId, nnId, conf);
     if (waitActive) {
       waitClusterUp();
       LOG.info("Restarted the namenode");

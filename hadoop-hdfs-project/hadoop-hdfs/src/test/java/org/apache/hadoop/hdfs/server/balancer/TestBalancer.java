@@ -18,11 +18,11 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
@@ -338,8 +338,7 @@ public class TestBalancer extends TestCase {
     waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
 
     // start rebalancing
-    Map<String, Map<String, InetSocketAddress>> namenodes =
-      DFSUtil.getNNServiceRpcAddresses(conf);
+    Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
     assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
 

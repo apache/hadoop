@@ -244,3 +244,5 @@ HDFS-2920. fix remaining TODO items. (atm and todd)
 HDFS-3027. Implement a simple NN health check. (atm)
 
 HDFS-3023. Optimize entries in edits log for persistBlocks call. (todd)
+
+HDFS-2979. Balancer should use logical uri for creating failover proxy with HA enabled. (atm)
