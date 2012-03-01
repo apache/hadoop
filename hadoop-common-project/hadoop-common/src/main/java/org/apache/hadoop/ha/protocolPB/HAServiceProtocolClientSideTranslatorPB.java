@@ -72,19 +72,6 @@ public class HAServiceProtocolClientSideTranslatorPB implements
   }
   
   @Override
-  public long getProtocolVersion(String protocol, long clientVersion)
-      throws IOException {
-    return rpcProxy.getProtocolVersion(protocol, clientVersion);
-  }
-
-  @Override
-  public ProtocolSignature getProtocolSignature(String protocol,
-      long clientVersion, int clientMethodsHash) throws IOException {
-    return rpcProxy.getProtocolSignature(protocol, clientVersion,
-        clientMethodsHash);
-  }
-
-  @Override
   public void monitorHealth() throws IOException {
     try {
       rpcProxy.monitorHealth(NULL_CONTROLLER, MONITOR_HEALTH_REQ);

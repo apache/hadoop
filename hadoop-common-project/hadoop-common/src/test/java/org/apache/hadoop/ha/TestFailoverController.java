@@ -51,18 +51,6 @@ public class TestFailoverController {
     }
 
     @Override
-    public long getProtocolVersion(String protocol, long clientVersion)
-        throws IOException {
-      return 0;
-    }
-
-    @Override
-    public ProtocolSignature getProtocolSignature(String protocol,
-        long clientVersion, int clientMethodsHash) throws IOException {
-      return null;
-    }
-
-    @Override
     public void monitorHealth() throws HealthCheckFailedException, IOException {
       // Do nothing
     }
