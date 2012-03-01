@@ -22,6 +22,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-3909 Javadoc the Service interfaces (stevel)
 
+    MAPREDUCE-3885. Avoid an unnecessary copy for all requests/responses in 
+    MRs ProtoOverHadoopRpcEngine. (Devaraj Das via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
