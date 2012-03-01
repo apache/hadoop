@@ -61,10 +61,11 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  * 
  * Note the synchronization is coarse grained - it is at each method. 
  */
-public class SimulatedFSDataset implements FSDatasetInterface {
-  static class Factory extends FSDatasetInterface.Factory {
+public class SimulatedFSDataset
+    implements FSDatasetInterface<FSDatasetInterface.FSVolumeInterface> {
+  static class Factory extends FSDatasetInterface.Factory<SimulatedFSDataset> {
     @Override
-    public FSDatasetInterface createFSDatasetInterface(DataNode datanode,
+    public SimulatedFSDataset createFSDatasetInterface(DataNode datanode,
         DataStorage storage, Configuration conf) throws IOException {
       return new SimulatedFSDataset(datanode, storage, conf);
     }

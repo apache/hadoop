@@ -24,11 +24,7 @@ import static org.junit.Assume.assumeTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -38,7 +34,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
-import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -47,12 +42,6 @@ import org.junit.Test;
  * Test the ability of a DN to tolerate volume failures.
  */
 public class TestDataNodeVolumeFailureToleration {
-
-  private static final Log LOG = LogFactory.getLog(TestDataNodeVolumeFailureToleration.class);
-  {
-    ((Log4JLogger)TestDataNodeVolumeFailureToleration.LOG).getLogger().setLevel(Level.ALL);
-  }
-
   private FileSystem fs;
   private MiniDFSCluster cluster;
   private Configuration conf;
@@ -130,7 +119,7 @@ public class TestDataNodeVolumeFailureToleration {
       assertTrue("The DN should have started up fine.",
           cluster.isDataNodeUp());
       DataNode dn = cluster.getDataNodes().get(0);
-      String si = dn.getFSDataset().getStorageInfo();
+      String si = DataNodeTestUtils.getFSDataset(dn).getStorageInfo();
       assertTrue("The DN should have started with this directory",
           si.contains(dataDir1Actual.getPath()));
       assertFalse("The DN shouldn't have a bad directory.",
@@ -227,7 +216,7 @@ public class TestDataNodeVolumeFailureToleration {
    */
   private void testVolumeConfig(int volumesTolerated, int volumesFailed,
       boolean expectedBPServiceState, boolean manageDfsDirs)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     assumeTrue(!System.getProperty("os.name").startsWith("Windows"));
     final int dnIndex = 0;
     // Fail the current directory since invalid storage directory perms

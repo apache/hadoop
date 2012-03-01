@@ -45,6 +45,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-2899. Service protocol changes in DatanodeProtocol to add multiple 
     storages. (suresh)
 
+    HDFS-3021. Use generic type to declare FSDatasetInterface.  (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

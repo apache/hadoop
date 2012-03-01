@@ -74,7 +74,7 @@ class BlockPoolSliceScanner {
 
   private long scanPeriod = DEFAULT_SCAN_PERIOD_HOURS * 3600 * 1000;
   private DataNode datanode;
-  private final FSDatasetInterface dataset;
+  private final FSDatasetInterface<? extends FSVolumeInterface> dataset;
   
   // sorted set
   private TreeSet<BlockScanInfo> blockInfoSet;
@@ -133,7 +133,8 @@ class BlockPoolSliceScanner {
     }
   }
   
-  BlockPoolSliceScanner(DataNode datanode, FSDatasetInterface dataset,
+  BlockPoolSliceScanner(DataNode datanode,
+      FSDatasetInterface<? extends FSVolumeInterface> dataset,
       Configuration conf, String bpid) {
     this.datanode = datanode;
     this.dataset = dataset;
@@ -216,7 +217,7 @@ class BlockPoolSliceScanner {
      * otherwise, pick the first directory.
      */
     File dir = null;
-    List<FSVolumeInterface> volumes = dataset.getVolumes();
+    final List<? extends FSVolumeInterface> volumes = dataset.getVolumes();
     for (FSVolumeInterface vol : volumes) {
       File bpDir = vol.getDirectory(blockPoolId);
       if (LogFileHandler.isFilePresent(bpDir, verificationLogFile)) {
