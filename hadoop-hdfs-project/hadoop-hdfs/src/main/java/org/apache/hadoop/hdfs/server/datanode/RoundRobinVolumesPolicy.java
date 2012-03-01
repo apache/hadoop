@@ -23,13 +23,14 @@ import java.util.List;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
-public class RoundRobinVolumesPolicy implements BlockVolumeChoosingPolicy {
+public class RoundRobinVolumesPolicy<V extends FSVolumeInterface>
+    implements BlockVolumeChoosingPolicy<V> {
 
   private int curVolume = 0;
 
   @Override
-  public synchronized FSVolumeInterface chooseVolume(
-      List<FSVolumeInterface> volumes, long blockSize) throws IOException {
+  public synchronized V chooseVolume(final List<V> volumes, final long blockSize
+      ) throws IOException {
     if(volumes.size() < 1) {
       throw new DiskOutOfSpaceException("No more available volumes");
     }
@@ -44,7 +45,7 @@ public class RoundRobinVolumesPolicy implements BlockVolumeChoosingPolicy {
     long maxAvailable = 0;
     
     while (true) {
-      FSVolumeInterface volume = volumes.get(curVolume);
+      final V volume = volumes.get(curVolume);
       curVolume = (curVolume + 1) % volumes.size();
       long availableVolumeSize = volume.getAvailable();
       if (availableVolumeSize > blockSize) { return volume; }

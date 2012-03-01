@@ -50,13 +50,15 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  *
  */
 @InterfaceAudience.Private
-public interface FSDatasetInterface extends FSDatasetMBean {
+public interface FSDatasetInterface<V extends FSDatasetInterface.FSVolumeInterface>
+    extends FSDatasetMBean {
   /**
    * A factory for creating FSDatasetInterface objects.
    */
-  public abstract class Factory {
+  public abstract class Factory<D extends FSDatasetInterface<?>> {
     /** @return the configured factory. */
-    public static Factory getFactory(Configuration conf) {
+    public static Factory<?> getFactory(Configuration conf) {
+      @SuppressWarnings("rawtypes")
       final Class<? extends Factory> clazz = conf.getClass(
           DFSConfigKeys.DFS_DATANODE_FSDATASET_FACTORY_KEY,
           FSDataset.Factory.class,
@@ -65,7 +67,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
     }
 
     /** Create a FSDatasetInterface object. */
-    public abstract FSDatasetInterface createFSDatasetInterface(
+    public abstract D createFSDatasetInterface(
         DataNode datanode, DataStorage storage, Configuration conf
         ) throws IOException;
 
@@ -94,7 +96,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   }
 
   /** @return a list of volumes. */
-  public List<FSVolumeInterface> getVolumes();
+  public List<V> getVolumes();
 
   /** @return a volume information map (name => info). */
   public Map<String, Object> getVolumeInfoMap();
@@ -234,7 +236,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
         this.checksum = checksum;
       }
       
-      void close() throws IOException {
+      void close() {
         IOUtils.closeStream(dataOut);
         IOUtils.closeStream(checksumOut);
       }

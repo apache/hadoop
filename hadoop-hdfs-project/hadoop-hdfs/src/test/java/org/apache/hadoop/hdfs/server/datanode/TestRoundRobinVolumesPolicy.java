@@ -43,8 +43,10 @@ public class TestRoundRobinVolumesPolicy {
     volumes.add(Mockito.mock(FSVolumeInterface.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(200L);
 
-    RoundRobinVolumesPolicy policy = ReflectionUtils.newInstance(
-        RoundRobinVolumesPolicy.class, null);
+    @SuppressWarnings("unchecked")
+    final RoundRobinVolumesPolicy<FSVolumeInterface> policy = 
+        (RoundRobinVolumesPolicy<FSVolumeInterface>)ReflectionUtils.newInstance(
+            RoundRobinVolumesPolicy.class, null);
     
     // Test two rounds of round-robin choosing
     Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 0));
@@ -79,7 +81,8 @@ public class TestRoundRobinVolumesPolicy {
     volumes.add(Mockito.mock(FSVolumeInterface.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(600L);
 
-    RoundRobinVolumesPolicy policy = new RoundRobinVolumesPolicy();
+    final RoundRobinVolumesPolicy<FSVolumeInterface> policy
+        = new RoundRobinVolumesPolicy<FSVolumeInterface>();
     int blockSize = 700;
     try {
       policy.chooseVolume(volumes, blockSize);

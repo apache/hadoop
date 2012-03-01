@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
@@ -210,8 +211,10 @@ public class TestFileCreation extends junit.framework.TestCase {
       // can't check capacities for real storage since the OS file system may be changing under us.
       if (simulatedStorage) {
         DataNode dn = cluster.getDataNodes().get(0);
-        assertEquals(fileSize, dn.getFSDataset().getDfsUsed());
-        assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY-fileSize, dn.getFSDataset().getRemaining());
+        FSDatasetInterface<?> dataset = DataNodeTestUtils.getFSDataset(dn);
+        assertEquals(fileSize, dataset.getDfsUsed());
+        assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY-fileSize,
+            dataset.getRemaining());
       }
     } finally {
       cluster.shutdown();

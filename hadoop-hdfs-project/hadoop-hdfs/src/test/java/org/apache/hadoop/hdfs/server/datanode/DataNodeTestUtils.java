@@ -41,6 +41,17 @@ public class DataNodeTestUtils {
     return dn.getDNRegistrationForBP(bpid);
   }
 
+  /**
+   * This method is used for testing. 
+   * Examples are adding and deleting blocks directly.
+   * The most common usage will be when the data node's storage is simulated.
+   * 
+   * @return the fsdataset that stores the blocks
+   */
+  public static FSDatasetInterface<?> getFSDataset(DataNode dn) {
+    return dn.getFSDataset();
+  }
+
   public static File getFile(DataNode dn, String bpid, long bid) {
     return ((FSDataset)dn.getFSDataset()).getFile(bpid, bid);
   }

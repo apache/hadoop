@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 
 /**
  * Tests {@link DirectoryScanner} handling of differences
@@ -142,7 +142,7 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create a block file in a random volume*/
   private long createBlockFile() throws IOException {
-    List<FSVolumeInterface> volumes = fds.getVolumes();
+    List<FSVolume> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
     File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
@@ -155,7 +155,7 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create a metafile in a random volume*/
   private long createMetaFile() throws IOException {
-    List<FSVolumeInterface> volumes = fds.getVolumes();
+    List<FSVolume> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
     File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
@@ -168,7 +168,7 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create block file and corresponding metafile in a rondom volume */
   private long createBlockMetaFile() throws IOException {
-    List<FSVolumeInterface> volumes = fds.getVolumes();
+    List<FSVolume> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
     File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
@@ -228,7 +228,8 @@ public class TestDirectoryScanner extends TestCase {
     try {
       cluster.waitActive();
       bpid = cluster.getNamesystem().getBlockPoolId();
-      fds = (FSDataset) cluster.getDataNodes().get(0).getFSDataset();
+      fds = (FSDataset)DataNodeTestUtils.getFSDataset(
+          cluster.getDataNodes().get(0));
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                   parallelism);
       DataNode dn = cluster.getDataNodes().get(0);
