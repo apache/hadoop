@@ -232,32 +232,6 @@ public class TestDFSUtil {
     assertEquals(expectedNameServiceId, nameserviceId);
   }
 
-  /**
-   * Test for
-   * {@link DFSUtil#isDefaultNamenodeAddress(Configuration, InetSocketAddress, String...)}
-   */
-  @Test
-  public void testSingleNamenode() throws URISyntaxException {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    final String DEFAULT_ADDRESS = "localhost:9000";
-    final String NN2_ADDRESS = "localhost:9001";
-    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, DEFAULT_ADDRESS);
-    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, DEFAULT_ADDRESS);
-
-    InetSocketAddress testAddress1 = NetUtils.createSocketAddr(DEFAULT_ADDRESS);
-    boolean isDefault = DFSUtil.isDefaultNamenodeAddress(conf, testAddress1,
-        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
-    assertTrue(isDefault);
-    InetSocketAddress testAddress2 = NetUtils.createSocketAddr(NN2_ADDRESS);
-    isDefault = DFSUtil.isDefaultNamenodeAddress(conf, testAddress2,
-        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
-    assertFalse(isDefault);
-    
-    Collection<URI> uris = DFSUtil.getNameServiceUris(conf, DFS_NAMENODE_RPC_ADDRESS_KEY);
-    assertEquals(1, uris.size());
-    assertTrue(uris.contains(new URI("hdfs://" + DEFAULT_ADDRESS)));
-  }
-
   /** Tests to ensure default namenode is used as fallback */
   @Test
   public void testDefaultNamenode() throws IOException {

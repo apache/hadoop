@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
@@ -74,13 +75,13 @@ import org.apache.hadoop.util.ReflectionUtils;
  *
  ***************************************************/
 @InterfaceAudience.Private
-class FSDataset implements FSDatasetInterface {
+class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
   /**
    * A factory for creating FSDataset objects.
    */
-  static class Factory extends FSDatasetInterface.Factory {
+  static class Factory extends FSDatasetInterface.Factory<FSDataset> {
     @Override
-    public FSDatasetInterface createFSDatasetInterface(DataNode datanode,
+    public FSDataset createFSDatasetInterface(DataNode datanode,
         DataStorage storage, Configuration conf) throws IOException {
       return new FSDataset(datanode, storage, conf);
     }
@@ -786,13 +787,13 @@ class FSDataset implements FSDatasetInterface {
      * Read access to this unmodifiable list is not synchronized.
      * This list is replaced on modification holding "this" lock.
      */
-    private volatile List<FSVolumeInterface> volumes = null;
+    private volatile List<FSVolume> volumes = null;
 
-    BlockVolumeChoosingPolicy blockChooser;
+    BlockVolumeChoosingPolicy<FSVolume> blockChooser;
     int numFailedVolumes;
 
-    FSVolumeSet(List<FSVolumeInterface> volumes, int failedVols,
-        BlockVolumeChoosingPolicy blockChooser) {
+    FSVolumeSet(List<FSVolume> volumes, int failedVols,
+        BlockVolumeChoosingPolicy<FSVolume> blockChooser) {
       this.volumes = Collections.unmodifiableList(volumes);
       this.blockChooser = blockChooser;
       this.numFailedVolumes = failedVols;
@@ -810,29 +811,29 @@ class FSDataset implements FSDatasetInterface {
      * @return next volume to store the block in.
      */
     synchronized FSVolume getNextVolume(long blockSize) throws IOException {
-      return (FSVolume)blockChooser.chooseVolume(volumes, blockSize);
+      return blockChooser.chooseVolume(volumes, blockSize);
     }
       
     private long getDfsUsed() throws IOException {
       long dfsUsed = 0L;
-      for (FSVolumeInterface v : volumes) {
-        dfsUsed += ((FSVolume)v).getDfsUsed();
+      for (FSVolume v : volumes) {
+        dfsUsed += v.getDfsUsed();
       }
       return dfsUsed;
     }
 
     private long getBlockPoolUsed(String bpid) throws IOException {
       long dfsUsed = 0L;
-      for (FSVolumeInterface v : volumes) {
-        dfsUsed += ((FSVolume)v).getBlockPoolUsed(bpid);
+      for (FSVolume v : volumes) {
+        dfsUsed += v.getBlockPoolUsed(bpid);
       }
       return dfsUsed;
     }
 
     private long getCapacity() {
       long capacity = 0L;
-      for (FSVolumeInterface v : volumes) {
-        capacity += ((FSVolume)v).getCapacity();
+      for (FSVolume v : volumes) {
+        capacity += v.getCapacity();
       }
       return capacity;
     }
@@ -845,17 +846,16 @@ class FSDataset implements FSDatasetInterface {
       return remaining;
     }
       
-    private void getVolumeMap(ReplicasMap volumeMap)
-        throws IOException {
-      for (FSVolumeInterface v : volumes) {
-        ((FSVolume)v).getVolumeMap(volumeMap);
+    private void getVolumeMap(ReplicasMap volumeMap) throws IOException {
+      for (FSVolume v : volumes) {
+        v.getVolumeMap(volumeMap);
       }
     }
     
     private void getVolumeMap(String bpid, ReplicasMap volumeMap)
         throws IOException {
-      for (FSVolumeInterface v : volumes) {
-        ((FSVolume)v).getVolumeMap(bpid, volumeMap);
+      for (FSVolume v : volumes) {
+        v.getVolumeMap(bpid, volumeMap);
       }
     }
       
@@ -871,10 +871,10 @@ class FSDataset implements FSDatasetInterface {
       ArrayList<FSVolume> removedVols = null;
       
       // Make a copy of volumes for performing modification 
-      final List<FSVolumeInterface> volumeList = new ArrayList<FSVolumeInterface>(volumes);
+      final List<FSVolume> volumeList = new ArrayList<FSVolume>(volumes);
       
       for (int idx = 0; idx < volumeList.size(); idx++) {
-        FSVolume fsv = (FSVolume)volumeList.get(idx);
+        FSVolume fsv = volumeList.get(idx);
         try {
           fsv.checkDirs();
         } catch (DiskErrorException e) {
@@ -891,8 +891,8 @@ class FSDataset implements FSDatasetInterface {
       
       // Remove null volumes from the volumes array
       if (removedVols != null && removedVols.size() > 0) {
-        List<FSVolumeInterface> newVols = new ArrayList<FSVolumeInterface>();
-        for (FSVolumeInterface vol : volumeList) {
+        final List<FSVolume> newVols = new ArrayList<FSVolume>();
+        for (FSVolume vol : volumeList) {
           if (vol != null) {
             newVols.add(vol);
           }
@@ -914,21 +914,21 @@ class FSDataset implements FSDatasetInterface {
 
     private void addBlockPool(String bpid, Configuration conf)
         throws IOException {
-      for (FSVolumeInterface v : volumes) {
-        ((FSVolume)v).addBlockPool(bpid, conf);
+      for (FSVolume v : volumes) {
+        v.addBlockPool(bpid, conf);
       }
     }
     
     private void removeBlockPool(String bpid) {
-      for (FSVolumeInterface v : volumes) {
-        ((FSVolume)v).shutdownBlockPool(bpid);
+      for (FSVolume v : volumes) {
+        v.shutdownBlockPool(bpid);
       }
     }
 
     private void shutdown() {
-      for (FSVolumeInterface volume : volumes) {
+      for (FSVolume volume : volumes) {
         if(volume != null) {
-          ((FSVolume)volume).shutdown();
+          volume.shutdown();
         }
       }
     }
@@ -991,7 +991,7 @@ class FSDataset implements FSDatasetInterface {
   }
 
   @Override // FSDatasetInterface
-  public List<FSVolumeInterface> getVolumes() {
+  public List<FSVolume> getVolumes() {
     return volumes.volumes;
   }
 
@@ -1099,7 +1099,7 @@ class FSDataset implements FSDatasetInterface {
           + ", volume failures tolerated: " + volFailuresTolerated);
     }
 
-    final List<FSVolumeInterface> volArray = new ArrayList<FSVolumeInterface>(
+    final List<FSVolume> volArray = new ArrayList<FSVolume>(
         storage.getNumStorageDirs());
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       final File dir = storage.getStorageDir(idx).getCurrentDir();
@@ -1108,12 +1108,12 @@ class FSDataset implements FSDatasetInterface {
     }
     volumeMap = new ReplicasMap(this);
 
-    BlockVolumeChoosingPolicy blockChooserImpl =
-      (BlockVolumeChoosingPolicy) ReflectionUtils.newInstance(
-        conf.getClass(DFSConfigKeys.DFS_DATANODE_BLOCKVOLUMECHOICEPOLICY,
+    @SuppressWarnings("unchecked")
+    final BlockVolumeChoosingPolicy<FSVolume> blockChooserImpl =
+        ReflectionUtils.newInstance(conf.getClass(
+            DFSConfigKeys.DFS_DATANODE_BLOCKVOLUMECHOICEPOLICY,
             RoundRobinVolumesPolicy.class,
-            BlockVolumeChoosingPolicy.class),
-        conf);
+            BlockVolumeChoosingPolicy.class), conf);
     volumes = new FSVolumeSet(volArray, volsFailed, blockChooserImpl);
     volumes.getVolumeMap(volumeMap);
 
@@ -2001,7 +2001,7 @@ class FSDataset implements FSDatasetInterface {
     boolean error = false;
     for (int i = 0; i < invalidBlks.length; i++) {
       File f = null;
-      FSVolume v;
+      final FSVolume v;
       synchronized (this) {
         f = getFile(bpid, invalidBlks[i].getBlockId());
         ReplicaInfo dinfo = volumeMap.get(bpid, invalidBlks[i]);
@@ -2553,8 +2553,7 @@ class FSDataset implements FSDatasetInterface {
 
   private Collection<VolumeInfo> getVolumeInfo() {
     Collection<VolumeInfo> info = new ArrayList<VolumeInfo>();
-    for (FSVolumeInterface v : volumes.volumes) {
-      final FSVolume volume = (FSVolume)v;
+    for (FSVolume volume : volumes.volumes) {
       long used = 0;
       long free = 0;
       try {
@@ -2590,8 +2589,8 @@ class FSDataset implements FSDatasetInterface {
   public synchronized void deleteBlockPool(String bpid, boolean force)
       throws IOException {
     if (!force) {
-      for (FSVolumeInterface volume : volumes.volumes) {
-        if (!((FSVolume)volume).isBPDirEmpty(bpid)) {
+      for (FSVolume volume : volumes.volumes) {
+        if (!volume.isBPDirEmpty(bpid)) {
           DataNode.LOG.warn(bpid
               + " has some block files, cannot delete unless forced");
           throw new IOException("Cannot delete block pool, "
@@ -2599,8 +2598,8 @@ class FSDataset implements FSDatasetInterface {
         }
       }
     }
-    for (FSVolumeInterface volume : volumes.volumes) {
-      ((FSVolume)volume).deleteBPDirectories(bpid, force);
+    for (FSVolume volume : volumes.volumes) {
+      volume.deleteBPDirectories(bpid, force);
     }
   }
   

@@ -1768,8 +1768,8 @@ public class MiniDFSCluster {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
-    return dataNodes.get(dataNodeIndex).datanode.getFSDataset().getBlockReport(
-        bpid);
+    final DataNode dn = dataNodes.get(dataNodeIndex).datanode;
+    return DataNodeTestUtils.getFSDataset(dn).getBlockReport(bpid);
   }
   
   
@@ -1801,7 +1801,8 @@ public class MiniDFSCluster {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
-    FSDatasetInterface dataSet = dataNodes.get(dataNodeIndex).datanode.getFSDataset();
+    final DataNode dn = dataNodes.get(dataNodeIndex).datanode;
+    final FSDatasetInterface<?> dataSet = DataNodeTestUtils.getFSDataset(dn);
     if (!(dataSet instanceof SimulatedFSDataset)) {
       throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
     }
@@ -1819,7 +1820,8 @@ public class MiniDFSCluster {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
-    FSDatasetInterface dataSet = dataNodes.get(dataNodeIndex).datanode.getFSDataset();
+    final DataNode dn = dataNodes.get(dataNodeIndex).datanode;
+    final FSDatasetInterface<?> dataSet = DataNodeTestUtils.getFSDataset(dn);
     if (!(dataSet instanceof SimulatedFSDataset)) {
       throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
     }

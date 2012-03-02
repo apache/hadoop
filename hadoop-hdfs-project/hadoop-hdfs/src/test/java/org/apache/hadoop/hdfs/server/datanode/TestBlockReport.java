@@ -210,13 +210,14 @@ public class TestBlockReport {
       LOG.debug("Number of blocks allocated " + lBlocks.size());
     }
 
+    final DataNode dn0 = cluster.getDataNodes().get(DN_N0);
     for (ExtendedBlock b : blocks2Remove) {
       if(LOG.isDebugEnabled()) {
         LOG.debug("Removing the block " + b.getBlockName());
       }
       for (File f : findAllFiles(dataDir,
         new MyFileFilter(b.getBlockName(), true))) {
-        cluster.getDataNodes().get(DN_N0).getFSDataset().unfinalizeBlock(b);
+        DataNodeTestUtils.getFSDataset(dn0).unfinalizeBlock(b);
         if (!f.delete())
           LOG.warn("Couldn't delete " + b.getBlockName());
       }
@@ -225,9 +226,8 @@ public class TestBlockReport {
     waitTil(DN_RESCAN_EXTRA_WAIT);
 
     // all blocks belong to the same file, hence same BP
-    DataNode dn = cluster.getDataNodes().get(DN_N0);
     String poolId = cluster.getNamesystem().getBlockPoolId();
-    DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
+    DatanodeRegistration dnR = dn0.getDNRegistrationForBP(poolId);
     StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs()) };
     cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
@@ -602,15 +602,15 @@ public class TestBlockReport {
     cluster.waitActive();
     
     // Look about specified DN for the replica of the block from 1st DN
+    final DataNode dn1 = cluster.getDataNodes().get(DN_N1);
+    final FSDataset dataset1 = (FSDataset)DataNodeTestUtils.getFSDataset(dn1);
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    Replica r = ((FSDataset) cluster.getDataNodes().get(DN_N1).getFSDataset()).
-      fetchReplicaInfo(bpid, bl.getBlockId());
+    Replica r = dataset1.fetchReplicaInfo(bpid, bl.getBlockId());
     long start = System.currentTimeMillis();
     int count = 0;
     while (r == null) {
       waitTil(5);
-      r = ((FSDataset) cluster.getDataNodes().get(DN_N1).getFSDataset()).
-        fetchReplicaInfo(bpid, bl.getBlockId());
+      r = dataset1.fetchReplicaInfo(bpid, bl.getBlockId());
       long waiting_period = System.currentTimeMillis() - start;
       if (count++ % 100 == 0)
         if(LOG.isDebugEnabled()) {

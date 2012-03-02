@@ -44,6 +44,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-2944. Improve checking of input for JobClient.displayTasks() (XieXianshan via harsh)
 
+    MAPREDUCE-3956. Remove the use of the deprecated Syncable.sync() method from
+    TeraOutputFormat in the terasort example.  (szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
@@ -96,6 +99,9 @@ Release 0.23.3 - UNRELEASED
     use it (Sanjay Radia)
 
     MAPREDUCE-3909 Javadoc the Service interfaces (stevel)
+
+    MAPREDUCE-3885. Avoid an unnecessary copy for all requests/responses in 
+    MRs ProtoOverHadoopRpcEngine. (Devaraj Das via sseth)
 
   OPTIMIZATIONS
 

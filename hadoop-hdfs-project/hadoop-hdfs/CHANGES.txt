@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
+
   NEW FEATURES
 
     HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
@@ -68,6 +70,8 @@ Trunk (unreleased changes)
     HDFS-3030. Remove getProtocolVersion and getProtocolSignature from translators.
     (jitendra)
 
+    HDFS-3036. Remove unused method DFSUtil#isDefaultNamenodeAddress. (atm)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -117,6 +121,9 @@ Trunk (unreleased changes)
     HDFS-2908. Add apache license header for StorageReport.java. (Brandon Li
     via jitendra)
 
+    HDFS-3037. TestMulitipleNNDataBlockScanner#testBlockScannerAfterRestart is
+    racy. (atm)
+
 Release 0.23.3 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
@@ -161,6 +168,8 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-2899. Service protocol changes in DatanodeProtocol to add multiple 
     storages. (suresh)
+
+    HDFS-3021. Use generic type to declare FSDatasetInterface.  (szetszwo)
 
   IMPROVEMENTS
 
@@ -251,6 +260,8 @@ Release 0.23.3 - UNRELEASED
     multiple blocks need recovery. (todd)
 
     HDFS-3020. Fix editlog to automatically sync when buffer is full. (todd)
+
+    HDFS-3038. Add FSEditLog.metrics to findbugs exclude list. (todd via atm)
 
 Release 0.23.2 - UNRELEASED 
 

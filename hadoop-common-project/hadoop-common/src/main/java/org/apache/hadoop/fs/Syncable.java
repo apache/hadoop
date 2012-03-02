@@ -27,11 +27,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface Syncable {
-  /**
-   * @deprecated As of HADOOP 0.21.0, replaced by hflush
-   * @see #hflush()
-   */
-  @Deprecated  public void sync() throws IOException;
   
   /** Flush out the data in client's user buffer. After the return of
    * this call, new readers will see the data.

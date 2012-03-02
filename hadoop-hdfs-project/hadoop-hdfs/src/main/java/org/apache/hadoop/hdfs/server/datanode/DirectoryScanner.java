@@ -55,7 +55,7 @@ public class DirectoryScanner implements Runnable {
   private static final Log LOG = LogFactory.getLog(DirectoryScanner.class);
 
   private final DataNode datanode;
-  private final FSDatasetInterface dataset;
+  private final FSDatasetInterface<?> dataset;
   private final ExecutorService reportCompileThreadPool;
   private final ScheduledExecutorService masterThread;
   private final long scanPeriodMsecs;
@@ -219,7 +219,7 @@ public class DirectoryScanner implements Runnable {
     }
   }
 
-  DirectoryScanner(DataNode dn, FSDatasetInterface dataset, Configuration conf) {
+  DirectoryScanner(DataNode dn, FSDatasetInterface<?> dataset, Configuration conf) {
     this.datanode = dn;
     this.dataset = dataset;
     int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
@@ -411,7 +411,7 @@ public class DirectoryScanner implements Runnable {
   }
 
   /** Is the given volume still valid in the dataset? */
-  private static boolean isValid(final FSDatasetInterface dataset,
+  private static boolean isValid(final FSDatasetInterface<?> dataset,
       final FSVolumeInterface volume) {
     for (FSVolumeInterface vol : dataset.getVolumes()) {
       if (vol == volume) {
@@ -424,7 +424,7 @@ public class DirectoryScanner implements Runnable {
   /** Get lists of blocks on the disk sorted by blockId, per blockpool */
   private Map<String, ScanInfo[]> getDiskReport() {
     // First get list of data directories
-    final List<FSVolumeInterface> volumes = dataset.getVolumes();
+    final List<? extends FSVolumeInterface> volumes = dataset.getVolumes();
     ArrayList<ScanInfoPerBlockPool> dirReports =
       new ArrayList<ScanInfoPerBlockPool>(volumes.size());
     

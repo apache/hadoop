@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -28,20 +32,19 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataOutputStream extends DataOutputStream implements Syncable {
-  private OutputStream wrappedStream;
+  private final OutputStream wrappedStream;
 
   private static class PositionCache extends FilterOutputStream {
-    private FileSystem.Statistics statistics;
-    long position;
+    private final FileSystem.Statistics statistics;
+    private long position;
 
-    public PositionCache(OutputStream out, 
-                         FileSystem.Statistics stats,
-                         long pos) throws IOException {
+    PositionCache(OutputStream out, FileSystem.Statistics stats, long pos) {
       super(out);
       statistics = stats;
       position = pos;
     }
 
+    @Override
     public void write(int b) throws IOException {
       out.write(b);
       position++;
@@ -50,6 +53,7 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
       }
     }
     
+    @Override
     public void write(byte b[], int off, int len) throws IOException {
       out.write(b, off, len);
       position += len;                            // update position
@@ -58,27 +62,22 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
       }
     }
       
-    public long getPos() throws IOException {
+    long getPos() {
       return position;                            // return cached position
     }
-    
+
+    @Override
     public void close() throws IOException {
       out.close();
     }
   }
 
-  @Deprecated
-  public FSDataOutputStream(OutputStream out) throws IOException {
-    this(out, null);
-  }
-
-  public FSDataOutputStream(OutputStream out, FileSystem.Statistics stats)
-    throws IOException {
+  public FSDataOutputStream(OutputStream out, FileSystem.Statistics stats) {
     this(out, stats, 0);
   }
 
   public FSDataOutputStream(OutputStream out, FileSystem.Statistics stats,
-                            long startPosition) throws IOException {
+                            long startPosition) {
     super(new PositionCache(out, stats, startPosition));
     wrappedStream = out;
   }
@@ -88,13 +87,14 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
    *
    * @return the current position in the output stream
    */
-  public long getPos() throws IOException {
+  public long getPos() {
     return ((PositionCache)out).getPos();
   }
 
   /**
    * Close the underlying output stream.
    */
+  @Override
   public void close() throws IOException {
     out.close(); // This invokes PositionCache.close()
   }
@@ -109,14 +109,6 @@ public class FSDataOutputStream extends DataOutputStream implements Syncable {
     return wrappedStream;
   }
 
-  @Override  // Syncable
-  @Deprecated
-  public void sync() throws IOException {
-    if (wrappedStream instanceof Syncable) {
-      ((Syncable)wrappedStream).sync();
-    }
-  }
-  
   @Override  // Syncable
   public void hflush() throws IOException {
     if (wrappedStream instanceof Syncable) {

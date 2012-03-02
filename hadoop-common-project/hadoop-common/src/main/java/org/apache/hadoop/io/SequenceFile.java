@@ -1196,7 +1196,7 @@ public class SequenceFile {
     /** flush all currently written data to the file system */
     public void syncFs() throws IOException {
       if (out != null) {
-        out.sync();                               // flush contents to file system
+        out.hflush();  // flush contents to file system
       }
     }
 

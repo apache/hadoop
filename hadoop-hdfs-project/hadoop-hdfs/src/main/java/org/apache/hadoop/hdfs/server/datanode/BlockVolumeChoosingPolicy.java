@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 
 /**************************************************
@@ -34,7 +33,7 @@ import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterfa
  *
  ***************************************************/
 @InterfaceAudience.Private
-public interface BlockVolumeChoosingPolicy {
+public interface BlockVolumeChoosingPolicy<V extends FSVolumeInterface> {
 
   /**
    * Returns a specific FSVolume after applying a suitable choice algorithm
@@ -48,7 +47,5 @@ public interface BlockVolumeChoosingPolicy {
    * @return the chosen volume to store the block.
    * @throws IOException when disks are unavailable or are full.
    */
-  public FSVolumeInterface chooseVolume(List<FSVolumeInterface> volumes, long blockSize)
-    throws IOException;
-
+  public V chooseVolume(List<V> volumes, long blockSize) throws IOException;
 }
