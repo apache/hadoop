@@ -494,7 +494,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       nnResourceChecker = new NameNodeResourceChecker(conf);
       checkAvailableResources();
       assert safeMode != null &&
-        !safeMode.initializedReplQueues;
+        !safeMode.isPopulatingReplQueues();
       setBlockTotal();
       blockManager.activate(conf);
       this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
@@ -3801,7 +3801,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
     }
 
-    private void adjustBlockTotals(int deltaSafe, int deltaTotal) {
+    private synchronized void adjustBlockTotals(int deltaSafe, int deltaTotal) {
       if (!shouldIncrementallyTrackBlocks) {
         return;
       }

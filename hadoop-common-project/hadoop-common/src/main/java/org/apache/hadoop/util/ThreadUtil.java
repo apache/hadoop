@@ -30,7 +30,7 @@ public class ThreadUtil {
   /**
    * Cause the current thread to sleep as close as possible to the provided
    * number of milliseconds. This method will log and ignore any
-   * {@link InterrupedException} encountered.
+   * {@link InterruptedException} encountered.
    * 
    * @param millis the number of milliseconds for the current thread to sleep
    */

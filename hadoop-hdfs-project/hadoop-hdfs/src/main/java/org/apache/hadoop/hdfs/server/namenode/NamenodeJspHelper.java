@@ -315,10 +315,10 @@ class NamenodeJspHelper {
       // since the standby namenode doesn't compute replication queues 
       String underReplicatedBlocks = "";
       if (nn.getServiceState() == HAServiceState.ACTIVE) {
-    	  underReplicatedBlocks = new String(rowTxt() 
+    	  underReplicatedBlocks = rowTxt() 
               + colTxt("Excludes missing blocks.")
               + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
-              + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks()); 
+              + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks(); 
       }
       out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
           + "Configured Capacity" + colTxt() + ":" + colTxt()

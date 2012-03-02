@@ -173,7 +173,7 @@ class BPOfferService {
     }
   }
   
-  NamespaceInfo getNamespaceInfo() {
+  synchronized NamespaceInfo getNamespaceInfo() {
     return bpNSInfo;
   }
   
@@ -366,7 +366,7 @@ class BPOfferService {
     }
   }
 
-  DatanodeRegistration createRegistration() {
+  synchronized DatanodeRegistration createRegistration() {
     Preconditions.checkState(bpNSInfo != null,
         "getRegistration() can only be called after initial handshake");
     return dn.createBPRegistration(bpNSInfo);

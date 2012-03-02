@@ -234,7 +234,7 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
   /**
    * Exception thrown when there is no active leader
    */
-  public class ActiveNotFoundException extends Exception {
+  public static class ActiveNotFoundException extends Exception {
     private static final long serialVersionUID = 3505396722342846462L;
   }
 

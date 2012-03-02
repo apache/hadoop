@@ -248,3 +248,5 @@ HDFS-3023. Optimize entries in edits log for persistBlocks call. (todd)
 HDFS-2979. Balancer should use logical uri for creating failover proxy with HA enabled. (atm)
 
 HDFS-3035. Fix failure of TestFileAppendRestart due to OP_UPDATE_BLOCKS (todd)
+
+HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)

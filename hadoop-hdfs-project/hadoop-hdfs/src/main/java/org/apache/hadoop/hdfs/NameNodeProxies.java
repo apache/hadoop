@@ -63,7 +63,8 @@ public class NameNodeProxies {
   /**
    * Wrapper for a client proxy as well as its associated service ID.
    * This is simply used as a tuple-like return type for
-   * {@link createProxy} and {@link createNonHaProxy}.
+   * {@link NameNodeProxies#createProxy} and
+   * {@link NameNodeProxies#createNonHAProxy}.
    */
   public static class ProxyAndInfo<PROXYTYPE> {
     private final PROXYTYPE proxy;
@@ -125,7 +126,7 @@ public class NameNodeProxies {
 
   /**
    * Creates an explicitly non-HA-enabled proxy object. Most of the time you
-   * don't want to use this, and should instead use {@link createProxy}.
+   * don't want to use this, and should instead use {@link NameNodeProxies#createProxy}.
    * 
    * @param conf the configuration object
    * @param nnAddr address of the remote NN to connect to
@@ -160,8 +161,8 @@ public class NameNodeProxies {
           conf, ugi);
     } else {
       String message = "Upsupported protocol found when creating the proxy " +
-          "conection to NameNode: " +
-          ((xface != null) ? xface.getClass().getName() : xface);
+          "connection to NameNode: " +
+          ((xface != null) ? xface.getClass().getName() : "null");
       LOG.error(message);
       throw new IllegalStateException(message);
     }

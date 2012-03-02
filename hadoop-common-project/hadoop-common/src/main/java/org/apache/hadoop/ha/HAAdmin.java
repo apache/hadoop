@@ -262,8 +262,7 @@ public abstract class HAAdmin extends Configured implements Tool {
       return -1;
     }
 
-    int i = 0;
-    String cmd = argv[i++];
+    String cmd = argv[0];
 
     if (!cmd.startsWith("-")) {
       errOut.println("Bad command '" + cmd + "': expected command starting with '-'");

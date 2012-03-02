@@ -247,4 +247,12 @@
        <Method name="save" />
        <Bug pattern="OS_OPEN_STREAM" />
      </Match>
+     <!--
+      This method isn't performance-critical and is much clearer to write as it's written.
+      -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.datanode.BlockPoolManager" />
+       <Method name="doRefreshNamenodes" />
+       <Bug category="PERFORMANCE" />
+     </Match>
  </FindBugsFilter>

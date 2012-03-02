@@ -99,7 +99,8 @@ public class HAUtil {
         nsId, null, DFSUtil.LOCAL_ADDRESS_MATCHER);
     if (suffixes == null) {
       String msg = "Configuration " + DFS_NAMENODE_RPC_ADDRESS_KEY + 
-          " must be suffixed with" + namenodeId + " for HA configuration.";
+          " must be suffixed with nameservice and namenode ID for HA " +
+          "configuration.";
       throw new HadoopIllegalArgumentException(msg);
     }
     

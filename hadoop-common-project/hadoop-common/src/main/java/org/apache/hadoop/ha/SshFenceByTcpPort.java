@@ -76,7 +76,7 @@ public class SshFenceByTcpPort extends Configured
     if (argStr != null) {
       // Use a dummy service when checking the arguments defined
       // in the configuration are parseable.
-      Args args = new Args(new InetSocketAddress("localhost", 8020), argStr);
+      new Args(new InetSocketAddress("localhost", 8020), argStr);
     }
   }
 

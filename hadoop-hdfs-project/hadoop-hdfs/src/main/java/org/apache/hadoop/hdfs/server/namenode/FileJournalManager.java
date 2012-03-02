@@ -310,7 +310,9 @@ class FileJournalManager implements JournalManager {
         // file, but before writing anything to it. Safe to delete it.
         if (elf.getFile().length() == 0) {
           LOG.info("Deleting zero-length edit log file " + elf);
-          elf.getFile().delete();
+          if (!elf.getFile().delete()) {
+            throw new IOException("Unable to delete file " + elf.getFile());
+          }
           continue;
         }
         
@@ -328,7 +330,9 @@ class FileJournalManager implements JournalManager {
         // delete the file.
         if (elf.getNumTransactions() == 0) {
           LOG.info("Deleting edit log file with zero transactions " + elf);
-          elf.getFile().delete();
+          if (!elf.getFile().delete()) {
+            throw new IOException("Unable to delete " + elf.getFile());
+          }
           continue;
         }
         
