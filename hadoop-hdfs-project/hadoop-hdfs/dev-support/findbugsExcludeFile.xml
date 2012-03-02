@@ -247,4 +247,13 @@
        <Method name="save" />
        <Bug pattern="OS_OPEN_STREAM" />
      </Match>
+     <!--
+      the 'metrics' member is sometimes used from synchronized blocks, sometimes not,
+      but it's only reset by test cases, so should be fine
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.namenode.FSEditLog" />
+       <Field name="metrics" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
  </FindBugsFilter>

@@ -138,6 +138,8 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3020. Fix editlog to automatically sync when buffer is full. (todd)
 
+    HDFS-3038. Add FSEditLog.metrics to findbugs exclude list. (todd via atm)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
