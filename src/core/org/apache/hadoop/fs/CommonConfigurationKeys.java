@@ -52,5 +52,17 @@ public class CommonConfigurationKeys {
                                         "ipc.server.read.threadpool.size";
   public static final int IPC_SERVER_RPC_READ_THREADS_DEFAULT = 1;
 
+  public static final String  IO_NATIVE_LIB_AVAILABLE_KEY =
+      "hadoop.native.lib";
+  /** Default value for IO_NATIVE_LIB_AVAILABLE_KEY */
+  public static final boolean IO_NATIVE_LIB_AVAILABLE_DEFAULT = true;
+
+  /** Internal buffer size for Snappy compressor/decompressors */
+  public static final String IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY =
+      "io.compression.codec.snappy.buffersize";
+
+  /** Default value for IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY */
+  public static final int IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT =
+      256 * 1024;
 }
 

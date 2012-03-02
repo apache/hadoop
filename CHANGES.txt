@@ -4,6 +4,9 @@ Release 1.0.2 - unreleased
 
   NEW FEATURES
 
+    HADOOP-7206. Support Snappy compression. (Issei Yoshida and
+    Alejandro Abdelnur via vinodkv).
+
   IMPROVEMENTS
 
   BUG FIXES
