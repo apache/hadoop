@@ -280,11 +280,15 @@ public class TestFsShellReturnCode {
     System.setErr(out);
     final String results;
     try {
+      Path tdir = new Path(TEST_ROOT_DIR, "notNullCopy");
+      fileSys.delete(tdir, true);
+      fileSys.mkdirs(tdir);
       String[] args = new String[3];
       args[0] = "-get";
-      args[1] = "/invalidPath";
-      args[2] = "/test/tmp";
+      args[1] = tdir+"/invalidSrc";
+      args[2] = tdir+"/invalidDst";
       assertTrue("file exists", !fileSys.exists(new Path(args[1])));
+      assertTrue("file exists", !fileSys.exists(new Path(args[2])));
       int run = shell.run(args);
       results = bytes.toString();
       assertEquals("Return code should be 1", 1, run);

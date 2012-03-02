@@ -112,10 +112,12 @@ abstract class CommandWithDestination extends FsCommand {
       if (!dst.stat.isDirectory()) {
         throw new PathIsNotDirectoryException(dst.toString());
       }
-    } else {
-      if (dst.exists && !dst.stat.isDirectory() && !overwrite) {
+    } else if (dst.exists) {
+      if (!dst.stat.isDirectory() && !overwrite) {
         throw new PathExistsException(dst.toString());
       }
+    } else if (!dst.parentExists()) {
+      throw new PathNotFoundException(dst.toString());
     }
     super.processArguments(args);
   }
