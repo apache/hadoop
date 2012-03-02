@@ -166,6 +166,9 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
 
+    HADOOP-8131. FsShell put doesn't correctly handle a non-existent dir
+    (Daryn Sharp via bobby)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES

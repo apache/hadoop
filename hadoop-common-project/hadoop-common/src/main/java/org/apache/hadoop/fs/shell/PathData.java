@@ -182,6 +182,20 @@ public class PathData {
   }
 
   /**
+   * Test if the parent directory exists
+   * @return boolean indicating parent exists
+   * @throws IOException upon unexpected error
+   */
+  public boolean parentExists() throws IOException {
+    String uriPath = uri.getPath();
+    String name = uriPath.substring(uriPath.lastIndexOf("/")+1);
+    // Path will munch off the chars that indicate a dir, so there's no way
+    // to perform this test except by examining the raw basename we maintain
+    return (name.isEmpty() || name.equals(".") || name.equals(".."))
+        ? fs.exists(path) : fs.exists(path.getParent());
+  }
+  
+  /**
    * Returns a list of PathData objects of the items contained in the given
    * directory.
    * @return list of PathData objects for its children
