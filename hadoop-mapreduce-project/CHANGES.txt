@@ -155,6 +155,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3706. Fix circular redirect error in job-attempts page. (bobby
     via acmurthy)
 
+    MAPREDUCE-3896. Add user information to the delegation token issued by the
+    history server. (Vinod Kumar Vavilapalli via sseth)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
