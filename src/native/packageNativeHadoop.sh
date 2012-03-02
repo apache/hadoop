@@ -62,4 +62,17 @@ then
   done  
 fi
 
+if [ "${BUNDLE_SNAPPY_LIB}" = "true" ]
+then
+ if [ -d ${SNAPPY_LIB_DIR} ]
+ then
+   echo "Copying Snappy library in ${SNAPPY_LIB_DIR} to $DIST_LIB_DIR/"
+   cd ${SNAPPY_LIB_DIR}
+   $TAR . | (cd $DIST_LIB_DIR/; $UNTAR)
+ else
+   echo "Snappy lib directory ${SNAPPY_LIB_DIR} does not exist"
+   exit 1
+ fi
+fi
+
 #vim: ts=2: sw=2: et

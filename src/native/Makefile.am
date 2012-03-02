@@ -33,6 +33,7 @@ export PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
 
 AM_CPPFLAGS = @JNI_CPPFLAGS@ -I$(HADOOP_NATIVE_SRCDIR)/src \
               -Isrc/org/apache/hadoop/io/compress/zlib \
+              -Isrc/org/apache/hadoop/io/compress/snappy \
               -Isrc/org/apache/hadoop/io/nativeio \
               -Isrc/org/apache/hadoop/security
 AM_LDFLAGS = @JNI_LDFLAGS@ -m$(JVM_DATA_MODEL)
@@ -41,6 +42,8 @@ AM_CFLAGS = -g -Wall -fPIC -O2 -m$(JVM_DATA_MODEL)
 lib_LTLIBRARIES = libhadoop.la
 libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
                        src/org/apache/hadoop/io/compress/zlib/ZlibDecompressor.c \
+                       src/org/apache/hadoop/io/compress/snappy/SnappyCompressor.c \
+                       src/org/apache/hadoop/io/compress/snappy/SnappyDecompressor.c \
                        src/org/apache/hadoop/security/getGroup.c \
                        src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c \
                        src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c \

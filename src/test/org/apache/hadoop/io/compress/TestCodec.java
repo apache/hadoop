@@ -42,7 +42,6 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -50,18 +49,17 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RandomDatum;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.io.compress.CompressorStream;
-import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.snappy.LoadSnappy;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
+import org.apache.hadoop.util.ReflectionUtils;
 
 public class TestCodec extends TestCase {
 
@@ -84,6 +82,19 @@ public class TestCodec extends TestCase {
   public void testBZip2Codec() throws IOException {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.BZip2Codec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");
+  }
+
+  
+  public void testSnappyCodec() throws IOException {
+    if (LoadSnappy.isAvailable()) {
+      if (LoadSnappy.isLoaded()) {
+        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
+        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
+      }
+      else {
+        fail("Snappy native available but Hadoop native not");
+      }
+    }
   }
 
   public void testGzipCodecWithParam() throws IOException {
