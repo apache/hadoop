@@ -29,8 +29,10 @@ import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TypeConverter;
@@ -121,7 +123,6 @@ public class HistoryClientService extends AbstractService {
     InetAddress hostNameResolved = null;
     try {
       hostNameResolved = InetAddress.getLocalHost(); 
-      //address.getAddress().getLocalHost();
     } catch (UnknownHostException e) {
       throw new YarnException(e);
     }
@@ -164,6 +165,16 @@ public class HistoryClientService extends AbstractService {
       webApp.stop();
     }
     super.stop();
+  }
+
+  @Private
+  public MRClientProtocol getClientHandler() {
+    return this.protocolHandler;
+  }
+
+  @Private
+  public InetSocketAddress getBindAddress() {
+    return this.bindAddress;
   }
 
   private class MRClientProtocolHandler implements MRClientProtocol {
@@ -294,9 +305,12 @@ public class HistoryClientService extends AbstractService {
         GetDelegationTokenRequest request) throws YarnRemoteException {
 
       try {
+
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
       // Verify that the connection is kerberos authenticated
       AuthenticationMethod authMethod = UserGroupInformation
-        .getRealAuthenticationMethod(UserGroupInformation.getCurrentUser());
+        .getRealAuthenticationMethod(ugi);
       if (UserGroupInformation.isSecurityEnabled()
           && (authMethod != AuthenticationMethod.KERBEROS)) {
        throw new IOException(
@@ -305,8 +319,16 @@ public class HistoryClientService extends AbstractService {
 
       GetDelegationTokenResponse response = recordFactory.newRecordInstance(
           GetDelegationTokenResponse.class);
+
+      String user = ugi.getUserName();
+      Text owner = new Text(user);
+      Text realUser = null;
+      if (ugi.getRealUser() != null) {
+        realUser = new Text(ugi.getRealUser().getUserName());
+      }
       MRDelegationTokenIdentifier tokenIdentifier =
-          new MRDelegationTokenIdentifier();
+          new MRDelegationTokenIdentifier(owner, new Text(
+            request.getRenewer()), realUser);
       Token<MRDelegationTokenIdentifier> realJHSToken =
           new Token<MRDelegationTokenIdentifier>(tokenIdentifier,
               jhsDTSecretManager);
