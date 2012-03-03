@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAppManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -64,6 +65,7 @@ import org.apache.hadoop.yarn.util.Records;
 public class RMAppImpl implements RMApp {
 
   private static final Log LOG = LogFactory.getLog(RMAppImpl.class);
+  private static final String UNAVAILABLE = "N/A";
 
   // Immutable fields
   private final ApplicationId applicationId;
@@ -161,6 +163,12 @@ public class RMAppImpl implements RMApp {
 
   private final StateMachine<RMAppState, RMAppEventType, RMAppEvent>
                                                                  stateMachine;
+
+  private static final ApplicationResourceUsageReport
+    DUMMY_APPLICATION_RESOURCE_USAGE_REPORT =
+      BuilderUtils.newApplicationResourceUsageReport(-1, -1,
+          Resources.createResource(-1), Resources.createResource(-1),
+          Resources.createResource(-1));
 
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
@@ -324,29 +332,35 @@ public class RMAppImpl implements RMApp {
 
   
   @Override
-  public ApplicationReport createAndGetApplicationReport() {
+  public ApplicationReport createAndGetApplicationReport(boolean allowAccess) {
     this.readLock.lock();
 
     try {
-      String clientToken = "N/A";
-      String trackingUrl = "N/A";
-      String host = "N/A";
-      String origTrackingUrl = "N/A";
+      String clientToken = UNAVAILABLE;
+      String trackingUrl = UNAVAILABLE;
+      String host = UNAVAILABLE;
+      String origTrackingUrl = UNAVAILABLE;
       int rpcPort = -1;
       ApplicationResourceUsageReport appUsageReport = null;
       FinalApplicationStatus finishState = getFinalApplicationStatus();
-      if (this.currentAttempt != null) {
-        trackingUrl = this.currentAttempt.getTrackingUrl();
-        origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
-        clientToken = this.currentAttempt.getClientToken();
-        host = this.currentAttempt.getHost();
-        rpcPort = this.currentAttempt.getRpcPort();
-        appUsageReport = currentAttempt.getApplicationResourceUsageReport();
+      String diags = UNAVAILABLE;
+      if (allowAccess) {
+        if (this.currentAttempt != null) {
+          trackingUrl = this.currentAttempt.getTrackingUrl();
+          origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
+          clientToken = this.currentAttempt.getClientToken();
+          host = this.currentAttempt.getHost();
+          rpcPort = this.currentAttempt.getRpcPort();
+          appUsageReport = currentAttempt.getApplicationResourceUsageReport();
+        }
+        diags = this.diagnostics.toString();
+      } else {
+        appUsageReport = DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       }
       return BuilderUtils.newApplicationReport(this.applicationId, this.user,
           this.queue, this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()),
-          this.diagnostics.toString(), trackingUrl,
+          diags, trackingUrl,
           this.startTime, this.finishTime, finishState, appUsageReport,
           origTrackingUrl);
     } finally {

@@ -334,6 +334,19 @@ public class BuilderUtils {
     return report;
   }
 
+  public static ApplicationResourceUsageReport newApplicationResourceUsageReport(
+      int numUsedContainers, int numReservedContainers, Resource usedResources,
+      Resource reservedResources, Resource neededResources) {
+    ApplicationResourceUsageReport report =
+        recordFactory.newRecordInstance(ApplicationResourceUsageReport.class);
+    report.setNumUsedContainers(numUsedContainers);
+    report.setNumReservedContainers(numReservedContainers);
+    report.setUsedResources(usedResources);
+    report.setReservedResources(reservedResources);
+    report.setNeededResources(neededResources);
+    return report;
+  }
+
   public static Resource newResource(int memory) {
     Resource resource = recordFactory.newRecordInstance(Resource.class);
     resource.setMemory(memory);

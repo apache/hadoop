@@ -161,6 +161,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3896. Add user information to the delegation token issued by the
     history server. (Vinod Kumar Vavilapalli via sseth)
 
+    MAPREDUCE-3792. Fix "bin/mapred job -list" to display all jobs instead of
+    only the jobs owned by the user. (Jason Lowe via vinodkv)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
