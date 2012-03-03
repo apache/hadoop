@@ -25,6 +25,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3885. Avoid an unnecessary copy for all requests/responses in 
     MRs ProtoOverHadoopRpcEngine. (Devaraj Das via sseth)
 
+	MAPREDUCE-3935. Annotate Counters.Counter and Counters.Group as @Public.
+    (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
