@@ -14,6 +14,9 @@ Trunk (unreleased changes)
     Bikas Saha, Suresh Srinivas, Jitendra Nath Pandey, Hari Mankude, Brandon Li,
     Sanjay Radia, Mingjie Lai, and Gregory Chanan
 
+    HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. (Henry
+    Robinson via atm)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution

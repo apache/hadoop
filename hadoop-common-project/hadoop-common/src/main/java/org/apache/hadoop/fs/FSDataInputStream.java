@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -27,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable, Closeable {
+    implements Seekable, PositionedReadable, Closeable, ByteBufferReadable {
 
   public FSDataInputStream(InputStream in)
     throws IOException {
@@ -115,5 +116,13 @@ public class FSDataInputStream extends DataInputStream
   @InterfaceAudience.LimitedPrivate({"HDFS"})
   public InputStream getWrappedStream() {
     return in;
+  }
+
+  public int read(ByteBuffer buf) throws IOException {
+    if (in instanceof ByteBufferReadable) {
+      return ((ByteBufferReadable)in).read(buf);
+    }
+
+    throw new UnsupportedOperationException("Byte-buffer read unsupported by input stream");
   }
 }
