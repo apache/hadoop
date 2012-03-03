@@ -218,14 +218,10 @@ public class ClientRMService extends AbstractService implements
           + "absent application " + applicationId);
     }
 
-    if (!checkAccess(callerUGI, application.getUser(),
-        ApplicationAccessType.VIEW_APP, applicationId)) {
-      throw RPCUtil.getRemoteException(new AccessControlException("User "
-          + callerUGI.getShortUserName() + " cannot perform operation "
-          + ApplicationAccessType.VIEW_APP.name() + " on " + applicationId));
-    }
-
-    ApplicationReport report = application.createAndGetApplicationReport();
+    boolean allowAccess = checkAccess(callerUGI, application.getUser(),
+        ApplicationAccessType.VIEW_APP, applicationId);
+    ApplicationReport report =
+        application.createAndGetApplicationReport(allowAccess);
 
     GetApplicationReportResponse response = recordFactory
         .newRecordInstance(GetApplicationReportResponse.class);
@@ -349,14 +345,9 @@ public class ClientRMService extends AbstractService implements
 
     List<ApplicationReport> reports = new ArrayList<ApplicationReport>();
     for (RMApp application : this.rmContext.getRMApps().values()) {
-      // Only give out the applications viewable by the user as
-      // ApplicationReport has confidential information like client-token, ACLs
-      // etc. Web UI displays all applications though as we filter and print
-      // only public information there.
-      if (checkAccess(callerUGI, application.getUser(),
-          ApplicationAccessType.VIEW_APP, application.getApplicationId())) {
-        reports.add(application.createAndGetApplicationReport());
-      }
+      boolean allowAccess = checkAccess(callerUGI, application.getUser(),
+          ApplicationAccessType.VIEW_APP, application.getApplicationId());
+      reports.add(application.createAndGetApplicationReport(allowAccess));
     }
 
     GetAllApplicationsResponse response = 
@@ -395,7 +386,7 @@ public class ClientRMService extends AbstractService implements
         appReports = new ArrayList<ApplicationReport>(
             apps.size());
         for (RMApp app : apps) {
-          appReports.add(app.createAndGetApplicationReport());
+          appReports.add(app.createAndGetApplicationReport(true));
         }
       }
       queueInfo.setApplications(appReports);

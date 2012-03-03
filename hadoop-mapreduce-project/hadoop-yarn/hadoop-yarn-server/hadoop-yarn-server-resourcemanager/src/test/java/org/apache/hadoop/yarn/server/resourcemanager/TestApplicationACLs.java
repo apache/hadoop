@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import junit.framework.Assert;
@@ -40,6 +41,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -65,6 +68,7 @@ public class TestApplicationACLs {
   private static final String SUPER_USER = "superUser";
   private static final String FRIENDLY_GROUP = "friendly-group";
   private static final String SUPER_GROUP = "superGroup";
+  private static final String UNAVAILABLE = "N/A";
 
   private static final Log LOG = LogFactory.getLog(TestApplicationACLs.class);
 
@@ -298,20 +302,20 @@ public class TestApplicationACLs {
     ClientRMProtocol enemyRmClient = getRMClientForUser(ENEMY);
 
     // View as the enemy
-    try {
-      enemyRmClient.getApplicationReport(appReportRequest);
-      Assert.fail("App view by the enemy should fail!!");
-    } catch (YarnRemoteException e) {
-      LOG.info("Got exception while viewing app as the enemy", e);
-      Assert.assertEquals("User enemy cannot perform operation VIEW_APP on "
-          + applicationId, e.getMessage());
-    }
+    ApplicationReport appReport = enemyRmClient.getApplicationReport(
+        appReportRequest).getApplicationReport();
+    verifyEnemyAppReport(appReport);
 
     // List apps as enemy
-    Assert.assertEquals("App view by enemy should not list any apps!!", 0,
-        enemyRmClient.getAllApplications(
-            recordFactory.newRecordInstance(GetAllApplicationsRequest.class))
-            .getApplicationList().size());
+    List<ApplicationReport> appReports = enemyRmClient
+        .getAllApplications(recordFactory
+            .newRecordInstance(GetAllApplicationsRequest.class))
+        .getApplicationList();
+    Assert.assertEquals("App view by enemy should list the apps!!", 4,
+        appReports.size());
+    for (ApplicationReport report : appReports) {
+      verifyEnemyAppReport(report);
+    }
 
     // Kill app as the enemy
     try {
@@ -319,11 +323,37 @@ public class TestApplicationACLs {
       Assert.fail("App killing by the enemy should fail!!");
     } catch (YarnRemoteException e) {
       LOG.info("Got exception while killing app as the enemy", e);
-      Assert.assertEquals(
-          "User enemy cannot perform operation MODIFY_APP on "
-              + applicationId, e.getMessage());
+      Assert.assertEquals("User enemy cannot perform operation MODIFY_APP on "
+          + applicationId, e.getMessage());
     }
 
     rmClient.forceKillApplication(finishAppRequest);
+  }
+
+  private void verifyEnemyAppReport(ApplicationReport appReport) {
+    Assert.assertEquals("Enemy should not see app host!",
+        UNAVAILABLE, appReport.getHost());
+    Assert.assertEquals("Enemy should not see app rpc port!",
+        -1, appReport.getRpcPort());
+    Assert.assertEquals("Enemy should not see app client token!",
+        UNAVAILABLE, appReport.getClientToken());
+    Assert.assertEquals("Enemy should not see app diagnostics!",
+        UNAVAILABLE, appReport.getDiagnostics());
+    Assert.assertEquals("Enemy should not see app tracking url!",
+        UNAVAILABLE, appReport.getTrackingUrl());
+    Assert.assertEquals("Enemy should not see app original tracking url!",
+        UNAVAILABLE, appReport.getOriginalTrackingUrl());
+    ApplicationResourceUsageReport usageReport =
+        appReport.getApplicationResourceUsageReport();
+    Assert.assertEquals("Enemy should not see app used containers",
+        -1, usageReport.getNumUsedContainers());
+    Assert.assertEquals("Enemy should not see app reserved containers",
+        -1, usageReport.getNumReservedContainers());
+    Assert.assertEquals("Enemy should not see app used resources",
+        -1, usageReport.getUsedResources().getMemory());
+    Assert.assertEquals("Enemy should not see app reserved resources",
+        -1, usageReport.getReservedResources().getMemory());
+    Assert.assertEquals("Enemy should not see app needed resources",
+        -1, usageReport.getNeededResources().getMemory());
   }
 }

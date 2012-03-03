@@ -517,18 +517,12 @@ public class RMAppAttemptImpl implements RMAppAttempt {
           }
         }
       }
-      
-      ApplicationResourceUsageReport appResources = 
-          recordFactory.newRecordInstance(ApplicationResourceUsageReport.class);
-      appResources.setNumUsedContainers(numUsedContainers);
-      appResources.setNumReservedContainers(numReservedContainers);
-      appResources.setUsedResources(
-          Resources.createResource(currentConsumption));
-      appResources.setReservedResources(
-          Resources.createResource(reservedResources));
-      appResources.setNeededResources(
+
+      return BuilderUtils.newApplicationResourceUsageReport(
+          numUsedContainers, numReservedContainers,
+          Resources.createResource(currentConsumption),
+          Resources.createResource(reservedResources),
           Resources.createResource(currentConsumption + reservedResources));
-      return appResources;
     } finally {
       this.readLock.unlock();
     }

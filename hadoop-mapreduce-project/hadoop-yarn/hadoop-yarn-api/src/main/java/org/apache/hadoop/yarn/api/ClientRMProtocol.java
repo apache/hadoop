@@ -143,6 +143,18 @@ public interface ClientRMProtocol {
    * {@link GetApplicationReportResponse} which includes the 
    * {@link ApplicationReport} for the application.</p>
    * 
+   * <p>If the user does not have <code>VIEW_APP</code> access then the
+   * following fields in the report will be set to stubbed values:
+   * <ul>
+   *   <li>host - set to "N/A"</li>
+   *   <li>RPC port - set to -1</li>
+   *   <li>client token - set to "N/A"</li>
+   *   <li>diagnostics - set to "N/A"</li>
+   *   <li>tracking URL - set to "N/A"</li>
+   *   <li>original tracking URL - set to "N/A"</li>
+   *   <li>resource usage report - all values are -1</li>
+   * </ul></p>
+   *
    * @param request request for an application report
    * @return application report 
    * @throws YarnRemoteException
@@ -176,6 +188,11 @@ public interface ClientRMProtocol {
    * {@link GetAllApplicationsResponse} which includes the 
    * {@link ApplicationReport} for all the applications.</p>
    * 
+   * <p>If the user does not have <code>VIEW_APP</code> access for an
+   * application then the corresponding report will be filtered as
+   * described in {@link #getApplicationReport(GetApplicationReportRequest)}.
+   * </p>
+   *
    * @param request request for report on all running applications
    * @return report on all running applications
    * @throws YarnRemoteException
