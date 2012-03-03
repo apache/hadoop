@@ -96,6 +96,8 @@ public class Counters
   /**
    * A counter record, comprising its name and value.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static class Counter implements org.apache.hadoop.mapreduce.Counter {
     org.apache.hadoop.mapreduce.Counter realCounter;
 
@@ -207,6 +209,8 @@ public class Counters
    *  <p><code>Group</code>handles localization of the class name and the
    *  counter names.</p>
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static class Group implements CounterGroupBase<Counter> {
     private CounterGroupBase<Counter> realGroup;
     

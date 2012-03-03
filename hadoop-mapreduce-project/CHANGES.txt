@@ -47,6 +47,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3956. Remove the use of the deprecated Syncable.sync() method from
     TeraOutputFormat in the terasort example.  (szetszwo)
 
+    MAPREDUCE-3935. Annotate Counters.Counter and Counters.Group as @Public.
+    (tomwhite)
+
   BUG FIXES
 
     MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
