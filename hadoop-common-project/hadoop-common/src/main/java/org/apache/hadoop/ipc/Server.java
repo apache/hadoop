@@ -1671,6 +1671,10 @@ public abstract class Server {
               // on the server side, as opposed to just a normal exceptional
               // result.
               LOG.warn(logMsg, e);
+            } else if (e instanceof StandbyException) {
+              // Don't log the whole stack trace of these exceptions.
+              // Way too noisy!
+              LOG.info(logMsg);
             } else {
               LOG.info(logMsg, e);
             }

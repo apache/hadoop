@@ -256,4 +256,12 @@
        <Field name="metrics" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+     <!--
+      This method isn't performance-critical and is much clearer to write as it's written.
+      -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.datanode.BlockPoolManager" />
+       <Method name="doRefreshNamenodes" />
+       <Bug category="PERFORMANCE" />
+     </Match>
  </FindBugsFilter>

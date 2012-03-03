@@ -26,8 +26,8 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.ipc.RemoteException;
@@ -77,7 +77,8 @@ abstract class DfsServlet extends HttpServlet {
       NameNodeHttpServer.getNameNodeAddressFromContext(context);
     Configuration conf = new HdfsConfiguration(
         NameNodeHttpServer.getConfFromContext(context));
-    return DFSUtil.createNamenode(nnAddr, conf);
+    return NameNodeProxies.createProxy(conf, NameNode.getUri(nnAddr),
+        ClientProtocol.class).getProxy();
   }
 
   protected UserGroupInformation getUGI(HttpServletRequest request,

@@ -138,6 +138,12 @@
             dfsadmin and mradmin commands to refresh the security policy in-effect.
             </td>
           </tr>
+          <tr>
+            <td><code>security.ha.service.protocol.acl</code></td>
+            <td>ACL for HAService protocol used by HAAdmin to manage the
+            active and stand-by states of namenode.
+            </td>
+          </tr>
         </table>
       </section>
       

@@ -107,6 +107,14 @@ class FSDatasetAsyncDiskService {
     
   }
   
+  synchronized long countPendingDeletions() {
+    long count = 0;
+    for (ThreadPoolExecutor exec : executors.values()) {
+      count += exec.getTaskCount() - exec.getCompletedTaskCount();
+    }
+    return count;
+  }
+  
   /**
    * Execute the task sometime in the future, using ThreadPools.
    */

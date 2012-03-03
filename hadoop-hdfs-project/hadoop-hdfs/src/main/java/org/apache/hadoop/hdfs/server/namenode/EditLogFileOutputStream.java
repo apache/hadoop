@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.nio.channels.FileChannel;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 
@@ -36,7 +38,8 @@ import com.google.common.annotations.VisibleForTesting;
  * An implementation of the abstract class {@link EditLogOutputStream}, which
  * stores edits in a local file.
  */
-class EditLogFileOutputStream extends EditLogOutputStream {
+@InterfaceAudience.Private
+public class EditLogFileOutputStream extends EditLogOutputStream {
   private static Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
 
   private File file;
@@ -96,9 +99,21 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   public void create() throws IOException {
     fc.truncate(0);
     fc.position(0);
-    doubleBuf.getCurrentBuf().writeInt(HdfsConstants.LAYOUT_VERSION);
+    writeHeader(doubleBuf.getCurrentBuf());
     setReadyToFlush();
     flush();
+  }
+
+  /**
+   * Write header information for this EditLogFileOutputStream to the provided
+   * DataOutputSream.
+   * 
+   * @param out the output stream to write the header to.
+   * @throws IOException in the event of error writing to the stream.
+   */
+  @VisibleForTesting
+  public static void writeHeader(DataOutputStream out) throws IOException {
+    out.writeInt(HdfsConstants.LAYOUT_VERSION);
   }
 
   @Override
@@ -203,6 +218,11 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    */
   File getFile() {
     return file;
+  }
+  
+  @Override
+  public String toString() {
+    return "EditLogFileOutputStream(" + file + ")";
   }
 
   /**

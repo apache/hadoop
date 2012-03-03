@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
@@ -31,8 +32,13 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RefreshAuthorizationPolicyProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -49,7 +55,7 @@ public class TestIsMethodSupported {
   
   @BeforeClass
   public static void setUp() throws Exception {
-    cluster = (new MiniDFSCluster.Builder(conf)).numNameNodes(1)
+    cluster = (new MiniDFSCluster.Builder(conf))
         .numDataNodes(1).build();
     nnAddress = cluster.getNameNode().getNameNodeAddress();
     dnAddress = new InetSocketAddress(cluster.getDataNodes().get(0)
@@ -66,8 +72,9 @@ public class TestIsMethodSupported {
   @Test
   public void testNamenodeProtocol() throws IOException {
     NamenodeProtocolTranslatorPB translator =
-        new NamenodeProtocolTranslatorPB(nnAddress, conf,
-            UserGroupInformation.getCurrentUser());
+        (NamenodeProtocolTranslatorPB) NameNodeProxies.createNonHAProxy(conf,
+            nnAddress, NamenodeProtocol.class, UserGroupInformation.getCurrentUser(),
+            true).getProxy();
     boolean exists = translator.isMethodSupported("rollEditLog");
     Assert.assertTrue(exists);
     exists = translator.isMethodSupported("bogusMethod");
@@ -99,15 +106,17 @@ public class TestIsMethodSupported {
   @Test
   public void testClientNamenodeProtocol() throws IOException {
     ClientNamenodeProtocolTranslatorPB translator = 
-        new ClientNamenodeProtocolTranslatorPB(nnAddress, conf, 
-            UserGroupInformation.getCurrentUser()); 
+        (ClientNamenodeProtocolTranslatorPB) NameNodeProxies.createNonHAProxy(
+            conf, nnAddress, ClientProtocol.class,
+            UserGroupInformation.getCurrentUser(), true).getProxy();
     Assert.assertTrue(translator.isMethodSupported("mkdirs"));
   }
   
   @Test
   public void tesJournalProtocol() throws IOException {
-    JournalProtocolTranslatorPB translator = 
-        new JournalProtocolTranslatorPB(nnAddress, conf);
+    JournalProtocolTranslatorPB translator = (JournalProtocolTranslatorPB)
+        NameNodeProxies.createNonHAProxy(conf, nnAddress, JournalProtocol.class,
+            UserGroupInformation.getCurrentUser(), true).getProxy();
     //Nameode doesn't implement JournalProtocol
     Assert.assertFalse(translator.isMethodSupported("startLogSegment"));
   }
@@ -130,24 +139,30 @@ public class TestIsMethodSupported {
   @Test
   public void testGetUserMappingsProtocol() throws IOException {
     GetUserMappingsProtocolClientSideTranslatorPB translator = 
-        new GetUserMappingsProtocolClientSideTranslatorPB(
-            nnAddress, UserGroupInformation.getCurrentUser(), conf);
+        (GetUserMappingsProtocolClientSideTranslatorPB)
+        NameNodeProxies.createNonHAProxy(conf, nnAddress,
+            GetUserMappingsProtocol.class, UserGroupInformation.getCurrentUser(),
+            true).getProxy();
     Assert.assertTrue(translator.isMethodSupported("getGroupsForUser"));
   }
   
   @Test
   public void testRefreshAuthorizationPolicyProtocol() throws IOException {
-    RefreshAuthorizationPolicyProtocolClientSideTranslatorPB translator =
-        new RefreshAuthorizationPolicyProtocolClientSideTranslatorPB(
-            nnAddress, UserGroupInformation.getCurrentUser(), conf);
+    RefreshAuthorizationPolicyProtocolClientSideTranslatorPB translator = 
+      (RefreshAuthorizationPolicyProtocolClientSideTranslatorPB)
+      NameNodeProxies.createNonHAProxy(conf, nnAddress,
+          RefreshAuthorizationPolicyProtocol.class,
+          UserGroupInformation.getCurrentUser(), true).getProxy();
     Assert.assertTrue(translator.isMethodSupported("refreshServiceAcl"));
   }
   
   @Test
   public void testRefreshUserMappingsProtocol() throws IOException {
     RefreshUserMappingsProtocolClientSideTranslatorPB translator =
-        new RefreshUserMappingsProtocolClientSideTranslatorPB(
-            nnAddress, UserGroupInformation.getCurrentUser(), conf);
+        (RefreshUserMappingsProtocolClientSideTranslatorPB)
+        NameNodeProxies.createNonHAProxy(conf, nnAddress,
+            RefreshUserMappingsProtocol.class,
+            UserGroupInformation.getCurrentUser(), true).getProxy();
     Assert.assertTrue(
         translator.isMethodSupported("refreshUserToGroupsMappings"));
   }

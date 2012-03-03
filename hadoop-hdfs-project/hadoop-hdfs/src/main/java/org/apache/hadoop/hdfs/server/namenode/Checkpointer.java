@@ -29,7 +29,6 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
@@ -58,17 +57,16 @@ class Checkpointer extends Daemon {
 
   private BackupNode backupNode;
   volatile boolean shouldRun;
-  private long checkpointPeriod;    // in seconds
-  // Transactions count to trigger the checkpoint
-  private long checkpointTxnCount; 
 
   private String infoBindAddress;
+
+  private CheckpointConf checkpointConf;
 
   private BackupImage getFSImage() {
     return (BackupImage)backupNode.getFSImage();
   }
 
-  private NamenodeProtocol getNamenode(){
+  private NamenodeProtocol getRemoteNamenodeProxy(){
     return backupNode.namenode;
   }
 
@@ -89,26 +87,24 @@ class Checkpointer extends Daemon {
   /**
    * Initialize checkpoint.
    */
-  @SuppressWarnings("deprecation")
   private void initialize(Configuration conf) throws IOException {
     // Create connection to the namenode.
     shouldRun = true;
 
     // Initialize other scheduling parameters from the configuration
-    checkpointPeriod = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, 
-                                    DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT);
-    checkpointTxnCount = conf.getLong(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 
-                                  DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
-    SecondaryNameNode.warnForDeprecatedConfigs(conf);
+    checkpointConf = new CheckpointConf(conf);
 
     // Pull out exact http address for posting url to avoid ip aliasing issues
     String fullInfoAddr = conf.get(DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, 
                                    DFS_NAMENODE_BACKUP_HTTP_ADDRESS_DEFAULT);
     infoBindAddress = fullInfoAddr.substring(0, fullInfoAddr.indexOf(":"));
 
-    LOG.info("Checkpoint Period : " + checkpointPeriod + " secs " +
-             "(" + checkpointPeriod/60 + " min)");
-    LOG.info("Transactions count is  : " + checkpointTxnCount + ", to trigger checkpoint");
+    LOG.info("Checkpoint Period : " +
+             checkpointConf.getPeriod() + " secs " +
+             "(" + checkpointConf.getPeriod()/60 + " min)");
+    LOG.info("Transactions count is  : " +
+             checkpointConf.getTxnCount() +
+             ", to trigger checkpoint");
   }
 
   /**
@@ -125,8 +121,8 @@ class Checkpointer extends Daemon {
   public void run() {
     // Check the size of the edit log once every 5 minutes.
     long periodMSec = 5 * 60;   // 5 minutes
-    if(checkpointPeriod < periodMSec) {
-      periodMSec = checkpointPeriod;
+    if(checkpointConf.getPeriod() < periodMSec) {
+      periodMSec = checkpointConf.getPeriod();
     }
     periodMSec *= 1000;
 
@@ -142,7 +138,7 @@ class Checkpointer extends Daemon {
           shouldCheckpoint = true;
         } else {
           long txns = countUncheckpointedTxns();
-          if(txns >= checkpointTxnCount)
+          if(txns >= checkpointConf.getTxnCount())
             shouldCheckpoint = true;
         }
         if(shouldCheckpoint) {
@@ -165,7 +161,7 @@ class Checkpointer extends Daemon {
   }
 
   private long countUncheckpointedTxns() throws IOException {
-    long curTxId = getNamenode().getTransactionID();
+    long curTxId = getRemoteNamenodeProxy().getTransactionID();
     long uncheckpointedTxns = curTxId -
       getFSImage().getStorage().getMostRecentCheckpointTxId();
     assert uncheckpointedTxns >= 0;
@@ -183,7 +179,7 @@ class Checkpointer extends Daemon {
     bnImage.freezeNamespaceAtNextRoll();
     
     NamenodeCommand cmd = 
-      getNamenode().startCheckpoint(backupNode.getRegistration());
+      getRemoteNamenodeProxy().startCheckpoint(backupNode.getRegistration());
     CheckpointCommand cpCmd = null;
     switch(cmd.getAction()) {
       case NamenodeProtocol.ACT_SHUTDOWN:
@@ -207,7 +203,7 @@ class Checkpointer extends Daemon {
     long lastApplied = bnImage.getLastAppliedTxId();
     LOG.debug("Doing checkpoint. Last applied: " + lastApplied);
     RemoteEditLogManifest manifest =
-      getNamenode().getEditLogManifest(bnImage.getLastAppliedTxId() + 1);
+      getRemoteNamenodeProxy().getEditLogManifest(bnImage.getLastAppliedTxId() + 1);
 
     if (!manifest.getLogs().isEmpty()) {
       RemoteEditLog firstRemoteLog = manifest.getLogs().get(0);
@@ -243,11 +239,16 @@ class Checkpointer extends Daemon {
     
     long txid = bnImage.getLastAppliedTxId();
     
-    backupNode.namesystem.dir.setReady();
-    backupNode.namesystem.setBlockTotal();
-    
-    bnImage.saveFSImageInAllDirs(backupNode.getNamesystem(), txid);
-    bnStorage.writeAll();
+    backupNode.namesystem.writeLock();
+    try {
+      backupNode.namesystem.dir.setReady();
+      backupNode.namesystem.setBlockTotal();
+      
+      bnImage.saveFSImageInAllDirs(backupNode.getNamesystem(), txid);
+      bnStorage.writeAll();
+    } finally {
+      backupNode.namesystem.writeUnlock();
+    }
 
     if(cpCmd.needToReturnImage()) {
       TransferFsImage.uploadImageFromStorage(
@@ -255,7 +256,7 @@ class Checkpointer extends Daemon {
           bnStorage, txid);
     }
 
-    getNamenode().endCheckpoint(backupNode.getRegistration(), sig);
+    getRemoteNamenodeProxy().endCheckpoint(backupNode.getRegistration(), sig);
 
     if (backupNode.getRole() == NamenodeRole.BACKUP) {
       bnImage.convergeJournalSpool();
@@ -286,7 +287,7 @@ class Checkpointer extends Daemon {
           log.getStartTxId(), log.getEndTxId());
       if (log.getStartTxId() > dstImage.getLastAppliedTxId()) {
         editsStreams.add(new EditLogFileInputStream(f, log.getStartTxId(), 
-                                                    log.getEndTxId()));
+                                                    log.getEndTxId(), true));
        }
     }
     LOG.info("Checkpointer about to load edits from " +

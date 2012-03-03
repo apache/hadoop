@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,11 +38,13 @@ public class TestMiniDFSCluster {
   private static final String CLUSTER_1 = "cluster1";
   private static final String CLUSTER_2 = "cluster2";
   private static final String CLUSTER_3 = "cluster3";
+  private static final String CLUSTER_4 = "cluster4";
   protected String testDataPath;
   protected File testDataDir;
   @Before
   public void setUp() {
-    testDataPath = System.getProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA);
+    testDataPath = System.getProperty(MiniDFSCluster.PROP_TEST_BUILD_DATA,
+        "build/test/data");
     testDataDir = new File(new File(testDataPath).getParentFile(),
                            "miniclusters");
 
@@ -103,5 +106,21 @@ public class TestMiniDFSCluster {
     }
   }
 
-
+  @Test(timeout=100000)
+  public void testIsClusterUpAfterShutdown() throws Throwable {
+    Configuration conf = new HdfsConfiguration();
+    File testDataCluster4 = new File(testDataPath, CLUSTER_4);
+    String c4Path = testDataCluster4.getAbsolutePath();
+    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR, c4Path);
+    MiniDFSCluster cluster4 = new MiniDFSCluster.Builder(conf).build();
+    try {
+      DistributedFileSystem dfs = (DistributedFileSystem) cluster4.getFileSystem();
+      dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_ENTER);
+      cluster4.shutdown();
+    } finally {
+      while(cluster4.isClusterUp()){
+        Thread.sleep(1000);
+      }  
+    }
+  }
 }

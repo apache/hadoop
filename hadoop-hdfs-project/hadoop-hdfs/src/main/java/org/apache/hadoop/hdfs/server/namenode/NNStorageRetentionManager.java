@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFil
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -46,6 +47,7 @@ import com.google.common.collect.Sets;
 public class NNStorageRetentionManager {
   
   private final int numCheckpointsToRetain;
+  private final long numExtraEditsToRetain;
   private static final Log LOG = LogFactory.getLog(
       NNStorageRetentionManager.class);
   private final NNStorage storage;
@@ -60,6 +62,15 @@ public class NNStorageRetentionManager {
     this.numCheckpointsToRetain = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY,
         DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_DEFAULT);
+    this.numExtraEditsToRetain = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY,
+        DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_DEFAULT);
+    Preconditions.checkArgument(numCheckpointsToRetain > 0,
+        "Must retain at least one checkpoint");
+    Preconditions.checkArgument(numExtraEditsToRetain >= 0,
+        DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY +
+        " must not be negative");
+    
     this.storage = storage;
     this.editLog = editLog;
     this.purger = purger;
@@ -79,8 +90,12 @@ public class NNStorageRetentionManager {
     purgeCheckpointsOlderThan(inspector, minImageTxId);
     // If fsimage_N is the image we want to keep, then we need to keep
     // all txns > N. We can remove anything < N+1, since fsimage_N
-    // reflects the state up to and including N.
-    editLog.purgeLogsOlderThan(minImageTxId + 1);
+    // reflects the state up to and including N. However, we also
+    // provide a "cushion" of older txns that we keep, which is
+    // handy for HA, where a remote node may not have as many
+    // new images.
+    long purgeLogsFrom = Math.max(0, minImageTxId + 1 - numExtraEditsToRetain);
+    editLog.purgeLogsOlderThan(purgeLogsFrom);
   }
   
   private void purgeCheckpointsOlderThan(

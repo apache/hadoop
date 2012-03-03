@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.security;
 
 
 
+import static org.junit.Assert.*;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -32,12 +34,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -64,6 +70,7 @@ public class TestDelegationToken {
     config.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 5000);
+    config.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     config.set("hadoop.security.auth_to_local",
         "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
     FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
@@ -71,7 +78,6 @@ public class TestDelegationToken {
     cluster.waitActive();
     dtSecretManager = NameNodeAdapter.getDtSecretManager(
         cluster.getNamesystem());
-    dtSecretManager.startThreads();
   }
 
   @After
@@ -269,5 +275,51 @@ public class TestDelegationToken {
       }
     });
   }
- 
+  
+  /**
+   * Test that the delegation token secret manager only runs when the
+   * NN is out of safe mode. This is because the secret manager
+   * has to log to the edit log, which should not be written in
+   * safe mode. Regression test for HDFS-2579.
+   */
+  @Test
+  public void testDTManagerInSafeMode() throws Exception {
+    cluster.startDataNodes(config, 1, true, StartupOption.REGULAR, null);
+    FileSystem fs = cluster.getFileSystem();
+    for (int i = 0; i < 5; i++) {
+      DFSTestUtil.createFile(fs, new Path("/test-" + i), 100, (short)1, 1L);
+    }
+    cluster.getConfiguration(0).setInt(
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY, 500); 
+    cluster.getConfiguration(0).setInt(
+        DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 30000);
+    cluster.setWaitSafeMode(false);
+    cluster.restartNameNode();
+    NameNode nn = cluster.getNameNode();
+    assertTrue(nn.isInSafeMode());
+    DelegationTokenSecretManager sm =
+      NameNodeAdapter.getDtSecretManager(nn.getNamesystem());
+    assertFalse("Secret manager should not run in safe mode", sm.isRunning());
+    
+    NameNodeAdapter.leaveSafeMode(nn, false);
+    assertTrue("Secret manager should start when safe mode is exited",
+        sm.isRunning());
+    
+    LOG.info("========= entering safemode again");
+    
+    NameNodeAdapter.enterSafeMode(nn, false);
+    assertFalse("Secret manager should stop again when safe mode " +
+        "is manually entered", sm.isRunning());
+    
+    // Set the cluster to leave safemode quickly on its own.
+    cluster.getConfiguration(0).setInt(
+        DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+    cluster.setWaitSafeMode(true);
+    cluster.restartNameNode();
+    nn = cluster.getNameNode();
+    sm = NameNodeAdapter.getDtSecretManager(nn.getNamesystem());
+
+    assertFalse(nn.isInSafeMode());
+    assertTrue(sm.isRunning());
+  }
 }

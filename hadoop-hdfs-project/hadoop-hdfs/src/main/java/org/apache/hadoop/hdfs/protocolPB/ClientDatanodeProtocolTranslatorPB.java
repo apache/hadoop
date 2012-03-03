@@ -45,6 +45,7 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
+import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
@@ -63,7 +64,8 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class ClientDatanodeProtocolTranslatorPB implements
-    ProtocolMetaInterface, ClientDatanodeProtocol, Closeable {
+    ProtocolMetaInterface, ClientDatanodeProtocol,
+    ProtocolTranslator, Closeable {
   public static final Log LOG = LogFactory
       .getLog(ClientDatanodeProtocolTranslatorPB.class);
   
@@ -197,5 +199,10 @@ public class ClientDatanodeProtocolTranslatorPB implements
     return RpcClientUtil.isMethodSupported(rpcProxy,
         ClientDatanodeProtocolPB.class, RpcKind.RPC_PROTOCOL_BUFFER,
         RPC.getProtocolVersion(ClientDatanodeProtocolPB.class), methodName);
+  }
+
+  @Override
+  public Object getUnderlyingProxyObject() {
+    return rpcProxy;
   }
 }

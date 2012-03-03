@@ -183,7 +183,7 @@ public class BlockInfo extends Block implements
   /**
    * Count the number of data-nodes the block belongs to.
    */
-  int numNodes() {
+  public int numNodes() {
     assert this.triplets != null : "BlockInfo is not initialized";
     assert triplets.length % 3 == 0 : "Malformed BlockInfo";
     for(int idx = getCapacity()-1; idx >= 0; idx--) {

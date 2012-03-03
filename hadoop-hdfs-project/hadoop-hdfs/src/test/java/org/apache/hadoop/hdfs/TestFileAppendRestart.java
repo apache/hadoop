@@ -90,7 +90,7 @@ public class TestFileAppendRestart {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       FileSystem fs = cluster.getFileSystem();
       File editLog =
-        new File(FSImageTestUtil.getNameNodeCurrentDirs(cluster).get(0),
+        new File(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0).get(0),
             NNStorage.getInProgressEditsFileName(1));
       EnumMap<FSEditLogOpCodes, Holder<Integer>> counts;
       
@@ -98,18 +98,31 @@ public class TestFileAppendRestart {
       writeAndAppend(fs, p1, BLOCK_SIZE, BLOCK_SIZE);
 
       counts = FSImageTestUtil.countEditLogOpTypes(editLog);
+      // OP_ADD to create file
+      // OP_UPDATE_BLOCKS for first block
+      // OP_CLOSE to close file
+      // OP_ADD to reopen file
+      // OP_UPDATE_BLOCKS for second block
+      // OP_CLOSE to close file
       assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_UPDATE_BLOCKS).held);
       assertEquals(2, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
 
       Path p2 = new Path("/not-block-boundaries");
       writeAndAppend(fs, p2, BLOCK_SIZE/2, BLOCK_SIZE);
       counts = FSImageTestUtil.countEditLogOpTypes(editLog);
-      // We get *3* OP_ADDS from this test rather than two. The first
-      // OP_ADD comes from re-opening the file to establish the lease,
-      // the second comes from the updatePipeline call when the block
-      // itself has its generation stamp incremented
-      assertEquals(5, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
-      assertEquals(4, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
+      // OP_ADD to create file
+      // OP_UPDATE_BLOCKS for first block
+      // OP_CLOSE to close file
+      // OP_ADD to re-establish the lease
+      // OP_UPDATE_BLOCKS from the updatePipeline call (increments genstamp of last block)
+      // OP_UPDATE_BLOCKS at the start of the second block
+      // OP_CLOSE to close file
+      // Total: 2 OP_ADDs, 3 OP_UPDATE_BLOCKS, and 2 OP_CLOSEs in addition
+      //        to the ones above
+      assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_ADD).held);
+      assertEquals(2+3, (int)counts.get(FSEditLogOpCodes.OP_UPDATE_BLOCKS).held);
+      assertEquals(2+2, (int)counts.get(FSEditLogOpCodes.OP_CLOSE).held);
       
       cluster.restartNameNode();
       

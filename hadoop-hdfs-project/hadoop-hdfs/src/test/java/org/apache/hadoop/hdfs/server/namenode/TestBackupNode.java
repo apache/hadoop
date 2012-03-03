@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
@@ -123,6 +124,7 @@ public class TestBackupNode {
   @Test
   public void testBackupNodeTailsEdits() throws Exception {
     Configuration conf = new HdfsConfiguration();
+    HAUtil.setAllowStandbyReads(conf, true);
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     BackupNode backup = null;
@@ -244,11 +246,12 @@ public class TestBackupNode {
   }  
 
   void testCheckpoint(StartupOption op) throws Exception {
-    Path file1 = new Path("checkpoint.dat");
-    Path file2 = new Path("checkpoint2.dat");
-    Path file3 = new Path("backup.dat");
+    Path file1 = new Path("/checkpoint.dat");
+    Path file2 = new Path("/checkpoint2.dat");
+    Path file3 = new Path("/backup.dat");
 
     Configuration conf = new HdfsConfiguration();
+    HAUtil.setAllowStandbyReads(conf, true);
     short replication = (short)conf.getInt("dfs.replication", 3);
     int numDatanodes = Math.max(3, replication);
     conf.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
@@ -345,11 +348,13 @@ public class TestBackupNode {
       TestCheckpoint.checkFile(fileSys, file3, replication);
       // should also be on BN right away
       assertTrue("file3 does not exist on BackupNode",
-          op != StartupOption.BACKUP || bnFS.exists(file3));
+          op != StartupOption.BACKUP ||
+          backup.getNamesystem().getFileInfo(
+              file3.toUri().getPath(), false) != null);
 
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);
-      assertTrue(e.getLocalizedMessage(), false);
+      throw new AssertionError(e);
     } finally {
       if(backup != null) backup.stop();
       if(fileSys != null) fileSys.close();

@@ -24,8 +24,11 @@ import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Daemon;
+import org.junit.Assert;
 
 import com.google.common.base.Preconditions;
 
@@ -124,6 +127,58 @@ public class BlockManagerTestUtil {
     return blockManager.computeDatanodeWork();
   }
   
+  public static int computeInvalidationWork(BlockManager bm) {
+    return bm.computeInvalidateWork(Integer.MAX_VALUE);
+  }
+  
+  /**
+   * Compute all the replication and invalidation work for the
+   * given BlockManager.
+   * 
+   * This differs from the above functions in that it computes
+   * replication work for all DNs rather than a particular subset,
+   * regardless of invalidation/replication limit configurations.
+   * 
+   * NB: you may want to set
+   * {@link DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY} to
+   * a high value to ensure that all work is calculated.
+   */
+  public static int computeAllPendingWork(BlockManager bm)
+    throws IOException {
+    int work = computeInvalidationWork(bm);
+    work += bm.computeReplicationWork(Integer.MAX_VALUE);
+    return work;
+  }
+
+  /**
+   * Ensure that the given NameNode marks the specified DataNode as
+   * entirely dead/expired.
+   * @param nn the NameNode to manipulate
+   * @param dnName the name of the DataNode
+   */
+  public static void noticeDeadDatanode(NameNode nn, String dnName) {
+    FSNamesystem namesystem = nn.getNamesystem();
+    namesystem.writeLock();
+    try {
+      DatanodeManager dnm = namesystem.getBlockManager().getDatanodeManager();
+      HeartbeatManager hbm = dnm.getHeartbeatManager();
+      DatanodeDescriptor[] dnds = hbm.getDatanodes();
+      DatanodeDescriptor theDND = null;
+      for (DatanodeDescriptor dnd : dnds) {
+        if (dnd.getName().equals(dnName)) {
+          theDND = dnd;
+        }
+      }
+      Assert.assertNotNull("Could not find DN with name: " + dnName, theDND);
+      
+      synchronized (hbm) {
+        theDND.setLastUpdate(0);
+        hbm.heartbeatCheck();
+      }
+    } finally {
+      namesystem.writeUnlock();
+    }
+  }
   
   /**
    * Change whether the block placement policy will prefer the writer's

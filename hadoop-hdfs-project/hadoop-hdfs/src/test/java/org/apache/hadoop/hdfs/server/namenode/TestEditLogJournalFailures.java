@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 
 public class TestEditLogJournalFailures {
@@ -144,20 +145,34 @@ public class TestEditLogJournalFailures {
         DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
     shutDownMiniCluster();
     Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY, editsDirs[1]);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY, editsDirs[0]);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY, 0);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY, 0);
     setUpMiniCluster(conf, true);
     
     assertTrue(doAnEdit());
     // Invalidated the one required edits journal.
-    invalidateEditsDirAtIndex(1, false, false);
+    invalidateEditsDirAtIndex(0, false, false);
+    JournalAndStream nonRequiredJas = getJournalAndStream(1);
+    EditLogFileOutputStream nonRequiredSpy =
+      spyOnStream(nonRequiredJas);
+    
     // Make sure runtime.exit(...) hasn't been called at all yet.
     assertExitInvocations(0);
+    
+    // ..and that the other stream is active.
+    assertTrue(nonRequiredJas.isActive());
     
     // This will actually return true in the tests, since the NN will not in
     // fact call Runtime.exit();
     doAnEdit();
+    
+    // Since the required directory failed setReadyToFlush, and that
+    // directory was listed prior to the non-required directory,
+    // we should not call setReadyToFlush on the non-required
+    // directory. Regression test for HDFS-2874.
+    Mockito.verify(nonRequiredSpy, Mockito.never()).setReadyToFlush();
+    assertFalse(nonRequiredJas.isActive());
     
     // A single failure of a required journal should result in a call to
     // runtime.exit(...).
@@ -217,15 +232,10 @@ public class TestEditLogJournalFailures {
    * @param index the index of the journal to take offline.
    * @return the original <code>EditLogOutputStream</code> of the journal.
    */
-  private EditLogOutputStream invalidateEditsDirAtIndex(int index,
+  private void invalidateEditsDirAtIndex(int index,
       boolean failOnFlush, boolean failOnWrite) throws IOException {
-    FSImage fsimage = cluster.getNamesystem().getFSImage();
-    FSEditLog editLog = fsimage.getEditLog();
-
-    JournalAndStream jas = editLog.getJournals().get(index);
-    EditLogFileOutputStream elos =
-      (EditLogFileOutputStream) jas.getCurrentStream();
-    EditLogFileOutputStream spyElos = spy(elos);
+    JournalAndStream jas = getJournalAndStream(index);
+    EditLogFileOutputStream spyElos = spyOnStream(jas);
     if (failOnWrite) {
       doThrow(new IOException("fail on write()")).when(spyElos).write(
           (FSEditLogOp) any());
@@ -237,25 +247,24 @@ public class TestEditLogJournalFailures {
         .setReadyToFlush();
     }
     doNothing().when(spyElos).abort();
-     
+  }
+
+  private EditLogFileOutputStream spyOnStream(JournalAndStream jas) {
+    EditLogFileOutputStream elos =
+      (EditLogFileOutputStream) jas.getCurrentStream();
+    EditLogFileOutputStream spyElos = spy(elos);
     jas.setCurrentStreamForTests(spyElos);
-     
-    return elos;
+    return spyElos;
   }
 
   /**
-   * Restore the journal at index <code>index</code> with the passed
-   * {@link EditLogOutputStream}.
-   * 
-   * @param index index of the journal to restore.
-   * @param elos the {@link EditLogOutputStream} to put at that index.
+   * Pull out one of the JournalAndStream objects from the edit log.
    */
-  private void restoreEditsDirAtIndex(int index, EditLogOutputStream elos) {
+  private JournalAndStream getJournalAndStream(int index) {
     FSImage fsimage = cluster.getNamesystem().getFSImage();
     FSEditLog editLog = fsimage.getEditLog();
 
-    JournalAndStream jas = editLog.getJournals().get(index);
-    jas.setCurrentStreamForTests(elos);
+    return editLog.getJournals().get(index);
   }
 
   /**

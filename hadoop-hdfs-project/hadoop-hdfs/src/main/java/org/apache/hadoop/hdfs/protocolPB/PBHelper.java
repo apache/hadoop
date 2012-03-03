@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeStor
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeStorageProto.StorageState;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.FinalizeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.KeyUpdateCommandProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
@@ -119,7 +120,9 @@ import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -819,6 +822,23 @@ public class PBHelper {
     ReceivedDeletedBlockInfoProto.Builder builder = 
         ReceivedDeletedBlockInfoProto.newBuilder();
     
+    ReceivedDeletedBlockInfoProto.BlockStatus status;
+    switch (receivedDeletedBlockInfo.getStatus()) {
+    case RECEIVING_BLOCK:
+      status = ReceivedDeletedBlockInfoProto.BlockStatus.RECEIVING;
+      break;
+    case RECEIVED_BLOCK:
+      status = ReceivedDeletedBlockInfoProto.BlockStatus.RECEIVED;
+      break;
+    case DELETED_BLOCK:
+      status = ReceivedDeletedBlockInfoProto.BlockStatus.DELETED;
+      break;
+    default:
+      throw new IllegalArgumentException("Bad status: " +
+          receivedDeletedBlockInfo.getStatus());
+    }
+    builder.setStatus(status);
+    
     if (receivedDeletedBlockInfo.getDelHints() != null) {
       builder.setDeleteHint(receivedDeletedBlockInfo.getDelHints());
     }
@@ -850,7 +870,21 @@ public class PBHelper {
 
   public static ReceivedDeletedBlockInfo convert(
       ReceivedDeletedBlockInfoProto proto) {
-    return new ReceivedDeletedBlockInfo(PBHelper.convert(proto.getBlock()),
+    ReceivedDeletedBlockInfo.BlockStatus status = null;
+    switch (proto.getStatus()) {
+    case RECEIVING:
+      status = BlockStatus.RECEIVING_BLOCK;
+      break;
+    case RECEIVED:
+      status = BlockStatus.RECEIVED_BLOCK;
+      break;
+    case DELETED:
+      status = BlockStatus.DELETED_BLOCK;
+      break;
+    }
+    return new ReceivedDeletedBlockInfo(
+        PBHelper.convert(proto.getBlock()),
+        status,
         proto.hasDeleteHint() ? proto.getDeleteHint() : null);
   }
   
@@ -1243,6 +1277,37 @@ public class PBHelper {
         setSpaceConsumed(cs.getSpaceConsumed()).
         setSpaceQuota(cs.getSpaceQuota()).
         build();
+  }
+
+  public static NNHAStatusHeartbeat convert(NNHAStatusHeartbeatProto s) {
+    if (s == null) return null;
+    switch (s.getState()) {
+    case ACTIVE:
+      return new NNHAStatusHeartbeat(NNHAStatusHeartbeat.State.ACTIVE, s.getTxid());
+    case STANDBY:
+      return new NNHAStatusHeartbeat(NNHAStatusHeartbeat.State.STANDBY, s.getTxid());
+    default:
+      throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" + s.getState());
+    }
+  }
+
+  public static NNHAStatusHeartbeatProto convert(NNHAStatusHeartbeat hb) {
+    if (hb == null) return null;
+    NNHAStatusHeartbeatProto.Builder builder =
+      NNHAStatusHeartbeatProto.newBuilder();
+    switch (hb.getState()) {
+      case ACTIVE:
+        builder.setState(NNHAStatusHeartbeatProto.State.ACTIVE);
+        break;
+      case STANDBY:
+        builder.setState(NNHAStatusHeartbeatProto.State.STANDBY);
+        break;
+      default:
+        throw new IllegalArgumentException("Unexpected NNHAStatusHeartbeat.State:" +
+            hb.getState());
+    }
+    builder.setTxid(hb.getTxId());
+    return builder.build();
   }
 
   public static DatanodeStorageProto convert(DatanodeStorage s) {

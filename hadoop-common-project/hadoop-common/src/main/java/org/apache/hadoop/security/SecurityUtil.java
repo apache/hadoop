@@ -23,6 +23,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ServiceLoader;
@@ -449,6 +450,27 @@ public class SecurityUtil {
   }
   
   /**
+   * Perform the given action as the daemon's login user. If the login
+   * user cannot be determined, this will log a FATAL error and exit
+   * the whole JVM.
+   */
+  public static <T> T doAsLoginUserOrFatal(PrivilegedAction<T> action) { 
+    if (UserGroupInformation.isSecurityEnabled()) {
+      UserGroupInformation ugi = null;
+      try { 
+        ugi = UserGroupInformation.getLoginUser();
+      } catch (IOException e) {
+        LOG.fatal("Exception while getting login user", e);
+        e.printStackTrace();
+        Runtime.getRuntime().exit(-1);
+      }
+      return ugi.doAs(action);
+    } else {
+      return action.run();
+    }
+  }
+
+  /**
    * Resolves a host subject to the security requirements determined by
    * hadoop.security.token.service.use_ip.
    * 
@@ -597,5 +619,5 @@ public class SecurityUtil {
     void setSearchDomains(String ... domains) {
       searchDomains = Arrays.asList(domains);
     }
-  }  
+  }
 }

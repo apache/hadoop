@@ -22,6 +22,7 @@ import junit.framework.Assert;
 import java.io.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -57,18 +58,19 @@ public class TestCheckPointForSecurityTokens {
   }
   
   /**
-   * Tests save namepsace.
+   * Tests save namespace.
    */
   @Test
   public void testSaveNamespace() throws IOException {
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
+      conf.setBoolean(
+          DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
       cluster.waitActive();
       fs = (DistributedFileSystem)(cluster.getFileSystem());
       FSNamesystem namesystem = cluster.getNamesystem();
-      namesystem.getDelegationTokenSecretManager().startThreads();
       String renewer = UserGroupInformation.getLoginUser().getUserName();
       Token<DelegationTokenIdentifier> token1 = namesystem
           .getDelegationToken(new Text(renewer)); 
@@ -122,7 +124,6 @@ public class TestCheckPointForSecurityTokens {
       }
 
       namesystem = cluster.getNamesystem();
-      namesystem.getDelegationTokenSecretManager().startThreads();
       Token<DelegationTokenIdentifier> token3 = namesystem
           .getDelegationToken(new Text(renewer));
       Token<DelegationTokenIdentifier> token4 = namesystem
@@ -136,7 +137,6 @@ public class TestCheckPointForSecurityTokens {
       cluster.waitActive();
 
       namesystem = cluster.getNamesystem();
-      namesystem.getDelegationTokenSecretManager().startThreads();
       Token<DelegationTokenIdentifier> token5 = namesystem
           .getDelegationToken(new Text(renewer));
 
@@ -159,7 +159,6 @@ public class TestCheckPointForSecurityTokens {
       cluster.waitActive();
 
       namesystem = cluster.getNamesystem();
-      namesystem.getDelegationTokenSecretManager().startThreads();
       try {
         renewToken(token1);
         cancelToken(token1);

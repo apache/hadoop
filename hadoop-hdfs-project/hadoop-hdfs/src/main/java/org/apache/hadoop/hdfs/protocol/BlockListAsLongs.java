@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
  * - followed by the invalid replica represented with three -1s;
  * - followed by the under-construction replica list where each replica is
  *   represented by 4 longs: three for the block id, length, generation 
- *   stamp, and the forth for the replica state.
+ *   stamp, and the fourth for the replica state.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -303,5 +303,17 @@ public class BlockListAsLongs implements Iterable<Block> {
     blockList[idx] = -1;
     blockList[idx+1] = -1;
     blockList[idx+2] = -1;
+  }
+
+  public long getMaxGsInBlockList() {
+    long maxGs = -1;
+    Iterator<Block> iter = getBlockReportIterator();
+    while (iter.hasNext()) {
+      Block b = iter.next();
+      if (b.getGenerationStamp() > maxGs) {
+        maxGs = b.getGenerationStamp();
+      }
+    }
+    return maxGs;
   }
 }

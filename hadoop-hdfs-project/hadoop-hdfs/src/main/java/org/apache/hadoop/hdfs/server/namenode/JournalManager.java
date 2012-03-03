@@ -48,20 +48,23 @@ public interface JournalManager extends Closeable {
    /**
    * Get the input stream starting with fromTxnId from this journal manager
    * @param fromTxnId the first transaction id we want to read
+   * @param inProgressOk whether or not in-progress streams should be returned
    * @return the stream starting with transaction fromTxnId
    * @throws IOException if a stream cannot be found.
    */
-  EditLogInputStream getInputStream(long fromTxnId) throws IOException;
+  EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
+    throws IOException;
 
   /**
    * Get the number of transaction contiguously available from fromTxnId.
    *
    * @param fromTxnId Transaction id to count from
+   * @param inProgressOk whether or not in-progress streams should be counted
    * @return The number of transactions available from fromTxnId
    * @throws IOException if the journal cannot be read.
    * @throws CorruptionException if there is a gap in the journal at fromTxnId.
    */
-  long getNumberOfTransactions(long fromTxnId) 
+  long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
       throws IOException, CorruptionException;
 
   /**

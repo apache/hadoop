@@ -19,7 +19,6 @@
 package org.apache.hadoop.io.retry;
 
 import static org.apache.hadoop.io.retry.RetryPolicies.RETRY_FOREVER;
-import static org.apache.hadoop.io.retry.RetryPolicies.TRY_ONCE_DONT_FAIL;
 import static org.apache.hadoop.io.retry.RetryPolicies.TRY_ONCE_THEN_FAIL;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryByException;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryByRemoteException;
@@ -53,19 +52,6 @@ public class TestRetryProxy extends TestCase {
     unreliable.alwaysSucceeds();
     try {
       unreliable.failsOnceThenSucceeds();
-      fail("Should fail");
-    } catch (UnreliableException e) {
-      // expected
-    }
-  }
-  
-  public void testTryOnceDontFail() throws UnreliableException {
-    UnreliableInterface unreliable = (UnreliableInterface)
-      RetryProxy.create(UnreliableInterface.class, unreliableImpl, TRY_ONCE_DONT_FAIL);
-    unreliable.alwaysSucceeds();
-    unreliable.failsOnceThenSucceeds();
-    try {
-      unreliable.failsOnceThenSucceedsWithReturnValue();
       fail("Should fail");
     } catch (UnreliableException e) {
       // expected

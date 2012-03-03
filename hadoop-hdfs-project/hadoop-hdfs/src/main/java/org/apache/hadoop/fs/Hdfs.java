@@ -80,8 +80,7 @@ public class Hdfs extends AbstractFileSystem {
       throw new IOException("Incomplete HDFS URI, no host: " + theUri);
     }
 
-    InetSocketAddress namenode = NameNode.getAddress(theUri.getAuthority());
-    this.dfs = new DFSClient(namenode, conf, getStatistics());
+    this.dfs = new DFSClient(theUri, conf, getStatistics());
   }
 
   @Override

@@ -91,7 +91,10 @@ public class LayoutVersion {
     STORED_TXIDS(-37, "Transaction IDs are stored in edits log and image files"),
     TXID_BASED_LAYOUT(-38, "File names in NN Storage are based on transaction IDs"), 
     EDITLOG_OP_OPTIMIZATION(-39,
-        "Use LongWritable and ShortWritable directly instead of ArrayWritable of UTF8");
+        "Use LongWritable and ShortWritable directly instead of ArrayWritable of UTF8"),
+    OPTIMIZE_PERSIST_BLOCKS(-40,
+        "Serialize block lists with delta-encoded variable length ints, " +
+        "add OP_UPDATE_BLOCKS");
     
     final int lv;
     final int ancestorLV;

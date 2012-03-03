@@ -61,6 +61,7 @@ public class TestNNStorageRetentionFunctional {
       throws IOException {
     MiniDFSCluster cluster = null;    
     Configuration conf = new HdfsConfiguration();
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
 
     File sd0 = new File(TEST_ROOT_DIR, "nn0");
     File sd1 = new File(TEST_ROOT_DIR, "nn1");

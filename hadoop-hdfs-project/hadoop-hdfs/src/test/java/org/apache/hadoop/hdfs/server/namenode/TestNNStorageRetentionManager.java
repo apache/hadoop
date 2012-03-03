@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
@@ -33,6 +34,7 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -46,6 +48,17 @@ import com.google.common.collect.Sets;
 
 
 public class TestNNStorageRetentionManager {
+  Configuration conf = new Configuration();
+
+  /**
+   * For the purpose of this test, purge as many edits as we can 
+   * with no extra "safety cushion"
+   */
+  @Before
+  public void setNoExtraEditRetention() {
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
+  }
+  
   /**
    * Test the "easy case" where we have more images in the
    * directory than we need to keep. Should purge the
@@ -163,9 +176,27 @@ public class TestNNStorageRetentionManager {
     runTest(tc);    
   }
   
-  private void runTest(TestCaseDescription tc) throws IOException {
-    Configuration conf = new Configuration();
+  @Test
+  public void testRetainExtraLogs() throws IOException {
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY,
+        50);
+    TestCaseDescription tc = new TestCaseDescription();
+    tc.addRoot("/foo1", NameNodeDirType.IMAGE);
+    tc.addRoot("/foo2", NameNodeDirType.EDITS);
+    tc.addImage("/foo1/current/" + getImageFileName(100), true);
+    tc.addImage("/foo1/current/" + getImageFileName(200), true);
+    tc.addImage("/foo1/current/" + getImageFileName(300), false);
+    tc.addImage("/foo1/current/" + getImageFileName(400), false);
 
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(101, 200), true);
+    // Since we need 50 extra edits, *do* retain the 201-300 segment 
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(201, 300), false);
+    tc.addLog("/foo2/current/" + getFinalizedEditsFileName(301, 400), false);
+    tc.addLog("/foo2/current/" + getInProgressEditsFileName(401), false);
+    runTest(tc);
+  }
+  
+  private void runTest(TestCaseDescription tc) throws IOException {
     StoragePurger mockPurger =
       Mockito.mock(NNStorageRetentionManager.StoragePurger.class);
     ArgumentCaptor<FSImageFile> imagesPurgedCaptor =
@@ -261,8 +292,9 @@ public class TestNNStorageRetentionManager {
       for (FakeRoot root : dirRoots.values()) {
         if (!root.type.isOfType(NameNodeDirType.EDITS)) continue;
         
+        // passing null NNStorage for unit test because it does not use it
         FileJournalManager fjm = new FileJournalManager(
-            root.mockStorageDir());
+            root.mockStorageDir(), null);
         fjm.purger = purger;
         jms.add(fjm);
       }

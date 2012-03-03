@@ -80,7 +80,7 @@ import org.apache.log4j.LogManager;
  * <li>-logLevel L specifies the logging level when the benchmark runs.
  * The default logging level is {@link Level#ERROR}.</li>
  * <li>-UGCacheRefreshCount G will cause the benchmark to call
- * {@link NameNode#refreshUserToGroupsMappings()} after
+ * {@link NameNodeRpcServer#refreshUserToGroupsMappings} after
  * every G operations, which purges the name-node's user group cache.
  * By default the refresh is never called.</li>
  * <li>-keepResults do not clean up the name-space after execution.</li>
@@ -813,7 +813,7 @@ public class NNThroughputBenchmark {
       StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0, 0, 0);
+          rep, 0, 0, 0).getCommands();
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -859,7 +859,7 @@ public class NNThroughputBenchmark {
       StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
           false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0, 0, 0);
+          rep, 0, 0, 0).getCommands();
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {
@@ -889,8 +889,10 @@ public class NNThroughputBenchmark {
           receivedDNReg.setStorageInfo(
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
-          ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
-                  blocks[i], DataNode.EMPTY_DEL_HINT) };
+          ReceivedDeletedBlockInfo[] rdBlocks = {
+            new ReceivedDeletedBlockInfo(
+                  blocks[i], ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
+                  null) };
           StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
               receivedDNReg.getStorageID(), rdBlocks) };
           nameNodeProto.blockReceivedAndDeleted(receivedDNReg, nameNode
@@ -1007,7 +1009,8 @@ public class NNThroughputBenchmark {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
           ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
-              loc.getBlock().getLocalBlock(), "") };
+              loc.getBlock().getLocalBlock(),
+              ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
           StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
               datanodes[dnIdx].dnRegistration.getStorageID(), rdBlocks) };
           nameNodeProto.blockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc

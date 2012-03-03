@@ -50,6 +50,29 @@ public class DataNodeAdapter {
       boolean heartbeatsDisabledForTests) {
     dn.setHeartbeatsDisabledForTests(heartbeatsDisabledForTests);
   }
+
+  public static void triggerDeletionReport(DataNode dn) throws IOException {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      bpos.triggerDeletionReportForTests();
+    }
+  }
+
+  public static void triggerHeartbeat(DataNode dn) throws IOException {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      bpos.triggerHeartbeatForTests();
+    }
+  }
+  
+  public static void triggerBlockReport(DataNode dn) throws IOException {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      bpos.triggerBlockReportForTests();
+    }
+  }
+
+  public static long getPendingAsyncDeletions(DataNode dn) {
+    FSDataset fsd = (FSDataset)dn.getFSDataset();
+    return fsd.asyncDiskService.countPendingDeletions();
+  }
   
   /**
    * Insert a Mockito spy object between the given DataNode and
@@ -69,10 +92,20 @@ public class DataNodeAdapter {
     }
     Preconditions.checkArgument(bpos != null,
         "No such bpid: %s", bpid);
+    
+    BPServiceActor bpsa = null;
+    for (BPServiceActor thisBpsa : bpos.getBPServiceActors()) {
+      if (thisBpsa.getNNSocketAddress().equals(nn.getServiceRpcAddress())) {
+        bpsa = thisBpsa;
+        break;
+      }
+    }
+    Preconditions.checkArgument(bpsa != null,
+      "No service actor to NN at %s", nn.getServiceRpcAddress());
 
-    DatanodeProtocolClientSideTranslatorPB origNN = bpos.getBpNamenode();
+    DatanodeProtocolClientSideTranslatorPB origNN = bpsa.getNameNodeProxy();
     DatanodeProtocolClientSideTranslatorPB spy = Mockito.spy(origNN);
-    bpos.setBpNamenode(spy);
+    bpsa.setNameNode(spy);
     return spy;
   }
 }

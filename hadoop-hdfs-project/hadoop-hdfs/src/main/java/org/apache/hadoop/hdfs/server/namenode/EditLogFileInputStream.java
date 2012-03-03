@@ -41,6 +41,7 @@ class EditLogFileInputStream extends EditLogInputStream {
   private final int logVersion;
   private final FSEditLogOp.Reader reader;
   private final FSEditLogLoader.PositionTrackingInputStream tracker;
+  private final boolean isInProgress;
   
   /**
    * Open an EditLogInputStream for the given file.
@@ -53,7 +54,7 @@ class EditLogFileInputStream extends EditLogInputStream {
    */
   EditLogFileInputStream(File name)
       throws LogHeaderCorruptException, IOException {
-    this(name, HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID);
+    this(name, HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID, false);
   }
 
   /**
@@ -66,7 +67,8 @@ class EditLogFileInputStream extends EditLogInputStream {
    * @throws IOException if an actual IO error occurs while reading the
    *         header
    */
-  EditLogFileInputStream(File name, long firstTxId, long lastTxId)
+  EditLogFileInputStream(File name, long firstTxId, long lastTxId,
+      boolean isInProgress)
       throws LogHeaderCorruptException, IOException {
     file = name;
     fStream = new FileInputStream(name);
@@ -84,6 +86,25 @@ class EditLogFileInputStream extends EditLogInputStream {
     reader = new FSEditLogOp.Reader(in, logVersion);
     this.firstTxId = firstTxId;
     this.lastTxId = lastTxId;
+    this.isInProgress = isInProgress;
+  }
+
+  /**
+   * Skip over a number of transactions. Subsequent calls to
+   * {@link EditLogFileInputStream#readOp()} will begin after these skipped
+   * transactions. If more transactions are requested to be skipped than remain
+   * in the edit log, all edit log ops in the log will be skipped and subsequent
+   * calls to {@link EditLogInputStream#readOp} will return null.
+   * 
+   * @param transactionsToSkip number of transactions to skip over.
+   * @throws IOException if there's an error while reading an operation
+   */
+  public void skipTransactions(long transactionsToSkip) throws IOException {
+    assert firstTxId != HdfsConstants.INVALID_TXID &&
+        lastTxId != HdfsConstants.INVALID_TXID;
+    for (long i = 0; i < transactionsToSkip; i++) {
+      reader.readOp();
+    }
   }
 
   @Override
@@ -133,6 +154,11 @@ class EditLogFileInputStream extends EditLogInputStream {
   }
   
   @Override
+  public boolean isInProgress() {
+    return isInProgress;
+  }
+  
+  @Override
   public String toString() {
     return getName();
   }
@@ -142,11 +168,11 @@ class EditLogFileInputStream extends EditLogInputStream {
     try {
       in = new EditLogFileInputStream(file);
     } catch (LogHeaderCorruptException corrupt) {
-      // If it's missing its header, this is equivalent to no transactions
+      // If the header is malformed or the wrong value, this indicates a corruption
       FSImage.LOG.warn("Log at " + file + " has no valid header",
           corrupt);
-      return new FSEditLogLoader.EditLogValidation(0, HdfsConstants.INVALID_TXID, 
-                                                   HdfsConstants.INVALID_TXID);
+      return new FSEditLogLoader.EditLogValidation(0,
+          HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID, true);
     }
     
     try {
@@ -172,14 +198,13 @@ class EditLogFileInputStream extends EditLogInputStream {
       throw new LogHeaderCorruptException(
           "Reached EOF when reading log header");
     }
-    if (logVersion < HdfsConstants.LAYOUT_VERSION) { // future version
+    if (logVersion < HdfsConstants.LAYOUT_VERSION || // future version
+        logVersion > Storage.LAST_UPGRADABLE_LAYOUT_VERSION) { // unsupported
       throw new LogHeaderCorruptException(
           "Unexpected version of the file system log file: "
           + logVersion + ". Current version = "
           + HdfsConstants.LAYOUT_VERSION + ".");
     }
-    assert logVersion <= Storage.LAST_UPGRADABLE_LAYOUT_VERSION :
-      "Unsupported version " + logVersion;
     return logVersion;
   }
   

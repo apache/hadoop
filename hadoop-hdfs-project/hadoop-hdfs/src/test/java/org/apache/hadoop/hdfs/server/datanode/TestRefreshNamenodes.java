@@ -22,11 +22,17 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology.NNConf;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology.NSConf;
 import org.junit.Test;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
 
 /**
  * Tests datanode refresh namenode list functionality.
@@ -43,9 +49,13 @@ public class TestRefreshNamenodes {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId1");
-      cluster = new MiniDFSCluster.Builder(conf).federation(true).
-          numNameNodes(1).nameNodePort(nnPort1).build();
+      MiniDFSNNTopology topology = new MiniDFSNNTopology()
+        .addNameservice(new NSConf("ns1").addNN(
+            new NNConf(null).setIpcPort(nnPort1)))
+        .setFederation(true);
+      cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(topology)
+        .build();
 
       DataNode dn = cluster.getDataNodes().get(0);
       assertEquals(1, dn.getAllBpOs().length);
@@ -58,21 +68,24 @@ public class TestRefreshNamenodes {
 
       cluster.addNameNode(conf, nnPort4);
 
-      BPOfferService[] bpoList = dn.getAllBpOs();
       // Ensure a BPOfferService in the datanodes corresponds to
       // a namenode in the cluster
+      Set<InetSocketAddress> nnAddrsFromCluster = Sets.newHashSet();
       for (int i = 0; i < 4; i++) {
-        InetSocketAddress addr = cluster.getNameNode(i).getNameNodeAddress();
-        boolean found = false;
-        for (int j = 0; j < bpoList.length; j++) {
-          if (bpoList[j] != null && addr.equals(bpoList[j].nnAddr)) {
-            found = true;
-            bpoList[j] = null; // Erase the address that matched
-            break;
-          }
-        }
-        assertTrue("NameNode address " + addr + " is not found.", found);
+        assertTrue(nnAddrsFromCluster.add(
+            cluster.getNameNode(i).getNameNodeAddress()));
       }
+      
+      Set<InetSocketAddress> nnAddrsFromDN = Sets.newHashSet();
+      for (BPOfferService bpos : dn.getAllBpOs()) {
+        for (BPServiceActor bpsa : bpos.getBPServiceActors()) {
+          assertTrue(nnAddrsFromDN.add(bpsa.getNNSocketAddress()));
+        }
+      }
+      
+      assertEquals("",
+          Joiner.on(",").join(
+            Sets.symmetricDifference(nnAddrsFromCluster, nnAddrsFromDN)));
     } finally {
       if (cluster != null) {
         cluster.shutdown();

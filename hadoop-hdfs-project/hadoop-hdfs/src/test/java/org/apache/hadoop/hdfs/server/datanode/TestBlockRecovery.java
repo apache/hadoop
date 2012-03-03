@@ -42,10 +42,13 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
+import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
+import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat.State;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
@@ -137,7 +140,9 @@ public class TestBlockRecovery {
             Mockito.anyInt(),
             Mockito.anyInt(),
             Mockito.anyInt()))
-        .thenReturn(new DatanodeCommand[0]);
+        .thenReturn(new HeartbeatResponse(
+            new DatanodeCommand[0],
+            new NNHAStatusHeartbeat(State.ACTIVE, 1)));
 
     dn = new DataNode(conf, dirs, null) {
       @Override
@@ -147,14 +152,8 @@ public class TestBlockRecovery {
         return namenode;
       }
     };
-    dn.runDatanodeDaemon();
-    while (!dn.isDatanodeFullyStarted()) {
-      try {
-        Thread.sleep(50);
-      } catch (InterruptedException e) {
-        fail("Interrupted starting DN");
-      }
-    }
+    // Trigger a heartbeat so that it acknowledges the NN as active.
+    dn.getAllBpOs()[0].triggerHeartbeatForTests();
   }
 
   /**
@@ -462,7 +461,7 @@ public class TestBlockRecovery {
         initReplicaRecovery(any(RecoveringBlock.class));
     Daemon d = spyDN.recoverBlocks(initRecoveringBlocks());
     d.join();
-    DatanodeProtocol dnP = dn.getBPNamenode(POOL_ID);
+    DatanodeProtocol dnP = dn.getActiveNamenodeForBP(POOL_ID);
     verify(dnP).commitBlockSynchronization(
         block, RECOVERY_ID, 0, true, true, DatanodeID.EMPTY_ARRAY);
   }
@@ -519,7 +518,7 @@ public class TestBlockRecovery {
     } catch (IOException e) {
       e.getMessage().startsWith("Cannot recover ");
     }
-    DatanodeProtocol namenode = dn.getBPNamenode(POOL_ID);
+    DatanodeProtocol namenode = dn.getActiveNamenodeForBP(POOL_ID);
     verify(namenode, never()).commitBlockSynchronization(
         any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
         anyBoolean(), any(DatanodeID[].class));
@@ -548,7 +547,7 @@ public class TestBlockRecovery {
       } catch (IOException e) {
         e.getMessage().startsWith("Cannot recover ");
       }
-      DatanodeProtocol namenode = dn.getBPNamenode(POOL_ID);
+      DatanodeProtocol namenode = dn.getActiveNamenodeForBP(POOL_ID);
       verify(namenode, never()).commitBlockSynchronization(
           any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
           anyBoolean(), any(DatanodeID[].class));

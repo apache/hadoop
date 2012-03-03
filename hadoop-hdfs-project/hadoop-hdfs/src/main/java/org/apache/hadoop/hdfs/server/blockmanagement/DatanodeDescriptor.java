@@ -94,6 +94,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
     boolean contains(E e) {
       return blockq.contains(e);
     }
+
+    synchronized void clear() {
+      blockq.clear();
+    }
   }
 
   private volatile BlockInfo blockList = null;
@@ -103,6 +107,24 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public boolean isAlive = false;
   public boolean needKeyUpdate = false;
 
+  /**
+   * Set to false on any NN failover, and reset to true
+   * whenever a block report is received.
+   */
+  private boolean heartbeatedSinceFailover = false;
+  
+  /**
+   * At startup or at any failover, the DNs in the cluster may
+   * have pending block deletions from a previous incarnation
+   * of the NameNode. Thus, we consider their block contents
+   * stale until we have received a block report. When a DN
+   * is considered stale, any replicas on it are transitively
+   * considered stale. If any block has at least one stale replica,
+   * then no invalidations will be processed for this block.
+   * See HDFS-1972.
+   */
+  private boolean blockContentsStale = true;
+  
   // A system administrator can tune the balancer bandwidth parameter
   // (dfs.balance.bandwidthPerSec) dynamically by calling
   // "dfsadmin -setBalanacerBandwidth <newbandwidth>", at which point the
@@ -129,6 +151,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   private int volumeFailures = 0;
+  
+  /** Set to false after processing first block report */
+  private boolean firstBlockReport = true;
+  
   /** 
    * When set to true, the node is not in include list and is not allowed
    * to communicate with the namenode
@@ -281,6 +307,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.invalidateBlocks.clear();
     this.volumeFailures = 0;
   }
+  
+  public void clearBlockQueues() {
+    synchronized (invalidateBlocks) {
+      this.invalidateBlocks.clear();
+      this.recoverBlocks.clear();
+      this.replicateBlocks.clear();
+    }
+  }
 
   public int numBlocks() {
     return numBlocks;
@@ -298,6 +332,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.lastUpdate = System.currentTimeMillis();
     this.xceiverCount = xceiverCount;
     this.volumeFailures = volFailures;
+    this.heartbeatedSinceFailover = true;
     rollBlocksScheduled(lastUpdate);
   }
 
@@ -564,5 +599,41 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.bandwidth = bandwidth;
   }
 
+  public boolean areBlockContentsStale() {
+    return blockContentsStale;
+  }
 
+  public void markStaleAfterFailover() {
+    heartbeatedSinceFailover = false;
+    blockContentsStale = true;
+  }
+
+  public void receivedBlockReport() {
+    if (heartbeatedSinceFailover) {
+      blockContentsStale = false;
+    }
+    firstBlockReport = false;
+  }
+  
+  boolean isFirstBlockReport() {
+    return firstBlockReport;
+  }
+
+  @Override
+  public String dumpDatanode() {
+    StringBuilder sb = new StringBuilder(super.dumpDatanode());
+    int repl = replicateBlocks.size();
+    if (repl > 0) {
+      sb.append(" ").append(repl).append(" blocks to be replicated;");
+    }
+    int inval = invalidateBlocks.size();
+    if (inval > 0) {
+      sb.append(" ").append(inval).append(" blocks to be invalidated;");      
+    }
+    int recover = recoverBlocks.size();
+    if (recover > 0) {
+      sb.append(" ").append(recover).append(" blocks to be recovered;");
+    }
+    return sb.toString();
+  }
 }

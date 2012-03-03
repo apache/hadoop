@@ -22,12 +22,14 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * An implementation of the abstract class {@link EditLogOutputStream},
@@ -40,7 +42,7 @@ import org.apache.hadoop.net.NetUtils;
 class EditLogBackupOutputStream extends EditLogOutputStream {
   static int DEFAULT_BUFFER_SIZE = 256;
 
-  private JournalProtocolTranslatorPB backupNode;  // RPC proxy to backup node
+  private JournalProtocol backupNode;  // RPC proxy to backup node
   private NamenodeRegistration bnRegistration;  // backup node registration
   private NamenodeRegistration nnRegistration;  // active node registration
   private EditsDoubleBuffer doubleBuf;
@@ -55,8 +57,9 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     InetSocketAddress bnAddress =
       NetUtils.createSocketAddr(bnRegistration.getAddress());
     try {
-      this.backupNode =
-          new JournalProtocolTranslatorPB(bnAddress, new HdfsConfiguration());
+      this.backupNode = NameNodeProxies.createNonHAProxy(new HdfsConfiguration(),
+          bnAddress, JournalProtocol.class, UserGroupInformation.getCurrentUser(),
+          true).getProxy();
     } catch(IOException e) {
       Storage.LOG.error("Error connecting to: " + bnAddress, e);
       throw e;
@@ -93,14 +96,14 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
       throw new IOException("BackupEditStream has " + size +
                           " records still to be flushed and cannot be closed.");
     } 
-    IOUtils.cleanup(Storage.LOG, backupNode); // stop the RPC threads
+    RPC.stopProxy(backupNode); // stop the RPC threads
     doubleBuf.close();
     doubleBuf = null;
   }
 
   @Override
   public void abort() throws IOException {
-    IOUtils.cleanup(Storage.LOG, backupNode);
+    RPC.stopProxy(backupNode);
     doubleBuf = null;
   }
 

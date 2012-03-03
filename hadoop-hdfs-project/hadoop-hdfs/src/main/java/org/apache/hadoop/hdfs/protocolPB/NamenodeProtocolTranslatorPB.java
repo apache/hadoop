@@ -19,11 +19,9 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeCommandProto;
@@ -47,14 +45,11 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -84,15 +79,6 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
       VersionRequestProto.newBuilder().build();
 
   final private NamenodeProtocolPB rpcProxy;
-
-  public NamenodeProtocolTranslatorPB(InetSocketAddress nameNodeAddr,
-      Configuration conf, UserGroupInformation ugi) throws IOException {
-    RPC.setProtocolEngine(conf, NamenodeProtocolPB.class,
-        ProtobufRpcEngine.class);
-    rpcProxy = RPC.getProxy(NamenodeProtocolPB.class,
-        RPC.getProtocolVersion(NamenodeProtocolPB.class), nameNodeAddr, ugi,
-        conf, NetUtils.getSocketFactory(conf, NamenodeProtocolPB.class));
-  }
   
   public NamenodeProtocolTranslatorPB(NamenodeProtocolPB rpcProxy) {
     this.rpcProxy = rpcProxy;
@@ -137,7 +123,6 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public CheckpointSignature rollEditLog() throws IOException {
     try {
       return PBHelper.convert(rpcProxy.rollEditLog(NULL_CONTROLLER,

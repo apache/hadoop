@@ -26,6 +26,8 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 
+import com.google.common.base.Joiner;
+
 /**
  * I-node for file being written.
  */
@@ -41,19 +43,7 @@ public class INodeFileUnderConstruction extends INodeFile {
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    this(permissions, 0, replication, preferredBlockSize, modTime,
-        clientName, clientMachine, clientNode);
-  }
-
-  INodeFileUnderConstruction(PermissionStatus permissions,
-                             int nrBlocks,
-                             short replication,
-                             long preferredBlockSize,
-                             long modTime,
-                             String clientName,
-                             String clientMachine,
-                             DatanodeDescriptor clientNode) {
-    super(permissions.applyUMask(UMASK), nrBlocks, replication,
+    super(permissions.applyUMask(UMASK), 0, replication,
         modTime, modTime, preferredBlockSize);
     this.clientName = clientName;
     this.clientMachine = clientMachine;
@@ -106,6 +96,9 @@ public class INodeFileUnderConstruction extends INodeFile {
   // use the modification time as the access time
   //
   INodeFile convertToInodeFile() {
+    assert allBlocksComplete() :
+      "Can't finalize inode " + this + " since it contains " +
+      "non-complete blocks! Blocks are: " + blocksAsString();
     INodeFile obj = new INodeFile(getPermissionStatus(),
                                   getBlocks(),
                                   getReplication(),
@@ -114,6 +107,18 @@ public class INodeFileUnderConstruction extends INodeFile {
                                   getPreferredBlockSize());
     return obj;
     
+  }
+  
+  /**
+   * @return true if all of the blocks in this file are marked as completed.
+   */
+  private boolean allBlocksComplete() {
+    for (BlockInfo b : blocks) {
+      if (!b.isComplete()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -152,5 +157,9 @@ public class INodeFileUnderConstruction extends INodeFile {
     ucBlock.setINode(this);
     setBlock(numBlocks()-1, ucBlock);
     return ucBlock;
+  }
+  
+  private String blocksAsString() {
+    return Joiner.on(",").join(this.blocks);
   }
 }

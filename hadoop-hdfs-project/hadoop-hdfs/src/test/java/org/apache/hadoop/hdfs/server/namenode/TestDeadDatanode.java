@@ -110,7 +110,9 @@ public class TestDeadDatanode {
     DatanodeProtocol dnp = cluster.getNameNodeRpc();
     
     ReceivedDeletedBlockInfo[] blocks = { new ReceivedDeletedBlockInfo(
-        new Block(0), "") };
+        new Block(0), 
+        ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
+        null) };
     StorageReceivedDeletedBlocks[] storageBlocks = { 
         new StorageReceivedDeletedBlocks(reg.getStorageID(), blocks) };
     
@@ -136,7 +138,7 @@ public class TestDeadDatanode {
     // that asks datanode to register again
     StorageReport[] rep = { new StorageReport(reg.getStorageID(), false, 0, 0,
         0, 0) };
-    DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, rep, 0, 0, 0);
+    DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, rep, 0, 0, 0).getCommands();
     Assert.assertEquals(1, cmd.length);
     Assert.assertEquals(cmd[0].getAction(), RegisterCommand.REGISTER
         .getAction());

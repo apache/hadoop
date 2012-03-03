@@ -20,23 +20,17 @@ package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.proto.RefreshUserMappingsProtocolProtos.RefreshSuperUserGroupsConfigurationRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.RefreshUserMappingsProtocolProtos.RefreshUserToGroupsMappingsRequestProto;
 import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -47,16 +41,10 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
   /** RpcController is not used and hence is set to null */
   private final static RpcController NULL_CONTROLLER = null;
   private final RefreshUserMappingsProtocolPB rpcProxy;
-
+  
   public RefreshUserMappingsProtocolClientSideTranslatorPB(
-      InetSocketAddress nameNodeAddr, UserGroupInformation ugi,
-      Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, RefreshUserMappingsProtocolPB.class,
-        ProtobufRpcEngine.class);
-    rpcProxy = RPC.getProxy(RefreshUserMappingsProtocolPB.class,
-        RPC.getProtocolVersion(RefreshUserMappingsProtocolPB.class),
-        NameNode.getAddress(conf), ugi, conf,
-        NetUtils.getSocketFactory(conf, RefreshUserMappingsProtocol.class));
+      RefreshUserMappingsProtocolPB rpcProxy) {
+    this.rpcProxy = rpcProxy;
   }
 
   @Override

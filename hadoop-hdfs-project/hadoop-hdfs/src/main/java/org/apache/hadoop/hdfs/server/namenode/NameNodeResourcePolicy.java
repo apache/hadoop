@@ -37,9 +37,6 @@ final class NameNodeResourcePolicy {
    *        required to continue operation.
    * @return true if and only if there are sufficient NN resources to
    *         continue logging edits.
-   * @throws RuntimeException if the number of <bold>configured</bold>
-   *         redundant resources is fewer than the minimum number of available
-   *         redundant resources.
    */
   static boolean areResourcesAvailable(
       Collection<? extends CheckableNameNodeResource> resources,
@@ -61,12 +58,6 @@ final class NameNodeResourcePolicy {
           return false;
         }
       }
-    }
-    
-    if (redundantResourceCount < minimumRedundantResources) {
-      throw new RuntimeException("Need a minimum of " + minimumRedundantResources
-          + " for NN to operate but only " + redundantResourceCount
-          + " are configured.");
     }
     
     if (redundantResourceCount == 0) {

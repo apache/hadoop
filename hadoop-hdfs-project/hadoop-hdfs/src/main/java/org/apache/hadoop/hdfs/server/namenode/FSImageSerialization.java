@@ -40,6 +40,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Static utility functions for serializing various pieces of data in the correct
@@ -275,6 +276,49 @@ public class FSImageSerialization {
     ustr.readFields(in);
     return DFSUtil.bytes2byteArray(ustr.getBytes(),
       ustr.getLength(), (byte) Path.SEPARATOR_CHAR);
+  }
+
+
+  /**
+   * Write an array of blocks as compactly as possible. This uses
+   * delta-encoding for the generation stamp and size, following
+   * the principle that genstamp increases relatively slowly,
+   * and size is equal for all but the last block of a file.
+   */
+  public static void writeCompactBlockArray(
+      Block[] blocks, DataOutputStream out) throws IOException {
+    WritableUtils.writeVInt(out, blocks.length);
+    Block prev = null;
+    for (Block b : blocks) {
+      long szDelta = b.getNumBytes() -
+          (prev != null ? prev.getNumBytes() : 0);
+      long gsDelta = b.getGenerationStamp() -
+          (prev != null ? prev.getGenerationStamp() : 0);
+      out.writeLong(b.getBlockId()); // blockid is random
+      WritableUtils.writeVLong(out, szDelta);
+      WritableUtils.writeVLong(out, gsDelta);
+      prev = b;
+    }
+  }
+  
+  public static Block[] readCompactBlockArray(
+      DataInputStream in, int logVersion) throws IOException {
+    int num = WritableUtils.readVInt(in);
+    if (num < 0) {
+      throw new IOException("Invalid block array length: " + num);
+    }
+    Block prev = null;
+    Block[] ret = new Block[num];
+    for (int i = 0; i < num; i++) {
+      long id = in.readLong();
+      long sz = WritableUtils.readVLong(in) +
+          ((prev != null) ? prev.getNumBytes() : 0);
+      long gs = WritableUtils.readVLong(in) +
+          ((prev != null) ? prev.getGenerationStamp() : 0);
+      ret[i] = new Block(id, sz, gs);
+      prev = ret[i];
+    }
+    return ret;
   }
 
   /**
