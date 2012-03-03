@@ -590,7 +590,9 @@ public class CLI extends Configured implements Tool {
   @Private
   public static String headerPattern = "%23s\t%10s\t%14s\t%12s\t%12s\t%10s\t%15s\t%15s\t%8s\t%8s\t%10s\t%10s\n";
   @Private
-  public static String dataPattern   = "%23s\t%10s\t%14d\t%12s\t%12s\t%10s\t%14d\t%14d\t%7dM\t%7sM\t%9dM\t%10s\n";
+  public static String dataPattern   = "%23s\t%10s\t%14d\t%12s\t%12s\t%10s\t%15s\t%15s\t%8s\t%8s\t%10s\t%10s\n";
+  private static String memPattern   = "%dM";
+  private static String UNAVAILABLE  = "N/A";
 
   @Private
   public void displayJobList(JobStatus[] jobs, PrintWriter writer) {
@@ -599,15 +601,20 @@ public class CLI extends Configured implements Tool {
       "Queue", "Priority", "UsedContainers",
       "RsvdContainers", "UsedMem", "RsvdMem", "NeededMem", "AM info");
     for (JobStatus job : jobs) {
+      int numUsedSlots = job.getNumUsedSlots();
+      int numReservedSlots = job.getNumReservedSlots();
+      int usedMem = job.getUsedMem();
+      int rsvdMem = job.getReservedMem();
+      int neededMem = job.getNeededMem();
       writer.printf(dataPattern,
           job.getJobID().toString(), job.getState(), job.getStartTime(),
           job.getUsername(), job.getQueue(), 
           job.getPriority().name(),
-          job.getNumUsedSlots(),
-          job.getNumReservedSlots(),
-          job.getUsedMem(),
-          job.getReservedMem(),
-          job.getNeededMem(),
+          numUsedSlots < 0 ? UNAVAILABLE : numUsedSlots,
+          numReservedSlots < 0 ? UNAVAILABLE : numReservedSlots,
+          usedMem < 0 ? UNAVAILABLE : String.format(memPattern, usedMem),
+          rsvdMem < 0 ? UNAVAILABLE : String.format(memPattern, rsvdMem),
+          neededMem < 0 ? UNAVAILABLE : String.format(memPattern, neededMem),
           job.getSchedulingInfo());
     }
     writer.flush();

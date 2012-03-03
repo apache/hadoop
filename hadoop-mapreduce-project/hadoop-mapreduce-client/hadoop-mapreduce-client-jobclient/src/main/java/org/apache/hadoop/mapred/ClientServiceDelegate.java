@@ -79,6 +79,7 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 
 public class ClientServiceDelegate {
   private static final Log LOG = LogFactory.getLog(ClientServiceDelegate.class);
+  private static final String UNAVAILABLE = "N/A";
 
   // Caches for per-user NotRunningJobs
   private HashMap<JobState, HashMap<String, NotRunningJob>> notRunningJobs;
@@ -160,6 +161,13 @@ public class ClientServiceDelegate {
           LOG.debug("Application state is " + application.getYarnApplicationState());
           application = rm.getApplicationReport(appId);
           continue;
+        } else if (UNAVAILABLE.equals(application.getHost())) {
+          if (!amAclDisabledStatusLogged) {
+            LOG.info("Job " + jobId + " is running, but the host is unknown."
+                + " Verify user has VIEW_JOB access.");
+            amAclDisabledStatusLogged = true;
+          }
+          return getNotRunningJob(application, JobState.RUNNING);
         }
         if(!conf.getBoolean(MRJobConfig.JOB_AM_ACCESS_DISABLED, false)) {
           UserGroupInformation newUgi = UserGroupInformation.createRemoteUser(
@@ -369,9 +377,12 @@ public class ClientServiceDelegate {
       report.setJobFile(jobFile);
     }
     String historyTrackingUrl = report.getTrackingUrl();
-    return TypeConverter.fromYarn(report, "http://"
-        + (StringUtils.isNotEmpty(historyTrackingUrl) ? historyTrackingUrl
-            : trackingUrl));
+    String url = StringUtils.isNotEmpty(historyTrackingUrl)
+        ? historyTrackingUrl : trackingUrl;
+    if (!UNAVAILABLE.equals(url)) {
+      url = "http://" + url;
+    }
+    return TypeConverter.fromYarn(report, url);
   }
 
   public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)
