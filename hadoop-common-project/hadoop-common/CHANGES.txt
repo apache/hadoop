@@ -112,6 +112,9 @@ Release 0.23.2 - UNRELEASED
     HADOOP-7923. Automate the updating of version numbers in the doc system.
     (szetszwo)
 
+    HADOOP-8137. Added links to CLI manuals to the site. (tgraves via
+    acmurthy)  
+
   OPTIMIZATIONS
 
     HADOOP-8071. Avoid an extra packet in client code when nagling is
