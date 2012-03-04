@@ -24,6 +24,8 @@ import static org.mockito.Mockito.*;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -32,6 +34,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 
 import org.junit.After;
 import org.junit.Before;
@@ -255,6 +260,11 @@ public class TestParentQueue {
   }
 
   private static final String C = "c";
+  private static final String C1 = "c1";
+  private static final String C11 = "c11";
+  private static final String C111 = "c111";
+  private static final String C1111 = "c1111";
+
   private static final String D = "d";
   private static final String A1 = "a1";
   private static final String A2 = "a2";
@@ -265,7 +275,7 @@ public class TestParentQueue {
   private void setupMultiLevelQueues(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
     conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
@@ -289,9 +299,24 @@ public class TestParentQueue {
     conf.setCapacity(Q_B + "." + B1, 10);
     conf.setCapacity(Q_B + "." + B2, 20);
     conf.setCapacity(Q_B + "." + B3, 70);
+
+    conf.setQueues(Q_C, new String[] {C1});
+
+    final String Q_C1= Q_C + "." + C1;
+    conf.setCapacity(Q_C1, 100);
+    conf.setQueues(Q_C1, new String[] {C11});
+
+    final String Q_C11= Q_C1 + "." + C11;
+    conf.setCapacity(Q_C11, 100);
+    conf.setQueues(Q_C11, new String[] {C111});
+
+    final String Q_C111= Q_C11 + "." + C111;
+    conf.setCapacity(Q_C111, 100);
+    //Leaf Queue
+    conf.setQueues(Q_C111, new String[] {C1111});
+    final String Q_C1111= Q_C111 + "." + C1111;
+    conf.setCapacity(Q_C1111, 100);
   }
-
-
 
   @Test
   public void testMultiLevelQueues() throws Exception {
@@ -470,6 +495,79 @@ public class TestParentQueue {
 
   }
   
+
+  public boolean hasQueueACL(List<QueueUserACLInfo> aclInfos, QueueACL acl, String qName) {
+    for (QueueUserACLInfo aclInfo : aclInfos) {
+      if (aclInfo.getQueueName().equals(qName)) {
+        if (aclInfo.getUserAcls().contains(acl)) {
+          return true;
+        }
+      }
+    }    
+    return false;
+  }
+
+  @Test
+  public void testQueueAcl() throws Exception {
+ 
+    setupMultiLevelQueues(csConf);
+    csConf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
+    csConf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.ADMINISTER_QUEUE, " ");
+
+    final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
+    csConf.setAcl(Q_C, QueueACL.ADMINISTER_QUEUE, "*");
+    final String Q_C11= Q_C + "." + C1 +  "." + C11;
+    csConf.setAcl(Q_C11, QueueACL.SUBMIT_APPLICATIONS, "*");
+
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    CSQueue root = 
+        CapacityScheduler.parseQueue(csContext, csConf, null, 
+            CapacitySchedulerConfiguration.ROOT, queues, queues, 
+            CapacityScheduler.queueComparator, 
+            CapacityScheduler.applicationComparator,
+            TestUtils.spyHook);
+
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+    // Setup queue configs
+    ParentQueue c = (ParentQueue)queues.get(C);
+    ParentQueue c1 = (ParentQueue)queues.get(C1);
+    ParentQueue c11 = (ParentQueue)queues.get(C11);
+    ParentQueue c111 = (ParentQueue)queues.get(C111);
+
+    assertFalse(root.hasAccess(QueueACL.ADMINISTER_QUEUE, user));
+    List<QueueUserACLInfo> aclInfos = root.getQueueUserAclInfo(user);
+    assertFalse(hasQueueACL(aclInfos, QueueACL.ADMINISTER_QUEUE, "root"));
+    
+    assertFalse(root.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+    assertFalse(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "root"));
+
+    // c has no SA, but QA
+    assertTrue(c.hasAccess(QueueACL.ADMINISTER_QUEUE, user));
+    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "c"));
+    assertFalse(c.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+    assertFalse(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "c"));
+
+    //Queue c1 has QA, no SA (gotten perm from parent)
+    assertTrue(c1.hasAccess(QueueACL.ADMINISTER_QUEUE, user)); 
+    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "c1"));
+    assertFalse(c1.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user)); 
+    assertFalse(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "c1"));
+
+    //Queue c11 has permissions from parent queue and SA
+    assertTrue(c11.hasAccess(QueueACL.ADMINISTER_QUEUE, user));
+    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "c11"));
+    assertTrue(c11.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+    assertTrue(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "c11"));
+
+    //Queue c111 has SA and AQ, both from parent
+    assertTrue(c111.hasAccess(QueueACL.ADMINISTER_QUEUE, user));
+    assertTrue(hasQueueACL(aclInfos,  QueueACL.ADMINISTER_QUEUE, "c111"));
+    assertTrue(c111.hasAccess(QueueACL.SUBMIT_APPLICATIONS, user));
+    assertTrue(hasQueueACL(aclInfos, QueueACL.SUBMIT_APPLICATIONS, "c111"));
+
+    reset(c);
+  }
+
   @After
   public void tearDown() throws Exception {
   }
