@@ -50,19 +50,22 @@
       <item name="Overview" href="index.html"/>
       <item name="Single Node Setup" href="hadoop-yarn/hadoop-yarn-site/SingleCluster.html"/>
       <item name="Cluster Setup" href="hadoop-yarn/hadoop-yarn-site/ClusterSetup.html"/>
+      <item name="Hadoop Commands" href="hadoop-project-dist/hadoop-common/commands_manual.html"/>
     </menu>
     
     <menu name="HDFS" inherit="top">
       <item name="Federation" href="hadoop-yarn/hadoop-yarn-site/Federation.html"/>
       <item name="WebHDFS REST API" href="hadoop-yarn/hadoop-yarn-site/WebHDFS.html"/>
       <item name="HttpFS Gateway" href="hadoop-hdfs-httpfs/index.html"/>
+      <item name="HDFS User Guide" href="hadoop-project-dist/hadoop-hdfs/hdfs_user_guide.html"/>
     </menu>
 
-    <menu name="MapReduce" inherit="top">
+    <menu name="Yarn/MapReduce" inherit="top">
       <item name="YARN Architecture" href="hadoop-yarn/hadoop-yarn-site/YARN.html"/>
       <item name="Writing Yarn Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
+      <item name="Yarn Commands" href="hadoop-yarn/hadoop-yarn-site/YarnCommands.html"/>
     </menu>
 
     <menu name="YARN REST API's" inherit="top">
