@@ -72,6 +72,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-2793. Corrected AppIDs, JobIDs, TaskAttemptIDs to be of correct
     format on the web pages. (Bikas Saha via vinodkv)
 
+    MAPREDUCE-3614. Fixed MR AM to close history file quickly and send a correct
+    final state to the RM when it is killed. (Ravi Prakash via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3901. Modified JobHistory records in YARN to lazily load job and

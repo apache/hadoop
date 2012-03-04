@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -95,8 +96,11 @@ public class JobHistoryEventHandler extends AbstractService
   private static final Log LOG = LogFactory.getLog(
       JobHistoryEventHandler.class);
 
-  private static final Map<JobId, MetaInfo> fileMap =
+  protected static final Map<JobId, MetaInfo> fileMap =
     Collections.<JobId,MetaInfo>synchronizedMap(new HashMap<JobId,MetaInfo>());
+
+  // Has a signal (SIGTERM etc) been issued?
+  protected volatile boolean isSignalled = false;
 
   public JobHistoryEventHandler(AppContext context, int startCount) {
     super("JobHistoryEventHandler");
@@ -314,7 +318,30 @@ public class JobHistoryEventHandler extends AbstractService
       LOG.info("In stop, writing event " + ev.getType());
       handleEvent(ev);
     }
-    
+
+    // Process JobUnsuccessfulCompletionEvent for jobIds which still haven't
+    // closed their event writers
+    Iterator<JobId> jobIt = fileMap.keySet().iterator();
+    if(isSignalled) {
+      while (jobIt.hasNext()) {
+        JobId toClose = jobIt.next();
+        MetaInfo mi = fileMap.get(toClose);
+        if(mi != null && mi.isWriterActive()) {
+          LOG.warn("Found jobId " + toClose
+            + " to have not been closed. Will close");
+          //Create a JobFinishEvent so that it is written to the job history
+          JobUnsuccessfulCompletionEvent jucEvent =
+            new JobUnsuccessfulCompletionEvent(TypeConverter.fromYarn(toClose),
+              System.currentTimeMillis(), context.getJob(toClose)
+              .getCompletedMaps(), context.getJob(toClose).getCompletedReduces(),
+              JobState.KILLED.toString());
+          JobHistoryEvent jfEvent = new JobHistoryEvent(toClose, jucEvent);
+          //Bypass the queue mechanism which might wait. Call the method directly
+          handleEvent(jfEvent);
+        }
+      }
+    }
+
     //close all file handles
     for (MetaInfo mi : fileMap.values()) {
       try {
@@ -710,7 +737,7 @@ public class JobHistoryEventHandler extends AbstractService
     }
   }
 
-  private class MetaInfo {
+  protected class MetaInfo {
     private Path historyFile;
     private Path confFile;
     private EventWriter writer;
@@ -879,5 +906,11 @@ public class JobHistoryEventHandler extends AbstractService
   private String getFileNameFromTmpFN(String tmpFileName) {
     //TODO. Some error checking here.
     return tmpFileName.substring(0, tmpFileName.length()-4);
+  }
+
+  public void setSignalled(boolean isSignalled) {
+    this.isSignalled = isSignalled;
+    LOG.info("JobHistoryEventHandler notified that isSignalled was "
+      + isSignalled);
   }
 }
