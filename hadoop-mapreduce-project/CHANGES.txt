@@ -167,6 +167,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3792. Fix "bin/mapred job -list" to display all jobs instead of
     only the jobs owned by the user. (Jason Lowe via vinodkv)
 
+    MAPREDUCE-3929. Fixed output of 'bin/mapred queue -showacl' command to 
+    clarify ACLs for users. (John George via acmurthy) 
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
