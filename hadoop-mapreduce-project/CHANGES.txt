@@ -75,6 +75,8 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3614. Fixed MR AM to close history file quickly and send a correct
     final state to the RM when it is killed. (Ravi Prakash via vinodkv)
 
+    MAPREDUCE-3497. Added docs for YARN CLI. (tgraves via acmurthy) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-3901. Modified JobHistory records in YARN to lazily load job and
