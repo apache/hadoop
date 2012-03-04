@@ -170,6 +170,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3929. Fixed output of 'bin/mapred queue -showacl' command to 
     clarify ACLs for users. (John George via acmurthy) 
 
+    MAPREDUCE-3960. Fix web-proxy to forward request to AM with configured
+    hostname or IP. (tgraves via acmurthy) 
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES

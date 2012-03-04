@@ -64,6 +64,9 @@ public class AmIpFilter implements Filter {
         try {
           proxyAddresses = new HashSet<String>();
           for(InetAddress add : InetAddress.getAllByName(proxyHost)) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("proxy address is: " + add.getHostAddress());
+            }
             proxyAddresses.add(add.getHostAddress());
           }
           lastUpdate = now;
@@ -89,6 +92,9 @@ public class AmIpFilter implements Filter {
     
     HttpServletRequest httpReq = (HttpServletRequest)req;
     HttpServletResponse httpResp = (HttpServletResponse)resp;
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Remote address for request is: " + httpReq.getRemoteAddr());
+    }
     if(!getProxyAddresses().contains(httpReq.getRemoteAddr())) {
       String redirectUrl = httpResp.encodeRedirectURL(proxyUriBase + 
           httpReq.getRequestURI());

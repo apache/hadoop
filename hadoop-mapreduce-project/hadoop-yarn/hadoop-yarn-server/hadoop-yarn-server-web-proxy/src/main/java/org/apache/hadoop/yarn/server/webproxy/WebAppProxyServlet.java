@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -38,6 +39,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.httpclient.Header;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
+import org.apache.commons.httpclient.HostConfiguration;
 import org.apache.commons.httpclient.cookie.CookiePolicy;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.params.HttpClientParams;
@@ -123,13 +125,23 @@ public class WebAppProxyServlet extends HttpServlet {
    * @throws IOException on any error.
    */
   private static void proxyLink(HttpServletRequest req, 
-      HttpServletResponse resp, URI link,Cookie c) throws IOException {
+      HttpServletResponse resp, URI link, Cookie c, String proxyHost)
+      throws IOException {
     org.apache.commons.httpclient.URI uri = 
       new org.apache.commons.httpclient.URI(link.toString(), false);
     HttpClientParams params = new HttpClientParams();
     params.setCookiePolicy(CookiePolicy.BROWSER_COMPATIBILITY);
     params.setBooleanParameter(HttpClientParams.ALLOW_CIRCULAR_REDIRECTS, true);
     HttpClient client = new HttpClient(params);
+    // Make sure we send the request from the proxy address in the config
+    // since that is what the AM filter checks against. IP aliasing or
+    // similar could cause issues otherwise.
+    HostConfiguration config = new HostConfiguration();
+    InetAddress localAddress = InetAddress.getByName(proxyHost);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("local InetAddress for proxy host: " + localAddress.toString());
+    }
+    config.setLocalAddress(localAddress);
     HttpMethod method = new GetMethod(uri.getEscapedURI());
 
     @SuppressWarnings("unchecked")
@@ -150,7 +162,7 @@ public class WebAppProxyServlet extends HttpServlet {
     }
     OutputStream out = resp.getOutputStream();
     try {
-      resp.setStatus(client.executeMethod(method));
+      resp.setStatus(client.executeMethod(config, method));
       for(Header header : method.getResponseHeaders()) {
         resp.setHeader(header.getName(), header.getValue());
       }
@@ -187,6 +199,11 @@ public class WebAppProxyServlet extends HttpServlet {
   private ApplicationReport getApplicationReport(ApplicationId id) throws IOException {
     return ((AppReportFetcher) getServletContext()
         .getAttribute(WebAppProxy.FETCHER_ATTRIBUTE)).getApplicationReport(id);
+  }
+  
+  private String getProxyHost() throws IOException {
+    return ((String) getServletContext()
+        .getAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE));
   }
   
   @Override
@@ -275,7 +292,7 @@ public class WebAppProxyServlet extends HttpServlet {
       if(userWasWarned && userApproved) {
         c = makeCheckCookie(id, true);
       }
-      proxyLink(req, resp, toFetch, c);
+      proxyLink(req, resp, toFetch, c, getProxyHost());
 
     } catch(URISyntaxException e) {
       throw new IOException(e); 
