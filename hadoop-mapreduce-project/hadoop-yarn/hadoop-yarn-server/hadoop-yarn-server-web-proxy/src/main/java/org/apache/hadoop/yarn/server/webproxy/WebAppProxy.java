@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 public class WebAppProxy extends AbstractService {
   public static final String FETCHER_ATTRIBUTE= "AppUrlFetcher";
   public static final String IS_SECURITY_ENABLED_ATTRIBUTE = "IsSecurityEnabled";
+  public static final String PROXY_HOST_ATTRIBUTE = "proxyHost";
   private static final Log LOG = LogFactory.getLog(WebAppProxy.class);
   
   private HttpServer proxyServer = null;
@@ -43,6 +44,7 @@ public class WebAppProxy extends AbstractService {
   private AccessControlList acl = null;
   private AppReportFetcher fetcher = null;
   private boolean isSecurityEnabled = false;
+  private String proxyHost = null;
   
   public WebAppProxy() {
     super(WebAppProxy.class.getName());
@@ -60,6 +62,9 @@ public class WebAppProxy extends AbstractService {
           CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION +
           " of " + auth);
     }
+    String proxy = YarnConfiguration.getProxyHostAndPort(conf);
+    String[] proxyParts = proxy.split(":");
+    proxyHost = proxyParts[0];
 
     fetcher = new AppReportFetcher(conf);
     bindAddress = conf.get(YarnConfiguration.PROXY_ADDRESS);
@@ -88,6 +93,7 @@ public class WebAppProxy extends AbstractService {
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
       proxyServer.setAttribute(FETCHER_ATTRIBUTE, fetcher);
       proxyServer.setAttribute(IS_SECURITY_ENABLED_ATTRIBUTE, isSecurityEnabled);
+      proxyServer.setAttribute(PROXY_HOST_ATTRIBUTE, proxyHost);
       proxyServer.start();
     } catch (IOException e) {
       LOG.fatal("Could not start proxy web server",e);

@@ -432,6 +432,10 @@ public class ResourceManager extends CompositeService implements Recoverable {
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
+      String proxy = YarnConfiguration.getProxyHostAndPort(conf);
+      String[] proxyParts = proxy.split(":");
+      builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
+
     }
     webApp = builder.start(new RMWebApp(this));
   }
