@@ -158,9 +158,14 @@ public class TestApplicationLimits {
                    queue.getAbsoluteMaximumCapacity()));
     assertEquals(expectedMaxActiveApps, 
                  queue.getMaximumActiveApplications());
+    int expectedMaxActiveAppsUsingAbsCap = 
+            Math.max(1, 
+                (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
+                       csConf.getMaximumApplicationMasterResourcePercent() *
+                       queue.getAbsoluteCapacity()));
     assertEquals(
         (int)Math.ceil(
-            expectedMaxActiveApps * (queue.getUserLimit() / 100.0f) * 
+        		expectedMaxActiveAppsUsingAbsCap * (queue.getUserLimit() / 100.0f) * 
             queue.getUserLimitFactor()), 
         queue.getMaximumActiveApplicationsPerUser());
     assertEquals(
@@ -178,8 +183,13 @@ public class TestApplicationLimits {
                    queue.getAbsoluteMaximumCapacity()));
     assertEquals(expectedMaxActiveApps, 
                  queue.getMaximumActiveApplications());
+    expectedMaxActiveAppsUsingAbsCap = 
+            Math.max(1, 
+                (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
+                       csConf.getMaximumApplicationMasterResourcePercent() *
+                       queue.getAbsoluteCapacity()));
     assertEquals(
-        (int)Math.ceil(expectedMaxActiveApps * 
+        (int)Math.ceil(expectedMaxActiveAppsUsingAbsCap * 
             (queue.getUserLimit() / 100.0f) * queue.getUserLimitFactor()), 
         queue.getMaximumActiveApplicationsPerUser());
     assertEquals(
