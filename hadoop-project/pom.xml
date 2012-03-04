@@ -889,7 +889,7 @@
           <artifactId>jdk.tools</artifactId>
           <version>1.6</version>
           <scope>system</scope>
-          <systemPath>${env.JAVA_HOME}/lib/tools.jar</systemPath>
+          <systemPath>${java.home}/../lib/tools.jar</systemPath>
         </dependency>
       </dependencies>
     </profile>
