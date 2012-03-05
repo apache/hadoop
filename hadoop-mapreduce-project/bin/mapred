@@ -51,8 +51,6 @@ fi
 COMMAND=$1
 shift
 
-HADOOP_JOB_HISTORYSERVER_OPTS="-Dmapred.jobsummary.logger=${HADOOP_JHS_LOGGER:-INFO,console}"
-
 if [ "$COMMAND" = "job" ] ; then
   CLASS=org.apache.hadoop.mapred.JobClient
 elif [ "$COMMAND" = "queue" ] ; then
@@ -70,7 +68,10 @@ elif [ "$COMMAND" = "groups" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "historyserver" ] ; then
   CLASS=org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOB_HISTORYSERVER_OPTS"
+  HADOOP_OPTS="$HADOOP_OPTS -Dmapred.jobsummary.logger=${HADOOP_JHS_LOGGER:-INFO,console} $HADOOP_JOB_HISTORYSERVER_OPTS"
+  if [ "$HADOOP_JOB_HISTORYSERVER_HEAPSIZE" != "" ]; then
+    JAVA_HEAP_MAX="-Xmx""$HADOOP_JOB_HISTORYSERVER_HEAPSIZE""m"
+  fi
 elif [ "$COMMAND" = "mradmin" ] \
     || [ "$COMMAND" = "jobtracker" ] \
     || [ "$COMMAND" = "tasktracker" ] ; then

@@ -27,11 +27,16 @@
 #   YARN_HEAPSIZE  The maximum amount of heap to use, in MB. 
 #                    Default is 1000.
 #
+#   YARN_{COMMAND}_HEAPSIZE overrides YARN_HEAPSIZE for a given command
+#                           eg YARN_NODEMANAGER_HEAPSIZE sets the heap
+#                           size for the NodeManager.  If you set the
+#                           heap size in YARN_{COMMAND}_OPTS or YARN_OPTS
+#                           they take precedence.
+#
 #   YARN_OPTS      Extra Java runtime options.
 #   
-#   YARN_NAMENODE_OPTS       These options are added to YARN_OPTS 
 #   YARN_CLIENT_OPTS         when the respective command is run.
-#   YARN_{COMMAND}_OPTS etc  YARN_JT_OPTS applies to JobTracker 
+#   YARN_{COMMAND}_OPTS etc  YARN_NODEMANAGER_OPTS applies to NodeManager 
 #                              for e.g.  YARN_CLIENT_OPTS applies to 
 #                              more than one command (fs, dfs, fsck, 
 #                              dfsadmin etc)  
@@ -170,6 +175,9 @@ elif [ "$COMMAND" = "resourcemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/rm-config/log4j.properties
   CLASS='org.apache.hadoop.yarn.server.resourcemanager.ResourceManager'
   YARN_OPTS="$YARN_OPTS $YARN_RESOURCEMANAGER_OPTS"
+  if [ "$YARN_RESOURCEMANAGER_HEAPSIZE" != "" ]; then
+    JAVA_HEAP_MAX="-Xmx""$YARN_RESOURCEMANAGER_HEAPSIZE""m"
+  fi
 elif [ "$COMMAND" = "nodemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/nm-config/log4j.properties
   CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
@@ -178,9 +186,15 @@ elif [ "$COMMAND" = "nodemanager" ] ; then
   else
     YARN_OPTS="$YARN_OPTS -server $YARN_NODEMANAGER_OPTS"
   fi
+  if [ "$YARN_NODEMANAGER_HEAPSIZE" != "" ]; then
+    JAVA_HEAP_MAX="-Xmx""$YARN_NODEMANAGER_HEAPSIZE""m"
+  fi
 elif [ "$COMMAND" = "proxyserver" ] ; then
   CLASS='org.apache.hadoop.yarn.server.webproxy.WebAppProxyServer'
   YARN_OPTS="$YARN_OPTS $YARN_PROXYSERVER_OPTS"
+  if [ "$YARN_PROXYSERVER_HEAPSIZE" != "" ]; then
+    JAVA_HEAP_MAX="-Xmx""$YARN_PROXYSERVER_HEAPSIZE""m"
+  fi
 elif [ "$COMMAND" = "version" ] ; then
   CLASS=org.apache.hadoop.util.VersionInfo
   YARN_OPTS="$YARN_OPTS $YARN_CLIENT_OPTS"
