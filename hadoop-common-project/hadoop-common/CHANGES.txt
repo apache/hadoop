@@ -65,6 +65,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the
     client side translator and server side implementation. (jitendra)
 
+    HADOOP-8125. make hadoop-client set of curated jars available in a
+    distribution tarball (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

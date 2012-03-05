@@ -17,9 +17,9 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project</artifactId>
+    <artifactId>hadoop-project-dist</artifactId>
     <version>0.23.3-SNAPSHOT</version>
-    <relativePath>../hadoop-project</relativePath>
+    <relativePath>../hadoop-project-dist</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-client</artifactId>
@@ -28,6 +28,10 @@
 
   <description>Apache Hadoop Client</description>
   <name>Apache Hadoop Client</name>
+
+<properties>
+   <hadoop.component>client</hadoop.component>
+ </properties>
 
   <dependencies>
     <dependency>
