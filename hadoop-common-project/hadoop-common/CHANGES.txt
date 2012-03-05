@@ -228,6 +228,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8118.  In metrics2.util.MBeans, change log level to trace for the
     stack trace of InstanceAlreadyExistsException.  (szetszwo)
 
+    HADOOP-8125. make hadoop-client set of curated jars available in a
+    distribution tarball (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
