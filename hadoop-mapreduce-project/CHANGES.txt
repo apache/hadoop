@@ -52,8 +52,12 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-2722. [Gridmix] Gridmix simulated job's map's hdfsBytesRead
+                    counter is wrong when compressed input is used.(ravigummadi)
+
     MAPREDUCE-3757. [Rumen] Fixed Rumen Folder to adjust shuffleFinished and
-                    sortFinished times when needed.
+                    sortFinished times when needed.(ravigummadi)
+
     MAPREDUCE-3194. "mapred mradmin" command is broken in mrv2
                      (Jason Lowe via bobby)
 

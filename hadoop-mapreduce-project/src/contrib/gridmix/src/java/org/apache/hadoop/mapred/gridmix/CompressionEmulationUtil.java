@@ -571,4 +571,25 @@ class CompressionEmulationUtil {
     }
     setInputCompressionEmulationEnabled(target, needsCompressedInput);
   }
+
+  /**
+   * Get the uncompressed input bytes count from the given possibly compressed
+   * input bytes count.
+   * @param possiblyCompressedInputBytes input bytes count. This is compressed
+   *        input size if compression emulation is on.
+   * @param conf configuration of the Gridmix simulated job
+   * @return uncompressed input bytes count. Compute this in case if compressed
+   *         input was used
+   */
+  static long getUncompressedInputBytes(long possiblyCompressedInputBytes,
+                                        Configuration conf) {
+    long uncompressedInputBytes = possiblyCompressedInputBytes;
+
+    if (CompressionEmulationUtil.isInputCompressionEmulationEnabled(conf)) {
+      float inputCompressionRatio =
+          CompressionEmulationUtil.getMapInputCompressionEmulationRatio(conf);
+      uncompressedInputBytes /= inputCompressionRatio;
+    }
+    return uncompressedInputBytes;
+  }
 }

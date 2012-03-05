@@ -19,7 +19,6 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -31,13 +30,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
-import org.apache.hadoop.mapred.ClusterStatus;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Utils;
@@ -560,5 +557,31 @@ public class TestCompressionEmulationUtils {
     queue.close();
     String readLine = new String(bytes);
     assertEquals("Compression/Decompression error", inputLine, readLine);
+  }
+
+  /**
+   * Tests the computation logic of uncompressed input bytes by
+   * {@link LoadJob#getUncompressedInputBytes(long, Configuration)}
+   */
+  @Test
+  public void testComputeUncompressedInputBytes() {
+    long possiblyCompressedInputBytes = 100000;
+    float compressionRatio = 0.45F;
+    Configuration conf = new Configuration();
+    CompressionEmulationUtil.setMapInputCompressionEmulationRatio(conf,
+        compressionRatio);
+
+    // By default, input compression emulation is diabled. Verify the
+    // computation of uncompressed input bytes.
+    long result = CompressionEmulationUtil.getUncompressedInputBytes(
+        possiblyCompressedInputBytes, conf);
+    assertEquals(possiblyCompressedInputBytes, result);
+
+    // Enable input compression emulation and verify uncompressed
+    // input bytes computation logic
+    CompressionEmulationUtil.setInputCompressionEmulationEnabled(conf, true);
+    result = CompressionEmulationUtil.getUncompressedInputBytes(
+        possiblyCompressedInputBytes, conf);
+    assertEquals((long)(possiblyCompressedInputBytes/compressionRatio), result);
   }
 }
