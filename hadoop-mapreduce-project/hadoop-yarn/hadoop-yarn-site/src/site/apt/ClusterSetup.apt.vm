@@ -103,6 +103,9 @@ Hadoop MapReduce Next Generation - Cluster Setup
 *--------------------------------------+--------------------------------------+
 | WebAppProxy                          | YARN_PROXYSERVER_OPTS                |
 *--------------------------------------+--------------------------------------+
+| Map Reduce Job History Server        | HADOOP_JOB_HISTORYSERVER_OPTS        |
+*--------------------------------------+--------------------------------------+
+
 
     For example, To configure Namenode to use parallelGC, the following 
     statement should be added in hadoop-env.sh :
@@ -118,10 +121,22 @@ Hadoop MapReduce Next Generation - Cluster Setup
         don't exist.
         
       * <<<HADOOP_HEAPSIZE>>> / <<<YARN_HEAPSIZE>>> - The maximum amount of 
-        heapsize to use, in MB e.g. 1000MB. This is used to configure the heap 
-        size for the daemon. By default, the value is 1000MB.
-
-  
+        heapsize to use, in MB e.g. if the varibale is set to 1000 the heap
+        will be set to 1000MB.  This is used to configure the heap 
+        size for the daemon. By default, the value is 1000.  If you want to
+        configure the values separately for each deamon you can use.
+*--------------------------------------+--------------------------------------+
+|| Daemon                              || Environment Variable                |
+*--------------------------------------+--------------------------------------+
+| ResourceManager                      | YARN_RESOURCEMANAGER_HEAPSIZE        |
+*--------------------------------------+--------------------------------------+
+| NodeManager                          | YARN_NODEMANAGER_HEAPSIZE            |
+*--------------------------------------+--------------------------------------+
+| WebAppProxy                          | YARN_PROXYSERVER_HEAPSIZE            |
+*--------------------------------------+--------------------------------------+
+| Map Reduce Job History Server        | HADOOP_JOB_HISTORYSERVER_HEAPSIZE    |
+*--------------------------------------+--------------------------------------+
+ 
     * {Configuring the Hadoop Daemons in Non-Secure Mode}
 
       This section deals with important parameters to be specified in 
