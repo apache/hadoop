@@ -175,6 +175,9 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8123. Use java.home rather than env.JAVA_HOME for java in the
     project. (Jonathan Eagles via acmurthy) 
 
+    HADOOP-8064. Remove unnecessary dependency on w3c.org in document processing
+    (Khiwal Lee via bobby)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
