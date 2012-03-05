@@ -142,7 +142,7 @@ public class HsTaskPage extends HsView {
 
         td.br().$title(String.valueOf(sortId))._(). // sorting
             _(taid)._().td(ta.getState().toString()).td().a(".nodelink",
-                url("http://", nodeHttpAddr),
+                "http://"+ nodeHttpAddr,
                 nodeRackName + "/" + nodeHttpAddr);
         td._(" ").a(".logslink",
             url("logs", nodeIdString, containerIdString, taid, app.getJob()
