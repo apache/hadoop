@@ -179,6 +179,9 @@ Release 0.23.2 - UNRELEASED
     using capacity and not max-capacity since we are already scaling it by
     userLimitFactor. (Eric Payne via acmurthy) 
 
+    MAPREDUCE-3009. Fixed node link on JobHistory webapp. (chackaravarthy via 
+    vinodkv)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
