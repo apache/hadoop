@@ -91,6 +91,10 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-2855. Passing a cached class-loader to ResourceBundle creator to
     minimize counter names lookup time. (Siddarth Seth via vinodkv)
 
+    MAPREDUCE-3944. Change the history jobs/ webservice to return partial job 
+    info for a significant performance improvement. (Robert Joseph Evans via
+    sseth)
+
   BUG FIXES
 
     MAPREDUCE-3918  proc_historyserver no longer in command line arguments for

@@ -32,11 +32,20 @@ import org.codehaus.jettison.json.JSONObject;
 
 public class VerifyJobsUtils {
 
-  public static void verifyHsJob(JSONObject info, Job job) throws JSONException {
+  public static void verifyHsJobPartial(JSONObject info, Job job) throws JSONException {
+    assertEquals("incorrect number of elements", 11, info.length());
 
-    // this is 23 instead of 24 because acls not being checked since
-    // we are using mock job instead of CompletedJob
-    assertEquals("incorrect number of elements", 23, info.length());
+    // everyone access fields
+    verifyHsJobGeneric(job, info.getString("id"), info.getString("user"),
+        info.getString("name"), info.getString("state"),
+        info.getString("queue"), info.getLong("startTime"),
+        info.getLong("finishTime"), info.getInt("mapsTotal"),
+        info.getInt("mapsCompleted"), info.getInt("reducesTotal"),
+        info.getInt("reducesCompleted"));
+  }
+  
+  public static void verifyHsJob(JSONObject info, Job job) throws JSONException {
+    assertEquals("incorrect number of elements", 24, info.length());
 
     // everyone access fields
     verifyHsJobGeneric(job, info.getString("id"), info.getString("user"),

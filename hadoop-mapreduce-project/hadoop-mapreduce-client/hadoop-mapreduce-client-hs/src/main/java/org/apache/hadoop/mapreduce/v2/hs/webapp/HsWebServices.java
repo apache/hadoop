@@ -31,6 +31,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -184,35 +185,32 @@ public class HsWebServices {
         break;
       }
 
-      // getAllJobs only gives you a partial we want a full
-      Job fullJob = appCtx.getJob(job.getID());
-      if (fullJob == null) {
-        continue;
-      }
-
-      JobInfo jobInfo = new JobInfo(fullJob);
       // can't really validate queue is a valid one since queues could change
       if (queueQuery != null && !queueQuery.isEmpty()) {
-        if (!jobInfo.getQueueName().equals(queueQuery)) {
+        if (!job.getQueueName().equals(queueQuery)) {
           continue;
         }
       }
 
       if (userQuery != null && !userQuery.isEmpty()) {
-        if (!jobInfo.getUserName().equals(userQuery)) {
+        if (!job.getUserName().equals(userQuery)) {
           continue;
         }
       }
 
+      JobReport report = job.getReport();
+      
       if (checkStart
-          && (jobInfo.getStartTime() < sBegin || jobInfo.getStartTime() > sEnd)) {
+          && (report.getStartTime() < sBegin || report.getStartTime() > sEnd)) {
         continue;
       }
       if (checkEnd
-          && (jobInfo.getFinishTime() < fBegin || jobInfo.getFinishTime() > fEnd)) {
+          && (report.getFinishTime() < fBegin || report.getFinishTime() > fEnd)) {
         continue;
       }
-
+      
+      JobInfo jobInfo = new JobInfo(job);
+      
       allJobs.add(jobInfo);
       num++;
     }
