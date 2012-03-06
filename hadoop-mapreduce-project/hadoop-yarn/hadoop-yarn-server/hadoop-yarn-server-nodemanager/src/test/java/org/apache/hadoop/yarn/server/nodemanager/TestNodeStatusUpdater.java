@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -71,7 +73,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import static org.mockito.Mockito.mock;
 
 public class TestNodeStatusUpdater {
 
@@ -91,6 +92,7 @@ public class TestNodeStatusUpdater {
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
   private final Configuration conf = new YarnConfiguration();
   private NodeManager nm;
+  protected NodeManager rebootedNodeManager;
 
   @After
   public void tearDown() {
@@ -496,8 +498,28 @@ public class TestNodeStatusUpdater {
       LOG.info("Waiting for NM to stop..");
       Thread.sleep(1000);
     }
-
     Assert.assertEquals(STATE.STOPPED, nm.getServiceState());
+    
+    waitCount = 0;
+    while (null == rebootedNodeManager && waitCount++ != 20) {
+      LOG.info("Waiting for NM to reinitialize..");
+      Thread.sleep(1000);
+    }
+      
+    waitCount = 0;
+    while (rebootedNodeManager.getServiceState() != STATE.STARTED && waitCount++ != 20) {
+      LOG.info("Waiting for NM to start..");
+      Thread.sleep(1000);
+    }
+    Assert.assertEquals(STATE.STARTED, rebootedNodeManager.getServiceState());
+
+    rebootedNodeManager.stop();
+    waitCount = 0;
+    while (rebootedNodeManager.getServiceState() != STATE.STOPPED && waitCount++ != 20) {
+      LOG.info("Waiting for NM to stop..");
+      Thread.sleep(1000);
+    }
+    Assert.assertEquals(STATE.STOPPED, rebootedNodeManager.getServiceState());
   }
   
   @Test
@@ -641,6 +663,12 @@ public class TestNodeStatusUpdater {
         myResourceTracker2.heartBeatNodeAction = nodeHeartBeatAction;
         myNodeStatusUpdater.resourceTracker = myResourceTracker2;
         return myNodeStatusUpdater;
+      }
+
+      @Override
+      NodeManager createNewNodeManager() {
+        rebootedNodeManager = getNodeManager(NodeAction.NORMAL);
+        return rebootedNodeManager;
       }
     };
   }

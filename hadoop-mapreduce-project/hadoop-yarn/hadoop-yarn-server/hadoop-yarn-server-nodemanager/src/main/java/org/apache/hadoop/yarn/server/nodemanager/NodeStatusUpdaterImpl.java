@@ -91,6 +91,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
+  private boolean hasToRebootNode;
+  
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
       NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics, 
       ContainerTokenSecretManager containerTokenSecretManager) {
@@ -155,6 +157,18 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     // Interrupt the updater.
     this.isStopped = true;
     super.stop();
+  }
+  
+  private synchronized void reboot() {
+    this.hasToRebootNode = true;
+    // Stop the status-updater. This will trigger a sub-service state change in
+    // the NodeManager which will then decide to reboot or not based on
+    // isRebooted.
+    this.stop();
+  }
+
+  synchronized boolean hasToRebootNode() {
+    return this.hasToRebootNode;
   }
 
   protected boolean isSecurityEnabled() {
@@ -336,8 +350,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
             if (response.getNodeAction() == NodeAction.REBOOT) {
               LOG.info("Node is out of sync with ResourceManager,"
-                  + " hence shutting down.");
-              NodeStatusUpdaterImpl.this.stop();
+                  + " hence rebooting.");
+              NodeStatusUpdaterImpl.this.reboot();
               break;
             }
 
