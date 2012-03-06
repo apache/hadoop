@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -138,12 +139,6 @@ public class LogAggregationService extends AbstractService implements
     }
     super.stop();
   }
-  
-  
-
-  
-
-
   
   private void verifyAndCreateRemoteLogDir(Configuration conf) {
     // Checking the existance of the TLD
@@ -289,7 +284,7 @@ public class LogAggregationService extends AbstractService implements
     createAppDir(user, appId, userUgi);
 
     // New application
-    AppLogAggregator appLogAggregator =
+    final AppLogAggregator appLogAggregator =
         new AppLogAggregatorImpl(this.dispatcher, this.deletionService,
             getConfig(), appId, userUgi, dirsHandler,
             getRemoteNodeLogFileForApp(appId, user), logRetentionPolicy,
@@ -303,7 +298,22 @@ public class LogAggregationService extends AbstractService implements
     // aggregation.
 
     // Schedule the aggregator.
-    this.threadPool.execute(appLogAggregator);
+    Runnable aggregatorWrapper = new Runnable() {
+      public void run() {
+        try {
+          appLogAggregator.run();
+        } finally {
+          appLogAggregators.remove(appId);
+        }
+      }
+    };
+    this.threadPool.execute(aggregatorWrapper);
+  }
+
+  // for testing only
+  @Private
+  int getNumAggregators() {
+    return this.appLogAggregators.size();
   }
 
   private void stopContainer(ContainerId containerId, int exitCode) {
