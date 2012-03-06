@@ -607,13 +607,13 @@ public class JobHistoryEventHandler extends AbstractService
     Counter slotMillisMapCounter = allCounters
       .findCounter(JobCounter.SLOTS_MILLIS_MAPS);
     if (slotMillisMapCounter != null) {
-      summary.setMapSlotSeconds(slotMillisMapCounter.getValue());
+      summary.setMapSlotSeconds(slotMillisMapCounter.getValue() / 1000);
     }
 
     Counter slotMillisReduceCounter = allCounters
       .findCounter(JobCounter.SLOTS_MILLIS_REDUCES);
     if (slotMillisReduceCounter != null) {
-      summary.setMapSlotSeconds(slotMillisReduceCounter.getValue());
+      summary.setReduceSlotSeconds(slotMillisReduceCounter.getValue() / 1000);
     }
   }
 

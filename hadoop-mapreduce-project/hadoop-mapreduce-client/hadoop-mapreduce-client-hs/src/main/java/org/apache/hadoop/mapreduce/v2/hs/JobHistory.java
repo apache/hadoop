@@ -62,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobIndexInfo;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -1095,10 +1096,16 @@ public class JobHistory extends AbstractService implements HistoryContext   {
     }
     return userName;
   }
-  
-  //TODO AppContext - Not Required
- @Override
- public Clock getClock() {
-   return null;
- }
+
+  // TODO AppContext - Not Required
+  @Override
+  public Clock getClock() {
+    return null;
+  }
+
+  // TODO AppContext - Not Required
+  @Override
+  public ClusterInfo getClusterInfo() {
+    return null;
+  }
 }

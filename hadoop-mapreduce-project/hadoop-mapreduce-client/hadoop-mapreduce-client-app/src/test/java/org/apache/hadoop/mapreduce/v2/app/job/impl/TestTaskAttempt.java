@@ -35,6 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MapTaskAttemptImpl;
+import org.apache.hadoop.mapreduce.JobCounter;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletion;
@@ -48,6 +50,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.ControlledClock;
 import org.apache.hadoop.mapreduce.v2.app.MRApp;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -59,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.Event;
@@ -66,6 +70,8 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+
+import com.sun.source.tree.AssertTree;
 
 @SuppressWarnings("unchecked")
 public class TestTaskAttempt{
@@ -153,10 +159,76 @@ public class TestTaskAttempt{
     }
     assertEquals(0, expected.size());
   }
+  
+  @Test
+  public void testSlotMillisCounterUpdate() throws Exception {
+    verifySlotMillis(2048, 2048, 1024);
+    verifySlotMillis(2048, 1024, 1024);
+    verifySlotMillis(10240, 1024, 2048);
+  }
 
+  public void verifySlotMillis(int mapMemMb, int reduceMemMb,
+      int minContainerSize) throws Exception {
+    Clock actualClock = new SystemClock();
+    ControlledClock clock = new ControlledClock(actualClock);
+    clock.setTime(10);
+    MRApp app =
+        new MRApp(1, 1, false, "testSlotMillisCounterUpdate", true, clock);
+    Configuration conf = new Configuration();
+    conf.setInt(MRJobConfig.MAP_MEMORY_MB, mapMemMb);
+    conf.setInt(MRJobConfig.REDUCE_MEMORY_MB, reduceMemMb);
+    app.setClusterInfo(new ClusterInfo(BuilderUtils
+        .newResource(minContainerSize), BuilderUtils.newResource(10240)));
+
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    Map<TaskId, Task> tasks = job.getTasks();
+    Assert.assertEquals("Num tasks is not correct", 2, tasks.size());
+    Iterator<Task> taskIter = tasks.values().iterator();
+    Task mTask = taskIter.next();
+    app.waitForState(mTask, TaskState.RUNNING);
+    Task rTask = taskIter.next();
+    app.waitForState(rTask, TaskState.RUNNING);
+    Map<TaskAttemptId, TaskAttempt> mAttempts = mTask.getAttempts();
+    Assert.assertEquals("Num attempts is not correct", 1, mAttempts.size());
+    Map<TaskAttemptId, TaskAttempt> rAttempts = rTask.getAttempts();
+    Assert.assertEquals("Num attempts is not correct", 1, rAttempts.size());
+    TaskAttempt mta = mAttempts.values().iterator().next();
+    TaskAttempt rta = rAttempts.values().iterator().next();
+    app.waitForState(mta, TaskAttemptState.RUNNING);
+    app.waitForState(rta, TaskAttemptState.RUNNING);
+
+    clock.setTime(11);
+    app.getContext()
+        .getEventHandler()
+        .handle(new TaskAttemptEvent(mta.getID(), TaskAttemptEventType.TA_DONE));
+    app.getContext()
+        .getEventHandler()
+        .handle(new TaskAttemptEvent(rta.getID(), TaskAttemptEventType.TA_DONE));
+    app.waitForState(job, JobState.SUCCEEDED);
+    Assert.assertEquals(mta.getFinishTime(), 11);
+    Assert.assertEquals(mta.getLaunchTime(), 10);
+    Assert.assertEquals(rta.getFinishTime(), 11);
+    Assert.assertEquals(rta.getLaunchTime(), 10);
+    Assert.assertEquals((int) Math.ceil((float) mapMemMb / minContainerSize),
+        job.getAllCounters().findCounter(JobCounter.SLOTS_MILLIS_MAPS)
+            .getValue());
+    Assert.assertEquals(
+        (int) Math.ceil((float) reduceMemMb / minContainerSize), job
+            .getAllCounters().findCounter(JobCounter.SLOTS_MILLIS_REDUCES)
+            .getValue());
+  }
+  
   @SuppressWarnings("rawtypes")
   private TaskAttemptImpl createMapTaskAttemptImplForTest(
       EventHandler eventHandler, TaskSplitMetaInfo taskSplitMetaInfo) {
+    Clock clock = new SystemClock();
+    return createMapTaskAttemptImplForTest(eventHandler, taskSplitMetaInfo, clock);
+  }
+  
+  @SuppressWarnings("rawtypes")
+  private TaskAttemptImpl createMapTaskAttemptImplForTest(
+      EventHandler eventHandler, TaskSplitMetaInfo taskSplitMetaInfo, Clock clock) {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
     JobId jobId = MRBuilderUtils.newJobId(appId, 1);
     TaskId taskId = MRBuilderUtils.newTaskId(jobId, 1, TaskType.MAP);
@@ -164,11 +236,10 @@ public class TestTaskAttempt{
     Path jobFile = mock(Path.class);
     JobConf jobConf = new JobConf();
     OutputCommitter outputCommitter = mock(OutputCommitter.class);
-    Clock clock = new SystemClock();
     TaskAttemptImpl taImpl =
         new MapTaskAttemptImpl(taskId, 1, eventHandler, jobFile, 1,
             taskSplitMetaInfo, jobConf, taListener, outputCommitter, null,
-            null, clock);
+            null, clock, null);
     return taImpl;
   }
 
@@ -220,7 +291,7 @@ public class TestTaskAttempt{
             TaskAttemptUnsuccessfulCompletion datum = (TaskAttemptUnsuccessfulCompletion) event
                 .getHistoryEvent().getDatum();
             Assert.assertEquals("Diagnostic Information is not Correct",
-                "Test Diagnostic Event", datum.get(6).toString());
+                "Test Diagnostic Event", datum.get(8).toString());
           }
         }
       };

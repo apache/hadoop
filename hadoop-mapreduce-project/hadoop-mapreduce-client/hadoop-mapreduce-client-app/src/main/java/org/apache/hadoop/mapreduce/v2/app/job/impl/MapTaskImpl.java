@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.security.token.Token;
@@ -51,10 +52,10 @@ public class MapTaskImpl extends TaskImpl {
       Token<JobTokenIdentifier> jobToken,
       Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock, 
       Map<TaskId, TaskInfo> completedTasksFromPreviousRun, int startCount,
-      MRAppMetrics metrics) {
+      MRAppMetrics metrics, AppContext appContext) {
     super(jobId, TaskType.MAP, partition, eventHandler, remoteJobConfFile,
         conf, taskAttemptListener, committer, jobToken, fsTokens, clock, 
-        completedTasksFromPreviousRun, startCount, metrics);
+        completedTasksFromPreviousRun, startCount, metrics, appContext);
     this.taskSplitMetaInfo = taskSplitMetaInfo;
   }
 
@@ -68,7 +69,7 @@ public class MapTaskImpl extends TaskImpl {
     return new MapTaskAttemptImpl(getID(), nextAttemptNumber,
         eventHandler, jobFile,
         partition, taskSplitMetaInfo, conf, taskAttemptListener,
-        committer, jobToken, fsTokens, clock);
+        committer, jobToken, fsTokens, clock, appContext);
   }
 
   @Override
