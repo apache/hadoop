@@ -68,6 +68,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8125. make hadoop-client set of curated jars available in a
     distribution tarball (rvs via tucu)
 
+    HADOOP-8142. Update versions from 0.23.2 to 0.23.3 in the build files.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
