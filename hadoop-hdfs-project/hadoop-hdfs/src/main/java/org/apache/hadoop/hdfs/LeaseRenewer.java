@@ -430,7 +430,8 @@ class LeaseRenewer {
     for(long lastRenewed = System.currentTimeMillis();
         clientsRunning() && !Thread.interrupted();
         Thread.sleep(getSleepPeriod())) {
-      if (System.currentTimeMillis() - lastRenewed >= getRenewalTime()) {
+      final long elapsed = System.currentTimeMillis() - lastRenewed;
+      if (elapsed >= getRenewalTime()) {
         try {
           renew();
           if (LOG.isDebugEnabled()) {
@@ -440,7 +441,7 @@ class LeaseRenewer {
           lastRenewed = System.currentTimeMillis();
         } catch (SocketTimeoutException ie) {
           LOG.warn("Failed to renew lease for " + clientsString() + " for "
-              + (getRenewalTime()/1000) + " seconds.  Aborting ...", ie);
+              + (elapsed/1000) + " seconds.  Aborting ...", ie);
           synchronized (this) {
             for(DFSClient c : dfsclients) {
               c.abort();
@@ -449,8 +450,7 @@ class LeaseRenewer {
           break;
         } catch (IOException ie) {
           LOG.warn("Failed to renew lease for " + clientsString() + " for "
-              + (getRenewalTime()/1000) + " seconds.  Will retry shortly ...",
-              ie);
+              + (elapsed/1000) + " seconds.  Will retry shortly ...", ie);
         }
       }
 
