@@ -198,8 +198,12 @@
     <Method name="run" />
     <Bug pattern="DM_EXIT" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.NodeManager" />
+    <Method name="initAndStartNodeManager" />
+    <Bug pattern="DM_EXIT" />
+  </Match>
  
-
   <!-- Ignore heartbeat exception when killing localizer -->
   <Match>
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer" />

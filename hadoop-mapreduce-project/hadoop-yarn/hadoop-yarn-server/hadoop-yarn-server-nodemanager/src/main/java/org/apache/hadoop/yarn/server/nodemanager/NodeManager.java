@@ -60,7 +60,8 @@ public class NodeManager extends CompositeService implements
   private ApplicationACLsManager aclsManager;
   private NodeHealthCheckerService nodeHealthChecker;
   private LocalDirsHandlerService dirsHandler;
-
+  private static CompositeServiceShutdownHook nodeManagerShutdownHook; 
+  
   public NodeManager() {
     super(NodeManager.class.getName());
   }
@@ -226,25 +227,52 @@ public class NodeManager extends CompositeService implements
 
   @Override
   public void stateChanged(Service service) {
-    // Shutdown the Nodemanager when the NodeStatusUpdater is stopped.
     if (NodeStatusUpdaterImpl.class.getName().equals(service.getName())
         && STATE.STOPPED.equals(service.getServiceState())) {
+
+      boolean hasToReboot = ((NodeStatusUpdaterImpl) service).hasToRebootNode();
+
+      // Shutdown the Nodemanager when the NodeStatusUpdater is stopped.      
       stop();
+
+      // Reboot the whole node-manager if NodeStatusUpdater got a reboot command
+      // from the RM.
+      if (hasToReboot) {
+        LOG.info("Rebooting the node manager.");
+        NodeManager nodeManager = createNewNodeManager();
+        nodeManager.initAndStartNodeManager(hasToReboot);
+      }
     }
   }
   
-  public static void main(String[] args) {
-    StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);
+  private void initAndStartNodeManager(boolean hasToReboot) {
     try {
-      NodeManager nodeManager = new NodeManager();
-      Runtime.getRuntime().addShutdownHook(
-          new CompositeServiceShutdownHook(nodeManager));
+
+      // Remove the old hook if we are rebooting.
+      if (hasToReboot && null != nodeManagerShutdownHook) {
+        Runtime.getRuntime().removeShutdownHook(nodeManagerShutdownHook);
+      }
+
+      nodeManagerShutdownHook = new CompositeServiceShutdownHook(this);
+      Runtime.getRuntime().addShutdownHook(nodeManagerShutdownHook);
+
       YarnConfiguration conf = new YarnConfiguration();
-      nodeManager.init(conf);
-      nodeManager.start();
+      this.init(conf);
+      this.start();
     } catch (Throwable t) {
       LOG.fatal("Error starting NodeManager", t);
       System.exit(-1);
     }
+  }
+
+  // For testing
+  NodeManager createNewNodeManager() {
+    return new NodeManager();
+  }
+
+  public static void main(String[] args) {
+    StringUtils.startupShutdownMessage(NodeManager.class, args, LOG);
+    NodeManager nodeManager = new NodeManager();
+    nodeManager.initAndStartNodeManager(false);
   }
 }
