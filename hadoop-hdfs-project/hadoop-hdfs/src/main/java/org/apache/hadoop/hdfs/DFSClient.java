@@ -18,6 +18,31 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
@@ -59,7 +84,6 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -83,6 +107,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -105,7 +130,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -127,6 +151,7 @@ public class DFSClient implements java.io.Closeable {
   private final InetSocketAddress nnAddress;
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
+  volatile long lastLeaseRenewal;
   private volatile FsServerDefaults serverDefaults;
   private volatile long serverDefaultsLastUpdate;
   final String clientName;
@@ -351,6 +376,12 @@ public class DFSClient implements java.io.Closeable {
   void putFileBeingWritten(final String src, final DFSOutputStream out) {
     synchronized(filesBeingWritten) {
       filesBeingWritten.put(src, out);
+      // update the last lease renewal time only when there was no
+      // writes. once there is one write stream open, the lease renewer
+      // thread keeps it updated well with in anyone's expiration time.
+      if (lastLeaseRenewal == 0) {
+        updateLastLeaseRenewal();
+      }
     }
   }
 
@@ -358,6 +389,9 @@ public class DFSClient implements java.io.Closeable {
   void removeFileBeingWritten(final String src) {
     synchronized(filesBeingWritten) {
       filesBeingWritten.remove(src);
+      if (filesBeingWritten.isEmpty()) {
+        lastLeaseRenewal = 0;
+      }
     }
   }
 
@@ -373,6 +407,19 @@ public class DFSClient implements java.io.Closeable {
     return clientRunning;
   }
 
+  long getLastLeaseRenewal() {
+    return lastLeaseRenewal;
+  }
+
+  void updateLastLeaseRenewal() {
+    synchronized(filesBeingWritten) {
+      if (filesBeingWritten.isEmpty()) {
+        return;
+      }
+      lastLeaseRenewal = System.currentTimeMillis();
+    }
+  }
+
   /**
    * Renew leases.
    * @return true if lease was renewed. May return false if this
@@ -380,8 +427,24 @@ public class DFSClient implements java.io.Closeable {
    **/
   boolean renewLease() throws IOException {
     if (clientRunning && !isFilesBeingWrittenEmpty()) {
-      namenode.renewLease(clientName);
-      return true;
+      try {
+        namenode.renewLease(clientName);
+        updateLastLeaseRenewal();
+        return true;
+      } catch (IOException e) {
+        // Abort if the lease has already expired. 
+        final long elapsed = System.currentTimeMillis() - getLastLeaseRenewal();
+        if (elapsed > HdfsConstants.LEASE_SOFTLIMIT_PERIOD) {
+          LOG.warn("Failed to renew lease for " + clientName + " for "
+              + (elapsed/1000) + " seconds (>= soft-limit ="
+              + (HdfsConstants.LEASE_SOFTLIMIT_PERIOD/1000) + " seconds.) "
+              + "Closing all files being written ...", e);
+          closeAllFilesBeingWritten(true);
+        } else {
+          // Let the lease renewer handle it and retry.
+          throw e;
+        }
+      }
     }
     return false;
   }
