@@ -25,7 +25,10 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.shell.PathExceptions.PathIsDirectoryException;
+import org.apache.hadoop.io.IOUtils;
 
 /** Various commands for copy files */
 @InterfaceAudience.Private
@@ -53,21 +56,69 @@ class CopyCommands {
 
     protected PathData dst = null;
     protected String delimiter = null;
+    protected List<PathData> srcs = null;
 
     @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
-      CommandFormat cf = new CommandFormat(2, 3, "nl");
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "nl");
       cf.parse(args);
 
       delimiter = cf.getOpt("nl") ? "\n" : null;
 
       dst = new PathData(new File(args.removeLast()), getConf());
+      if (dst.exists && dst.stat.isDirectory()) {
+        throw new PathIsDirectoryException(dst.toString());
+      }
+      srcs = new LinkedList<PathData>();
     }
 
     @Override
+    protected void processArguments(LinkedList<PathData> items)
+    throws IOException {
+      super.processArguments(items);
+      if (exitCode != 0) { // check for error collecting paths
+        return;
+      }
+      FSDataOutputStream out = dst.fs.create(dst.path);
+      try {
+        FSDataInputStream in = null;
+        for (PathData src : srcs) {
+          try {
+            in = src.fs.open(src.path);
+            IOUtils.copyBytes(in, out, getConf(), false);
+            if (delimiter != null) {
+              out.write(delimiter.getBytes("UTF-8"));
+            }
+          } finally {
+            in.close();
+          }
+        }
+      } finally {
+        out.close();
+      }      
+    }
+ 
+    @Override
+    protected void processNonexistentPath(PathData item) throws IOException {
+      exitCode = 1; // flag that a path is bad
+      super.processNonexistentPath(item);
+    }
+
+    // this command is handled a bit differently than others.  the paths
+    // are batched up instead of actually being processed.  this avoids
+    // unnecessarily streaming into the merge file and then encountering
+    // a path error that should abort the merge
+    
+    @Override
     protected void processPath(PathData src) throws IOException {
-      FileUtil.copyMerge(src.fs, src.path,
-          dst.fs, dst.path, false, getConf(), delimiter);
+      // for directories, recurse one level to get its files, else skip it
+      if (src.stat.isDirectory()) {
+        if (getDepth() == 0) {
+          recursePath(src);
+        } // skip subdirs
+      } else {
+        srcs.add(src);
+      }
     }
   }
 
