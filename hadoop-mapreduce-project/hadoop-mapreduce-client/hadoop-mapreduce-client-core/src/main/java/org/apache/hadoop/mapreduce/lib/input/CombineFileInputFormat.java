@@ -514,7 +514,7 @@ public abstract class CombineFileInputFormat<K, V>
             long left = locations[i].getLength();
             long myOffset = locations[i].getOffset();
             long myLength = 0;
-            while (left > 0) {
+            do {
               if (maxSize == 0) {
                 myLength = left;
               } else {
@@ -536,7 +536,7 @@ public abstract class CombineFileInputFormat<K, V>
               myOffset += myLength;
 
               blocksList.add(oneblock);
-            }
+            } while (left > 0);
           }
           blocks = blocksList.toArray(new OneBlockInfo[blocksList.size()]);
         }

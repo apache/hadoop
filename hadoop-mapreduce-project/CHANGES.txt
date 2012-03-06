@@ -46,6 +46,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3728. ShuffleHandler can't access results when configured in a
     secure mode (ahmed via tucu)
 
+    MAPREDUCE-3952. In MR2, when Total input paths to process == 1,
+    CombinefileInputFormat.getSplits() returns 0 split. (zhenxiao via tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
