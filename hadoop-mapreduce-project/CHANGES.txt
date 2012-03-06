@@ -194,6 +194,8 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3034. Ensure NodeManager reboots itself on direction from
     ResourceManager. (Devaraj K & Eric Payne via acmurthy) 
 
+    MAPREDUCE-3976. TestRMContainerAllocator failing (Jason Lowe via bobby)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
