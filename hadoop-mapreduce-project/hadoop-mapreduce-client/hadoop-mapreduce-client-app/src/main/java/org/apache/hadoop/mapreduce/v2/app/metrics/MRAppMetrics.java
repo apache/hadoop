@@ -55,7 +55,7 @@ public class MRAppMetrics {
   }
 
   public static MRAppMetrics create(MetricsSystem ms) {
-    JvmMetrics.create("MRAppMaster", null, ms);
+    JvmMetrics.initSingleton("MRAppMaster", null);
     return ms.register(new MRAppMetrics());
   }
 

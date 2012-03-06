@@ -451,8 +451,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     startWepApp();
-    MetricsSystem ms = DefaultMetricsSystem.initialize("ResourceManager");
-    JvmMetrics.create("ResourceManager", null, ms);
+    DefaultMetricsSystem.initialize("ResourceManager");
+    JvmMetrics.initSingleton("ResourceManager", null);
     try {
       rmDTSecretManager.startThreads();
     } catch(IOException ie) {
