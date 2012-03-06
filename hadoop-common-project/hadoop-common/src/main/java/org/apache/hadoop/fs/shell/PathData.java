@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIsDirectoryException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIsNotDirectoryException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Encapsulates a Path (path), its FileStatus (stat), and its FileSystem (fs).
@@ -43,7 +45,7 @@ import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 
-public class PathData {
+public class PathData implements Comparable<PathData> {
   protected final URI uri;
   public final FileSystem fs;
   public final Path path;
@@ -210,6 +212,7 @@ public class PathData {
       String child = getStringForChildPath(stats[i].getPath());
       items[i] = new PathData(fs, child, stats[i]);
     }
+    Arrays.sort(items);
     return items;
   }
 
@@ -303,6 +306,7 @@ public class PathData {
         items[i++] = new PathData(fs, globMatch, stat);
       }
     }
+    Arrays.sort(items);
     return items;
   }
 
@@ -446,4 +450,20 @@ public class PathData {
     }
   }
 
+  @Override
+  public int compareTo(PathData o) {
+    return path.compareTo(((PathData)o).path);
+  }
+  
+  @Override
+  public boolean equals(Object o) {
+    return (o != null) &&
+           (o instanceof PathData) &&
+           path.equals(((PathData)o).path);
+  }
+  
+  @Override
+  public int hashCode() {
+    return path.hashCode();
+  }
 }
