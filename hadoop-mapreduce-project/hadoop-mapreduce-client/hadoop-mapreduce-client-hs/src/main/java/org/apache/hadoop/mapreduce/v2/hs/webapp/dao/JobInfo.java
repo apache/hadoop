@@ -55,18 +55,18 @@ public class JobInfo {
   protected int mapsCompleted;
   protected int reducesTotal;
   protected int reducesCompleted;
-  protected boolean uberized;
+  protected Boolean uberized;
   protected String diagnostics;
-  protected long avgMapTime = 0;
-  protected long avgReduceTime = 0;
-  protected long avgShuffleTime = 0;
-  protected long avgMergeTime = 0;
-  protected int failedReduceAttempts = 0;
-  protected int killedReduceAttempts = 0;
-  protected int successfulReduceAttempts = 0;
-  protected int failedMapAttempts = 0;
-  protected int killedMapAttempts = 0;
-  protected int successfulMapAttempts = 0;
+  protected Long avgMapTime;
+  protected Long avgReduceTime;
+  protected Long avgShuffleTime;
+  protected Long avgMergeTime;
+  protected Integer failedReduceAttempts;
+  protected Integer killedReduceAttempts;
+  protected Integer successfulReduceAttempts;
+  protected Integer failedMapAttempts;
+  protected Integer killedMapAttempts;
+  protected Integer successfulMapAttempts;
   protected ArrayList<ConfEntryInfo> acls;
 
   @XmlTransient
@@ -80,7 +80,7 @@ public class JobInfo {
   public JobInfo(Job job) {
     this.id = MRApps.toString(job.getID());
     JobReport report = job.getReport();
-    countTasksAndAttempts(job);
+    
     this.mapsTotal = job.getTotalMaps();
     this.mapsCompleted = job.getCompletedMaps();
     this.reducesTotal = job.getTotalReduces();
@@ -91,19 +91,33 @@ public class JobInfo {
     this.queue = job.getQueueName();
     this.user = job.getUserName();
     this.state = job.getState().toString();
-    this.uberized = job.isUber();
-    this.diagnostics = "";
-    List<String> diagnostics = job.getDiagnostics();
-    if (diagnostics != null && !diagnostics.isEmpty()) {
-      StringBuffer b = new StringBuffer();
-      for (String diag : diagnostics) {
-        b.append(diag);
-      }
-      this.diagnostics = b.toString();
-    }
 
     this.acls = new ArrayList<ConfEntryInfo>();
+    
     if (job instanceof CompletedJob) {
+      avgMapTime = 0l;
+      avgReduceTime = 0l;
+      avgShuffleTime = 0l;
+      avgMergeTime = 0l;
+      failedReduceAttempts = 0;
+      killedReduceAttempts = 0;
+      successfulReduceAttempts = 0;
+      failedMapAttempts = 0;
+      killedMapAttempts = 0;
+      successfulMapAttempts = 0;
+      countTasksAndAttempts(job);
+      this.uberized = job.isUber();
+      this.diagnostics = "";
+      List<String> diagnostics = job.getDiagnostics();
+      if (diagnostics != null && !diagnostics.isEmpty()) {
+        StringBuffer b = new StringBuffer();
+        for (String diag : diagnostics) {
+          b.append(diag);
+        }
+        this.diagnostics = b.toString();
+      }
+
+
       Map<JobACL, AccessControlList> allacls = job.getJobACLs();
       if (allacls != null) {
         for (Map.Entry<JobACL, AccessControlList> entry : allacls.entrySet()) {
@@ -122,43 +136,43 @@ public class JobInfo {
     return numReduces;
   }
 
-  public long getAvgMapTime() {
+  public Long getAvgMapTime() {
     return avgMapTime;
   }
 
-  public long getAvgReduceTime() {
+  public Long getAvgReduceTime() {
     return avgReduceTime;
   }
 
-  public long getAvgShuffleTime() {
+  public Long getAvgShuffleTime() {
     return avgShuffleTime;
   }
 
-  public long getAvgMergeTime() {
+  public Long getAvgMergeTime() {
     return avgMergeTime;
   }
 
-  public long getFailedReduceAttempts() {
+  public Integer getFailedReduceAttempts() {
     return failedReduceAttempts;
   }
 
-  public long getKilledReduceAttempts() {
+  public Integer getKilledReduceAttempts() {
     return killedReduceAttempts;
   }
 
-  public long getSuccessfulReduceAttempts() {
+  public Integer getSuccessfulReduceAttempts() {
     return successfulReduceAttempts;
   }
 
-  public long getFailedMapAttempts() {
+  public Integer getFailedMapAttempts() {
     return failedMapAttempts;
   }
 
-  public long getKilledMapAttempts() {
+  public Integer getKilledMapAttempts() {
     return killedMapAttempts;
   }
 
-  public long getSuccessfulMapAttempts() {
+  public Integer getSuccessfulMapAttempts() {
     return successfulMapAttempts;
   }
 
@@ -210,7 +224,7 @@ public class JobInfo {
     return this.finishTime;
   }
 
-  public boolean isUber() {
+  public Boolean isUber() {
     return this.uberized;
   }
 

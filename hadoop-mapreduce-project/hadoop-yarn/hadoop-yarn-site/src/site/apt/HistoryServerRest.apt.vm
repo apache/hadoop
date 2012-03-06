@@ -129,7 +129,7 @@ History Server REST API's.
 
 ** Jobs API
 
-  The jobs resource provides a list of the MapReduce jobs that have finished. 
+  The jobs resource provides a list of the MapReduce jobs that have finished.  It does not currently return a full list of parameters
 
 *** URI
 
@@ -160,7 +160,9 @@ History Server REST API's.
 *** Elements of the <jobs> object
 
   When you make a request for the list of jobs, the information will be returned as an array of job objects.
-  See also {{Job API}} for syntax of the job object.
+  See also {{Job API}} for syntax of the job object.  Except this is a subset of a full job.  Only startTime,
+  finishTime, id, name, queue, user, state, mapsTotal, mapsCompleted, reducesTotal, and reducesCompleted are
+  returned.
 
 *---------------+--------------+-------------------------------+
 || Item         || Data Type  || Description                   |
@@ -194,73 +196,29 @@ History Server REST API's.
    "jobs" : {
       "job" : [
          {
-            "avgReduceTime" : 833,
-            "failedReduceAttempts" : 0,
             "state" : "SUCCEEDED",
-            "successfulReduceAttempts" : 1,
-            "acls" : [
-               {
-                  "value" : " ",
-                  "name" : "mapreduce.job.acl-modify-job"
-               },
-              {
-                  "value" : " ",
-                  "name" : "mapreduce.job.acl-view-job"
-               }
-            ],
             "user" : "user1",
             "reducesTotal" : 1,
             "mapsCompleted" : 1,
             "startTime" : 1326381344489,
             "id" : "job_1326381300833_1_1",
-            "avgMapTime" : 2671,
-            "successfulMapAttempts" : 1,
             "name" : "word count",
-            "avgShuffleTime" : 2540,
             "reducesCompleted" : 1,
-            "diagnostics" : "",
-            "failedMapAttempts" : 0,
-            "avgMergeTime" : 2570,
-            "killedReduceAttempts" : 0,
             "mapsTotal" : 1,
             "queue" : "default",
-            "uberized" : false,
-            "killedMapAttempts" : 0,
             "finishTime" : 1326381356010
          },
          {
-            "avgReduceTime" : 124961,
-            "failedReduceAttempts" : 0,
             "state" : "SUCCEEDED",
-            "successfulReduceAttempts" : 1,
-            "acls" : [
-               {
-                  "value" : " ",
-                  "name" : "mapreduce.job.acl-modify-job"
-               },
-               {
-                  "value" : " ",
-                  "name" : "mapreduce.job.acl-view-job"
-               }
-            ],
             "user" : "user1",
             "reducesTotal" : 1,
             "mapsCompleted" : 1,
             "startTime" : 1326381446529,
             "id" : "job_1326381300833_2_2",
-            "avgMapTime" : 2638,
-            "successfulMapAttempts" : 1,
             "name" : "Sleep job",
-            "avgShuffleTime" : 2540,
             "reducesCompleted" : 1,
-            "diagnostics" : "",
-            "failedMapAttempts" : 0,
-            "avgMergeTime" : 2589,
-            "killedReduceAttempts" : 0,
             "mapsTotal" : 1,
             "queue" : "default",
-            "uberized" : false,
-            "killedMapAttempts" : 0,
             "finishTime" : 1326381582106
          }
       ]
@@ -303,26 +261,6 @@ History Server REST API's.
     <mapsCompleted>1</mapsCompleted>
     <reducesTotal>1</reducesTotal>
     <reducesCompleted>1</reducesCompleted>
-    <uberized>false</uberized>
-    <diagnostics/>
-    <avgMapTime>2671</avgMapTime>
-    <avgReduceTime>833</avgReduceTime>
-    <avgShuffleTime>2540</avgShuffleTime>
-    <avgMergeTime>2570</avgMergeTime>
-    <failedReduceAttempts>0</failedReduceAttempts>
-    <killedReduceAttempts>0</killedReduceAttempts>
-    <successfulReduceAttempts>1</successfulReduceAttempts>
-    <failedMapAttempts>0</failedMapAttempts>
-    <killedMapAttempts>0</killedMapAttempts>
-    <successfulMapAttempts>1</successfulMapAttempts>
-    <acls>
-      <name>mapreduce.job.acl-modify-job</name>
-      <value> </value>
-    </acls>
-    <acls>
-      <name>mapreduce.job.acl-view-job</name>
-      <value> </value>
-    </acls>
   </job>
   <job>
     <startTime>1326381446529</startTime>
@@ -336,26 +274,6 @@ History Server REST API's.
     <mapsCompleted>1</mapsCompleted>
     <reducesTotal>1</reducesTotal>
     <reducesCompleted>1</reducesCompleted>
-    <uberized>false</uberized>
-    <diagnostics/>
-    <avgMapTime>2638</avgMapTime>
-    <avgReduceTime>124961</avgReduceTime>
-    <avgShuffleTime>2540</avgShuffleTime>
-    <avgMergeTime>2589</avgMergeTime>
-    <failedReduceAttempts>0</failedReduceAttempts>
-    <killedReduceAttempts>0</killedReduceAttempts>
-    <successfulReduceAttempts>1</successfulReduceAttempts>
-    <failedMapAttempts>0</failedMapAttempts>
-    <killedMapAttempts>0</killedMapAttempts>
-    <successfulMapAttempts>1</successfulMapAttempts>
-    <acls>
-      <name>mapreduce.job.acl-modify-job</name>
-      <value> </value>
-    </acls>
-    <acls>
-      <name>mapreduce.job.acl-view-job</name>
-      <value> </value>
-    </acls>
   </job>
 </jobs>
 +---+

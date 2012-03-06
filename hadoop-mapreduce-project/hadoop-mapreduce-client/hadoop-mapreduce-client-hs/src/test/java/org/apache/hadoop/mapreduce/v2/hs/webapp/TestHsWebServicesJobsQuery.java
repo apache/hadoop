@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Map;
@@ -34,8 +35,11 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.hs.MockHistoryJobs;
+import org.apache.hadoop.mapreduce.v2.hs.MockHistoryJobs.JobsPair;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -73,11 +77,19 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
 
   static class TestAppContext implements AppContext {
     final String user = MockJobs.newUserName();
-    final Map<JobId, Job> jobs;
+    final Map<JobId, Job> fullJobs;
+    final Map<JobId, Job> partialJobs;
     final long startTime = System.currentTimeMillis();
 
     TestAppContext(int numJobs, int numTasks, int numAttempts) {
-      jobs = MockJobs.newJobs(numJobs, numTasks, numAttempts);
+      JobsPair jobs;
+      try {
+        jobs = MockHistoryJobs.newHistoryJobs(numJobs, numTasks, numAttempts);
+      } catch (IOException e) {
+        throw new YarnException(e);
+      }
+      partialJobs = jobs.partial;
+      fullJobs = jobs.full;
     }
 
     TestAppContext() {
@@ -101,12 +113,16 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
 
     @Override
     public Job getJob(JobId jobID) {
-      return jobs.get(jobID);
+      return fullJobs.get(jobID);
     }
 
+    public Job getPartialJob(JobId jobID) {
+      return partialJobs.get(jobID);
+    }
+    
     @Override
     public Map<JobId, Job> getAllJobs() {
-      return jobs; // OK
+      return partialJobs; // OK
     }
 
     @SuppressWarnings("rawtypes")
@@ -199,8 +215,8 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
     assertEquals("incorrect number of elements", 3, arr.length());
     // just verify one of them.
     JSONObject info = arr.getJSONObject(0);
-    Job job = appContext.getJob(MRApps.toJobID(info.getString("id")));
-    VerifyJobsUtils.verifyHsJob(info, job);
+    Job job = appContext.getPartialJob(MRApps.toJobID(info.getString("id")));
+    VerifyJobsUtils.verifyHsJobPartial(info, job);
   }
 
   @Test
