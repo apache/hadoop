@@ -175,6 +175,7 @@ public interface MRJobConfig {
   public static final String MAP_INPUT_START = "mapreduce.map.input.start";
 
   public static final String MAP_MEMORY_MB = "mapreduce.map.memory.mb";
+  public static final int DEFAULT_MAP_MEMORY_MB = 1024;
 
   public static final String MAP_MEMORY_PHYSICAL_MB = "mapreduce.map.memory.physical.mb";
 
@@ -225,6 +226,7 @@ public interface MRJobConfig {
   public static final String REDUCE_MEMORY_PHYSICAL_MB = "mapreduce.reduce.memory.physical.mb";
 
   public static final String REDUCE_MEMORY_MB = "mapreduce.reduce.memory.mb";
+  public static final int DEFAULT_REDUCE_MEMORY_MB = 1024;
 
   public static final String REDUCE_MEMORY_TOTAL_BYTES = "mapreduce.reduce.memory.totalbytes";
 

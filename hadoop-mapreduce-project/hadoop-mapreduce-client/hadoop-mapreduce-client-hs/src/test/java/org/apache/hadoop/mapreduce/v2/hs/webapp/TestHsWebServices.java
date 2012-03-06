@@ -37,6 +37,7 @@ import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistory;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -137,6 +138,11 @@ public class TestHsWebServices extends JerseyTest {
     @Override
     public long getStartTime() {
       return startTime;
+    }
+
+    @Override
+    public ClusterInfo getClusterInfo() {
+      return null;
     }
   }
 

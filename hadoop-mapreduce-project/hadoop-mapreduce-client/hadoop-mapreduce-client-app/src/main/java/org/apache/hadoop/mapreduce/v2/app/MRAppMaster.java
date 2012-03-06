@@ -91,6 +91,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -449,10 +450,11 @@ public class MRAppMaster extends CompositeService {
   protected Job createJob(Configuration conf) {
 
     // create single job
-    Job newJob = new JobImpl(jobId, appAttemptID, conf, dispatcher
-        .getEventHandler(), taskAttemptListener, jobTokenSecretManager,
-        fsTokens, clock, completedTasksFromPreviousRun, metrics, committer,
-        newApiCommitter, currentUser.getUserName(), appSubmitTime, amInfos);
+    Job newJob =
+        new JobImpl(jobId, appAttemptID, conf, dispatcher.getEventHandler(),
+            taskAttemptListener, jobTokenSecretManager, fsTokens, clock,
+            completedTasksFromPreviousRun, metrics, committer, newApiCommitter,
+            currentUser.getUserName(), appSubmitTime, amInfos, context);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
 
     dispatcher.register(JobFinishEvent.Type.class,
@@ -710,6 +712,7 @@ public class MRAppMaster extends CompositeService {
 
     private final Map<JobId, Job> jobs = new ConcurrentHashMap<JobId, Job>();
     private final Configuration conf;
+    private final ClusterInfo clusterInfo = new ClusterInfo();
 
     public RunningAppContext(Configuration config) {
       this.conf = config;
@@ -758,6 +761,11 @@ public class MRAppMaster extends CompositeService {
     @Override
     public Clock getClock() {
       return clock;
+    }
+    
+    @Override
+    public ClusterInfo getClusterInfo() {
+      return this.clusterInfo;
     }
   }
 

@@ -15,20 +15,20 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-package org.apache.hadoop.mapreduce.v2.app.recover;
+package org.apache.hadoop.mapreduce.v2.app;
 
 import org.apache.hadoop.yarn.Clock;
 
-class ControlledClock implements Clock {
+public class ControlledClock implements Clock {
   private long time = -1;
   private final Clock actualClock;
-  ControlledClock(Clock actualClock) {
+  public ControlledClock(Clock actualClock) {
     this.actualClock = actualClock;
   }
-  synchronized void setTime(long time) {
+  public synchronized void setTime(long time) {
     this.time = time;
   }
-  synchronized void reset() {
+  public synchronized void reset() {
     time = -1;
   }
 
