@@ -565,4 +565,38 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     logAggregationService.stop();
   }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testLogAggregatorCleanup() throws Exception {
+    DeletionService delSrvc = mock(DeletionService.class);
+
+    // get the AppLogAggregationImpl thread to crash
+    LocalDirsHandlerService mockedDirSvc = mock(LocalDirsHandlerService.class);
+
+    DrainDispatcher dispatcher = createDispatcher();
+    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, appEventHandler);
+
+    LogAggregationService logAggregationService =
+        new LogAggregationService(dispatcher, this.context, delSrvc,
+                                  mockedDirSvc);
+    logAggregationService.init(this.conf);
+    logAggregationService.start();
+
+    ApplicationId application1 = BuilderUtils.newApplicationId(1234, 1);
+    logAggregationService.handle(new LogHandlerAppStartedEvent(
+            application1, this.user, null,
+            ContainerLogsRetentionPolicy.ALL_CONTAINERS, this.acls));
+
+    logAggregationService.handle(new LogHandlerAppFinishedEvent(application1));
+    dispatcher.await();
+    int timeToWait = 20 * 1000;
+    while (timeToWait > 0 && logAggregationService.getNumAggregators() > 0) {
+      Thread.sleep(100);
+      timeToWait -= 100;
+    }
+    Assert.assertEquals("Log aggregator failed to cleanup!", 0,
+        logAggregationService.getNumAggregators());
+  }
 }
