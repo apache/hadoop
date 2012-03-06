@@ -54,6 +54,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
@@ -104,6 +105,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private final Lock readLock;
   private final Lock writeLock;
   private final MRAppMetrics metrics;
+  protected final AppContext appContext;
   private long scheduledTime;
   
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
@@ -251,7 +253,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       Token<JobTokenIdentifier> jobToken,
       Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock,
       Map<TaskId, TaskInfo> completedTasksFromPreviousRun, int startCount,
-      MRAppMetrics metrics) {
+      MRAppMetrics metrics, AppContext appContext) {
     this.conf = conf;
     this.clock = clock;
     this.jobFile = remoteJobConfFile;
@@ -271,6 +273,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     this.fsTokens = fsTokens;
     this.jobToken = jobToken;
     this.metrics = metrics;
+    this.appContext = appContext;
 
     // See if this is from a previous generation.
     if (completedTasksFromPreviousRun != null

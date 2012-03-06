@@ -73,6 +73,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
@@ -128,7 +129,6 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
 
-
 /**
  * Implementation of TaskAttempt interface.
  */
@@ -140,8 +140,6 @@ public abstract class TaskAttemptImpl implements
   static final Counters EMPTY_COUNTERS = new Counters();
   private static final Log LOG = LogFactory.getLog(TaskAttemptImpl.class);
   private static final long MEMORY_SPLITS_RESOLUTION = 1024; //TODO Make configurable?
-  private static final int MAP_MEMORY_MB_DEFAULT = 1024;
-  private static final int REDUCE_MEMORY_MB_DEFAULT = 1024;
   private final static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   protected final JobConf conf;
@@ -158,6 +156,7 @@ public abstract class TaskAttemptImpl implements
   private final List<String> diagnostics = new ArrayList<String>();
   private final Lock readLock;
   private final Lock writeLock;
+  private final AppContext appContext;
   private Collection<Token<? extends TokenIdentifier>> fsTokens;
   private Token<JobTokenIdentifier> jobToken;
   private static AtomicBoolean initialClasspathFlag = new AtomicBoolean();
@@ -459,7 +458,8 @@ public abstract class TaskAttemptImpl implements
       TaskAttemptListener taskAttemptListener, Path jobFile, int partition,
       JobConf conf, String[] dataLocalHosts, OutputCommitter committer,
       Token<JobTokenIdentifier> jobToken,
-      Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock) {
+      Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock,
+      AppContext appContext) {
     oldJobId = TypeConverter.fromYarn(taskId.getJobId());
     this.conf = conf;
     this.clock = clock;
@@ -467,6 +467,7 @@ public abstract class TaskAttemptImpl implements
     attemptId.setTaskId(taskId);
     attemptId.setId(i);
     this.taskAttemptListener = taskAttemptListener;
+    this.appContext = appContext;
 
     // Initialize reportedStatus
     reportedStatus = new TaskAttemptStatus();
@@ -497,9 +498,13 @@ public abstract class TaskAttemptImpl implements
   private int getMemoryRequired(Configuration conf, TaskType taskType) {
     int memory = 1024;
     if (taskType == TaskType.MAP)  {
-      memory = conf.getInt(MRJobConfig.MAP_MEMORY_MB, MAP_MEMORY_MB_DEFAULT);
+      memory =
+          conf.getInt(MRJobConfig.MAP_MEMORY_MB,
+              MRJobConfig.DEFAULT_MAP_MEMORY_MB);
     } else if (taskType == TaskType.REDUCE) {
-      memory = conf.getInt(MRJobConfig.REDUCE_MEMORY_MB, REDUCE_MEMORY_MB_DEFAULT);
+      memory =
+          conf.getInt(MRJobConfig.REDUCE_MEMORY_MB,
+              MRJobConfig.DEFAULT_REDUCE_MEMORY_MB);
     }
     
     return memory;
@@ -950,26 +955,26 @@ public abstract class TaskAttemptImpl implements
       finishTime = clock.getTime();
     }
   }
-  
+
   private static long computeSlotMillis(TaskAttemptImpl taskAttempt) {
     TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
     int slotMemoryReq =
-       taskAttempt.getMemoryRequired(taskAttempt.conf, taskType);
+        taskAttempt.getMemoryRequired(taskAttempt.conf, taskType);
+
+    int minSlotMemSize =
+        taskAttempt.appContext.getClusterInfo().getMinContainerCapability()
+            .getMemory();
+
     int simSlotsRequired =
-        slotMemoryReq
-            / (taskType == TaskType.MAP ? MAP_MEMORY_MB_DEFAULT
-                : REDUCE_MEMORY_MB_DEFAULT);
-    // Simulating MRv1 slots for counters by assuming *_MEMORY_MB_DEFAULT
-    // corresponds to a MrV1 slot.
-    // Fallow slot millis is not applicable in MRv2 - since a container is
-    // either assigned with the required memory or is not. No partial
-    // reserveations
+        minSlotMemSize == 0 ? 0 : (int) Math.ceil((float) slotMemoryReq
+            / minSlotMemSize);
+
     long slotMillisIncrement =
         simSlotsRequired
             * (taskAttempt.getFinishTime() - taskAttempt.getLaunchTime());
     return slotMillisIncrement;
   }
-  
+
   private static JobCounterUpdateEvent createJobCounterUpdateEventTAFailed(
       TaskAttemptImpl taskAttempt) {
     TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
@@ -1216,8 +1221,8 @@ public abstract class TaskAttemptImpl implements
         taskAttempt.eventHandler.handle(new JobHistoryEvent(
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       } else {
-        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
-            + taskAttempt.getID());
+        LOG.debug("Not generating HistoryFinish event since start event not " +
+        		"generated for taskAttempt: " + taskAttempt.getID());
       }
     }
   }
@@ -1352,8 +1357,8 @@ public abstract class TaskAttemptImpl implements
         // taskAttempt.logAttemptFinishedEvent(TaskAttemptState.FAILED); Not
         // handling failed map/reduce events.
       }else {
-        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
-            + taskAttempt.getID());
+        LOG.debug("Not generating HistoryFinish event since start event not " +
+        		"generated for taskAttempt: " + taskAttempt.getID());
       }
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
@@ -1419,8 +1424,8 @@ public abstract class TaskAttemptImpl implements
         taskAttempt.eventHandler.handle(new JobHistoryEvent(
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       }else {
-        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
-            + taskAttempt.getID());
+        LOG.debug("Not generating HistoryFinish event since start event not " +
+        		"generated for taskAttempt: " + taskAttempt.getID());
       }
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
@@ -1445,8 +1450,8 @@ public abstract class TaskAttemptImpl implements
         taskAttempt.eventHandler.handle(new JobHistoryEvent(
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       }else {
-        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
-            + taskAttempt.getID());
+        LOG.debug("Not generating HistoryFinish event since start event not " +
+        		"generated for taskAttempt: " + taskAttempt.getID());
       }
 //      taskAttempt.logAttemptFinishedEvent(TaskAttemptState.KILLED); Not logging Map/Reduce attempts in case of failure.
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(

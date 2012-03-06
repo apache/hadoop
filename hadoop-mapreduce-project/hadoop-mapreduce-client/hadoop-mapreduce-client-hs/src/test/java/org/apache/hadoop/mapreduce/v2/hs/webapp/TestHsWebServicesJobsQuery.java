@@ -39,6 +39,7 @@ import org.apache.hadoop.mapreduce.v2.hs.MockHistoryJobs;
 import org.apache.hadoop.mapreduce.v2.hs.MockHistoryJobs.JobsPair;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -144,6 +145,11 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
     @Override
     public long getStartTime() {
       return startTime;
+    }
+
+    @Override
+    public ClusterInfo getClusterInfo() {
+      return null;
     }
   }
 
