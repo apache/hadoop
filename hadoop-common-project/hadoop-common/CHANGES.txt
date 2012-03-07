@@ -32,6 +32,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-7776. Make the Ipc-Header in a RPC-Payload an explicit header.
     (sanjay)
 
+    HADOOP-7717. Move handling of concurrent client fail-overs to
+    RetryInvocationHandler (atm)
+
     HADOOP-7862. Move the support for multiple protocols to lower layer so
     that Writable, PB and Avro can all use it (Sanjay)
 
