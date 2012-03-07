@@ -159,6 +159,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-2188. Make FSEditLog create its journals from a list of URIs rather 
     than NNStorage. (Ivan Kelly via jitendra)
 
+    HDFS-1765. Block Replication should respect under-replication
+    block priority. (Uma Maheswara Rao G via eli)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

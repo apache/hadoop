@@ -149,9 +149,7 @@ public class TestNameNodeMetrics {
     fs.delete(file, true);
     filesTotal--; // reduce the filecount for deleted file
     
-    // Wait for more than DATANODE_COUNT replication intervals to ensure all 
-    // the blocks pending deletion are sent for deletion to the datanodes.
-    Thread.sleep(DFS_REPLICATION_INTERVAL * (DATANODE_COUNT + 1) * 1000);
+    waitForDeletion();
     updateMetrics();
     rb = getMetrics(NS_METRICS);
     assertGauge("FilesTotal", filesTotal, rb);
@@ -182,7 +180,7 @@ public class TestNameNodeMetrics {
     assertGauge("PendingReplicationBlocks", 1L, rb);
     assertGauge("ScheduledReplicationBlocks", 1L, rb);
     fs.delete(file, true);
-    updateMetrics();
+    waitForDeletion();
     rb = getMetrics(NS_METRICS);
     assertGauge("CorruptBlocks", 0L, rb);
     assertGauge("PendingReplicationBlocks", 0L, rb);
@@ -221,8 +219,14 @@ public class TestNameNodeMetrics {
     assertGauge("UnderReplicatedBlocks", 1L, rb);
     assertGauge("MissingBlocks", 1L, rb);
     fs.delete(file, true);
-    updateMetrics();
+    waitForDeletion();
     assertGauge("UnderReplicatedBlocks", 0L, getMetrics(NS_METRICS));
+  }
+
+  private void waitForDeletion() throws InterruptedException {
+    // Wait for more than DATANODE_COUNT replication intervals to ensure all
+    // the blocks pending deletion are sent for deletion to the datanodes.
+    Thread.sleep(DFS_REPLICATION_INTERVAL * (DATANODE_COUNT + 1) * 1000);
   }
   
   @Test
