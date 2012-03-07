@@ -107,6 +107,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3060. Bump TestDistributedUpgrade#testDistributedUpgrade timeout (eli)
 
+    HDFS-2410. Further cleanup of hardcoded configuration keys and values.
+    (suresh)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)

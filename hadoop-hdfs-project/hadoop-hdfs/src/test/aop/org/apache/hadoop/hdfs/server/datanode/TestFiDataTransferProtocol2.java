@@ -30,6 +30,7 @@ import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.fi.DataTransferTestUtil.SleepAction;
 import org.apache.hadoop.fi.DataTransferTestUtil.VerificationAction;
 import org.apache.hadoop.fi.FiTestUtil;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -65,8 +66,8 @@ public class TestFiDataTransferProtocol2 {
 
   static private FSDataOutputStream createFile(FileSystem fs, Path p
       ) throws IOException {
-    return fs.create(p, true, fs.getConf().getInt("io.file.buffer.size", 4096),
-        REPLICATION, BLOCKSIZE);
+    return fs.create(p, true, fs.getConf()
+        .getInt(IO_FILE_BUFFER_SIZE_KEY, 4096), REPLICATION, BLOCKSIZE);
   }
 
   {

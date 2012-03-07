@@ -24,6 +24,7 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -77,7 +78,7 @@ public class TestReadWhileWriting {
       //   Do not close file yet.
       {
         final FSDataOutputStream out = fs.create(p, true,
-            fs.getConf().getInt("io.file.buffer.size", 4096),
+            fs.getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
             (short)3, BLOCK_SIZE);
         write(out, 0, half);
 

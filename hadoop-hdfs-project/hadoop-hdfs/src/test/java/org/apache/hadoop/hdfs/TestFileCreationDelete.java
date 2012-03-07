@@ -43,7 +43,7 @@ public class TestFileCreationDelete extends junit.framework.TestCase {
     conf.setInt("ipc.client.connection.maxidletime", MAX_IDLE_TIME);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
 
     // create cluster
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();

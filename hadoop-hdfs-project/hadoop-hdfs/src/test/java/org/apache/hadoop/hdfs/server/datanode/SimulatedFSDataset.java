@@ -148,7 +148,7 @@ public class SimulatedFSDataset
       }
     }
     
-    synchronized SimulatedInputStream getIStream() throws IOException {
+    synchronized SimulatedInputStream getIStream() {
       if (!finalized) {
         // throw new IOException("Trying to read an unfinalized block");
          return new SimulatedInputStream(oStream.getLength(), DEFAULT_DATABYTE);

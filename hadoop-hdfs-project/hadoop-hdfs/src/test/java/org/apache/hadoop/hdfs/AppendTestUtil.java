@@ -143,8 +143,8 @@ public class AppendTestUtil {
   public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
       throws IOException {
     return fileSys.create(name, true,
-        fileSys.getConf().getInt("io.file.buffer.size", 4096),
-        (short) repl, (long) BLOCK_SIZE);
+        fileSys.getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
+        (short) repl, BLOCK_SIZE);
   }
 
   /**

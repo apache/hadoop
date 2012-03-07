@@ -163,7 +163,7 @@ public class TestStickyBit extends TestCase {
     try {
       Configuration conf = new HdfsConfiguration();
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
-      conf.setBoolean("dfs.support.append", true);
+      conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
 
       FileSystem hdfs = cluster.getFileSystem();

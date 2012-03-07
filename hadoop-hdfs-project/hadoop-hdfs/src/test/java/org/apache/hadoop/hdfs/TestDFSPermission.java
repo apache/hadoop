@@ -22,14 +22,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import javax.security.auth.login.LoginException;
-
 import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -202,7 +201,7 @@ public class TestDFSPermission extends TestCase {
     switch (op) {
     case CREATE:
       FSDataOutputStream out = fs.create(name, permission, true, 
-          conf.getInt("io.file.buffer.size", 4096),
+          conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
           fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
       out.close();
       break;
@@ -520,8 +519,7 @@ public class TestDFSPermission extends TestCase {
     }
 
     /* Perform an operation and verify if the permission checking is correct */
-    void verifyPermission(UserGroupInformation ugi) throws LoginException,
-        IOException {
+    void verifyPermission(UserGroupInformation ugi) throws IOException {
       if (this.ugi != ugi) {
         setRequiredPermissions(ugi);
         this.ugi = ugi;
@@ -564,8 +562,7 @@ public class TestDFSPermission extends TestCase {
     }
 
     /* Set the permissions required to pass the permission checking */
-    protected void setRequiredPermissions(UserGroupInformation ugi)
-        throws IOException {
+    protected void setRequiredPermissions(UserGroupInformation ugi) {
       if (SUPERUSER.equals(ugi)) {
         requiredAncestorPermission = SUPER_MASK;
         requiredParentPermission = SUPER_MASK;

@@ -30,6 +30,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -115,9 +116,9 @@ public class TestDecommission {
   private void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     // create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true, 
-                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
-                                            (short)repl, (long)blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
+        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
+        (short) repl, blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -246,7 +247,7 @@ public class TestDecommission {
    * Wait till node is fully decommissioned.
    */
   private void waitNodeState(DatanodeInfo node,
-                             AdminStates state) throws IOException {
+                             AdminStates state) {
     boolean done = state == node.getAdminState();
     while (!done) {
       LOG.info("Waiting for node " + node + " to change state to "

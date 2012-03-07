@@ -124,7 +124,7 @@ public class TestPermission extends TestCase {
 
       FsPermission filePerm = new FsPermission((short)0444);
       FSDataOutputStream out = fs.create(new Path("/b1/b2/b3.txt"), filePerm,
-          true, conf.getInt("io.file.buffer.size", 4096),
+          true, conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
           fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
       out.write(123);
       out.close();
@@ -223,7 +223,7 @@ public class TestPermission extends TestCase {
       userfs.mkdirs(RENAME_PATH);
       assertTrue(canRename(userfs, RENAME_PATH, CHILD_DIR1));
     } finally {
-      if(cluster != null) cluster.shutdown();
+      cluster.shutdown();
     }
   }
 

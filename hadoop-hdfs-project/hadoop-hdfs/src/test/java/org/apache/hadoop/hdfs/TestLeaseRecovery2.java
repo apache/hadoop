@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -72,7 +73,8 @@ public class TestLeaseRecovery2 {
   static private MiniDFSCluster cluster;
   static private DistributedFileSystem dfs;
   final static private Configuration conf = new HdfsConfiguration();
-  final static private int BUF_SIZE = conf.getInt("io.file.buffer.size", 4096);
+  final static private int BUF_SIZE = conf.getInt(
+      CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
   
   final static private long SHORT_LEASE_PERIOD = 1000L;
   final static private long LONG_LEASE_PERIOD = 60*60*SHORT_LEASE_PERIOD;

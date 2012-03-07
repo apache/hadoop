@@ -39,9 +39,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -316,8 +316,8 @@ public class MiniDFSCluster {
    * Servers will be started on free ports.
    * <p>
    * The caller must manage the creation of NameNode and DataNode directories
-   * and have already set {@link DFSConfigKeys#DFS_NAMENODE_NAME_DIR_KEY} and 
-   * {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} in the given conf.
+   * and have already set {@link #DFS_NAMENODE_NAME_DIR_KEY} and 
+   * {@link #DFS_DATANODE_DATA_DIR_KEY} in the given conf.
    * 
    * @param conf the base configuration to use in starting the servers.  This
    *          will be modified as necessary.
@@ -391,8 +391,8 @@ public class MiniDFSCluster {
    * @param format if true, format the NameNode and DataNodes before starting 
    *          up
    * @param manageDfsDirs if true, the data directories for servers will be
-   *          created and {@link DFSConfigKeys#DFS_NAMENODE_NAME_DIR_KEY} and 
-   *          {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} will be set in 
+   *          created and {@link #DFS_NAMENODE_NAME_DIR_KEY} and 
+   *          {@link #DFS_DATANODE_DATA_DIR_KEY} will be set in 
    *          the conf
    * @param operation the operation with which to start the servers.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
@@ -423,8 +423,8 @@ public class MiniDFSCluster {
    * @param numDataNodes Number of DataNodes to start; may be zero
    * @param format if true, format the NameNode and DataNodes before starting up
    * @param manageDfsDirs if true, the data directories for servers will be
-   *          created and {@link DFSConfigKeys#DFS_NAMENODE_NAME_DIR_KEY} and 
-   *          {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} will be set in 
+   *          created and {@link #DFS_NAMENODE_NAME_DIR_KEY} and 
+   *          {@link #DFS_DATANODE_DATA_DIR_KEY} will be set in 
    *          the conf
    * @param operation the operation with which to start the servers.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
@@ -457,11 +457,11 @@ public class MiniDFSCluster {
    * @param numDataNodes Number of DataNodes to start; may be zero
    * @param format if true, format the NameNode and DataNodes before starting up
    * @param manageNameDfsDirs if true, the data directories for servers will be
-   *          created and {@link DFSConfigKeys#DFS_NAMENODE_NAME_DIR_KEY} and 
-   *          {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} will be set in 
+   *          created and {@link #DFS_NAMENODE_NAME_DIR_KEY} and 
+   *          {@link #DFS_DATANODE_DATA_DIR_KEY} will be set in 
    *          the conf
    * @param manageDataDfsDirs if true, the data directories for datanodes will
-   *          be created and {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} 
+   *          be created and {@link #DFS_DATANODE_DATA_DIR_KEY} 
    *          set to same in the conf
    * @param operation the operation with which to start the servers.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
@@ -498,11 +498,11 @@ public class MiniDFSCluster {
     this.federation = federation;
     this.waitSafeMode = waitSafeMode;
     
-    int replication = conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
-    conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
-    conf.setClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
+    int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
+    conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
+    conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+    conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
+    conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
                    StaticMapping.class, DNSToSwitchMapping.class);
     
     Collection<String> nameserviceIds = DFSUtil.getNameServiceIds(conf);
@@ -510,8 +510,8 @@ public class MiniDFSCluster {
       federation = true;
   
     if (!federation) {
-      conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + nameNodePort);
-      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
+      conf.set(FS_DEFAULT_NAME_KEY, "127.0.0.1:" + nameNodePort);
+      conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:"
           + nameNodeHttpPort);
       NameNode nn = createNameNode(0, conf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
@@ -555,7 +555,7 @@ public class MiniDFSCluster {
       initFederatedNamenodeAddress(conf, nameserviceId, nnPort);
       nnPort = nnPort == 0 ? 0 : nnPort + 2;
     }
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceIdList);
+    conf.set(DFS_FEDERATION_NAMESERVICES, nameserviceIdList);
   }
 
   /* For federated namenode initialize the address:port */
@@ -563,11 +563,11 @@ public class MiniDFSCluster {
       String nameserviceId, int nnPort) {
     // Set nameserviceId specific key
     String key = DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId);
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId);
     conf.set(key, "127.0.0.1:0");
 
     key = DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId);
+        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId);
     conf.set(key, "127.0.0.1:" + nnPort);
   }
   
@@ -588,10 +588,10 @@ public class MiniDFSCluster {
       StartupOption operation, String clusterId)
       throws IOException {
     if (manageNameDfsDirs) {
-      conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+      conf.set(DFS_NAMENODE_NAME_DIR_KEY,
           fileAsURI(new File(base_dir, "name" + (2*nnIndex + 1)))+","+
           fileAsURI(new File(base_dir, "name" + (2*nnIndex + 2))));
-      conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
+      conf.set(DFS_NAMENODE_CHECKPOINT_DIR_KEY,
           fileAsURI(new File(base_dir, "namesecondary" + (2*nnIndex + 1)))+","+
           fileAsURI(new File(base_dir, "namesecondary" + (2*nnIndex + 2))));
     }
@@ -616,17 +616,17 @@ public class MiniDFSCluster {
       int numDataNodes, boolean manageNameDfsDirs, boolean format,
       StartupOption operation, String clusterId, String nameserviceId)
       throws IOException {
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
+    conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
     NameNode nn = createNameNode(nnIndex, conf, numDataNodes, manageNameDfsDirs,
         format, operation, clusterId);
     conf.set(DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NameNode
+        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NameNode
         .getHostPortString(nn.getNameNodeAddress()));
     conf.set(DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
         .getHostPortString(nn.getHttpAddress()));
     DFSUtil.setGenericConf(conf, nameserviceId, 
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+        DFS_NAMENODE_HTTP_ADDRESS_KEY);
     nameNodes[nnIndex] = new NameNodeInfo(nn, new Configuration(conf));
   }
 
@@ -702,7 +702,7 @@ public class MiniDFSCluster {
    *          will be modified as necessary.
    * @param numDataNodes Number of DataNodes to start; may be zero
    * @param manageDfsDirs if true, the data directories for DataNodes will be
-   *          created and {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} will be set 
+   *          created and {@link #DFS_DATANODE_DATA_DIR_KEY} will be set 
    *          in the conf
    * @param operation the operation with which to start the DataNodes.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
@@ -734,7 +734,7 @@ public class MiniDFSCluster {
    *          will be modified as necessary.
    * @param numDataNodes Number of DataNodes to start; may be zero
    * @param manageDfsDirs if true, the data directories for DataNodes will be
-   *          created and {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} will be 
+   *          created and {@link #DFS_DATANODE_DATA_DIR_KEY} will be 
    *          set in the conf
    * @param operation the operation with which to start the DataNodes.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
@@ -768,7 +768,7 @@ public class MiniDFSCluster {
    *          will be modified as necessary.
    * @param numDataNodes Number of DataNodes to start; may be zero
    * @param manageDfsDirs if true, the data directories for DataNodes will be
-   *          created and {@link DFSConfigKeys#DFS_DATANODE_DATA_DIR_KEY} will be 
+   *          created and {@link #DFS_DATANODE_DATA_DIR_KEY} will be 
    *          set in the conf
    * @param operation the operation with which to start the DataNodes.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
@@ -786,12 +786,12 @@ public class MiniDFSCluster {
                              long[] simulatedCapacities,
                              boolean setupHostsFile,
                              boolean checkDataNodeAddrConfig) throws IOException {
-    conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
+    conf.set(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
 
     int curDatanodesNum = dataNodes.size();
     // for mincluster's the default initialDelay for BRs is 0
-    if (conf.get(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY) == null) {
-      conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, 0);
+    if (conf.get(DFS_BLOCKREPORT_INITIAL_DELAY_KEY) == null) {
+      conf.setLong(DFS_BLOCKREPORT_INITIAL_DELAY_KEY, 0);
     }
     // If minicluster's name node is null assume that the conf has been
     // set with the right address:port of the name node.
@@ -838,8 +838,8 @@ public class MiniDFSCluster {
                                 + i + ": " + dir1 + " or " + dir2);
         }
         String dirs = fileAsURI(dir1) + "," + fileAsURI(dir2);
-        dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
-        conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
+        dnConf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
+        conf.set(DFS_DATANODE_DATA_DIR_KEY, dirs);
       }
       if (simulatedCapacities != null) {
         SimulatedFSDataset.setFactory(dnConf);
@@ -868,7 +868,7 @@ public class MiniDFSCluster {
       DataNode dn = DataNode.instantiateDataNode(dnArgs, dnConf);
       if(dn == null)
         throw new IOException("Cannot start DataNode in "
-            + dnConf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
+            + dnConf.get(DFS_DATANODE_DATA_DIR_KEY));
       //NOTE: the following is true if and only if:
       //      hadoop.security.token.service.use_ip=true
       //since the HDFS does things based on IP:port, we need to add the mapping
@@ -1286,7 +1286,7 @@ public class MiniDFSCluster {
     Configuration newconf = new HdfsConfiguration(conf); // save cloned config
     if (keepPort) {
       InetSocketAddress addr = dnprop.datanode.getSelfAddr();
-      conf.set("dfs.datanode.address", addr.getAddress().getHostAddress() + ":"
+      conf.set(DFS_DATANODE_ADDRESS_KEY, addr.getAddress().getHostAddress() + ":"
           + addr.getPort());
     }
     dataNodes.add(new DataNodeProperties(DataNode.createDataNode(args, conf),
@@ -1413,10 +1413,10 @@ public class MiniDFSCluster {
   /**
    * @return a http URL
    */
-  public String getHttpUri(int nnIndex) throws IOException {
+  public String getHttpUri(int nnIndex) {
     return "http://"
         + nameNodes[nnIndex].conf
-            .get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+            .get(DFS_NAMENODE_HTTP_ADDRESS_KEY);
   }
   
   /**
@@ -1425,7 +1425,7 @@ public class MiniDFSCluster {
   public HftpFileSystem getHftpFileSystem(int nnIndex) throws IOException {
     String uri = "hftp://"
         + nameNodes[nnIndex].conf
-            .get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+            .get(DFS_NAMENODE_HTTP_ADDRESS_KEY);
     try {
       return (HftpFileSystem)FileSystem.get(new URI(uri), conf);
     } catch (URISyntaxException e) {
@@ -1877,9 +1877,9 @@ public class MiniDFSCluster {
     nameNodes = newlist;
     String nameserviceId = NAMESERVICE_ID_PREFIX + (nnIndex + 1);
     
-    String nameserviceIds = conf.get(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES);
+    String nameserviceIds = conf.get(DFS_FEDERATION_NAMESERVICES);
     nameserviceIds += "," + nameserviceId;
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceIds);
+    conf.set(DFS_FEDERATION_NAMESERVICES, nameserviceIds);
     
     initFederatedNamenodeAddress(conf, nameserviceId, namenodePort);
     createFederatedNameNode(nnIndex, conf, numDataNodes, true, true, null,
@@ -1912,28 +1912,28 @@ public class MiniDFSCluster {
   private void setupDatanodeAddress(Configuration conf, boolean setupHostsFile,
                            boolean checkDataNodeAddrConfig) throws IOException {
     if (setupHostsFile) {
-      String hostsFile = conf.get(DFSConfigKeys.DFS_HOSTS, "").trim();
+      String hostsFile = conf.get(DFS_HOSTS, "").trim();
       if (hostsFile.length() == 0) {
         throw new IOException("Parameter dfs.hosts is not setup in conf");
       }
       // Setup datanode in the include file, if it is defined in the conf
       String address = "127.0.0.1:" + getFreeSocketPort();
       if (checkDataNodeAddrConfig) {
-        conf.setIfUnset("dfs.datanode.address", address);
+        conf.setIfUnset(DFS_DATANODE_ADDRESS_KEY, address);
       } else {
-        conf.set("dfs.datanode.address", address);
+        conf.set(DFS_DATANODE_ADDRESS_KEY, address);
       }
       addToFile(hostsFile, address);
       LOG.info("Adding datanode " + address + " to hosts file " + hostsFile);
     } else {
       if (checkDataNodeAddrConfig) {
-        conf.setIfUnset("dfs.datanode.address", "127.0.0.1:0");
-        conf.setIfUnset("dfs.datanode.http.address", "127.0.0.1:0");
-        conf.setIfUnset("dfs.datanode.ipc.address", "127.0.0.1:0");
+        conf.setIfUnset(DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+        conf.setIfUnset(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+        conf.setIfUnset(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
       } else {
-        conf.set("dfs.datanode.address", "127.0.0.1:0");
-        conf.set("dfs.datanode.http.address", "127.0.0.1:0");
-        conf.set("dfs.datanode.ipc.address", "127.0.0.1:0");
+        conf.set(DFS_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
+        conf.set(DFS_DATANODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+        conf.set(DFS_DATANODE_IPC_ADDRESS_KEY, "127.0.0.1:0");
       }
     }
   }
