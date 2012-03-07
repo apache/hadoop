@@ -26,10 +26,6 @@ Trunk (unreleased changes)
 
     HDFS-2197. Refactor RPC call implementations out of NameNode class (todd)
 
-    HDFS-2158. Add JournalSet to manage the set of journals. (jitendra)
-
-    HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
-
     HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
 
     HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
@@ -39,9 +35,6 @@ Trunk (unreleased changes)
     (suresh)
 
     HDFS-2857. Cleanup BlockInfo class. (suresh)
-
-    HDFS-1580. Add interface for generic Write Ahead Logging mechanisms.
-    (Ivan Kelly via jitendra)
 
     HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
     (Uma Maheswara Rao G via eli)
@@ -79,15 +72,6 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
-    HDFS-2477. Optimize computing the diff between a block report and the
-    namenode state. (Tomasz Nykiel via hairong)
-
-    HDFS-2495. Increase granularity of write operations in ReplicationMonitor
-    thus reducing contention for write lock. (Tomasz Nykiel via hairong)
-
-    HDFS-2476. More CPU efficient data structure for under-replicated,
-    over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
-
   BUG FIXES
 
     HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
@@ -108,12 +92,6 @@ Trunk (unreleased changes)
 
     HDFS-2373. Commands using WebHDFS and hftp print unnecessary debug 
     info on the console with security enabled. (Arpit Gupta via suresh)
-
-    HDFS-2188. Make FSEditLog create its journals from a list of URIs rather 
-    than NNStorage. (Ivan Kelly via jitendra)
-
-    HDFS-1765. Block Replication should respect under-replication
-    block priority. (Uma Maheswara Rao G via eli)
 
     HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
 
@@ -540,9 +518,25 @@ Release 0.23.3 - UNRELEASED
     HDFS-2992. Edit log failure trace should include transaction ID of
     error.  (Colin Patrick McCabe via eli)
 
+    HDFS-2158. Add JournalSet to manage the set of journals. (jitendra)
+
+    HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
+
+    HDFS-1580. Add interface for generic Write Ahead Logging mechanisms.
+    (Ivan Kelly via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
+
+    HDFS-2477. Optimize computing the diff between a block report and the
+    namenode state. (Tomasz Nykiel via hairong)
+
+    HDFS-2495. Increase granularity of write operations in ReplicationMonitor
+    thus reducing contention for write lock. (Tomasz Nykiel via hairong)
+
+    HDFS-2476. More CPU efficient data structure for under-replicated,
+    over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
 
   BUG FIXES
 
@@ -583,6 +577,12 @@ Release 0.23.3 - UNRELEASED
     HDFS-3020. Fix editlog to automatically sync when buffer is full. (todd)
 
     HDFS-3038. Add FSEditLog.metrics to findbugs exclude list. (todd via atm)
+
+    HDFS-2188. Make FSEditLog create its journals from a list of URIs rather 
+    than NNStorage. (Ivan Kelly via jitendra)
+
+    HDFS-1765. Block Replication should respect under-replication
+    block priority. (Uma Maheswara Rao G via eli)
 
 Release 0.23.2 - UNRELEASED 
 
