@@ -102,8 +102,14 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-2334. Add Closeable to JournalManager. (Ivan Kelly via jitendra)
 
+<<<<<<< .working
   OPTIMIZATIONS
 
+=======
+    HDFS-2477. Optimize computing the diff between a block report and the
+               namenode state. (Tomasz Nykiel via hairong)
+
+>>>>>>> .merge-right.r1196676
   BUG FIXES
  
     HDFS-2481. Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol.
