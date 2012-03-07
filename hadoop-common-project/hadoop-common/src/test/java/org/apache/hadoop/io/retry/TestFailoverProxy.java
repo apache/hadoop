@@ -36,34 +36,18 @@ public class TestFailoverProxy {
     private Object impl1;
     private Object impl2;
     
-    private boolean latchEnabled = false;
-    private CountDownLatch getProxyLatch;
     private int failoversOccurred = 0;
     
     public FlipFlopProxyProvider(Class<?> iface, Object activeImpl,
-        Object standbyImpl, int getProxyCountDown) {
+        Object standbyImpl) {
       this.iface = iface;
       this.impl1 = activeImpl;
       this.impl2 = standbyImpl;
       currentlyActive = impl1;
-      getProxyLatch = new CountDownLatch(getProxyCountDown);
-    }
-    
-    public FlipFlopProxyProvider(Class<?> iface, Object activeImpl,
-        Object standbyImpl) {
-      this(iface, activeImpl, standbyImpl, 0);
     }
     
     @Override
     public Object getProxy() {
-      if (latchEnabled) {
-        getProxyLatch.countDown();
-        try {
-          getProxyLatch.await();
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-      }
       return currentlyActive;
     }
 
@@ -81,10 +65,6 @@ public class TestFailoverProxy {
     @Override
     public void close() throws IOException {
       // Nothing to do.
-    }
-    
-    public void setLatchEnabled(boolean latchEnabled) {
-      this.latchEnabled = latchEnabled;
     }
     
     public int getFailoversOccurred() {
@@ -214,6 +194,32 @@ public class TestFailoverProxy {
     assertEquals("impl2", unreliable.succeedsOnceThenFailsReturningStringIdempotent());
   }
   
+  private static class SynchronizedUnreliableImplementation extends UnreliableImplementation {
+    
+    private CountDownLatch methodLatch;
+    
+    public SynchronizedUnreliableImplementation(String identifier,
+        TypeOfExceptionToFailWith exceptionToFailWith, int threadCount) {
+      super(identifier, exceptionToFailWith);
+      
+      methodLatch = new CountDownLatch(threadCount);
+    }
+
+    @Override
+    public String failsIfIdentifierDoesntMatch(String identifier)
+        throws UnreliableException, StandbyException, IOException {
+      // Wait until all threads are trying to invoke this method
+      methodLatch.countDown();
+      try {
+        methodLatch.await();
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+      return super.failsIfIdentifierDoesntMatch(identifier);
+    }
+    
+  }
+  
   private static class ConcurrentMethodThread extends Thread {
     
     private UnreliableInterface unreliable;
@@ -240,11 +246,11 @@ public class TestFailoverProxy {
   public void testConcurrentMethodFailures() throws InterruptedException {
     FlipFlopProxyProvider proxyProvider = new FlipFlopProxyProvider(
         UnreliableInterface.class,
-        new UnreliableImplementation("impl1",
-            TypeOfExceptionToFailWith.STANDBY_EXCEPTION),
+        new SynchronizedUnreliableImplementation("impl1",
+            TypeOfExceptionToFailWith.STANDBY_EXCEPTION,
+            2),
         new UnreliableImplementation("impl2",
-            TypeOfExceptionToFailWith.STANDBY_EXCEPTION),
-        2);
+            TypeOfExceptionToFailWith.STANDBY_EXCEPTION));
     
     final UnreliableInterface unreliable = (UnreliableInterface)RetryProxy
       .create(UnreliableInterface.class, proxyProvider,
@@ -252,9 +258,6 @@ public class TestFailoverProxy {
 
     ConcurrentMethodThread t1 = new ConcurrentMethodThread(unreliable);
     ConcurrentMethodThread t2 = new ConcurrentMethodThread(unreliable);
-    
-    // Getting a proxy will now wait on a latch.
-    proxyProvider.setLatchEnabled(true);
     
     t1.start();
     t2.start();

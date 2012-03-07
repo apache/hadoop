@@ -104,15 +104,12 @@ class RetryInvocationHandler implements RpcInvocationHandler {
             if (invocationAttemptFailoverCount == proxyProviderFailoverCount) {
               proxyProvider.performFailover(currentProxy);
               proxyProviderFailoverCount++;
+              currentProxy = proxyProvider.getProxy();
             } else {
               LOG.warn("A failover has occurred since the start of this method"
                   + " invocation attempt.");
             }
           }
-          // The call to getProxy() could technically only be made in the event
-          // performFailover() is called, but it needs to be out here for the
-          // purpose of testing.
-          currentProxy = proxyProvider.getProxy();
           invocationFailoverCount++;
         }
         if(LOG.isDebugEnabled()) {
