@@ -499,7 +499,7 @@ public class FSEditLog {
         numOpTimes = 0, numOpGetDelegationToken = 0,
         numOpRenewDelegationToken = 0, numOpCancelDelegationToken = 0,
         numOpUpdateMasterKey = 0, numOpOther = 0;
-
+    long highestGenStamp = -1;
     long startTime = FSNamesystem.now();
 
     DataInputStream in = new DataInputStream(new BufferedInputStream(edits));
@@ -710,9 +710,14 @@ public class FSEditLog {
         case OP_SET_GENSTAMP: {
           numOpSetGenStamp++;
           long lw = in.readLong();
+          if ((highestGenStamp != -1) && (highestGenStamp + 1 != lw)) {
+            throw new IOException("OP_SET_GENSTAMP tried to set a genstamp of " + lw + 
+              " but the previous highest genstamp was " + highestGenStamp);
+          }
+          highestGenStamp = lw;
           fsDir.namesystem.setGenerationStamp(lw);
           break;
-        } 
+        }
         case OP_DATANODE_ADD: {
           numOpOther++;
           FSImage.DatanodeImage nodeimage = new FSImage.DatanodeImage();
