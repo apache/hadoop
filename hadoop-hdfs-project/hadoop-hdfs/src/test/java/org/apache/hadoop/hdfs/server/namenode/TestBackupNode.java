@@ -21,8 +21,11 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
+
+import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,13 +34,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.junit.Before;
@@ -244,8 +247,11 @@ public class TestBackupNode {
   void testCheckpoint(StartupOption op) throws Exception {
     Path file1 = new Path("checkpoint.dat");
     Path file2 = new Path("checkpoint2.dat");
+    Path file3 = new Path("backup.dat");
 
     Configuration conf = new HdfsConfiguration();
+    short replication = (short)conf.getInt("dfs.replication", 3);
+    int numDatanodes = Math.max(3, replication);
     conf.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // disable block scanner
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
@@ -293,7 +299,7 @@ public class TestBackupNode {
       //
       // Restart cluster and verify that file1 still exist.
       //
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
                                                 .format(false).build();
       fileSys = cluster.getFileSystem();
       // check that file1 still exists
@@ -321,6 +327,26 @@ public class TestBackupNode {
       txid = cluster.getNameNodeRpc().getTransactionID();
       backup.doCheckpoint();
       waitCheckpointDone(cluster, txid);
+
+      // Try BackupNode operations
+      InetSocketAddress add = backup.getNameNodeAddress();
+      // Write to BN
+      FileSystem bnFS = FileSystem.get(new Path("hdfs://"
+          + NameNode.getHostPortString(add)).toUri(), conf);
+      boolean canWrite = true;
+      try {
+        TestCheckpoint.writeFile(bnFS, file3, replication);
+      } catch (IOException eio) {
+        LOG.info("Write to BN failed as expected: ", eio);
+        canWrite = false;
+      }
+      assertFalse("Write to BackupNode must be prohibited.", canWrite);
+
+      TestCheckpoint.writeFile(fileSys, file3, replication);
+      TestCheckpoint.checkFile(fileSys, file3, replication);
+      // should also be on BN right away
+      assertTrue("file3 does not exist on BackupNode",
+          op != StartupOption.BACKUP || bnFS.exists(file3));
 
     } catch(IOException e) {
       LOG.error("Error in TestBackupNode:", e);

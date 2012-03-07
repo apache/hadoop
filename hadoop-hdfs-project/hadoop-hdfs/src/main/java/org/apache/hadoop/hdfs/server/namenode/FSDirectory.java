@@ -159,6 +159,11 @@ public class FSDirectory implements Closeable {
    */
   void imageLoadComplete() {
     Preconditions.checkState(!ready, "FSDirectory already loaded");
+    setReady();
+  }
+
+  void setReady() {
+    if(ready) return;
     writeLock();
     try {
       setReady(true);

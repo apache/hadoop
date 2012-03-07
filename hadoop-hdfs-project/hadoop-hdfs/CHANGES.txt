@@ -164,6 +164,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-1765. Block Replication should respect under-replication
     block priority. (Uma Maheswara Rao G via eli)
 
+    HDFS-2285. BackupNode should reject requests to modify namespace.
+    (shv and Uma Maheswara Rao)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
