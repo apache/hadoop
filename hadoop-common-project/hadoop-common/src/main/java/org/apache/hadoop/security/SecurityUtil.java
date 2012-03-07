@@ -620,4 +620,11 @@ public class SecurityUtil {
       searchDomains = Arrays.asList(domains);
     }
   }
+
+  public static void initKrb5CipherSuites() {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      System.setProperty("https.cipherSuites",
+          Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
+    }
+  }
 }

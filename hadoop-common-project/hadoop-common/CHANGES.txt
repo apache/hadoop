@@ -113,6 +113,9 @@ Trunk (unreleased changes)
     HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
     via atm)
 
+    HADOOP-8141. Add method to SecurityUtil to init krb5 cipher suites.
+    (todd)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
