@@ -215,6 +215,12 @@ public class FSEditLog  {
       waitForSyncToFinish();
       endCurrentLogSegment(true);
     }
+    
+    try {
+      journalSet.close();
+    } catch (IOException ioe) {
+      LOG.warn("Error closing journalSet", ioe);
+    }
 
     state = State.CLOSED;
   }

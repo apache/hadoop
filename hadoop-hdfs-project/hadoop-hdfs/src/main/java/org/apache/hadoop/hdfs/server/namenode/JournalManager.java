@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 
@@ -27,7 +28,7 @@ import java.io.IOException;
  * each conceptual place of storage corresponds to exactly one instance of
  * this class, which is created when the EditLog is first opened.
  */
-interface JournalManager {
+interface JournalManager extends Closeable {
   /**
    * Begin writing to a new segment of the log stream, which starts at
    * the given transaction ID.
@@ -80,6 +81,11 @@ interface JournalManager {
    * Recover segments which have not been finalized.
    */
   void recoverUnfinalizedSegments() throws IOException;
+
+  /**
+   * Close the journal manager, freeing any resources it may hold.
+   */
+  void close() throws IOException;
 
   /** 
    * Indicate that a journal is cannot be used to load a certain range of 
