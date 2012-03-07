@@ -373,6 +373,9 @@ Release 0.23.1 - 2012-02-17
     HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal
     Lee via jitendra)
 
+    HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
+    (Uma Maheswara Rao G via eli)
+
   OPTIMIZATIONS
 
     HDFS-2130. Switch default checksum to CRC32C. (todd)
