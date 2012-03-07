@@ -71,6 +71,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8142. Update versions from 0.23.2 to 0.23.3 in the build files.
     (szetszwo)
 
+    HADOOP-8141. Add method to SecurityUtil to init krb5 cipher suites.
+    (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

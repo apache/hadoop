@@ -58,7 +58,7 @@ public class Krb5AndCertsSslSocketConnector extends SslSocketConnector {
     Collections.unmodifiableList(Collections.singletonList(
           "TLS_KRB5_WITH_3DES_EDE_CBC_SHA"));
   static {
-    System.setProperty("https.cipherSuites", KRB5_CIPHER_SUITES.get(0));
+    SecurityUtil.initKrb5CipherSuites();
   }
   
   private static final Log LOG = LogFactory
