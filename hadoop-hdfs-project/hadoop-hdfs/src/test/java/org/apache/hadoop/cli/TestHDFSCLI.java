@@ -29,6 +29,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
+import org.junit.Test;
 
 public class TestHDFSCLI extends CLITestHelperDFS {
 
@@ -95,7 +96,7 @@ public class TestHDFSCLI extends CLITestHelperDFS {
 
   //TODO: The test is failing due to the change in HADOOP-7360.
   //      HDFS-2038 is going to fix it.  Disable the test for the moment.
-  //@Test
+  @Test
   @Override
   public void testAll () {
     super.testAll();
