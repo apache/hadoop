@@ -44,6 +44,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
+
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
@@ -120,7 +122,7 @@ public class TestStorageRestore {
     // simulate an error
     fi.getStorage().reportErrorsOnDirectories(al);
     
-    for (FSEditLog.JournalAndStream j : fi.getEditLog().getJournals()) {
+    for (JournalAndStream j : fi.getEditLog().getJournals()) {
       if (j.getManager() instanceof FileJournalManager) {
         FileJournalManager fm = (FileJournalManager)j.getManager();
         if (fm.getStorageDirectory().getRoot().equals(path2)

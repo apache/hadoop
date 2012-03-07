@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -73,7 +75,7 @@ public class TestEditLogJournalFailures {
   public void testSingleFailedEditsDirOnFlush() throws IOException {
     assertTrue(doAnEdit());
     // Invalidate one edits journal.
-    invalidateEditsDirAtIndex(0, true);
+    invalidateEditsDirAtIndex(0, true, false);
     // Make sure runtime.exit(...) hasn't been called at all yet.
     assertExitInvocations(0);
     assertTrue(doAnEdit());
@@ -86,8 +88,22 @@ public class TestEditLogJournalFailures {
   public void testAllEditsDirsFailOnFlush() throws IOException {
     assertTrue(doAnEdit());
     // Invalidate both edits journals.
-    invalidateEditsDirAtIndex(0, true);
-    invalidateEditsDirAtIndex(1, true);
+    invalidateEditsDirAtIndex(0, true, false);
+    invalidateEditsDirAtIndex(1, true, false);
+    // Make sure runtime.exit(...) hasn't been called at all yet.
+    assertExitInvocations(0);
+    assertTrue(doAnEdit());
+    // The previous edit could not be synced to any persistent storage, should
+    // have halted the NN.
+    assertExitInvocations(1);
+  }
+  
+  @Test
+  public void testAllEditsDirFailOnWrite() throws IOException {
+    assertTrue(doAnEdit());
+    // Invalidate both edits journals.
+    invalidateEditsDirAtIndex(0, true, true);
+    invalidateEditsDirAtIndex(1, true, true);
     // Make sure runtime.exit(...) hasn't been called at all yet.
     assertExitInvocations(0);
     assertTrue(doAnEdit());
@@ -100,7 +116,7 @@ public class TestEditLogJournalFailures {
   public void testSingleFailedEditsDirOnSetReadyToFlush() throws IOException {
     assertTrue(doAnEdit());
     // Invalidate one edits journal.
-    invalidateEditsDirAtIndex(0, false);
+    invalidateEditsDirAtIndex(0, false, false);
     // Make sure runtime.exit(...) hasn't been called at all yet.
     assertExitInvocations(0);
     assertTrue(doAnEdit());
@@ -117,16 +133,18 @@ public class TestEditLogJournalFailures {
    * @return the original <code>EditLogOutputStream</code> of the journal.
    */
   private EditLogOutputStream invalidateEditsDirAtIndex(int index,
-      boolean failOnFlush) throws IOException {
+      boolean failOnFlush, boolean failOnWrite) throws IOException {
     FSImage fsimage = cluster.getNamesystem().getFSImage();
     FSEditLog editLog = fsimage.getEditLog();
-    
 
-    FSEditLog.JournalAndStream jas = editLog.getJournals().get(index);
+    JournalAndStream jas = editLog.getJournals().get(index);
     EditLogFileOutputStream elos =
       (EditLogFileOutputStream) jas.getCurrentStream();
     EditLogFileOutputStream spyElos = spy(elos);
-    
+    if (failOnWrite) {
+      doThrow(new IOException("fail on write()")).when(spyElos).write(
+          (FSEditLogOp) any());
+    }
     if (failOnFlush) {
       doThrow(new IOException("fail on flush()")).when(spyElos).flush();
     } else {
@@ -151,7 +169,7 @@ public class TestEditLogJournalFailures {
     FSImage fsimage = cluster.getNamesystem().getFSImage();
     FSEditLog editLog = fsimage.getEditLog();
 
-    FSEditLog.JournalAndStream jas = editLog.getJournals().get(index);
+    JournalAndStream jas = editLog.getJournals().get(index);
     jas.setCurrentStreamForTests(elos);
   }
 

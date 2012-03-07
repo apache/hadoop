@@ -18,18 +18,20 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+
 import static org.apache.hadoop.hdfs.server.common.Util.now;
+
 
 /**
  * A generic abstract class to support journaling of edits logs into 
  * a persistent storage.
  */
-abstract class EditLogOutputStream implements JournalStream {
+abstract class EditLogOutputStream {
   // these are statistics counters
   private long numSync;        // number of sync(s) to disk
   private long totalTimeSync;  // total time to sync
 
-  EditLogOutputStream() throws IOException {
+  EditLogOutputStream() {
     numSync = totalTimeSync = 0;
   }
 
@@ -101,12 +103,6 @@ abstract class EditLogOutputStream implements JournalStream {
   }
 
   /**
-   * Return the size of the current edits log.
-   * Length is used to check when it is large enough to start a checkpoint.
-   */
-  abstract long length() throws IOException;
-
-  /**
    * Implement the policy when to automatically sync the buffered edits log
    * The buffered edits can be flushed when the buffer becomes full or
    * a certain period of time is elapsed.
@@ -127,12 +123,7 @@ abstract class EditLogOutputStream implements JournalStream {
   /**
    * Return number of calls to {@link #flushAndSync()}
    */
-  long getNumSync() {
+  protected long getNumSync() {
     return numSync;
-  }
-
-  @Override // Object
-  public String toString() {
-    return getName();
   }
 }
