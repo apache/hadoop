@@ -96,7 +96,7 @@ public class TestDistributedUpgrade {
  
   /**
    */
-  @Test(timeout=120000)
+  @Test(timeout=300000) // 5 min timeout
   public void testDistributedUpgrade() throws Exception {
     int numDirs = 1;
     TestDFSUpgradeFromImage testImg = new TestDFSUpgradeFromImage();
