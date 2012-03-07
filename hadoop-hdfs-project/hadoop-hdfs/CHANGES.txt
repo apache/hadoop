@@ -1248,6 +1248,8 @@ Release 0.23.0 - 2011-11-01
     HDFS-2308. NamenodeProtocol.endCheckpoint is vestigial and can be removed.
     (eli)
 
+    HDFS-2507. Allow saveNamespace operations to be canceled. (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
