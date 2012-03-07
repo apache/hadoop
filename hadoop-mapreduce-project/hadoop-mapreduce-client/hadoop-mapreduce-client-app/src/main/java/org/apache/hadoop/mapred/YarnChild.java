@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
@@ -227,12 +228,21 @@ class YarnChild {
   /**
    * Configure mapred-local dirs. This config is used by the task for finding
    * out an output directory.
+   * @throws IOException 
    */
-  private static void configureLocalDirs(Task task, JobConf job) {
+  private static void configureLocalDirs(Task task, JobConf job) throws IOException {
     String[] localSysDirs = StringUtils.getTrimmedStrings(
         System.getenv(ApplicationConstants.LOCAL_DIR_ENV));
     job.setStrings(MRConfig.LOCAL_DIR, localSysDirs);
     LOG.info(MRConfig.LOCAL_DIR + " for child: " + job.get(MRConfig.LOCAL_DIR));
+    LocalDirAllocator lDirAlloc = new LocalDirAllocator(MRConfig.LOCAL_DIR);
+    Path workDir = lDirAlloc.getLocalPathForWrite("work", job);
+    FileSystem lfs = FileSystem.getLocal(job).getRaw();
+    if (!lfs.mkdirs(workDir)) {
+        throw new IOException("Mkdirs failed to create "
+            + workDir.toString());
+    }
+    job.set(MRJobConfig.JOB_LOCAL_DIR,workDir.toString());
   }
 
   private static JobConf configureTask(Task task, Credentials credentials,
