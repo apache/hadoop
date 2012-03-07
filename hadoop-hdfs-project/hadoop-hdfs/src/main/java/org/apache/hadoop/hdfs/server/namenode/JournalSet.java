@@ -309,7 +309,7 @@ public class JournalSet implements JournalManager {
     }
 
     @Override
-    void write(final FSEditLogOp op)
+    public void write(final FSEditLogOp op)
         throws IOException {
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override
@@ -322,7 +322,7 @@ public class JournalSet implements JournalManager {
     }
 
     @Override
-    void writeRaw(final byte[] data, final int offset, final int length)
+    public void writeRaw(final byte[] data, final int offset, final int length)
         throws IOException {
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override
@@ -335,7 +335,7 @@ public class JournalSet implements JournalManager {
     }
 
     @Override
-    void create() throws IOException {
+    public void create() throws IOException {
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override
         public void apply(JournalAndStream jas) throws IOException {
@@ -367,7 +367,7 @@ public class JournalSet implements JournalManager {
     }
 
     @Override
-    void setReadyToFlush() throws IOException {
+    public void setReadyToFlush() throws IOException {
       mapJournalsAndReportErrors(new JournalClosure() {
         @Override
         public void apply(JournalAndStream jas) throws IOException {

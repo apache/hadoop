@@ -26,6 +26,8 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.EnumMap;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -61,6 +63,8 @@ import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.base.Joiner;
 
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class FSEditLogLoader {
   private final FSNamesystem fsNamesys;
 
@@ -550,7 +554,7 @@ public class FSEditLogLoader {
   /**
    * Stream wrapper that keeps track of the current stream position.
    */
-  static class PositionTrackingInputStream extends FilterInputStream {
+  public static class PositionTrackingInputStream extends FilterInputStream {
     private long curPos = 0;
     private long markPos = -1;
 

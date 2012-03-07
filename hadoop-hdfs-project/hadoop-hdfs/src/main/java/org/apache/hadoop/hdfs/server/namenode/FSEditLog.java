@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.lang.reflect.Constructor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
@@ -109,6 +111,7 @@ public class FSEditLog  {
   private NameNodeMetrics metrics;
 
   private NNStorage storage;
+  private Configuration conf;
 
   private static class TransactionId {
     public long txid;
@@ -145,6 +148,7 @@ public class FSEditLog  {
    * @param editsDirs List of journals to use
    */
   FSEditLog(Configuration conf, NNStorage storage, Collection<URI> editsDirs) {
+    this.conf = conf;
     isSyncRunning = false;
     this.storage = storage;
     metrics = NameNode.getNameNodeMetrics();
@@ -167,9 +171,13 @@ public class FSEditLog  {
 
     this.journalSet = new JournalSet();
     for (URI u : this.editsDirs) {
-      StorageDirectory sd = storage.getStorageDirectory(u);
-      if (sd != null) {
-        journalSet.add(new FileJournalManager(sd));
+      if (u.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
+        StorageDirectory sd = storage.getStorageDirectory(u);
+        if (sd != null) {
+          journalSet.add(new FileJournalManager(sd));
+        }
+      } else {
+        journalSet.add(createJournal(u));
       }
     }
  
@@ -1001,6 +1009,55 @@ public class FSEditLog  {
   static void closeAllStreams(Iterable<EditLogInputStream> streams) {
     for (EditLogInputStream s : streams) {
       IOUtils.closeStream(s);
+    }
+  }
+
+  /**
+   * Retrieve the implementation class for a Journal scheme.
+   * @param conf The configuration to retrieve the information from
+   * @param uriScheme The uri scheme to look up.
+   * @return the class of the journal implementation
+   * @throws IllegalArgumentException if no class is configured for uri
+   */
+  static Class<? extends JournalManager> getJournalClass(Configuration conf,
+                               String uriScheme) {
+    String key
+      = DFSConfigKeys.DFS_NAMENODE_EDITS_PLUGIN_PREFIX + "." + uriScheme;
+    Class <? extends JournalManager> clazz = null;
+    try {
+      clazz = conf.getClass(key, null, JournalManager.class);
+    } catch (RuntimeException re) {
+      throw new IllegalArgumentException(
+          "Invalid class specified for " + uriScheme, re);
+    }
+      
+    if (clazz == null) {
+      LOG.warn("No class configured for " +uriScheme
+               + ", " + key + " is empty");
+      throw new IllegalArgumentException(
+          "No class configured for " + uriScheme);
+    }
+    return clazz;
+  }
+
+  /**
+   * Construct a custom journal manager.
+   * The class to construct is taken from the configuration.
+   * @param uri Uri to construct
+   * @return The constructed journal manager
+   * @throws IllegalArgumentException if no class is configured for uri
+   */
+  private JournalManager createJournal(URI uri) {
+    Class<? extends JournalManager> clazz
+      = getJournalClass(conf, uri.getScheme());
+
+    try {
+      Constructor<? extends JournalManager> cons
+        = clazz.getConstructor(Configuration.class, URI.class);
+      return cons.newInstance(conf, uri);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Unable to construct journal, "
+                                         + uri, e);
     }
   }
 }

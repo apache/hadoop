@@ -68,7 +68,8 @@ public class NNStorage extends Storage implements Closeable {
   private static final Log LOG = LogFactory.getLog(NNStorage.class.getName());
 
   static final String DEPRECATED_MESSAGE_DIGEST_PROPERTY = "imageMD5Digest";
-  
+  static final String LOCAL_URI_SCHEME = "file";
+
   //
   // The filenames used for storing the images
   //
@@ -325,22 +326,14 @@ public class NNStorage extends Storage implements Closeable {
 
   /**
    * Checks the consistency of a URI, in particular if the scheme
-   * is specified and is supported by a concrete implementation
+   * is specified 
    * @param u URI whose consistency is being checked.
    */
   private static void checkSchemeConsistency(URI u) throws IOException {
     String scheme = u.getScheme();
     // the URI should have a proper scheme
-    if(scheme == null)
+    if(scheme == null) {
       throw new IOException("Undefined scheme for " + u);
-    else {
-      try {
-        // the scheme should be enumerated as JournalType
-        JournalType.valueOf(scheme.toUpperCase());
-      } catch (IllegalArgumentException iae){
-        throw new IOException("Unknown scheme " + scheme +
-            ". It should correspond to a JournalType enumeration value");
-      }
     }
   }
 
