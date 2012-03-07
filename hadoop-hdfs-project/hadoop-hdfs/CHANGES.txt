@@ -47,6 +47,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3021. Use generic type to declare FSDatasetInterface.  (szetszwo)
 
+    HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
+    should be configurable. (atm)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

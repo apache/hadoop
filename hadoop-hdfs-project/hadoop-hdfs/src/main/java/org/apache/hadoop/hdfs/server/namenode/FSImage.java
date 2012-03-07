@@ -738,7 +738,7 @@ public class FSImage implements Closeable {
    * FSImageSaver assumes that it was launched from a thread that holds
    * FSNamesystem lock and waits for the execution of FSImageSaver thread
    * to finish.
-   * This way we are guraranteed that the namespace is not being updated
+   * This way we are guaranteed that the namespace is not being updated
    * while multiple instances of FSImageSaver are traversing it
    * and writing it out.
    */

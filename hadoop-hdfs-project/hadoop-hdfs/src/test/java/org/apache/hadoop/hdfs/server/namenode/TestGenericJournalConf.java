@@ -118,6 +118,7 @@ public class TestGenericJournalConf {
              DummyJournalManager.class.getName());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
              "dummy://test");
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKED_VOLUMES_MINIMUM_KEY, 0);
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
       cluster.waitActive();
