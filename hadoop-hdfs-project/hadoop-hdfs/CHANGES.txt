@@ -173,6 +173,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-2285. BackupNode should reject requests to modify namespace.
     (shv and Uma Maheswara Rao)
 
+    HDFS-2764. TestBackupNode is racy. (atm)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

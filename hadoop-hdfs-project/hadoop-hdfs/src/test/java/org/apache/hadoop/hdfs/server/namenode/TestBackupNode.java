@@ -25,8 +25,6 @@ import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -102,10 +100,10 @@ public class TestBackupNode {
             "checkpoint txid should increase above " + txid);
         Thread.sleep(1000);
       } catch (Exception e) {}
+      // The checkpoint is not done until the nn has received it from the bn
       thisCheckpointTxId = cluster.getNameNode().getFSImage().getStorage()
         .getMostRecentCheckpointTxId();
     } while (thisCheckpointTxId < txid);
-    
     // Check that the checkpoint got uploaded to NN successfully
     FSImageTestUtil.assertNNHasCheckpoints(cluster,
         Collections.singletonList((int)thisCheckpointTxId));
