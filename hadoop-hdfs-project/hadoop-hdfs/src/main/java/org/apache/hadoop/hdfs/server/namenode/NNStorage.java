@@ -57,6 +57,7 @@ import org.apache.hadoop.net.DNS;
 
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 /**
  * NNStorage is responsible for management of the StorageDirectories used by
@@ -157,7 +158,9 @@ public class NNStorage extends Storage implements Closeable {
 
     storageDirs = new CopyOnWriteArrayList<StorageDirectory>();
     
-    setStorageDirectories(imageDirs, editsDirs);
+    // this may modify the editsDirs, so copy before passing in
+    setStorageDirectories(imageDirs, 
+                          Lists.newArrayList(editsDirs));
   }
 
   @Override // Storage
@@ -297,6 +300,27 @@ public class NNStorage extends Storage implements Closeable {
         this.addStorageDir(new StorageDirectory(new File(dirName.getPath()),
                     NameNodeDirType.EDITS));
     }
+  }
+
+  /**
+   * Return the storage directory corresponding to the passed URI
+   * @param uri URI of a storage directory
+   * @return The matching storage directory or null if none found
+   */
+  StorageDirectory getStorageDirectory(URI uri) {
+    try {
+      uri = Util.fileAsURI(new File(uri));
+      Iterator<StorageDirectory> it = dirIterator();
+      for (; it.hasNext(); ) {
+        StorageDirectory sd = it.next();
+        if (Util.fileAsURI(sd.getRoot()).equals(uri)) {
+          return sd;
+        }
+      }
+    } catch (IOException ioe) {
+      LOG.warn("Error converting file to URI", ioe);
+    }
+    return null;
   }
 
   /**

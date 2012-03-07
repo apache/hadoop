@@ -142,6 +142,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3038. Add FSEditLog.metrics to findbugs exclude list. (todd via atm)
 
+    HDFS-2188. Make FSEditLog create its journals from a list of URIs rather 
+    than NNStorage. (Ivan Kelly via jitendra)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
