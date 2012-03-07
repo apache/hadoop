@@ -144,14 +144,15 @@ public class DFSck extends Configured implements Tool {
       throws IOException {
     int errCode = -1;
     int numCorrupt = 0;
-    String lastBlock = null;
+    int cookie = 0;
     final String noCorruptLine = "has no CORRUPT files";
     final String noMoreCorruptLine = "has no more CORRUPT files";
+    final String cookiePrefix = "Cookie:";
     boolean allDone = false;
     while (!allDone) {
       final StringBuffer url = new StringBuffer(baseUrl);
-      if (lastBlock != null) {
-        url.append("&startblockafter=").append(lastBlock);
+      if (cookie > 0) {
+        url.append("&startblockafter=").append(String.valueOf(cookie));
       }
       URL path = new URL(url.toString());
       SecurityUtil.fetchServiceTicket(path);
@@ -162,29 +163,31 @@ public class DFSck extends Configured implements Tool {
       try {
         String line = null;
         while ((line = input.readLine()) != null) {
-          if ((line.endsWith(noCorruptLine)) || 
+          if (line.startsWith(cookiePrefix)){
+            try{
+              cookie = Integer.parseInt(line.split("\t")[1]);
+            } catch (Exception e){
+              allDone = true;
+              break;
+            }
+            continue;
+          }
+          if ((line.endsWith(noCorruptLine)) ||
               (line.endsWith(noMoreCorruptLine)) ||
               (line.endsWith(NamenodeFsck.NONEXISTENT_STATUS))) {
             allDone = true;
             break;
           }
           if ((line.isEmpty())
-              || (line.startsWith("FSCK started by")) 
+              || (line.startsWith("FSCK started by"))
               || (line.startsWith("The filesystem under path")))
             continue;
           numCorrupt++;
           if (numCorrupt == 1) {
-            out.println("The list of corrupt files under path '" 
+            out.println("The list of corrupt files under path '"
                 + dir + "' are:");
           }
           out.println(line);
-          try {
-            // Get the block # that we need to send in next call
-            lastBlock = line.split("\t")[0];
-          } catch (Exception e) {
-            allDone = true;
-            break;
-          }
         }
       } finally {
         input.close();
