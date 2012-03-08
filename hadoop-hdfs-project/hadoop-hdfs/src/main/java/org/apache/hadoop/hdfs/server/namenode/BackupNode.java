@@ -106,13 +106,13 @@ public class BackupNode extends NameNode {
   @Override // NameNode
   protected void setRpcServerAddress(Configuration conf,
       InetSocketAddress addr) {
-    conf.set(BN_ADDRESS_NAME_KEY, getHostPortString(addr));
+    conf.set(BN_ADDRESS_NAME_KEY, NetUtils.getHostPortString(addr));
   }
   
   @Override // Namenode
   protected void setRpcServiceServerAddress(Configuration conf,
       InetSocketAddress addr) {
-    conf.set(BN_SERVICE_RPC_ADDRESS_KEY,  getHostPortString(addr));
+    conf.set(BN_SERVICE_RPC_ADDRESS_KEY, NetUtils.getHostPortString(addr));
   }
 
   @Override // NameNode
@@ -124,7 +124,7 @@ public class BackupNode extends NameNode {
   
   @Override // NameNode
   protected void setHttpServerAddress(Configuration conf){
-    conf.set(BN_HTTP_ADDRESS_NAME_KEY, getHostPortString(getHttpAddress()));
+    conf.set(BN_HTTP_ADDRESS_NAME_KEY, NetUtils.getHostPortString(getHttpAddress()));
   }
 
   @Override // NameNode
@@ -297,8 +297,8 @@ public class BackupNode extends NameNode {
     InetSocketAddress nnAddress = NameNode.getServiceAddress(conf, true);
     this.namenode = new NamenodeProtocolTranslatorPB(nnAddress, conf,
         UserGroupInformation.getCurrentUser());
-    this.nnRpcAddress = getHostPortString(nnAddress);
-    this.nnHttpAddress = getHostPortString(super.getHttpServerAddress(conf));
+    this.nnRpcAddress = NetUtils.getHostPortString(nnAddress);
+    this.nnHttpAddress = NetUtils.getHostPortString(super.getHttpServerAddress(conf));
     // get version and id info from the name-node
     NamespaceInfo nsInfo = null;
     while(!isStopRequested()) {

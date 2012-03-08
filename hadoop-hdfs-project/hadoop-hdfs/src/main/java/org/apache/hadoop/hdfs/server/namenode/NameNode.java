@@ -236,13 +236,6 @@ public class NameNode {
         + namenode.getHostName()+portString);
   }
 
-  /**
-   * Compose a "host:port" string from the address.
-   */
-  public static String getHostPortString(InetSocketAddress addr) {
-    return addr.getHostName() + ":" + addr.getPort();
-  }
-
   //
   // Common NameNode methods implementation for the active name-node role.
   //
@@ -272,7 +265,7 @@ public class NameNode {
    */
   protected void setRpcServiceServerAddress(Configuration conf,
       InetSocketAddress serviceRPCAddress) {
-    setServiceAddress(conf, getHostPortString(serviceRPCAddress));
+    setServiceAddress(conf, NetUtils.getHostPortString(serviceRPCAddress));
   }
 
   protected void setRpcServerAddress(Configuration conf,
@@ -292,7 +285,7 @@ public class NameNode {
   
   protected void setHttpServerAddress(Configuration conf) {
     conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY,
-        getHostPortString(getHttpAddress()));
+        NetUtils.getHostPortString(getHttpAddress()));
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
@@ -305,8 +298,8 @@ public class NameNode {
 
   NamenodeRegistration setRegistration() {
     nodeRegistration = new NamenodeRegistration(
-        getHostPortString(rpcServer.getRpcAddress()),
-        getHostPortString(getHttpAddress()),
+        NetUtils.getHostPortString(rpcServer.getRpcAddress()),
+        NetUtils.getHostPortString(getHttpAddress()),
         getFSImage().getStorage(), getRole());
     return nodeRegistration;
   }

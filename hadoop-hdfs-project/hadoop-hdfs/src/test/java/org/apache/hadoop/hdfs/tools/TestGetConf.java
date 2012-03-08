@@ -33,10 +33,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.GetConf;
 import org.apache.hadoop.hdfs.tools.GetConf.Command;
 import org.apache.hadoop.hdfs.tools.GetConf.CommandHandler;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 
@@ -86,7 +86,7 @@ public class TestGetConf {
   private String[] toStringArray(List<InetSocketAddress> list) {
     String[] ret = new String[list.size()];
     for (int i = 0; i < list.size(); i++) {
-      ret[i] = NameNode.getHostPortString(list.get(i));
+      ret[i] = NetUtils.getHostPortString(list.get(i));
     }
     return ret;
   }

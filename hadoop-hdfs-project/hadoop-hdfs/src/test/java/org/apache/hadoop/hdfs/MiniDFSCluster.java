@@ -620,10 +620,10 @@ public class MiniDFSCluster {
     NameNode nn = createNameNode(nnIndex, conf, numDataNodes, manageNameDfsDirs,
         format, operation, clusterId);
     conf.set(DFSUtil.getNameServiceIdKey(
-        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NameNode
+        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NetUtils
         .getHostPortString(nn.getNameNodeAddress()));
     conf.set(DFSUtil.getNameServiceIdKey(
-        DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
+        DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NetUtils
         .getHostPortString(nn.getHttpAddress()));
     DFSUtil.setGenericConf(conf, nameserviceId, 
         DFS_NAMENODE_HTTP_ADDRESS_KEY);
@@ -643,7 +643,7 @@ public class MiniDFSCluster {
    */
   public URI getURI(int nnIndex) {
     InetSocketAddress addr = nameNodes[nnIndex].nameNode.getNameNodeAddress();
-    String hostPort = NameNode.getHostPortString(addr);
+    String hostPort = NetUtils.getHostPortString(addr);
     URI uri = null;
     try {
       uri = new URI("hdfs://" + hostPort);
