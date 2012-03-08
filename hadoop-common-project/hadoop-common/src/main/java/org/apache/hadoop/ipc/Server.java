@@ -21,6 +21,7 @@ package org.apache.hadoop.ipc;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.BindException;
@@ -74,6 +75,7 @@ import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcPayloadOperation;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
+import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -90,6 +92,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -109,6 +112,22 @@ public abstract class Server {
    * The first four bytes of Hadoop RPC connections
    */
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
+  
+  /**
+   * Serialization type for ConnectionContext and RpcPayloadHeader
+   */
+  public enum IpcSerializationType {
+    // Add new serialization type to the end without affecting the enum order
+    PROTOBUF;
+    
+    void write(DataOutput out) throws IOException {
+      out.writeByte(this.ordinal());
+    }
+    
+    static IpcSerializationType fromByte(byte b) {
+      return IpcSerializationType.values()[b];
+    }
+  }
   
   /**
    * If the user accidentally sends an HTTP GET to an IPC port, we detect this
@@ -133,7 +152,8 @@ public abstract class Server {
   // 5 : Introduced use of {@link ArrayPrimitiveWritable$Internal}
   //     in ObjectWritable to efficiently transmit arrays of primitives
   // 6 : Made RPC payload header explicit
-  public static final byte CURRENT_VERSION = 6;
+  // 7 : Changed Ipc Connection Header to use Protocol buffers
+  public static final byte CURRENT_VERSION = 7;
 
   /**
    * Initial and max size of response buffer
@@ -968,9 +988,9 @@ public abstract class Server {
 
   /** Reads calls from a connection and queues them for handling. */
   public class Connection {
-    private boolean rpcHeaderRead = false; // if initial rpc header is read
-    private boolean headerRead = false;  //if the connection header that
-                                         //follows version is read.
+    private boolean connectionHeaderRead = false; // connection  header is read?
+    private boolean connectionContextRead = false; //if connection context that
+                                            //follows connection header is read
 
     private SocketChannel channel;
     private ByteBuffer data;
@@ -986,14 +1006,14 @@ public abstract class Server {
     private int remotePort;
     private InetAddress addr;
     
-    ConnectionHeader header = new ConnectionHeader();
+    IpcConnectionContextProto connectionContext;
     String protocolName;
     boolean useSasl;
     SaslServer saslServer;
     private AuthMethod authMethod;
     private boolean saslContextEstablished;
     private boolean skipInitialSaslHandshake;
-    private ByteBuffer rpcHeaderBuffer;
+    private ByteBuffer connectionHeaderBuf = null;
     private ByteBuffer unwrappedData;
     private ByteBuffer unwrappedDataLengthBuffer;
     
@@ -1241,17 +1261,17 @@ public abstract class Server {
             return count;
         }
         
-        if (!rpcHeaderRead) {
+        if (!connectionHeaderRead) {
           //Every connection is expected to send the header.
-          if (rpcHeaderBuffer == null) {
-            rpcHeaderBuffer = ByteBuffer.allocate(2);
+          if (connectionHeaderBuf == null) {
+            connectionHeaderBuf = ByteBuffer.allocate(3);
           }
-          count = channelRead(channel, rpcHeaderBuffer);
-          if (count < 0 || rpcHeaderBuffer.remaining() > 0) {
+          count = channelRead(channel, connectionHeaderBuf);
+          if (count < 0 || connectionHeaderBuf.remaining() > 0) {
             return count;
           }
-          int version = rpcHeaderBuffer.get(0);
-          byte[] method = new byte[] {rpcHeaderBuffer.get(1)};
+          int version = connectionHeaderBuf.get(0);
+          byte[] method = new byte[] {connectionHeaderBuf.get(1)};
           authMethod = AuthMethod.read(new DataInputStream(
               new ByteArrayInputStream(method)));
           dataLengthBuffer.flip();
@@ -1273,6 +1293,14 @@ public abstract class Server {
             setupBadVersionResponse(version);
             return -1;
           }
+          
+          IpcSerializationType serializationType = IpcSerializationType
+              .fromByte(connectionHeaderBuf.get(2));
+          if (serializationType != IpcSerializationType.PROTOBUF) {
+            respondUnsupportedSerialization(serializationType);
+            return -1;
+          }
+          
           dataLengthBuffer.clear();
           if (authMethod == null) {
             throw new IOException("Unable to read authentication method");
@@ -1302,8 +1330,8 @@ public abstract class Server {
             useSasl = true;
           }
           
-          rpcHeaderBuffer = null;
-          rpcHeaderRead = true;
+          connectionHeaderBuf = null;
+          connectionHeaderRead = true;
           continue;
         }
         
@@ -1334,7 +1362,7 @@ public abstract class Server {
             skipInitialSaslHandshake = false;
             continue;
           }
-          boolean isHeaderRead = headerRead;
+          boolean isHeaderRead = connectionContextRead;
           if (useSasl) {
             saslReadAndProcess(data.array());
           } else {
@@ -1383,6 +1411,17 @@ public abstract class Server {
       }
     }
     
+    private void respondUnsupportedSerialization(IpcSerializationType st) throws IOException {
+      String errMsg = "Server IPC version " + CURRENT_VERSION
+          + " do not support serilization " + st.toString();
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+      Call fakeCall = new Call(-1, null, this);
+      setupResponse(buffer, fakeCall, Status.FATAL, null,
+          IpcException.class.getName(), errMsg);
+      responder.doRespond(fakeCall);
+    }
+    
     private void setupHttpRequestOnIpcPortResponse() throws IOException {
       Call fakeCall =  new Call(0, null, this);
       fakeCall.setResponse(ByteBuffer.wrap(
@@ -1390,15 +1429,15 @@ public abstract class Server {
       responder.doRespond(fakeCall);
     }
 
-    /// Reads the connection header following version
-    private void processHeader(byte[] buf) throws IOException {
+    /** Reads the connection context following the connection header */
+    private void processConnectionContext(byte[] buf) throws IOException {
       DataInputStream in =
         new DataInputStream(new ByteArrayInputStream(buf));
-      header.readFields(in);
-      protocolName = header.getProtocol();
+      connectionContext = IpcConnectionContextProto.parseFrom(in);
+      protocolName = connectionContext.hasProtocol() ? connectionContext
+          .getProtocol() : null;
 
-      
-      UserGroupInformation protocolUser = header.getUgi();
+      UserGroupInformation protocolUser = ProtoUtil.getUgi(connectionContext);
       if (!useSasl) {
         user = protocolUser;
         if (user != null) {
@@ -1472,15 +1511,15 @@ public abstract class Server {
     
     private void processOneRpc(byte[] buf) throws IOException,
         InterruptedException {
-      if (headerRead) {
+      if (connectionContextRead) {
         processData(buf);
       } else {
-        processHeader(buf);
-        headerRead = true;
+        processConnectionContext(buf);
+        connectionContextRead = true;
         if (!authorizeConnection()) {
           throw new AccessControlException("Connection from " + this
-              + " for protocol " + header.getProtocol()
-              + " is unauthorized for user " + user);
+              + " for protocol " + connectionContext.getProtocol()
+              + " is unauthorized for user " + user);      
         }
       }
     }
@@ -1549,9 +1588,9 @@ public abstract class Server {
             && (authMethod != AuthMethod.DIGEST)) {
           ProxyUsers.authorize(user, this.getHostAddress(), conf);
         }
-        authorize(user, header, getHostInetAddress());
+        authorize(user, protocolName, getHostInetAddress());
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Successfully authorized " + header);
+          LOG.debug("Successfully authorized " + connectionContext);
         }
         rpcMetrics.incrAuthorizationSuccesses();
       } catch (AuthorizationException ae) {
@@ -1596,11 +1635,10 @@ public abstract class Server {
       while (running) {
         try {
           final Call call = callQueue.take(); // pop the queue; maybe blocked here
-
-          if (LOG.isDebugEnabled())
+          if (LOG.isDebugEnabled()) {
             LOG.debug(getName() + ": has Call#" + call.callId + 
                 "for RpcKind " + call.rpcKind + " from " + call.connection);
-          
+          }
           String errorClass = null;
           String error = null;
           Writable value = null;
@@ -1921,21 +1959,22 @@ public abstract class Server {
    * Authorize the incoming client connection.
    * 
    * @param user client user
-   * @param connection incoming connection
+   * @param protocolName - the protocol
    * @param addr InetAddress of incoming connection
    * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
-  public void authorize(UserGroupInformation user, 
-                        ConnectionHeader connection,
-                        InetAddress addr
-                        ) throws AuthorizationException {
+  private void authorize(UserGroupInformation user, String protocolName,
+      InetAddress addr) throws AuthorizationException {
     if (authorize) {
+      if (protocolName == null) {
+        throw new AuthorizationException("Null protocol not authorized");
+      }
       Class<?> protocol = null;
       try {
-        protocol = getProtocolClass(connection.getProtocol(), getConf());
+        protocol = getProtocolClass(protocolName, getConf());
       } catch (ClassNotFoundException cfne) {
         throw new AuthorizationException("Unknown protocol: " + 
-                                         connection.getProtocol());
+                                         protocolName);
       }
       serviceAuthorizationManager.authorize(user, protocol, getConf(), addr);
     }
