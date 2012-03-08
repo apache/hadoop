@@ -119,6 +119,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3003. Remove getHostPortString() from NameNode, replace it with
     NetUtils.getHostPortString(). (Brandon Li via atm)
 
+    HDFS-3014. FSEditLogOp and its subclasses should have toString() method.
+    (Sho Shimauchi via atm)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)
