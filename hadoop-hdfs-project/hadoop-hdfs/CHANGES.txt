@@ -8,9 +8,6 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
-    HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
-               should be configurable. (atm)
-
     HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
     via jitendra)
 
@@ -31,13 +28,7 @@ Trunk (unreleased changes)
     HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
     (Hari Mankude via eli)
 
-    HDFS-2410. Further cleanup of hardcoded configuration keys and values.
-    (suresh)
-
     HDFS-2857. Cleanup BlockInfo class. (suresh)
-
-    HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
-    (Uma Maheswara Rao G via eli)
 
     HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal Lee
     via jitendra)
@@ -51,9 +42,6 @@ Trunk (unreleased changes)
     HDFS-2655. BlockReaderLocal#skip performs unnecessary IO.
     (Brandon Li via jitendra) 
 
-    HDFS-3003. Remove getHostPortString() from NameNode, replace it with
-    NetUtils.getHostPortString(). (Brandon Li via atm)
-
     HDFS-3009. Remove duplicate code in DFSClient#isLocalAddress by using 
     NetUtils. (Hari Mankude via suresh)
 
@@ -62,13 +50,8 @@ Trunk (unreleased changes)
 
     HDFS-3016. Security in unit tests. (Jaimin Jetly via jitendra)
 
-    HDFS-3014. FSEditLogOp and its subclasses should have toString() method.
-    (Sho Shimauchi via atm)
-
     HDFS-3030. Remove getProtocolVersion and getProtocolSignature from translators.
     (jitendra)
-
-    HDFS-3036. Remove unused method DFSUtil#isDefaultNamenodeAddress. (atm)
 
   OPTIMIZATIONS
 
@@ -470,6 +453,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3021. Use generic type to declare FSDatasetInterface.  (szetszwo)
 
+    HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
+    should be configurable. (atm)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
@@ -517,6 +503,22 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-2992. Edit log failure trace should include transaction ID of
     error.  (Colin Patrick McCabe via eli)
+
+    HDFS-2507. Allow saveNamespace operations to be canceled. (todd)
+
+    HDFS-2410. Further cleanup of hardcoded configuration keys and values.
+    (suresh)
+
+    HDFS-208. name node should warn if only one dir is listed in dfs.name.dir.
+    (Uma Maheswara Rao G via eli)
+
+    HDFS-3003. Remove getHostPortString() from NameNode, replace it with
+    NetUtils.getHostPortString(). (Brandon Li via atm)
+
+    HDFS-3014. FSEditLogOp and its subclasses should have toString() method.
+    (Sho Shimauchi via atm)
+
+    HDFS-3036. Remove unused method DFSUtil#isDefaultNamenodeAddress. (atm)
 
     HDFS-2158. Add JournalSet to manage the set of journals. (jitendra)
 
@@ -580,6 +582,11 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3038. Add FSEditLog.metrics to findbugs exclude list. (todd via atm)
 
+    HDFS-2285. BackupNode should reject requests to modify namespace.
+    (shv and Uma Maheswara Rao)
+
+    HDFS-2764. TestBackupNode is racy. (atm)
+
     HDFS-2188. Make FSEditLog create its journals from a list of URIs rather 
     than NNStorage. (Ivan Kelly via jitendra)
 
@@ -618,8 +625,6 @@ Release 0.23.2 - UNRELEASED
   BUG FIXES
     HDFS-2923. Namenode IPC handler count uses the wrong configuration key
     (todd)
-
-    HDFS-2764. TestBackupNode is racy. (atm)
 
     HDFS-2869. Fix an error in the webhdfs docs for the mkdir op (harsh)
 
@@ -1637,8 +1642,6 @@ Release 0.23.0 - 2011-11-01
     all the nodes in the cluster. (suresh)
 
     HDFS-2371. Refactor BlockSender.java for better readability. (suresh)
-
-    HDFS-2507. Allow saveNamespace operations to be canceled. (todd)
 
     HDFS-2493. Remove reference to FSNamesystem in blockmanagement classes.
     (szetszwo)
@@ -2682,9 +2685,6 @@ Release 0.22.0 - 2011-11-29
 
     HDFS-2452. OutOfMemoryError in DataXceiverServer takes down the DataNode
     (Uma Maheswara Rao via cos)
-
-    HDFS-2285. BackupNode should reject requests to modify namespace.
-    (shv and Uma Maheswara Rao)
 
     HDFS-2002. Incorrect computation of needed blocks in getTurnOffTip().
     (Plamen Jeliazkov via shv)
