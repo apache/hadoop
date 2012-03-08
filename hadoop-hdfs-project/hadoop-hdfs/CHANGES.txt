@@ -133,6 +133,8 @@ Release 0.23.3 - UNRELEASED
                over-replicated, and invalidated blocks.
                (Tomasz Nykiel via todd)
 
+    HDFS-3036. Remove unused method DFSUtil#isDefaultNamenodeAddress. (atm)
+
   BUG FIXES
  
     HDFS-2481. Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol.
