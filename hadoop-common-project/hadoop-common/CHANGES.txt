@@ -27,18 +27,12 @@ Trunk (unreleased changes)
 
     HADOOP-7595. Upgrade dependency to Avro 1.5.3. (Alejandro Abdelnur via atm)
 
-    HADOOP-7717. Move handling of concurrent client fail-overs to
-    RetryInvocationHandler (atm)
-
     HADOOP-7664. Remove warmings when overriding final parameter configuration
     if the override value is same as the final parameter value.
     (Ravi Prakash via suresh)
 
     HADOOP-7729. Send back valid HTTP response if user hits IPC port with
     HTTP GET. (todd)
-
-    HADOOP-7728. Enable task memory management to be configurable in hadoop
-    config setup script. (ramya)
 
     HADOOP-7792. Add verifyToken method to AbstractDelegationTokenSecretManager.
     (jitendra)
@@ -57,16 +51,11 @@ Trunk (unreleased changes)
     HADOOP-7988. Upper case in hostname part of the principals doesn't work with
     kerberos. (jitendra)
 
-    HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
-    (Brandon Li via jitendra)
-
     HADOOP-8078. Add capability to turn on security in unit tests. (Jaimin Jetly
     via jitendra)
 
     HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the 
     client side translator and server side implementation. (jitendra)
-
-    HADOOP-7557 Make IPC header be extensible (sanjay radia)
 
   BUG FIXES
 
@@ -109,9 +98,6 @@ Trunk (unreleased changes)
 
     HADOOP-7770. ViewFS getFileChecksum throws FileNotFoundException for files in 
     /tmp and /user. (Ravi Prakash via jitendra)
-
-    HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
-    via atm)
 
     HADOOP-8141. Add method to SecurityUtil to init krb5 cipher suites.
     (todd)
@@ -234,6 +220,20 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8125. make hadoop-client set of curated jars available in a
     distribution tarball (rvs via tucu)
 
+    HADOOP-7717. Move handling of concurrent client fail-overs to
+    RetryInvocationHandler (atm)
+
+    HADOOP-7728. Enable task memory management to be configurable in hadoop
+    config setup script. (ramya)
+
+    HADOOP-7358. Improve log levels when exceptions caught in RPC handler
+    (Todd Lipcon via shv)
+
+    HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
+    (Brandon Li via jitendra)
+
+    HADOOP-7557 Make IPC header be extensible (sanjay radia)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -266,6 +266,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8119. Fix javac warnings in TestAuthenticationFilter in hadoop-auth.
     (szetszwo)
+
+    HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
+    via atm)
 
 Release 0.23.2 - UNRELEASED 
 
@@ -1531,9 +1534,6 @@ Release 0.22.0 - 2011-11-29
     HADOOP-7772. javadoc the topology classes (stevel)
 
     HADOOP-7786. Remove HDFS-specific config keys defined in FsConfig. (eli)
-
-    HADOOP-7358. Improve log levels when exceptions caught in RPC handler
-    (Todd Lipcon via shv)
 
     HADOOP-7861. changes2html.pl generates links to HADOOP, HDFS, and MAPREDUCE
     jiras. (shv)
