@@ -52,6 +52,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3578. Starting nodemanager as root gives "Unknown -jvm option"
     (tomwhite)
 
+    MAPREDUCE-3348. Fixed a bug in MR client to redirect to JobHistoryServer
+    correctly when RM forgets the app. (Devaraj K via vinodkv)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

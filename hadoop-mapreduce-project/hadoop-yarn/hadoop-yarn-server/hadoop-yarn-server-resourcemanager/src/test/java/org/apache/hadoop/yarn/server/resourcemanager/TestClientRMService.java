@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import junit.framework.Assert;
 
@@ -27,11 +31,19 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
+
 
 public class TestClientRMService {
 
@@ -78,5 +90,23 @@ public class TestClientRMService {
     Assert.assertEquals(1, nodeReports.size());
     Assert.assertFalse("Node is expected to be unhealthy!", nodeReports.get(0)
       .getNodeHealthStatus().getIsNodeHealthy());
+  }
+  
+  @Test
+  public void testGetApplicationReport() throws YarnRemoteException {
+    RMContext rmContext = mock(RMContext.class);
+    when(rmContext.getRMApps()).thenReturn(
+        new ConcurrentHashMap<ApplicationId, RMApp>());
+    ClientRMService rmService = new ClientRMService(rmContext, null, null,
+        null, null);
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
+    GetApplicationReportRequest request = recordFactory
+        .newRecordInstance(GetApplicationReportRequest.class);
+    request.setApplicationId(recordFactory
+        .newRecordInstance(ApplicationId.class));
+    GetApplicationReportResponse applicationReport = rmService
+        .getApplicationReport(request);
+    Assert.assertNull("It should return null as application report for absent application.",
+        applicationReport.getApplicationReport());
   }
 }
