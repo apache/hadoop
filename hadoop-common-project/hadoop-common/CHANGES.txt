@@ -59,6 +59,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-8146.  FsShell commands cannot be interrupted
+    (Daryn Sharp via Uma Maheswara Rao G)
+
     HADOOP-8018.  Hudson auto test for HDFS has started throwing javadoc
     (Jon Eagles via bobby)
 
