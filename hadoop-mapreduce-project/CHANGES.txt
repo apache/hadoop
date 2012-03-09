@@ -215,6 +215,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3975. Default value not set for Configuration parameter
     mapreduce.job.local.dir (Eric Payne via bobby)
 
+    MAPREDUCE-3982. Fixed FileOutputCommitter to not err out for an 'empty-job'
+    whose tasks don't write any outputs. (Robert Joseph Evans via vinodkv)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
