@@ -122,6 +122,28 @@ public class TestFileOutputCommitter extends TestCase {
     assertEquals(output, expectedOutput.toString());
     FileUtil.fullyDelete(new File(outDir.toString()));
   }
+  
+  public void testEmptyOutput() throws Exception {
+    Job job = Job.getInstance();
+    FileOutputFormat.setOutputPath(job, outDir);
+    Configuration conf = job.getConfiguration();
+    conf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt);
+    JobContext jContext = new JobContextImpl(conf, taskID.getJobID());
+    TaskAttemptContext tContext = new TaskAttemptContextImpl(conf, taskID);
+    FileOutputCommitter committer = new FileOutputCommitter(outDir, tContext);
+
+    // setup
+    committer.setupJob(jContext);
+    committer.setupTask(tContext);
+
+    // Do not write any output
+
+    // do commit
+    committer.commitTask(tContext);
+    committer.commitJob(jContext);
+    
+    FileUtil.fullyDelete(new File(outDir.toString()));
+  }
 
   @SuppressWarnings("unchecked")
   public void testAbort() throws IOException, InterruptedException {

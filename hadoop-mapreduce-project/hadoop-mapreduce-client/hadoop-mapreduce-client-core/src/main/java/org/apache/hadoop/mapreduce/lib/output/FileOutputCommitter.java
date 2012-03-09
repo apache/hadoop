@@ -278,11 +278,11 @@ public class FileOutputCommitter extends OutputCommitter {
    */
   public void setupJob(JobContext context) throws IOException {
     if (hasOutputPath()) {
-      Path pendingJobAttemptsPath = getPendingJobAttemptsPath();
-      FileSystem fs = pendingJobAttemptsPath.getFileSystem(
+      Path jobAttemptPath = getJobAttemptPath(context);
+      FileSystem fs = jobAttemptPath.getFileSystem(
           context.getConfiguration());
-      if (!fs.mkdirs(pendingJobAttemptsPath)) {
-        LOG.error("Mkdirs failed to create " + pendingJobAttemptsPath);
+      if (!fs.mkdirs(jobAttemptPath)) {
+        LOG.error("Mkdirs failed to create " + jobAttemptPath);
       }
     } else {
       LOG.warn("Output Path is null in setupJob()");
