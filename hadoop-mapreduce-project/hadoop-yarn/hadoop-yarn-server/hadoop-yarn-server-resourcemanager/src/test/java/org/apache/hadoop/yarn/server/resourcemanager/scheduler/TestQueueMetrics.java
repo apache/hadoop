@@ -27,6 +27,7 @@ import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -38,6 +39,7 @@ import org.junit.Test;
 
 public class TestQueueMetrics {
   static final int GB = 1024; // MB
+  private static final Configuration conf = new Configuration();
 
   final MetricsSystem ms = new MetricsSystemImpl();
 
@@ -45,7 +47,8 @@ public class TestQueueMetrics {
     String queueName = "single";
     String user = "alice";
 
-    QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false);
+    QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false,
+						 conf);
     MetricsSource queueSource= queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(user);
 
@@ -59,7 +62,7 @@ public class TestQueueMetrics {
     // configurable cluster/queue resources
     checkResources(queueSource, 0, 0, 0, 0, 100*GB, 15*GB, 5, 0, 0);
 
-    metrics.incrAppsRunning(user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0);
 
     metrics.allocateResources(user, 3, Resources.createResource(2*GB));
@@ -77,7 +80,8 @@ public class TestQueueMetrics {
     String queueName = "single2";
     String user = "dodo";
 
-    QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, true);
+    QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, true,
+						 conf);
     MetricsSource queueSource = queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(user);
 
@@ -95,7 +99,7 @@ public class TestQueueMetrics {
     checkResources(queueSource, 0, 0, 0, 0,  100*GB, 15*GB, 5, 0, 0);
     checkResources(userSource, 0, 0, 0, 0, 10*GB, 15*GB, 5, 0, 0);
 
-    metrics.incrAppsRunning(user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0);
     checkApps(userSource, 1, 0, 1, 0, 0, 0);
 
@@ -118,11 +122,11 @@ public class TestQueueMetrics {
     String user = "alice";
 
     QueueMetrics parentMetrics =
-        QueueMetrics.forQueue(ms, parentQueueName, null, true);
+      QueueMetrics.forQueue(ms, parentQueueName, null, true, conf);
     Queue parentQueue = make(stub(Queue.class).returning(parentMetrics).
         from.getMetrics());
     QueueMetrics metrics =
-        QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true);
+      QueueMetrics.forQueue(ms, leafQueueName, parentQueue, true, conf);
     MetricsSource parentQueueSource = queueSource(ms, parentQueueName);
     MetricsSource queueSource = queueSource(ms, leafQueueName);
     AppSchedulingInfo app = mockApp(user);
@@ -146,7 +150,7 @@ public class TestQueueMetrics {
     checkResources(userSource, 0, 0, 0, 0, 10*GB, 15*GB, 5, 0, 0);
     checkResources(parentUserSource, 0, 0, 0, 0, 10*GB, 15*GB, 5, 0, 0);
 
-    metrics.incrAppsRunning(user);
+    metrics.incrAppsRunning(app, user);
     checkApps(queueSource, 1, 0, 1, 0, 0, 0);
     checkApps(userSource, 1, 0, 1, 0, 0, 0);
 
