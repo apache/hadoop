@@ -31,9 +31,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -79,7 +81,7 @@ import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 @Evolving
 @SuppressWarnings("unchecked")
 public class CapacityScheduler 
-implements ResourceScheduler, CapacitySchedulerContext {
+implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
   private static final Log LOG = LogFactory.getLog(CapacityScheduler.class);
 
@@ -109,7 +111,21 @@ implements ResourceScheduler, CapacitySchedulerContext {
     }
   };
 
+  public void setConf(Configuration conf) {
+    if (conf instanceof YarnConfiguration) {
+      yarnConf = (YarnConfiguration) conf;
+    } else {
+      throw new IllegalArgumentException("Can only configure with " +
+					 "YarnConfiguration");
+    }
+  }
+
+  public Configuration getConf() {
+    return yarnConf;
+  }
+
   private CapacitySchedulerConfiguration conf;
+  private YarnConfiguration yarnConf;
   private ContainerTokenSecretManager containerTokenSecretManager;
   private RMContext rmContext;
 

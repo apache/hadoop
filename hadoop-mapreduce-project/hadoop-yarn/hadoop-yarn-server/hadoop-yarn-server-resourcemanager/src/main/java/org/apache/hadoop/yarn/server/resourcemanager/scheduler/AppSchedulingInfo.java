@@ -231,7 +231,7 @@ public class AppSchedulingInfo {
       // once an allocation is done we assume the application is
       // running from scheduler's POV.
       pending = false;
-      metrics.incrAppsRunning(user);
+      metrics.incrAppsRunning(this, user);
     }
     LOG.debug("allocate: user: " + user + ", memory: "
         + request.getCapability());
