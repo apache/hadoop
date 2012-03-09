@@ -92,6 +92,8 @@ Trunk (unreleased changes)
     HDFS-3037. TestMulitipleNNDataBlockScanner#testBlockScannerAfterRestart is
     racy. (atm)
 
+    HDFS-2966 TestNameNodeMetrics tests can fail under load. (stevel)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

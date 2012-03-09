@@ -62,6 +62,8 @@ public class TestNameNodeMetrics {
   
   // Number of datanodes in the cluster
   private static final int DATANODE_COUNT = 3; 
+  private static final int WAIT_GAUGE_VALUE_RETRIES = 20;
+
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 1);
@@ -140,10 +142,8 @@ public class TestNameNodeMetrics {
     assertGauge("BlockCapacity", blockCapacity, rb);
     fs.delete(file, true);
     filesTotal--; // reduce the filecount for deleted file
-    
-    waitForDeletion();
-    rb = getMetrics(NS_METRICS);
-    assertGauge("FilesTotal", filesTotal, rb);
+
+    rb = waitForDnMetricValue(NS_METRICS, "FilesTotal", filesTotal);
     assertGauge("BlocksTotal", 0L, rb);
     assertGauge("PendingDeletionBlocks", 0L, rb);
 
@@ -176,9 +176,7 @@ public class TestNameNodeMetrics {
     assertGauge("PendingReplicationBlocks", 1L, rb);
     assertGauge("ScheduledReplicationBlocks", 1L, rb);
     fs.delete(file, true);
-    waitForDeletion();
-    rb = getMetrics(NS_METRICS);
-    assertGauge("CorruptBlocks", 0L, rb);
+    rb = waitForDnMetricValue(NS_METRICS, "CorruptBlocks", 0L);
     assertGauge("PendingReplicationBlocks", 0L, rb);
     assertGauge("ScheduledReplicationBlocks", 0L, rb);
   }
@@ -219,8 +217,7 @@ public class TestNameNodeMetrics {
     assertGauge("UnderReplicatedBlocks", 1L, rb);
     assertGauge("MissingBlocks", 1L, rb);
     fs.delete(file, true);
-    waitForDeletion();
-    assertGauge("UnderReplicatedBlocks", 0L, getMetrics(NS_METRICS));
+    waitForDnMetricValue(NS_METRICS, "UnderReplicatedBlocks", 0L);
   }
 
   private void waitForDeletion() throws InterruptedException {
@@ -228,7 +225,44 @@ public class TestNameNodeMetrics {
     // the blocks pending deletion are sent for deletion to the datanodes.
     Thread.sleep(DFS_REPLICATION_INTERVAL * (DATANODE_COUNT + 1) * 1000);
   }
-  
+
+  /**
+   * Wait for the named gauge value from the metrics source to reach the
+   * desired value.
+   *
+   * There's an initial delay then a spin cycle of sleep and poll. Because
+   * all the tests use a shared FS instance, these tests are not independent;
+   * that's why the initial sleep is in there.
+   *
+   * @param source metrics source
+   * @param name gauge name
+   * @param expected expected value
+   * @return the last metrics record polled
+   * @throws Exception if something went wrong.
+   */
+  private MetricsRecordBuilder waitForDnMetricValue(String source,
+                                                    String name,
+                                                    long expected)
+      throws Exception {
+    MetricsRecordBuilder rb;
+    long gauge;
+    //initial wait.
+    waitForDeletion();
+    //lots of retries are allowed for slow systems; fast ones will still
+    //exit early
+    int retries = (DATANODE_COUNT + 1) * WAIT_GAUGE_VALUE_RETRIES;
+    rb = getMetrics(source);
+    gauge = MetricsAsserts.getLongGauge(name, rb);
+    while (gauge != expected && (--retries > 0)) {
+      Thread.sleep(DFS_REPLICATION_INTERVAL * 500);
+      rb = getMetrics(source);
+      gauge = MetricsAsserts.getLongGauge(name, rb);
+    }
+    //at this point the assertion is valid or the retry count ran out
+    assertGauge(name, expected, rb);
+    return rb;
+  }
+
   @Test
   public void testRenameMetrics() throws Exception {
     Path src = getTestPath("src");
