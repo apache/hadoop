@@ -117,6 +117,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
     via atm)
 
+    HADOOP-8154. DNS#getIPs shouldn't silently return the local host
+    IP for bogus interface names. (eli)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
