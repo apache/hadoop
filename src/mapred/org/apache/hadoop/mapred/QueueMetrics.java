@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
+import java.util.ArrayList;
+
 import org.apache.hadoop.metrics2.MetricsBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterInt;
@@ -36,8 +38,13 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
  */
 @SuppressWarnings("deprecation")
 class QueueMetrics implements MetricsSource {
+
   private static final Log LOG =
     LogFactory.getLog(QueueMetrics.class);
+
+  public static final String BUCKET_PROPERTY = 
+    "mapred.queue.metrics.runtime.buckets";
+  private static final String DEFAULT_BUCKETS = "60,300,1440";
 
   final MetricsRegistry registry = new MetricsRegistry("Queue");
   final MetricMutableCounterInt mapsLaunched =
@@ -76,6 +83,8 @@ class QueueMetrics implements MetricsSource {
       registry.newCounter("maps_killed", "", 0);
   final MetricMutableCounterInt redsKilled =
       registry.newCounter("reduces_killed", "", 0);
+  final MetricMutableGaugeInt[] runningTime;
+  TimeBucketMetrics<JobID> runBuckets;
 
   final String sessionId;
   private String queueName;
@@ -85,13 +94,45 @@ class QueueMetrics implements MetricsSource {
     sessionId = conf.get("session.id", "");
     registry.setContext("mapred").tag("sessionId", "", sessionId);
     registry.tag("Queue", "Metrics by queue", queueName);
+    runningTime = buildBuckets(conf);
   }
 
   public String getQueueName() {
     return this.queueName;
   }
 
+  private static ArrayList<Integer> parseInts(String value) {
+    ArrayList<Integer> result = new ArrayList<Integer>();
+    for(String word: value.split(",")) {
+      result.add(Integer.parseInt(word.trim()));
+    }
+    return result;
+  }
+
+  private MetricMutableGaugeInt[] buildBuckets(Configuration conf) {
+    ArrayList<Integer> buckets = 
+      parseInts(conf.get(BUCKET_PROPERTY, DEFAULT_BUCKETS));
+    MetricMutableGaugeInt[] result = 
+      new MetricMutableGaugeInt[buckets.size() + 1];
+    result[0] = registry.newGauge("running_0", "", 0);
+    long[] cuts = new long[buckets.size()];
+    for(int i=0; i < buckets.size(); ++i) {
+      result[i+1] = registry.newGauge("running_" + buckets.get(i), "", 0);
+      cuts[i] = buckets.get(i) * 1000 * 60; // covert from min to ms
+    }
+    this.runBuckets = new TimeBucketMetrics<JobID>(cuts);
+    return result;
+  }
+
+  private void updateRunningTime() {
+    int[] counts = runBuckets.getBucketCounts(System.currentTimeMillis());
+    for(int i=0; i < counts.length; ++i) {
+      runningTime[i].set(counts[i]); 
+    }
+  }
+
   public void getMetrics(MetricsBuilder builder, boolean all) {
+    updateRunningTime();
     registry.snapshot(builder.addRecord(registry.name()), all);
   }
 
@@ -181,10 +222,12 @@ class QueueMetrics implements MetricsSource {
 
   public void addRunningJob(JobConf conf, JobID id) {
     jobsRunning.incr();
+    runBuckets.add(id, System.currentTimeMillis());
   }
 
   public void decRunningJob(JobConf conf, JobID id) {
     jobsRunning.decr();
+    runBuckets.remove(id);
   }
 
   public void killedMap(TaskAttemptID taskAttemptID) {
