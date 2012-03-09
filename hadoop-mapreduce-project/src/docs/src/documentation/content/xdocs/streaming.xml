@@ -750,7 +750,7 @@ You can use Hadoop Streaming to do this.
 As an example, consider the problem of zipping (compressing) a set of files across the hadoop cluster. You can achieve this using either of these methods:
 </p><ol>
 <li> Hadoop Streaming and custom mapper script:<ul>
-  <li> Generate a file containing the full HDFS path of the input files. Each map task would get one file name as input.</li>
+  <li> Generate files listing the full HDFS paths of the files to be processed. Each list file is the input for an individual map task which processes the files listed.</li>
   <li> Create a mapper script which, given a filename, will get the file to local disk, gzip the file and put it back in the desired output directory</li>
 </ul></li>
 <li>The existing Hadoop Framework:<ul>

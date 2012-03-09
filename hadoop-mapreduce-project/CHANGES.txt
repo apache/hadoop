@@ -28,6 +28,8 @@ Release 0.23.3 - UNRELEASED
 	MAPREDUCE-3935. Annotate Counters.Counter and Counters.Group as @Public.
     (tomwhite)
 
+    MAPREDUCE-3991. Streaming FAQ has some wrong instructions about input files splitting. (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
