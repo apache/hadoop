@@ -181,11 +181,7 @@ elif [ "$COMMAND" = "resourcemanager" ] ; then
 elif [ "$COMMAND" = "nodemanager" ] ; then
   CLASSPATH=${CLASSPATH}:$YARN_CONF_DIR/nm-config/log4j.properties
   CLASS='org.apache.hadoop.yarn.server.nodemanager.NodeManager'
-  if [[ $EUID -eq 0 ]]; then
-    YARN_OPTS="$YARN_OPTS -jvm server $YARN_NODEMANAGER_OPTS"
-  else
-    YARN_OPTS="$YARN_OPTS -server $YARN_NODEMANAGER_OPTS"
-  fi
+  YARN_OPTS="$YARN_OPTS -server $YARN_NODEMANAGER_OPTS"
   if [ "$YARN_NODEMANAGER_HEAPSIZE" != "" ]; then
     JAVA_HEAP_MAX="-Xmx""$YARN_NODEMANAGER_HEAPSIZE""m"
   fi
