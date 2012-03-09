@@ -81,6 +81,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-7557 Make IPC header be extensible (sanjay radia)
 
+    HADOOP-7806. Support binding to sub-interfaces (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
