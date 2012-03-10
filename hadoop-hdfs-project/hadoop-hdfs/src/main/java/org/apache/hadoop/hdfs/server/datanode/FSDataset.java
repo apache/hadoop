@@ -18,13 +18,16 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -37,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -612,8 +616,8 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
     }
 
     @Override
-    public File getDirectory(String bpid) throws IOException {
-      return getBlockPoolSlice(bpid).getDirectory();
+    public String getPath(String bpid) throws IOException {
+      return getBlockPoolSlice(bpid).getDirectory().getAbsolutePath();
     }
 
     @Override
@@ -2301,7 +2305,7 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
             DataNode.LOG.warn("Metadata file in memory "
                 + memMetaFile.getAbsolutePath()
                 + " does not match file found by scan "
-                + diskMetaFile.getAbsolutePath());
+                + (diskMetaFile == null? null: diskMetaFile.getAbsolutePath()));
           }
         } else {
           // Metadata file corresponding to block in memory is missing
@@ -2611,5 +2615,221 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
     BlockLocalPathInfo info = new BlockLocalPathInfo(block,
         datafile.getAbsolutePath(), metafile.getAbsolutePath());
     return info;
+  }
+
+  @Override
+  public RollingLogs createRollingLogs(String bpid, String prefix
+      ) throws IOException {
+    String dir = null;
+    final List<FSVolume> volumes = getVolumes();
+    for (FSVolume vol : volumes) {
+      String bpDir = vol.getPath(bpid);
+      if (RollingLogsImpl.isFilePresent(bpDir, prefix)) {
+        dir = bpDir;
+        break;
+      }
+    }
+    if (dir == null) {
+      dir = volumes.get(0).getPath(bpid);
+    }
+    return new RollingLogsImpl(dir, prefix);
+  }
+
+  static class RollingLogsImpl implements RollingLogs {
+    private static final String CURR_SUFFIX = ".curr";
+    private static final String PREV_SUFFIX = ".prev";
+
+    static boolean isFilePresent(String dir, String filePrefix) {
+      return new File(dir, filePrefix + CURR_SUFFIX).exists() ||
+             new File(dir, filePrefix + PREV_SUFFIX).exists();
+    }
+
+    private final File curr;
+    private final File prev;
+    private PrintStream out; //require synchronized access
+
+    private Appender appender = new Appender() {
+      @Override
+      public Appendable append(CharSequence csq) {
+        synchronized(RollingLogsImpl.this) {
+          if (out == null) {
+            throw new IllegalStateException(RollingLogsImpl.this
+                + " is not yet opened.");
+          }
+          out.print(csq);
+        }
+        return this;
+      }
+
+      @Override
+      public Appendable append(char c) {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public Appendable append(CharSequence csq, int start, int end) {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void close() {
+        synchronized(RollingLogsImpl.this) {
+          if (out != null) {
+            out.close();
+            out = null;
+          }
+        }
+      }
+    };
+
+
+    private final AtomicInteger numReaders = new AtomicInteger();
+
+    private RollingLogsImpl(String dir, String filePrefix) throws FileNotFoundException{
+      curr = new File(dir, filePrefix + CURR_SUFFIX);
+      prev = new File(dir, filePrefix + PREV_SUFFIX);
+      out = new PrintStream(new FileOutputStream(curr, true));
+    }
+
+    @Override
+    public Reader iterator(boolean skipPrevFile) throws IOException {
+      numReaders.incrementAndGet(); 
+      return new Reader(skipPrevFile);
+    }
+
+    @Override
+    public Appender appender() {
+      return appender;
+    }
+
+    @Override
+    public boolean roll() throws IOException {
+      if (numReaders.get() > 0) {
+        return false;
+      }
+      if (!prev.delete() && prev.exists()) {
+        throw new IOException("Failed to delete " + prev);
+      }
+
+      synchronized(this) {
+        appender.close();
+        final boolean renamed = curr.renameTo(prev);
+        out = new PrintStream(new FileOutputStream(curr, true));
+        if (!renamed) {
+          throw new IOException("Failed to rename " + curr + " to " + prev);
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public String toString() {
+      return curr.toString();
+    }
+    
+    /**
+     * This is used to read the lines in order.
+     * If the data is not read completely (i.e, untill hasNext() returns
+     * false), it needs to be explicitly 
+     */
+    private class Reader implements RollingLogs.LineIterator {
+      private File file;
+      private BufferedReader reader;
+      private String line;
+      private boolean closed = false;
+      
+      private Reader(boolean skipPrevFile) throws IOException {
+        reader = null;
+        file = skipPrevFile? curr : prev;
+        readNext();        
+      }
+
+      @Override
+      public boolean isPrevious() {
+        return file == prev;
+      }
+
+      private boolean openFile() throws IOException {
+
+        for(int i=0; i<2; i++) {
+          if (reader != null || i > 0) {
+            // move to next file
+            file = isPrevious()? curr : null;
+          }
+          if (file == null) {
+            return false;
+          }
+          if (file.exists()) {
+            break;
+          }
+        }
+        
+        if (reader != null ) {
+          reader.close();
+          reader = null;
+        }
+        
+        reader = new BufferedReader(new FileReader(file));
+        return true;
+      }
+      
+      // read next line if possible.
+      private void readNext() throws IOException {
+        line = null;
+        try {
+          if (reader != null && (line = reader.readLine()) != null) {
+            return;
+          }
+          if (line == null) {
+            // move to the next file.
+            if (openFile()) {
+              readNext();
+            }
+          }
+        } finally {
+          if (!hasNext()) {
+            close();
+          }
+        }
+      }
+      
+      @Override
+      public boolean hasNext() {
+        return line != null;
+      }
+
+      @Override
+      public String next() {
+        String curLine = line;
+        try {
+          readNext();
+        } catch (IOException e) {
+          DataBlockScanner.LOG.warn("Failed to read next line.", e);
+        }
+        return curLine;
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+
+      @Override
+      public void close() throws IOException {
+        if (!closed) {
+          try {
+            if (reader != null) {
+              reader.close();
+            }
+          } finally {
+            file = null;
+            reader = null;
+            closed = true;
+            final int n = numReaders.decrementAndGet();
+            assert(n >= 0);
+          }
+        }
+      }
+    }
   }
 }

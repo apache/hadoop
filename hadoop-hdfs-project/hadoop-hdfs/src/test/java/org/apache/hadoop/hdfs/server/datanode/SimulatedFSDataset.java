@@ -435,7 +435,7 @@ public class SimulatedFSDataset
   }
 
   @Override // FSDatasetInterface
-  public synchronized void unfinalizeBlock(ExtendedBlock b) throws IOException {
+  public synchronized void unfinalizeBlock(ExtendedBlock b) {
     if (isValidRbw(b)) {
       blockMap.remove(b.getLocalBlock());
     }
@@ -456,12 +456,12 @@ public class SimulatedFSDataset
   }
 
   @Override // FSDatasetMBean
-  public long getCapacity() throws IOException {
+  public long getCapacity() {
     return storage.getCapacity();
   }
 
   @Override // FSDatasetMBean
-  public long getDfsUsed() throws IOException {
+  public long getDfsUsed() {
     return storage.getUsed();
   }
 
@@ -471,7 +471,7 @@ public class SimulatedFSDataset
   }
   
   @Override // FSDatasetMBean
-  public long getRemaining() throws IOException {
+  public long getRemaining() {
     return storage.getFree();
   }
 
@@ -938,13 +938,13 @@ public class SimulatedFSDataset
   @Override // FSDatasetInterface
   public FinalizedReplica updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                         long recoveryId,
-                                        long newlength) throws IOException {
+                                        long newlength) {
     return new FinalizedReplica(
         oldBlock.getBlockId(), newlength, recoveryId, null, null);
   }
 
   @Override // FSDatasetInterface
-  public long getReplicaVisibleLength(ExtendedBlock block) throws IOException {
+  public long getReplicaVisibleLength(ExtendedBlock block) {
     return block.getNumBytes();
   }
 
@@ -1011,6 +1011,11 @@ public class SimulatedFSDataset
 
   @Override
   public Map<String, Object> getVolumeInfoMap() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public RollingLogs createRollingLogs(String bpid, String prefix) {
     throw new UnsupportedOperationException();
   }
 }

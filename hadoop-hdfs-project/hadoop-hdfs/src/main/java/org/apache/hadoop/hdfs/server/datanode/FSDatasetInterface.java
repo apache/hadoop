@@ -88,12 +88,20 @@ public interface FSDatasetInterface<V extends FSDatasetInterface.FSVolumeInterfa
     /** @return the available storage space in bytes. */
     public long getAvailable() throws IOException;
 
-    /** @return the directory for the block pool. */
-    public File getDirectory(String bpid) throws IOException;
+    /** @return the path to the volume */
+    public String getPath(String bpid) throws IOException;
 
     /** @return the directory for the finalized blocks in the block pool. */
     public File getFinalizedDir(String bpid) throws IOException;
   }
+
+  /**
+   * Create rolling logs.
+   * 
+   * @param prefix the prefix of the log names.
+   * @return rolling logs
+   */
+  public RollingLogs createRollingLogs(String bpid, String prefix) throws IOException;
 
   /** @return a list of volumes. */
   public List<V> getVolumes();
