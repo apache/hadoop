@@ -19,8 +19,6 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
-import java.nio.charset.CharacterCodingException;
-import java.io.IOException;
 import java.util.Date;
 import java.util.Map;
 import java.util.Iterator;
@@ -30,16 +28,20 @@ import java.util.Properties;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.OutputCollector;
+import org.apache.hadoop.streaming.io.InputWriter;
+import org.apache.hadoop.streaming.io.OutputReader;
+import org.apache.hadoop.streaming.io.TextInputWriter;
+import org.apache.hadoop.streaming.io.TextOutputReader;
 import org.apache.hadoop.util.LineReader;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.UTF8ByteArrayUtils;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.BytesWritable;
 
 import org.apache.hadoop.fs.FileSystem;
 
@@ -49,15 +51,49 @@ public abstract class PipeMapRed {
 
   protected static final Log LOG = LogFactory.getLog(PipeMapRed.class.getName());
 
-  /** The command to be spawned as a subprocess.
+  /**
+   * Returns the Configuration.
+   */
+  public Configuration getConfiguration() {
+    return job_;
+  }
+  
+  /**
+   * Returns the DataOutput to which the client input is written.
+   */
+  public DataOutput getClientOutput() {
+    return clientOut_;
+  }
+  
+  /**
+   * Returns the DataInput from which the client output is read.
+   */
+  public DataInput getClientInput() {
+    return clientIn_;
+  }
+  
+  /**
+   * Returns the input separator to be used.
+   */
+  public abstract byte[] getInputSeparator();
+  
+  /**
+   * Returns the field separator to be used.
+   */
+  public abstract byte[] getFieldSeparator();
+
+  /**
+   * Returns the number of key fields.
+   */
+  public abstract int getNumOfKeyFields();
+
+  
+  /** 
+   * Returns the command to be spawned as a subprocess.
    * Mapper/Reducer operations will delegate to it
    */
   abstract String getPipeCommand(JobConf job);
-
-  abstract byte[] getFieldSeparator();
-
-  abstract int getNumOfKeyFields();
-
+  
   abstract boolean getDoPipe();
 
   final static int OUTSIDE = 1;
@@ -120,7 +156,19 @@ public abstract class PipeMapRed {
 
       job_ = job;
       fs_ = FileSystem.get(job_);
-
+      
+      mapInputWriterClass_ = 
+        job_.getClass("stream.map.input.writer.class", 
+          TextInputWriter.class, InputWriter.class);
+      mapOutputReaderClass_ = 
+        job_.getClass("stream.map.output.reader.class",
+          TextOutputReader.class, OutputReader.class);
+      reduceInputWriterClass_ = 
+        job_.getClass("stream.reduce.input.writer.class",
+          TextInputWriter.class, InputWriter.class);
+      reduceOutputReaderClass_ = 
+        job_.getClass("stream.reduce.output.reader.class",
+          TextOutputReader.class, OutputReader.class);
       nonZeroExitIsFailure_ = job_.getBoolean("stream.non.zero.exit.is.failure", true);
       
       doPipe_ = getDoPipe();
@@ -280,13 +328,16 @@ public abstract class PipeMapRed {
     }
   }
 
-  void startOutputThreads(OutputCollector output, Reporter reporter) {
-    outThread_ = new MROutputThread(output, reporter);
+  void startOutputThreads(OutputCollector output, Reporter reporter) 
+    throws IOException {
+    inWriter_ = createInputWriter();
+    outReader_ = createOutputReader();
+    outThread_ = new MROutputThread(outReader_, output, reporter);
     outThread_.start();
     errThread_.setReporter(reporter);
   }
-
-  void waitOutputThreads() {
+  
+  void waitOutputThreads() throws IOException {
     try {
       if (outThread_ == null) {
         // This happens only when reducer has empty input(So reduce() is not
@@ -328,58 +379,46 @@ public abstract class PipeMapRed {
       //ignore
     }
   }
-
-  /**
-   * Split a line into key and value.
-   * @param line: a byte array of line containing UTF-8 bytes
-   * @param key: key of a record
-   * @param val: value of a record
-   * @throws IOException
-   */
-  void splitKeyVal(byte[] line, int length, Text key, Text val)
-  throws IOException {
-    int numKeyFields = getNumOfKeyFields();
-    byte[] separator = getFieldSeparator();
-    
-    // Need to find numKeyFields separators
-    int pos = UTF8ByteArrayUtils.findBytes(line, 0, length, separator);
-    for(int k=1; k<numKeyFields && pos!=-1; k++) {
-      pos = UTF8ByteArrayUtils.findBytes(line, pos + separator.length, 
-          length, separator);
-    }
-    try {
-      if (pos == -1) {
-        key.set(line, 0, length);
-        val.set("");
-      } else {
-        StreamKeyValUtil.splitKeyVal(line, 0, length, key, val, pos, separator.length);
-      }
-    } catch (CharacterCodingException e) {
-      LOG.warn(StringUtils.stringifyException(e));
-    }
+  
+  
+  abstract InputWriter createInputWriter() throws IOException;
+  
+  InputWriter createInputWriter(Class<? extends InputWriter> inputWriterClass) 
+    throws IOException {
+    InputWriter inputWriter =
+      ReflectionUtils.newInstance(inputWriterClass, job_);
+    inputWriter.initialize(this);
+    return inputWriter;
   }
 
+  abstract OutputReader createOutputReader() throws IOException;
+
+  OutputReader createOutputReader(Class<? extends OutputReader> outputReaderClass) 
+    throws IOException {
+    OutputReader outputReader =
+      ReflectionUtils.newInstance(outputReaderClass, job_);
+    outputReader.initialize(this);
+    return outputReader;
+  }
+  
+  
   class MROutputThread extends Thread {
 
-    MROutputThread(OutputCollector output, Reporter reporter) {
+    MROutputThread(OutputReader outReader, OutputCollector outCollector,
+      Reporter reporter) {
       setDaemon(true);
-      this.output = output;
+      this.outReader = outReader;
+      this.outCollector = outCollector;
       this.reporter = reporter;
     }
 
     public void run() {
-      LineReader lineReader = null;
       try {
-        Text key = new Text();
-        Text val = new Text();
-        Text line = new Text();
-        lineReader = new LineReader((InputStream)clientIn_, job_);
         // 3/4 Tool to Hadoop
-        while (lineReader.readLine(line) > 0) {
-          answer = line.getBytes();
-          splitKeyVal(answer, line.getLength(), key, val);
-          output.collect(key, val);
-          line.clear();
+        while (outReader.readKeyValue()) {
+          Object key = outReader.getCurrentKey();
+          Object value = outReader.getCurrentValue();
+          outCollector.collect(key, value);
           numRecWritten_++;
           long now = System.currentTimeMillis();
           if (now-lastStdoutReport > reporterOutDelay_) {
@@ -394,21 +433,11 @@ public abstract class PipeMapRed {
             logflush();
           }
         }
-        if (lineReader != null) {
-          lineReader.close();
-        }
-        if (clientIn_ != null) {
-          clientIn_.close();
-          clientIn_ = null;
-          LOG.info("MROutputThread done");
-        }
       } catch (Throwable th) {
         outerrThreadsThrowable = th;
         LOG.warn(StringUtils.stringifyException(th));
+      } finally {
         try {
-          if (lineReader != null) {
-            lineReader.close();
-          }
           if (clientIn_ != null) {
             clientIn_.close();
             clientIn_ = null;
@@ -419,9 +448,9 @@ public abstract class PipeMapRed {
       }
     }
 
-    OutputCollector output;
-    Reporter reporter;
-    byte[] answer;
+    OutputReader outReader = null;
+    OutputCollector outCollector = null;
+    Reporter reporter = null;
     long lastStdoutReport = 0;
     
   }
@@ -540,9 +569,10 @@ public abstract class PipeMapRed {
           clientOut_.flush();
           clientOut_.close();
         }
+        waitOutputThreads();
       } catch (IOException io) {
+        LOG.warn(StringUtils.stringifyException(io));
       }
-      waitOutputThreads();
       if (sim != null) sim.destroy();
       logprintln("mapRedFinished");
     } catch (RuntimeException e) {
@@ -579,7 +609,7 @@ public abstract class PipeMapRed {
     //s += envline("PWD"); // =/home/crawler/hadoop/trunk
     s += "last Hadoop input: |" + mapredKey_ + "|\n";
     if (outThread_ != null) {
-      s += "last tool output: |" + outThread_.answer + "|\n";
+      s += "last tool output: |" + outReader_.getLastOutput() + "|\n";
     }
     s += "Date: " + new Date() + "\n";
     // s += envline("HADOOP_HOME");
@@ -611,37 +641,12 @@ public abstract class PipeMapRed {
     return msg;
   }
 
-  /**
-   * Write a value to the output stream using UTF-8 encoding
-   * @param value output value
-   * @throws IOException
-   */
-  void write(Object value) throws IOException {
-    byte[] bval;
-    int valSize;
-    if (value instanceof BytesWritable) {
-      BytesWritable val = (BytesWritable) value;
-      bval = val.getBytes();
-      valSize = val.getLength();
-    } else if (value instanceof Text) {
-      Text val = (Text) value;
-      bval = val.getBytes();
-      valSize = val.getLength();
-    } else {
-      String sval = value.toString();
-      bval = sval.getBytes("UTF-8");
-      valSize = bval.length;
-    }
-    clientOut_.write(bval, 0, valSize);
-  }
-
   long startTime_;
   long numRecRead_ = 0;
   long numRecWritten_ = 0;
   long numRecSkipped_ = 0;
   long nextRecReadLog_ = 1;
 
-  
   long minRecWrittenToEnableSkip_ = Long.MAX_VALUE;
 
   long reporterOutDelay_ = 10*1000L; 
@@ -656,9 +661,15 @@ public abstract class PipeMapRed {
   boolean debugFailDuring_;
   boolean debugFailLate_;
 
+  Class<? extends InputWriter> mapInputWriterClass_;
+  Class<? extends OutputReader> mapOutputReaderClass_;
+  Class<? extends InputWriter> reduceInputWriterClass_;
+  Class<? extends OutputReader> reduceOutputReaderClass_;
   boolean nonZeroExitIsFailure_;
   
   Process sim;
+  InputWriter inWriter_;
+  OutputReader outReader_;
   MROutputThread outThread_;
   String jobLog_;
   MRErrorThread errThread_;

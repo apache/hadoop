@@ -47,7 +47,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.FileOutputFormat;
@@ -63,7 +62,11 @@ import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapred.TextOutputFormat;
 import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorCombiner;
 import org.apache.hadoop.mapred.lib.aggregate.ValueAggregatorReducer;
+import org.apache.hadoop.streaming.io.IdentifierResolver;
+import org.apache.hadoop.streaming.io.InputWriter;
+import org.apache.hadoop.streaming.io.OutputReader;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 
@@ -284,6 +287,7 @@ public class StreamJob implements Tool {
       inReaderSpec_ = (String)cmdLine.getOptionValue("inputreader"); 
       mapDebugSpec_ = (String)cmdLine.getOptionValue("mapdebug");    
       reduceDebugSpec_ = (String)cmdLine.getOptionValue("reducedebug");
+      ioSpec_ = (String)cmdLine.getOptionValue("io");
       
       String[] car = cmdLine.getOptionValues("cacheArchive");
       if (null != car && car.length > 0){
@@ -408,6 +412,8 @@ public class StreamJob implements Tool {
                                     "File name URI", "fileNameURI", Integer.MAX_VALUE, false);
     Option cacheArchive = createOption("cacheArchive", 
                                        "File name URI", "fileNameURI", Integer.MAX_VALUE, false);
+    Option io = createOption("io",
+                             "Optional.", "spec", 1, false);
     
     // boolean properties
     
@@ -437,6 +443,7 @@ public class StreamJob implements Tool {
       addOption(cmdenv).
       addOption(cacheFile).
       addOption(cacheArchive).
+      addOption(io).
       addOption(verbose).
       addOption(info).
       addOption(debug).
@@ -467,6 +474,7 @@ public class StreamJob implements Tool {
     "To run this script when a map task fails ");
     System.out.println("  -reducedebug <path>  Optional." +
     " To run this script when a reduce task fails ");
+    System.out.println("  -io <identifier>  Optional.");
     System.out.println("  -verbose");
     System.out.println();
     GenericOptionsParser.printGenericCommandUsage(System.out);
@@ -689,9 +697,38 @@ public class StreamJob implements Tool {
 
     jobConf_.setInputFormat(fmt);
 
-    jobConf_.setOutputKeyClass(Text.class);
-    jobConf_.setOutputValueClass(Text.class);
-
+    if (ioSpec_ != null) {
+      jobConf_.set("stream.map.input", ioSpec_);
+      jobConf_.set("stream.map.output", ioSpec_);
+      jobConf_.set("stream.reduce.input", ioSpec_);
+      jobConf_.set("stream.reduce.output", ioSpec_);
+    }
+    
+    Class<? extends IdentifierResolver> idResolverClass = 
+      jobConf_.getClass("stream.io.identifier.resolver.class",
+        IdentifierResolver.class, IdentifierResolver.class);
+    IdentifierResolver idResolver = ReflectionUtils.newInstance(idResolverClass, jobConf_);
+    
+    idResolver.resolve(jobConf_.get("stream.map.input", IdentifierResolver.TEXT_ID));
+    jobConf_.setClass("stream.map.input.writer.class",
+      idResolver.getInputWriterClass(), InputWriter.class);
+    
+    idResolver.resolve(jobConf_.get("stream.reduce.input", IdentifierResolver.TEXT_ID));
+    jobConf_.setClass("stream.reduce.input.writer.class",
+      idResolver.getInputWriterClass(), InputWriter.class);
+    
+    idResolver.resolve(jobConf_.get("stream.map.output", IdentifierResolver.TEXT_ID));
+    jobConf_.setClass("stream.map.output.reader.class",
+      idResolver.getOutputReaderClass(), OutputReader.class);
+    jobConf_.setMapOutputKeyClass(idResolver.getOutputKeyClass());
+    jobConf_.setMapOutputValueClass(idResolver.getOutputValueClass());
+    
+    idResolver.resolve(jobConf_.get("stream.reduce.output", IdentifierResolver.TEXT_ID));
+    jobConf_.setClass("stream.reduce.output.reader.class",
+      idResolver.getOutputReaderClass(), OutputReader.class);
+    jobConf_.setOutputKeyClass(idResolver.getOutputKeyClass());
+    jobConf_.setOutputValueClass(idResolver.getOutputValueClass());
+    
     jobConf_.set("stream.addenvironment", addTaskEnvironment_);
 
     if (mapCmd_ != null) {
@@ -962,6 +999,7 @@ public class StreamJob implements Tool {
   protected String additionalConfSpec_;
   protected String mapDebugSpec_;
   protected String reduceDebugSpec_;
+  protected String ioSpec_;
 
   // Use to communicate config to the external processes (ex env.var.HADOOP_USER)
   // encoding "a=b c=d"
