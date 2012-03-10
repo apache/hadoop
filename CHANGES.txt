@@ -31,6 +31,9 @@ Release 1.0.2 - unreleased
     HDFS-3006. In WebHDFS, when the return body is empty, set the Content-Type
     to application/octet-stream instead of application/json.  (szetszwo)
 
+    MAPREDUCE-764. Fix TypedBytesInput.readRaw to preserve custom type codes.  
+    (Klaas Bosteels via acmurthy) 
+
 Release 1.0.1 - 2012.02.14
 
   NEW FEATURES

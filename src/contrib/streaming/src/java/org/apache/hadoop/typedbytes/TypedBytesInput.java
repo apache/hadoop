@@ -149,7 +149,7 @@ public class TypedBytesInput {
     } else if (code == Type.MARKER.code) {
       return null;
     } else if (50 <= code && code <= 200) { // application-specific typecodes
-      return readRawBytes();
+      return readRawBytes(code);
     } else {
       throw new RuntimeException("unknown type");
     }
@@ -202,20 +202,30 @@ public class TypedBytesInput {
   }
 
   /**
-   * Reads the raw bytes following a <code>Type.BYTES</code> code.
+   * Reads the raw bytes following a custom code.
+   * @param code the custom type code
    * @return the obtained bytes sequence
    * @throws IOException
    */
-  public byte[] readRawBytes() throws IOException {
+  public byte[] readRawBytes(int code) throws IOException {
     int length = in.readInt();
     byte[] bytes = new byte[5 + length];
-    bytes[0] = (byte) Type.BYTES.code;
+    bytes[0] = (byte) code;
     bytes[1] = (byte) (0xff & (length >> 24));
     bytes[2] = (byte) (0xff & (length >> 16));
     bytes[3] = (byte) (0xff & (length >> 8));
     bytes[4] = (byte) (0xff & length);
     in.readFully(bytes, 5, length);
     return bytes;
+  }
+  
+  /**
+   * Reads the raw bytes following a <code>Type.BYTES</code> code.
+   * @return the obtained bytes sequence
+   * @throws IOException
+   */
+  public byte[] readRawBytes() throws IOException {
+    return readRawBytes(Type.BYTES.code);
   }
 
   /**
