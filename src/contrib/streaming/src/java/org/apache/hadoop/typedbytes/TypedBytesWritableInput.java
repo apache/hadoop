@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.typedbytes;
 
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.ByteWritable;
@@ -36,17 +40,22 @@ import org.apache.hadoop.io.VIntWritable;
 import org.apache.hadoop.io.VLongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Provides functionality for reading typed bytes as Writable objects.
  * 
  * @see TypedBytesInput
  */
-public class TypedBytesWritableInput {
+public class TypedBytesWritableInput implements Configurable {
 
   private TypedBytesInput in;
+  private Configuration conf;
 
-  private TypedBytesWritableInput() {}
+  private TypedBytesWritableInput() {
+    conf = new Configuration();
+  }
 
   private void setTypedBytesInput(TypedBytesInput in) {
     this.in = in;
@@ -86,6 +95,7 @@ public class TypedBytesWritableInput {
 
   /** Creates a new instance of TypedBytesWritableInput. */
   public TypedBytesWritableInput(TypedBytesInput in) {
+    this();
     this.in = in;
   }
 
@@ -120,6 +130,8 @@ public class TypedBytesWritableInput {
       return readArray();
     case MAP:
       return readMap();
+    case WRITABLE:
+      return readWritable();
     default:
       throw new RuntimeException("unknown type");
     }
@@ -151,6 +163,8 @@ public class TypedBytesWritableInput {
       return ArrayWritable.class;
     case MAP:
       return MapWritable.class;
+    case WRITABLE:
+      return Writable.class;
     default:
       throw new RuntimeException("unknown type");
     }
@@ -331,5 +345,36 @@ public class TypedBytesWritableInput {
   public SortedMapWritable readSortedMap() throws IOException {
     return readSortedMap(null);
   }
+  
+  public Writable readWritable(Writable writable) throws IOException {
+    ByteArrayInputStream bais = new ByteArrayInputStream(in.readBytes());
+    DataInputStream dis = new DataInputStream(bais);
+    String className = WritableUtils.readString(dis);
+    if (writable == null) {
+      try {
+        Class<? extends Writable> cls = 
+          conf.getClassByName(className).asSubclass(Writable.class);
+        writable = (Writable) ReflectionUtils.newInstance(cls, conf);
+      } catch (ClassNotFoundException e) {
+        throw new IOException(e);
+      }
+    } else if (!writable.getClass().getName().equals(className)) {
+      throw new IOException("wrong Writable class given");
+    }
+    writable.readFields(dis);
+    return writable;
+  }
 
+  public Writable readWritable() throws IOException {
+    return readWritable(null);
+  }
+
+  public Configuration getConf() {
+    return conf;
+  }
+
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+  
 }

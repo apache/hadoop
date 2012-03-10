@@ -101,6 +101,8 @@ public class TypedBytesInput {
       return readMap();
     } else if (code == Type.MARKER.code) {
       return null;
+    } else if (50 <= code && code <= 200) { // application-specific typecodes
+      return new Buffer(readBytes());
     } else {
       throw new RuntimeException("unknown type");
     }
@@ -146,6 +148,8 @@ public class TypedBytesInput {
       return readRawMap();
     } else if (code == Type.MARKER.code) {
       return null;
+    } else if (50 <= code && code <= 200) { // application-specific typecodes
+      return readRawBytes();
     } else {
       throw new RuntimeException("unknown type");
     }
