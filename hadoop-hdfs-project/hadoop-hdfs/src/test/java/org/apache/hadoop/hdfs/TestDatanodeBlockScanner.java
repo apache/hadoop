@@ -18,26 +18,27 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.io.*;
-import java.util.Random;
+
+import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-
-import junit.framework.TestCase;
 
 /**
  * This test verifies that block verification occurs on the datanode
@@ -392,7 +393,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   }
   
   private static void waitForBlockDeleted(ExtendedBlock blk, int dnIndex,
-      long timeout) throws IOException, TimeoutException, InterruptedException {
+      long timeout) throws TimeoutException, InterruptedException {
     File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
     long failtime = System.currentTimeMillis() 
                     + ((timeout > 0) ? timeout : Long.MAX_VALUE);

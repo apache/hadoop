@@ -85,7 +85,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -96,7 +95,6 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
@@ -165,7 +163,6 @@ import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.google.protobuf.BlockingService;
 
 
@@ -253,7 +250,7 @@ public class DataNode extends Configured
   boolean isBlockTokenEnabled;
   BlockPoolTokenSecretManager blockPoolTokenSecretManager;
   
-  public DataBlockScanner blockScanner = null;
+  volatile DataBlockScanner blockScanner = null;
   private DirectoryScanner directoryScanner = null;
   
   /** Activated plug-ins. */

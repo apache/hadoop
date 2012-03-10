@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.TreeMap;
 
 import javax.servlet.http.HttpServlet;
@@ -132,24 +130,14 @@ public class DataBlockScanner implements Runnable {
       waitForInit(currentBpId);
       synchronized (this) {
         if (getBlockPoolSetSize() > 0) {          
-          // Find nextBpId by finding the last modified current log file, if any
-          long lastScanTime = -1;
-          Iterator<String> bpidIterator = blockPoolScannerMap.keySet()
-              .iterator();
-          while (bpidIterator.hasNext()) {
-            String bpid = bpidIterator.next();
-            for (FSDatasetInterface.FSVolumeInterface vol : dataset.getVolumes()) {
-              try {
-                File currFile = BlockPoolSliceScanner.getCurrentFile(vol, bpid);
-                if (currFile.exists()) {
-                  long lastModified = currFile.lastModified();
-                  if (lastScanTime < lastModified) {
-                    lastScanTime = lastModified;
-                    nextBpId = bpid;
-                  }
-                }
-              } catch (IOException e) {
-                LOG.warn("Received exception: ", e);
+          // Find nextBpId by the minimum of the last scan time
+          long lastScanTime = 0;
+          for (String bpid : blockPoolScannerMap.keySet()) {
+            final long t = getBPScanner(bpid).getLastScanTime();
+            if (t != 0L) {
+              if (bpid == null || t < lastScanTime) {
+                lastScanTime =  t;
+                nextBpId = bpid;
               }
             }
           }
@@ -157,13 +145,9 @@ public class DataBlockScanner implements Runnable {
           // nextBpId can still be null if no current log is found,
           // find nextBpId sequentially.
           if (nextBpId == null) {
-            if ("".equals(currentBpId)) {
+            nextBpId = blockPoolScannerMap.higherKey(currentBpId);
+            if (nextBpId == null) {
               nextBpId = blockPoolScannerMap.firstKey();
-            } else {
-              nextBpId = blockPoolScannerMap.higherKey(currentBpId);
-              if (nextBpId == null) {
-                nextBpId = blockPoolScannerMap.firstKey();
-              }
             }
           }
           if (nextBpId != null) {
@@ -206,12 +190,8 @@ public class DataBlockScanner implements Runnable {
     }
   }
   
-  public synchronized boolean isInitialized(String bpid) {
-    BlockPoolSliceScanner bpScanner = getBPScanner(bpid);
-    if (bpScanner != null) {
-      return bpScanner.isInitialized();
-    }
-    return false;
+  boolean isInitialized(String bpid) {
+    return getBPScanner(bpid) != null;
   }
 
   public synchronized void printBlockReport(StringBuilder buffer,
@@ -260,14 +240,8 @@ public class DataBlockScanner implements Runnable {
     if (blockPoolScannerMap.get(blockPoolId) != null) {
       return;
     }
-    BlockPoolSliceScanner bpScanner = new BlockPoolSliceScanner(datanode, dataset,
-        conf, blockPoolId);
-    try {
-      bpScanner.init();
-    } catch (IOException ex) {
-      LOG.warn("Failed to initialized block scanner for pool id="+blockPoolId);
-      return;
-    }
+    BlockPoolSliceScanner bpScanner = new BlockPoolSliceScanner(blockPoolId,
+        datanode, dataset, conf);
     blockPoolScannerMap.put(blockPoolId, bpScanner);
     LOG.info("Added bpid=" + blockPoolId + " to blockPoolScannerMap, new size="
         + blockPoolScannerMap.size());

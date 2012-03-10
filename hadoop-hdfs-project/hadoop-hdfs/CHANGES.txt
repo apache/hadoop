@@ -455,8 +455,6 @@ Release 0.23.3 - UNRELEASED
     HDFS-2899. Service protocol changes in DatanodeProtocol to add multiple 
     storages. (suresh)
 
-    HDFS-3021. Use generic type to declare FSDatasetInterface.  (szetszwo)
-
     HDFS-2430. The number of failed or low-resource volumes the NN can tolerate
     should be configurable. (atm)
 
@@ -532,6 +530,11 @@ Release 0.23.3 - UNRELEASED
     (Ivan Kelly via jitendra)
 
     HDFS-3060. Bump TestDistributedUpgrade#testDistributedUpgrade timeout (eli)
+
+    HDFS-3021. Use generic type to declare FSDatasetInterface.  (szetszwo)
+
+    HDFS-3056.  Add a new interface RollingLogs for DataBlockScanner logging.
+    (szetszwo)
 
   OPTIMIZATIONS
 
