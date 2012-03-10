@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.streaming;
 
+import java.util.Arrays;
+
 import org.apache.hadoop.util.ToolRunner;
 
 /** The main entrypoint. Usually invoked with the script bin/hadoopStreaming
@@ -27,11 +29,28 @@ import org.apache.hadoop.util.ToolRunner;
 public class HadoopStreaming {
 
   public static void main(String[] args) throws Exception {
+    if (args.length < 1) {
+      System.err.println("No Arguments Given!");
+      System.exit(1);
+    }
     int returnStatus = 0;
-    StreamJob job = new StreamJob();
-    returnStatus = ToolRunner.run(job, args);
+    String cmd = args[0];
+    String[] remainingArgs = Arrays.copyOfRange(args, 1, args.length);
+    if (cmd.equalsIgnoreCase("dumptb")) {
+      DumpTypedBytes dumptb = new DumpTypedBytes();
+      returnStatus = ToolRunner.run(dumptb, remainingArgs);
+    } else if (cmd.equalsIgnoreCase("loadtb")) {
+      LoadTypedBytes loadtb = new LoadTypedBytes();
+      returnStatus = ToolRunner.run(loadtb, remainingArgs);
+    } else if (cmd.equalsIgnoreCase("streamjob")) {
+      StreamJob job = new StreamJob();
+      returnStatus = ToolRunner.run(job, remainingArgs);
+    } else { // for backward compatibility
+      StreamJob job = new StreamJob();
+      returnStatus = ToolRunner.run(job, args);
+    }
     if (returnStatus != 0) {
-      System.err.println("Streaming Job Failed!");
+      System.err.println("Streaming Command Failed!");
       System.exit(returnStatus);
     }
   }
