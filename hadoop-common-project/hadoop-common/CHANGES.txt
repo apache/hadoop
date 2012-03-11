@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-7900. LocalDirAllocator confChanged() accesses conf.get() twice
+    (Ravi Gummadi via Uma Maheswara Rao G)
+
     HADOOP-8146.  FsShell commands cannot be interrupted
     (Daryn Sharp via Uma Maheswara Rao G)
 
