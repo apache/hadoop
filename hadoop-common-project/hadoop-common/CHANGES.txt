@@ -92,6 +92,9 @@ Release 0.23.3 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-7900. LocalDirAllocator confChanged() accesses conf.get() twice
+    (Ravi Gummadi via Uma Maheswara Rao G)
+
     HADOOP-7635. RetryInvocationHandler should release underlying resources on
     close. (atm)
 
