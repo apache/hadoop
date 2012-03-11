@@ -50,13 +50,7 @@ public class TestNameNodeResourcePolicy {
     assertFalse(testResourceScenario(4, 0, 3, 0, 2));
     assertTrue(testResourceScenario(4, 0, 3, 0, 1));
     assertFalse(testResourceScenario(4, 0, 4, 0, 1));
-    try {
-      testResourceScenario(1, 0, 0, 0, 2);
-      fail("Should fail if there are more minimum redundant resources than " +
-          "total redundant resources");
-    } catch (RuntimeException rte) {
-      assertTrue(rte.getMessage().startsWith("Need a minimum"));
-    }
+    assertFalse(testResourceScenario(1, 0, 0, 0, 2));
   }
   
   @Test

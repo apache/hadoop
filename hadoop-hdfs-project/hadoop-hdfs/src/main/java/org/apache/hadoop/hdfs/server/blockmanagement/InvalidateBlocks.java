@@ -162,4 +162,9 @@ class InvalidateBlocks {
     numBlocks -= toInvalidate.size();
     return toInvalidate;
   }
+  
+  synchronized void clear() {
+    node2blocks.clear();
+    numBlocks = 0;
+  }
 }

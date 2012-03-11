@@ -22,6 +22,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import java.io.Closeable;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * A generic abstract class to support reading edits log data from 
  * persistent storage.
@@ -79,4 +82,9 @@ public abstract class EditLogInputStream implements JournalStream, Closeable {
    * Return the size of the current edits log.
    */
   public abstract long length() throws IOException;
+  
+  /**
+   * Return true if this stream is in progress, false if it is finalized.
+   */
+  public abstract boolean isInProgress();
 }

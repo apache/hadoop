@@ -48,6 +48,8 @@ public enum EditsElement {
       BLOCK_ID,
       BLOCK_NUM_BYTES,
       BLOCK_GENERATION_STAMP,
+      BLOCK_DELTA_NUM_BYTES, // delta-encoded relative to previous block
+      BLOCK_DELTA_GEN_STAMP, // delta-encoded relative to previous block
     PERMISSION_STATUS,
       FS_PERMISSIONS,
     CLIENT_NAME,

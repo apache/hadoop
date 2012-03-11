@@ -104,6 +104,14 @@ class PendingReplicationBlocks {
     }
   }
 
+
+  public void clear() {
+    synchronized (pendingReplications) {
+      pendingReplications.clear();
+      timedOutItems.clear();
+    }
+  }
+
   /**
    * The total number of blocks that are undergoing replication
    */

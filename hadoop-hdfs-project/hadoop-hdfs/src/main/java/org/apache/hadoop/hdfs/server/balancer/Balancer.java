@@ -24,8 +24,8 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.URI;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1379,7 +1379,7 @@ public class Balancer {
    * for each namenode,
    * execute a {@link Balancer} to work through all datanodes once.  
    */
-  static int run(List<InetSocketAddress> namenodes, final Parameters p,
+  static int run(Collection<URI> namenodes, final Parameters p,
       Configuration conf) throws IOException, InterruptedException {
     final long sleeptime = 2000*conf.getLong(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
@@ -1393,8 +1393,8 @@ public class Balancer {
     final List<NameNodeConnector> connectors
         = new ArrayList<NameNodeConnector>(namenodes.size());
     try {
-      for(InetSocketAddress isa : namenodes) {
-        connectors.add(new NameNodeConnector(isa, conf));
+      for (URI uri : namenodes) {
+        connectors.add(new NameNodeConnector(uri, conf));
       }
     
       boolean done = false;
@@ -1476,7 +1476,7 @@ public class Balancer {
       try {
         checkReplicationPolicyCompatibility(conf);
 
-        final List<InetSocketAddress> namenodes = DFSUtil.getNNServiceRpcAddresses(conf);
+        final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
         return Balancer.run(namenodes, parse(args), conf);
       } catch (IOException e) {
         System.out.println(e + ".  Exiting ...");

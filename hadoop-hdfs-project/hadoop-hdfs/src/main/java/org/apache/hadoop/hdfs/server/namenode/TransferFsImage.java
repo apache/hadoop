@@ -24,8 +24,11 @@ import java.security.MessageDigest;
 import java.util.List;
 import java.lang.Math;
 
+import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -41,7 +44,8 @@ import com.google.common.collect.Lists;
 /**
  * This class provides fetching a specified file from the NameNode.
  */
-class TransferFsImage {
+@InterfaceAudience.Private
+public class TransferFsImage {
   
   public final static String CONTENT_LENGTH = "Content-Length";
   public final static String MD5_HEADER = "X-MD5-Digest";
@@ -103,7 +107,7 @@ class TransferFsImage {
    * @param storage the storage directory to transfer the image from
    * @param txid the transaction ID of the image to be uploaded
    */
-  static void uploadImageFromStorage(String fsName,
+  public static void uploadImageFromStorage(String fsName,
       InetSocketAddress imageListenAddress,
       NNStorage storage, long txid) throws IOException {
     
@@ -111,7 +115,20 @@ class TransferFsImage {
         txid, imageListenAddress, storage);
     // this doesn't directly upload an image, but rather asks the NN
     // to connect back to the 2NN to download the specified image.
-    TransferFsImage.getFileClient(fsName, fileid, null, null, false);
+    try {
+      TransferFsImage.getFileClient(fsName, fileid, null, null, false);
+    } catch (HttpGetFailedException e) {
+      if (e.getResponseCode() == HttpServletResponse.SC_CONFLICT) {
+        // this is OK - this means that a previous attempt to upload
+        // this checkpoint succeeded even though we thought it failed.
+        LOG.info("Image upload with txid " + txid + 
+            " conflicted with a previous image upload to the " +
+            "same NameNode. Continuing...", e);
+        return;
+      } else {
+        throw e;
+      }
+    }
     LOG.info("Uploaded image with txid " + txid + " to namenode at " +
     		fsName);
   }
@@ -194,10 +211,11 @@ class TransferFsImage {
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     
     if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-      throw new IOException(
+      throw new HttpGetFailedException(
           "Image transfer servlet at " + url +
           " failed with status code " + connection.getResponseCode() +
-          "\nResponse message:\n" + connection.getResponseMessage());
+          "\nResponse message:\n" + connection.getResponseMessage(),
+          connection);
     }
     
     long advertisedSize;
@@ -288,6 +306,20 @@ class TransferFsImage {
   private static MD5Hash parseMD5Header(HttpURLConnection connection) {
     String header = connection.getHeaderField(MD5_HEADER);
     return (header != null) ? new MD5Hash(header) : null;
+  }
+  
+  public static class HttpGetFailedException extends IOException {
+    private static final long serialVersionUID = 1L;
+    private final int responseCode;
+
+    HttpGetFailedException(String msg, HttpURLConnection connection) throws IOException {
+      super(msg);
+      this.responseCode = connection.getResponseCode();
+    }
+    
+    public int getResponseCode() {
+      return responseCode;
+    }
   }
 
 }

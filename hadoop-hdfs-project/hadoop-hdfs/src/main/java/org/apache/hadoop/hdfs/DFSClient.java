@@ -1,4 +1,3 @@
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -28,6 +27,12 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_BLOCK_WRITE_RETRIES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_CACHED_CONN_RETRY_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_READ_PREFETCH_SIZE_KEY;
@@ -44,7 +49,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 
 import java.io.BufferedOutputStream;
-import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -55,6 +59,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.URI;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -84,6 +89,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
+
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
@@ -123,13 +129,14 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
+
+import com.google.common.base.Preconditions;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -148,7 +155,9 @@ public class DFSClient implements java.io.Closeable {
   public static final long SERVER_DEFAULTS_VALIDITY_PERIOD = 60 * 60 * 1000L; // 1 hour
   static final int TCP_WINDOW_SIZE = 128 * 1024; // 128 KB
   final ClientProtocol namenode;
-  private final InetSocketAddress nnAddress;
+  /* The service used for delegation tokens */
+  private Text dtService;
+
   final UserGroupInformation ugi;
   volatile boolean clientRunning = true;
   volatile long lastLeaseRenewal;
@@ -168,6 +177,9 @@ public class DFSClient implements java.io.Closeable {
    * DFSClient configuration 
    */
   static class Conf {
+    final int maxFailoverAttempts;
+    final int failoverSleepBaseMillis;
+    final int failoverSleepMaxMillis;
     final int maxBlockAcquireFailures;
     final int confTime;
     final int ioBufferSize;
@@ -189,6 +201,16 @@ public class DFSClient implements java.io.Closeable {
     final boolean useLegacyBlockReader;
 
     Conf(Configuration conf) {
+      maxFailoverAttempts = conf.getInt(
+          DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY,
+          DFS_CLIENT_FAILOVER_MAX_ATTEMPTS_DEFAULT);
+      failoverSleepBaseMillis = conf.getInt(
+          DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_KEY,
+          DFS_CLIENT_FAILOVER_SLEEPTIME_BASE_DEFAULT);
+      failoverSleepMaxMillis = conf.getInt(
+          DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_KEY,
+          DFS_CLIENT_FAILOVER_SLEEPTIME_MAX_DEFAULT);
+
       maxBlockAcquireFailures = conf.getInt(
           DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
           DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
@@ -261,6 +283,7 @@ public class DFSClient implements java.io.Closeable {
    */
   private final Map<String, DFSOutputStream> filesBeingWritten
       = new HashMap<String, DFSOutputStream>();
+
   private boolean shortCircuitLocalReads;
   
   /**
@@ -272,59 +295,69 @@ public class DFSClient implements java.io.Closeable {
   public DFSClient(Configuration conf) throws IOException {
     this(NameNode.getAddress(conf), conf);
   }
+  
+  public DFSClient(InetSocketAddress address, Configuration conf) throws IOException {
+    this(NameNode.getUri(address), conf);
+  }
 
   /**
-   * Same as this(nameNodeAddr, conf, null);
+   * Same as this(nameNodeUri, conf, null);
    * @see #DFSClient(InetSocketAddress, Configuration, org.apache.hadoop.fs.FileSystem.Statistics)
    */
-  public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf
+  public DFSClient(URI nameNodeUri, Configuration conf
       ) throws IOException {
-    this(nameNodeAddr, conf, null);
+    this(nameNodeUri, conf, null);
   }
 
   /**
-   * Same as this(nameNodeAddr, null, conf, stats);
+   * Same as this(nameNodeUri, null, conf, stats);
    * @see #DFSClient(InetSocketAddress, ClientProtocol, Configuration, org.apache.hadoop.fs.FileSystem.Statistics) 
    */
-  public DFSClient(InetSocketAddress nameNodeAddr, Configuration conf,
+  public DFSClient(URI nameNodeUri, Configuration conf,
                    FileSystem.Statistics stats)
     throws IOException {
-    this(nameNodeAddr, null, conf, stats);
+    this(nameNodeUri, null, conf, stats);
   }
-
+  
   /** 
-   * Create a new DFSClient connected to the given nameNodeAddr or rpcNamenode.
-   * Exactly one of nameNodeAddr or rpcNamenode must be null.
+   * Create a new DFSClient connected to the given nameNodeUri or rpcNamenode.
+   * Exactly one of nameNodeUri or rpcNamenode must be null.
    */
-  DFSClient(InetSocketAddress nameNodeAddr, ClientProtocol rpcNamenode,
+  DFSClient(URI nameNodeUri, ClientProtocol rpcNamenode,
       Configuration conf, FileSystem.Statistics stats)
     throws IOException {
     // Copy only the required DFSClient configuration
     this.dfsClientConf = new Conf(conf);
     this.conf = conf;
     this.stats = stats;
-    this.nnAddress = nameNodeAddr;
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
 
     // The hdfsTimeout is currently the same as the ipc timeout 
     this.hdfsTimeout = Client.getTimeout(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
-    final String authority = nameNodeAddr == null? "null":
-        nameNodeAddr.getHostName() + ":" + nameNodeAddr.getPort();
+    
+    final String authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
     this.leaserenewer = LeaseRenewer.getInstance(authority, ugi, this);
     this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
+    
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
-    if (nameNodeAddr != null && rpcNamenode == null) {
-      this.namenode = DFSUtil.createNamenode(nameNodeAddr, conf, ugi);
-    } else if (nameNodeAddr == null && rpcNamenode != null) {
-      //This case is used for testing.
+    
+    
+    if (rpcNamenode != null) {
+      // This case is used for testing.
+      Preconditions.checkArgument(nameNodeUri == null);
       this.namenode = rpcNamenode;
+      dtService = null;
     } else {
-      throw new IllegalArgumentException(
-          "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
-          + "nameNodeAddr=" + nameNodeAddr + ", rpcNamenode=" + rpcNamenode);
+      Preconditions.checkArgument(nameNodeUri != null,
+          "null URI");
+      NameNodeProxies.ProxyAndInfo<ClientProtocol> proxyInfo =
+        NameNodeProxies.createProxy(conf, nameNodeUri, ClientProtocol.class);
+      this.dtService = proxyInfo.getDelegationTokenService();
+      this.namenode = proxyInfo.getProxy();
     }
+
     // read directly from the block file if configured.
     this.shortCircuitLocalReads = conf.getBoolean(
         DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_KEY,
@@ -451,20 +484,8 @@ public class DFSClient implements java.io.Closeable {
   
   /**
    * Close connections the Namenode.
-   * The namenode variable is either a rpcProxy passed by a test or 
-   * created using the protocolTranslator which is closeable.
-   * If closeable then call close, else close using RPC.stopProxy().
    */
   void closeConnectionToNamenode() {
-    if (namenode instanceof Closeable) {
-      try {
-        ((Closeable) namenode).close();
-        return;
-      } catch (IOException e) {
-        // fall through - lets try the stopProxy
-        LOG.warn("Exception closing namenode, stopping the proxy");
-      }     
-    }
     RPC.stopProxy(namenode);
   }
   
@@ -554,11 +575,13 @@ public class DFSClient implements java.io.Closeable {
    */
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    Token<DelegationTokenIdentifier> result =
+    assert dtService != null;
+    Token<DelegationTokenIdentifier> token =
       namenode.getDelegationToken(renewer);
-    SecurityUtil.setTokenService(result, nnAddress);
-    LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(result));
-    return result;
+    token.setService(this.dtService);
+
+    LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(token));
+    return token;
   }
 
   /**
@@ -697,13 +720,8 @@ public class DFSClient implements java.io.Closeable {
     @Override
     public long renew(Token<?> token, Configuration conf) throws IOException {
       Token<DelegationTokenIdentifier> delToken = 
-          (Token<DelegationTokenIdentifier>) token;
-      LOG.info("Renewing " + 
-               DelegationTokenIdentifier.stringifyToken(delToken));
-      ClientProtocol nn = 
-        DFSUtil.createNamenode
-           (SecurityUtil.getTokenServiceAddr(delToken),
-            conf, UserGroupInformation.getCurrentUser());
+        (Token<DelegationTokenIdentifier>) token;
+      ClientProtocol nn = getNNProxy(delToken, conf);
       try {
         return nn.renewDelegationToken(delToken);
       } catch (RemoteException re) {
@@ -719,15 +737,38 @@ public class DFSClient implements java.io.Closeable {
           (Token<DelegationTokenIdentifier>) token;
       LOG.info("Cancelling " + 
                DelegationTokenIdentifier.stringifyToken(delToken));
-      ClientProtocol nn = DFSUtil.createNamenode(
-          SecurityUtil.getTokenServiceAddr(delToken), conf,
-          UserGroupInformation.getCurrentUser());
+      ClientProtocol nn = getNNProxy(delToken, conf);
       try {
         nn.cancelDelegationToken(delToken);
       } catch (RemoteException re) {
         throw re.unwrapRemoteException(InvalidToken.class,
             AccessControlException.class);
       }
+    }
+    
+    private static ClientProtocol getNNProxy(
+        Token<DelegationTokenIdentifier> token, Configuration conf)
+        throws IOException {
+      URI uri = HAUtil.getServiceUriFromToken(token);
+      if (HAUtil.isTokenForLogicalUri(token) &&
+          !HAUtil.isLogicalUri(conf, uri)) {
+        // If the token is for a logical nameservice, but the configuration
+        // we have disagrees about that, we can't actually renew it.
+        // This can be the case in MR, for example, if the RM doesn't
+        // have all of the HA clusters configured in its configuration.
+        throw new IOException("Unable to map logical nameservice URI '" +
+            uri + "' to a NameNode. Local configuration does not have " +
+            "a failover proxy provider configured.");
+      }
+      
+      NameNodeProxies.ProxyAndInfo<ClientProtocol> info =
+        NameNodeProxies.createProxy(conf, uri, ClientProtocol.class);
+      assert info.getDelegationTokenService().equals(token.getService()) :
+        "Returned service '" + info.getDelegationTokenService().toString() +
+        "' doesn't match expected service '" +
+        token.getService().toString() + "'";
+        
+      return info.getProxy();
     }
 
     @Override

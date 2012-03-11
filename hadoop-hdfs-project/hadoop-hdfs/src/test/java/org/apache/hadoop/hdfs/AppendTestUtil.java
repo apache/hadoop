@@ -109,12 +109,18 @@ public class AppendTestUtil {
     out.write(bytes);
   }
   
-  static void check(FileSystem fs, Path p, long length) throws IOException {
+  public static void check(FileSystem fs, Path p, long length) throws IOException {
     int i = -1;
     try {
       final FileStatus status = fs.getFileStatus(p);
-      TestCase.assertEquals(length, status.getLen());
-      InputStream in = fs.open(p);
+      FSDataInputStream in = fs.open(p);
+      if (in.getWrappedStream() instanceof DFSInputStream) {
+        long len = ((DFSInputStream)in.getWrappedStream()).getFileLength();
+        TestCase.assertEquals(length, len);
+      } else {
+        TestCase.assertEquals(length, status.getLen());
+      }
+      
       for(i++; i < length; i++) {
         TestCase.assertEquals((byte)i, (byte)in.read());  
       }

@@ -19,10 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.*;
 import org.junit.Test;
+import java.io.File;
 import java.io.IOException;
 import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -70,5 +72,26 @@ public class TestValidateConfigurationSettings {
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
     DFSTestUtil.formatNameNode(conf);
     NameNode nameNode = new NameNode(conf); // should be OK!
+  }
+
+  /**
+   * HDFS-3013: NameNode format command doesn't pick up
+   * dfs.namenode.name.dir.NameServiceId configuration.
+   */
+  @Test
+  public void testGenericKeysForNameNodeFormat()
+      throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:8070");
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "ns1");
+    String nameDir = System.getProperty("java.io.tmpdir") + "/test.dfs.name";
+    File dir = new File(nameDir);
+    if (dir.exists()) {
+      FileUtil.fullyDelete(dir);
+    }
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + ".ns1", nameDir);
+    DFSTestUtil.formatNameNode(conf);
+    NameNode nameNode = new NameNode(conf);
+    FileUtil.fullyDelete(dir);
   }
 }

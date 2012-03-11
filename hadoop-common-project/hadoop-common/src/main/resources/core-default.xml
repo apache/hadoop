@@ -488,6 +488,14 @@
 </property>
 
 <property>
+  <name>ipc.client.connect.max.retries.on.timeouts</name>
+  <value>45</value>
+  <description>Indicates the number of retries a client will make on socket timeout
+               to establish a server connection.
+  </description>
+</property>
+
+<property>
   <name>ipc.server.listen.queue.size</name>
   <value>128</value>
   <description>Indicates the length of the listen queue for servers accepting
@@ -846,6 +854,32 @@
   <description>
     Location of the keytab file with the credentials for the principal.
     Referring to the same keytab file Oozie uses for its Kerberos credentials for Hadoop.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value></value>
+  <description>
+    List of fencing methods to use for service fencing. May contain
+    builtin methods (eg shell and sshfence) or user-defined method.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.fencing.ssh.connect-timeout</name>
+  <value>30000</value>
+  <description>
+    SSH connection timeout, in milliseconds, to use with the builtin
+    sshfence fencer.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.fencing.ssh.private-key-files</name>
+  <value></value>
+  <description>
+    The SSH private key files to use with the builtin sshfence fencer.
   </description>
 </property>
 

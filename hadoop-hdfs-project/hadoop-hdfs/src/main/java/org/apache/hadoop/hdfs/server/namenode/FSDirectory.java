@@ -261,113 +261,32 @@ public class FSDirectory implements Closeable {
    */
   INode unprotectedAddFile( String path, 
                             PermissionStatus permissions,
-                            BlockInfo[] blocks, 
                             short replication,
                             long modificationTime,
                             long atime,
                             long preferredBlockSize,
+                            boolean underConstruction,
                             String clientName,
                             String clientMachine)
       throws UnresolvedLinkException {
     INode newNode;
     assert hasWriteLock();
-    if (blocks == null)
-      newNode = new INodeDirectory(permissions, modificationTime);
-    else if(blocks.length == 0 || blocks[blocks.length-1].getBlockUCState()
-        == BlockUCState.UNDER_CONSTRUCTION) {
+    if (underConstruction) {
       newNode = new INodeFileUnderConstruction(
-          permissions, blocks.length, replication,
+          permissions, replication,
           preferredBlockSize, modificationTime, clientName, 
           clientMachine, null);
     } else {
-      newNode = new INodeFile(permissions, blocks.length, replication,
+      newNode = new INodeFile(permissions, 0, replication,
                               modificationTime, atime, preferredBlockSize);
     }
-    writeLock();
+
     try {
-      try {
-        newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
-        if(newNode != null && blocks != null) {
-          int nrBlocks = blocks.length;
-          // Add file->block mapping
-          INodeFile newF = (INodeFile)newNode;
-          for (int i = 0; i < nrBlocks; i++) {
-            newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
-          }
-        }
-      } catch (IOException e) {
-        return null;
-      }
-      return newNode;
-    } finally {
-      writeUnlock();
+      newNode = addNode(path, newNode, UNKNOWN_DISK_SPACE);
+    } catch (IOException e) {
+      return null;
     }
-
-  }
-
-  /**
-   * Update files in-memory data structures with new block information.
-   * @throws IOException 
-   */
-  void updateFile(INodeFile file,
-                  String path,
-                  BlockInfo[] blocks, 
-                  long mtime,
-                  long atime) throws IOException {
-
-    // Update the salient file attributes.
-    file.setAccessTime(atime);
-    file.setModificationTimeForce(mtime);
-
-    // Update its block list
-    BlockInfo[] oldBlocks = file.getBlocks();
-
-    // Are we only updating the last block's gen stamp.
-    boolean isGenStampUpdate = oldBlocks.length == blocks.length;
-
-    // First, update blocks in common
-    BlockInfo oldBlock = null;
-    for (int i = 0; i < oldBlocks.length && i < blocks.length; i++) {
-      oldBlock = oldBlocks[i];
-      Block newBlock = blocks[i];
-
-      boolean isLastBlock = i == oldBlocks.length - 1;
-      if (oldBlock.getBlockId() != newBlock.getBlockId() ||
-          (oldBlock.getGenerationStamp() != newBlock.getGenerationStamp() && 
-              !(isGenStampUpdate && isLastBlock))) {
-        throw new IOException("Mismatched block IDs or generation stamps, " + 
-            "attempting to replace block " + oldBlock + " with " + newBlock +
-            " as block # " + i + "/" + blocks.length + " of " + path);
-      }
-
-      oldBlock.setNumBytes(newBlock.getNumBytes());
-      oldBlock.setGenerationStamp(newBlock.getGenerationStamp());
-    }
-
-    if (blocks.length < oldBlocks.length) {
-      // We're removing a block from the file, e.g. abandonBlock(...)
-      if (!file.isUnderConstruction()) {
-        throw new IOException("Trying to remove a block from file " +
-            path + " which is not under construction.");
-      }
-      if (blocks.length != oldBlocks.length - 1) {
-        throw new IOException("Trying to remove more than one block from file "
-            + path);
-      }
-      unprotectedRemoveBlock(path,
-          (INodeFileUnderConstruction)file, oldBlocks[oldBlocks.length - 1]);
-    } else if (blocks.length > oldBlocks.length) {
-      // We're adding blocks
-      // First complete last old Block
-      getBlockManager().completeBlock(file, oldBlocks.length-1, true);
-      // Add the new blocks
-      for (int i = oldBlocks.length; i < blocks.length; i++) {
-        // addBlock();
-        BlockInfo newBI = blocks[i];
-        getBlockManager().addINode(newBI, file);
-        file.addBlock(newBI);
-      }
-    }
+    return newNode;
   }
 
   INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
@@ -450,7 +369,7 @@ public class FSDirectory implements Closeable {
 
     writeLock();
     try {
-      fsImage.getEditLog().logOpenFile(path, file);
+      fsImage.getEditLog().logUpdateBlocks(path, file);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("DIR* FSDirectory.persistBlocks: "
             +path+" with "+ file.getBlocks().length 
@@ -460,7 +379,7 @@ public class FSDirectory implements Closeable {
       writeUnlock();
     }
   }
-
+  
   /**
    * Close file.
    */
@@ -483,7 +402,7 @@ public class FSDirectory implements Closeable {
   }
 
   /**
-   * Remove a block to the file.
+   * Remove a block from the file.
    */
   boolean removeBlock(String path, INodeFileUnderConstruction fileNode, 
                       Block block) throws IOException {
@@ -499,7 +418,7 @@ public class FSDirectory implements Closeable {
     }
     return true;
   }
-
+  
   void unprotectedRemoveBlock(String path, INodeFileUnderConstruction fileNode, 
       Block block) throws IOException {
     // modify file-> block and blocksMap

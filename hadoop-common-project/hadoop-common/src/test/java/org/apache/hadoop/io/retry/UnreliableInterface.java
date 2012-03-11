@@ -67,4 +67,7 @@ public interface UnreliableInterface {
   @Idempotent
   public String failsIfIdentifierDoesntMatch(String identifier)
       throws UnreliableException, StandbyException, IOException;
+
+  void nonIdempotentVoidFailsIfIdentifierDoesntMatch(String identifier)
+      throws UnreliableException, StandbyException, IOException;
 }

@@ -1,0 +1,434 @@
+~~ Licensed under the Apache License, Version 2.0 (the "License");
+~~ you may not use this file except in compliance with the License.
+~~ You may obtain a copy of the License at
+~~
+~~   http://www.apache.org/licenses/LICENSE-2.0
+~~
+~~ Unless required by applicable law or agreed to in writing, software
+~~ distributed under the License is distributed on an "AS IS" BASIS,
+~~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+~~ See the License for the specific language governing permissions and
+~~ limitations under the License. See accompanying LICENSE file.
+
+  ---
+  Hadoop Distributed File System-${project.version} - High Availability
+  ---
+  ---
+  ${maven.build.timestamp}
+
+HDFS High Availability
+
+  \[ {{{./index.html}Go Back}} \]
+
+%{toc|section=1|fromDepth=0}
+
+* {Purpose}
+
+  This guide provides an overview of the HDFS High Availability (HA) feature and
+  how to configure and manage an HA HDFS cluster.
+ 
+  This document assumes that the reader has a general understanding of
+  general components and node types in an HDFS cluster. Please refer to the
+  HDFS Architecture guide for details.
+
+* {Background}
+
+  Prior to Hadoop 0.23.2, the NameNode was a single point of failure (SPOF) in
+  an HDFS cluster. Each cluster had a single NameNode, and if that machine or
+  process became unavailable, the cluster as a whole would be unavailable
+  until the NameNode was either restarted or brought up on a separate machine.
+  
+  This impacted the total availability of the HDFS cluster in two major ways:
+
+    * In the case of an unplanned event such as a machine crash, the cluster would
+      be unavailable until an operator restarted the NameNode.
+
+    * Planned maintenance events such as software or hardware upgrades on the
+      NameNode machine would result in windows of cluster downtime.
+  
+  The HDFS High Availability feature addresses the above problems by providing
+  the option of running two redundant NameNodes in the same cluster in an
+  Active/Passive configuration with a hot standby. This allows a fast failover to
+  a new NameNode in the case that a machine crashes, or a graceful
+  administrator-initiated failover for the purpose of planned maintenance.
+
+* {Architecture}
+
+  In a typical HA cluster, two separate machines are configured as NameNodes.
+  At any point in time, exactly one of the NameNodes is in an <Active> state,
+  and the other is in a <Standby> state. The Active NameNode is responsible
+  for all client operations in the cluster, while the Standby is simply acting
+  as a slave, maintaining enough state to provide a fast failover if
+  necessary.
+  
+  In order for the Standby node to keep its state synchronized with the Active
+  node, the current implementation requires that the two nodes both have access
+  to a directory on a shared storage device (eg an NFS mount from a NAS). This
+  restriction will likely be relaxed in future versions.
+
+  When any namespace modification is performed by the Active node, it durably
+  logs a record of the modification to an edit log file stored in the shared
+  directory.  The Standby node is constantly watching this directory for edits,
+  and as it sees the edits, it applies them to its own namespace. In the event of
+  a failover, the Standby will ensure that it has read all of the edits from the
+  shared storage before promoting itself to the Active state. This ensures that
+  the namespace state is fully synchronized before a failover occurs.
+  
+  In order to provide a fast failover, it is also necessary that the Standby node
+  have up-to-date information regarding the location of blocks in the cluster.
+  In order to achieve this, the DataNodes are configured with the location of
+  both NameNodes, and send block location information and heartbeats to both.
+  
+  It is vital for the correct operation of an HA cluster that only one of the
+  NameNodes be Active at a time. Otherwise, the namespace state would quickly
+  diverge between the two, risking data loss or other incorrect results.  In
+  order to ensure this property and prevent the so-called "split-brain scenario,"
+  the administrator must configure at least one <fencing method> for the shared
+  storage. During a failover, if it cannot be verified that the previous Active
+  node has relinquished its Active state, the fencing process is responsible for
+  cutting off the previous Active's access to the shared edits storage. This
+  prevents it from making any further edits to the namespace, allowing the new
+  Active to safely proceed with failover.
+
+  <<Note:>> Currently, only manual failover is supported. This means the HA
+  NameNodes are incapable of automatically detecting a failure of the Active
+  NameNode, and instead rely on the operator to manually initiate a failover.
+  Automatic failure detection and initiation of a failover will be implemented in
+  future versions.
+
+* {Hardware resources}
+
+  In order to deploy an HA cluster, you should prepare the following:
+
+    * <<NameNode machines>> - the machines on which you run the Active and
+    Standby NameNodes should have equivalent hardware to each other, and
+    equivalent hardware to what would be used in a non-HA cluster.
+
+    * <<Shared storage>> - you will need to have a shared directory which both
+    NameNode machines can have read/write access to. Typically this is a remote
+    filer which supports NFS and is mounted on each of the NameNode machines.
+    Currently only a single shared edits directory is supported. Thus, the
+    availability of the system is limited by the availability of this shared edits
+    directory, and therefore in order to remove all single points of failure there
+    needs to be redundancy for the shared edits directory. Specifically, multiple
+    network paths to the storage, and redundancy in the storage itself (disk,
+    network, and power). Beacuse of this, it is recommended that the shared storage
+    server be a high-quality dedicated NAS appliance rather than a simple Linux
+    server.
+  
+  Note that, in an HA cluster, the Standby NameNode also performs checkpoints of
+  the namespace state, and thus it is not necessary to run a Secondary NameNode,
+  CheckpointNode, or BackupNode in an HA cluster. In fact, to do so would be an
+  error. This also allows one who is reconfiguring a non-HA-enabled HDFS cluster
+  to be HA-enabled to reuse the hardware which they had previously dedicated to
+  the Secondary NameNode.
+
+* {Deployment}
+
+** Configuration overview
+
+  Similar to Federation configuration, HA configuration is backward compatible
+  and allows existing single NameNode configurations to work without change.
+  The new configuration is designed such that all the nodes in the cluster may
+  have the same configuration without the need for deploying different
+  configuration files to different machines based on the type of the node.
+ 
+  Like HDFS Federation, HA clusters reuse the <<<nameservice ID>>> to identify a
+  single HDFS instance that may in fact consist of multiple HA NameNodes. In
+  addition, a new abstraction called <<<NameNode ID>>> is added with HA. Each
+  distinct NameNode in the cluster has a different NameNode ID to distinguish it.
+  To support a single configuration file for all of the NameNodes, the relevant
+  configuration parameters are suffixed with the <<nameservice ID>> as well as
+  the <<NameNode ID>>.
+
+** Configuration details
+
+  To configure HA NameNodes, you must add several configuration options to your
+  <<hdfs-site.xml>> configuration file.
+
+  The order in which you set these configurations is unimportant, but the values
+  you choose for <<dfs.federation.nameservices>> and
+  <<dfs.ha.namenodes.[nameservice ID]>> will determine the keys of those that
+  follow. Thus, you should decide on these values before setting the rest of the
+  configuration options.
+
+  * <<dfs.federation.nameservices>> - the logical name for this new nameservice
+
+    Choose a logical name for this nameservice, for example "mycluster", and use
+    this logical name for the value of this config option. The name you choose is
+    arbitrary. It will be used both for configuration and as the authority
+    component of absolute HDFS paths in the cluster.
+
+    <<Note:>> If you are also using HDFS Federation, this configuration setting
+    should also include the list of other nameservices, HA or otherwise, as a
+    comma-separated list.
+
+----
+<property>
+  <name>dfs.federation.nameservices</name>
+  <value>mycluster</value>
+</property>
+----
+
+  * <<dfs.ha.namenodes.[nameservice ID]>> - unique identifiers for each NameNode in the nameservice
+
+    Configure with a list of comma-separated NameNode IDs. This will be used by
+    DataNodes to determine all the NameNodes in the cluster. For example, if you
+    used "mycluster" as the nameservice ID previously, and you wanted to use "nn1"
+    and "nn2" as the individual IDs of the NameNodes, you would configure this as
+    such:
+
+----
+<property>
+  <name>dfs.ha.namenodes.mycluster</name>
+  <value>nn1,nn2</value>
+</property>
+----
+
+    <<Note:>> Currently, only a maximum of two NameNodes may be configured per
+    nameservice.
+
+  * <<dfs.namenode.rpc-address.[nameservice ID].[name node ID]>> - the fully-qualified RPC address for each NameNode to listen on
+
+    For both of the previously-configured NameNode IDs, set the full address and
+    IPC port of the NameNode processs. Note that this results in two separate
+    configuration options. For example:
+
+----
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.nn1</name>
+  <value>machine1.example.com:8020</value>
+</property>
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.nn2</name>
+  <value>machine2.example.com:8020</value>
+</property>
+----
+
+    <<Note:>> You may similarly configure the "<<servicerpc-address>>" setting if
+    you so desire.
+
+  * <<dfs.namenode.http-address.[nameservice ID].[name node ID]>> - the fully-qualified HTTP address for each NameNode to listen on
+
+    Similarly to <rpc-address> above, set the addresses for both NameNodes' HTTP
+    servers to listen on. For example:
+
+----
+<property>
+  <name>dfs.namenode.http-address.mycluster.nn1</name>
+  <value>machine1.example.com:50070</value>
+</property>
+<property>
+  <name>dfs.namenode.http-address.mycluster.nn2</name>
+  <value>machine2.example.com:50070</value>
+</property>
+----
+
+    <<Note:>> If you have Hadoop's security features enabled, you should also set
+    the <https-address> similarly for each NameNode.
+
+  * <<dfs.namenode.shared.edits.dir>> - the location of the shared storage directory
+
+    This is where one configures the path to the remote shared edits directory
+    which the Standby NameNode uses to stay up-to-date with all the file system
+    changes the Active NameNode makes. <<You should only configure one of these
+    directories.>> This directory should be mounted r/w on both NameNode machines.
+    The value of this setting should be the absolute path to this directory on the
+    NameNode machines. For example:
+
+----
+<property>
+  <name>dfs.namenode.shared.edits.dir</name>
+  <value>file:///mnt/filer1/dfs/ha-name-dir-shared</value>
+</property>
+----
+
+  * <<dfs.client.failover.proxy.provider.[nameservice ID]>> - the Java class that HDFS clients use to contact the Active NameNode
+
+    Configure the name of the Java class which will be used by the DFS Client to
+    determine which NameNode is the current Active, and therefore which NameNode is
+    currently serving client requests. The only implementation which currently
+    ships with Hadoop is the <<ConfiguredFailoverProxyProvider>>, so use this
+    unless you are using a custom one. For example:
+
+----
+<property>
+  <name>dfs.client.failover.proxy.provider.mycluster</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+----
+
+  * <<dfs.ha.fencing.methods>> - a list of scripts or Java classes which will be used to fence the Active NameNode during a failover
+
+    It is critical for correctness of the system that only one NameNode be in the
+    Active state at any given time. Thus, during a failover, we first ensure that
+    the Active NameNode is either in the Standby state, or the process has
+    terminated, before transitioning the other NameNode to the Active state. In
+    order to do this, you must configure at least one <<fencing method.>> These are
+    configured as a carriage-return-separated list, which will be attempted in order
+    until one indicates that fencing has succeeded. There are two methods which
+    ship with Hadoop: <shell> and <sshfence>. For information on implementing
+    your own custom fencing method, see the <org.apache.hadoop.ha.NodeFencer> class.
+
+    * <<sshfence>> - SSH to the Active NameNode and kill the process
+
+      The <sshfence> option SSHes to the target node and uses <fuser> to kill the
+      process listening on the service's TCP port. In order for this fencing option
+      to work, it must be able to SSH to the target node without providing a
+      passphrase. Thus, one must also configure the
+      <<dfs.ha.fencing.ssh.private-key-files>> option, which is a
+      comma-separated list of SSH private key files. For example:
+
+---
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>sshfence</value>
+</property>
+
+<property>
+  <name>dfs.ha.fencing.ssh.private-key-files</name>
+  <value>/home/exampleuser/.ssh/id_rsa</value>
+</property>
+---
+
+      Optionally, one may configure a non-standard username or port to perform the
+      SSH. One may also configure a timeout, in milliseconds, for the SSH, after
+      which this fencing method will be considered to have failed. It may be
+      configured like so:
+
+---
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>sshfence([[username][:port]])</value>
+</property>
+<property>
+  <name>dfs.ha.fencing.ssh.connect-timeout</name>
+  <value>
+</property>
+---
+
+    * <<shell>> - run an arbitrary shell command to fence the Active NameNode
+
+      The <shell> fencing method runs an arbitrary shell command. It may be
+      configured like so:
+
+---
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>shell(/path/to/my/script.sh arg1 arg2 ...)</value>
+</property>
+---
+
+      The string between '(' and ')' is passed directly to a bash shell and may not
+      include any closing parentheses.
+
+      When executed, the first argument to the configured script will be the address
+      of the NameNode to be fenced, followed by all arguments specified in the
+      configuration.
+
+      The shell command will be run with an environment set up to contain all of the
+      current Hadoop configuration variables, with the '_' character replacing any
+      '.' characters in the configuration keys. If the shell command returns an exit
+      code of 0, the fencing is determined to be successful. If it returns any other
+      exit code, the fencing was not successful and the next fencing method in the
+      list will be attempted.
+
+      <<Note:>> This fencing method does not implement any timeout. If timeouts are
+      necessary, they should be implemented in the shell script itself (eg by forking
+      a subshell to kill its parent in some number of seconds).
+
+  * <<fs.defaultFS>> - the default path prefix used by the Hadoop FS client when none is given
+
+    Optionally, you may now configure the default path for Hadoop clients to use
+    the new HA-enabled logical URI. If you used "mycluster" as the nameservice ID
+    earlier, this will be the value of the authority portion of all of your HDFS
+    paths. This may be configured like so, in your <<core-site.xml>> file:
+
+---
+<property>
+  <name>fs.defaultFS</name>
+  <value>hdfs://mycluster</value>
+</property>
+---
+
+** Deployment details
+
+  After all of the necessary configuration options have been set, one must
+  initially synchronize the two HA NameNodes' on-disk metadata. If you are
+  setting up a fresh HDFS cluster, you should first run the format command (<hdfs
+  namenode -format>) on one of NameNodes. If you have already formatted the
+  NameNode, or are converting a non-HA-enabled cluster to be HA-enabled, you
+  should now copy over the contents of your NameNode metadata directories to
+  the other, unformatted NameNode using <scp> or a similar utility. The location
+  of the directories containing the NameNode metadata are configured via the
+  configuration options <<dfs.namenode.name.dir>> and/or
+  <<dfs.namenode.edits.dir>>. At this time, you should also ensure that the
+  shared edits dir (as configured by <<dfs.namenode.shared.edits.dir>>) includes
+  all recent edits files which are in your NameNode metadata directories.
+
+  At this point you may start both of your HA NameNodes as you normally would
+  start a NameNode.
+
+  You can visit each of the NameNodes' web pages separately by browsing to their
+  configured HTTP addresses. You should notice that next to the configured
+  address will be the HA state of the NameNode (either "standby" or "active".)
+  Whenever an HA NameNode starts, it is initially in the Standby state.
+
+** Administrative commands
+
+  Now that your HA NameNodes are configured and started, you will have access
+  to some additional commands to administer your HA HDFS cluster. Specifically,
+  you should familiarize yourself with all of the subcommands of the "<hdfs
+  haadmin>" command. Running this command without any additional arguments will
+  display the following usage information:
+
+---
+Usage: DFSHAAdmin [-ns <nameserviceId>]
+    [-transitionToActive <serviceId>]
+    [-transitionToStandby <serviceId>]
+    [-failover [--forcefence] [--forceactive] <serviceId> <serviceId>]
+    [-getServiceState <serviceId>]
+    [-checkHealth <serviceId>]
+    [-help <command>]
+---
+
+  This guide describes high-level uses of each of these subcommands. For
+  specific usage information of each subcommand, you should run "<hdfs haadmin
+  -help <command>>".
+
+  * <<transitionToActive>> and <<transitionToStandby>> - transition the state of the given NameNode to Active or Standby
+
+    These subcommands cause a given NameNode to transition to the Active or Standby
+    state, respectively. <<These commands do not attempt to perform any fencing,
+    and thus should rarely be used.>> Instead, one should almost always prefer to
+    use the "<hdfs haadmin -failover>" subcommand.
+
+  * <<failover>> - initiate a failover between two NameNodes
+
+    This subcommand causes a failover from the first provided NameNode to the
+    second. If the first NameNode is in the Standby state, this command simply
+    transitions the second to the Active state without error. If the first NameNode
+    is in the Active state, an attempt will be made to gracefully transition it to
+    the Standby state. If this fails, the fencing methods (as configured by
+    <<dfs.ha.fencing.methods>>) will be attempted in order until one
+    succeeds. Only after this process will the second NameNode be transitioned to
+    the Active state. If no fencing method succeeds, the second NameNode will not
+    be transitioned to the Active state, and an error will be returned.
+
+  * <<getServiceState>> - determine whether the given NameNode is Active or Standby
+
+    Connect to the provided NameNode to determine its current state, printing
+    either "standby" or "active" to STDOUT appropriately. This subcommand might be
+    used by cron jobs or monitoring scripts which need to behave differently based
+    on whether the NameNode is currently Active or Standby.
+
+  * <<checkHealth>> - check the health of the given NameNode
+
+    Connect to the provided NameNode to check its health. The NameNode is capable
+    of performing some diagnostics on itself, including checking if internal
+    services are running as expected. This command will return 0 if the NameNode is
+    healthy, non-zero otherwise. One might use this command for monitoring
+    purposes.
+
+    <<Note:>> This is not yet implemented, and at present will always return
+    success, unless the given NameNode is completely down.

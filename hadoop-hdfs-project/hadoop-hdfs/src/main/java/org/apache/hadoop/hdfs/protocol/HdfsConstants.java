@@ -100,6 +100,14 @@ public class HdfsConstants {
   public static final String HDFS_URI_SCHEME = "hdfs";
 
   /**
+   * A prefix put before the namenode URI inside the "service" field
+   * of a delgation token, indicating that the URI is a logical (HA)
+   * URI.
+   */
+  public static final String HA_DT_SERVICE_PREFIX = "ha-hdfs:";
+
+
+  /**
    * Please see {@link LayoutVersion} on adding new layout version.
    */
   public static final int LAYOUT_VERSION = LayoutVersion

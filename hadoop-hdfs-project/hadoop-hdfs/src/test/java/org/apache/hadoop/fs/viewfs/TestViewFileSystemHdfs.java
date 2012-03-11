@@ -27,8 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -51,12 +52,15 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   public static void clusterSetupAtBegining() throws IOException,
       LoginException, URISyntaxException {
     SupportsBlocks = true;
+    CONF.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    
     cluster =
-        new MiniDFSCluster.Builder(CONF).numNameNodes(2).numDataNodes(2)
+        new MiniDFSCluster.Builder(CONF).nnTopology(
+                MiniDFSNNTopology.simpleFederatedTopology(2))
+            .numDataNodes(2)
             .build();
     cluster.waitClusterUp();
-    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem(0)).startThreads();
-    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem(1)).startThreads();
     
     fHdfs = cluster.getFileSystem(0);
     fHdfs2 = cluster.getFileSystem(1);

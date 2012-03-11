@@ -41,7 +41,7 @@ import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.VIntToke
 class EditsLoaderCurrent implements EditsLoader {
 
   private static int[] supportedVersions = { -18, -19, -20, -21, -22, -23, -24,
-      -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39};
+      -25, -26, -27, -28, -30, -31, -32, -33, -34, -35, -36, -37, -38, -39, -40};
 
   private EditsVisitor v;
   private int editsVersion = 0;
@@ -150,6 +150,25 @@ class EditsLoaderCurrent implements EditsLoader {
     }
   }
 
+  private void visit_OP_UPDATE_BLOCKS() throws IOException {
+    visitTxId();
+    v.visitStringUTF8(EditsElement.PATH);
+    VIntToken numBlocksToken = v.visitVInt(EditsElement.NUMBLOCKS);
+    for (int i = 0; i < numBlocksToken.value; i++) {
+      v.visitEnclosingElement(EditsElement.BLOCK);
+
+      v.visitLong(EditsElement.BLOCK_ID);
+      if (i == 0) {
+        v.visitVLong(EditsElement.BLOCK_NUM_BYTES);
+        v.visitVLong(EditsElement.BLOCK_GENERATION_STAMP);
+      } else {
+        v.visitVLong(EditsElement.BLOCK_DELTA_NUM_BYTES);
+        v.visitVLong(EditsElement.BLOCK_DELTA_GEN_STAMP);
+      }
+      v.leaveEnclosingElement();
+    }
+  }
+  
   /**
    * Visit OP_RENAME_OLD
    */
@@ -520,6 +539,9 @@ class EditsLoaderCurrent implements EditsLoader {
         break;        
       case OP_START_LOG_SEGMENT: // 24
         visit_OP_BEGIN_LOG_SEGMENT();
+        break;
+      case OP_UPDATE_BLOCKS: // 25
+        visit_OP_UPDATE_BLOCKS();
         break;
       default:
       {

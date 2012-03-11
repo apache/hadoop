@@ -109,5 +109,12 @@
     group list is separated by a blank. For e.g. "alice,bob users,wheel". 
     A special value of "*" means all users are allowed.</description>
   </property>
-
+  
+  <property>
+    <name>security.ha.service.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for HAService protocol used by HAAdmin to manage the
+      active and stand-by states of namenode.</description>
+  </property>
+  
 </configuration>

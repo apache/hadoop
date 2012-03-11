@@ -376,6 +376,7 @@
         <configuration>
           <excludes>
             <exclude>CHANGES.txt</exclude>
+            <exclude>CHANGES.HDFS-1623.txt</exclude>
             <exclude>.idea/**</exclude>
             <exclude>src/main/conf/*</exclude>
             <exclude>src/main/docs/**</exclude>

@@ -33,9 +33,11 @@
 <property>
   <name>dfs.namenode.logging.level</name>
   <value>info</value>
-  <description>The logging level for dfs namenode. Other values are "dir"(trac
-e namespace mutations), "block"(trace block under/over replications and block
-creations/deletions), or "all".</description>
+  <description>
+    The logging level for dfs namenode. Other values are "dir" (trace
+    namespace mutations), "block" (trace block under/over replications
+    and block creations/deletions), or "all".
+  </description>
 </property>
 
 <property>
@@ -226,6 +228,18 @@ creations/deletions), or "all".</description>
       directories, for redundancy. Default value is same as dfs.namenode.name.dir
   </description>
 </property>
+
+<property>
+  <name>dfs.namenode.shared.edits.dir</name>
+  <value></value>
+  <description>A directory on shared storage between the multiple namenodes
+  in an HA cluster. This directory will be written by the active and read
+  by the standby in order to keep the namespaces synchronized. This directory
+  does not need to be listed in dfs.namenode.edits.dir above. It should be
+  left empty in a non-HA cluster.
+  </description>
+</property>
+  
 <property>
   <name>dfs.web.ugi</name>
   <value>webuser,webgroup</value>
@@ -624,6 +638,19 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.namenode.num.extra.edits.retained</name>
+  <value>1000000</value>
+  <description>The number of extra transactions which should be retained
+  beyond what is minimally necessary for a NN restart. This can be useful for
+  audit purposes or for an HA setup where a remote Standby Node may have
+  been offline for some time and need to have a longer backlog of retained
+  edits in order to start again.
+  Typically each edit is on the order of a few hundred bytes, so the default
+  of 1 million edits should be on the order of hundreds of MBs or low GBs.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.delegation.key.update-interval</name>
   <value>86400000</value>
   <description>The update interval for master key for delegation tokens 
@@ -695,6 +722,120 @@ creations/deletions), or "all".</description>
   <description>
         Specifies the maximum number of threads to use for transferring data
         in and out of the DN.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.max.attempts</name>
+  <value>15</value>
+  <description>
+    Expert only. The number of client failover attempts that should be
+    made before the failover is considered failed.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.sleep.base.millis</name>
+  <value>500</value>
+  <description>
+    Expert only. The time to wait, in milliseconds, between failover
+    attempts increases exponentially as a function of the number of
+    attempts made so far, with a random factor of +/- 50%. This option
+    specifies the base value used in the failover calculation. The
+    first failover will retry immediately. The 2nd failover attempt
+    will delay at least dfs.client.failover.sleep.base.millis
+    milliseconds. And so on.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.sleep.max.millis</name>
+  <value>15000</value>
+  <description>
+    Expert only. The time to wait, in milliseconds, between failover
+    attempts increases exponentially as a function of the number of
+    attempts made so far, with a random factor of +/- 50%. This option
+    specifies the maximum value to wait between failovers. 
+    Specifically, the time between two failover attempts will not
+    exceed +/- 50% of dfs.client.failover.sleep.max.millis
+    milliseconds.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.connection.retries</name>
+  <value>0</value>
+  <description>
+    Expert only. Indicates the number of retries a failover IPC client
+    will make to establish a server connection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.connection.retries.on.timeouts</name>
+  <value>0</value>
+  <description>
+    Expert only. The number of retry attempts a failover IPC client
+    will make on socket timeout when establishing a server connection.
+  </description>
+</property>
+
+<property>
+  <name>dfs.federation.nameservices</name>
+  <value></value>
+  <description>
+    Comma-separated list of nameservices.
+  </description>
+</property>
+
+<property>
+  <name>dfs.federation.nameservice.id</name>
+  <value></value>
+  <description>
+    The ID of this nameservice. If the nameservice ID is not
+    configured or more than one nameservice is configured for
+    dfs.federation.nameservices it is determined automatically by
+    matching the local node's address with the configured address.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.namenodes.EXAMPLENAMESERVICE</name>
+  <value></value>
+  <description>
+    The prefix for a given nameservice, contains a comma-separated
+    list of namenodes for a given nameservice (eg EXAMPLENAMESERVICE).
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.namenode.id</name>
+  <value></value>
+  <description>
+    The ID of this namenode. If the namenode ID is not configured it
+    is determined automatically by matching the local node's address
+    with the configured address.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.log-roll.period</name>
+  <value>120</value>
+  <description>
+    How often, in seconds, the StandbyNode should ask the active to
+    roll edit logs. Since the StandbyNode only reads from finalized
+    log segments, the StandbyNode will only be as up-to-date as how
+    often the logs are rolled. Note that failover triggers a log roll
+    so the StandbyNode will be up to date before it becomes active.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.tail-edits.period</name>
+  <value>60</value>
+  <description>
+    How often, in seconds, the StandbyNode should check for new
+    finalized log segments in the shared edits log.
   </description>
 </property>
 

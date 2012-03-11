@@ -75,7 +75,8 @@ public class TestReplication extends TestCase {
   private void checkFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     Configuration conf = fileSys.getConf();
-    ClientProtocol namenode = DFSUtil.createNamenode(conf);
+    ClientProtocol namenode = NameNodeProxies.createProxy(conf, fileSys.getUri(),
+        ClientProtocol.class).getProxy();
       
     waitForBlockReplication(name.toString(), namenode, 
                             Math.min(numDatanodes, repl), -1);

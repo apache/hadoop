@@ -46,7 +46,7 @@ import com.google.common.base.Predicate;
  * are added by default, and arbitrary extra volumes may be configured as well.
  */
 @InterfaceAudience.Private
-class NameNodeResourceChecker {
+public class NameNodeResourceChecker {
   private static final Log LOG = LogFactory.getLog(NameNodeResourceChecker.class.getName());
 
   // Space (in bytes) reserved per volume.
@@ -176,8 +176,7 @@ class NameNodeResourceChecker {
    *         least one redundant volume and all of the required volumes, false
    *         otherwise.
    */
-  boolean hasAvailableDiskSpace()
-      throws IOException {
+  public boolean hasAvailableDiskSpace() {
     return NameNodeResourcePolicy.areResourcesAvailable(volumes.values(),
         minimumRedundantVolumes);
   }

@@ -25,22 +25,47 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
- * A data structure to store Block and delHints together, used to send
- * received/deleted ACKs.
+ * A data structure to store the blocks in an incremental block report. 
  */
 public class ReceivedDeletedBlockInfo implements Writable {
   Block block;
+  BlockStatus status;
   String delHints;
 
-  public final static String TODELETE_HINT = "-";
+  public static enum BlockStatus {
+    RECEIVING_BLOCK(1),
+    RECEIVED_BLOCK(2),
+    DELETED_BLOCK(3);
+    
+    private final int code;
+    BlockStatus(int code) {
+      this.code = code;
+    }
+    
+    public int getCode() {
+      return code;
+    }
+    
+    public static BlockStatus fromCode(int code) {
+      for (BlockStatus bs : BlockStatus.values()) {
+        if (bs.code == code) {
+          return bs;
+        }
+      }
+      return null;
+    }
+  }
 
   public ReceivedDeletedBlockInfo() {
   }
 
-  public ReceivedDeletedBlockInfo(Block blk, String delHints) {
+  public ReceivedDeletedBlockInfo(
+      Block blk, BlockStatus status, String delHints) {
     this.block = blk;
+    this.status = status;
     this.delHints = delHints;
   }
 
@@ -60,13 +85,19 @@ public class ReceivedDeletedBlockInfo implements Writable {
     this.delHints = hints;
   }
 
+  public BlockStatus getStatus() {
+    return status;
+  }
+
   public boolean equals(Object o) {
     if (!(o instanceof ReceivedDeletedBlockInfo)) {
       return false;
     }
     ReceivedDeletedBlockInfo other = (ReceivedDeletedBlockInfo) o;
     return this.block.equals(other.getBlock())
-        && this.delHints.equals(other.delHints);
+        && this.status == other.status
+        && (this.delHints == other.delHints ||
+            this.delHints != null && this.delHints.equals(other.delHints));
   }
 
   public int hashCode() {
@@ -79,23 +110,30 @@ public class ReceivedDeletedBlockInfo implements Writable {
   }
 
   public boolean isDeletedBlock() {
-    return delHints.equals(TODELETE_HINT);
+    return status == BlockStatus.DELETED_BLOCK;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     this.block.write(out);
-    Text.writeString(out, this.delHints);
+    WritableUtils.writeVInt(out, this.status.code);
+    if (this.status == BlockStatus.DELETED_BLOCK) {
+      Text.writeString(out, this.delHints);
+    }
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
     this.block = new Block();
     this.block.readFields(in);
-    this.delHints = Text.readString(in);
+    this.status = BlockStatus.fromCode(WritableUtils.readVInt(in));
+    if (this.status == BlockStatus.DELETED_BLOCK) {
+      this.delHints = Text.readString(in);
+    }
   }
 
   public String toString() {
-    return block.toString() + ", delHint: " + delHints;
+    return block.toString() + ", status: " + status +
+      ", delHint: " + delHints;
   }
 }

@@ -124,16 +124,18 @@ public class GetImageServlet extends HttpServlet {
             final long txid = parsedParams.getTxId();
 
             if (! currentlyDownloadingCheckpoints.add(txid)) {
-              throw new IOException(
+              response.sendError(HttpServletResponse.SC_CONFLICT,
                   "Another checkpointer is already in the process of uploading a" +
                   " checkpoint made at transaction ID " + txid);
+              return null;
             }
 
             try {
               if (nnImage.getStorage().findImageFile(txid) != null) {
-                throw new IOException(
+                response.sendError(HttpServletResponse.SC_CONFLICT,
                     "Another checkpointer already uploaded an checkpoint " +
                     "for txid " + txid);
+                return null;
               }
               
               // issue a HTTP get request to download the new fsimage 

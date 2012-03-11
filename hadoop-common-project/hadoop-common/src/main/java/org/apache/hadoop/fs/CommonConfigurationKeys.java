@@ -114,11 +114,12 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String 
   HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_USER_MAPPINGS =
       "security.refresh.user.mappings.protocol.acl";
+  public static final String 
+  SECURITY_HA_SERVICE_PROTOCOL_ACL = "security.ha.service.protocol.acl";
   
   public static final String HADOOP_SECURITY_TOKEN_SERVICE_USE_IP =
       "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
       true;
-
 }
 

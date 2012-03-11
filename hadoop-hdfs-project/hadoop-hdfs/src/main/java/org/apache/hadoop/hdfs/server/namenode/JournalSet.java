@@ -25,8 +25,10 @@ import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -145,9 +147,15 @@ public class JournalSet implements JournalManager {
   
   private List<JournalAndStream> journals = Lists.newArrayList();
   final int minimumRedundantJournals;
+  private volatile Runtime runtime = Runtime.getRuntime();
   
   JournalSet(int minimumRedundantResources) {
     this.minimumRedundantJournals = minimumRedundantResources;
+  }
+  
+  @VisibleForTesting
+  public void setRuntimeForTesting(Runtime runtime) {
+    this.runtime = runtime;
   }
   
   @Override
@@ -198,19 +206,25 @@ public class JournalSet implements JournalManager {
    *         or null if no more exist
    */
   @Override
-  public EditLogInputStream getInputStream(long fromTxnId) throws IOException {
+  public EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
+      throws IOException {
     JournalManager bestjm = null;
     long bestjmNumTxns = 0;
     CorruptionException corruption = null;
 
     for (JournalAndStream jas : journals) {
+      if (jas.isDisabled()) continue;
+      
       JournalManager candidate = jas.getManager();
       long candidateNumTxns = 0;
       try {
-        candidateNumTxns = candidate.getNumberOfTransactions(fromTxnId);
+        candidateNumTxns = candidate.getNumberOfTransactions(fromTxnId,
+            inProgressOk);
       } catch (CorruptionException ce) {
         corruption = ce;
       } catch (IOException ioe) {
+        LOG.warn("Unable to read input streams from JournalManager " + candidate,
+            ioe);
         continue; // error reading disk, just skip
       }
       
@@ -228,15 +242,20 @@ public class JournalSet implements JournalManager {
         return null;
       }
     }
-    return bestjm.getInputStream(fromTxnId);
+    return bestjm.getInputStream(fromTxnId, inProgressOk);
   }
   
   @Override
-  public long getNumberOfTransactions(long fromTxnId) throws IOException {
+  public long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
+      throws IOException {
     long num = 0;
     for (JournalAndStream jas: journals) {
-      if (jas.isActive()) {
-        long newNum = jas.getManager().getNumberOfTransactions(fromTxnId);
+      if (jas.isDisabled()) {
+        LOG.info("Skipping jas " + jas + " since it's disabled");
+        continue;
+      } else {
+        long newNum = jas.getManager().getNumberOfTransactions(fromTxnId,
+            inProgressOk);
         if (newNum > num) {
           num = newNum;
         }
@@ -295,13 +314,31 @@ public class JournalSet implements JournalManager {
    */
   private void mapJournalsAndReportErrors(
       JournalClosure closure, String status) throws IOException{
+
     List<JournalAndStream> badJAS = Lists.newLinkedList();
     for (JournalAndStream jas : journals) {
       try {
         closure.apply(jas);
       } catch (Throwable t) {
-        LOG.error("Error: " + status + " failed for (journal " + jas + ")", t);
-        badJAS.add(jas);
+        if (jas.isRequired()) {
+          String msg = "Error: " + status + " failed for required journal ("
+            + jas + ")";
+          LOG.fatal(msg, t);
+          // If we fail on *any* of the required journals, then we must not
+          // continue on any of the other journals. Abort them to ensure that
+          // retry behavior doesn't allow them to keep going in any way.
+          abortAllJournals();
+          // the current policy is to shutdown the NN on errors to shared edits
+          // dir. There are many code paths to shared edits failures - syncs,
+          // roll of edits etc. All of them go through this common function 
+          // where the isRequired() check is made. Applying exit policy here 
+          // to catch all code paths.
+          runtime.exit(1);
+          throw new IOException(msg);
+        } else {
+          LOG.error("Error: " + status + " failed for (journal " + jas + ")", t);
+          badJAS.add(jas);          
+        }
       }
     }
     disableAndReportErrorOnJournals(badJAS);
@@ -313,6 +350,17 @@ public class JournalSet implements JournalManager {
     }
   }
   
+  /**
+   * Abort all of the underlying streams.
+   */
+  private void abortAllJournals() {
+    for (JournalAndStream jas : journals) {
+      if (jas.isActive()) {
+        jas.abort();
+      }
+    }
+  }
+
   /**
    * An implementation of EditLogOutputStream that applies a requested method on
    * all the journals that are currently active.

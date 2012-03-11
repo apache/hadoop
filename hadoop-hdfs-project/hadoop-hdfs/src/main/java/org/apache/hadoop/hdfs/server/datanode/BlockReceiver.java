@@ -153,6 +153,7 @@ class BlockReceiver implements Closeable {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
           replicaInfo = datanode.data.createRbw(block);
+          datanode.notifyNamenodeReceivingBlock(block);
           break;
         case PIPELINE_SETUP_STREAMING_RECOVERY:
           replicaInfo = datanode.data.recoverRbw(
@@ -166,6 +167,7 @@ class BlockReceiver implements Closeable {
                 block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
+          datanode.notifyNamenodeReceivingBlock(block);
           break;
         case PIPELINE_SETUP_APPEND_RECOVERY:
           replicaInfo = datanode.data.recoverAppend(block, newGs, minBytesRcvd);
@@ -174,6 +176,7 @@ class BlockReceiver implements Closeable {
                 block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
+          datanode.notifyNamenodeReceivingBlock(block);
           break;
         case TRANSFER_RBW:
         case TRANSFER_FINALIZED:
@@ -320,7 +323,6 @@ class BlockReceiver implements Closeable {
   private void verifyChunks( byte[] dataBuf, int dataOff, int len, 
                              byte[] checksumBuf, int checksumOff ) 
                              throws IOException {
-    DatanodeProtocol nn = datanode.getBPNamenode(block.getBlockPoolId());
     while (len > 0) {
       int chunkLen = Math.min(len, bytesPerChecksum);
       
@@ -331,9 +333,7 @@ class BlockReceiver implements Closeable {
           try {
             LOG.info("report corrupt block " + block + " from datanode " +
                       srcDataNode + " to namenode");
-            LocatedBlock lb = new LocatedBlock(block, 
-                                            new DatanodeInfo[] {srcDataNode});
-            nn.reportBadBlocks(new LocatedBlock[] {lb});
+            datanode.reportRemoteBadBlock(srcDataNode, block);
           } catch (IOException e) {
             LOG.warn("Failed to report bad block " + block + 
                       " from datanode " + srcDataNode + " to namenode");

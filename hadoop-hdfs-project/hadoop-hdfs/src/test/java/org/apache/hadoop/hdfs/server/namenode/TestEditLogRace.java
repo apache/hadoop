@@ -237,7 +237,7 @@ public class TestEditLogRace {
         
       System.out.println("Verifying file: " + editFile);
       FSEditLogLoader loader = new FSEditLogLoader(namesystem);
-      int numEditsThisLog = loader.loadFSEdits(new EditLogFileInputStream(editFile), 
+      long numEditsThisLog = loader.loadFSEdits(new EditLogFileInputStream(editFile), 
           startTxId);
       
       System.out.println("Number of edits: " + numEditsThisLog);
@@ -375,6 +375,7 @@ public class TestEditLogRace {
                 true);
             LOG.info("mkdirs complete");
           } catch (Throwable ioe) {
+            LOG.fatal("Got exception", ioe);
             deferredException.set(ioe);
             waitToEnterFlush.countDown();
           }
@@ -469,6 +470,7 @@ public class TestEditLogRace {
                 true);
             LOG.info("mkdirs complete");
           } catch (Throwable ioe) {
+            LOG.fatal("Got exception", ioe);
             deferredException.set(ioe);
             waitToEnterSync.countDown();
           }

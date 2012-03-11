@@ -32,8 +32,7 @@ public class UnsupportedActionException extends IOException {
   /** for java.io.Serializable */
   private static final long serialVersionUID = 1L;
 
-  public UnsupportedActionException(String action) {
-    super("Action " + action + "() is not supported.");
+  public UnsupportedActionException(String msg) {
+    super(msg);
   }
-
 }

@@ -19,7 +19,6 @@ package org.apache.hadoop.io.retry;
 
 import org.apache.hadoop.classification.InterfaceStability;
 
-
 /**
  * <p>
  * Specifies a policy for retrying method failures.
@@ -33,10 +32,39 @@ public interface RetryPolicy {
    * Returned by {@link RetryPolicy#shouldRetry(Exception, int, int, boolean)}.
    */
   @InterfaceStability.Evolving
-  public enum RetryAction {
-    FAIL,
-    RETRY,
-    FAILOVER_AND_RETRY
+  public static class RetryAction {
+    
+    // A few common retry policies, with no delays.
+    public static final RetryAction FAIL =
+        new RetryAction(RetryDecision.FAIL);
+    public static final RetryAction RETRY =
+        new RetryAction(RetryDecision.RETRY);
+    public static final RetryAction FAILOVER_AND_RETRY =
+        new RetryAction(RetryDecision.FAILOVER_AND_RETRY);
+    
+    public final RetryDecision action;
+    public final long delayMillis;
+    public final String reason;
+    
+    public RetryAction(RetryDecision action) {
+      this(action, 0, null);
+    }
+    
+    public RetryAction(RetryDecision action, long delayTime) {
+      this(action, delayTime, null);
+    }
+    
+    public RetryAction(RetryDecision action, long delayTime, String reason) {
+      this.action = action;
+      this.delayMillis = delayTime;
+      this.reason = reason;
+    }
+    
+    public enum RetryDecision {
+      FAIL,
+      RETRY,
+      FAILOVER_AND_RETRY
+    }
   }
   
   /**

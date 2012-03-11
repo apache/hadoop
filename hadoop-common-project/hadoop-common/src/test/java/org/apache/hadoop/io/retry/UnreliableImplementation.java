@@ -19,6 +19,7 @@ package org.apache.hadoop.io.retry;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.retry.UnreliableInterface.UnreliableException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 
@@ -37,7 +38,8 @@ public class UnreliableImplementation implements UnreliableInterface {
   public static enum TypeOfExceptionToFailWith {
     UNRELIABLE_EXCEPTION,
     STANDBY_EXCEPTION,
-    IO_EXCEPTION
+    IO_EXCEPTION,
+    REMOTE_EXCEPTION
   }
   
   public UnreliableImplementation() {
@@ -46,6 +48,10 @@ public class UnreliableImplementation implements UnreliableInterface {
   
   public UnreliableImplementation(String identifier) {
     this(identifier, TypeOfExceptionToFailWith.UNRELIABLE_EXCEPTION);
+  }
+  
+  public void setIdentifier(String identifier) {
+    this.identifier = identifier;
   }
   
   public UnreliableImplementation(String identifier,
@@ -91,14 +97,7 @@ public class UnreliableImplementation implements UnreliableInterface {
     if (succeedsOnceThenFailsCount++ < 1) {
       return identifier;
     } else {
-      switch (exceptionToFailWith) {
-      case STANDBY_EXCEPTION:
-        throw new StandbyException(identifier);
-      case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(identifier);
-      case IO_EXCEPTION:
-        throw new IOException(identifier);
-      }
+      throwAppropriateException(exceptionToFailWith, identifier);
       return null;
     }
   }
@@ -109,16 +108,8 @@ public class UnreliableImplementation implements UnreliableInterface {
     if (succeedsTenTimesThenFailsCount++ < 10) {
       return identifier;
     } else {
-      switch (exceptionToFailWith) {
-      case STANDBY_EXCEPTION:
-        throw new StandbyException(identifier);
-      case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(identifier);
-      case IO_EXCEPTION:
-        throw new IOException(identifier);
-      default:
-        throw new RuntimeException(identifier);
-      }
+      throwAppropriateException(exceptionToFailWith, identifier);
+      return null;
     }
   }
 
@@ -128,16 +119,8 @@ public class UnreliableImplementation implements UnreliableInterface {
     if (succeedsOnceThenFailsIdempotentCount++ < 1) {
       return identifier;
     } else {
-      switch (exceptionToFailWith) {
-      case STANDBY_EXCEPTION:
-        throw new StandbyException(identifier);
-      case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(identifier);
-      case IO_EXCEPTION:
-        throw new IOException(identifier);
-      default:
-        throw new RuntimeException(identifier);
-      }
+      throwAppropriateException(exceptionToFailWith, identifier);
+      return null;
     }
   }
 
@@ -147,17 +130,38 @@ public class UnreliableImplementation implements UnreliableInterface {
     if (this.identifier.equals(identifier)) {
       return identifier;
     } else {
-      switch (exceptionToFailWith) {
-      case STANDBY_EXCEPTION:
-        throw new StandbyException(identifier);
-      case UNRELIABLE_EXCEPTION:
-        throw new UnreliableException(identifier);
-      case IO_EXCEPTION:
-        throw new IOException(identifier);
-      default:
-        throw new RuntimeException(identifier);
-      }
+      String message = "expected '" + this.identifier + "' but received '" +
+          identifier + "'";
+      throwAppropriateException(exceptionToFailWith, message);
+      return null;
+    }
+  }
+  
+  @Override
+  public void nonIdempotentVoidFailsIfIdentifierDoesntMatch(String identifier)
+      throws UnreliableException, StandbyException, IOException {
+    if (this.identifier.equals(identifier)) {
+      return;
+    } else {
+      String message = "expected '" + this.identifier + "' but received '" +
+          identifier + "'";
+      throwAppropriateException(exceptionToFailWith, message);
     }
   }
 
+  private static void throwAppropriateException(TypeOfExceptionToFailWith eType,
+      String message) throws UnreliableException, StandbyException, IOException {
+    switch (eType) {
+    case STANDBY_EXCEPTION:
+      throw new StandbyException(message);
+    case UNRELIABLE_EXCEPTION:
+      throw new UnreliableException(message);
+    case IO_EXCEPTION:
+      throw new IOException(message);
+    case REMOTE_EXCEPTION:
+      throw new RemoteException(IOException.class.getName(), message);
+    default:
+      throw new RuntimeException(message);
+    }
+  }
 }

@@ -18,8 +18,9 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
@@ -34,12 +35,13 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -155,7 +157,7 @@ public class TestBalancerWithMultipleNameNodes {
     LOG.info("BALANCER 1");
 
     // start rebalancing
-    final List<InetSocketAddress> namenodes = DFSUtil.getNNServiceRpcAddresses(s.conf);
+    final Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(s.conf);
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, s.conf);
     Assert.assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
 
@@ -249,8 +251,9 @@ public class TestBalancerWithMultipleNameNodes {
     final ExtendedBlock[][] blocks;
     {
       LOG.info("UNEVEN 1");
-      final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-          .numNameNodes(nNameNodes)
+      final MiniDFSCluster cluster = new MiniDFSCluster
+          .Builder(new Configuration(conf))
+          .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
           .numDataNodes(nDataNodes)
           .racks(racks)
           .simulatedCapacities(capacities)
@@ -258,6 +261,7 @@ public class TestBalancerWithMultipleNameNodes {
       LOG.info("UNEVEN 2");
       try {
         cluster.waitActive();
+        DFSTestUtil.setFederatedConfiguration(cluster, conf);
         LOG.info("UNEVEN 3");
         final Suite s = new Suite(cluster, nNameNodes, nDataNodes, conf);
         blocks = generateBlocks(s, usedSpacePerNN);
@@ -271,7 +275,7 @@ public class TestBalancerWithMultipleNameNodes {
     {
       LOG.info("UNEVEN 10");
       final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-          .numNameNodes(nNameNodes)
+          .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(nNameNodes))
           .numDataNodes(nDataNodes)
           .racks(racks)
           .simulatedCapacities(capacities)
@@ -324,13 +328,15 @@ public class TestBalancerWithMultipleNameNodes {
     Assert.assertEquals(nDataNodes, racks.length);
 
     LOG.info("RUN_TEST -1");
-    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numNameNodes(nNameNodes)
+    final MiniDFSCluster cluster = new MiniDFSCluster
+        .Builder(new Configuration(conf))
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(nNameNodes))
         .numDataNodes(nDataNodes)
         .racks(racks)
         .simulatedCapacities(capacities)
         .build();
     LOG.info("RUN_TEST 0");
+    DFSTestUtil.setFederatedConfiguration(cluster, conf);
 
     try {
       cluster.waitActive();
