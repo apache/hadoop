@@ -206,7 +206,7 @@ public class SecondaryNameNode implements Runnable {
             System.setProperty("https.cipherSuites", 
                 Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
             InetSocketAddress secInfoSocAddr = 
-              NetUtils.createSocketAddr(infoBindAddress + ":"+ conf.get(
+              NetUtils.createSocketAddr(infoBindAddress + ":"+ conf.getInt(
                 "dfs.secondary.https.port", 50490));
             imagePort = secInfoSocAddr.getPort();
             infoServer.addSslListener(secInfoSocAddr, conf, false, true);
