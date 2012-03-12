@@ -130,6 +130,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3056.  Add a new interface RollingLogs for DataBlockScanner logging.
     (szetszwo)
 
+    HDFS-2731. Add command to bootstrap the Standby Node's name directories
+    from the Active NameNode. (todd)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)

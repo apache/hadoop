@@ -53,6 +53,7 @@ import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -97,7 +98,7 @@ public class FSImage implements Closeable {
    *               Collection imageDirs, Collection editsDirs) 
    * @throws IOException if default directories are invalid.
    */
-  protected FSImage(Configuration conf) throws IOException {
+  public FSImage(Configuration conf) throws IOException {
     this(conf,
          FSNamesystem.getNamespaceDirs(conf),
          FSNamesystem.getNamespaceEditsDirs(conf));
@@ -142,7 +143,9 @@ public class FSImage implements Closeable {
     Preconditions.checkState(fileCount == 1,
         "FSImage.format should be called with an uninitialized namesystem, has " +
         fileCount + " files");
-    storage.format(clusterId);
+    NamespaceInfo ns = NNStorage.newNamespaceInfo();
+    ns.clusterID = clusterId;
+    storage.format(ns);
     saveFSImageInAllDirs(fsn, 0);
   }
   
@@ -1040,7 +1043,7 @@ public class FSImage implements Closeable {
    * renames the image from fsimage_N.ckpt to fsimage_N and also
    * saves the related .md5 file into place.
    */
-  synchronized void saveDigestAndRenameCheckpointImage(
+  public synchronized void saveDigestAndRenameCheckpointImage(
       long txid, MD5Hash digest) throws IOException {
     renameCheckpoint(txid);
     List<StorageDirectory> badSds = Lists.newArrayList();

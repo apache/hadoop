@@ -712,29 +712,36 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   public static List<URI> getNamespaceEditsDirs(Configuration conf)
       throws IOException {
+    return getNamespaceEditsDirs(conf, true);
+  }
+  
+  public static List<URI> getNamespaceEditsDirs(Configuration conf,
+      boolean includeShared)
+      throws IOException {
     // Use a LinkedHashSet so that order is maintained while we de-dup
     // the entries.
     LinkedHashSet<URI> editsDirs = new LinkedHashSet<URI>();
     
-    List<URI> sharedDirs = getSharedEditsDirs(conf);
-
-    // Fail until multiple shared edits directories are supported (HDFS-2782)
-    if (sharedDirs.size() > 1) {
-      throw new IOException(
-          "Multiple shared edits directories are not yet supported");
-    }
-
-    // First add the shared edits dirs. It's critical that the shared dirs
-    // are added first, since JournalSet syncs them in the order they are listed,
-    // and we need to make sure all edits are in place in the shared storage
-    // before they are replicated locally. See HDFS-2874.
-    for (URI dir : sharedDirs) {
-      if (!editsDirs.add(dir)) {
-        LOG.warn("Edits URI " + dir + " listed multiple times in " + 
-            DFS_NAMENODE_SHARED_EDITS_DIR_KEY + ". Ignoring duplicates.");
+    if (includeShared) {
+      List<URI> sharedDirs = getSharedEditsDirs(conf);
+  
+      // Fail until multiple shared edits directories are supported (HDFS-2782)
+      if (sharedDirs.size() > 1) {
+        throw new IOException(
+            "Multiple shared edits directories are not yet supported");
       }
-    }
-    
+  
+      // First add the shared edits dirs. It's critical that the shared dirs
+      // are added first, since JournalSet syncs them in the order they are listed,
+      // and we need to make sure all edits are in place in the shared storage
+      // before they are replicated locally. See HDFS-2874.
+      for (URI dir : sharedDirs) {
+        if (!editsDirs.add(dir)) {
+          LOG.warn("Edits URI " + dir + " listed multiple times in " + 
+              DFS_NAMENODE_SHARED_EDITS_DIR_KEY + ". Ignoring duplicates.");
+        }
+      }
+    }    
     // Now add the non-shared dirs.
     for (URI dir : getStorageDirs(conf, DFS_NAMENODE_EDITS_DIR_KEY)) {
       if (!editsDirs.add(dir)) {

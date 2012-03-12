@@ -52,7 +52,7 @@ public class TransferFsImage {
 
   private static final Log LOG = LogFactory.getLog(TransferFsImage.class);
 
-  static MD5Hash downloadImageToStorage(
+  public static MD5Hash downloadImageToStorage(
       String fsName, long imageTxId, NNStorage dstStorage, boolean needDigest)
       throws IOException {
     String fileid = GetImageServlet.getParamStringForImage(

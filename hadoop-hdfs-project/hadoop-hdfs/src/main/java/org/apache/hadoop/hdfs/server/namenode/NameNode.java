@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
+import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
@@ -652,32 +654,13 @@ public class NameNode {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
-
-    if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
-                         DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
-      throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
-                             + " is set to false for this filesystem, so it "
-                             + "cannot be formatted. You will need to set "
-                             + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
-                             + "to true in order to format this filesystem");
-    }
+    checkAllowFormat(conf);
     
     Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
-    for(Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
-      File curDir = new File(it.next().getPath());
-      // Its alright for a dir not to exist, or to exist (properly accessible)
-      // and be completely empty.
-      if (!curDir.exists() ||
-          (curDir.isDirectory() && FileUtil.listFiles(curDir).length == 0))
-        continue;
-      if (isConfirmationNeeded) {
-        if (!confirmPrompt("Re-format filesystem in " + curDir + " ?")) {
-          System.err.println("Format aborted in "+ curDir);
-          return true;
-        }
-      }
+    if (!confirmFormat(dirsToFormat, isConfirmationNeeded, true)) {
+      return true; // aborted
     }
 
     // if clusterID is not provided - see if you can find the current one
@@ -692,6 +675,58 @@ public class NameNode {
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
     fsImage.format(fsn, clusterId);
     return false;
+  }
+
+  /**
+   * Check whether the given storage directories already exist.
+   * If running in interactive mode, will prompt the user for each
+   * directory to allow them to format anyway. Otherwise, returns
+   * false, unless 'force' is specified.
+   * 
+   * @param dirsToFormat the dirs to check
+   * @param force format regardless of whether dirs exist
+   * @param interactive prompt the user when a dir exists
+   * @return true if formatting should proceed
+   * @throws IOException
+   */
+  public static boolean confirmFormat(Collection<URI> dirsToFormat,
+      boolean force, boolean interactive)
+      throws IOException {
+    for(Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
+      File curDir = new File(it.next().getPath());
+      // Its alright for a dir not to exist, or to exist (properly accessible)
+      // and be completely empty.
+      if (!curDir.exists() ||
+          (curDir.isDirectory() && FileUtil.listFiles(curDir).length == 0))
+        continue;
+      if (force) { // Don't confirm, always format.
+        System.err.println(
+            "Storage directory exists in " + curDir + ". Formatting anyway.");
+        continue;
+      }
+      if (!interactive) { // Don't ask - always don't format
+        System.err.println(
+            "Running in non-interactive mode, and image appears to exist in " +
+            curDir + ". Not formatting.");
+        return false;
+      }
+      if (!confirmPrompt("Re-format filesystem in " + curDir + " ?")) {
+        System.err.println("Format aborted in " + curDir);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public static void checkAllowFormat(Configuration conf) throws IOException {
+    if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
+        DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
+      throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
+                + " is set to false for this filesystem, so it "
+                + "cannot be formatted. You will need to set "
+                + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
+                + "to true in order to format this filesystem");
+    }
   }
 
   private static boolean finalize(Configuration conf,
@@ -726,7 +761,8 @@ public class NameNode {
       StartupOption.UPGRADE.getName() + "] | [" +
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
-      StartupOption.IMPORT.getName() + "]");
+      StartupOption.IMPORT.getName() + "] | [" +
+      StartupOption.BOOTSTRAPSTANDBY.getName() + "]");
   }
 
   private static StartupOption parseArguments(String args[]) {
@@ -764,8 +800,12 @@ public class NameNode {
         startOpt = StartupOption.FINALIZE;
       } else if (StartupOption.IMPORT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.IMPORT;
-      } else
+      } else if (StartupOption.BOOTSTRAPSTANDBY.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.BOOTSTRAPSTANDBY;
+        return startOpt;
+      } else {
         return null;
+      }
     }
     return startOpt;
   }
@@ -840,6 +880,11 @@ public class NameNode {
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
+      case BOOTSTRAPSTANDBY:
+        String toolArgs[] = Arrays.copyOfRange(argv, 1, argv.length);
+        int rc = BootstrapStandby.run(toolArgs, conf);
+        System.exit(rc);
+        return null; // avoid warning
       case BACKUP:
       case CHECKPOINT:
         NamenodeRole role = startOpt.toNodeRole();
