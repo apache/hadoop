@@ -251,8 +251,7 @@ public class SecondaryNameNode implements Runnable {
               new AccessControlList(conf.get(DFS_ADMIN, " ")));
           
           if(UserGroupInformation.isSecurityEnabled()) {
-            System.setProperty("https.cipherSuites", 
-                Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
+            SecurityUtil.initKrb5CipherSuites();
             InetSocketAddress secInfoSocAddr = 
               NetUtils.createSocketAddr(infoBindAddress + ":"+ conf.getInt(
                 DFS_NAMENODE_SECONDARY_HTTPS_PORT_KEY,

@@ -19,15 +19,21 @@ package org.apache.hadoop.test;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Layout;
+import org.apache.log4j.Logger;
+import org.apache.log4j.WriterAppender;
 import org.junit.Assert;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -98,6 +104,35 @@ public abstract class GenericTestUtils {
       Thread.sleep(checkEveryMillis);
     } while (System.currentTimeMillis() - st < waitForMillis);
     throw new TimeoutException("Timed out waiting for condition");
+  }
+  
+  public static class LogCapturer {
+    private StringWriter sw = new StringWriter();
+    private WriterAppender appender;
+    private Logger logger;
+    
+    public static LogCapturer captureLogs(Log l) {
+      Logger logger = ((Log4JLogger)l).getLogger();
+      LogCapturer c = new LogCapturer(logger);
+      return c;
+    }
+    
+
+    private LogCapturer(Logger logger) {
+      this.logger = logger;
+      Layout layout = Logger.getRootLogger().getAppender("stdout").getLayout();
+      WriterAppender wa = new WriterAppender(layout, sw);
+      logger.addAppender(wa);
+    }
+    
+    public String getOutput() {
+      return sw.toString();
+    }
+    
+    public void stopCapturing() {
+      logger.removeAppender(appender);
+
+    }
   }
   
   
@@ -244,5 +279,11 @@ public abstract class GenericTestUtils {
         }
       }
     }
+  }
+
+  public static void assertMatches(String output, String pattern) {
+    Assert.assertTrue("Expected output to match /" + pattern + "/" +
+        " but got:\n" + output,
+        Pattern.compile(pattern).matcher(output).find());
   }
 }

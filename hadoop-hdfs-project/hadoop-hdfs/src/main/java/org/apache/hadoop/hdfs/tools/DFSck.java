@@ -245,8 +245,7 @@ public class DFSck extends Configured implements Tool {
   private int doWork(final String[] args) throws IOException {
     String proto = "http://";
     if (UserGroupInformation.isSecurityEnabled()) {
-      System.setProperty("https.cipherSuites",
-          Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
+      SecurityUtil.initKrb5CipherSuites();
       proto = "https://";
     }
     final StringBuilder url = new StringBuilder(proto);

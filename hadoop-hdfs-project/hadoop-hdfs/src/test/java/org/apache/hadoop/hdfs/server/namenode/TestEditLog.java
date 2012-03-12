@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
@@ -1001,7 +1002,7 @@ public class TestEditLog extends TestCase {
     NNStorage storage = new NNStorage(new Configuration(),
                                       Collections.<URI>emptyList(),
                                       editUris);
-    storage.format("test-cluster-id");
+    storage.format(new NamespaceInfo());
     FSEditLog editlog = new FSEditLog(storage);    
     // open the edit log and add two transactions
     // logGenerationStamp is used, simply because it doesn't 
