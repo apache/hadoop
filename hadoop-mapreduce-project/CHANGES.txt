@@ -89,9 +89,6 @@ Trunk (unreleased changes)
     MAPREDUCE-3664. Federation Documentation has incorrect configuration example.
     (Brandon Li via jitendra)
 
-    MAPREDUCE-3974. TestSubmitJob in MR1 tests doesn't compile after HDFS-162
-    merge. (atm)
-
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -149,6 +146,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-3348. Fixed a bug in MR client to redirect to JobHistoryServer
     correctly when RM forgets the app. (Devaraj K via vinodkv)
+
+    MAPREDUCE-3974. TestSubmitJob in MR1 tests doesn't compile after HDFS-162
+    merge. (atm)
 
 Release 0.23.2 - UNRELEASED
 
