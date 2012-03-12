@@ -80,9 +80,15 @@ public class TestGridmixSubmission {
   private static final long GENDATA = 30; // in megabytes
   private static final int GENSLOP = 100 * 1024; // +/- 100k for logs
 
+  static Path ioPath;
+  private static Path out;
+  private static final Path root = new Path("/user");
+
   @BeforeClass
   public static void init() throws IOException {
     GridmixTestUtils.initCluster();
+    ioPath = new Path("foo").makeQualified(GridmixTestUtils.dfs);
+    out = GridmixTestUtils.DEST.makeQualified(GridmixTestUtils.dfs);
   }
 
   @AfterClass
@@ -453,7 +459,7 @@ public class TestGridmixSubmission {
     } finally {
       System.setIn(origStdIn);
       if (tmpIs != null) {
-	tmpIs.close();
+	       tmpIs.close();
       }
       lfs.delete(rootTempDir, true);
     }
@@ -499,59 +505,102 @@ public class TestGridmixSubmission {
     System.out.println("Serial ended at " + System.currentTimeMillis());
   }
 
+  /** Submit Gridmix run and verify that it succeeds */
   private void doSubmission(boolean useDefaultQueue,
       boolean defaultOutputPath) throws Exception {
-    final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs);
-    final Path out = GridmixTestUtils.DEST.makeQualified(GridmixTestUtils.dfs);
-    final Path root = new Path("/user");
-    Configuration conf = null;
+    String[] argv = prepareArgs(defaultOutputPath,
+        EchoUserResolver.class.getName());
+    testGridmixExitCode(useDefaultQueue, argv, 0);
+  }
 
-    try{
-      ArrayList<String> argsList = new ArrayList<String>();
+  /**
+   * Setup args for Gridmix run and run gridmix and verify the exit code.
+   * @param useDefaultQueue whether to use default queue or not
+   * @param argv array of arguments to gridmix
+   * @param expectedExitCode the expected exit code of Gridmix run
+   */
+  static void testGridmixExitCode(boolean useDefaultQueue, String[] argv,
+      int expectedExitCode) throws Exception {
 
-      argsList.add("-D" + FilePool.GRIDMIX_MIN_FILE + "=0");
-      argsList.add("-D" + Gridmix.GRIDMIX_USR_RSV + "="
-          + EchoUserResolver.class.getName());
+    try {
+      // Allow synthetic users to create home directories
+      FileSystem.mkdirs(GridmixTestUtils.dfs, root,
+                        new FsPermission((short)0777));
 
-      // Set the config property gridmix.output.directory only if
-      // defaultOutputPath is false. If defaultOutputPath is true, then
-      // let us allow gridmix to use the path foo/gridmix/ as output dir.
-      if (!defaultOutputPath) {
-        argsList.add("-D" + Gridmix.GRIDMIX_OUT_DIR + "=" + out);
-      }
-      argsList.add("-generate");
-      argsList.add(String.valueOf(GENDATA) + "m");
-      argsList.add(in.toString());
-      argsList.add("-"); // ignored by DebugGridmix
-
-      String[] argv = argsList.toArray(new String[argsList.size()]);
-
-      DebugGridmix client = new DebugGridmix();
-      conf = new Configuration();
-      conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy);
-      conf.set("mapreduce.job.hdfs-servers", "");
-      if (useDefaultQueue) {
-        conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, false);
-        conf.set(GridmixJob.GRIDMIX_DEFAULT_QUEUE, "q1");
-      } else {
-        conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true);
-      }
-      conf = GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
-      // allow synthetic users to create home directories
-      GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short)0777));
-      GridmixTestUtils.dfs.setPermission(root, new FsPermission((short)0777));
-      int res = ToolRunner.run(conf, client, argv);
-      assertEquals("Client exited with nonzero status", 0, res);
-      client.checkMonitor(conf);
+      runGridmix(useDefaultQueue, argv, expectedExitCode);
     } catch (Exception e) {
       e.printStackTrace();
       // fail the test if there is an exception
       throw new RuntimeException(e);
     } finally {
-      in.getFileSystem(conf).delete(in, true);
-      out.getFileSystem(conf).delete(out, true);
-      root.getFileSystem(conf).delete(root,true);
+      deletePath(ioPath);
+      deletePath(out);
+      deletePath(root);
     }
   }
 
+  /** Run gridmix with specified arguments and verify the exit code. */
+  private static void runGridmix(boolean useDefaultQueue, String[] argv,
+      int expectedExitCode) throws Exception {
+
+    DebugGridmix client = new DebugGridmix();
+    Configuration conf = new Configuration();
+    conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy);
+    conf.set("mapreduce.job.hdfs-servers", "");
+    if (useDefaultQueue) {
+      conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, false);
+      conf.set(GridmixJob.GRIDMIX_DEFAULT_QUEUE, "q1");
+    } else {
+      conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true);
+    }
+    conf = GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
+
+    int res = ToolRunner.run(conf, client, argv);
+    assertEquals("Gridmix exited with wrong exit status",
+                 expectedExitCode, res);
+    if (expectedExitCode == 0) {
+      client.checkMonitor(conf);
+
+      // Verify the permissions of ioPath
+      FsPermission perm =
+          GridmixTestUtils.dfs.getFileStatus(ioPath).getPermission();
+      assertEquals("Wrong permissions of ioPath",
+                   new FsPermission((short)0777), perm);
+    }
+  }
+
+  /**
+   * Create the list of arguments for the Gridmix run.
+   * @param defaultOutputPath Should the default output path be used for the
+   *                          Gridmix run ?
+   * @param userResolver the user resolver for the Gridmix run
+   * @return the array of arguments to Gridmix
+   */
+  static String[] prepareArgs(boolean defaultOutputPath, String userResolver) {
+    ArrayList<String> argsList = new ArrayList<String>();
+
+    argsList.add("-D" + FilePool.GRIDMIX_MIN_FILE + "=0");
+    argsList.add("-D" + Gridmix.GRIDMIX_USR_RSV + "=" + userResolver);
+
+    // Set the config property gridmix.output.directory only if
+    // defaultOutputPath is false. If defaultOutputPath is true, then
+    // let us allow gridmix to use the path foo/gridmix/ as output dir.
+    if (!defaultOutputPath) {
+      argsList.add("-D" + Gridmix.GRIDMIX_OUT_DIR + "=" + out);
+    }
+
+    argsList.add("-generate");
+    argsList.add(String.valueOf(GENDATA) + "m");
+    argsList.add(ioPath.toString());
+    argsList.add("-"); // ignored by DebugGridmix
+    return argsList.toArray(new String[argsList.size()]);
+  }
+
+  /** If the given path exists, deletes it and its contents recursively */
+  private static void deletePath(Path dir) throws IOException {
+    if (GridmixTestUtils.dfs.exists(dir)) {
+      GridmixTestUtils.dfs.setPermission(dir, new FsPermission((short)0777));
+      GridmixTestUtils.dfs.delete(dir, true);
+    }
+  }
 }

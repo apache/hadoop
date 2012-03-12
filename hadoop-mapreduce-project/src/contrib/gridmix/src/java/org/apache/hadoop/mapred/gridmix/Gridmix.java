@@ -145,6 +145,18 @@ public class Gridmix extends Configured implements Tool {
   // Shutdown hook
   private final Shutdown sdh = new Shutdown();
 
+  /** Error while parsing/analyzing the arguments to Gridmix */
+  static final int ARGS_ERROR = 1;
+  /** Error while trying to start/setup the Gridmix run */
+  static final int STARTUP_FAILED_ERROR = 2;
+  /**
+   * If at least 1 distributed cache file is missing in the expected
+   * distributed cache dir, Gridmix cannot proceed with emulation of
+   * distributed cache load.
+   */
+  static final int MISSING_DIST_CACHE_FILES_ERROR = 3;
+
+
   Gridmix(String[] args) {
     summarizer = new Summarizer(args);
   }
@@ -160,31 +172,42 @@ public class Gridmix extends Configured implements Tool {
   }
   
   /**
-   * Write random bytes at the path &lt;inputDir&gt;.
+   * Write random bytes at the path &lt;inputDir&gt; if needed.
    * @see org.apache.hadoop.mapred.gridmix.GenerateData
+   * @return exit status
    */
-  protected void writeInputData(long genbytes, Path inputDir)
+  protected int writeInputData(long genbytes, Path inputDir)
       throws IOException, InterruptedException {
-    final Configuration conf = getConf();
+    if (genbytes > 0) {
+      final Configuration conf = getConf();
+
+      if (inputDir.getFileSystem(conf).exists(inputDir)) {
+        LOG.error("Gridmix input data directory " + inputDir
+                  + " already exists when -generate option is used.\n");
+        return STARTUP_FAILED_ERROR;
+      }
+
+      // configure the compression ratio if needed
+      CompressionEmulationUtil.setupDataGeneratorConfig(conf);
     
-    // configure the compression ratio if needed
-    CompressionEmulationUtil.setupDataGeneratorConfig(conf);
+      final GenerateData genData = new GenerateData(conf, inputDir, genbytes);
+      LOG.info("Generating " + StringUtils.humanReadableInt(genbytes) +
+               " of test data...");
+      launchGridmixJob(genData);
     
-    final GenerateData genData = new GenerateData(conf, inputDir, genbytes);
-    LOG.info("Generating " + StringUtils.humanReadableInt(genbytes) +
-        " of test data...");
-    launchGridmixJob(genData);
-    
-    FsShell shell = new FsShell(conf);
-    try {
-      LOG.info("Changing the permissions for inputPath " + inputDir.toString());
-      shell.run(new String[] {"-chmod","-R","777", inputDir.toString()});
-    } catch (Exception e) {
-      LOG.error("Couldnt change the file permissions " , e);
-      throw new IOException(e);
+      FsShell shell = new FsShell(conf);
+      try {
+        LOG.info("Changing the permissions for inputPath " + inputDir.toString());
+        shell.run(new String[] {"-chmod","-R","777", inputDir.toString()});
+      } catch (Exception e) {
+        LOG.error("Couldnt change the file permissions " , e);
+        throw new IOException(e);
+      }
+
+      LOG.info("Input data generation successful.");
     }
-    
-    LOG.info("Input data generation successful.");
+
+    return 0;
   }
 
   /**
@@ -363,31 +386,33 @@ public class Gridmix extends Configured implements Tool {
   private int runJob(Configuration conf, String[] argv)
     throws IOException, InterruptedException {
     if (argv.length < 2) {
+      LOG.error("Too few arguments to Gridmix.\n");
       printUsage(System.err);
-      return 1;
+      return ARGS_ERROR;
     }
-    
-    // Should gridmix generate distributed cache data ?
-    boolean generate = false;
+
     long genbytes = -1L;
     String traceIn = null;
     Path ioPath = null;
     URI userRsrc = null;
-    userResolver = ReflectionUtils.newInstance(
-                     conf.getClass(GRIDMIX_USR_RSV, 
-                       SubmitterUserResolver.class,
-                       UserResolver.class), 
-                     conf);
     try {
+      userResolver = ReflectionUtils.newInstance(conf.getClass(GRIDMIX_USR_RSV, 
+                       SubmitterUserResolver.class, UserResolver.class), conf);
+
       for (int i = 0; i < argv.length - 2; ++i) {
         if ("-generate".equals(argv[i])) {
           genbytes = StringUtils.TraditionalBinaryPrefix.string2long(argv[++i]);
-          generate = true;
+          if (genbytes <= 0) {
+            LOG.error("size of input data to be generated specified using "
+                      + "-generate option should be nonnegative.\n");
+            return ARGS_ERROR;
+          }
         } else if ("-users".equals(argv[i])) {
           userRsrc = new URI(argv[++i]);
         } else {
+          LOG.error("Unknown option " + argv[i] + " specified.\n");
           printUsage(System.err);
-          return 1;
+          return ARGS_ERROR;
         }
       }
 
@@ -397,10 +422,10 @@ public class Gridmix extends Configured implements Tool {
             LOG.warn("Ignoring the user resource '" + userRsrc + "'.");
           }
         } else {
-          System.err.println("\n\n" + userResolver.getClass()
-              + " needs target user list. Use -users option." + "\n\n");
+          LOG.error(userResolver.getClass()
+              + " needs target user list. Use -users option.\n");
           printUsage(System.err);
-          return 1;
+          return ARGS_ERROR;
         }
       } else if (userRsrc != null) {
         LOG.warn("Ignoring the user resource '" + userRsrc + "'.");
@@ -409,11 +434,32 @@ public class Gridmix extends Configured implements Tool {
       ioPath = new Path(argv[argv.length - 2]);
       traceIn = argv[argv.length - 1];
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error(e.toString() + "\n");
+      if (LOG.isDebugEnabled()) {
+        e.printStackTrace();
+      }
+
       printUsage(System.err);
-      return 1;
+      return ARGS_ERROR;
     }
-    return start(conf, traceIn, ioPath, genbytes, userResolver, generate);
+
+    // Create <ioPath> with 777 permissions
+    final FileSystem inputFs = ioPath.getFileSystem(conf);
+    ioPath = ioPath.makeQualified(inputFs);
+    boolean succeeded = false;
+    try {
+      succeeded = FileSystem.mkdirs(inputFs, ioPath,
+                                    new FsPermission((short)0777));
+    } catch(IOException e) {
+      // No need to emit this exception message
+    } finally {
+      if (!succeeded) {
+        LOG.error("Failed creation of <ioPath> directory " + ioPath + "\n");
+        return STARTUP_FAILED_ERROR;
+      }
+    }
+
+    return start(conf, traceIn, ioPath, genbytes, userResolver);
   }
 
   /**
@@ -429,17 +475,16 @@ public class Gridmix extends Configured implements Tool {
    * @param genbytes size of input data to be generated under the directory
    *                 &lt;ioPath&gt;/input/
    * @param userResolver gridmix user resolver
-   * @param generate true if -generate option was specified
    * @return exit code
    * @throws IOException
    * @throws InterruptedException
    */
   int start(Configuration conf, String traceIn, Path ioPath, long genbytes,
-      UserResolver userResolver, boolean generate)
+      UserResolver userResolver)
       throws IOException, InterruptedException {
     DataStatistics stats = null;
     InputStream trace = null;
-    ioPath = ioPath.makeQualified(ioPath.getFileSystem(conf));
+    int exitCode = 0;
 
     try {
       Path scratchDir = new Path(ioPath, conf.get(GRIDMIX_OUT_DIR, "gridmix"));
@@ -455,19 +500,21 @@ public class Gridmix extends Configured implements Tool {
         Path inputDir = getGridmixInputDataPath(ioPath);
         
         // Write input data if specified
-        if (genbytes > 0) {
-          writeInputData(genbytes, inputDir);
+        exitCode = writeInputData(genbytes, inputDir);
+        if (exitCode != 0) {
+          return exitCode;
         }
-        
+
         // publish the data statistics
         stats = GenerateData.publishDataStatistics(inputDir, genbytes, conf);
         
         // scan input dir contents
         submitter.refreshFilePool();
 
+        boolean shouldGenerate = (genbytes > 0);
         // set up the needed things for emulation of various loads
-        int exitCode = setupEmulation(conf, traceIn, scratchDir, ioPath,
-                                      generate);
+        exitCode = setupEmulation(conf, traceIn, scratchDir, ioPath,
+                                  shouldGenerate);
         if (exitCode != 0) {
           return exitCode;
         }
@@ -478,8 +525,12 @@ public class Gridmix extends Configured implements Tool {
         factory.start();
         statistics.start();
       } catch (Throwable e) {
-        LOG.error("Startup failed", e);
+        LOG.error("Startup failed. " + e.toString() + "\n");
+        if (LOG.isDebugEnabled()) {
+          e.printStackTrace();
+        }
         if (factory != null) factory.abort(); // abort pipeline
+        exitCode = STARTUP_FAILED_ERROR;
       } finally {
         // signal for factory to start; sets start time
         startFlag.countDown();
@@ -510,7 +561,7 @@ public class Gridmix extends Configured implements Tool {
       }
       IOUtils.cleanup(LOG, trace);
     }
-    return 0;
+    return exitCode;
   }
 
   /**

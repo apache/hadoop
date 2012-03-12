@@ -204,7 +204,8 @@ public class TestDistCacheEmulation {
 
     dce = createDistributedCacheEmulator(jobConf, ioPath, generate);
     int exitCode = dce.setupGenerateDistCacheData(jobProducer);
-    int expectedExitCode = generate ? 0 : dce.MISSING_DIST_CACHE_FILES_ERROR;
+    int expectedExitCode =
+        generate ? 0 : Gridmix.MISSING_DIST_CACHE_FILES_ERROR;
     assertEquals("setupGenerateDistCacheData failed.",
                  expectedExitCode, exitCode);
 
