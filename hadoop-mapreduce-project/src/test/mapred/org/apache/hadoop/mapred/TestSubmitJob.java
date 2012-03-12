@@ -32,9 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -147,12 +144,6 @@ public class TestSubmitJob {
         ClientProtocol.versionID, JobTracker.getAddress(conf), ugi, 
         conf, NetUtils.getSocketFactory(conf, ClientProtocol.class));
   }
-
-  static org.apache.hadoop.hdfs.protocol.ClientProtocol getDFSClient(
-      Configuration conf, UserGroupInformation ugi) throws IOException {
-    return new ClientNamenodeProtocolTranslatorPB(NameNode.getAddress(conf),
-        conf, ugi);
-  }
   
   /**
    * Submit a job and check if the files are accessible to other users.
@@ -219,16 +210,21 @@ public class TestSubmitJob {
       // create user2
       UserGroupInformation user2 = 
         TestMiniMRWithDFSWithDistinctUsers.createUGI("user2", false);
-      JobConf conf_other = mr.createJobConf();
-      org.apache.hadoop.hdfs.protocol.ClientProtocol client = 
-        getDFSClient(conf_other, user2);
+      final JobConf conf_other = mr.createJobConf();
+
+      FileSystem fs2 = user2.doAs(new PrivilegedExceptionAction<FileSystem>() {
+        @Override
+        public FileSystem run() throws Exception {
+          return FileSystem.get(conf_other);
+        }
+      });
 
       // try accessing mapred.system.dir/jobid/*
       try {
-        String path = new URI(jt.getSystemDir()).getPath();
+        Path path = new Path(jt.getSystemDir());
         LOG.info("Try listing the mapred-system-dir as the user (" 
                  + user2.getUserName() + ")");
-        client.getListing(path, HdfsFileStatus.EMPTY_NAME, false);
+        fs2.listStatus(path);
         fail("JobTracker system dir is accessible to others");
       } catch (IOException ioe) {
         assertTrue(ioe.toString(),
@@ -241,8 +237,7 @@ public class TestSubmitJob {
       try {
         LOG.info("Try accessing the job folder for job " + id + " as the user (" 
                  + user2.getUserName() + ")");
-        client.getListing(jobSubmitDirpath.toUri().getPath(),
-          HdfsFileStatus.EMPTY_NAME, false);
+        fs2.listStatus(jobSubmitDirpath);
         fail("User's staging folder is accessible to others");
       } catch (IOException ioe) {
         assertTrue(ioe.toString(),
