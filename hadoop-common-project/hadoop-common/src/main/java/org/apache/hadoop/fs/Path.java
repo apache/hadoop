@@ -161,7 +161,9 @@ public class Path implements Comparable {
   private String normalizePath(String path) {
     // remove double slashes & backslashes
     path = StringUtils.replace(path, "//", "/");
-    path = StringUtils.replace(path, "\\", "/");
+    if (Path.WINDOWS) {
+      path = StringUtils.replace(path, "\\", "/");
+    }
     
     // trim trailing slash from non-root path (ignoring windows drive)
     int minLength = hasWindowsDrive(path, true) ? 4 : 1;
