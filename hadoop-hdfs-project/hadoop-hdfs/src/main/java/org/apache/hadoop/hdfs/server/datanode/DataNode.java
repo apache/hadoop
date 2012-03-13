@@ -235,7 +235,7 @@ public class DataNode extends Configured
   
   volatile boolean shouldRun = true;
   private BlockPoolManager blockPoolManager;
-  public volatile FSDatasetInterface<? extends FSVolumeInterface> data = null;
+  volatile FSDatasetInterface<? extends FSVolumeInterface> data = null;
   private String clusterId = null;
 
   public final static String EMPTY_DEL_HINT = "";

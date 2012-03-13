@@ -1037,22 +1037,13 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
   }
 
   @Override // FSDatasetInterface
-  public boolean metaFileExists(ExtendedBlock b) throws IOException {
-    return getMetaFile(b).exists();
-  }
-  
-  @Override // FSDatasetInterface
-  public long getMetaDataLength(ExtendedBlock b) throws IOException {
-    File checksumFile = getMetaFile(b);
-    return checksumFile.length();
-  }
-
-  @Override // FSDatasetInterface
   public MetaDataInputStream getMetaDataInputStream(ExtendedBlock b)
       throws IOException {
-    File checksumFile = getMetaFile(b);
-    return new MetaDataInputStream(new FileInputStream(checksumFile),
-                                                    checksumFile.length());
+    final File meta = getMetaFile(b);
+    if (meta == null || !meta.exists()) {
+      return null;
+    }
+    return new MetaDataInputStream(new FileInputStream(meta), meta.length());
   }
     
   private final DataNode datanode;
@@ -1211,18 +1202,6 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
       throw new IOException("Block " + b + " is not valid.");
     }
     return f;
-  }
-  
-  @Override // FSDatasetInterface
-  public InputStream getBlockInputStream(ExtendedBlock b)
-      throws IOException {
-    File f = getBlockFileNoExistsCheck(b);
-    try {
-      return new FileInputStream(f);
-    } catch (FileNotFoundException fnfe) {
-      throw new IOException("Block " + b + " is not valid. " +
-          "Expected block file at " + f + " does not exist.");
-    }
   }
   
   /**
