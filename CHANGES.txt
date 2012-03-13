@@ -7,6 +7,8 @@ Release 1.0.2 - unreleased
     HADOOP-7206. Support Snappy compression. (Issei Yoshida and
     Alejandro Abdelnur via vinodkv).
 
+    HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
+
   IMPROVEMENTS
 
     MAPREDUCE-3773. Add queue metrics with buckets for job run times. (omalley

@@ -135,4 +135,12 @@ public interface NameNodeMXBean {
    * @return the decommissioning node information
    */
   public String getDecomNodes();
+
+  /**
+   * Get status information about the directories storing image and edits logs
+   * of the NN.
+   * 
+   * @return the name dir status information, as a JSON string.
+   */
+  public String getNameDirStatuses();
 }

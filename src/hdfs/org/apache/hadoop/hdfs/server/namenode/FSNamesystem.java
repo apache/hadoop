@@ -83,6 +83,8 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
@@ -5792,6 +5794,30 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
+  }
+
+  @Override  // NameNodeMXBean
+  public String getNameDirStatuses() {
+    Map<String, Map<File, StorageDirType>> statusMap =
+      new HashMap<String, Map<File, StorageDirType>>();
+    
+    Map<File, StorageDirType> activeDirs = new HashMap<File, StorageDirType>();
+    for (Iterator<StorageDirectory> it
+        = getFSImage().dirIterator(); it.hasNext();) {
+      StorageDirectory st = it.next();
+      activeDirs.put(st.getRoot(), st.getStorageDirType());
+    }
+    statusMap.put("active", activeDirs);
+    
+    List<Storage.StorageDirectory> removedStorageDirs
+        = getFSImage().getRemovedStorageDirs();
+    Map<File, StorageDirType> failedDirs = new HashMap<File, StorageDirType>();
+    for (StorageDirectory st : removedStorageDirs) {
+      failedDirs.put(st.getRoot(), st.getStorageDirType());
+    }
+    statusMap.put("failed", failedDirs);
+    
+    return JSON.toString(statusMap);
   }
 
   private long getLastContact(DatanodeDescriptor alivenode) {
