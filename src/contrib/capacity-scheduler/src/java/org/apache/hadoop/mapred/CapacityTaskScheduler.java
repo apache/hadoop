@@ -344,7 +344,7 @@ class CapacityTaskScheduler extends TaskScheduler {
           // starved
           if ((getPendingTasks(j) != 0 &&
               !hasSufficientReservedTaskTrackers(j)) &&
-                (taskTracker.getAvailableSlots(type) !=
+                !(j.getNumSlotsPerTask(type) >
                  getTTMaxSlotsForType(taskTrackerStatus, type))) {
             // Reserve all available slots on this tasktracker
             LOG.info(j.getJobID() + ": Reserving "
