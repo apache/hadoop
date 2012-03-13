@@ -667,9 +667,8 @@ public class SimulatedFSDataset
     return binfo;
   }
 
-  @Override // FSDatasetInterface
-  public synchronized InputStream getBlockInputStream(ExtendedBlock b)
-      throws IOException {
+  synchronized InputStream getBlockInputStream(ExtendedBlock b
+      ) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
@@ -694,15 +693,9 @@ public class SimulatedFSDataset
     throw new IOException("Not supported");
   }
 
-  /**
-   * Returns metaData of block b as an input stream
-   * @param b - the block for which the metadata is desired
-   * @return metaData of block b as an input stream
-   * @throws IOException - block does not exist or problems accessing
-   *  the meta file
-   */
-  private synchronized InputStream getMetaDataInStream(ExtendedBlock b)
-                                              throws IOException {
+  @Override // FSDatasetInterface
+  public synchronized MetaDataInputStream getMetaDataInputStream(ExtendedBlock b
+      ) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
@@ -712,40 +705,11 @@ public class SimulatedFSDataset
       throw new IOException("Block " + b + 
           " is being written, its meta cannot be read");
     }
-    return binfo.getMetaIStream();
-  }
- 
-  @Override // FSDatasetInterface
-  public synchronized long getMetaDataLength(ExtendedBlock b)
-      throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
-    BInfo binfo = map.get(b.getLocalBlock());
-    if (binfo == null) {
-      throw new IOException("No such Block " + b );  
-    }
-    if (!binfo.finalized) {
-      throw new IOException("Block " + b +
-          " is being written, its metalength cannot be read");
-    }
-    return binfo.getMetaIStream().getLength();
-  }
-  
-  @Override // FSDatasetInterface
-  public MetaDataInputStream getMetaDataInputStream(ExtendedBlock b)
-      throws IOException {
-     return new MetaDataInputStream(getMetaDataInStream(b), 
-                                    getMetaDataLength(b));
+    final SimulatedInputStream sin = binfo.getMetaIStream();
+    return new MetaDataInputStream(sin, sin.getLength());
   }
 
-  @Override // FSDatasetInterface
-  public synchronized boolean metaFileExists(ExtendedBlock b) throws IOException {
-    if (!isValidBlock(b)) {
-          throw new IOException("Block " + b +
-              " is valid, and cannot be written to.");
-      }
-    return true; // crc exists for all valid blocks
-  }
-
+  @Override
   public void checkDataDir() throws DiskErrorException {
     // nothing to check for simulated data set
   }

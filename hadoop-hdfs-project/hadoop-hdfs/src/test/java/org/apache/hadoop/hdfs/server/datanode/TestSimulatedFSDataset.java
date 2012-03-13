@@ -102,7 +102,7 @@ public class TestSimulatedFSDataset extends TestCase {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
     ExtendedBlock b = new ExtendedBlock(bpid, 1, 5, 0);
     try {
-      assertFalse(fsdataset.metaFileExists(b));
+      assertTrue(fsdataset.getMetaDataInputStream(b) == null);
       assertTrue("Expected an IO exception", false);
     } catch (IOException e) {
       // ok - as expected

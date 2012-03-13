@@ -219,9 +219,10 @@ class BlockSender implements java.io.Closeable {
         (!is32Bit || length <= Integer.MAX_VALUE);
 
       DataChecksum csum;
-      if (!corruptChecksumOk || datanode.data.metaFileExists(block)) {
-        checksumIn = new DataInputStream(new BufferedInputStream(datanode.data
-            .getMetaDataInputStream(block), HdfsConstants.IO_FILE_BUFFER_SIZE));
+      final InputStream metaIn = datanode.data.getMetaDataInputStream(block);
+      if (!corruptChecksumOk || metaIn != null) {
+        checksumIn = new DataInputStream(
+            new BufferedInputStream(metaIn, HdfsConstants.IO_FILE_BUFFER_SIZE));
 
         // read and handle the common header here. For now just a version
         BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);

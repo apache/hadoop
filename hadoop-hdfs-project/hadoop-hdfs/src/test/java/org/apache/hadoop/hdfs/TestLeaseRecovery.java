@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.TestInterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -117,8 +118,8 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
           dfs.dfs.getNamenode(), filestr).getBlock();
       long currentGS = lastblock.getGenerationStamp();
       for(int i = 0; i < REPLICATION_NUM; i++) {
-        updatedmetainfo[i] = datanodes[i].data.getStoredBlock(lastblock
-            .getBlockPoolId(), lastblock.getBlockId());
+        updatedmetainfo[i] = DataNodeTestUtils.getFSDataset(datanodes[i]).getStoredBlock(
+            lastblock.getBlockPoolId(), lastblock.getBlockId());
         assertEquals(lastblock.getBlockId(), updatedmetainfo[i].getBlockId());
         assertEquals(oldSize, updatedmetainfo[i].getNumBytes());
         assertEquals(currentGS, updatedmetainfo[i].getGenerationStamp());

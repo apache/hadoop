@@ -39,8 +39,8 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlo
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * This is an interface for the underlying storage that stores blocks for
@@ -124,14 +124,6 @@ public interface FSDatasetInterface<V extends FSDatasetInterface.FSVolumeInterfa
       File diskMetaFile, FSVolumeInterface vol);
 
   /**
-   * Returns the length of the metadata file of the specified block
-   * @param b - the block for which the metadata length is desired
-   * @return the length of the metadata file for the specified block.
-   * @throws IOException
-   */
-  public long getMetaDataLength(ExtendedBlock b) throws IOException;
-  
-  /**
    * This class provides the input stream and length of the metadata
    * of a block
    *
@@ -149,22 +141,13 @@ public interface FSDatasetInterface<V extends FSDatasetInterface.FSVolumeInterfa
   }
   
   /**
-   * Returns metaData of block b as an input stream (and its length)
    * @param b - the block
-   * @return the metadata input stream; 
+   * @return a stream if the meta-data of the block exists;
+   *         otherwise, return null.
    * @throws IOException
    */
-  public MetaDataInputStream getMetaDataInputStream(ExtendedBlock b)
-        throws IOException;
-  
-  /**
-   * Does the meta file exist for this block?
-   * @param b - the block
-   * @return true of the metafile for specified block exits
-   * @throws IOException
-   */
-  public boolean metaFileExists(ExtendedBlock b) throws IOException;
-
+  public MetaDataInputStream getMetaDataInputStream(ExtendedBlock b
+      ) throws IOException;
 
   /**
    * Returns the specified block's on-disk length (excluding metadata)
@@ -191,16 +174,7 @@ public interface FSDatasetInterface<V extends FSDatasetInterface.FSVolumeInterfa
   /**
    * @return the generation stamp stored with the block.
    */
-  public Block getStoredBlock(String bpid, long blkid)
-      throws IOException;
-
-  /**
-   * Returns an input stream to read the contents of the specified block
-   * @param b
-   * @return an input stream to read the contents of the specified block
-   * @throws IOException
-   */
-  public InputStream getBlockInputStream(ExtendedBlock b) throws IOException;
+  public Block getStoredBlock(String bpid, long blkid) throws IOException;
   
   /**
    * Returns an input stream at specified offset of the specified block
@@ -408,11 +382,6 @@ public interface FSDatasetInterface<V extends FSDatasetInterface.FSVolumeInterfa
      */
   public void checkDataDir() throws DiskErrorException;
       
-    /**
-     * Stringifies the name of the storage
-     */
-  public String toString();
-  
   /**
    * Shutdown the FSDataset
    */

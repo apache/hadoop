@@ -272,8 +272,8 @@ public class TestFileAppend3 extends junit.framework.TestCase {
       }
       for(DatanodeInfo datanodeinfo : lb.getLocations()) {
         final DataNode dn = cluster.getDataNode(datanodeinfo.getIpcPort());
-        final Block metainfo = dn.data.getStoredBlock(blk.getBlockPoolId(), 
-            blk.getBlockId());
+        final Block metainfo = DataNodeTestUtils.getFSDataset(dn).getStoredBlock(
+            blk.getBlockPoolId(), blk.getBlockId());
         assertEquals(size, metainfo.getNumBytes());
       }
     }

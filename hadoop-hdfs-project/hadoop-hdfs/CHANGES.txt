@@ -225,6 +225,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-2731. Add command to bootstrap the Standby Node's name directories
     from the Active NameNode. (todd)
 
+    HDFS-3082. Clean up FSDatasetInterface and change DataNode.data to package
+    private.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)

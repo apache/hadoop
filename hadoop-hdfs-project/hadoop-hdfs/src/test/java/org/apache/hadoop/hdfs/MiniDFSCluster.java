@@ -1744,7 +1744,7 @@ public class MiniDFSCluster {
     
     // If datanode dataset is not initialized then wait
     for (DataNodeProperties dn : dataNodes) {
-      if (dn.datanode.data == null) {
+      if (DataNodeTestUtils.getFSDataset(dn.datanode) == null) {
         return true;
       }
     }
