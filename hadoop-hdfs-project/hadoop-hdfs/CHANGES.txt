@@ -6,6 +6,8 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-2676. Remove Avro RPC. (suresh)
 
+    HDFS-2303. Unbundle jsvc. (Roman Shaposhnik and Mingjie Lai via eli)
+
   NEW FEATURES
 
     HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
