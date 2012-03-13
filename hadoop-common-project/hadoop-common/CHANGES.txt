@@ -265,6 +265,9 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8140. dfs -getmerge should process its argments better (Daryn Sharp
     via bobby)
 
+    HADOOP-8164. Back slash as path separator is handled for Windows only.
+    (Daryn Sharp via suresh)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
