@@ -133,7 +133,14 @@ if [ "$starting_secure_dn" = "true" ]; then
    HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
-  exec "$HADOOP_HDFS_HOME/libexec/jsvc" \
+  JSVC=$JSVC_HOME/jsvc
+  if [ ! -f $JSVC ]; then
+    echo "JSVC_HOME is not set correctly so jsvc can not be found. Jsvc is required to run secure datanodes. "
+    echo "Please download and install jsvc from http://archive.apache.org/dist/commons/daemon/binaries/ "\
+      "and set JSVC_HOME to the directory containing the jsvc binary."
+    exit
+  fi
+  exec "$JSVC" \
            -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
            -errfile "$HADOOP_LOG_DIR/jsvc.err" \
            -pidfile "$HADOOP_SECURE_DN_PID" \

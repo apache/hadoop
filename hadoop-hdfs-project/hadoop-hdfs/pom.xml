@@ -329,49 +329,6 @@
               </tasks>
             </configuration>
           </execution>
-          <execution>
-            <id>xprepare-package-hadoop-daemon</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target unless="windows.build">
-                <condition property="commons.daemon.os.name" value="darwin">
-                    <os name="Mac OS X"/>
-                </condition>
-                <condition property="commons.daemon.os.arch" value="universal">
-                    <os name="Mac OS X"/>
-                </condition>
-                <condition property="commons.daemon.os.name" value="linux">
-                    <os name="Linux" />
-                </condition>
-                <!-- Set commons.daemon.os.arch to either i686 or x86_64 for GNU/Linux -->
-                <condition property="commons.daemon.os.arch" value="x86_64">
-                    <os name="Linux" arch="amd64"/>
-                </condition>
-                <condition property="commons.daemon.os.arch" value="i686">
-                    <os name="Linux" /> <!-- This is a guess -->
-                </condition>
-                <property name="commons.daemon.tar.name"
-                          value="commons-daemon-${commons-daemon.version}-bin-${commons.daemon.os.name}-${commons.daemon.os.arch}.tar.gz"/>
-
-                <mkdir dir="downloads"/>
-                <get src="http://archive.apache.org/dist/commons/daemon/binaries/${commons-daemon.version}/${commons.daemon.os.name}/${commons.daemon.tar.name}"
-                    dest="downloads/${commons.daemon.tar.name}" verbose="true" skipexisting="true"/>
-                <delete dir="${project.build.directory}/commons-daemon.staging"/>
-                <mkdir dir="${project.build.directory}/commons-daemon.staging"/>
-                <untar compression="gzip" src="${basedir}/downloads/${commons.daemon.tar.name}"
-                       dest="${project.build.directory}/commons-daemon.staging"/>
-                <copy file="${project.build.directory}/commons-daemon.staging/jsvc"
-                      todir="${project.build.directory}/${project.artifactId}-${project.version}/libexec"
-                      verbose="true"/>
-                <chmod perm="ugo+x" type="file">
-                  <fileset file="${project.build.directory}/${project.artifactId}-${project.version}/libexec/jsvc"/>
-                </chmod>
-              </target>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <plugin>
