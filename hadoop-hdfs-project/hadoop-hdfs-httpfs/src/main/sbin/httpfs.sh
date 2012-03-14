@@ -29,7 +29,7 @@ done
 BASEDIR=`dirname ${PRG}`
 BASEDIR=`cd ${BASEDIR}/..;pwd`
 
-source ${BASEDIR}/libexec/httpfs-config.sh
+source ${HADOOP_LIBEXEC_DIR:-${BASEDIR}/libexec}/httpfs-config.sh
 
 # The Java System property 'httpfs.http.port' it is not used by HttpFS,
 # it is used in Tomcat's server.xml configuration file
@@ -55,8 +55,8 @@ if [ "${1}" = "stop" ]; then
 fi
 
 if [ "${HTTPFS_SILENT}" != "true" ]; then
-  ${CATALINA_BASE:-"${BASEDIR}/share/hadoop/httpfs/tomcat"}/bin/catalina.sh "$@"
+  ${HTTPFS_CATALINA_HOME}/bin/catalina.sh "$@"
 else
-  ${CATALINA_BASE:-"${BASEDIR}/share/hadoop/httpfs/tomcat"}/bin/catalina.sh "$@" > /dev/null
+  ${HTTPFS_CATALINA_HOME}/bin/catalina.sh "$@" > /dev/null
 fi
 
