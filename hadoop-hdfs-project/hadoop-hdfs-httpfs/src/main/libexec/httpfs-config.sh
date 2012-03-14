@@ -150,6 +150,13 @@ else
   print "Using   CATALINA_BASE:       ${CATALINA_BASE}"
 fi
 
+if [ "${HTTPFS_CATALINA_HOME}" = "" ]; then
+  export HTTPFS_CATALINA_HOME=${CATALINA_BASE}
+  print "Setting HTTPFS_CATALINA_HOME:       ${HTTPFS_CATALINA_HOME}"
+else
+  print "Using   HTTPFS_CATALINA_HOME:       ${HTTPFS_CATALINA_HOME}"
+fi
+
 if [ "${CATALINA_OUT}" = "" ]; then
   export CATALINA_OUT=${HTTPFS_LOG}/httpfs-catalina.out
   print "Setting CATALINA_OUT:        ${CATALINA_OUT}"
