@@ -114,6 +114,7 @@
         <artifactId>maven-javadoc-plugin</artifactId>
         <configuration>
           <linksource>true</linksource>
+          <maxmemory>512m</maxmemory>
           <quiet>true</quiet>
           <verbose>false</verbose>
           <source>${maven.compile.source}</source>
