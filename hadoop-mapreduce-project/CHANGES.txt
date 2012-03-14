@@ -64,6 +64,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3974. TestSubmitJob in MR1 tests doesn't compile after HDFS-162
     merge. (atm)
 
+    MAPREDUCE-4007. JobClient getJob(JobID) should return NULL if the job 
+    does not exist (for backwards compatibility) (tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
