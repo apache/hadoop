@@ -14,6 +14,8 @@ Release 0.22.1 - Unreleased
 
     HDFS-2886. CreateEditLogs should generate a realistic edit log. (shv)
 
+    HDFS-1601. Pipeline ACKs are sent as lots of tiny TCP packets (todd)
+
   BUG FIXES
 
     HDFS-1910. NameNode should not save fsimage twice. (shv)
