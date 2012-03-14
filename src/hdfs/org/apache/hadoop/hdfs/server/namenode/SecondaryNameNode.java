@@ -426,7 +426,7 @@ public class SecondaryNameNode implements Runnable {
     namenode.rollFsImage();
     checkpointImage.endCheckpoint();
 
-    LOG.warn("Checkpoint done. New Image Size: " 
+    LOG.info("Checkpoint done. New Image Size: "
               + checkpointImage.getFsImageName().length());
   }
 

@@ -1,11 +1,16 @@
 Hadoop Change Log
 
+    HDFS-3075. Backport HADOOP-4885: Try to restore failed name-node storage
+    directories at checkpoint time.  (Brandon Li via szetszwo)
+
 Release 1.0.2 - unreleased
 
   NEW FEATURES
 
     HADOOP-7206. Support Snappy compression. (Issei Yoshida and
     Alejandro Abdelnur via vinodkv).
+
+    HDFS-2701. Cleanup FS* processIOError methods. (eli)
 
     HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
 
@@ -35,6 +40,11 @@ Release 1.0.2 - unreleased
 
     MAPREDUCE-764. Fix TypedBytesInput.readRaw to preserve custom type codes.  
     (Klaas Bosteels via acmurthy) 
+
+    HDFS-2703. removedStorageDirs is not updated everywhere we remove
+    a storage dir. (eli)
+
+    HDFS-2702. A single failed name dir can cause the NN to exit. (eli)
 
 Release 1.0.1 - 2012.02.14
 
