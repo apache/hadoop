@@ -130,6 +130,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8154. DNS#getIPs shouldn't silently return the local host
     IP for bogus interface names. (eli)
 
+    HADOOP-8169.  javadoc generation fails with java.lang.OutOfMemoryError:
+    Java heap space (tgraves via bobby)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
