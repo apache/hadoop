@@ -1238,18 +1238,26 @@ public class FSEditLog {
     if (existsNew()) {
       Iterator<StorageDirectory> it =
         fsimage.dirIterator(NameNodeDirType.EDITS);
+      StringBuilder b = new StringBuilder();
       while (it.hasNext()) {
         File editsNew = getEditNewFile(it.next());
+        b.append("\n  ").append(editsNew);
         if (!editsNew.exists()) {
           throw new IOException(
               "Inconsistent existence of edits.new " + editsNew);
         }
       }
-      return; // nothing to do, edits.new exists!
+      FSNamesystem.LOG.warn("Cannot roll edit log," +
+          " edits.new files already exists in all healthy directories:" + b);
+      return;
     }
 
     close(); // close existing edit log
 
+    // After edit streams are closed, healthy edits files should be identical,
+    // and same to fsimage files
+    fsimage.restoreStorageDirs();
+    
     //
     // Open edits.new
     //

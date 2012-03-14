@@ -163,6 +163,9 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-4001. Improve MAPREDUCE-3789's fix logic by looking at job's slot demands instead. (harsh)
 
+    HDFS-3075. Backport HADOOP-4885: Try to restore failed name-node storage
+    directories at checkpoint time.  (Brandon Li via szetszwo)
+
 Release 1.0.2 - unreleased
 
   NEW FEATURES
