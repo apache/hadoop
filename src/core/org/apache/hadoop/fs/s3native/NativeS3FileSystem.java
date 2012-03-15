@@ -61,6 +61,17 @@ import org.apache.hadoop.util.Progressable;
  * Unlike {@link org.apache.hadoop.fs.s3.S3FileSystem} this implementation
  * stores files on S3 in their
  * native form so they can be read by other S3 tools.
+ *
+ * A note about directories. S3 of course has no "native" support for them.
+ * The idiom we choose then is: for any directory created by this class,
+ * we use an empty object "#{dirpath}_$folder$" as a marker.
+ * Further, to interoperate with other S3 tools, we also accept the following:
+ *  - an object "#{dirpath}/' denoting a directory marker
+ *  - if there exists any objects with the prefix "#{dirpath}/", then the
+ *    directory is said to exist
+ *  - if both a file with the name of a directory and a marker for that
+ *    directory exists, then the *file masks the directory*, and the directory
+ *    is never returned.
  * </p>
  * @see org.apache.hadoop.fs.s3.S3FileSystem
  */
@@ -85,6 +96,7 @@ public class NativeS3FileSystem extends FileSystem {
       this.key = key;
     }
     
+    @Override
     public synchronized int read() throws IOException {
       int result = in.read();
       if (result != -1) {
@@ -92,6 +104,7 @@ public class NativeS3FileSystem extends FileSystem {
       }
       return result;
     }
+    @Override
     public synchronized int read(byte[] b, int off, int len)
       throws IOException {
       
@@ -102,18 +115,23 @@ public class NativeS3FileSystem extends FileSystem {
       return result;
     }
 
+    @Override
     public void close() throws IOException {
       in.close();
     }
 
+    @Override
     public synchronized void seek(long pos) throws IOException {
       in.close();
+      LOG.info("Opening key '" + key + "' for reading at position '" + pos + "'");
       in = store.retrieve(key, pos);
       this.pos = pos;
     }
+    @Override
     public synchronized long getPos() throws IOException {
       return pos;
     }
+    @Override
     public boolean seekToNewSource(long targetPos) throws IOException {
       return false;
     }
@@ -134,6 +152,7 @@ public class NativeS3FileSystem extends FileSystem {
       this.conf = conf;
       this.key = key;
       this.backupFile = newBackupFile();
+      LOG.info("OutputStream for key '" + key + "' writing to tempfile '" + this.backupFile + "'");
       try {
         this.digest = MessageDigest.getInstance("MD5");
         this.backupStream = new BufferedOutputStream(new DigestOutputStream(
@@ -168,6 +187,7 @@ public class NativeS3FileSystem extends FileSystem {
       }
 
       backupStream.close();
+      LOG.info("OutputStream for key '" + key + "' closed. Now beginning upload");
       
       try {
         byte[] md5Hash = digest == null ? null : digest.digest();
@@ -179,7 +199,7 @@ public class NativeS3FileSystem extends FileSystem {
         super.close();
         closed = true;
       } 
-
+      LOG.info("OutputStream for key '" + key + "' upload complete");
     }
 
     @Override
@@ -191,8 +211,6 @@ public class NativeS3FileSystem extends FileSystem {
     public void write(byte[] b, int off, int len) throws IOException {
       backupStream.write(b, off, len);
     }
-    
-    
   }
   
   private URI uri;
@@ -236,6 +254,7 @@ public class NativeS3FileSystem extends FileSystem {
     Map<String, RetryPolicy> methodNameToPolicyMap =
       new HashMap<String, RetryPolicy>();
     methodNameToPolicyMap.put("storeFile", methodPolicy);
+    methodNameToPolicyMap.put("rename", methodPolicy);
     
     return (NativeFileSystemStore)
       RetryProxy.create(NativeFileSystemStore.class, store,
@@ -246,7 +265,11 @@ public class NativeS3FileSystem extends FileSystem {
     if (!path.isAbsolute()) {
       throw new IllegalArgumentException("Path must be absolute: " + path);
     }
-    return path.toUri().getPath().substring(1); // remove initial slash
+    String ret = path.toUri().getPath().substring(1); // remove initial slash
+    if (ret.endsWith("/") && (ret.indexOf("/") != ret.length() - 1)) {
+      ret = ret.substring(0, ret.length() -1);
+  }
+    return ret;
   }
   
   private static Path keyToPath(String key) {
@@ -261,6 +284,7 @@ public class NativeS3FileSystem extends FileSystem {
   }
 
   /** This optional operation is not yet supported. */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     throw new IOException("Not supported");
@@ -287,27 +311,41 @@ public class NativeS3FileSystem extends FileSystem {
   }
 
   @Override
-  public boolean delete(Path f, boolean recursive) throws IOException {
+  public boolean delete(Path f, boolean recurse) throws IOException {
     FileStatus status;
     try {
       status = getFileStatus(f);
     } catch (FileNotFoundException e) {
+      LOG.debug("Delete called for '" + f + "' but file does not exist, so returning false");
       return false;
     }
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     if (status.isDir()) {
-      FileStatus[] contents = listStatus(f);
-      if (!recursive && contents.length > 0) {
-        throw new IOException("Directory " + f.toString() + " is not empty.");
+      if (!recurse && listStatus(f).length > 0) {
+        throw new IOException("Can not delete " + f + " at is a not empty directory and recurse option is false");
       }
-      for (FileStatus p : contents) {
-        if (!delete(p.getPath(), recursive)) {
-          return false;
+
+      createParent(f);
+
+      LOG.debug("Deleting directory '" + f  + "'");
+      String priorLastKey = null;
+      do {
+        PartialListing listing = store.list(key, S3_MAX_LISTING_LENGTH, priorLastKey, true);
+        for (FileMetadata file : listing.getFiles()) {
+          store.delete(file.getKey());
         }
+        priorLastKey = listing.getPriorLastKey();
+      } while (priorLastKey != null);
+
+      try {
+        store.delete(key + FOLDER_SUFFIX);
+      } catch (FileNotFoundException e) {
+        //this is fine, we don't require a marker
       }
-      store.delete(key + FOLDER_SUFFIX);
     } else {
+      LOG.debug("Deleting file '" + f + "'");
+      createParent(f);
       store.delete(key);
     }
     return true;
@@ -315,7 +353,6 @@ public class NativeS3FileSystem extends FileSystem {
 
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
-    
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     
@@ -323,23 +360,28 @@ public class NativeS3FileSystem extends FileSystem {
       return newDirectory(absolutePath);
     }
     
+    LOG.debug("getFileStatus retrieving metadata for key '" + key + "'");
     FileMetadata meta = store.retrieveMetadata(key);
     if (meta != null) {
+      LOG.debug("getFileStatus returning 'file' for key '" + key + "'");
       return newFile(meta, absolutePath);
     }
     if (store.retrieveMetadata(key + FOLDER_SUFFIX) != null) {
+      LOG.debug("getFileStatus returning 'directory' for key '" + key + "' as '"
+          + key + FOLDER_SUFFIX + "' exists");
       return newDirectory(absolutePath);
     }
     
+    LOG.debug("getFileStatus listing key '" + key + "'");
     PartialListing listing = store.list(key, 1);
     if (listing.getFiles().length > 0 ||
         listing.getCommonPrefixes().length > 0) {
+      LOG.debug("getFileStatus returning 'directory' for key '" + key + "' as it has contents");
       return newDirectory(absolutePath);
     }
     
-    throw new FileNotFoundException(absolutePath +
-        ": No such file or directory.");
-    
+    LOG.debug("getFileStatus could not find key '" + key + "'");
+    throw new FileNotFoundException("No such file or directory '" + absolutePath + "'");
   }
 
   @Override
@@ -372,16 +414,20 @@ public class NativeS3FileSystem extends FileSystem {
     Set<FileStatus> status = new TreeSet<FileStatus>();
     String priorLastKey = null;
     do {
-      PartialListing listing = store.list(key, S3_MAX_LISTING_LENGTH, 
-          priorLastKey);
+      PartialListing listing = store.list(key, S3_MAX_LISTING_LENGTH, priorLastKey, false);
       for (FileMetadata fileMetadata : listing.getFiles()) {
         Path subpath = keyToPath(fileMetadata.getKey());
         String relativePath = pathUri.relativize(subpath.toUri()).getPath();
-        if (relativePath.endsWith(FOLDER_SUFFIX)) {
-          status.add(newDirectory(new Path(absolutePath,
-              relativePath.substring(0,
-                  relativePath.indexOf(FOLDER_SUFFIX)))));
-        } else {
+
+        if (fileMetadata.getKey().equals(key + "/")) {
+          // this is just the directory we have been asked to list
+        }
+        else if (relativePath.endsWith(FOLDER_SUFFIX)) {
+          status.add(newDirectory(new Path(
+              absolutePath,
+              relativePath.substring(0, relativePath.indexOf(FOLDER_SUFFIX)))));
+        }
+        else {
           status.add(newFile(fileMetadata, subpath));
         }
       }
@@ -398,7 +444,7 @@ public class NativeS3FileSystem extends FileSystem {
       return null;
     }
     
-    return status.toArray(new FileStatus[0]);
+    return status.toArray(new FileStatus[status.size()]);
   }
   
   private FileStatus newFile(FileMetadata meta, Path path) {
@@ -432,10 +478,11 @@ public class NativeS3FileSystem extends FileSystem {
       FileStatus fileStatus = getFileStatus(f);
       if (!fileStatus.isDir()) {
         throw new IOException(String.format(
-            "Can't make directory for path %s since it is a file.", f));
+            "Can't make directory for path '%s' since it is a file.", f));
 
       }
     } catch (FileNotFoundException e) {
+      LOG.debug("Making dir '" + f + "' in S3");
       String key = pathToKey(f) + FOLDER_SUFFIX;
       store.storeEmptyFile(key);    
     }
@@ -444,9 +491,11 @@ public class NativeS3FileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-    if (!exists(f)) {
-      throw new FileNotFoundException(f.toString());
+    FileStatus fs = getFileStatus(f); // will throw if the file doesn't exist
+    if (fs.isDir()) {
+      throw new IOException("'" + f + "' is a directory");
     }
+    LOG.info("Opening '" + f + "' for reading");
     Path absolutePath = makeAbsolute(f);
     String key = pathToKey(absolutePath);
     return new FSDataInputStream(new BufferedFSInputStream(
@@ -456,47 +505,16 @@ public class NativeS3FileSystem extends FileSystem {
   // rename() and delete() use this method to ensure that the parent directory
   // of the source does not vanish.
   private void createParent(Path path) throws IOException {
-      Path parent = path.getParent();
-      if (parent != null) {
-          String key = pathToKey(makeAbsolute(parent));
-          if (key.length() > 0) {
-              store.storeEmptyFile(key + FOLDER_SUFFIX);
-          }
+    Path parent = path.getParent();
+    if (parent != null) {
+      String key = pathToKey(makeAbsolute(parent));
+      if (key.length() > 0) {
+          store.storeEmptyFile(key + FOLDER_SUFFIX);
       }
+    }
   }
   
-  private boolean existsAndIsFile(Path f) throws IOException {
     
-    Path absolutePath = makeAbsolute(f);
-    String key = pathToKey(absolutePath);
-    
-    if (key.length() == 0) {
-        return false;
-    }
-    
-    FileMetadata meta = store.retrieveMetadata(key);
-    if (meta != null) {
-        // S3 object with given key exists, so this is a file
-        return true;
-    }
-    
-    if (store.retrieveMetadata(key + FOLDER_SUFFIX) != null) {
-        // Signifies empty directory
-        return false;
-    }
-    
-    PartialListing listing = store.list(key, 1, null);
-    if (listing.getFiles().length > 0 ||
-        listing.getCommonPrefixes().length > 0) {
-        // Non-empty directory
-        return false;
-    }
-    
-    throw new FileNotFoundException(absolutePath +
-        ": No such file or directory");
-}
-
-
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
 
@@ -507,60 +525,74 @@ public class NativeS3FileSystem extends FileSystem {
       return false;
     }
 
+    final String debugPreamble = "Renaming '" + src + "' to '" + dst + "' - ";
+
     // Figure out the final destination
     String dstKey;
     try {
-      boolean dstIsFile = existsAndIsFile(dst);
+      boolean dstIsFile = !getFileStatus(dst).isDir();
       if (dstIsFile) {
-        // Attempting to overwrite a file using rename()
+        LOG.debug(debugPreamble + "returning false as dst is an already existing file");
         return false;
       } else {
-        // Move to within the existent directory
+        LOG.debug(debugPreamble + "using dst as output directory");
         dstKey = pathToKey(makeAbsolute(new Path(dst, src.getName())));
       }
     } catch (FileNotFoundException e) {
-      // dst doesn't exist, so we can proceed
+      LOG.debug(debugPreamble + "using dst as output destination");
       dstKey = pathToKey(makeAbsolute(dst));
       try {
         if (!getFileStatus(dst.getParent()).isDir()) {
-          return false; // parent dst is a file
+          LOG.debug(debugPreamble + "returning false as dst parent exists and is a file");
+          return false;
         }
       } catch (FileNotFoundException ex) {
-        return false; // parent dst does not exist
+        LOG.debug(debugPreamble + "returning false as dst parent does not exist");
+        return false;
       }
     }
 
+    boolean srcIsFile;
     try {
-      boolean srcIsFile = existsAndIsFile(src);
-      if (srcIsFile) {
-        store.rename(srcKey, dstKey);
-      } else {
-        // Move the folder object
-        store.delete(srcKey + FOLDER_SUFFIX);
-        store.storeEmptyFile(dstKey + FOLDER_SUFFIX);
-
-        // Move everything inside the folder
-        String priorLastKey = null;
-        do {
-          PartialListing listing = store.listAll(srcKey, S3_MAX_LISTING_LENGTH,
-              priorLastKey);
-          for (FileMetadata file : listing.getFiles()) {
-            store.rename(file.getKey(), dstKey
-                + file.getKey().substring(srcKey.length()));
-          }
-          priorLastKey = listing.getPriorLastKey();
-        } while (priorLastKey != null);
-      }
-
-      createParent(src);
-      return true;
-
+      srcIsFile = !getFileStatus(src).isDir();
     } catch (FileNotFoundException e) {
-      // Source file does not exist;
+      LOG.debug(debugPreamble + "returning false as src does not exist");
       return false;
     }
-  }
+    if (srcIsFile) {
+      LOG.debug(debugPreamble + "src is file, so doing copy then delete in S3");
+      store.copy(srcKey, dstKey);
+      store.delete(srcKey);
+    } else {
+      LOG.debug(debugPreamble + "src is directory, so copying contents");
+      store.storeEmptyFile(dstKey + FOLDER_SUFFIX);
 
+      List<String> keysToDelete = new ArrayList<String>();
+      String priorLastKey = null;
+      do {
+        PartialListing listing = store.list(srcKey, S3_MAX_LISTING_LENGTH, priorLastKey, true);
+        for (FileMetadata file : listing.getFiles()) {
+          keysToDelete.add(file.getKey());
+          store.copy(file.getKey(), dstKey + file.getKey().substring(srcKey.length()));
+        }
+        priorLastKey = listing.getPriorLastKey();
+      } while (priorLastKey != null);
+
+      LOG.debug(debugPreamble + "all files in src copied, now removing src files");
+      for (String key: keysToDelete) {
+        store.delete(key);
+      }
+
+      try {
+        store.delete(srcKey + FOLDER_SUFFIX);
+      } catch (FileNotFoundException e) {
+        //this is fine, we don't require a marker
+      }
+      LOG.debug(debugPreamble + "done");
+    }
+
+    return true;
+  }
 
   /**
    * Set the working directory to the given directory.
@@ -574,5 +606,4 @@ public class NativeS3FileSystem extends FileSystem {
   public Path getWorkingDirectory() {
     return workingDir;
   }
-
 }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3native;
 
 import static org.apache.hadoop.fs.s3native.NativeS3FileSystem.PATH_DELIMITER;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -122,19 +123,13 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
 
   public PartialListing list(String prefix, int maxListingLength)
       throws IOException {
-    return list(prefix, maxListingLength, null);
+    return list(prefix, maxListingLength, null, false);
   }
 
   public PartialListing list(String prefix, int maxListingLength,
-      String priorLastKey) throws IOException {
+      String priorLastKey, boolean recursive) throws IOException {
 
-    return list(prefix, PATH_DELIMITER, maxListingLength, priorLastKey);
-  }
-
-  public PartialListing listAll(String prefix, int maxListingLength,
-      String priorLastKey) throws IOException {
-
-    return list(prefix, null, maxListingLength, priorLastKey);
+    return list(prefix, recursive ? null : PATH_DELIMITER, maxListingLength, priorLastKey);
   }
 
   private PartialListing list(String prefix, String delimiter,
@@ -174,9 +169,9 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
     dataMap.remove(key);
   }
 
-  public void rename(String srcKey, String dstKey) throws IOException {
-    metadataMap.put(dstKey, metadataMap.remove(srcKey));
-    dataMap.put(dstKey, dataMap.remove(srcKey));
+  public void copy(String srcKey, String dstKey) throws IOException {
+    metadataMap.put(dstKey, metadataMap.get(srcKey));
+    dataMap.put(dstKey, dataMap.get(srcKey));
   }
   
   public void purge(String prefix) throws IOException {

@@ -55,5 +55,75 @@ public abstract class NativeS3FileSystemContractBaseTest
     assertEquals(1, paths.length);
     assertEquals(path("/test"), paths[0].getPath());
   }
-  
+
+  private void createTestFiles(String base) throws IOException {
+    store.storeEmptyFile(base + "/file1");
+    store.storeEmptyFile(base + "/dir/file2");
+    store.storeEmptyFile(base + "/dir/file3");
+  }
+
+  public void testDirWithDifferentMarkersWorks() throws Exception {
+
+    for (int i = 0; i < 3; i++) {
+      String base = "test/hadoop" + i;
+      Path path = path("/" + base);
+
+      createTestFiles(base);
+
+      if (i == 0 ) {
+        //do nothing, we are testing correctness with no markers
+      }
+      else if (i == 1) {
+        // test for _$folder$ marker
+        store.storeEmptyFile(base + "_$folder$");
+        store.storeEmptyFile(base + "/dir_$folder$");
+      }
+      else if (i == 2) {
+        // test the end slash file marker
+        store.storeEmptyFile(base + "/");
+        store.storeEmptyFile(base + "/dir/");
+      }
+      else if (i == 3) {
+        // test both markers
+        store.storeEmptyFile(base + "_$folder$");
+        store.storeEmptyFile(base + "/dir_$folder$");
+        store.storeEmptyFile(base + "/");
+        store.storeEmptyFile(base + "/dir/");
+      }
+
+      assertTrue(fs.getFileStatus(path).isDir());
+      assertEquals(2, fs.listStatus(path).length);
+    }
+  }
+
+  public void testDeleteWithNoMarker() throws Exception {
+    String base = "test/hadoop";
+    Path path = path("/" + base);
+
+    createTestFiles(base);
+
+    fs.delete(path, true);
+
+    path = path("/test");
+  }
+
+  public void testRenameWithNoMarker() throws Exception {
+    String base = "test/hadoop";
+    Path dest = path("/test/hadoop2");
+
+    createTestFiles(base);
+
+    fs.rename(path("/" + base), dest);
+
+    Path path = path("/test");
+    assertTrue(fs.getFileStatus(path).isDir());
+    assertEquals(1, fs.listStatus(path).length);
+    assertTrue(fs.getFileStatus(dest).isDir());
+    assertEquals(2, fs.listStatus(dest).length);
+  }
+
+  public void testEmptyFile() throws Exception {
+    store.storeEmptyFile("test/hadoop/file1");
+    fs.open(path("/test/hadoop/file1")).close();
+  }
 }
