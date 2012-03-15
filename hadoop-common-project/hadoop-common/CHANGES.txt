@@ -273,6 +273,9 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8164. Back slash as path separator is handled for Windows only.
     (Daryn Sharp via suresh)
 
+    HADOOP-8173. FsShell needs to handle quoted metachars.  (Daryn Sharp via
+    szetszwo)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
