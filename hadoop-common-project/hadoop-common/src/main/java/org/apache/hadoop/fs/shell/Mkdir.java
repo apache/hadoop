@@ -43,21 +43,16 @@ class Mkdir extends FsCommand {
   public static final String DESCRIPTION =
     "Create a directory in specified location.";
 
-  private boolean createParents;
-  
   @Override
   protected void processOptions(LinkedList<String> args) {
-    CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE, "p");
+    CommandFormat cf = new CommandFormat(1, Integer.MAX_VALUE);
     cf.parse(args);
-    createParents = cf.getOpt("p");
   }
 
   @Override
   protected void processPath(PathData item) throws IOException {
     if (item.stat.isDirectory()) {
-      if (!createParents) {
-        throw new PathExistsException(item.toString());
-      }
+      throw new PathExistsException(item.toString());
     } else {
       throw new PathIsNotDirectoryException(item.toString());
     }
@@ -65,7 +60,6 @@ class Mkdir extends FsCommand {
 
   @Override
   protected void processNonexistentPath(PathData item) throws IOException {
-    // TODO: should use createParents to control intermediate dir creation 
     if (!item.fs.mkdirs(item.path)) {
       throw new PathIOException(item.toString());
     }
