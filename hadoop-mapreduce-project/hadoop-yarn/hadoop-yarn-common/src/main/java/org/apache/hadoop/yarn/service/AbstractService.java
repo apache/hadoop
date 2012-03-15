@@ -145,10 +145,7 @@ public abstract class AbstractService implements Service {
    * the desired state
    */
   private void ensureCurrentState(STATE currentState) {
-    if (state != currentState) {
-      throw new IllegalStateException("For this operation, current State must " +
-        "be " + currentState + " instead of " + state);
-    }
+    ServiceOperations.ensureCurrentState(state, currentState);
   }
 
   /**

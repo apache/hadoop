@@ -46,4 +46,34 @@ public class ServiceAssert extends Assert {
     assertEquals("Service in wrong state: " + service, state,
                  service.getServiceState());
   }
+
+  /**
+   * Assert that the breakable service has entered a state exactly the number
+   * of time asserted.
+   * @param service service -if null an assertion is raised.
+   * @param state state to check.
+   * @param expected expected count.
+   */
+  public static void assertStateCount(BreakableService service,
+                        Service.STATE state,
+                        int expected) {
+    assertNotNull("Null service", service);
+    int actual = service.getCount(state);
+    if (expected != actual) {
+      fail("Expected entry count for state [" + state +"] of " + service
+               + " to be " + expected + " but was " + actual);
+    }
+  }
+
+  /**
+   * Assert that a service configuration contains a specific key; the value
+   * is ignored.
+   * @param service service to check
+   * @param key key to look for
+   */
+  public static void assertServiceConfigurationContains(Service service,
+                                                        String key) {
+    assertNotNull("No option "+ key + " in service configuration",
+                  service.getConfig().get(key));
+  }
 }
