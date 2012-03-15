@@ -120,6 +120,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3773. Add queue metrics with buckets for job run times. (omalley
     via acmurthy)
 
+    MAPREDUCE-3970 Add ServiceOperations class to aid working with Services
+    (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
