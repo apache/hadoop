@@ -208,6 +208,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3093. Fix bug where namenode -format interpreted the -force flag in
     reverse. (todd)
 
+    HDFS-3005. FSVolume.decDfsUsed(..) should be synchronized.  (szetszwo)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
