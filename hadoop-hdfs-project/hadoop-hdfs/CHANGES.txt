@@ -295,6 +295,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-1765. Block Replication should respect under-replication
     block priority. (Uma Maheswara Rao G via eli)
 
+    HDFS-3093. Fix bug where namenode -format interpreted the -force flag in
+    reverse. (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
