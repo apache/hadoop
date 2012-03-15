@@ -17,42 +17,59 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestSecondaryWebUi {
+  
+  private static MiniDFSCluster cluster;
+  private static SecondaryNameNode snn;
+  private static Configuration conf = new Configuration();
+  
+  @BeforeClass
+  public static void setUpCluster() throws IOException {
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+        "0.0.0.0:0");
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+        .build();
+    cluster.waitActive();
+    
+    snn = new SecondaryNameNode(conf);
+  }
+  
+  @AfterClass
+  public static void shutDownCluster() {
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+    if (snn != null) {
+      snn.shutdown();
+    }
+  }
 
   @Test
   public void testSecondaryWebUi() throws IOException {
-    Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
-        "0.0.0.0:0");
-    MiniDFSCluster cluster = null;
-    SecondaryNameNode snn = null;
-    try {
-      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .build();
-      cluster.waitActive();
-      
-      snn = new SecondaryNameNode(conf);
-      String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
-          SecondaryNameNode.getHttpAddress(conf).getPort() + "/status.jsp"));
-      assertTrue(pageContents.contains("Last Checkpoint Time"));
-    } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
-      if (snn != null) {
-        snn.shutdown();
-      }
-    }
+    String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
+        SecondaryNameNode.getHttpAddress(conf).getPort() + "/status.jsp"));
+    assertTrue(pageContents.contains("Last Checkpoint Time"));
+  }
+  
+  @Test
+  public void testSecondaryWebJmx() throws MalformedURLException, IOException {
+    String pageContents = DFSTestUtil.urlGet(new URL("http://localhost:" +
+        SecondaryNameNode.getHttpAddress(conf).getPort() + "/jmx"));
+    assertTrue(pageContents.contains(
+        "Hadoop:service=SecondaryNameNode,name=JvmMetrics"));
   }
 }

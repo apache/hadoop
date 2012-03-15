@@ -204,6 +204,7 @@ public class SecondaryNameNode implements Runnable {
           DFS_SECONDARY_NAMENODE_USER_NAME_KEY, infoBindAddress);
     }
     // initiate Java VM metrics
+    DefaultMetricsSystem.initialize("SecondaryNameNode");
     JvmMetrics.create("SecondaryNameNode",
         conf.get(DFS_METRICS_SESSION_ID_KEY), DefaultMetricsSystem.instance());
     
