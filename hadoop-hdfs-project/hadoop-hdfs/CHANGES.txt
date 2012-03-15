@@ -205,6 +205,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-2764. TestBackupNode is racy. (atm)
 
+    HDFS-3093. Fix bug where namenode -format interpreted the -force flag in
+    reverse. (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
