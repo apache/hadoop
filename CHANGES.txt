@@ -7,8 +7,6 @@ Release 1.1.0 - unreleased
     MAPREDUCE-3118. Backport Gridmix and Rumen features to
                     branch-0.20-security (Ravi Gummadi via amarrk)
 
-    HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
-
   BUG FIXES
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
@@ -67,11 +65,6 @@ Release 1.1.0 - unreleased
 
     HDFS-2653. DFSClient should cache whether addrs are non-local when
     short-circuiting is enabled. (eli)
-
-    HDFS-2703. removedStorageDirs is not updated everywhere we remove
-    a storage dir. (eli)
-
-    HDFS-2702. A single failed name dir can cause the NN to exit. (eli)
 
     HADOOP-7942. enabling clover coverage reports fails hadoop unit test 
     compilation. (jitendra)
@@ -150,8 +143,6 @@ Release 1.1.0 - unreleased
 
     HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
 
-    HDFS-2701. Cleanup FS* processIOError methods. (eli)
-
     HDFS-2547. Fix inaccuracy in ReplicationTargetChooser comments. (harsh)
 
     MAPREDUCE-2919. The JT web UI should show job start times. (harsh)
@@ -172,6 +163,10 @@ Release 1.0.2 - unreleased
 
     HADOOP-7206. Support Snappy compression. (Issei Yoshida and
     Alejandro Abdelnur via vinodkv).
+
+    HDFS-2701. Cleanup FS* processIOError methods. (eli)
+
+    HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
 
   IMPROVEMENTS
 
@@ -199,6 +194,11 @@ Release 1.0.2 - unreleased
 
     MAPREDUCE-764. Fix TypedBytesInput.readRaw to preserve custom type codes.  
     (Klaas Bosteels via acmurthy) 
+
+    HDFS-2703. removedStorageDirs is not updated everywhere we remove
+    a storage dir. (eli)
+
+    HDFS-2702. A single failed name dir can cause the NN to exit. (eli)
 
 Release 1.0.1 - 2012.02.14
 
