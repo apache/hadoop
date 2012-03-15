@@ -1233,13 +1233,36 @@
   </description>
 </property>
 
+<!--  end of node health script variables -->
+
 <property>
-  <name>mapreduce.job.counters.limit</name>
+  <name>mapreduce.job.counters.max</name>
   <value>120</value>
   <description>Limit on the number of counters allowed per job.
   </description>
 </property>
 
-<!--  end of node health script variables -->
+<property>
+  <name>mapreduce.job.counters.groups.max</name>
+  <value>50</value>
+  <description>Limit on the number of counter groups allowed per job.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.counters.counter.name.max</name>
+  <value>64</value>
+  <description>Limit on the length of counter names in jobs. Names
+  exceeding this limit will be truncated.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.counters.group.name.max</name>
+  <value>128</value>
+  <description>Limit on the length of counter group names in jobs. Names
+  exceeding this limit will be truncated.
+  </description>
+</property>
 
 </configuration>

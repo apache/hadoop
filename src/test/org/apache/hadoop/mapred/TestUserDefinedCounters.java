@@ -130,7 +130,7 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
     assertEquals(4,
         runningJob.getCounters().getGroup("StringCounter")
         .getCounter("MapRecords"));
-    assertTrue(counters.getGroupNames().size() <= 51);
+    assertTrue(counters.getGroupNames().size() <= Counters.MAX_GROUP_LIMIT);
     int i = 0;
     while (counters.size() < Counters.MAX_COUNTER_LIMIT) {
       counters.incrCounter("IncrCounter", "limit " + i, 2);
