@@ -123,8 +123,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.namenode.FileChecksumServlets;
@@ -235,7 +235,7 @@ public class DataNode extends Configured
   
   volatile boolean shouldRun = true;
   private BlockPoolManager blockPoolManager;
-  volatile FSDatasetInterface<? extends FSVolumeInterface> data = null;
+  volatile FSDatasetInterface<? extends FsVolumeSpi> data = null;
   private String clusterId = null;
 
   public final static String EMPTY_DEL_HINT = "";

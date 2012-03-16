@@ -20,10 +20,10 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
-public class RoundRobinVolumesPolicy<V extends FSVolumeInterface>
+public class RoundRobinVolumesPolicy<V extends FsVolumeSpi>
     implements BlockVolumeChoosingPolicy<V> {
 
   private int curVolume = 0;

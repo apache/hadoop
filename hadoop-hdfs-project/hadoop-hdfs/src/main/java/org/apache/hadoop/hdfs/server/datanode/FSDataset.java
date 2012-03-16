@@ -61,7 +61,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
@@ -548,7 +551,7 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
    * 
    * It uses the {@link FSDataset} object for synchronization.
    */
-  static class FSVolume implements FSVolumeInterface {
+  static class FSVolume implements FsVolumeSpi {
     private final FSDataset dataset;
     private final Map<String, BlockPoolSlice> map = new HashMap<String, BlockPoolSlice>();
     private final File currentDir;    // <StorageDirectory>/current
@@ -865,7 +868,7 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
       
     private long getRemaining() throws IOException {
       long remaining = 0L;
-      for (FSVolumeInterface vol : volumes) {
+      for (FsVolumeSpi vol : volumes) {
         remaining += vol.getAvailable();
       }
       return remaining;
@@ -1052,13 +1055,13 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
   }
 
   @Override // FSDatasetInterface
-  public MetaDataInputStream getMetaDataInputStream(ExtendedBlock b)
+  public LengthInputStream getMetaDataInputStream(ExtendedBlock b)
       throws IOException {
     final File meta = getMetaFile(b);
     if (meta == null || !meta.exists()) {
       return null;
     }
-    return new MetaDataInputStream(new FileInputStream(meta), meta.length());
+    return new LengthInputStream(new FileInputStream(meta), meta.length());
   }
     
   private final DataNode datanode;
@@ -1287,7 +1290,7 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
    * Returns handles to the block file and its metadata file
    */
   @Override // FSDatasetInterface
-  public synchronized BlockInputStreams getTmpInputStreams(ExtendedBlock b, 
+  public synchronized ReplicaInputStreams getTmpInputStreams(ExtendedBlock b, 
                           long blkOffset, long ckoff) throws IOException {
     ReplicaInfo info = getReplicaInfo(b);
     File blockFile = info.getBlockFile();
@@ -1300,7 +1303,7 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
     if (ckoff > 0) {
       metaInFile.seek(ckoff);
     }
-    return new BlockInputStreams(new FileInputStream(blockInFile.getFD()),
+    return new ReplicaInputStreams(new FileInputStream(blockInFile.getFD()),
                                 new FileInputStream(metaInFile.getFD()));
   }
     
@@ -1742,9 +1745,9 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
    * last checksum will be overwritten.
    */
   @Override // FSDatasetInterface
-  public void adjustCrcChannelPosition(ExtendedBlock b, BlockWriteStreams streams, 
+  public void adjustCrcChannelPosition(ExtendedBlock b, ReplicaOutputStreams streams, 
       int checksumSize) throws IOException {
-    FileOutputStream file = (FileOutputStream) streams.checksumOut;
+    FileOutputStream file = (FileOutputStream) streams.getChecksumOut();
     FileChannel channel = file.getChannel();
     long oldPos = channel.position();
     long newPos = oldPos - checksumSize;
@@ -2195,7 +2198,7 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
    */
   @Override
   public void checkAndUpdate(String bpid, long blockId, File diskFile,
-      File diskMetaFile, FSVolumeInterface vol) {
+      File diskMetaFile, FsVolumeSpi vol) {
     Block corruptBlock = null;
     ReplicaInfo memBlockInfo;
     synchronized (this) {

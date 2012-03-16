@@ -55,7 +55,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
@@ -511,7 +511,7 @@ class DataXceiver extends Receiver implements Runnable {
     checkAccess(out, true, block, blockToken,
         Op.BLOCK_CHECKSUM, BlockTokenSecretManager.AccessMode.READ);
     updateCurrentThreadName("Reading metadata for block " + block);
-    final MetaDataInputStream metadataIn = 
+    final LengthInputStream metadataIn = 
       datanode.data.getMetaDataInputStream(block);
     final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
         metadataIn, HdfsConstants.IO_FILE_BUFFER_SIZE));

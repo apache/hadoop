@@ -21,7 +21,7 @@ import java.io.File;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 /**
  * This class describes a replica that has been finalized.
@@ -38,7 +38,7 @@ class FinalizedReplica extends ReplicaInfo {
    * @param dir directory path where block and meta files are located
    */
   FinalizedReplica(long blockId, long len, long genStamp,
-      FSVolumeInterface vol, File dir) {
+      FsVolumeSpi vol, File dir) {
     super(blockId, len, genStamp, vol, dir);
   }
   
@@ -48,7 +48,7 @@ class FinalizedReplica extends ReplicaInfo {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  FinalizedReplica(Block block, FSVolumeInterface vol, File dir) {
+  FinalizedReplica(Block block, FsVolumeSpi vol, File dir) {
     super(block, vol, dir);
   }
 
