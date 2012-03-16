@@ -112,7 +112,9 @@ public class DelegationTokenRenewer extends AbstractService {
 
   @Override
   public synchronized void stop() {
-    renewalTimer.cancel();
+    if (renewalTimer != null) {
+      renewalTimer.cancel();
+    }
     delegationTokens.clear();
 
     dtCancelThread.interrupt();
