@@ -1,8 +1,5 @@
 Hadoop Change Log
 
-    HDFS-3075. Backport HADOOP-4885: Try to restore failed name-node storage
-    directories at checkpoint time.  (Brandon Li via szetszwo)
-
 Release 1.0.2 - unreleased
 
   NEW FEATURES
@@ -45,6 +42,11 @@ Release 1.0.2 - unreleased
     a storage dir. (eli)
 
     HDFS-2702. A single failed name dir can cause the NN to exit. (eli)
+
+    HDFS-3075. Backport HADOOP-4885: Try to restore failed name-node storage
+    directories at checkpoint time.  (Brandon Li via szetszwo)
+
+    HDFS-3101. Cannot read empty file using WebHDFS.  (szetszwo)
 
 Release 1.0.1 - 2012.02.14
 
