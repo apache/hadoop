@@ -5719,6 +5719,42 @@
         </comparator>
       </comparators>
     </test>
+
+    <test> <!-- TESTED -->
+      <description>mkdir: Test recreate of existing directory fails</description>
+      <test-commands>
+        <command>-fs NAMENODE -rm -r -f dir0</command>
+        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r dir0</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>mkdir: `dir0/dir1': File exists</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!-- TESTED -->
+      <description>mkdir: Test recreate of existing directory with -p succeeds</description>
+      <test-commands>
+        <command>-fs NAMENODE -rm -r -f dir0</command>
+        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r dir0</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
+        </comparator>
+      </comparators>
+    </test>
     
     <!--Tests for setrep-->
     <test> <!-- TESTED -->
