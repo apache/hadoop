@@ -281,6 +281,9 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8175. Add -p option to mkdir in FsShell.  (Daryn Sharp via szetszwo)
 
+    HADOOP-8176.  Disambiguate the destination of FsShell copies (Daryn Sharp
+    via bobby)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
