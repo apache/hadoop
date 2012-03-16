@@ -566,6 +566,8 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-3098. Update and add tests for HADOOP-8173. (Daryn Sharp via szetszwo)
 
+    HDFS-3104. Add tests for HADOOP-8175. (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
