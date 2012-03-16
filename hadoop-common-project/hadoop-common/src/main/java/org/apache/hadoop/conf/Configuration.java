@@ -303,7 +303,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return <code>true</code> if the key is deprecated and 
    *         <code>false</code> otherwise.
    */
-  private static boolean isDeprecated(String key) {
+  public static boolean isDeprecated(String key) {
     return deprecatedKeyMap.containsKey(key);
   }
 
