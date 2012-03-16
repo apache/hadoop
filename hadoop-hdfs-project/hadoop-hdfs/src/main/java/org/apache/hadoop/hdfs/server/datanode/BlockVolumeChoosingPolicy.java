@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 /**************************************************
  * BlockVolumeChoosingPolicy allows a DataNode to
@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterfa
  *
  ***************************************************/
 @InterfaceAudience.Private
-public interface BlockVolumeChoosingPolicy<V extends FSVolumeInterface> {
+public interface BlockVolumeChoosingPolicy<V extends FsVolumeSpi> {
 
   /**
    * Returns a specific FSVolume after applying a suitable choice algorithm

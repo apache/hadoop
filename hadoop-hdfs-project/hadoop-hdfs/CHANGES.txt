@@ -234,6 +234,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3057. httpfs and hdfs launcher scripts should honor CATALINA_HOME 
     and HADOOP_LIBEXEC_DIR (rvs via tucu)
 
+    HDFS-3088. Move FSDatasetInterface inner classes to a package.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)

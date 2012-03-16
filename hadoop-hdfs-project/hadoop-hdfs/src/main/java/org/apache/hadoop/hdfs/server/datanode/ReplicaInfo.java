@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -36,7 +36,7 @@ import org.apache.hadoop.io.IOUtils;
 @InterfaceAudience.Private
 abstract public class ReplicaInfo extends Block implements Replica {
   /** volume where the replica belongs */
-  private FSVolumeInterface volume;
+  private FsVolumeSpi volume;
   /** directory where block & meta files belong */
   private File dir;
 
@@ -47,7 +47,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  ReplicaInfo(long blockId, long genStamp, FSVolumeInterface vol, File dir) {
+  ReplicaInfo(long blockId, long genStamp, FsVolumeSpi vol, File dir) {
     this( blockId, 0L, genStamp, vol, dir);
   }
   
@@ -57,7 +57,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  ReplicaInfo(Block block, FSVolumeInterface vol, File dir) {
+  ReplicaInfo(Block block, FsVolumeSpi vol, File dir) {
     this(block.getBlockId(), block.getNumBytes(), 
         block.getGenerationStamp(), vol, dir);
   }
@@ -71,7 +71,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * @param dir directory path where block and meta files are located
    */
   ReplicaInfo(long blockId, long len, long genStamp,
-      FSVolumeInterface vol, File dir) {
+      FsVolumeSpi vol, File dir) {
     super(blockId, len, genStamp);
     this.volume = vol;
     this.dir = dir;
@@ -113,14 +113,14 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * Get the volume where this replica is located on disk
    * @return the volume where this replica is located on disk
    */
-  FSVolumeInterface getVolume() {
+  FsVolumeSpi getVolume() {
     return volume;
   }
   
   /**
    * Set the volume where this replica is located on disk
    */
-  void setVolume(FSVolumeInterface vol) {
+  void setVolume(FsVolumeSpi vol) {
     this.volume = vol;
   }
   

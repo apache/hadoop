@@ -31,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 /**
  * DataBlockScanner manages block scanning for all the block pools. For each
@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterfa
 public class DataBlockScanner implements Runnable {
   public static final Log LOG = LogFactory.getLog(DataBlockScanner.class);
   private final DataNode datanode;
-  private final FSDatasetInterface<? extends FSVolumeInterface> dataset;
+  private final FSDatasetInterface<? extends FsVolumeSpi> dataset;
   private final Configuration conf;
   
   /**
@@ -55,7 +55,7 @@ public class DataBlockScanner implements Runnable {
   Thread blockScannerThread = null;
   
   DataBlockScanner(DataNode datanode,
-      FSDatasetInterface<? extends FSVolumeInterface> dataset,
+      FSDatasetInterface<? extends FsVolumeSpi> dataset,
       Configuration conf) {
     this.datanode = datanode;
     this.dataset = dataset;

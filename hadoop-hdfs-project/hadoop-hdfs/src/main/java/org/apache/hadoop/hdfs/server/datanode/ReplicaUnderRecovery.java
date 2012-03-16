@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.File;
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 
 /**
@@ -145,7 +145,7 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   }
   
   @Override //ReplicaInfo
-  void setVolume(FSVolumeInterface vol) {
+  void setVolume(FsVolumeSpi vol) {
     super.setVolume(vol);
     original.setVolume(vol);
   }

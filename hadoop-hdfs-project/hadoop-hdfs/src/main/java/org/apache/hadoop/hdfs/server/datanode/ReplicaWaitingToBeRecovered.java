@@ -21,7 +21,7 @@ import java.io.File;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 /**
  * This class represents a replica that is waiting to be recovered.
@@ -44,7 +44,7 @@ class ReplicaWaitingToBeRecovered extends ReplicaInfo {
    * @param dir directory path where block and meta files are located
    */
   ReplicaWaitingToBeRecovered(long blockId, long len, long genStamp,
-      FSVolumeInterface vol, File dir) {
+      FsVolumeSpi vol, File dir) {
     super(blockId, len, genStamp, vol, dir);
   }
   
@@ -54,7 +54,7 @@ class ReplicaWaitingToBeRecovered extends ReplicaInfo {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  ReplicaWaitingToBeRecovered(Block block, FSVolumeInterface vol, File dir) {
+  ReplicaWaitingToBeRecovered(Block block, FsVolumeSpi vol, File dir) {
     super(block, vol, dir);
   }
   

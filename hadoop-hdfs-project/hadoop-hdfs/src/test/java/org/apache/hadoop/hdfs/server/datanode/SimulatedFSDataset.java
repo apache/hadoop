@@ -39,6 +39,10 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolumeSet;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
@@ -61,8 +65,7 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  * 
  * Note the synchronization is coarse grained - it is at each method. 
  */
-public class SimulatedFSDataset
-    implements FSDatasetInterface<FSDatasetInterface.FSVolumeInterface> {
+public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
   static class Factory extends FSDatasetInterface.Factory<SimulatedFSDataset> {
     @Override
     public SimulatedFSDataset createFSDatasetInterface(DataNode datanode,
@@ -215,14 +218,14 @@ public class SimulatedFSDataset
     }
 
     @Override
-    synchronized public BlockWriteStreams createStreams(boolean isCreate, 
+    synchronized public ReplicaOutputStreams createStreams(boolean isCreate, 
         DataChecksum requestedChecksum) throws IOException {
       if (finalized) {
         throw new IOException("Trying to write to a finalized replica "
             + theBlock);
       } else {
         SimulatedOutputStream crcStream = new SimulatedOutputStream();
-        return new BlockWriteStreams(oStream, crcStream, requestedChecksum);
+        return new ReplicaOutputStreams(oStream, crcStream, requestedChecksum);
       }
     }
 
@@ -688,13 +691,13 @@ public class SimulatedFSDataset
 
   /** Not supported */
   @Override // FSDatasetInterface
-  public BlockInputStreams getTmpInputStreams(ExtendedBlock b, long blkoff,
+  public ReplicaInputStreams getTmpInputStreams(ExtendedBlock b, long blkoff,
       long ckoff) throws IOException {
     throw new IOException("Not supported");
   }
 
   @Override // FSDatasetInterface
-  public synchronized MetaDataInputStream getMetaDataInputStream(ExtendedBlock b
+  public synchronized LengthInputStream getMetaDataInputStream(ExtendedBlock b
       ) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
@@ -706,7 +709,7 @@ public class SimulatedFSDataset
           " is being written, its meta cannot be read");
     }
     final SimulatedInputStream sin = binfo.getMetaIStream();
-    return new MetaDataInputStream(sin, sin.getLength());
+    return new LengthInputStream(sin, sin.getLength());
   }
 
   @Override
@@ -716,7 +719,7 @@ public class SimulatedFSDataset
 
   @Override // FSDatasetInterface
   public synchronized void adjustCrcChannelPosition(ExtendedBlock b,
-                                              BlockWriteStreams stream, 
+                                              ReplicaOutputStreams stream, 
                                               int checksumSize)
                                               throws IOException {
   }
@@ -959,12 +962,12 @@ public class SimulatedFSDataset
 
   @Override
   public void checkAndUpdate(String bpid, long blockId, File diskFile,
-      File diskMetaFile, FSVolumeInterface vol) {
+      File diskMetaFile, FsVolumeSpi vol) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public List<FSVolumeInterface> getVolumes() {
+  public List<FsVolumeSpi> getVolumes() {
     throw new UnsupportedOperationException();
   }
 

@@ -21,7 +21,7 @@ import java.io.File;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
 /** This class represents replicas being written. 
  * Those are the replicas that
@@ -36,7 +36,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param dir directory path where block and meta files are located
    */
   ReplicaBeingWritten(long blockId, long genStamp, 
-        FSVolumeInterface vol, File dir) {
+        FsVolumeSpi vol, File dir) {
     super( blockId, genStamp, vol, dir);
   }
   
@@ -48,7 +48,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param writer a thread that is writing to this replica
    */
   ReplicaBeingWritten(Block block, 
-      FSVolumeInterface vol, File dir, Thread writer) {
+      FsVolumeSpi vol, File dir, Thread writer) {
     super( block, vol, dir, writer);
   }
 
@@ -62,7 +62,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param writer a thread that is writing to this replica
    */
   ReplicaBeingWritten(long blockId, long len, long genStamp,
-      FSVolumeInterface vol, File dir, Thread writer ) {
+      FsVolumeSpi vol, File dir, Thread writer ) {
     super( blockId, len, genStamp, vol, dir, writer);
   }
 

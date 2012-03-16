@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
@@ -33,19 +33,19 @@ public class TestRoundRobinVolumesPolicy {
   // Test the Round-Robin block-volume choosing algorithm.
   @Test
   public void testRR() throws Exception {
-    final List<FSVolumeInterface> volumes = new ArrayList<FSVolumeInterface>();
+    final List<FsVolumeSpi> volumes = new ArrayList<FsVolumeSpi>();
 
     // First volume, with 100 bytes of space.
-    volumes.add(Mockito.mock(FSVolumeInterface.class));
+    volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(0).getAvailable()).thenReturn(100L);
 
     // Second volume, with 200 bytes of space.
-    volumes.add(Mockito.mock(FSVolumeInterface.class));
+    volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(200L);
 
     @SuppressWarnings("unchecked")
-    final RoundRobinVolumesPolicy<FSVolumeInterface> policy = 
-        (RoundRobinVolumesPolicy<FSVolumeInterface>)ReflectionUtils.newInstance(
+    final RoundRobinVolumesPolicy<FsVolumeSpi> policy = 
+        (RoundRobinVolumesPolicy<FsVolumeSpi>)ReflectionUtils.newInstance(
             RoundRobinVolumesPolicy.class, null);
     
     // Test two rounds of round-robin choosing
@@ -71,18 +71,18 @@ public class TestRoundRobinVolumesPolicy {
   @Test
   public void testRRPolicyExceptionMessage()
       throws Exception {
-    final List<FSVolumeInterface> volumes = new ArrayList<FSVolumeInterface>();
+    final List<FsVolumeSpi> volumes = new ArrayList<FsVolumeSpi>();
 
     // First volume, with 500 bytes of space.
-    volumes.add(Mockito.mock(FSVolumeInterface.class));
+    volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(0).getAvailable()).thenReturn(500L);
 
     // Second volume, with 600 bytes of space.
-    volumes.add(Mockito.mock(FSVolumeInterface.class));
+    volumes.add(Mockito.mock(FsVolumeSpi.class));
     Mockito.when(volumes.get(1).getAvailable()).thenReturn(600L);
 
-    final RoundRobinVolumesPolicy<FSVolumeInterface> policy
-        = new RoundRobinVolumesPolicy<FSVolumeInterface>();
+    final RoundRobinVolumesPolicy<FsVolumeSpi> policy
+        = new RoundRobinVolumesPolicy<FsVolumeSpi>();
     int blockSize = 700;
     try {
       policy.chooseVolume(volumes, blockSize);
