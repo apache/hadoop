@@ -23,12 +23,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.lang.reflect.Method;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import sun.security.krb5.Config;
-import sun.security.krb5.KrbException;
 
 /**
  * This class implements parsing and handling of Kerberos principal names. In
@@ -77,13 +76,11 @@ public class KerberosName {
   private static List<Rule> rules;
 
   private static String defaultRealm;
-  private static Config kerbConf;
 
   static {
     try {
-      kerbConf = Config.getInstance();
-      defaultRealm = kerbConf.getDefaultRealm();
-    } catch (KrbException ke) {
+      defaultRealm = KerberosUtil.getDefaultRealm();
+    } catch (Exception ke) {
         defaultRealm="";
     }
   }

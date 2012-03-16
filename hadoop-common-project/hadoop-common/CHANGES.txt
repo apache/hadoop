@@ -88,6 +88,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-7806. Support binding to sub-interfaces (eli)
 
+    HADOOP-6941. Adds support for building Hadoop with IBM's JDK 
+    (Stephen Watt, Eli and ddas)
+
   OPTIMIZATIONS
 
   BUG FIXES
