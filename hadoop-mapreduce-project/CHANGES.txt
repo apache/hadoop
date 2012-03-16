@@ -34,6 +34,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3773. Add queue metrics with buckets for job run times. (omalley
     via acmurthy)
 
+    MAPREDUCE-3970 Add ServiceOperations class to aid working with Services
+    (stevel)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -66,9 +69,6 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4007. JobClient getJob(JobID) should return NULL if the job 
     does not exist (for backwards compatibility) (tucu)
-
-    MAPREDUCE-3970 Add ServiceOperations class to aid working with Services
-    (stevel)
 
 Release 0.23.2 - UNRELEASED
 
