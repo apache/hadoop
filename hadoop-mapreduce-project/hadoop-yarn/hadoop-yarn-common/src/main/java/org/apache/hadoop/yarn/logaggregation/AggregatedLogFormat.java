@@ -430,7 +430,7 @@ public class AggregatedLogFormat {
         int currentRead = 0;
         int totalRead = 0;
         while ((currentRead = reader.read(cbuf, 0, bufferSize)) != -1) {
-          writer.write(cbuf);
+          writer.write(cbuf, 0, currentRead);
           totalRead += currentRead;
         }
       }
