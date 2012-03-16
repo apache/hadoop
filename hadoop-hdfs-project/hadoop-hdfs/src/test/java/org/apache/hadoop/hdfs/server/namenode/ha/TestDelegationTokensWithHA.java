@@ -204,6 +204,17 @@ public class TestDelegationTokensWithHA {
     assertArrayEquals(token.getIdentifier(), token2.getIdentifier());
     assertArrayEquals(token.getPassword(), token2.getPassword());
   }
+
+  /**
+   * HDFS-3062: DistributedFileSystem.getCanonicalServiceName() throws an
+   * exception if the URI is a logical URI. This bug fails the combination of
+   * ha + mapred + security.
+   */
+  @Test
+  public void testDFSGetCanonicalServiceName() throws Exception {
+    assertEquals(fs.getCanonicalServiceName(), 
+        HATestUtil.getLogicalUri(cluster).getHost());
+  }
   
   enum TokenTestAction {
     RENEW, CANCEL;
