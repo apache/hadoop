@@ -840,4 +840,18 @@ public class DistributedFileSystem extends FileSystem {
   public void setBalancerBandwidth(long bandwidth) throws IOException {
     dfs.setBalancerBandwidth(bandwidth);
   }
+
+  /**
+   * Get a canonical service name for this file system. If the URI is logical,
+   * the hostname part of the URI will be returned.
+   * @return a service string that uniquely identifies this file system.
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    if (HAUtil.isLogicalUri(getConf(), getUri())) {
+      return getUri().getHost();
+    } else {
+      return super.getCanonicalServiceName();
+    }
+  }
 }
