@@ -237,6 +237,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3982. Fixed FileOutputCommitter to not err out for an 'empty-job'
     whose tasks don't write any outputs. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-4005. Fixes broken AM container logs URL on ResourceManager
+    Application Info page. (Jason Lowe via sseth)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES

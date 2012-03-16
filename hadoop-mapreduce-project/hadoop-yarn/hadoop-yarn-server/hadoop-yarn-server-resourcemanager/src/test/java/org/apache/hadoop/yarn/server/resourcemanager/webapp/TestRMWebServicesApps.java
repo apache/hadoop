@@ -751,6 +751,8 @@ public class TestRMWebServicesApps extends JerseyTest {
         amHostHttpAddress);
     assertTrue("amContainerLogs doesn't match",
         amContainerLogs.startsWith("http://"));
+    assertTrue("amContainerLogs doesn't contain user info",
+        amContainerLogs.endsWith("/" + app.getUser()));
   }
 
 }
