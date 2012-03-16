@@ -562,6 +562,8 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-2985. Improve logging when replicas are marked as corrupt. (todd)
 
+    HDFS-3098. Update and add tests for HADOOP-8173. (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
