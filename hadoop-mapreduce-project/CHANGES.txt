@@ -240,6 +240,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-4005. Fixes broken AM container logs URL on ResourceManager
     Application Info page. (Jason Lowe via sseth)
 
+    MAPREDUCE-4006. History server container log web UI sometimes combines
+    stderr/stdout/syslog contents together (Siddharth Seth via tgraves)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
