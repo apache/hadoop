@@ -226,6 +226,54 @@ public class TestFsShellCopy {
   }
   
   @Test
+  public void testRepresentsDir() throws Exception {
+    Path subdirDstPath = new Path(dstPath, srcPath.getName());
+    String argv[] = null;
+    lfs.delete(dstPath, true);
+    assertFalse(lfs.exists(dstPath));
+
+    argv = new String[]{ "-put", srcPath.toString(), dstPath.toString() };
+    assertEquals(0, shell.run(argv));
+    assertTrue(lfs.exists(dstPath) && lfs.isFile(dstPath));
+
+    lfs.delete(dstPath, true);
+    assertFalse(lfs.exists(dstPath));
+
+    // since dst path looks like a dir, it should not copy the file and
+    // rename it to what looks like a directory
+    lfs.delete(dstPath, true); // make copy fail
+    for (String suffix : new String[]{ "/", "/." } ) {
+      argv = new String[]{
+          "-put", srcPath.toString(), dstPath.toString()+suffix };
+      assertEquals(1, shell.run(argv));
+      assertFalse(lfs.exists(dstPath));
+      assertFalse(lfs.exists(subdirDstPath));
+    }
+
+    // since dst path looks like a dir, it should not copy the file and
+    // rename it to what looks like a directory
+    for (String suffix : new String[]{ "/", "/." } ) {
+      // empty out the directory and create to make copy succeed
+      lfs.delete(dstPath, true);
+      lfs.mkdirs(dstPath);
+      argv = new String[]{
+          "-put", srcPath.toString(), dstPath.toString()+suffix };
+      assertEquals(0, shell.run(argv));
+      assertTrue(lfs.exists(subdirDstPath));
+      assertTrue(lfs.isFile(subdirDstPath));
+    }
+
+    // ensure .. is interpreted as a dir
+    String dotdotDst = dstPath+"/foo/..";
+    lfs.delete(dstPath, true);
+    lfs.mkdirs(new Path(dstPath, "foo"));
+    argv = new String[]{ "-put", srcPath.toString(), dotdotDst };
+    assertEquals(0, shell.run(argv));
+    assertTrue(lfs.exists(subdirDstPath));
+    assertTrue(lfs.isFile(subdirDstPath));
+  }
+  
+  @Test
   public void testCopyMerge() throws Exception {
     Path root = new Path(testRootDir, "TestMerge");
     Path f1 = new Path(root, "f1");

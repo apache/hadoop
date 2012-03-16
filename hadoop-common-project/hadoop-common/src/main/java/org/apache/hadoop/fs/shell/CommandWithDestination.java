@@ -200,6 +200,8 @@ abstract class CommandWithDestination extends FsCommand {
     // a child path if dst is a dir; after recursion, it's always a dir
     if ((getDepth() > 0) || (dst.exists && dst.stat.isDirectory())) {
       target = dst.getPathDataForChild(src);
+    } else if (dst.representsDirectory()) { // see if path looks like a dir
+      target = dst.getPathDataForChild(src);
     } else {
       target = dst;
     }

@@ -188,12 +188,21 @@ public class PathData implements Comparable<PathData> {
    * @throws IOException upon unexpected error
    */
   public boolean parentExists() throws IOException {
+    return representsDirectory()
+        ? fs.exists(path) : fs.exists(path.getParent());
+  }
+
+  /**
+   * Check if the path represents a directory as determined by the basename
+   * being "." or "..", or the path ending with a directory separator 
+   * @return boolean if this represents a directory
+   */
+  public boolean representsDirectory() {
     String uriPath = uri.getPath();
     String name = uriPath.substring(uriPath.lastIndexOf("/")+1);
     // Path will munch off the chars that indicate a dir, so there's no way
     // to perform this test except by examining the raw basename we maintain
-    return (name.isEmpty() || name.equals(".") || name.equals(".."))
-        ? fs.exists(path) : fs.exists(path.getParent());
+    return (name.isEmpty() || name.equals(".") || name.equals(".."));
   }
   
   /**
