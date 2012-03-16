@@ -526,7 +526,11 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-mkdir &lt;path&gt; \.\.\.:( |\t)*Create a directory in specified location.( )*</expected-output>
+          <expected-output>^-mkdir \[-p\] &lt;path&gt; \.\.\.:( |\t)*Create a directory in specified location.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>TokenComparator</type>
+          <expected-output>-p  Do not fail if the directory already exists</expected-output>
         </comparator>
       </comparators>
     </test>
