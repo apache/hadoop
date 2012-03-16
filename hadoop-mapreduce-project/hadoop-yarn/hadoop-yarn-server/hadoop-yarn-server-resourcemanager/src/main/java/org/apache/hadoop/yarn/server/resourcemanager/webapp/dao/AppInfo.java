@@ -118,7 +118,8 @@ public class AppInfo {
             this.amContainerLogsExist = true;
             String url = join("http://", masterContainer.getNodeHttpAddress(),
                 "/node", "/containerlogs/",
-                ConverterUtils.toString(masterContainer.getId()));
+                ConverterUtils.toString(masterContainer.getId()),
+                "/", app.getUser());
             this.amContainerLogs = url;
             this.amHostHttpAddress = masterContainer.getNodeHttpAddress();
           }
