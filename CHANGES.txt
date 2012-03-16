@@ -159,9 +159,6 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-4001. Improve MAPREDUCE-3789's fix logic by looking at job's slot demands instead. (harsh)
 
-    HDFS-3075. Backport HADOOP-4885: Try to restore failed name-node storage
-    directories at checkpoint time.  (Brandon Li via szetszwo)
-
     MAPREDUCE-2835. Make per-job counter limits configurable. (tomwhite)
 
 Release 1.0.2 - unreleased
@@ -206,6 +203,11 @@ Release 1.0.2 - unreleased
     a storage dir. (eli)
 
     HDFS-2702. A single failed name dir can cause the NN to exit. (eli)
+
+    HDFS-3075. Backport HADOOP-4885: Try to restore failed name-node storage
+    directories at checkpoint time.  (Brandon Li via szetszwo)
+
+    HDFS-3101. Cannot read empty file using WebHDFS.  (szetszwo)
 
 Release 1.0.1 - 2012.02.14
 
