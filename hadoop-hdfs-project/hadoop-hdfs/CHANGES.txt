@@ -50,6 +50,8 @@ Trunk (unreleased changes)
 
     HDFS-2976. Remove unnecessary method (tokenRefetchNeeded) in DFSClient.
 
+    HDFS-3111. Missing license headers in trunk. (umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES
