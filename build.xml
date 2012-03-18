@@ -1795,7 +1795,7 @@
     <copy todir="${system-test-build-dir}/${final.name}"
       file="${system-test-build-dir}/${test.final.name}.jar" overwrite="true"/>
     <macro_tar 
-      param.destfile="${system-test-build-dir}/${final.name}-${os.arch}-bin.tar.gz">
+      param.destfile="${system-test-build-dir}/${final.name}-${os-arch}-bin.tar.gz">
         <param.listofitems>
           <tarfileset dir="${system-test-build-dir}" mode="664">
             <exclude name="${final.name}/bin/*" />
@@ -1811,7 +1811,7 @@
   </target>
   
   <target name="binary" depends="bin-package" description="Make platform-specific binary tarball without source and documentation">
-    <macro_tar param.destfile="${build.dir}/${final.name}-${os.arch}-bin.tar.gz">
+    <macro_tar param.destfile="${build.dir}/${final.name}-${os-arch}-bin.tar.gz">
       <param.listofitems>
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
@@ -1841,14 +1841,14 @@
     </macro_tar>
     <copy todir="${package.buildroot}/SOURCES">
       <fileset dir="${build.dir}">
-        <include name="${final.name}-${os.arch}-bin.tar.gz" />
+        <include name="${final.name}-${os-arch}-bin.tar.gz" />
       </fileset>
     </copy>
     <copy file="${src.dir}/packages/rpm/spec/hadoop.spec" todir="${package.buildroot}/SPECS">
       <filterchain>
         <replacetokens>
           <token key="final.name" value="${final.name}" />
-          <token key="build.arch" value="${os.arch}" />
+          <token key="build.arch" value="${os-arch}" />
           <token key="version" value="${hadoop.version}" />
           <token key="package.release" value="${package.release}" />
           <token key="package.build.dir" value="${package.build.dir}" />
@@ -1859,7 +1859,7 @@
         </replacetokens>
       </filterchain>
     </copy>
-    <rpm specFile="hadoop.spec" command="-bb --target ${os.arch}" topDir="${package.buildroot}" cleanBuildDir="true" failOnError="true"/>
+    <rpm specFile="hadoop.spec" command="-bb --target ${os-arch}" topDir="${package.buildroot}" cleanBuildDir="true" failOnError="true"/>
     <copy todir="${build.dir}/" flatten="true">
       <fileset dir="${package.buildroot}/RPMS">
         <include name="**/${name}*.rpm" />
@@ -1903,7 +1903,7 @@
         </replacetokens>
       </filterchain>
     </copy>
-    <deb destfile="${package.buildroot}/${name}_${hadoop.version}-${package.release}_${os.arch}.deb" control="${package.build.dir}/hadoop.control">
+    <deb destfile="${package.buildroot}/${name}_${hadoop.version}-${package.release}_${os-arch}.deb" control="${package.build.dir}/hadoop.control">
       <tarfileset dir="${build.dir}/${final.name}" filemode="644" prefix="${package.prefix}">
         <exclude name="bin/*" />
         <exclude name="sbin/*" />
