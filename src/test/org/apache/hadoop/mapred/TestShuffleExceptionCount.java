@@ -17,103 +17,196 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
-import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import static org.apache.hadoop.test.MetricsAsserts.*;
 
 import org.junit.Test;
 
 public class TestShuffleExceptionCount {
 
-  public static class TestMapOutputServlet extends TaskTracker.MapOutputServlet {
+  static boolean abortCalled = false;
+  private final float epsilon = 1e-5f;
 
-    public void checkException(IOException ie, String exceptionMsgRegex,
-        String exceptionStackRegex, ShuffleServerInstrumentation shuffleMetrics) {
-      super.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-          shuffleMetrics);
+  public static class TestShuffleExceptionTracker extends ShuffleExceptionTracker {
+    private static final long serialVersionUID = 1L;
+
+    TestShuffleExceptionTracker(int size, String exceptionStackRegex,
+        String exceptionMsgRegex, float shuffleExceptionLimit) {
+      super(size, exceptionStackRegex,
+          exceptionMsgRegex, shuffleExceptionLimit);
     }
 
+    protected void doAbort() {
+      abortCalled = true;
+  }
   }
 
   @Test
   public void testCheckException() throws IOException, InterruptedException {
-    TestMapOutputServlet testServlet = new TestMapOutputServlet();
-    JobConf conf = new JobConf();
-    conf.setUser("testuser");
-    conf.setJobName("testJob");
-    conf.setSessionId("testSession");
-
-    TaskTracker tt = new TaskTracker();
-    tt.setConf(conf);
-    ShuffleServerInstrumentation shuffleMetrics =
-      ShuffleServerInstrumentation.create(tt);
 
     // first test with only MsgRegex set but doesn't match
     String exceptionMsgRegex = "Broken pipe";
     String exceptionStackRegex = null;
+    TestShuffleExceptionTracker shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0f);
     IOException ie = new IOException("EOFException");
-    testServlet.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-        shuffleMetrics);
-    MetricsRecordBuilder rb = getMetrics(shuffleMetrics);
-    assertCounter("shuffle_exceptions_caught", 0, rb);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
 
     // test with only MsgRegex set that does match
     ie = new IOException("Broken pipe");
     exceptionStackRegex = null;
-    testServlet.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-        shuffleMetrics);
-    rb = getMetrics(shuffleMetrics);
-    assertCounter("shuffle_exceptions_caught", 1, rb);
+    shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
 
     // test with neither set, make sure incremented
     exceptionMsgRegex = null;
     exceptionStackRegex = null;
-    testServlet.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-        shuffleMetrics);
-    rb = getMetrics(shuffleMetrics);
-    assertCounter("shuffle_exceptions_caught", 2, rb);
+    shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
 
     // test with only StackRegex set doesn't match
     exceptionMsgRegex = null;
     exceptionStackRegex = ".*\\.doesnt\\$SelectSet\\.wakeup.*";
     ie.setStackTrace(constructStackTrace());
-    testServlet.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-        shuffleMetrics);
-    rb = getMetrics(shuffleMetrics);
-    assertCounter("shuffle_exceptions_caught", 2, rb);
+    shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
 
     // test with only StackRegex set does match
     exceptionMsgRegex = null;
     exceptionStackRegex = ".*\\.SelectorManager\\$SelectSet\\.wakeup.*";
-    testServlet.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-        shuffleMetrics);
-    rb = getMetrics(shuffleMetrics);
-    assertCounter("shuffle_exceptions_caught", 3, rb);
+    shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0.3f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
 
     // test with both regex set and matches
     exceptionMsgRegex = "Broken pipe";
     ie.setStackTrace(constructStackTraceTwo());
-    testServlet.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-        shuffleMetrics);
-    rb = getMetrics(shuffleMetrics);
-    assertCounter("shuffle_exceptions_caught", 4, rb);
+    shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0.3f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
 
     // test with both regex set and only msg matches
     exceptionStackRegex = ".*[1-9]+BOGUSREGEX";
-    testServlet.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-        shuffleMetrics);
-    rb = getMetrics(shuffleMetrics);
-    assertCounter("shuffle_exceptions_caught", 4, rb);
+    shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0.3f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
 
     // test with both regex set and only stack matches
     exceptionStackRegex = ".*\\.SelectorManager\\$SelectSet\\.wakeup.*";
     exceptionMsgRegex = "EOFException";
-    testServlet.checkException(ie, exceptionMsgRegex, exceptionStackRegex,
-        shuffleMetrics);
-    rb = getMetrics(shuffleMetrics);
-    assertCounter("shuffle_exceptions_caught", 4, rb);
+    shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0.3f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
+
+    exceptionMsgRegex = "Broken pipe";
+    ie.setStackTrace(constructStackTraceTwo());
+    shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0.3f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
+  }
+
+  @Test
+  public void testExceptionCount() {
+    String exceptionMsgRegex = "Broken pipe";
+    String exceptionStackRegex = ".*\\.SelectorManager\\$SelectSet\\.wakeup.*";
+    IOException ie = new IOException("Broken pipe");
+    ie.setStackTrace(constructStackTraceTwo());
+
+    TestShuffleExceptionTracker shuffleExceptionTracker = new TestShuffleExceptionTracker(
+        10, exceptionStackRegex, exceptionMsgRegex, 0.3f);
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
+    assertEquals("shuffleExceptionCount wrong", (float) 1 / (float) 10,
+        shuffleExceptionTracker.getPercentExceptions(), epsilon);
+
+    ie.setStackTrace(constructStackTraceThree());
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
+    assertEquals("shuffleExceptionCount wrong", (float) 1 / (float) 10,
+        shuffleExceptionTracker.getPercentExceptions(), epsilon);
+
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
+    assertEquals("shuffleExceptionCount wrong", (float) 1 / (float) 10,
+        shuffleExceptionTracker.getPercentExceptions(), epsilon);
+
+    ie.setStackTrace(constructStackTrace());
+    shuffleExceptionTracker.checkException(ie);
+    assertFalse("abort called when set to off", abortCalled);
+    assertEquals("shuffleExceptionCount wrong", (float) 2 / (float) 10,
+        shuffleExceptionTracker.getPercentExceptions(), epsilon);
+
+    shuffleExceptionTracker.checkException(ie);
+    assertTrue("abort not called", abortCalled);
+    assertEquals("shuffleExceptionCount wrong", (float) 3 / (float) 10,
+        shuffleExceptionTracker.getPercentExceptions(), epsilon);
 
   }
+
+  @Test
+  public void testShuffleExceptionTrailing() {
+    String exceptionStackRegex = ".*\\.SelectorManager\\$SelectSet\\.wakeup.*";
+    String exceptionMsgRegex = "Broken pipe";
+    int size = 5;
+    ShuffleExceptionTracker tracker = new ShuffleExceptionTracker(
+        size, exceptionStackRegex, exceptionMsgRegex, 0.3f);
+    assertEquals(size, tracker.getNumRequests());
+    assertEquals(0, tracker.getPercentExceptions(), 0);
+    tracker.success();
+    assertEquals(0, tracker.getPercentExceptions(), 0);
+    tracker.exception();
+    assertEquals((float) 1 / (float) size, tracker.getPercentExceptions(), epsilon);
+    tracker.exception();
+    tracker.exception();
+    assertEquals((float) 3 / (float) size, tracker.getPercentExceptions(), epsilon);
+    tracker.exception();
+    tracker.exception();
+    tracker.exception();
+    tracker.exception();
+    assertEquals((float) 5 / (float) size, tracker.getPercentExceptions(), epsilon);
+    // make sure we push out old ones
+    tracker.success();
+    tracker.success();
+    assertEquals((float) 3 / (float) size, tracker.getPercentExceptions(), epsilon);
+    tracker.exception();
+    tracker.exception();
+    tracker.exception();
+    tracker.exception();
+    tracker.exception();
+    assertEquals((float) 5 / (float) size, tracker.getPercentExceptions(), epsilon);
+  }
+
+  @Test
+  public void testShuffleExceptionTrailingSize() {
+    String exceptionStackRegex = ".*\\.SelectorManager\\$SelectSet\\.wakeup.*";
+    String exceptionMsgRegex = "Broken pipe";
+    int size = 1000;
+    ShuffleExceptionTracker tracker = new ShuffleExceptionTracker(
+        size, exceptionStackRegex, exceptionMsgRegex, 0.3f);
+    assertEquals(size, tracker.getNumRequests());
+    tracker.success();
+    tracker.success();
+    tracker.exception();
+    tracker.exception();
+    assertEquals((float) 2 / (float) size, tracker.getPercentExceptions(),
+        epsilon);
+  }
+
 
   /*
    * Construction exception like:
@@ -174,4 +267,18 @@ public class TestShuffleExceptionCount {
     return stack;
   }
 
+  /*
+   * java.io.IOException: Broken pipe at
+   * sun.nio.ch.EPollArrayWrapper.interrupt(Native Method) at
+   * sun.nio.ch.EPollArrayWrapper.interrupt(EPollArrayWrapper.java:256) at
+   * sun.nio.ch.EPollSelectorImpl.wakeup(EPollSelectorImpl.java:175) at
+   */
+  private StackTraceElement[] constructStackTraceThree() {
+    StackTraceElement[] stack = new StackTraceElement[3];
+    stack[0] = new StackTraceElement("sun.nio.ch.EPollArrayWrapper", "interrupt", "", -2);
+    stack[1] = new StackTraceElement("sun.nio.ch.EPollArrayWrapper", "interrupt", "EPollArrayWrapper.java", 256);
+    stack[2] = new StackTraceElement("sun.nio.ch.EPollSelectorImpl", "wakeup", "EPollSelectorImpl.java", 175);
+
+    return stack;
+}
 }

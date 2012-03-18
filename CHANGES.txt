@@ -209,6 +209,9 @@ Release 1.0.2 - unreleased
 
     HDFS-3101. Cannot read empty file using WebHDFS.  (szetszwo)
 
+    MAPREDUCE-3851.  Allow more aggressive action on detection of the jetty
+    issue (tgraves via bobby)
+
 Release 1.0.1 - 2012.02.14
 
   NEW FEATURES
