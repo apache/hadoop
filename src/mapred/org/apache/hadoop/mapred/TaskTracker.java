@@ -411,6 +411,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
   private ShuffleServerInstrumentation shuffleServerMetrics;
 
+  private ShuffleExceptionTracker shuffleExceptionTracking;
+
   private TaskTrackerInstrumentation myInstrumentation = null;
 
   public TaskTrackerInstrumentation getTaskTrackerInstrumentation() {
@@ -1467,9 +1469,33 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       conf.get("mapreduce.reduce.shuffle.catch.exception.stack.regex");
     String exceptionMsgRegex =
       conf.get("mapreduce.reduce.shuffle.catch.exception.message.regex");
+    // Percent of shuffle exceptions (out of sample size) seen before it's
+    // fatal - acceptable values are from 0 to 1.0, 0 disables the check.
+    // ie. 0.3 = 30% of the last X number of requests matched the exception,
+    // so abort.
+    float shuffleExceptionLimit =
+      conf.getFloat(
+          "mapreduce.reduce.shuffle.catch.exception.percent.limit.fatal", 0);
+    if ((shuffleExceptionLimit > 1) || (shuffleExceptionLimit < 0)) {
+      throw new IllegalArgumentException(
+          "mapreduce.reduce.shuffle.catch.exception.percent.limit.fatal "
+              + " must be between 0 and 1.0");
+    }
 
-    server.setAttribute("exceptionStackRegex", exceptionStackRegex);
-    server.setAttribute("exceptionMsgRegex", exceptionMsgRegex);
+    // The number of trailing requests we track, used for the fatal
+    // limit calculation
+    int shuffleExceptionSampleSize =
+      conf.getInt("mapreduce.reduce.shuffle.catch.exception.sample.size", 1000);
+    if (shuffleExceptionSampleSize <= 0) {
+      throw new IllegalArgumentException(
+          "mapreduce.reduce.shuffle.catch.exception.sample.size "
+              + " must be greater than 0");
+    }
+    shuffleExceptionTracking =
+      new ShuffleExceptionTracker(shuffleExceptionSampleSize, exceptionStackRegex,
+          exceptionMsgRegex, shuffleExceptionLimit );
+
+    server.setAttribute("shuffleExceptionTracking", shuffleExceptionTracking);
 
     server.addInternalServlet("mapOutput", "/mapOutput", MapOutputServlet.class);
     server.addServlet("taskLog", "/tasklog", TaskLogServlet.class);
@@ -3796,10 +3822,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         (ShuffleServerInstrumentation) context.getAttribute("shuffleServerMetrics");
       TaskTracker tracker = 
         (TaskTracker) context.getAttribute("task.tracker");
-      String exceptionStackRegex =
-        (String) context.getAttribute("exceptionStackRegex");
-      String exceptionMsgRegex =
-        (String) context.getAttribute("exceptionMsgRegex");
+      ShuffleExceptionTracker shuffleExceptionTracking =
+        (ShuffleExceptionTracker) context.getAttribute("shuffleExceptionTracking");
 
       verifyRequest(request, response, tracker, jobId);
 
@@ -3912,7 +3936,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
                            ") failed :\n"+
                            StringUtils.stringifyException(ie));
         log.warn(errorMsg);
-        checkException(ie, exceptionMsgRegex, exceptionStackRegex, shuffleMetrics);
+        if (shuffleExceptionTracking.checkException(ie)) {
+          shuffleMetrics.exceptionsCaught();
+        }
         if (isInputException) {
           tracker.mapOutputLost(TaskAttemptID.forName(mapId), errorMsg);
         }
@@ -3933,40 +3959,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         }
       }
       outStream.close();
+      shuffleExceptionTracking.success();
       shuffleMetrics.successOutput();
     }
     
-    protected void checkException(IOException ie, String exceptionMsgRegex,
-        String exceptionStackRegex, ShuffleServerInstrumentation shuffleMetrics) {
-      // parse exception to see if it looks like a regular expression you
-      // configure. If both msgRegex and StackRegex set then make sure both
-      // match, otherwise only the one set has to match.
-      if (exceptionMsgRegex != null) {
-        String msg = ie.getMessage();
-        if (msg == null || !msg.matches(exceptionMsgRegex)) {
-          return;
-        }
-      }
-      if (exceptionStackRegex != null
-          && !checkStackException(ie, exceptionStackRegex)) {
-        return;
-      }
-      shuffleMetrics.exceptionsCaught();
-    }
-
-    private boolean checkStackException(IOException ie,
-        String exceptionStackRegex) {
-      StackTraceElement[] stack = ie.getStackTrace();
-
-      for (StackTraceElement elem : stack) {
-        String stacktrace = elem.toString();
-        if (stacktrace.matches(exceptionStackRegex)) {
-          return true;
-        }
-      }
-      return false;
-    }
-
 
     /**
      * verify that request has correct HASH for the url

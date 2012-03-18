@@ -132,4 +132,9 @@
        <Method name="run" />
        <Bug pattern="DM_EXIT" />
     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.ShuffleExceptionTracker" />
+       <Method name="doAbort" />
+       <Bug pattern="DM_EXIT" />
+    </Match>
 </FindBugsFilter>
