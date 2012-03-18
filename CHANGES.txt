@@ -54,6 +54,9 @@ Release 1.0.2 - unreleased
     HADOOP-8088. User-group mapping cache incorrectly does negative caching on
     transient failures (Kihwal Lee via bobby)
 
+    HADOOP-8132. 64bit secure datanodes do not start as the jsvc path is wrong
+    (Arpit Gupta via mattf)
+
 Release 1.0.1 - 2012.02.14
 
   NEW FEATURES
