@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 1.0.1 Release Notes</title>
+<title>Hadoop 1.0.2 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,10 +10,144 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 1.0.1 Release Notes</h1>
+<h1>Hadoop 1.0.2 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
 <a name="changes"/>
+
+<h2>Changes since Hadoop 1.0.1</h2>
+
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-1722">HADOOP-1722</a>.
+     Major improvement reported by runping and fixed by klbostee <br>
+     <b>Make streaming to handle non-utf8 byte array</b><br>
+     <blockquote>                                              Streaming allows binary (or other non-UTF8) streams.
+
+      
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3851">MAPREDUCE-3851</a>.
+     Major bug reported by kihwal and fixed by tgraves (tasktracker)<br>
+     <b>Allow more aggressive action on detection of the jetty issue</b><br>
+     <blockquote>                    added new configuration variables to control when TT aborts if it sees a certain number of exceptions:<br/>
+
+<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;// Percent of shuffle exceptions (out of sample size) seen before it&#39;s<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;// fatal - acceptable values are from 0 to 1.0, 0 disables the check.<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;// ie. 0.3 = 30% of the last X number of requests matched the exception,<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;// so abort.<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;conf.getFloat(<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;mapreduce.reduce.shuffle.catch.exception.percent.limit.fatal&quot;, 0);<br/>
+
+<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;// The number of trailing requests we track, used for the fatal<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;// limit calculation<br/>
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;conf.getInt(&quot;mapreduce.reduce.shuffle.catch.exception.sample.size&quot;, 1000);
+</blockquote></li>
+
+</ul>
+
+<h3>Other Jiras (describe bug fixes and minor changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5450">HADOOP-5450</a>.
+     Blocker improvement reported by klbostee and fixed by klbostee <br>
+     <b>Add support for application-specific typecodes to typed bytes</b><br>
+     <blockquote>For serializing objects of types that are not supported by typed bytes serialization, applications might want to use a custom serialization format. Right now, typecode 0 has to be used for the bytes resulting from this custom serialization, which could lead to problems when deserializing the objects because the application cannot know if a byte sequence following typecode 0 is a customly serialized object or just a raw sequence of bytes. Therefore, a range of typecodes that are treated as ali...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7206">HADOOP-7206</a>.
+     Major new feature reported by eli and fixed by tucu00 <br>
+     <b>Integrate Snappy compression</b><br>
+     <blockquote>Google release Zippy as an open source (APLv2) project called Snappy (http://code.google.com/p/snappy). This tracks integrating it into Hadoop.<br><br>{quote}<br>Snappy is a compression/decompression library. It does not aim for maximum compression, or compatibility with any other compression library; instead, it aims for very high speeds and reasonable compression. For instance, compared to the fastest mode of zlib, Snappy is an order of magnitude faster for most inputs, but the resulting compressed ...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8050">HADOOP-8050</a>.
+     Major bug reported by kihwal and fixed by kihwal (metrics)<br>
+     <b>Deadlock in metrics</b><br>
+     <blockquote>The metrics serving thread and the periodic snapshot thread can deadlock.<br>It happened a few times on one of namenodes we have. When it happens RPC works but the web ui and hftp stop working. I haven&apos;t look at the trunk too closely, but it might happen there too.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8088">HADOOP-8088</a>.
+     Major bug reported by kihwal and fixed by  (security)<br>
+     <b>User-group mapping cache incorrectly does negative caching on transient failures</b><br>
+     <blockquote>We&apos;ve seen a case where some getGroups() calls fail when the ldap server or the network is having transient failures. Looking at the code, the shell-based and the JNI-based implementations swallow exceptions and return an empty or partial list. The caller, Groups#getGroups() adds this likely empty list into the mapping cache for the user. This will function as negative caching until the cache expires. I don&apos;t think we want negative caching here, but even if we do, it should be intelligent eno...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8090">HADOOP-8090</a>.
+     Major improvement reported by gkesavan and fixed by gkesavan <br>
+     <b>rename hadoop 64 bit rpm/deb package name</b><br>
+     <blockquote>change hadoop rpm/deb name from hadoop-&lt;version&gt;.amd64.rpm/deb hadoop-&lt;version&gt;.x86_64.rpm/deb   </blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8132">HADOOP-8132</a>.
+     Major bug reported by arpitgupta and fixed by arpitgupta <br>
+     <b>64bit secure datanodes do not start as the jsvc path is wrong</b><br>
+     <blockquote>64bit secure datanodes were looking for /usr/libexec/../libexec/jsvc. instead of /usr/libexec/../libexec/jsvc.amd64</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2701">HDFS-2701</a>.
+     Major improvement reported by eli and fixed by eli (name-node)<br>
+     <b>Cleanup FS* processIOError methods</b><br>
+     <blockquote>Let&apos;s rename the various &quot;processIOError&quot; methods to be more descriptive. The current code makes it difficult to identify and reason about bug fixes. While we&apos;re at it let&apos;s remove &quot;Fatal&quot; from the &quot;Unable to sync the edit log&quot; log since it&apos;s not actually a fatal error (this is confusing to users). And 2NN &quot;Checkpoint done&quot; should be info, not a warning (also confusing to users).<br><br>Thanks to HDFS-1073 these issues don&apos;t exist on trunk or 23.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2702">HDFS-2702</a>.
+     Critical bug reported by eli and fixed by eli (name-node)<br>
+     <b>A single failed name dir can cause the NN to exit </b><br>
+     <blockquote>There&apos;s a bug in FSEditLog#rollEditLog which results in the NN process exiting if a single name dir has failed. Here&apos;s the relevant code:<br><br>{code}<br>close()  // So editStreams.size() is 0 <br>foreach edits dir {<br>  ..<br>  eStream = new ...  // Might get an IOE here<br>  editStreams.add(eStream);<br>} catch (IOException ioe) {<br>  removeEditsForStorageDir(sd);  // exits if editStreams.size() &lt;= 1  <br>}<br>{code}<br><br>If we get an IOException before we&apos;ve added two edits streams to the list we&apos;ll exit, eg if there&apos;s an ...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2703">HDFS-2703</a>.
+     Major bug reported by eli and fixed by eli (name-node)<br>
+     <b>removedStorageDirs is not updated everywhere we remove a storage dir</b><br>
+     <blockquote>There are a number of places (FSEditLog#open, purgeEditLog, and rollEditLog) where we remove a storage directory but don&apos;t add it to the removedStorageDirs list. This means a storage dir may have been removed but we don&apos;t see it in the log or Web UI. This doesn&apos;t affect trunk/23 since the code there is totally different.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2978">HDFS-2978</a>.
+     Major new feature reported by atm and fixed by atm (name-node)<br>
+     <b>The NameNode should expose name dir statuses via JMX</b><br>
+     <blockquote>We currently display this info on the NN web UI, so users who wish to monitor this must either do it manually or parse HTML. We should publish this information via JMX.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3006">HDFS-3006</a>.
+     Major bug reported by bcwalrus and fixed by szetszwo (name-node)<br>
+     <b>Webhdfs &quot;SETOWNER&quot; call returns incorrect content-type</b><br>
+     <blockquote>The SETOWNER call returns an empty body. But the header has &quot;Content-Type: application/json&quot;, which is a contradiction (empty string is not valid json). This appears to happen for SETTIMES and SETPERMISSION as well.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3075">HDFS-3075</a>.
+     Major improvement reported by brandonli and fixed by brandonli (name-node)<br>
+     <b>Backport HADOOP-4885 to branch-1</b><br>
+     <blockquote>When a storage directory is inaccessible, namenode removes it from the valid storage dir list to a removedStorageDirs list. Those storage directories will not be restored when they become healthy again. <br><br>The proposed solution is to restore the previous failed directories at the beginning of checkpointing, say, rollEdits, by copying necessary metadata files from healthy directory to unhealthy ones. In this way, whenever a failed storage directory is recovered by the administrator, he/she can ...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3101">HDFS-3101</a>.
+     Major bug reported by wangzw and fixed by szetszwo (hdfs client)<br>
+     <b>cannot read empty file using webhdfs</b><br>
+     <blockquote>STEP:<br>1, create a new EMPTY file<br>2, read it using webhdfs.<br><br>RESULT:<br>expected: get a empty file<br>I got: {&quot;RemoteException&quot;:{&quot;exception&quot;:&quot;IOException&quot;,&quot;javaClassName&quot;:&quot;java.io.IOException&quot;,&quot;message&quot;:&quot;Offset=0 out of the range [0, 0); OPEN, path=/testFile&quot;}}<br><br>First of all, [0, 0) is not a valid range, and I think read a empty file should be OK.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-764">MAPREDUCE-764</a>.
+     Blocker bug reported by klbostee and fixed by klbostee (contrib/streaming)<br>
+     <b>TypedBytesInput&apos;s readRaw() does not preserve custom type codes</b><br>
+     <blockquote>The typed bytes format supports byte sequences of the form {{&lt;custom type code&gt; &lt;length&gt; &lt;bytes&gt;}}. When reading such a sequence via {{TypedBytesInput}}&apos;s {{readRaw()}} method, however, the returned sequence currently is {{0 &lt;length&gt; &lt;bytes&gt;}} (0 is the type code for a bytes array), which leads to bugs such as the one described [here|http://dumbo.assembla.com/spaces/dumbo/tickets/54].</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3583">MAPREDUCE-3583</a>.
+     Critical bug reported by zhihyu@ebaysf.com and fixed by zhihyu@ebaysf.com <br>
+     <b>ProcfsBasedProcessTree#constructProcessInfo() may throw NumberFormatException</b><br>
+     <blockquote>HBase PreCommit builds frequently gave us NumberFormatException.<br><br>From https://builds.apache.org/job/PreCommit-HBASE-Build/553//testReport/org.apache.hadoop.hbase.mapreduce/TestHFileOutputFormat/testMRIncrementalLoad/:<br>{code}<br>2011-12-20 01:44:01,180 WARN  [main] mapred.JobClient(784): No job jar file set.  User classes may not be found. See JobConf(Class) or JobConf#setJar(String).<br>java.lang.NumberFormatException: For input string: &quot;18446743988060683582&quot;<br>	at java.lang.NumberFormatException.fo...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3773">MAPREDUCE-3773</a>.
+     Major new feature reported by owen.omalley and fixed by owen.omalley (jobtracker)<br>
+     <b>Add queue metrics with buckets for job run times</b><br>
+     <blockquote>It would be nice to have queue metrics that reflect the number of jobs in each queue that have been running for different ranges of time.<br><br>Reasonable time ranges are probably 0-1 hr, 1-5 hr, 5-24 hr, 24+ hrs; but they should be configurable.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3824">MAPREDUCE-3824</a>.
+     Critical bug reported by aw and fixed by tgraves (distributed-cache)<br>
+     <b>Distributed caches are not removed properly</b><br>
+     <blockquote>Distributed caches are not being properly removed by the TaskTracker when they are expected to be expired. </blockquote></li>
+
+</ul>
+
 <h2>Changes since Hadoop 1.0.0</h2>
 
 <h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
