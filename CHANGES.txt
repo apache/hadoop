@@ -22,6 +22,9 @@ Release 1.0.2 - unreleased
     HADOOP-5450. Add support for application-specific typecodes to typed
     bytes. (Klaas Bosteels via acmurthy) 
 
+    HADOOP-8090. rename hadoop 64 bit rpm/deb package name. (Giridharan Kesavan
+    via mattf)
+
   BUG FIXES
 
     HADOOP-8050. Deadlock in metrics. (Kihwal Lee via mattf)
