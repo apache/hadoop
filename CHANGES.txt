@@ -212,6 +212,9 @@ Release 1.0.2 - unreleased
     MAPREDUCE-3851.  Allow more aggressive action on detection of the jetty
     issue (tgraves via bobby)
 
+    HADOOP-8088. User-group mapping cache incorrectly does negative caching on
+    transient failures (Kihwal Lee via bobby)
+
 Release 1.0.1 - 2012.02.14
 
   NEW FEATURES

@@ -26,6 +26,7 @@
 **/TestGetFileBlockLocations.java
 **/TestGlobalFilter.java
 **/TestGlobExpander.java
+**/TestGroupsCaching.java
 **/TestHarFileSystem.java
 **/TestHtmlQuoting.java
 **/TestHttpServer.java

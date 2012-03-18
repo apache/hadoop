@@ -77,6 +77,9 @@ public class Groups {
     }
     // Create and cache user's groups
     groups = new CachedGroups(impl.getGroups(user));
+    if (groups.getGroups().isEmpty()) {
+      throw new IOException("No groups found for user " + user);
+    }
     userToGroupsMap.put(user, groups);
     LOG.debug("Returning fetched groups for '" + user + "'");
     return groups.getGroups();
