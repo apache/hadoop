@@ -54,6 +54,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
+    (Devaraj K via umamahesh)
+
     HADOOP-7900. LocalDirAllocator confChanged() accesses conf.get() twice
     (Ravi Gummadi via Uma Maheswara Rao G)
 

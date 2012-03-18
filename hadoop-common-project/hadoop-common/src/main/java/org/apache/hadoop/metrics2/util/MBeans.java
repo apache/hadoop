@@ -53,19 +53,21 @@ public class MBeans {
                                     Object theMbean) {
     final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
     ObjectName name = getMBeanName(serviceName, nameName);
-    try {
-      mbs.registerMBean(theMbean, name);
-      LOG.debug("Registered "+ name);
-      return name;
-    } catch (InstanceAlreadyExistsException iaee) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Failed to register MBean \""+ name + "\"", iaee);
-      } else {
-        LOG.warn("Failed to register MBean \""+ name
-            + "\": Instance already exists.");
+    if (name != null) {
+      try {
+        mbs.registerMBean(theMbean, name);
+        LOG.debug("Registered " + name);
+        return name;
+      } catch (InstanceAlreadyExistsException iaee) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Failed to register MBean \"" + name + "\"", iaee);
+        } else {
+          LOG.warn("Failed to register MBean \"" + name
+              + "\": Instance already exists.");
+        }
+      } catch (Exception e) {
+        LOG.warn("Failed to register MBean \"" + name + "\"", e);
       }
-    } catch (Exception e) {
-      LOG.warn("Failed to register MBean \""+ name + "\"", e);
     }
     return null;
   }
