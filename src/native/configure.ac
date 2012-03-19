@@ -55,6 +55,8 @@ JNI_LDFLAGS=""
 if test $JAVA_HOME != ""
 then
   JNI_LDFLAGS="-L$JAVA_HOME/jre/lib/$OS_ARCH/server"
+  JVMSOPATH=`find $JAVA_HOME/jre/ -name libjvm.so | head -n 1`
+  JNI_LDFLAGS="$JNI_LDFLAGS -L`dirname $JVMSOPATH`"
 fi
 ldflags_bak=$LDFLAGS
 LDFLAGS="$LDFLAGS $JNI_LDFLAGS"

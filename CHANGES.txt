@@ -163,6 +163,11 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-2835. Make per-job counter limits configurable. (tomwhite)
 
+    HADOOP-6924. Adds a directory to the list of directories to search for the libjvm.so file. 
+    The new directory is found by running a 'find' command and the first output is taken. 
+    This was done to handle the build of Hadoop with IBM's JDK. (Stephen Watt, 
+    Guillermo Cabrera and ddas) 
+
 Release 1.0.2 - 2012.03.18
 
   NEW FEATURES
