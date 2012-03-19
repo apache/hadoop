@@ -259,10 +259,12 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     for (int i = 0; i < dnprotos.size(); i++) {
       dns[i] = PBHelper.convert(dnprotos.get(i));
     }
+    final List<String> sidprotos = request.getNewTargetStoragesList();
+    final String[] storageIDs = sidprotos.toArray(new String[sidprotos.size()]);
     try {
       impl.commitBlockSynchronization(PBHelper.convert(request.getBlock()),
           request.getNewGenStamp(), request.getNewLength(),
-          request.getCloseFile(), request.getDeleteBlock(), dns);
+          request.getCloseFile(), request.getDeleteBlock(), dns, storageIDs);
     } catch (IOException e) {
       throw new ServiceException(e);
     }

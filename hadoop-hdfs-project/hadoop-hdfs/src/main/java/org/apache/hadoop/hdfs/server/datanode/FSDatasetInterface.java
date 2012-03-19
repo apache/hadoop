@@ -87,6 +87,9 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
   /** @return a list of volumes. */
   public List<V> getVolumes();
 
+  /** @return the volume that contains a replica of the block. */
+  public V getVolume(ExtendedBlock b);
+
   /** @return a volume information map (name => info). */
   public Map<String, Object> getVolumeInfoMap();
 
@@ -336,11 +339,11 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
 
   /**
    * Update replica's generation stamp and length and finalize it.
+   * @return the ID of storage that stores the block
    */
-  public ReplicaInfo updateReplicaUnderRecovery(
-                                          ExtendedBlock oldBlock,
-                                          long recoveryId,
-                                          long newLength) throws IOException;
+  public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
+      long recoveryId, long newLength) throws IOException;
+
   /**
    * add new block pool ID
    * @param bpid Block pool Id

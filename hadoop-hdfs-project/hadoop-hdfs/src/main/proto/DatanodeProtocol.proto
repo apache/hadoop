@@ -339,6 +339,7 @@ message CommitBlockSynchronizationRequestProto {
   required bool closeFile = 4;
   required bool deleteBlock = 5;
   repeated DatanodeIDProto newTaragets = 6;
+  repeated string newTargetStorages = 7;
 }
 
 /**

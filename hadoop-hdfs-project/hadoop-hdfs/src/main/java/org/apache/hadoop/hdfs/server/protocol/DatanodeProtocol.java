@@ -176,6 +176,6 @@ public interface DatanodeProtocol {
    */
   public void commitBlockSynchronization(ExtendedBlock block,
       long newgenerationstamp, long newlength,
-      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets
-      ) throws IOException;
+      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets,
+      String[] newtargetstorages) throws IOException;
 }

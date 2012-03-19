@@ -307,7 +307,8 @@ public class TestPipelinesFailover {
           Mockito.anyLong(), // new length
           Mockito.eq(true), // close file
           Mockito.eq(false), // delete block
-          (DatanodeID[]) Mockito.anyObject()); // new targets
+          (DatanodeID[]) Mockito.anyObject(), // new targets
+          (String[]) Mockito.anyObject()); // new target storages
 
       DistributedFileSystem fsOtherUser = createFsAsOtherUser(cluster, conf);
       assertFalse(fsOtherUser.recoverLease(TEST_PATH));
