@@ -57,6 +57,8 @@ JNI_LDFLAGS=""
 if test $JAVA_HOME != ""
 then
   JNI_LDFLAGS="-L$JAVA_HOME/jre/lib/$OS_ARCH/server"
+  JVMSOPATH=`find $JAVA_HOME/jre/ -name libjvm.so | head -n 1`
+  JNI_LDFLAGS="$JNI_LDFLAGS -L`dirname $JVMSOPATH`"
 fi
 LDFLAGS="$LDFLAGS $JNI_LDFLAGS"
 AC_CHECK_LIB([jvm], [JNI_GetCreatedJavaVMs])
