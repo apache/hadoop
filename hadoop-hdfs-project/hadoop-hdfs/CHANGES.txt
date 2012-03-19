@@ -52,6 +52,9 @@ Trunk (unreleased changes)
 
     HDFS-3111. Missing license headers in trunk. (umamahesh)
 
+    HDFS-3091. Update the usage limitations of ReplaceDatanodeOnFailure policy in
+    the config description for the smaller clusters. (szetszwo via umamahesh)
+
   OPTIMIZATIONS
 
   BUG FIXES

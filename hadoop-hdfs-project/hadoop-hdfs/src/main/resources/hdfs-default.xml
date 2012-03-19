@@ -371,6 +371,12 @@
 
     This is a site-wide property to enable/disable the feature.
 
+    When the cluster size is extremely small, e.g. 3 nodes or less, cluster
+    administrators may want to set the policy to NEVER in the default
+    configuration file or disable this feature.  Otherwise, users may
+    experience an unusually high rate of pipeline failures since it is
+    impossible to find new datanodes for replacement.
+
     See also dfs.client.block.write.replace-datanode-on-failure.policy
   </description>
 </property>
