@@ -98,6 +98,8 @@ Release 1.1.0 - unreleased
     HADOOP-5836. Bug in S3N handling of directory markers using an object with
     a trailing "/" causes jobs to fail. (Jagane Sundar, Ian Nowland via suresh)
 
+    MAPREDUCE-1109. ConcurrentModificationException in jobtracker.jsp (harsh)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
