@@ -52,10 +52,6 @@ Trunk (unreleased changes)
     HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the 
     client side translator and server side implementation. (jitendra)
 
-    HADOOP-6924. Adds a directory to the list of directories to search
-    for the libjvm.so file. The new directory is found by running a 'find'
-    command and the first output is taken. This was done to handle the 
-    build of Hadoop with IBM's JDK. (Stephen Watt, Guillermo Cabrera and ddas)
 
   BUG FIXES
 
@@ -202,6 +198,11 @@ Release 0.23.3 - UNRELEASED
     (Stephen Watt, Eli and ddas)
 
     HADOOP-8183. Stop using "mapred.used.genericoptions.parser" (harsh)
+
+    HADOOP-6924. Adds a directory to the list of directories to search
+    for the libjvm.so file. The new directory is found by running a 'find'
+    command and the first output is taken. This was done to handle the 
+    build of Hadoop with IBM's JDK. (Stephen Watt, Guillermo Cabrera and ddas)
 
   OPTIMIZATIONS
 
