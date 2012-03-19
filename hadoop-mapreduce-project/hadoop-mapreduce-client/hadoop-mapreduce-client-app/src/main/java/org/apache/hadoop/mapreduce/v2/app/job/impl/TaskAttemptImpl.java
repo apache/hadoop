@@ -1030,6 +1030,7 @@ public abstract class TaskAttemptImpl implements
   
   private void updateProgressSplits() {
     double newProgress = reportedStatus.progress;
+    newProgress = Math.max(Math.min(newProgress, 1.0D), 0.0D);
     Counters counters = reportedStatus.counters;
     if (counters == null)
       return;

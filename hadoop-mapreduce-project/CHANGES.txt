@@ -108,6 +108,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3954. Added new envs to separate heap size for different daemons
     started via bin scripts. (Robert Joseph Evans via vinodkv)
 
+    MAPREDUCE-4025.  AM can crash if task attempt reports bogus progress value
+    (Jason Lowe via bobby)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3901. Modified JobHistory records in YARN to lazily load job and
