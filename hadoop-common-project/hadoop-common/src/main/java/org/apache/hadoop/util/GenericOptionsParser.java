@@ -305,7 +305,7 @@ public class GenericOptionsParser {
         }
       }
     }
-    conf.setBoolean("mapred.used.genericoptionsparser", true);
+    conf.setBoolean("mapreduce.client.genericoptionsparser.used", true);
     
     // tokensFile
     if(line.hasOption("tokenCacheFile")) {
