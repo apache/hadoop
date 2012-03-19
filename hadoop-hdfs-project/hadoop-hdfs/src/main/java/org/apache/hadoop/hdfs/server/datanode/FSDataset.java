@@ -553,14 +553,16 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
    */
   static class FSVolume implements FsVolumeSpi {
     private final FSDataset dataset;
+    private final String storageID;
     private final Map<String, BlockPoolSlice> map = new HashMap<String, BlockPoolSlice>();
     private final File currentDir;    // <StorageDirectory>/current
     private final DF usage;           
     private final long reserved;
     
-    FSVolume(FSDataset dataset, File currentDir, Configuration conf
-        ) throws IOException {
+    FSVolume(FSDataset dataset, String storageID, File currentDir,
+        Configuration conf) throws IOException {
       this.dataset = dataset;
+      this.storageID = storageID;
       this.reserved = conf.getLong(DFSConfigKeys.DFS_DATANODE_DU_RESERVED_KEY,
                                    DFSConfigKeys.DFS_DATANODE_DU_RESERVED_DEFAULT);
       this.currentDir = currentDir; 
@@ -808,6 +810,10 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
         }
       }
     }
+
+    String getStorageID() {
+      return storageID;
+    }
   }
     
   static class FSVolumeSet {
@@ -1017,6 +1023,12 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
     return volumes.volumes;
   }
 
+  @Override
+  public synchronized FSVolume getVolume(final ExtendedBlock b) {
+    final ReplicaInfo r =  volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
+    return r != null? (FSVolume)r.getVolume(): null;
+  }
+
   @Override // FSDatasetInterface
   public synchronized Block getStoredBlock(String bpid, long blkid)
       throws IOException {
@@ -1107,7 +1119,7 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
         storage.getNumStorageDirs());
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       final File dir = storage.getStorageDir(idx).getCurrentDir();
-      volArray.add(new FSVolume(this, dir, conf));
+      volArray.add(new FSVolume(this, storage.getStorageID(), dir, conf));
       DataNode.LOG.info("FSDataset added volume - " + dir);
     }
     volumeMap = new ReplicasMap(this);
@@ -1756,19 +1768,6 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
           oldPos + " to " + newPos);
     }
     channel.position(newPos);
-  }
-
-  synchronized File createTmpFile(FSVolume vol, String bpid, Block blk) throws IOException {
-    if ( vol == null ) {
-      ReplicaInfo replica = volumeMap.get(bpid, blk);
-      if (replica != null) {
-        vol = (FSVolume)volumeMap.get(bpid, blk).getVolume();
-      }
-      if ( vol == null ) {
-        throw new IOException("Could not find volume for block " + blk);
-      }
-    }
-    return vol.createTmpFile(bpid, blk);
   }
 
   //
@@ -2421,13 +2420,13 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
   }
 
   @Override // FSDatasetInterface
-  public synchronized ReplicaInfo updateReplicaUnderRecovery(
+  public synchronized String updateReplicaUnderRecovery(
                                     final ExtendedBlock oldBlock,
                                     final long recoveryId,
                                     final long newlength) throws IOException {
     //get replica
-    final ReplicaInfo replica = volumeMap.get(oldBlock.getBlockPoolId(), 
-        oldBlock.getBlockId());
+    final String bpid = oldBlock.getBlockPoolId();
+    final ReplicaInfo replica = volumeMap.get(bpid, oldBlock.getBlockId());
     DataNode.LOG.info("updateReplica: block=" + oldBlock
         + ", recoveryId=" + recoveryId
         + ", length=" + newlength
@@ -2457,10 +2456,18 @@ class FSDataset implements FSDatasetInterface<FSDataset.FSVolume> {
     //update replica
     final FinalizedReplica finalized = updateReplicaUnderRecovery(oldBlock
         .getBlockPoolId(), (ReplicaUnderRecovery) replica, recoveryId, newlength);
+    assert finalized.getBlockId() == oldBlock.getBlockId()
+        && finalized.getGenerationStamp() == recoveryId
+        && finalized.getNumBytes() == newlength
+        : "Replica information mismatched: oldBlock=" + oldBlock
+            + ", recoveryId=" + recoveryId + ", newlength=" + newlength
+            + ", finalized=" + finalized;
 
     //check replica files after update
     checkReplicaFiles(finalized);
-    return finalized;
+
+    //return storage ID
+    return getVolume(new ExtendedBlock(bpid, finalized)).getStorageID();
   }
 
   private FinalizedReplica updateReplicaUnderRecovery(

@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.InitReplicaRecoveryRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.InitReplicaRecoveryResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.InterDatanodeProtocolProtos.UpdateReplicaUnderRecoveryRequestProto;
@@ -66,14 +65,15 @@ public class InterDatanodeProtocolServerSideTranslatorPB implements
   public UpdateReplicaUnderRecoveryResponseProto updateReplicaUnderRecovery(
       RpcController unused, UpdateReplicaUnderRecoveryRequestProto request)
       throws ServiceException {
-    ExtendedBlock b;
+    final String storageID;
     try {
-      b = impl.updateReplicaUnderRecovery(PBHelper.convert(request.getBlock()),
+      storageID = impl.updateReplicaUnderRecovery(
+          PBHelper.convert(request.getBlock()),
           request.getRecoveryId(), request.getNewLength());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
     return UpdateReplicaUnderRecoveryResponseProto.newBuilder()
-        .setBlock(PBHelper.convert(b)).build();
+        .setStorageID(storageID).build();
   }
 }

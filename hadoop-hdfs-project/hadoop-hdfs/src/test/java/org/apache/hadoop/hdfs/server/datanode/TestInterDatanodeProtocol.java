@@ -329,14 +329,9 @@ public class TestInterDatanodeProtocol {
       }
 
       //update
-      final ReplicaInfo finalized = fsdataset.updateReplicaUnderRecovery(
+      final String storageID = fsdataset.updateReplicaUnderRecovery(
           new ExtendedBlock(b.getBlockPoolId(), rri), recoveryid, newlength);
-
-      //check meta data after update
-      FSDataset.checkReplicaFiles(finalized);
-      Assert.assertEquals(b.getBlockId(), finalized.getBlockId());
-      Assert.assertEquals(recoveryid, finalized.getGenerationStamp());
-      Assert.assertEquals(newlength, finalized.getNumBytes());
+      assertTrue(storageID != null);
 
     } finally {
       if (cluster != null) cluster.shutdown();

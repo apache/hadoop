@@ -148,6 +148,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3091. Update the usage limitations of ReplaceDatanodeOnFailure policy in
     the config description for the smaller clusters. (szetszwo via umamahesh)
 
+    HDFS-3105.  Add DatanodeStorage information to block recovery.  (szetszwo)
+
   OPTIMIZATIONS
     HDFS-2477. Optimize computing the diff between a block report and the
                namenode state. (Tomasz Nykiel via hairong)

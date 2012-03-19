@@ -903,11 +903,10 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
   }
 
   @Override // FSDatasetInterface
-  public FinalizedReplica updateReplicaUnderRecovery(ExtendedBlock oldBlock,
+  public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                         long recoveryId,
                                         long newlength) {
-    return new FinalizedReplica(
-        oldBlock.getBlockId(), newlength, recoveryId, null, null);
+    return storageId;
   }
 
   @Override // FSDatasetInterface
@@ -983,6 +982,11 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
 
   @Override
   public RollingLogs createRollingLogs(String bpid, String prefix) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public FsVolumeSpi getVolume(ExtendedBlock b) {
     throw new UnsupportedOperationException();
   }
 }

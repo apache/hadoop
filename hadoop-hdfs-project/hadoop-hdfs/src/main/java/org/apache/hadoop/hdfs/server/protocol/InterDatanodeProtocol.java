@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
 /** An inter-datanode protocol for updating generation stamp
@@ -55,9 +54,6 @@ public interface InterDatanodeProtocol {
    * 
    * For more details on protocol buffer wire protocol, please see 
    * .../org/apache/hadoop/hdfs/protocolPB/overview.html
-   * 
-   * The log of historical changes can be retrieved from the svn).
-   * 6: Add block pool ID to Block
    */
   public static final long versionID = 6L;
 
@@ -73,7 +69,6 @@ public interface InterDatanodeProtocol {
   /**
    * Update replica with the new generation stamp and length.  
    */
-  ExtendedBlock updateReplicaUnderRecovery(ExtendedBlock oldBlock,
-                                   long recoveryId,
-                                   long newLength) throws IOException;
+  String updateReplicaUnderRecovery(ExtendedBlock oldBlock, long recoveryId,
+      long newLength) throws IOException;
 }

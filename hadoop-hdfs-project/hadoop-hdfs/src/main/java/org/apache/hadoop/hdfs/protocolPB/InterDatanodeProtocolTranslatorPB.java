@@ -91,15 +91,15 @@ public class InterDatanodeProtocolTranslatorPB implements
   }
 
   @Override
-  public ExtendedBlock updateReplicaUnderRecovery(ExtendedBlock oldBlock,
+  public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
       long recoveryId, long newLength) throws IOException {
     UpdateReplicaUnderRecoveryRequestProto req = 
         UpdateReplicaUnderRecoveryRequestProto.newBuilder()
         .setBlock(PBHelper.convert(oldBlock))
         .setNewLength(newLength).setRecoveryId(recoveryId).build();
     try {
-      return PBHelper.convert(rpcProxy.updateReplicaUnderRecovery(
-          NULL_CONTROLLER, req).getBlock());
+      return rpcProxy.updateReplicaUnderRecovery(NULL_CONTROLLER, req
+          ).getStorageID();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

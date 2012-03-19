@@ -547,10 +547,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // DatanodeProtocol
   public void commitBlockSynchronization(ExtendedBlock block,
       long newgenerationstamp, long newlength,
-      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets)
+      boolean closeFile, boolean deleteblock, DatanodeID[] newtargets,
+      String[] newtargetstorages)
       throws IOException {
-    namesystem.commitBlockSynchronization(block,
-        newgenerationstamp, newlength, closeFile, deleteblock, newtargets);
+    namesystem.commitBlockSynchronization(block, newgenerationstamp,
+        newlength, closeFile, deleteblock, newtargets, newtargetstorages);
   }
   
   @Override // ClientProtocol

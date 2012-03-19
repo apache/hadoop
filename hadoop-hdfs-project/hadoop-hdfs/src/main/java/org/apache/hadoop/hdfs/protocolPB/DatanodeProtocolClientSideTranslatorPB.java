@@ -293,7 +293,8 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   @Override
   public void commitBlockSynchronization(ExtendedBlock block,
       long newgenerationstamp, long newlength, boolean closeFile,
-      boolean deleteblock, DatanodeID[] newtargets) throws IOException {
+      boolean deleteblock, DatanodeID[] newtargets, String[] newtargetstorages
+      ) throws IOException {
     CommitBlockSynchronizationRequestProto.Builder builder = 
         CommitBlockSynchronizationRequestProto.newBuilder()
         .setBlock(PBHelper.convert(block)).setNewGenStamp(newgenerationstamp)
@@ -301,6 +302,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
         .setDeleteBlock(deleteblock);
     for (int i = 0; i < newtargets.length; i++) {
       builder.addNewTaragets(PBHelper.convert(newtargets[i]));
+      builder.addNewTargetStorages(newtargetstorages[i]);
     }
     CommitBlockSynchronizationRequestProto req = builder.build();
     try {
