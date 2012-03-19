@@ -91,6 +91,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-6941. Adds support for building Hadoop with IBM's JDK 
     (Stephen Watt, Eli and ddas)
 
+    HADOOP-8183. Stop using "mapred.used.genericoptions.parser" (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
