@@ -96,6 +96,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8183. Stop using "mapred.used.genericoptions.parser" (harsh)
 
+    HADOOP-7788. Add simple HealthMonitor class to watch an HAService (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
