@@ -107,6 +107,8 @@ Trunk (unreleased changes)
     HADOOP-8141. Add method to SecurityUtil to init krb5 cipher suites.
     (todd)
 
+    HADOOP-7788. Add simple HealthMonitor class to watch an HAService (todd)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
