@@ -183,7 +183,8 @@ public class ApplicationMasterService extends AbstractService implements
           new RMAppAttemptRegistrationEvent(applicationAttemptId, request
               .getHost(), request.getRpcPort(), request.getTrackingUrl()));
 
-      RMAuditLogger.logSuccess(this.rmContext.getRMApps().get(appID).getUser(),
+      RMApp app = this.rmContext.getRMApps().get(appID);
+      RMAuditLogger.logSuccess(app.getUser(),
           AuditConstants.REGISTER_AM, "ApplicationMasterService", appID,
           applicationAttemptId);
 
@@ -194,6 +195,8 @@ public class ApplicationMasterService extends AbstractService implements
           .getMinimumResourceCapability());
       response.setMaximumResourceCapability(rScheduler
           .getMaximumResourceCapability());
+      response.setApplicationACLs(app.getRMAppAttempt(applicationAttemptId)
+          .getSubmissionContext().getAMContainerSpec().getApplicationACLs());
       return response;
     }
   }
