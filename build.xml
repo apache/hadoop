@@ -183,6 +183,7 @@
       <os arch="i486" />
       <os arch="i586" />
       <os arch="i686" />
+      <os arch="x86" />
     </or>
   </condition>
   <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-${os-arch}.tar.gz" />

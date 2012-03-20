@@ -8,6 +8,9 @@ Hadoop Change Log
     HADOOP-6941. Adds support for building Hadoop with IBM's JDK
     (Stephen Watt, Eli and ddas)
 
+    HADOOP-8188. Fixes the build process to do with jsvc, with IBM's JDK 
+    as the underlying jdk. (ddas)
+
 Release 1.0.2 - 2012.03.18
 
   NEW FEATURES
