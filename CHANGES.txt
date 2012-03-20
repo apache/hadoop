@@ -166,6 +166,9 @@ Release 1.1.0 - unreleased
     This was done to handle the build of Hadoop with IBM's JDK. (Stephen Watt, 
     Guillermo Cabrera and ddas) 
 
+    HADOOP-6941. Adds support for building Hadoop with IBM's JDK
+    (Stephen Watt, Eli and ddas)
+
 Release 1.0.2 - 2012.03.18
 
   NEW FEATURES

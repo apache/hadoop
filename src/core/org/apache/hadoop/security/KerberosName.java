@@ -25,9 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
-
-import sun.security.krb5.Config;
-import sun.security.krb5.KrbException;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 
 /**
  * This class implements parsing and handling of Kerberos principal names. In 
@@ -73,13 +71,11 @@ public class KerberosName {
   private static List<Rule> rules;
 
   private static String defaultRealm;
-  private static Config kerbConf;
   
   static {
     try {
-      kerbConf = Config.getInstance();
-      defaultRealm = kerbConf.getDefaultRealm();
-    } catch (KrbException ke) {
+      defaultRealm = KerberosUtil.getDefaultRealm();
+    } catch (Exception ke) {
       if(UserGroupInformation.isSecurityEnabled())
         throw new IllegalArgumentException("Can't get Kerberos configuration",ke);
       else 
