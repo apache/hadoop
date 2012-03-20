@@ -1131,6 +1131,7 @@ public abstract class Server {
                 throw new AccessControlException(
                     "Server is not configured to do DIGEST authentication.");
               }
+              secretManager.checkAvailableForRead();
               saslServer = Sasl.createSaslServer(AuthMethod.DIGEST
                   .getMechanismName(), null, SaslRpcServer.SASL_DEFAULT_REALM,
                   SaslRpcServer.SASL_PROPS, new SaslDigestCallbackHandler(

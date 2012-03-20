@@ -29,6 +29,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ipc.StandbyException;
 
 
 /**
@@ -72,6 +73,17 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @return the newly created empty token identifier
    */
   public abstract T createIdentifier();
+
+  /**
+   * No-op if the secret manager is available for reading tokens, throw a
+   * StandbyException otherwise.
+   * 
+   * @throws StandbyException if the secret manager is not available to read
+   *         tokens
+   */
+  public void checkAvailableForRead() throws StandbyException {
+    // Default to being available for read.
+  }
   
   /**
    * The name of the hashing algorithm.

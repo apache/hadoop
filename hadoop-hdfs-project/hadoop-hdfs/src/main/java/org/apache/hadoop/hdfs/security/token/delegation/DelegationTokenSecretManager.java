@@ -30,7 +30,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -72,6 +74,16 @@ public class DelegationTokenSecretManager
   @Override //SecretManager
   public DelegationTokenIdentifier createIdentifier() {
     return new DelegationTokenIdentifier();
+  }
+  
+  @Override //SecretManager
+  public void checkAvailableForRead() throws StandbyException {
+    namesystem.readLock();
+    try {
+      namesystem.checkOperation(OperationCategory.READ);
+    } finally {
+      namesystem.readUnlock();
+    }
   }
 
   /**
