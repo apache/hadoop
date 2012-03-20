@@ -646,7 +646,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   
-  void checkOperation(OperationCategory op) throws StandbyException {
+  public void checkOperation(OperationCategory op) throws StandbyException {
     if (haContext != null) {
       // null in some unit tests
       haContext.checkOperation(op);

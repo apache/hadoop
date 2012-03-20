@@ -225,6 +225,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3062. Fix bug which prevented MR job submission from creating
     delegation tokens on an HA cluster. (Mingjie Lai via todd)
 
+    HDFS-3083. Cannot run an MR job with HA and security enabled when
+    second-listed NN active. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
