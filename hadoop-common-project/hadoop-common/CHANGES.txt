@@ -19,6 +19,9 @@ Release 0.23.3 - UNRELEASED
     Bikas Saha, Suresh Srinivas, Jitendra Nath Pandey, Hari Mankude, Brandon Li,
     Sanjay Radia, Mingjie Lai, and Gregory Chanan
 
+    HADOOP-8121. Active Directory Group Mapping Service. (Jonathan Natkins via
+    atm)
+
   IMPROVEMENTS
 
     HADOOP-7524. Change RPC to allow multiple protocols including multuple

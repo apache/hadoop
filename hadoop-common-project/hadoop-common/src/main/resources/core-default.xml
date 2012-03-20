@@ -89,6 +89,113 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.url</name>
+  <value></value>
+  <description>
+    The URL of the LDAP server to use for resolving user groups when using
+    the LdapGroupsMapping user to group mapping.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.ssl</name>
+  <value>false</value>
+  <description>
+    Whether or not to use SSL when connecting to the LDAP server.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.ssl.keystore</name>
+  <value></value>
+  <description>
+    File path to the SSL keystore that contains the SSL certificate required
+    by the LDAP server.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.ssl.keystore.password.file</name>
+  <value></value>
+  <description>
+    The path to a file containing the password of the LDAP SSL keystore.
+
+    IMPORTANT: This file should be readable only by the Unix user running
+    the daemons.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.user</name>
+  <value></value>
+  <description>
+    The distinguished name of the user to bind as when connecting to the LDAP
+    server. This may be left blank if the LDAP server supports anonymous binds.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.bind.password.file</name>
+  <value></value>
+  <description>
+    The path to a file containing the password of the bind user.
+
+    IMPORTANT: This file should be readable only by the Unix user running
+    the daemons.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.base</name>
+  <value></value>
+  <description>
+    The search base for the LDAP connection. This is a distinguished name,
+    and will typically be the root of the LDAP directory.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
+  <value>(&amp;(objectClass=user)(sAMAccountName={0})</value>
+  <description>
+    An additional filter to use when searching for LDAP users. The default will
+    usually be appropriate for Active Directory installations. If connecting to
+    an LDAP server with a non-AD schema, this should be replaced with
+    (&amp;(objectClass=inetOrgPerson)(uid={0}). {0} is a special string used to
+    denote where the username fits into the filter.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.filter.group</name>
+  <value>(objectClass=group)</value>
+  <description>
+    An additional filter to use when searching for LDAP groups. This should be
+    changed when resolving groups against a non-Active Directory installation.
+    posixGroups are currently not a supported group class.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.member</name>
+  <value>member</value>
+  <description>
+    The attribute of the group object that identifies the users that are
+    members of the group. The default will usually be appropriate for
+    any LDAP installation.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.group.mapping.ldap.search.attr.group.name</name>
+  <value>cn</value>
+  <description>
+    The attribute of the group object that identifies the group name. The
+    default will usually be appropriate for all LDAP systems.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.service.user.name.key</name>
   <value></value>
   <description>
