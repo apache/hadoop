@@ -19,9 +19,9 @@
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   JobQueueInfo[] queues = tracker.getQueues();
-  Vector<JobInProgress> runningJobs = tracker.getRunningJobs();
-  Vector<JobInProgress> completedJobs = tracker.getCompletedJobs();
-  Vector<JobInProgress> failedJobs = tracker.getFailedJobs();
+  Vector<JobInProgress> runningJobs = tracker.runningJobs();
+  Vector<JobInProgress> completedJobs = tracker.completedJobs();
+  Vector<JobInProgress> failedJobs = tracker.failedJobs();
 %>
 <%!
   private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
