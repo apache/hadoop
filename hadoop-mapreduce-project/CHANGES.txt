@@ -74,6 +74,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4010.  TestWritableJobConf fails on trunk (tucu via bobby)
 
+    MAPREDUCE-3992. Reduce fetcher doesn't verify HTTP status code of response
+    (todd)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
