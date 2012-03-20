@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.util.Map;
+
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -26,6 +28,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -93,6 +96,11 @@ public class MockRM extends ResourceManager {
 
   // client
   public RMApp submitApp(int masterMemory, String name, String user) throws Exception {
+    return submitApp(masterMemory, name, user, null);
+  }
+
+  public RMApp submitApp(int masterMemory, String name, String user,
+      Map<ApplicationAccessType, String> acls) throws Exception {
     ClientRMProtocol client = getClientRMService();
     GetNewApplicationResponse resp = client.getNewApplication(Records
         .newRecord(GetNewApplicationRequest.class));
@@ -110,6 +118,7 @@ public class MockRM extends ResourceManager {
     Resource capability = Records.newRecord(Resource.class);
     capability.setMemory(masterMemory);
     clc.setResource(capability);
+    clc.setApplicationACLs(acls);
     sub.setAMContainerSpec(clc);
     req.setApplicationSubmissionContext(sub);
 

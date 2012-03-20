@@ -111,8 +111,11 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-3954. Added new envs to separate heap size for different daemons
     started via bin scripts. (Robert Joseph Evans via vinodkv)
 
-    MAPREDUCE-4025.  AM can crash if task attempt reports bogus progress value
+    MAPREDUCE-4025. AM can crash if task attempt reports bogus progress value
     (Jason Lowe via bobby)
+
+    MAPREDUCE-4034. Unable to view task logs on history server with
+    mapreduce.job.acl-view-job=* (Jason Lowe and Siddarth Seth via bobby)
 
   OPTIMIZATIONS
 
