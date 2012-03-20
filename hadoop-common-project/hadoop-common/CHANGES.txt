@@ -143,6 +143,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8167. Configuration deprecation logic breaks backwards compatibility (tucu)
 
+    HADOOP-8189. LdapGroupsMapping shouldn't throw away IOException. (Jonathan Natkins via atm)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)

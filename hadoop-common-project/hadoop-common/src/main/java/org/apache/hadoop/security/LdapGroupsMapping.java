@@ -314,8 +314,8 @@ public class LdapGroupsMapping
       }
       reader.close();
       return password.toString();
-    } catch (IOException ex) {
-      throw new RuntimeException("Could not read password file: " + pwFile);
+    } catch (IOException ioe) {
+      throw new RuntimeException("Could not read password file: " + pwFile, ioe);
     }
   }
 }
