@@ -145,6 +145,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8189. LdapGroupsMapping shouldn't throw away IOException. (Jonathan Natkins via atm)
 
+    HADOOP-8191. SshFenceByTcpPort uses netcat incorrectly (todd)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)

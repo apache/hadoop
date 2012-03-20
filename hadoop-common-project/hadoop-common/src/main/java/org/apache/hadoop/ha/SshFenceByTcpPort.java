@@ -74,9 +74,7 @@ public class SshFenceByTcpPort extends Configured
   @Override
   public void checkArgs(String argStr) throws BadFencingConfigurationException {
     if (argStr != null) {
-      // Use a dummy service when checking the arguments defined
-      // in the configuration are parseable.
-      new Args(new InetSocketAddress("localhost", 8020), argStr);
+      new Args(argStr);
     }
   }
 
@@ -84,29 +82,30 @@ public class SshFenceByTcpPort extends Configured
   public boolean tryFence(InetSocketAddress serviceAddr, String argsStr)
       throws BadFencingConfigurationException {
 
-    Args args = new Args(serviceAddr, argsStr);
-
+    Args args = new Args(argsStr);
+    String host = serviceAddr.getHostName();
+    
     Session session;
     try {
-      session = createSession(args);
+      session = createSession(serviceAddr.getHostName(), args);
     } catch (JSchException e) {
       LOG.warn("Unable to create SSH session", e);
       return false;
     }
 
-    LOG.info("Connecting to " + args.host + "...");
+    LOG.info("Connecting to " + host + "...");
     
     try {
       session.connect(getSshConnectTimeout());
     } catch (JSchException e) {
-      LOG.warn("Unable to connect to " + args.host
+      LOG.warn("Unable to connect to " + host
           + " as user " + args.user, e);
       return false;
     }
-    LOG.info("Connected to " + args.host);
+    LOG.info("Connected to " + host);
 
     try {
-      return doFence(session, args.targetPort);
+      return doFence(session, serviceAddr);
     } catch (JSchException e) {
       LOG.warn("Unable to achieve fencing on remote host", e);
       return false;
@@ -116,19 +115,21 @@ public class SshFenceByTcpPort extends Configured
   }
 
 
-  private Session createSession(Args args) throws JSchException {
+  private Session createSession(String host, Args args) throws JSchException {
     JSch jsch = new JSch();
     for (String keyFile : getKeyFiles()) {
       jsch.addIdentity(keyFile);
     }
     JSch.setLogger(new LogAdapter());
 
-    Session session = jsch.getSession(args.user, args.host, args.sshPort);
+    Session session = jsch.getSession(args.user, host, args.sshPort);
     session.setConfig("StrictHostKeyChecking", "no");
     return session;
   }
 
-  private boolean doFence(Session session, int port) throws JSchException {
+  private boolean doFence(Session session, InetSocketAddress serviceAddr)
+      throws JSchException {
+    int port = serviceAddr.getPort();
     try {
       LOG.info("Looking for process running on port " + port);
       int rc = execCommand(session,
@@ -145,7 +146,8 @@ public class SshFenceByTcpPort extends Configured
         LOG.info(
             "Indeterminate response from trying to kill service. " +
             "Verifying whether it is running using nc...");
-        rc = execCommand(session, "nc -z localhost 8020");
+        rc = execCommand(session, "nc -z " + serviceAddr.getHostName() +
+            " " + serviceAddr.getPort());
         if (rc == 0) {
           // the service is still listening - we are unable to fence
           LOG.warn("Unable to fence - it is running but we cannot kill it");
@@ -229,15 +231,11 @@ public class SshFenceByTcpPort extends Configured
 
     private static final int DEFAULT_SSH_PORT = 22;
 
-    String host;
-    int targetPort;
     String user;
     int sshPort;
     
-    public Args(InetSocketAddress serviceAddr, String arg) 
+    public Args(String arg) 
         throws BadFencingConfigurationException {
-      host = serviceAddr.getHostName();
-      targetPort = serviceAddr.getPort();
       user = System.getProperty("user.name");
       sshPort = DEFAULT_SSH_PORT;
 

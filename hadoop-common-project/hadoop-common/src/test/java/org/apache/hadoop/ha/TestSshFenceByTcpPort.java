@@ -71,37 +71,25 @@ public class TestSshFenceByTcpPort {
   
   @Test
   public void testArgsParsing() throws BadFencingConfigurationException {
-    InetSocketAddress addr = new InetSocketAddress("bar.com", 1234);
-
-    Args args = new SshFenceByTcpPort.Args(addr, null);
-    assertEquals("bar.com", args.host);
-    assertEquals(1234, args.targetPort);
+    Args args = new SshFenceByTcpPort.Args(null);
     assertEquals(System.getProperty("user.name"), args.user);
     assertEquals(22, args.sshPort);
     
-    args = new SshFenceByTcpPort.Args(addr, "");
-    assertEquals("bar.com", args.host);
-    assertEquals(1234, args.targetPort);    
+    args = new SshFenceByTcpPort.Args("");
     assertEquals(System.getProperty("user.name"), args.user);
     assertEquals(22, args.sshPort);
 
-    args = new SshFenceByTcpPort.Args(addr, "12345");
-    assertEquals("bar.com", args.host);
-    assertEquals(1234, args.targetPort);
+    args = new SshFenceByTcpPort.Args("12345");
     assertEquals("12345", args.user);
     assertEquals(22, args.sshPort);
 
-    args = new SshFenceByTcpPort.Args(addr, ":12345");
-    assertEquals("bar.com", args.host);
-    assertEquals(1234, args.targetPort);
+    args = new SshFenceByTcpPort.Args(":12345");
     assertEquals(System.getProperty("user.name"), args.user);
     assertEquals(12345, args.sshPort);
 
-    args = new SshFenceByTcpPort.Args(addr, "foo:8020");
-    assertEquals("bar.com", args.host);
-    assertEquals(1234, args.targetPort);
+    args = new SshFenceByTcpPort.Args("foo:2222");
     assertEquals("foo", args.user);
-    assertEquals(8020, args.sshPort);
+    assertEquals(2222, args.sshPort);
   }
   
   @Test
@@ -113,9 +101,8 @@ public class TestSshFenceByTcpPort {
   }
   
   private void assertBadArgs(String argStr) {
-    InetSocketAddress addr = new InetSocketAddress("bar.com", 1234);
     try {
-      new Args(addr, argStr);
+      new Args(argStr);
       fail("Did not fail on bad args: " + argStr);
     } catch (BadFencingConfigurationException e) {
       // Expected
