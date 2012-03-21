@@ -52,6 +52,7 @@ public class TestFSEditLogLoader {
   
   static {
     ((Log4JLogger)FSImage.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSEditLogLoader.LOG).getLogger().setLevel(Level.ALL);
   }
   
   private static final File TEST_DIR = new File(

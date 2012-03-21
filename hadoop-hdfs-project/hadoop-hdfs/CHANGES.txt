@@ -153,6 +153,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3086. Change Datanode not to send storage list in registration.
     (szetszwo)
 
+    HDFS-309. FSEditLog should log progress during replay. (Sho Shimauchi
+    via todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
