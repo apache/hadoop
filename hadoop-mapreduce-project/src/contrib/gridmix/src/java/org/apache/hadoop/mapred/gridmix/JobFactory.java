@@ -215,7 +215,13 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T> 
     return null == job ? null : new FilterJobStory(job) {
       @Override
       public TaskInfo getTaskInfo(TaskType taskType, int taskNumber) {
-        return new MinTaskInfo(this.job.getTaskInfo(taskType, taskNumber));
+        TaskInfo info = this.job.getTaskInfo(taskType, taskNumber);
+        if (info != null) {
+          info = new MinTaskInfo(info);
+        } else {
+          info = new MinTaskInfo(new TaskInfo(0, 0, 0, 0, 0));
+        }
+        return info;
       }
     };
   }
