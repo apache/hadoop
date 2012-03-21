@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeComm
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeRequestProto;
@@ -50,12 +49,10 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlo
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlockReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
-import org.apache.hadoop.hdfs.protocolR23Compatible.ProtocolSignatureWritable;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
@@ -69,7 +66,6 @@ import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
-import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RpcClientUtil;
@@ -145,14 +141,10 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   }
 
   @Override
-  public DatanodeRegistration registerDatanode(DatanodeRegistration registration,
-      DatanodeStorage[] storages) throws IOException {
+  public DatanodeRegistration registerDatanode(DatanodeRegistration registration
+      ) throws IOException {
     RegisterDatanodeRequestProto.Builder builder = RegisterDatanodeRequestProto
         .newBuilder().setRegistration(PBHelper.convert(registration));
-    for (DatanodeStorage s : storages) {
-      builder.addStorages(PBHelper.convert(s));
-    }
-    
     RegisterDatanodeResponseProto resp;
     try {
       resp = rpcProxy.registerDatanode(NULL_CONTROLLER, builder.build());
@@ -198,7 +190,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     
     for (StorageBlockReport r : reports) {
       StorageBlockReportProto.Builder reportBuilder = StorageBlockReportProto
-          .newBuilder().setStorageID(r.getStorageID());
+          .newBuilder().setStorage(PBHelper.convert(r.getStorage()));
       long[] blocks = r.getBlocks();
       for (int i = 0; i < blocks.length; i++) {
         reportBuilder.addBlocks(blocks[i]);

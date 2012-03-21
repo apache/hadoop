@@ -18,9 +18,10 @@
 package org.apache.hadoop.hdfs.server.protocol;
 
 /**
- * Class capatures information about a storage in Datanode
+ * Class captures information of a storage in Datanode.
  */
 public class DatanodeStorage {
+  /** The state of the storage. */
   public enum State {
     NORMAL,
     READ_ONLY
@@ -28,7 +29,15 @@ public class DatanodeStorage {
   
   private final String storageID;
   private final State state;
-  
+
+  /**
+   * Create a storage with {@link State#NORMAL}.
+   * @param storageID
+   */
+  public DatanodeStorage(String storageID) {
+    this(storageID, State.NORMAL);
+  }
+
   public DatanodeStorage(String sid, State s) {
     storageID = sid;
     state = s;

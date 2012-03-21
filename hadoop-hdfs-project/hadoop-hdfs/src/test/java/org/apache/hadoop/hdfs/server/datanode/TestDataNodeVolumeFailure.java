@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.net.NetUtils;
@@ -146,7 +147,8 @@ public class TestDataNodeVolumeFailure {
     String bpid = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(bpid);
     final StorageBlockReport[] report = {
-        new StorageBlockReport(dnR.getStorageID(),
+        new StorageBlockReport(
+            new DatanodeStorage(dnR.getStorageID()),
             DataNodeTestUtils.getFSDataset(dn).getBlockReport(bpid
                 ).getBlockListAsLongs())
     };

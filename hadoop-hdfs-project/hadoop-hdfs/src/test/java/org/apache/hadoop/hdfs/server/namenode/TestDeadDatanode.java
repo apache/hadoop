@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
@@ -125,7 +126,8 @@ public class TestDeadDatanode {
     }
 
     // Ensure blockReport from dead datanode is rejected with IOException
-    StorageBlockReport[] report = { new StorageBlockReport(reg.getStorageID(),
+    StorageBlockReport[] report = { new StorageBlockReport(
+        new DatanodeStorage(reg.getStorageID()),
         new long[] { 0L, 0L, 0L }) };
     try {
       dnp.blockReport(reg, poolId, report);

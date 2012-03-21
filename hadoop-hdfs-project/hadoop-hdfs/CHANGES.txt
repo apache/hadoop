@@ -241,7 +241,10 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3088. Move FSDatasetInterface inner classes to a package.  (szetszwo)
 
-    HDFS-3105.  Add DatanodeStorage information to block recovery.  (szetszwo)
+    HDFS-3105. Add DatanodeStorage information to block recovery.  (szetszwo)
+
+    HDFS-3086. Change Datanode not to send storage list in registration.
+    (szetszwo)
 
   OPTIMIZATIONS
 

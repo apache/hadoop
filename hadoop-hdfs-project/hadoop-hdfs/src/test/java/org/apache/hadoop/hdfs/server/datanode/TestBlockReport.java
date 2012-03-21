@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -147,7 +148,8 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N0);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
+    StorageBlockReport[] report = { new StorageBlockReport(
+        new DatanodeStorage(dnR.getStorageID()),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs()) };
     cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
 
@@ -228,7 +230,8 @@ public class TestBlockReport {
     // all blocks belong to the same file, hence same BP
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn0.getDNRegistrationForBP(poolId);
-    StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
+    StorageBlockReport[] report = { new StorageBlockReport(
+        new DatanodeStorage(dnR.getStorageID()),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs()) };
     cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
 
@@ -269,7 +272,8 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N0);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
+    StorageBlockReport[] report = { new StorageBlockReport(
+        new DatanodeStorage(dnR.getStorageID()),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs()) };
     DatanodeCommand dnCmd =
       cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
@@ -322,7 +326,8 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N1);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
+    StorageBlockReport[] report = { new StorageBlockReport(
+        new DatanodeStorage(dnR.getStorageID()),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs()) };
     cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
     printStats();
@@ -372,7 +377,8 @@ public class TestBlockReport {
     DataNode dn = cluster.getDataNodes().get(DN_N1);
     String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-    StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
+    StorageBlockReport[] report = { new StorageBlockReport(
+        new DatanodeStorage(dnR.getStorageID()),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs()) };
     cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
     printStats();
@@ -395,7 +401,8 @@ public class TestBlockReport {
       LOG.debug("Done corrupting length of " + corruptedBlock.getBlockName());
     }
     
-    report[0] = new StorageBlockReport(dnR.getStorageID(),
+    report[0] = new StorageBlockReport(
+        new DatanodeStorage(dnR.getStorageID()),
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
     cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
     printStats();
@@ -446,7 +453,8 @@ public class TestBlockReport {
       DataNode dn = cluster.getDataNodes().get(DN_N1);
       String poolId = cluster.getNamesystem().getBlockPoolId();
       DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-      StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
+      StorageBlockReport[] report = { new StorageBlockReport(
+          new DatanodeStorage(dnR.getStorageID()),
           new BlockListAsLongs(blocks, null).getBlockListAsLongs()) };
       cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
       printStats();
@@ -493,7 +501,8 @@ public class TestBlockReport {
       DataNode dn = cluster.getDataNodes().get(DN_N1);
       String poolId = cluster.getNamesystem().getBlockPoolId();
       DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
-      StorageBlockReport[] report = { new StorageBlockReport(dnR.getStorageID(),
+      StorageBlockReport[] report = { new StorageBlockReport(
+          new DatanodeStorage(dnR.getStorageID()),
           new BlockListAsLongs(blocks, null).getBlockListAsLongs()) };
       cluster.getNameNodeRpc().blockReport(dnR, poolId, report);
       printStats();

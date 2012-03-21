@@ -24,7 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -384,7 +383,8 @@ class BPServiceActor implements Runnable {
       // Send block report
       long brSendStartTime = now();
       StorageBlockReport[] report = { new StorageBlockReport(
-          bpRegistration.getStorageID(), bReport.getBlockListAsLongs()) };
+          new DatanodeStorage(bpRegistration.getStorageID()),
+          bReport.getBlockListAsLongs()) };
       cmd = bpNamenode.blockReport(bpRegistration, bpos.getBlockPoolId(), report);
 
       // Log the block report processing stats from Datanode perspective
@@ -603,8 +603,7 @@ class BPServiceActor implements Runnable {
     while (shouldRun()) {
       try {
         // Use returned registration from namenode with updated machine name.
-        bpRegistration = bpNamenode.registerDatanode(bpRegistration,
-            new DatanodeStorage[0]);
+        bpRegistration = bpNamenode.registerDatanode(bpRegistration);
         break;
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + nnAddr);
