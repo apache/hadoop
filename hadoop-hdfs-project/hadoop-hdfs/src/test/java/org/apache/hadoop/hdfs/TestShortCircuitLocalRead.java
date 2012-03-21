@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -63,7 +65,7 @@ public class TestShortCircuitLocalRead {
       throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true,
                                             fileSys.getConf().getInt("io.file.buffer.size", 4096),
-                                            (short)repl, (long)blockSize);
+                                            (short)repl, blockSize);
     return stm;
   }
 
@@ -113,6 +115,43 @@ public class TestShortCircuitLocalRead {
   }
 
   /**
+   * Verifies that reading a file with the direct read(ByteBuffer) api gives the expected set of bytes.
+   */
+  static void checkFileContentDirect(FileSystem fs, Path name, byte[] expected,
+      int readOffset) throws IOException {
+    DFSDataInputStream stm = (DFSDataInputStream)fs.open(name);
+
+    ByteBuffer actual = ByteBuffer.allocate(expected.length - readOffset);
+
+    long skipped = stm.skip(readOffset);
+    Assert.assertEquals(skipped, readOffset);
+
+    actual.limit(3);
+
+    //Read a small number of bytes first.
+    int nread = stm.read(actual);
+    actual.limit(nread + 2);
+    nread += stm.read(actual);
+
+    // Read across chunk boundary
+    actual.limit(Math.min(actual.capacity(), nread + 517));
+    nread += stm.read(actual);
+    checkData(actual.array(), readOffset, expected, nread, "A few bytes");
+    //Now read rest of it
+    actual.limit(actual.capacity());
+    while (actual.hasRemaining()) {
+      int nbytes = stm.read(actual);
+
+      if (nbytes < 0) {
+        throw new EOFException("End of file reached before reading fully.");
+      }
+      nread += nbytes;
+    }
+    checkData(actual.array(), readOffset, expected, "Read 3");
+    stm.close();
+  }
+
+  /**
    * Test that file data can be read by reading the block file
    * directly from the local store.
    */
@@ -145,6 +184,7 @@ public class TestShortCircuitLocalRead {
       stm.write(fileData);
       stm.close();
       checkFileContent(fs, file1, fileData, readOffset);
+      checkFileContentDirect(fs, file1, fileData, readOffset);
     } finally {
       fs.close();
       cluster.shutdown();
@@ -328,6 +368,7 @@ public class TestShortCircuitLocalRead {
     Thread[] threads = new Thread[threadCount];
     for (int i = 0; i < threadCount; i++) {
       threads[i] = new Thread() {
+        @Override
         public void run() {
           for (int i = 0; i < iteration; i++) {
             try {

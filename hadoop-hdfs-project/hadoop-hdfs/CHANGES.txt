@@ -57,6 +57,9 @@ Trunk (unreleased changes)
 
   OPTIMIZATIONS
 
+    HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
+    (Henry Robinson via todd)
+
   BUG FIXES
 
     HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G

@@ -56,7 +56,7 @@ import org.apache.hadoop.util.DataChecksum;
 public class RemoteBlockReader extends FSInputChecker implements BlockReader {
 
   Socket dnSock; //for now just sending the status code (e.g. checksumOk) after the read.
-  private DataInputStream in;
+  private final DataInputStream in;
   private DataChecksum checksum;
 
   /** offset in block of the last chunk received */
@@ -71,8 +71,8 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
       if startOffset is not chunk-aligned */
   private final long firstChunkOffset;
 
-  private int bytesPerChecksum;
-  private int checksumSize;
+  private final int bytesPerChecksum;
+  private final int checksumSize;
 
   /**
    * The total number of bytes we need to transfer from the DN.
@@ -477,6 +477,11 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   public static String getFileName(final InetSocketAddress s,
       final String poolId, final long blockId) {
     return s.toString() + ":" + poolId + ":" + blockId;
+  }
+
+  @Override
+  public int read(ByteBuffer buf) throws IOException {
+    throw new UnsupportedOperationException("readDirect unsupported in RemoteBlockReader");
   }
 
 }
