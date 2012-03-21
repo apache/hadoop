@@ -55,6 +55,9 @@ Trunk (unreleased changes)
     HDFS-3091. Update the usage limitations of ReplaceDatanodeOnFailure policy in
     the config description for the smaller clusters. (szetszwo via umamahesh)
 
+    HDFS-309. FSEditLog should log progress during replay. (Sho Shimauchi
+    via todd)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
