@@ -149,7 +149,6 @@ message UpgradeCommandProto {
  */
 message RegisterDatanodeRequestProto {
   required DatanodeRegistrationProto registration = 1; // Datanode info
-  repeated DatanodeStorageProto storages = 2; // Storages on the datanode
 }
 
 /**
@@ -227,7 +226,7 @@ message BlockReportRequestProto {
  * Report of blocks in a storage
  */
 message StorageBlockReportProto {
-  required string storageID = 1;    // Storage ID
+  required DatanodeStorageProto storage = 1;    // Storage
   repeated uint64 blocks = 2 [packed=true];
 }
 

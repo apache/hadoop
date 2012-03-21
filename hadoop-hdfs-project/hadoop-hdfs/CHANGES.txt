@@ -148,18 +148,21 @@ Release 0.23.3 - UNRELEASED
     HDFS-3091. Update the usage limitations of ReplaceDatanodeOnFailure policy in
     the config description for the smaller clusters. (szetszwo via umamahesh)
 
-    HDFS-3105.  Add DatanodeStorage information to block recovery.  (szetszwo)
+    HDFS-3105. Add DatanodeStorage information to block recovery.  (szetszwo)
+
+    HDFS-3086. Change Datanode not to send storage list in registration.
+    (szetszwo)
 
   OPTIMIZATIONS
+
     HDFS-2477. Optimize computing the diff between a block report and the
-               namenode state. (Tomasz Nykiel via hairong)
+    namenode state. (Tomasz Nykiel via hairong)
 
     HDFS-2495. Increase granularity of write operations in ReplicationMonitor
     thus reducing contention for write lock. (Tomasz Nykiel via hairong)
 
     HDFS-2476. More CPU efficient data structure for under-replicated,
-               over-replicated, and invalidated blocks.
-               (Tomasz Nykiel via todd)
+    over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
 
     HDFS-3036. Remove unused method DFSUtil#isDefaultNamenodeAddress. (atm)
 

@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlo
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
@@ -138,8 +137,7 @@ public class TestBlockRecovery {
         return (DatanodeRegistration) invocation.getArguments()[0];
       }
     }).when(namenode).registerDatanode(
-        Mockito.any(DatanodeRegistration.class),
-        Mockito.any(DatanodeStorage[].class));
+        Mockito.any(DatanodeRegistration.class));
 
     when(namenode.versionRequest()).thenReturn(new NamespaceInfo
         (1, CLUSTER_ID, POOL_ID, 1L, 1));

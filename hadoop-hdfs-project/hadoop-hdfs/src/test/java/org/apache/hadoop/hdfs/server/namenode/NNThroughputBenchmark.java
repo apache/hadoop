@@ -31,6 +31,8 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -51,8 +53,6 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
@@ -612,7 +612,6 @@ public class NNThroughputBenchmark {
       super.parseArguments(args);
     }
 
-    @SuppressWarnings("deprecation")
     void generateInputs(int[] opsPerThread) throws IOException {
       // create files using opsPerThread
       String[] createArgs = new String[] {
@@ -742,7 +741,6 @@ public class NNThroughputBenchmark {
       }
     }
 
-    @SuppressWarnings("deprecation")
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = System.currentTimeMillis();
@@ -762,6 +760,7 @@ public class NNThroughputBenchmark {
     
     NamespaceInfo nsInfo;
     DatanodeRegistration dnRegistration;
+    DatanodeStorage storage; //only one storage 
     ArrayList<Block> blocks;
     int nrBlocks; // actual number of blocks
     long[] blockReportList;
@@ -797,10 +796,15 @@ public class NNThroughputBenchmark {
       dnRegistration.setStorageInfo(new DataStorage(nsInfo, ""));
       DataNode.setNewStorageID(dnRegistration);
       // register datanode
-      
-      DatanodeStorage[] storages = { new DatanodeStorage(
-          dnRegistration.getStorageID(), DatanodeStorage.State.NORMAL) };
-      dnRegistration = nameNodeProto.registerDatanode(dnRegistration, storages);
+      dnRegistration = nameNodeProto.registerDatanode(dnRegistration);
+      //first block reports
+      storage = new DatanodeStorage(dnRegistration.getStorageID());
+      final StorageBlockReport[] reports = {
+          new StorageBlockReport(storage,
+              new BlockListAsLongs(null, null).getBlockListAsLongs())
+      };
+      nameNodeProto.blockReport(dnRegistration, 
+          nameNode.getNamesystem().getBlockPoolId(), reports);
     }
 
     /**
@@ -1032,7 +1036,7 @@ public class NNThroughputBenchmark {
       TinyDatanode dn = datanodes[daemonId];
       long start = System.currentTimeMillis();
       StorageBlockReport[] report = { new StorageBlockReport(
-          dn.dnRegistration.getStorageID(), dn.getBlockReportList()) };
+          dn.storage, dn.getBlockReportList()) };
       nameNodeProto.blockReport(dn.dnRegistration, nameNode.getNamesystem()
           .getBlockPoolId(), report);
       long end = System.currentTimeMillis();

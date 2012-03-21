@@ -50,7 +50,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionResponseProto;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
@@ -88,12 +87,8 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     DatanodeRegistration registration = PBHelper.convert(request
         .getRegistration());
     DatanodeRegistration registrationResp;
-    DatanodeStorage[] storages = new DatanodeStorage[request.getStoragesCount()];
-    for (int i = 0; i < request.getStoragesCount(); i++) {
-      storages[i] = PBHelper.convert(request.getStorages(i));
-    }
     try {
-      registrationResp = impl.registerDatanode(registration, storages);
+      registrationResp = impl.registerDatanode(registration);
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -148,7 +143,8 @@ public class DatanodeProtocolServerSideTranslatorPB implements
       for (int i = 0; i < blockIds.size(); i++) {
         blocks[i] = blockIds.get(i);
       }
-      report[index++] = new StorageBlockReport(s.getStorageID(), blocks);
+      report[index++] = new StorageBlockReport(PBHelper.convert(s.getStorage()),
+          blocks);
     }
     try {
       cmd = impl.blockReport(PBHelper.convert(request.getRegistration()),
