@@ -85,13 +85,6 @@ public class NamenodeFsck {
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
   
-  /** Don't attempt any fixing . */
-  public static final int FIXING_NONE = 0;
-  /** Move corrupted files to /lost+found . */
-  public static final int FIXING_MOVE = 1;
-  /** Delete corrupted files. */
-  public static final int FIXING_DELETE = 2;
-  
   private final NameNode namenode;
   private final NetworkTopology networktopology;
   private final int totalDatanodes;
@@ -107,7 +100,21 @@ public class NamenodeFsck {
   private boolean showLocations = false;
   private boolean showRacks = false;
   private boolean showCorruptFileBlocks = false;
-  private int fixing = FIXING_NONE;
+
+  /** 
+   * True if the user specified the -move option.
+   *
+   * Whe this option is in effect, we will copy salvaged blocks into the lost
+   * and found. */
+  private boolean doMove = false;
+
+  /** 
+   * True if the user specified the -delete option.
+   *
+   * Whe this option is in effect, we will delete corrupted files.
+   */
+  private boolean doDelete = false;
+
   private String path = "/";
 
   // We return back N files that are corrupt; the list of files returned is
@@ -144,8 +151,8 @@ public class NamenodeFsck {
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
       if (key.equals("path")) { this.path = pmap.get("path")[0]; }
-      else if (key.equals("move")) { this.fixing = FIXING_MOVE; }
-      else if (key.equals("delete")) { this.fixing = FIXING_DELETE; }
+      else if (key.equals("move")) { this.doMove = true; }
+      else if (key.equals("delete")) { this.doDelete = true; }
       else if (key.equals("files")) { this.showFiles = true; }
       else if (key.equals("blocks")) { this.showBlocks = true; }
       else if (key.equals("locations")) { this.showLocations = true; }
@@ -377,16 +384,20 @@ public class NamenodeFsck {
             + " blocks of total size " + missize + " B.");
       }
       res.corruptFiles++;
-      switch(fixing) {
-      case FIXING_NONE:
-        break;
-      case FIXING_MOVE:
-        if (!isOpen)
-          lostFoundMove(parent, file, blocks);
-        break;
-      case FIXING_DELETE:
-        if (!isOpen)
-          namenode.getRpcServer().delete(path, true);
+      try {
+        if (doMove) {
+          if (!isOpen) {
+            copyBlocksToLostFound(parent, file, blocks);
+          }
+        }
+        if (doDelete) {
+          if (!isOpen) {
+            LOG.warn("\n - deleting corrupted file " + path);
+            namenode.getRpcServer().delete(path, true);
+          }
+        }
+      } catch (IOException e) {
+        LOG.error("error processing " + path + ": " + e.toString());
       }
     }
     if (showFiles) {
@@ -401,8 +412,8 @@ public class NamenodeFsck {
     }
   }
   
-  private void lostFoundMove(String parent, HdfsFileStatus file, LocatedBlocks blocks)
-    throws IOException {
+  private void copyBlocksToLostFound(String parent, HdfsFileStatus file,
+        LocatedBlocks blocks) throws IOException {
     final DFSClient dfs = new DFSClient(NameNode.getAddress(conf), conf);
     try {
     if (!lfInited) {
@@ -436,12 +447,10 @@ public class NamenodeFsck {
         }
         if (fos == null) {
           fos = dfs.create(target + "/" + chain, true);
-          if (fos != null) chain++;
+          if (fos != null)
+            chain++;
           else {
-            LOG.warn(errmsg + ": could not store chain " + chain);
-            // perhaps we should bail out here...
-            // return;
-            continue;
+            throw new IOException(errmsg + ": could not store chain " + chain);
           }
         }
         
@@ -458,8 +467,7 @@ public class NamenodeFsck {
         }
       }
       if (fos != null) fos.close();
-      LOG.warn("\n - moved corrupted file " + fullName + " to /lost+found");
-      dfs.delete(fullName, true);
+      LOG.warn("\n - copied corrupted file " + fullName + " to /lost+found");
     }  catch (Exception e) {
       e.printStackTrace();
       LOG.warn(errmsg + ": " + e.getMessage());
