@@ -209,6 +209,8 @@ Release 0.23.3 - UNRELEASED
     command and the first output is taken. This was done to handle the 
     build of Hadoop with IBM's JDK. (Stephen Watt, Guillermo Cabrera and ddas)
 
+    HADOOP-8200. Remove HADOOP_[JOBTRACKER|TASKTRACKER]_OPTS. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
