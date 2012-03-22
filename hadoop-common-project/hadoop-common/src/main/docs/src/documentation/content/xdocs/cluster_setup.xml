@@ -134,8 +134,6 @@
           <tr><td>DataNode</td><td>HADOOP_DATANODE_OPTS</td></tr>
           <tr><td>SecondaryNamenode</td>
               <td>HADOOP_SECONDARYNAMENODE_OPTS</td></tr>
-          <tr><td>JobTracker</td><td>HADOOP_JOBTRACKER_OPTS</td></tr>
-          <tr><td>TaskTracker</td><td>HADOOP_TASKTRACKER_OPTS</td></tr>
           </table>
           
           <p> For example, To configure Namenode to use parallelGC, the

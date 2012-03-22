@@ -98,6 +98,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-7788. Add simple HealthMonitor class to watch an HAService (todd)
 
+    HADOOP-8200. Remove HADOOP_[JOBTRACKER|TASKTRACKER]_OPTS. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
