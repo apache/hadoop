@@ -252,6 +252,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3086. Change Datanode not to send storage list in registration.
     (szetszwo)
 
+    HDFS-3044. fsck move should be non-destructive by default.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
