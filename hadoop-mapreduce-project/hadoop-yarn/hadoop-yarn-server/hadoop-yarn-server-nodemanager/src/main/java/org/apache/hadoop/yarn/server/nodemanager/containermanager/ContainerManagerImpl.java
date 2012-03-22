@@ -358,7 +358,8 @@ public class ContainerManagerImpl extends CompositeService implements
     ContainerId containerID = launchContext.getContainerId();
     authorizeRequest(containerID, launchContext);
 
-    LOG.info(" container is " + request);
+    LOG.info("Start request for " + launchContext.getContainerId()
+        + " by user " + launchContext.getUser());
 
     // //////////// Parse credentials
     ByteBuffer tokens = launchContext.getContainerTokens();
