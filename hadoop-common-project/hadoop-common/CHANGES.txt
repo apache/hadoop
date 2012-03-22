@@ -156,6 +156,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8197. Configuration logs WARNs on every use of a deprecated key (tucu)
 
+    HADOOP-8159. NetworkTopology: getLeaf should check for invalid topologies.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
