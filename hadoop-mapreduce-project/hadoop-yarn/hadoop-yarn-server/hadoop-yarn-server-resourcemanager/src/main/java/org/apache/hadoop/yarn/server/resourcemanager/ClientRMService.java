@@ -259,7 +259,7 @@ public class ClientRMService extends AbstractService implements
           .currentTimeMillis()));
 
       LOG.info("Application with id " + applicationId.getId() + 
-          " submitted by user " + user + " with " + submissionContext);
+          " submitted by user " + user);
       RMAuditLogger.logSuccess(user, AuditConstants.SUBMIT_APP_REQUEST,
           "ClientRMService", applicationId);
     } catch (IOException ie) {
