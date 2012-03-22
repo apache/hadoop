@@ -347,9 +347,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private String handleDeprecation(String name) {
     if (isDeprecated(name)) {
       DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
-      if (!keyInfo.accessed) {
-        LOG.warn(keyInfo.getWarningMessage(name));
-      }
+      warnOnceIfDeprecated(name);
       for (String newKey : keyInfo.newKeys) {
         if(newKey != null) {
           name = newKey;
@@ -362,11 +360,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         getOverlay().containsKey(deprecatedKey)) {
       getProps().setProperty(name, getOverlay().getProperty(deprecatedKey));
       getOverlay().setProperty(name, getOverlay().getProperty(deprecatedKey));
-      
-      DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(deprecatedKey);
-      if (!keyInfo.accessed) {
-        LOG.warn(keyInfo.getWarningMessage(deprecatedKey));
-      }
     }
     return name;
   }
@@ -662,12 +655,16 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       getOverlay().setProperty(altName, value);
       getProps().setProperty(altName, value);
     }
-    if (isDeprecated(name)) {
-      DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
+    warnOnceIfDeprecated(name);
+  }
+
+  private void warnOnceIfDeprecated(String name) {
+    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
+    if (keyInfo != null && !keyInfo.accessed) {
       LOG.warn(keyInfo.getWarningMessage(name));
     }
   }
-  
+
   /**
    * Unset a previously set property.
    */

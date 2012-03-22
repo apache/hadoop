@@ -31,6 +31,7 @@ public class TestDeprecatedKeys extends TestCase {
   public void testDeprecatedKeys() throws Exception {
     Configuration conf = new Configuration();
     conf.set("topology.script.file.name", "xyz");
+    conf.set("topology.script.file.name", "xyz");
     String scriptFile = conf.get(CommonConfigurationKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY);
     assertTrue(scriptFile.equals("xyz")) ;
   }

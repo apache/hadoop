@@ -152,6 +152,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8157. Fix race condition in Configuration that could cause spurious
     ClassNotFoundExceptions after a GC. (todd)
 
+    HADOOP-8197. Configuration logs WARNs on every use of a deprecated key (tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
