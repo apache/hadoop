@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
@@ -332,6 +333,10 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       assertEquals(MediaType.APPLICATION_OCTET_STREAM, conn.getContentType());
       assertEquals((short)0755, webhdfs.getFileStatus(dir).getPermission().toShort());
       conn.disconnect();
+    }
+
+    {//test append.
+      AppendTestUtil.testAppend(fs, new Path(dir, "append"));
     }
   }
 }
