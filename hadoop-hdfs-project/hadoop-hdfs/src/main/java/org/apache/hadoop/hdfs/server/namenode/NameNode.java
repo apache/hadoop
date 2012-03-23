@@ -32,6 +32,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -990,24 +991,41 @@ public class NameNode {
     state.setState(haContext, STANDBY_STATE);
   }
 
-  synchronized HAServiceState getServiceState() throws AccessControlException {
+  synchronized HAServiceStatus getServiceStatus()
+      throws ServiceFailedException, AccessControlException {
     namesystem.checkSuperuserPrivilege();
+    if (!haEnabled) {
+      throw new ServiceFailedException("HA for namenode is not enabled");
+    }
+    if (state == null) {
+      return new HAServiceStatus(HAServiceState.INITIALIZING);
+    }
+    HAServiceState retState = state.getServiceState();
+    HAServiceStatus ret = new HAServiceStatus(retState);
+    if (retState == HAServiceState.STANDBY) {
+      String safemodeTip = namesystem.getSafeModeTip();
+      if (!safemodeTip.isEmpty()) {
+        ret.setNotReadyToBecomeActive(
+            "The NameNode is in safemode. " +
+            safemodeTip);
+      } else {
+        ret.setReadyToBecomeActive();
+      }
+    } else if (retState == HAServiceState.ACTIVE) {
+      ret.setReadyToBecomeActive();
+    } else {
+      ret.setNotReadyToBecomeActive("State is " + state);
+    }
+    return ret;
+  }
+
+  synchronized HAServiceState getServiceState() {
     if (state == null) {
       return HAServiceState.INITIALIZING;
     }
     return state.getServiceState();
   }
 
-  synchronized boolean readyToBecomeActive()
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
-    if (!haEnabled) {
-      throw new ServiceFailedException("HA for namenode is not enabled");
-    }
-    return !isInSafeMode();
-  }
-
-  
   /**
    * Class used as expose {@link NameNode} as context to {@link HAState}
    * 

@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import static org.mockito.Mockito.when;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
@@ -46,7 +45,6 @@ public class TestHAAdmin {
   @Before
   public void setup() throws IOException {
     mockProtocol = Mockito.mock(HAServiceProtocol.class);
-    when(mockProtocol.readyToBecomeActive()).thenReturn(true);
     tool = new HAAdmin() {
       @Override
       protected HAServiceProtocol getProtocol(String target) throws IOException {

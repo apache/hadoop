@@ -60,19 +60,31 @@ public class FailoverController {
                                         InetSocketAddress toSvcAddr,
                                         boolean forceActive)
       throws FailoverFailedException {
-    HAServiceState toSvcState;
+    HAServiceStatus toSvcStatus;
 
     try {
-      toSvcState = toSvc.getServiceState();
+      toSvcStatus = toSvc.getServiceStatus();
     } catch (IOException e) {
       String msg = "Unable to get service state for " + toSvcAddr;
       LOG.error(msg, e);
       throw new FailoverFailedException(msg, e);
     }
 
-    if (!toSvcState.equals(HAServiceState.STANDBY)) {
+    if (!toSvcStatus.getState().equals(HAServiceState.STANDBY)) {
       throw new FailoverFailedException(
           "Can't failover to an active service");
+    }
+    
+    if (!toSvcStatus.isReadyToBecomeActive()) {
+      String notReadyReason = toSvcStatus.getNotReadyReason();
+      if (!forceActive) {
+        throw new FailoverFailedException(
+            toSvcAddr + " is not ready to become active: " +
+            notReadyReason);
+      } else {
+        LOG.warn("Service is not ready to become active, but forcing: " +
+            notReadyReason);
+      }
     }
 
     try {
@@ -80,18 +92,6 @@ public class FailoverController {
     } catch (HealthCheckFailedException hce) {
       throw new FailoverFailedException(
           "Can't failover to an unhealthy service", hce);
-    } catch (IOException e) {
-      throw new FailoverFailedException(
-          "Got an IO exception", e);
-    }
-
-    try {
-      if (!toSvc.readyToBecomeActive()) {
-        if (!forceActive) {
-          throw new FailoverFailedException(
-              toSvcAddr + " is not ready to become active");
-        }
-      }
     } catch (IOException e) {
       throw new FailoverFailedException(
           "Got an IO exception", e);

@@ -159,6 +159,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3044. fsck move should be non-destructive by default.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3071. haadmin failover command does not provide enough detail when
+    target NN is not ready to be active. (todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

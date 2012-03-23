@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
@@ -981,15 +982,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // HAServiceProtocol
-  public synchronized HAServiceState getServiceState() 
-      throws AccessControlException {
-    return nn.getServiceState();
-  }
-
-  @Override // HAServiceProtocol
-  public synchronized boolean readyToBecomeActive() 
-      throws ServiceFailedException, AccessControlException {
-    return nn.readyToBecomeActive();
+  public synchronized HAServiceStatus getServiceStatus() 
+      throws AccessControlException, ServiceFailedException {
+    return nn.getServiceStatus();
   }
 
   /**

@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
@@ -28,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.ha.NodeFencer;
 
 import org.junit.After;
@@ -46,7 +48,10 @@ public class TestDFSHAAdminMiniCluster {
   private MiniDFSCluster cluster;
   private Configuration conf; 
   private DFSHAAdmin tool;
-  
+  private ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
+
+  private String errOutput;
+
   @Before
   public void setup() throws IOException {
     conf = new Configuration();
@@ -55,6 +60,7 @@ public class TestDFSHAAdminMiniCluster {
         .build();
     tool = new DFSHAAdmin();  
     tool.setConf(conf);
+    tool.setErrOut(new PrintStream(errOutBytes));
     cluster.waitActive();
   }
 
@@ -67,6 +73,12 @@ public class TestDFSHAAdminMiniCluster {
   public void testGetServiceState() throws Exception {
     assertEquals(0, runTool("-getServiceState", "nn1"));
     assertEquals(0, runTool("-getServiceState", "nn2"));
+    
+    cluster.transitionToActive(0);
+    assertEquals(0, runTool("-getServiceState", "nn1"));
+    
+    NameNodeAdapter.enterSafeMode(cluster.getNameNode(0), false);
+    assertEquals(0, runTool("-getServiceState", "nn1"));
   }
     
   @Test 
@@ -84,6 +96,18 @@ public class TestDFSHAAdminMiniCluster {
     assertFalse(nnode2.isStandbyState());
     assertEquals(0, runTool("-transitionToStandby", "nn2"));
     assertTrue(nnode2.isStandbyState());
+  }
+  
+  @Test
+  public void testTryFailoverToSafeMode() throws Exception {
+    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
+    tool.setConf(conf);
+
+    NameNodeAdapter.enterSafeMode(cluster.getNameNode(0), false);
+    assertEquals(-1, runTool("-failover", "nn2", "nn1"));
+    assertTrue("Bad output: " + errOutput,
+        errOutput.contains("is not ready to become active: " +
+            "The NameNode is in safemode"));
   }
     
   /**
@@ -132,11 +156,10 @@ public class TestDFSHAAdminMiniCluster {
   }
   
   private int runTool(String ... args) throws Exception {
-    ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
     errOutBytes.reset();
     LOG.info("Running: DFSHAAdmin " + Joiner.on(" ").join(args));
     int ret = tool.run(args);
-    String errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
+    errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
     LOG.info("Output:\n" + errOutput);
     return ret;
   }
