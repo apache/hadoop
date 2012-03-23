@@ -117,6 +117,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-4034. Unable to view task logs on history server with
     mapreduce.job.acl-view-job=* (Jason Lowe and Siddarth Seth via bobby)
 
+    MAPREDUCE-4043. Secret keys set in Credentials are not seen by tasks
+    (Jason Lowe via bobby) 
+
   OPTIMIZATIONS
 
     MAPREDUCE-3901. Modified JobHistory records in YARN to lazily load job and
