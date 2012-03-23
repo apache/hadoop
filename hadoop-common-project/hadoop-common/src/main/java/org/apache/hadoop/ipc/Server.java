@@ -1952,13 +1952,13 @@ public abstract class Server {
    *  Writable, long)} instead
    */
   @Deprecated
-  public Writable call(Writable param, long receiveTime) throws IOException {
+  public Writable call(Writable param, long receiveTime) throws Exception {
     return call(RpcKind.RPC_BUILTIN, null, param, receiveTime);
   }
   
   /** Called for each call. */
   public abstract Writable call(RpcKind rpcKind, String protocol,
-      Writable param, long receiveTime) throws IOException;
+      Writable param, long receiveTime) throws Exception;
   
   /**
    * Authorize the incoming client connection.
