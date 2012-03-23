@@ -51,6 +51,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
@@ -74,7 +75,7 @@ public class TestTaskImpl {
   private Token<JobTokenIdentifier> jobToken;
   private JobId jobId;
   private Path remoteJobConfFile;
-  private Collection<Token<? extends TokenIdentifier>> fsTokens;
+  private Credentials credentials;
   private Clock clock;
   private Map<TaskId, TaskInfo> completedTasksFromPreviousRun;
   private MRAppMetrics metrics;
@@ -100,12 +101,12 @@ public class TestTaskImpl {
         EventHandler eventHandler, Path remoteJobConfFile, JobConf conf,
         TaskAttemptListener taskAttemptListener, OutputCommitter committer,
         Token<JobTokenIdentifier> jobToken,
-        Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock,
+        Credentials credentials, Clock clock,
         Map<TaskId, TaskInfo> completedTasksFromPreviousRun, int startCount,
         MRAppMetrics metrics, AppContext appContext) {
       super(jobId, taskType , partition, eventHandler,
           remoteJobConfFile, conf, taskAttemptListener, committer, 
-          jobToken, fsTokens, clock, 
+          jobToken, credentials, clock,
           completedTasksFromPreviousRun, startCount, metrics, appContext);
     }
 
@@ -118,7 +119,7 @@ public class TestTaskImpl {
     protected TaskAttemptImpl createAttempt() {
       MockTaskAttemptImpl attempt = new MockTaskAttemptImpl(getID(), ++taskAttemptCounter, 
           eventHandler, taskAttemptListener, remoteJobConfFile, partition,
-          conf, committer, jobToken, fsTokens, clock, appContext);
+          conf, committer, jobToken, credentials, clock, appContext);
       taskAttempts.add(attempt);
       return attempt;
     }
@@ -140,10 +141,10 @@ public class TestTaskImpl {
         TaskAttemptListener taskAttemptListener, Path jobFile, int partition,
         JobConf conf, OutputCommitter committer,
         Token<JobTokenIdentifier> jobToken,
-        Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock,
+        Credentials credentials, Clock clock,
         AppContext appContext) {
       super(taskId, id, eventHandler, taskAttemptListener, jobFile, partition, conf,
-          dataLocations, committer, jobToken, fsTokens, clock, appContext);
+          dataLocations, committer, jobToken, credentials, clock, appContext);
       attemptId = Records.newRecord(TaskAttemptId.class);
       attemptId.setId(id);
       attemptId.setTaskId(taskId);
@@ -203,7 +204,7 @@ public class TestTaskImpl {
     committer = mock(OutputCommitter.class);
     jobToken = (Token<JobTokenIdentifier>) mock(Token.class);
     remoteJobConfFile = mock(Path.class);
-    fsTokens = null;
+    credentials = null;
     clock = new SystemClock();
     metrics = mock(MRAppMetrics.class);  
     dataLocations = new String[1];
@@ -224,7 +225,7 @@ public class TestTaskImpl {
     
     mockTask = new MockTaskImpl(jobId, partition, dispatcher.getEventHandler(),
         remoteJobConfFile, conf, taskAttemptListener, committer, jobToken,
-        fsTokens, clock, 
+        credentials, clock,
         completedTasksFromPreviousRun, startCount,
         metrics, appContext);        
     
