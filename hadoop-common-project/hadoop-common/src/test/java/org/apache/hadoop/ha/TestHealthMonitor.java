@@ -64,8 +64,8 @@ public class TestHealthMonitor {
     conf.setInt(CommonConfigurationKeys.HA_HM_CONNECT_RETRY_INTERVAL_KEY, 50);
     conf.setInt(CommonConfigurationKeys.HA_HM_SLEEP_AFTER_DISCONNECT_KEY, 50);
     mockProxy = Mockito.mock(HAServiceProtocol.class);
-    Mockito.doReturn(HAServiceState.ACTIVE)
-      .when(mockProxy).getServiceState();
+    Mockito.doReturn(new HAServiceStatus(HAServiceState.ACTIVE))
+      .when(mockProxy).getServiceStatus();
     
     hm = new HealthMonitor(conf, BOGUS_ADDR) {
       @Override

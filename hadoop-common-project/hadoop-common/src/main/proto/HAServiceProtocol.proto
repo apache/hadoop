@@ -66,27 +66,20 @@ message TransitionToStandbyResponseProto {
 /**
  * void request
  */
-message GetServiceStateRequestProto { 
+message GetServiceStatusRequestProto { 
 }
 
 /**
  * Returns the state of the service
  */
-message GetServiceStateResponseProto { 
+message GetServiceStatusResponseProto { 
   required HAServiceStateProto state = 1;
-}
 
-/**
- * void request
- */
-message ReadyToBecomeActiveRequestProto { 
-}
-
-/**
- * Returns true if service is ready to become active
- */
-message ReadyToBecomeActiveResponseProto { 
-  required bool readyToBecomeActive = 1;
+  // If state is STANDBY, indicate whether it is
+  // ready to become active.
+  optional bool readyToBecomeActive = 2;
+  // If not ready to become active, a textual explanation of why not
+  optional string notReadyReason = 3;
 }
 
 /**
@@ -115,14 +108,8 @@ service HAServiceProtocolService {
       returns(TransitionToStandbyResponseProto);
 
   /**
-   * Get the current state of the service.
+   * Get the current status of the service.
    */
-  rpc getServiceState(GetServiceStateRequestProto)
-      returns(GetServiceStateResponseProto);
-
-  /**
-   * Check if the service is ready to become active
-   */
-  rpc readyToBecomeActive(ReadyToBecomeActiveRequestProto)
-      returns(ReadyToBecomeActiveResponseProto);
+  rpc getServiceStatus(GetServiceStatusRequestProto)
+      returns(GetServiceStatusResponseProto);
 }

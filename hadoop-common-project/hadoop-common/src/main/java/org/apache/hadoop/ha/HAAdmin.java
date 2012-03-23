@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -221,7 +220,7 @@ public abstract class HAAdmin extends Configured implements Tool {
     }
 
     HAServiceProtocol proto = getProtocol(argv[1]);
-    out.println(proto.getServiceState());
+    out.println(proto.getServiceStatus().getState());
     return 0;
   }
 

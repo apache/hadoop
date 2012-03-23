@@ -115,27 +115,15 @@ public interface HAServiceProtocol {
                                            IOException;
 
   /**
-   * Return the current state of the service.
+   * Return the current status of the service. The status indicates
+   * the current <em>state</em> (e.g ACTIVE/STANDBY) as well as
+   * some additional information. {@see HAServiceStatus}
    * 
    * @throws AccessControlException
    *           if access is denied.
    * @throws IOException
    *           if other errors happen
    */
-  public HAServiceState getServiceState() throws AccessControlException,
-                                                 IOException;
-
-  /**
-   * Return true if the service is capable and ready to transition
-   * from the standby state to the active state.
-   * 
-   * @return true if the service is ready to become active, false otherwise.
-   * @throws AccessControlException
-   *           if access is denied.
-   * @throws IOException
-   *           if other errors happen
-   */
-  public boolean readyToBecomeActive() throws ServiceFailedException,
-                                              AccessControlException,
-                                              IOException;
+  public HAServiceStatus getServiceStatus() throws AccessControlException,
+                                                   IOException;
 }

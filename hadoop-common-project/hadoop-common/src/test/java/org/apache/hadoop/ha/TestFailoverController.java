@@ -30,8 +30,6 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysFailFencer;
 import static org.apache.hadoop.ha.TestNodeFencer.setupFencer;
-import org.apache.hadoop.ipc.ProtocolSignature;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -66,13 +64,16 @@ public class TestFailoverController {
     }
 
     @Override
-    public HAServiceState getServiceState() throws IOException {
-      return state;
+    public HAServiceStatus getServiceStatus() throws IOException {
+      HAServiceStatus ret = new HAServiceStatus(state);
+      if (state == HAServiceState.STANDBY) {
+        ret.setReadyToBecomeActive();
+      }
+      return ret;
     }
-
-    @Override
-    public boolean readyToBecomeActive() throws ServiceFailedException, IOException {
-      return true;
+    
+    private HAServiceState getServiceState() {
+      return state;
     }
   }
   
@@ -127,13 +128,13 @@ public class TestFailoverController {
   public void testFailoverWithoutPermission() throws Exception {
     DummyService svc1 = new DummyService(HAServiceState.ACTIVE) {
       @Override
-      public HAServiceState getServiceState() throws IOException {
+      public HAServiceStatus getServiceStatus() throws IOException {
         throw new AccessControlException("Access denied");
       }
     };
     DummyService svc2 = new DummyService(HAServiceState.STANDBY) {
       @Override
-      public HAServiceState getServiceState() throws IOException {
+      public HAServiceStatus getServiceStatus() throws IOException {
         throw new AccessControlException("Access denied");
       }
     };
@@ -153,8 +154,10 @@ public class TestFailoverController {
     DummyService svc1 = new DummyService(HAServiceState.ACTIVE);
     DummyService svc2 = new DummyService(HAServiceState.STANDBY) {
       @Override
-      public boolean readyToBecomeActive() throws ServiceFailedException, IOException {
-        return false;
+      public HAServiceStatus getServiceStatus() throws IOException {
+        HAServiceStatus ret = new HAServiceStatus(HAServiceState.STANDBY);
+        ret.setNotReadyToBecomeActive("injected not ready");
+        return ret;
       }
     };
     NodeFencer fencer = setupFencer(AlwaysSucceedFencer.class.getName());
@@ -164,6 +167,9 @@ public class TestFailoverController {
       fail("Can't failover to a service that's not ready");
     } catch (FailoverFailedException ffe) {
       // Expected
+      if (!ffe.getMessage().contains("injected not ready")) {
+        throw ffe;
+      }
     }
 
     assertEquals(HAServiceState.ACTIVE, svc1.getServiceState());

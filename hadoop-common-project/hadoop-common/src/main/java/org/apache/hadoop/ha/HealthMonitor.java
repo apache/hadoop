@@ -77,7 +77,8 @@ class HealthMonitor {
   private List<Callback> callbacks = Collections.synchronizedList(
       new LinkedList<Callback>());
 
-  private HAServiceState lastServiceState = HAServiceState.INITIALIZING;
+  private HAServiceStatus lastServiceState = new HAServiceStatus(
+      HAServiceState.INITIALIZING);
   
   enum State {
     /**
@@ -188,10 +189,10 @@ class HealthMonitor {
 
   private void doHealthChecks() throws InterruptedException {
     while (shouldRun) {
-      HAServiceState state = null;
+      HAServiceStatus status = null;
       boolean healthy = false;
       try {
-        state = proxy.getServiceState();
+        status = proxy.getServiceStatus();
         proxy.monitorHealth();
         healthy = true;
       } catch (HealthCheckFailedException e) {
@@ -207,8 +208,8 @@ class HealthMonitor {
         return;
       }
       
-      if (state != null) {
-        setLastServiceState(state);
+      if (status != null) {
+        setLastServiceStatus(status);
       }
       if (healthy) {
         enterState(State.SERVICE_HEALTHY);
@@ -218,8 +219,8 @@ class HealthMonitor {
     }
   }
   
-  private synchronized void setLastServiceState(HAServiceState serviceState) {
-    this.lastServiceState = serviceState;
+  private synchronized void setLastServiceStatus(HAServiceStatus status) {
+    this.lastServiceState = status;
   }
 
   private synchronized void enterState(State newState) {
@@ -238,7 +239,7 @@ class HealthMonitor {
     return state;
   }
   
-  synchronized HAServiceState getLastServiceState() {
+  synchronized HAServiceStatus getLastServiceStatus() {
     return lastServiceState;
   }
   

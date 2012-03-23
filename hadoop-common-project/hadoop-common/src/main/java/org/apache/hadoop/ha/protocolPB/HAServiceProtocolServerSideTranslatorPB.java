@@ -22,14 +22,12 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ha.HAServiceProtocol;
-import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.GetServiceStateRequestProto;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.GetServiceStateResponseProto;
+import org.apache.hadoop.ha.HAServiceStatus;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.GetServiceStatusRequestProto;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.GetServiceStatusResponseProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.MonitorHealthRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.MonitorHealthResponseProto;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.ReadyToBecomeActiveRequestProto;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.ReadyToBecomeActiveResponseProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToActiveRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToActiveResponseProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToStandbyRequestProto;
@@ -99,29 +97,37 @@ public class HAServiceProtocolServerSideTranslatorPB implements
   }
 
   @Override
-  public GetServiceStateResponseProto getServiceState(RpcController controller,
-      GetServiceStateRequestProto request) throws ServiceException {
-    HAServiceState s;
+  public GetServiceStatusResponseProto getServiceStatus(RpcController controller,
+      GetServiceStatusRequestProto request) throws ServiceException {
+    HAServiceStatus s;
     try {
-      s = server.getServiceState();
+      s = server.getServiceStatus();
     } catch(IOException e) {
       throw new ServiceException(e);
     }
     
-    HAServiceStateProto ret;
-    switch (s) {
+    HAServiceStateProto retState;
+    switch (s.getState()) {
     case ACTIVE:
-      ret = HAServiceStateProto.ACTIVE;
+      retState = HAServiceStateProto.ACTIVE;
       break;
     case STANDBY:
-      ret = HAServiceStateProto.STANDBY;
+      retState = HAServiceStateProto.STANDBY;
       break;
     case INITIALIZING:
     default:
-      ret = HAServiceStateProto.INITIALIZING;
+      retState = HAServiceStateProto.INITIALIZING;
       break;
     }
-    return GetServiceStateResponseProto.newBuilder().setState(ret).build();
+    
+    GetServiceStatusResponseProto.Builder ret =
+      GetServiceStatusResponseProto.newBuilder()
+        .setState(retState)
+        .setReadyToBecomeActive(s.isReadyToBecomeActive());
+    if (!s.isReadyToBecomeActive()) {
+      ret.setNotReadyReason(s.getNotReadyReason());
+    }
+    return ret.build();
   }
 
   @Override
@@ -142,17 +148,5 @@ public class HAServiceProtocolServerSideTranslatorPB implements
     return ProtocolSignature.getProtocolSignature(clientMethodsHash,
         RPC.getProtocolVersion(HAServiceProtocolPB.class),
         HAServiceProtocolPB.class);
-  }
-
-  @Override
-  public ReadyToBecomeActiveResponseProto readyToBecomeActive(
-      RpcController controller, ReadyToBecomeActiveRequestProto request)
-      throws ServiceException {
-    try {
-      return ReadyToBecomeActiveResponseProto.newBuilder()
-          .setReadyToBecomeActive(server.readyToBecomeActive()).build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
   }
 }
