@@ -22,6 +22,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8121. Active Directory Group Mapping Service. (Jonathan Natkins via
     atm)
 
+    HADOOP-7030. Add TableMapping topology implementation to read host to rack
+    mapping from a file. (Patrick Angeles and tomwhite via tomwhite)
+
   IMPROVEMENTS
 
     HADOOP-7524. Change RPC to allow multiple protocols including multuple

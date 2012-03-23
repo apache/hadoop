@@ -688,6 +688,19 @@
   </description>
 </property>
 
+<property>
+  <name>net.topology.table.file.name</name>
+  <value></value>
+  <description> The file name for a topology file, which is used when the
+    net.topology.script.file.name property is set to
+    org.apache.hadoop.net.TableMapping. The file format is a two column text
+    file, with columns separated by whitespace. The first column is a DNS or
+    IP address and the second column specifies the rack where the address maps.
+    If no entry corresponding to a host in the cluster is found, then 
+    /default-rack is assumed.
+  </description>
+</property>
+
 <!-- Local file system -->
 <property>
   <name>file.stream-buffer-size</name>

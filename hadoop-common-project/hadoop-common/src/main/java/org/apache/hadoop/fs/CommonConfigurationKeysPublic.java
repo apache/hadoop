@@ -63,6 +63,10 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY =
     "net.topology.node.switch.mapping.impl";
+  
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY =
+    "net.topology.table.file.name";
 
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  FS_TRASH_CHECKPOINT_INTERVAL_KEY =
