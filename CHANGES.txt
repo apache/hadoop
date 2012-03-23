@@ -101,6 +101,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-1740. NPE in getMatchingLevelForNodes when node locations are 
     variable depth (ahmed via tucu)
 
+    HADOOP-8154. DNS#getIPs shouldn't silently return the local host
+    IP for bogus interface names. (eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file

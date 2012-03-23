@@ -30,6 +30,9 @@ import javax.naming.directory.Attributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * 
  * A class that provides direct and reverse lookup functionalities, allowing
@@ -38,6 +41,8 @@ import javax.naming.directory.InitialDirContext;
  * 
  */
 public class DNS {
+
+  public static final Log LOG = LogFactory.getLog(DNS.class);
 
   /**
    * Returns the hostname associated with the specified IP address by the
@@ -82,25 +87,32 @@ public class DNS {
    *         interface
    * @throws UnknownHostException
    *             If an UnknownHostException is encountered in querying the
-   *             default interface
+   *             default interface or the given interface can not be found
    * 
    */
   public static String[] getIPs(String strInterface)
     throws UnknownHostException {
+    if ("default".equals(strInterface)) {
+      return new String[] {
+          InetAddress.getLocalHost().getHostAddress()
+      };
+    }
     try {
       NetworkInterface netIF = NetworkInterface.getByName(strInterface);
-      if (netIF == null)
-        return new String[] { InetAddress.getLocalHost()
-                              .getHostAddress() };
-      else {
+      if (netIF == null) {
+        throw new UnknownHostException("Unknown interface " + strInterface);
+      } else {
         Vector<String> ips = new Vector<String>();
-        Enumeration e = netIF.getInetAddresses();
+        Enumeration<InetAddress> e = netIF.getInetAddresses();
         while (e.hasMoreElements())
-          ips.add(((InetAddress) e.nextElement()).getHostAddress());
+          ips.add(e.nextElement().getHostAddress());
         return ips.toArray(new String[] {});
       }
     } catch (SocketException e) {
-      return new String[] { InetAddress.getLocalHost().getHostAddress() };
+      LOG.warn("Unable to get IP for interface " + strInterface, e);
+      return new String[] {
+          InetAddress.getLocalHost().getHostAddress()
+      };
     }
   }
 
