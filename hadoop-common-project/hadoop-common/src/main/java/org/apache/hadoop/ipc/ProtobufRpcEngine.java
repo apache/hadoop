@@ -39,15 +39,12 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
-import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcExceptionProto;
+
 import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcRequestProto;
-import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcResponseProto;
-import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcResponseProto.ResponseStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ProtoUtil;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
@@ -191,21 +188,11 @@ public class ProtobufRpcEngine implements RpcEngine {
         throw new ServiceException(e);
       }
 
-      HadoopRpcResponseProto response = val.message;
       if (LOG.isDebugEnabled()) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
       }
-
-      // Wrap the received message
-      ResponseStatus status = response.getStatus();
-      if (status != ResponseStatus.SUCCESS) {
-        RemoteException re =  new RemoteException(response.getException()
-            .getExceptionName(), response.getException().getStackTrace());
-        re.fillInStackTrace();
-        throw new ServiceException(re);
-      }
-
+      
       Message prototype = null;
       try {
         prototype = getReturnProtoType(method);
@@ -215,7 +202,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       Message returnMessage;
       try {
         returnMessage = prototype.newBuilderForType()
-            .mergeFrom(response.getResponse()).build();
+            .mergeFrom(val.responseMessage).build();
       } catch (Throwable e) {
         throw new ServiceException(e);
       }
@@ -287,28 +274,28 @@ public class ProtobufRpcEngine implements RpcEngine {
    * Writable Wrapper for Protocol Buffer Responses
    */
   private static class RpcResponseWritable implements Writable {
-    HadoopRpcResponseProto message;
+    byte[] responseMessage;
 
     @SuppressWarnings("unused")
     public RpcResponseWritable() {
     }
 
-    public RpcResponseWritable(HadoopRpcResponseProto message) {
-      this.message = message;
+    public RpcResponseWritable(Message message) {
+      this.responseMessage = message.toByteArray();
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-      ((Message)message).writeDelimitedTo(
-          DataOutputOutputStream.constructOutputStream(out));      
+      out.writeInt(responseMessage.length);
+      out.write(responseMessage);     
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int length = ProtoUtil.readRawVarint32(in);
+      int length = in.readInt();
       byte[] bytes = new byte[length];
       in.readFully(bytes);
-      message = HadoopRpcResponseProto.parseFrom(bytes);
+      responseMessage = bytes;
     }
   }
 
@@ -356,24 +343,6 @@ public class ProtobufRpcEngine implements RpcEngine {
       registerProtocolAndImpl(RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
           protocolImpl);
     }
-
-    private static RpcResponseWritable handleException(Throwable e) {
-      HadoopRpcExceptionProto exception = HadoopRpcExceptionProto.newBuilder()
-          .setExceptionName(e.getClass().getName())
-          .setStackTrace(StringUtils.stringifyException(e)).build();
-      HadoopRpcResponseProto response = HadoopRpcResponseProto.newBuilder()
-          .setStatus(ResponseStatus.ERRROR).setException(exception).build();
-      return new RpcResponseWritable(response);
-    }
-
-    private static HadoopRpcResponseProto constructProtoSpecificRpcSuccessResponse(
-        Message message) {
-      HadoopRpcResponseProto res = HadoopRpcResponseProto.newBuilder()
-          .setResponse(message.toByteString())
-          .setStatus(ResponseStatus.SUCCESS)
-          .build();
-      return res;
-    }
     
     /**
      * Protobuf invoker for {@link RpcInvoker}
@@ -418,7 +387,7 @@ public class ProtobufRpcEngine implements RpcEngine {
        * </ol>
        */
       public Writable call(RPC.Server server, String protocol,
-          Writable writableRequest, long receiveTime) throws IOException {
+          Writable writableRequest, long receiveTime) throws Exception {
         RpcRequestWritable request = (RpcRequestWritable) writableRequest;
         HadoopRpcRequestProto rpcRequest = request.message;
         String methodName = rpcRequest.getMethodName();
@@ -436,7 +405,7 @@ public class ProtobufRpcEngine implements RpcEngine {
           String msg = "Unknown method " + methodName + " called on " + protocol
               + " protocol.";
           LOG.warn(msg);
-          return handleException(new RpcServerException(msg));
+          throw new RpcServerException(msg);
         }
         Message prototype = service.getRequestPrototype(methodDescriptor);
         Message param = prototype.newBuilderForType()
@@ -457,14 +426,11 @@ public class ProtobufRpcEngine implements RpcEngine {
           server.rpcDetailedMetrics.addProcessingTime(methodName,
               processingTime);
         } catch (ServiceException e) {
-          Throwable cause = e.getCause();
-          return handleException(cause != null ? cause : e);
+          throw (Exception) e.getCause();
         } catch (Exception e) {
-          return handleException(e);
+          throw e;
         }
-  
-        HadoopRpcResponseProto response = constructProtoSpecificRpcSuccessResponse(result);
-        return new RpcResponseWritable(response);
+        return new RpcResponseWritable(result);
       }
     }
   }

@@ -100,6 +100,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8200. Remove HADOOP_[JOBTRACKER|TASKTRACKER]_OPTS. (eli)
 
+    HADOOP-8184.  ProtoBuf RPC engine uses the IPC layer reply packet.
+    (Sanjay Radia via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

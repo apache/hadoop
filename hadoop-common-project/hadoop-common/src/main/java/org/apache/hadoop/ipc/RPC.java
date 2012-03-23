@@ -85,7 +85,7 @@ public class RPC {
      * @throws IOException
      **/
     public Writable call(Server server, String protocol,
-        Writable rpcRequest, long receiveTime) throws IOException ;
+        Writable rpcRequest, long receiveTime) throws Exception ;
   }
   
   static final Log LOG = LogFactory.getLog(RPC.class);
@@ -880,7 +880,7 @@ public class RPC {
     
     @Override
     public Writable call(RpcKind rpcKind, String protocol,
-        Writable rpcRequest, long receiveTime) throws IOException {
+        Writable rpcRequest, long receiveTime) throws Exception {
       return getRpcInvoker(rpcKind).call(this, protocol, rpcRequest,
           receiveTime);
     }

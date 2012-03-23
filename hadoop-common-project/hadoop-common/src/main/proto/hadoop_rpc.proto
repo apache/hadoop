@@ -25,8 +25,11 @@ option java_outer_classname = "HadoopRpcProtos";
 option java_generate_equals_and_hash = true;
 
 /**
- * Message used to marshal the client request
+ * This message is used for Protobuf Rpc Engine.
+ * The message is used to marshal a Rpc-request
  * from RPC client to the RPC server.
+ * The Response to the Rpc call (including errors) are handled
+ * as part of the standard Rpc response. 
  */
 message HadoopRpcRequestProto {
   /** Name of the RPC method */
@@ -41,39 +44,3 @@ message HadoopRpcRequestProto {
   /** protocol version of class declaring the called method */
   required uint64 clientProtocolVersion = 4;
 }
-
-/**
- * At the RPC layer, this message is used to indicate
- * the server side exception the the RPC client.
- *
- * Hadoop RPC client throws an exception indicated
- * by exceptionName with the stackTrace.
- */
-message HadoopRpcExceptionProto {
-  /** Class name of the exception thrown from the server */
-
-  optional string exceptionName = 1;
-  /** Exception stack trace from the server side */
-  optional string stackTrace = 2;
-}
-
-/**
- * This message is used to marshal the response from
- * RPC server to the client.
- */
-message HadoopRpcResponseProto {
-  /** Status of IPC call */
-  enum ResponseStatus {
-    SUCCESS = 1;
-    ERRROR = 2;
-  }
-
-  required ResponseStatus status = 1;
-
-  // Protobuf response payload from the server, when status is SUCCESS.
-  optional bytes response = 2;
-
-  // Exception when status is ERROR or FATAL
-  optional HadoopRpcExceptionProto exception = 3;
-}
-
