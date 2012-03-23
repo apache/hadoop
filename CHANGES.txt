@@ -71,6 +71,9 @@ Release 1.0.2 - 2012.03.18
     HADOOP-8132. 64bit secure datanodes do not start as the jsvc path is wrong
     (Arpit Gupta via mattf)
 
+    HDFS-3127. Do not throw exceptions when FSImage.restoreStorageDirs() failes.
+    (Brandon Li via szetszwo)
+
 Release 1.0.1 - 2012.02.14
 
   NEW FEATURES

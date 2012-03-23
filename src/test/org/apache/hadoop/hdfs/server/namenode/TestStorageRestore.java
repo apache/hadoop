@@ -114,6 +114,7 @@ public class TestStorageRestore extends TestCase {
    * clean up
    */
   public void tearDown() throws Exception {
+    restoreAccess();    
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
       throw new IOException("Could not delete hdfs directory in tearDown '"
           + hdfsDir + "'");
@@ -135,6 +136,52 @@ public class TestStorageRestore extends TestCase {
     }
   }
 
+  /**
+   * invalidate storage by removing xwr permission from name2 and name3
+   */
+  public void removeStorageAccess(FSImage fi) throws IOException {
+    path2.setReadable(false);
+    path2.setExecutable(false);
+    path2.setWritable(false);
+    path3.setReadable(false);
+    path3.setExecutable(false);
+    path3.setWritable(false);
+    
+    for (Iterator<StorageDirectory> it = fi.dirIterator(); it.hasNext();) {
+      StorageDirectory sd = it.next();
+      
+      if (sd.getRoot().equals(path2) || sd.getRoot().equals(path3)) {
+        fi.getEditLog().removeEditsForStorageDir(sd);
+        fi.updateRemovedDirs(sd, null);
+        it.remove();
+      }
+    }
+  }
+  
+  public void restoreAccess() {
+    if (path2.exists()) {
+      path2.setReadable(true);
+      path2.setExecutable(true);
+      path2.setWritable(true);
+    }
+    if (path3.exists()) {
+      path3.setReadable(true);    
+      path3.setExecutable(true);
+      path3.setWritable(true);
+    }
+  }
+  
+  /**
+   * get the total number of healthy storage directories
+   */
+  public int numStorageDirs(FSImage fi) throws IOException {
+    int sum = 0;
+    for (Iterator<StorageDirectory> it = fi.dirIterator(); it.hasNext();) {
+      sum++;
+    }
+    return sum;
+  }
+  
   /**
    * test
    */
@@ -236,9 +283,10 @@ public class TestStorageRestore extends TestCase {
 
   /**
    * test 
-   * 1. create DFS cluster with 3 storage directories - 2 EDITS_IMAGE, 1 EDITS 
+   * 1. create DFS cluster with 3 storage directories
+   *    - 2 EDITS_IMAGE(name1, name2), 1 EDITS(name3)
    * 2. create a cluster and write a file 
-   * 3. corrupt/disable one storage (or two) by removing 
+   * 3. corrupt/disable name2 and name3 by removing subdir "current"  
    * 4. run doCheckpoint - it will fail on removed dirs (which will invalidate the storages)
    * 5. write another file 
    * 6. check that edits and fsimage differ 
@@ -293,6 +341,60 @@ public class TestStorageRestore extends TestCase {
     tmpfile = new File("/test1");
     assert(tmpfile.exists());
     
+    System.out
+        .println("****testStorageRestore: second Checkpoint done and checkFiles(true) run");
+    secondary.shutdown();
+    cluster.shutdown();
+  }
+
+  /**
+   * 1. create DFS cluster with 3 storage directories
+   *    - 2 EDITS_IMAGE(name1, name2), 1 EDITS(name3)
+   * 2. create a file
+   * 3. corrupt/disable name2 and name3 by removing xwr permission
+   * 4. run doCheckpoint - it will fail on removed dirs (which will invalidate the storages)
+   * 5. write another file
+   * 6. check that edits and fsimage differ
+   * 7. run doCheckpoint - recover should fail but checkpoint should succeed 
+   * 8. restore the access permission for name2 and name 3, run checkpoint again
+   * 9. verify that all the image and edits files are the same.
+   */
+  public void testStorageRestoreFailure() throws Exception {
+    int numDatanodes = 2;
+    cluster = new MiniDFSCluster(0, config, numDatanodes, true, false, true,
+        null, null, null, null);
+    cluster.waitActive();
+
+    SecondaryNameNode secondary = new SecondaryNameNode(config);
+    System.out.println("****testStorageRestore: Cluster and SNN started");
+    printStorages(cluster.getNameNode().getFSImage());
+
+    FileSystem fs = cluster.getFileSystem();
+    Path path = new Path("/", "test");
+    writeFile(fs, path, 2);
+
+    System.out
+        .println("****testStorageRestore: file test written, invalidating storage...");
+
+    removeStorageAccess(cluster.getNameNode().getFSImage());
+    printStorages(cluster.getNameNode().getFSImage());
+    System.out
+        .println("****testStorageRestore: storage invalidated + doCheckpoint");
+
+    path = new Path("/", "test1");
+    writeFile(fs, path, 2);
+    System.out.println("****testStorageRestore: file test1 written");
+    assert(numStorageDirs(cluster.getNameNode().getFSImage()) == 1);
+
+    System.out.println("****testStorageRestore: checkfiles(false) run");
+
+    secondary.doCheckpoint(); // still can't recover removed storage dirs
+    assert(numStorageDirs(cluster.getNameNode().getFSImage()) == 1);
+
+    restoreAccess();
+    secondary.doCheckpoint(); // should restore removed storage dirs
+    checkFiles(true);
+
     System.out
         .println("****testStorageRestore: second Checkpoint done and checkFiles(true) run");
     secondary.shutdown();

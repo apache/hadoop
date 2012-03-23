@@ -1234,21 +1234,23 @@ public class FSImage extends Storage {
   /** 
    * Refresh storage dirs by copying files from good storage dir
    */
-  void restoreStorageDirs() throws IOException {
+  void restoreStorageDirs() {
     if (!restoreRemovedDirs || getRemovedStorageDirs().isEmpty()) {
       return;
     }
     
     Iterator<StorageDirectory> it = dirIterator(NameNodeDirType.EDITS);
     if (!it.hasNext()) {
-      throw new IOException("No healthy edits directory");
+      FSNamesystem.LOG.warn("No healthy edits directory");
+      return;
     }
     StorageDirectory goodSd = it.next();
     File goodEdits = getEditFile(goodSd);
 
     it = dirIterator(NameNodeDirType.IMAGE);
     if (!it.hasNext()) {
-      throw new IOException("No healthy fsimage directory");
+      FSNamesystem.LOG.warn("No healthy fsimage directory");
+      return;
     }
     goodSd = it.next();
     File goodImage = getImageFile(goodSd, NameNodeFile.IMAGE);
@@ -1257,7 +1259,6 @@ public class FSImage extends Storage {
     //for Hadoop version < 0.13 to fail to start
     File goodImage013 = new File(goodSd.getRoot(), "image/fsimage");
 
-    List<IOException> exceptions = new ArrayList<IOException>();
     for (Iterator<StorageDirectory> i = removedStorageDirs.iterator();
         i.hasNext();) {
       StorageDirectory sd = i.next();
@@ -1301,12 +1302,8 @@ public class FSImage extends Storage {
       } catch (IOException e) {
         FSNamesystem.LOG.warn("Failed to recover removed directory "
             + sd.getRoot() + " with " + e);
-        exceptions.add(e);
+        //ignore restore exception
       }
-    }
-    
-    if (!exceptions.isEmpty()) {
-      throw MultipleIOException.createIOException(exceptions);
     }
   }
   
