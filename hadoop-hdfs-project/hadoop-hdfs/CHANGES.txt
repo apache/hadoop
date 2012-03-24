@@ -243,6 +243,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3100. In BlockSender, throw an exception when it needs to verify
     checksum but the meta data does not exist.  (Brandon Li via szetszwo)
 
+    HDFS-3132. Fix findbugs warning on HDFS trunk. (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

@@ -187,7 +187,7 @@ public class NameNode {
   protected FSNamesystem namesystem; 
   protected final Configuration conf;
   protected NamenodeRole role;
-  private HAState state;
+  private volatile HAState state;
   private final boolean haEnabled;
   private final HAContext haContext;
   protected boolean allowStaleStandbyReads;
