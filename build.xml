@@ -610,7 +610,14 @@
     </antcall> 
   </target>
 
-  <target name="compile-core-native" depends="compile-core-classes"
+  <target name="create-native-configure">
+    <exec executable="autoreconf" dir="${native.src.dir}" searchpath="yes" 
+          failonerror="yes">
+       <arg value="-if"/>
+    </exec>
+  </target>
+
+  <target name="compile-core-native" depends="create-native-configure, compile-core-classes"
           if="compile.native">
   	
     <mkdir dir="${build.native}/lib"/>
