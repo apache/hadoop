@@ -91,6 +91,11 @@
      <b>64bit secure datanodes do not start as the jsvc path is wrong</b><br>
      <blockquote>64bit secure datanodes were looking for /usr/libexec/../libexec/jsvc. instead of /usr/libexec/../libexec/jsvc.amd64</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8201">HADOOP-8201</a>.
+     Blocker bug reported by gkesavan and fixed by gkesavan <br>
+     <b>create the configure script for native compilation as part of the build</b><br>
+     <blockquote>configure script is checked into svn and its not regenerated during build. Ideally configure scritp should not be checked into svn and instead should be generated during build using autoreconf.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2701">HDFS-2701</a>.
      Major improvement reported by eli and fixed by eli (name-node)<br>
      <b>Cleanup FS* processIOError methods</b><br>
