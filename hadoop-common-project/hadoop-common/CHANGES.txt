@@ -106,6 +106,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8184.  ProtoBuf RPC engine uses the IPC layer reply packet.
     (Sanjay Radia via szetszwo)
 
+    HADOOP-8163. Improve ActiveStandbyElector to provide hooks for
+    fencing old active. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
