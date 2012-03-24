@@ -18,19 +18,24 @@
 
 package org.apache.hadoop.ha;
 
+import static org.junit.Assert.*;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
+import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
+import org.apache.log4j.Level;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.test.ClientBase;
 
 /**
@@ -39,27 +44,23 @@ import org.apache.zookeeper.test.ClientBase;
 public class TestActiveStandbyElectorRealZK extends ClientBase {
   static final int NUM_ELECTORS = 2;
   static ZooKeeper[] zkClient = new ZooKeeper[NUM_ELECTORS];
-  static int currentClientIndex = 0;
+  
+  static {
+    ((Log4JLogger)ActiveStandbyElector.LOG).getLogger().setLevel(
+        Level.ALL);
+  }
+  
+  int activeIndex = -1;
+  int standbyIndex = -1;
+  static final String PARENT_DIR = "/" + UUID.randomUUID();
+
+  ActiveStandbyElector[] electors = new ActiveStandbyElector[NUM_ELECTORS];
   
   @Override
   public void setUp() throws Exception {
     // build.test.dir is used by zookeeper
     new File(System.getProperty("build.test.dir", "build")).mkdirs();
     super.setUp();
-  }
-
-  class ActiveStandbyElectorTesterRealZK extends ActiveStandbyElector {
-    ActiveStandbyElectorTesterRealZK(String hostPort, int timeout,
-        String parent, List<ACL> acl, ActiveStandbyElectorCallback app)
-        throws IOException {
-      super(hostPort, timeout, parent, acl, app);
-    }
-
-    @Override
-    public ZooKeeper getNewZooKeeper() {
-      return TestActiveStandbyElectorRealZK.zkClient[
-                             TestActiveStandbyElectorRealZK.currentClientIndex];
-    }
   }
 
   /**
@@ -71,71 +72,48 @@ public class TestActiveStandbyElectorRealZK extends ClientBase {
    * an unexpected fatal error. this lets another thread object to become a 
    * leader.
    */
-  class ThreadRunner implements Runnable, ActiveStandbyElectorCallback {
+  class ThreadRunner extends TestingThread
+      implements  ActiveStandbyElectorCallback {
     int index;
-    TestActiveStandbyElectorRealZK test;
-    boolean wait = true;
+    
+    CountDownLatch hasBecomeActive = new CountDownLatch(1);
 
-    ThreadRunner(int i, TestActiveStandbyElectorRealZK s) {
-      index = i;
-      test = s;
+    ThreadRunner(TestContext ctx,
+        int idx) {
+      super(ctx);
+      index = idx;
     }
 
     @Override
-    public void run() {
+    public void doWork() throws Exception {
       LOG.info("starting " + index);
-      while(true) {
-        synchronized (test) {
-          // wait for test start signal to come
-          if (!test.start) {
-            try {
-              test.wait();
-            } catch(InterruptedException e) {
-              Assert.fail(e.getMessage());
-            }
-          } else {
-            break;
-          }
-        }
-      }
       // join election
-      byte[] data = new byte[8];
-      ActiveStandbyElector elector = test.elector[index];
+      byte[] data = new byte[1];
+      data[0] = (byte)index;
+      
+      ActiveStandbyElector elector = electors[index];
       LOG.info("joining " + index);
       elector.joinElection(data);
-      try {
-        while(true) {
-          synchronized (this) {
-            // wait for elector to become active/fatal error
-            if (wait) {
-              // wait to become active
-              // wait capped at 30s to prevent hung test
-              wait(30000);
-            } else {
-              break;
-            }
-          }
-        }
-        Thread.sleep(1000);
-        // quit election to allow other elector to become active
-        elector.quitElection();
-      } catch(InterruptedException e) {
-        Assert.fail(e.getMessage());
-      }
+
+      hasBecomeActive.await(30, TimeUnit.SECONDS);
+      Thread.sleep(1000);
+
+      // quit election to allow other elector to become active
+      elector.quitElection(true);
+
       LOG.info("ending " + index);
     }
 
     @Override
     public synchronized void becomeActive() {
-      test.reportActive(index);
+      reportActive(index);
       LOG.info("active " + index);
-      wait = false;
-      notifyAll();
+      hasBecomeActive.countDown();
     }
 
     @Override
     public synchronized void becomeStandby() {
-      test.reportStandby(index);
+      reportStandby(index);
       LOG.info("standby " + index);
     }
 
@@ -147,19 +125,16 @@ public class TestActiveStandbyElectorRealZK extends ClientBase {
     @Override
     public synchronized void notifyFatalError(String errorMessage) {
       LOG.info("fatal " + index + " .Error message:" + errorMessage);
-      wait = false;
-      notifyAll();
+      this.interrupt();
+    }
+
+    @Override
+    public void fenceOldActive(byte[] data) {
+      LOG.info("fenceOldActive " + index);
+      // should not fence itself
+      Assert.assertTrue(index != data[0]);
     }
   }
-
-  boolean start = false;
-  int activeIndex = -1;
-  int standbyIndex = -1;
-  String parentDir = "/" + java.util.UUID.randomUUID().toString();
-
-  ActiveStandbyElector[] elector = new ActiveStandbyElector[NUM_ELECTORS];
-  ThreadRunner[] threadRunner = new ThreadRunner[NUM_ELECTORS];
-  Thread[] thread = new Thread[NUM_ELECTORS];
 
   synchronized void reportActive(int index) {
     if (activeIndex == -1) {
@@ -187,45 +162,37 @@ public class TestActiveStandbyElectorRealZK extends ClientBase {
    * the standby now becomes active. these electors run on different threads and 
    * callback to the test class to report active and standby where the outcome 
    * is verified
-   * 
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws KeeperException
+   * @throws Exception 
    */
   @Test
-  public void testActiveStandbyTransition() throws IOException,
-      InterruptedException, KeeperException {
-    LOG.info("starting test with parentDir:" + parentDir);
-    start = false;
-    byte[] data = new byte[8];
-    // create random working directory
-    createClient().create(parentDir, data, Ids.OPEN_ACL_UNSAFE,
-        CreateMode.PERSISTENT);
+  public void testActiveStandbyTransition() throws Exception {
+    LOG.info("starting test with parentDir:" + PARENT_DIR);
 
-    for(currentClientIndex = 0; 
-        currentClientIndex < NUM_ELECTORS; 
-        ++currentClientIndex) {
-      LOG.info("creating " + currentClientIndex);
-      zkClient[currentClientIndex] = createClient();
-      threadRunner[currentClientIndex] = new ThreadRunner(currentClientIndex,
-          this);
-      elector[currentClientIndex] = new ActiveStandbyElectorTesterRealZK(
-          "hostPort", 1000, parentDir, Ids.OPEN_ACL_UNSAFE,
-          threadRunner[currentClientIndex]);
-      zkClient[currentClientIndex].register(elector[currentClientIndex]);
-      thread[currentClientIndex] = new Thread(threadRunner[currentClientIndex]);
-      thread[currentClientIndex].start();
+    TestContext ctx = new TestContext();
+    
+    for(int i = 0; i < NUM_ELECTORS; i++) {
+      LOG.info("creating " + i);
+      final ZooKeeper zk = createClient();
+      assert zk != null;
+      
+      ThreadRunner tr = new ThreadRunner(ctx, i);
+      electors[i] = new ActiveStandbyElector(
+          "hostPort", 1000, PARENT_DIR, Ids.OPEN_ACL_UNSAFE,
+          tr) {
+        @Override
+        protected synchronized ZooKeeper getNewZooKeeper()
+            throws IOException {
+          return zk;
+        }
+      };
+      ctx.addThread(tr);
     }
 
-    synchronized (this) {
-      // signal threads to start
-      LOG.info("signaling threads");
-      start = true;
-      notifyAll();
-    }
+    assertFalse(electors[0].parentZNodeExists());
+    electors[0].ensureParentZNode();
+    assertTrue(electors[0].parentZNodeExists());
 
-    for(int i = 0; i < thread.length; i++) {
-      thread[i].join();
-    }
+    ctx.startThreads();
+    ctx.stop();
   }
 }
