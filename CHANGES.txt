@@ -106,6 +106,9 @@ Release 1.1.0 - unreleased
     HADOOP-8154. DNS#getIPs shouldn't silently return the local host
     IP for bogus interface names. (eli)
 
+    MAPREDUCE-3992. Reduce fetcher doesn't verify HTTP status code of response
+    (todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file

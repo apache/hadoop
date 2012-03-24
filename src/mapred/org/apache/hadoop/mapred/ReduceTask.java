@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -1482,9 +1483,17 @@ class ReduceTask extends Task {
       throws IOException, InterruptedException {
         // Connect
         URL url = mapOutputLoc.getOutputLocation();
-        URLConnection connection = url.openConnection();
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
         
         InputStream input = setupSecureConnection(mapOutputLoc, connection);
+
+        // Validate response code
+        int rc = connection.getResponseCode();
+        if (rc != HttpURLConnection.HTTP_OK) {
+          throw new IOException(
+              "Got invalid response code " + rc + " from " + url +
+              ": " + connection.getResponseMessage());
+        }
  
         // Validate header from map output
         TaskAttemptID mapId = null;
