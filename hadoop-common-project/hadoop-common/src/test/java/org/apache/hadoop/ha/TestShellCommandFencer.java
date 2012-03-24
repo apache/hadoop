@@ -22,6 +22,7 @@ import static org.junit.Assert.*;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -32,6 +33,9 @@ import static org.mockito.Mockito.spy;
 
 public class TestShellCommandFencer {
   private ShellCommandFencer fencer = createFencer();
+  private static final HAServiceTarget TEST_TARGET =
+      new DummyHAService(HAServiceState.ACTIVE,
+          new InetSocketAddress("host", 1234));
   
   @BeforeClass
   public static void setupLogSpy() {
@@ -57,11 +61,10 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testBasicSuccessFailure() {
-    InetSocketAddress addr = new InetSocketAddress("host", 1234);
-    assertTrue(fencer.tryFence(addr, "echo"));
-    assertFalse(fencer.tryFence(addr, "exit 1"));
+    assertTrue(fencer.tryFence(TEST_TARGET, "echo"));
+    assertFalse(fencer.tryFence(TEST_TARGET, "exit 1"));
     // bad path should also fail
-    assertFalse(fencer.tryFence(addr, "xxxxxxxxxxxx"));
+    assertFalse(fencer.tryFence(TEST_TARGET, "xxxxxxxxxxxx"));
   }
   
   @Test
@@ -98,8 +101,7 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testStdoutLogging() {
-    InetSocketAddress addr = new InetSocketAddress("host", 1234);
-    assertTrue(fencer.tryFence(addr, "echo hello"));
+    assertTrue(fencer.tryFence(TEST_TARGET, "echo hello"));
     Mockito.verify(ShellCommandFencer.LOG).info(
         Mockito.endsWith("echo hello: host:1234 hello"));
   }
@@ -110,8 +112,7 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testStderrLogging() {
-    InetSocketAddress addr = new InetSocketAddress("host", 1234);
-    assertTrue(fencer.tryFence(addr, "echo hello >&2"));
+    assertTrue(fencer.tryFence(TEST_TARGET, "echo hello >&2"));
     Mockito.verify(ShellCommandFencer.LOG).warn(
         Mockito.endsWith("echo hello >&2: host:1234 hello"));
   }
@@ -122,8 +123,7 @@ public class TestShellCommandFencer {
    */
   @Test
   public void testConfAsEnvironment() {
-    InetSocketAddress addr = new InetSocketAddress("host", 1234);
-    fencer.tryFence(addr, "echo $in_fencing_tests");
+    fencer.tryFence(TEST_TARGET, "echo $in_fencing_tests");
     Mockito.verify(ShellCommandFencer.LOG).info(
         Mockito.endsWith("echo $in...ing_tests: host:1234 yessir"));
   }
@@ -136,8 +136,7 @@ public class TestShellCommandFencer {
    */
   @Test(timeout=10000)
   public void testSubprocessInputIsClosed() {
-    InetSocketAddress addr = new InetSocketAddress("host", 1234);
-    assertFalse(fencer.tryFence(addr, "read"));
+    assertFalse(fencer.tryFence(TEST_TARGET, "read"));
   }
   
   @Test

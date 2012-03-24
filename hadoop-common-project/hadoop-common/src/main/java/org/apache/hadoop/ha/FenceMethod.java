@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.ha;
 
-import java.net.InetSocketAddress;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
@@ -62,6 +60,6 @@ public interface FenceMethod {
    * @throws BadFencingConfigurationException if the configuration was
    *         determined to be invalid only at runtime
    */
-  public boolean tryFence(InetSocketAddress serviceAddr, String args)
+  public boolean tryFence(HAServiceTarget target, String args)
     throws BadFencingConfigurationException;
 }
