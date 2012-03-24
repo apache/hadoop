@@ -9,6 +9,69 @@ Release 1.1.0 - unreleased
 
     HADOOP-7806. Support binding to sub-interfaces. (harsh, eli via eli)
 
+  IMPROVEMENTS
+
+    MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
+                    from Rumen tool. (ravigummadi)
+
+    MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
+
+    MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for
+                    short running tasks. (amarrk)
+
+    MAPREDUCE-2836. Provide option to fail jobs when submitted to
+    non-existent fair scheduler pools. (Ahmed Radwan via todd)
+
+    HDFS-2332. Add test for HADOOP-7629 (using an immutable FsPermission
+    object as an RPC parameter fails). (todd)
+
+    HADOOP-7509. Improve exception message thrown when Authentication is
+    required. (Ravi Prakash via suresh)
+
+    HADOOP-7745. Fix wrong variable name in exception message introduced
+    in HADOOP-7509. (Ravi Prakash via suresh)
+
+    MAPREDUCE-2957. The TT should not re-init if it has no good local dirs. (eli)
+
+    MAPREDUCE-2850. Add test for MAPREDUCE-2413. (ravigummadi)
+
+    HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
+    (todd)
+
+    MAPREDUCE-3278. Fix a busy loop in ReduceTask that would cause 100%
+    cpu utilization during the fetch phase. (todd)
+
+    MAPREDUCE-3365. Expose the event-logging debug feature of FairScheduler. (Sho Shimauchi via harsh)
+
+    MAPREDUCE-3395. Add mapred.disk.healthChecker.interval to mapred-default.xml. (eli via harsh)
+
+    MAPREDUCE-3015. Add local dir failure info to metrics and the web UI. (eli)
+
+    MAPREDUCE-3394. Add log guard for a debug message in ReduceTask (todd)
+
+    MAPREDUCE-3419. Don't mark exited TT threads as dead in MiniMRCluster (eli)
+
+    MAPREDUCE-3424. Some LinuxTaskController cleanup (eli)
+
+    MAPREDUCE-2103. task-controller shouldn't require o-r permissions. (eli)
+
+    HDFS-2638. Improve a block recovery log. (eli)
+
+    HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
+
+    HDFS-2547. Fix inaccuracy in ReplicationTargetChooser comments. (harsh)
+
+    MAPREDUCE-2919. The JT web UI should show job start times. (harsh)
+
+    HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
+
+    HDFS-2872. Add sanity checks during edits loading that generation
+    stamps are non-decreasing. (Colin Patrick McCabe via eli)
+
+    MAPREDUCE-4001. Improve MAPREDUCE-3789's fix logic by looking at job's slot demands instead. (harsh)
+
+    MAPREDUCE-2835. Make per-job counter limits configurable. (tomwhite)
+
   BUG FIXES
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
@@ -108,69 +171,6 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-3992. Reduce fetcher doesn't verify HTTP status code of response
     (todd)
-
-  IMPROVEMENTS
-
-    MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
-                    from Rumen tool. (ravigummadi)
-
-    MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
-
-    MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for
-                    short running tasks. (amarrk)
-
-    MAPREDUCE-2836. Provide option to fail jobs when submitted to
-    non-existent fair scheduler pools. (Ahmed Radwan via todd)
-
-    HDFS-2332. Add test for HADOOP-7629 (using an immutable FsPermission
-    object as an RPC parameter fails). (todd)
-
-    HADOOP-7509. Improve exception message thrown when Authentication is
-    required. (Ravi Prakash via suresh)
-
-    HADOOP-7745. Fix wrong variable name in exception message introduced
-    in HADOOP-7509. (Ravi Prakash via suresh)
-
-    MAPREDUCE-2957. The TT should not re-init if it has no good local dirs. (eli)
-
-    MAPREDUCE-2850. Add test for MAPREDUCE-2413. (ravigummadi)
-
-    HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
-    (todd)
-
-    MAPREDUCE-3278. Fix a busy loop in ReduceTask that would cause 100%
-    cpu utilization during the fetch phase. (todd)
-
-    MAPREDUCE-3365. Expose the event-logging debug feature of FairScheduler. (Sho Shimauchi via harsh)
-
-    MAPREDUCE-3395. Add mapred.disk.healthChecker.interval to mapred-default.xml. (eli via harsh)
-
-    MAPREDUCE-3015. Add local dir failure info to metrics and the web UI. (eli)
-
-    MAPREDUCE-3394. Add log guard for a debug message in ReduceTask (todd)
-
-    MAPREDUCE-3419. Don't mark exited TT threads as dead in MiniMRCluster (eli)
-
-    MAPREDUCE-3424. Some LinuxTaskController cleanup (eli)
-
-    MAPREDUCE-2103. task-controller shouldn't require o-r permissions. (eli)
-
-    HDFS-2638. Improve a block recovery log. (eli)
-
-    HDFS-2654. Make BlockReaderLocal not extend RemoteBlockReader2. (eli)
-
-    HDFS-2547. Fix inaccuracy in ReplicationTargetChooser comments. (harsh)
-
-    MAPREDUCE-2919. The JT web UI should show job start times. (harsh)
-
-    HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
-
-    HDFS-2872. Add sanity checks during edits loading that generation
-    stamps are non-decreasing. (Colin Patrick McCabe via eli)
-
-    MAPREDUCE-4001. Improve MAPREDUCE-3789's fix logic by looking at job's slot demands instead. (harsh)
-
-    MAPREDUCE-2835. Make per-job counter limits configurable. (tomwhite)
 
 Release 1.0.3 - unreleased
 
