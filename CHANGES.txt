@@ -1,5 +1,13 @@
 Hadoop Change Log
 
+Release 1.0.3 - unreleased
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
     HADOOP-6924. Adds a directory to the list of directories to search for the libjvm.so file. 
     The new directory is found by running a 'find' command and the first output is taken. 
     This was done to handle the build of Hadoop with IBM's JDK. (Stephen Watt, 
@@ -11,7 +19,10 @@ Hadoop Change Log
     HADOOP-8188. Fixes the build process to do with jsvc, with IBM's JDK 
     as the underlying jdk. (ddas)
 
-Release 1.0.2 - 2012.03.18
+    HDFS-3127. Do not throw exceptions when FSImage.restoreStorageDirs() failes.
+    (Brandon Li via szetszwo)
+
+Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
 
@@ -71,8 +82,8 @@ Release 1.0.2 - 2012.03.18
     HADOOP-8132. 64bit secure datanodes do not start as the jsvc path is wrong
     (Arpit Gupta via mattf)
 
-    HDFS-3127. Do not throw exceptions when FSImage.restoreStorageDirs() failes.
-    (Brandon Li via szetszwo)
+    HADOOP-8201. create the configure script for native compilation as part of
+    the build (Giri Kesavan via mattf)
 
 Release 1.0.1 - 2012.02.14
 
