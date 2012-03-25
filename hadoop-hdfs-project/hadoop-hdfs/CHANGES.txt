@@ -103,6 +103,8 @@ Trunk (unreleased changes)
     HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
     corrupted block. (Henry Robinson via atm)
 
+    HDFS-3116. Typo in fetchdt error message. (AOE Takashi via atm)
+
 Release 0.23.3 - UNRELEASED 
 
   INCOMPATIBLE CHANGES

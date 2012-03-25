@@ -132,7 +132,7 @@ public class DelegationTokenFetcher {
       printUsage(System.err);
     }
     if (remaining.length != 1 || remaining[0].charAt(0) == '-') {
-      System.err.println("ERROR: Must specify exacltly one token file");
+      System.err.println("ERROR: Must specify exactly one token file");
       printUsage(System.err);
     }
     // default to using the local file system
