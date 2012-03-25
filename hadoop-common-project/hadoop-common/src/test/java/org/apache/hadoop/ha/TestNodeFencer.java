@@ -26,14 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
 
 public class TestNodeFencer {
-
-  private HAServiceTarget MOCK_TARGET;
-  
 
   @Before
   public void clearMockState() {
@@ -41,20 +37,15 @@ public class TestNodeFencer {
     AlwaysSucceedFencer.callArgs.clear();
     AlwaysFailFencer.fenceCalled = 0;
     AlwaysFailFencer.callArgs.clear();
-    
-    MOCK_TARGET = Mockito.mock(HAServiceTarget.class);
-    Mockito.doReturn("my mock").when(MOCK_TARGET).toString();
-    Mockito.doReturn(new InetSocketAddress("host", 1234))
-        .when(MOCK_TARGET).getAddress();
   }
 
   @Test
   public void testSingleFencer() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer(
         AlwaysSucceedFencer.class.getName() + "(foo)");
-    assertTrue(fencer.fence(MOCK_TARGET));
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
     assertEquals(1, AlwaysSucceedFencer.fenceCalled);
-    assertSame(MOCK_TARGET, AlwaysSucceedFencer.fencedSvc);
+    assertEquals("host:1234", AlwaysSucceedFencer.fencedSvc);
     assertEquals("foo", AlwaysSucceedFencer.callArgs.get(0));
   }
   
@@ -63,7 +54,7 @@ public class TestNodeFencer {
     NodeFencer fencer = setupFencer(
         AlwaysSucceedFencer.class.getName() + "(foo)\n" +
         AlwaysSucceedFencer.class.getName() + "(bar)\n");
-    assertTrue(fencer.fence(MOCK_TARGET));
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
     // Only one call, since the first fencer succeeds
     assertEquals(1, AlwaysSucceedFencer.fenceCalled);
     assertEquals("foo", AlwaysSucceedFencer.callArgs.get(0));
@@ -77,12 +68,12 @@ public class TestNodeFencer {
         " # the next one will always fail\n" +
         " " + AlwaysFailFencer.class.getName() + "(foo) # <- fails\n" +
         AlwaysSucceedFencer.class.getName() + "(bar) \n");
-    assertTrue(fencer.fence(MOCK_TARGET));
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
     // One call to each, since top fencer fails
     assertEquals(1, AlwaysFailFencer.fenceCalled);
-    assertSame(MOCK_TARGET, AlwaysFailFencer.fencedSvc);
+    assertEquals("host:1234", AlwaysFailFencer.fencedSvc);
     assertEquals(1, AlwaysSucceedFencer.fenceCalled);
-    assertSame(MOCK_TARGET, AlwaysSucceedFencer.fencedSvc);
+    assertEquals("host:1234", AlwaysSucceedFencer.fencedSvc);
     assertEquals("foo", AlwaysFailFencer.callArgs.get(0));
     assertEquals("bar", AlwaysSucceedFencer.callArgs.get(0));
   }
@@ -91,41 +82,41 @@ public class TestNodeFencer {
   public void testArglessFencer() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer(
         AlwaysSucceedFencer.class.getName());
-    assertTrue(fencer.fence(MOCK_TARGET));
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
     // One call to each, since top fencer fails
     assertEquals(1, AlwaysSucceedFencer.fenceCalled);
-    assertSame(MOCK_TARGET, AlwaysSucceedFencer.fencedSvc);
+    assertEquals("host:1234", AlwaysSucceedFencer.fencedSvc);
     assertEquals(null, AlwaysSucceedFencer.callArgs.get(0));
   }
 
   @Test
   public void testShortNameShell() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer("shell(true)");
-    assertTrue(fencer.fence(MOCK_TARGET));
+    assertTrue(fencer.fence(new InetSocketAddress("host", 1234)));
   }
 
   @Test
   public void testShortNameSsh() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer("sshfence");
-    assertFalse(fencer.fence(MOCK_TARGET));
+    assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
   }
 
   @Test
   public void testShortNameSshWithUser() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer("sshfence(user)");
-    assertFalse(fencer.fence(MOCK_TARGET));
+    assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
   }
 
   @Test
   public void testShortNameSshWithPort() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer("sshfence(:123)");
-    assertFalse(fencer.fence(MOCK_TARGET));
+    assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
   }
 
   @Test
   public void testShortNameSshWithUserPort() throws BadFencingConfigurationException {
     NodeFencer fencer = setupFencer("sshfence(user:123)");
-    assertFalse(fencer.fence(MOCK_TARGET));
+    assertFalse(fencer.fence(new InetSocketAddress("host", 1234)));
   }
 
   public static NodeFencer setupFencer(String confStr)
@@ -142,12 +133,12 @@ public class TestNodeFencer {
   public static class AlwaysSucceedFencer extends Configured
       implements FenceMethod {
     static int fenceCalled = 0;
-    static HAServiceTarget fencedSvc;
+    static String fencedSvc;
     static List<String> callArgs = Lists.newArrayList();
 
     @Override
-    public boolean tryFence(HAServiceTarget target, String args) {
-      fencedSvc = target;
+    public boolean tryFence(InetSocketAddress serviceAddr, String args) {
+      fencedSvc = serviceAddr.getHostName() + ":" + serviceAddr.getPort();
       callArgs.add(args);
       fenceCalled++;
       return true;
@@ -164,12 +155,12 @@ public class TestNodeFencer {
   public static class AlwaysFailFencer extends Configured
       implements FenceMethod {
     static int fenceCalled = 0;
-    static HAServiceTarget fencedSvc;
+    static String fencedSvc;
     static List<String> callArgs = Lists.newArrayList();
 
     @Override
-    public boolean tryFence(HAServiceTarget target, String args) {
-      fencedSvc = target;
+    public boolean tryFence(InetSocketAddress serviceAddr, String args) {
+      fencedSvc = serviceAddr.getHostName() + ":" + serviceAddr.getPort();
       callArgs.add(args);
       fenceCalled++;
       return false;

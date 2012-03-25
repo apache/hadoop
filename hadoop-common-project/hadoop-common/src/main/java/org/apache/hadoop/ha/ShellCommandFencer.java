@@ -75,8 +75,7 @@ public class ShellCommandFencer
   }
 
   @Override
-  public boolean tryFence(HAServiceTarget target, String cmd) {
-    InetSocketAddress serviceAddr = target.getAddress();
+  public boolean tryFence(InetSocketAddress serviceAddr, String cmd) {
     List<String> cmdList = Arrays.asList(cmd.split("\\s+"));
 
     // Create arg list with service as the first argument
