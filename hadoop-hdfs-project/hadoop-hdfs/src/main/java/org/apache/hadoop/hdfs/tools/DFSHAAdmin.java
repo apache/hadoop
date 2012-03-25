@@ -25,8 +25,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAAdmin;
-import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -65,9 +65,15 @@ public class DFSHAAdmin extends HAAdmin {
    * Try to map the given namenode ID to its service address.
    */
   @Override
-  protected HAServiceTarget resolveTarget(String nnId) {
+  protected String getServiceAddr(String nnId) {
     HdfsConfiguration conf = (HdfsConfiguration)getConf();
-    return new NNHAServiceTarget(conf, nameserviceId, nnId);
+    String serviceAddr = 
+      DFSUtil.getNamenodeServiceAddr(conf, nameserviceId, nnId);
+    if (serviceAddr == null) {
+      throw new IllegalArgumentException(
+          "Unable to determine service address for namenode '" + nnId + "'");
+    }
+    return serviceAddr;
   }
 
   @Override

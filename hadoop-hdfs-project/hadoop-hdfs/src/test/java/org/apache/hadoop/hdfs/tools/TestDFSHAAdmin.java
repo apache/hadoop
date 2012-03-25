@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceStatus;
-import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.NodeFencer;
 
@@ -80,18 +79,10 @@ public class TestDFSHAAdmin {
   public void setup() throws IOException {
     mockProtocol = Mockito.mock(HAServiceProtocol.class);
     tool = new DFSHAAdmin() {
-
       @Override
-      protected HAServiceTarget resolveTarget(String nnId) {
-        HAServiceTarget target = super.resolveTarget(nnId);
-        HAServiceTarget spy = Mockito.spy(target);
-        // OVerride the target to return our mock protocol
-        try {
-          Mockito.doReturn(mockProtocol).when(spy).getProxy();
-        } catch (IOException e) {
-          throw new AssertionError(e); // mock setup doesn't really throw
-        }
-        return spy;
+      protected HAServiceProtocol getProtocol(String serviceId) throws IOException {
+        getServiceAddr(serviceId);
+        return mockProtocol;
       }
     };
     tool.setConf(getHAConf());
