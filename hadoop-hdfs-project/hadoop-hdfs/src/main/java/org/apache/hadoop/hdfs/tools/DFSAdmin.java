@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -46,6 +48,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -488,6 +491,25 @@ public class DFSAdmin extends FsShell {
     return exitCode;
   }
 
+  /**
+   * Download the most recent fsimage from the name node, and save it to a local
+   * file in the given directory.
+   * 
+   * @param argv
+   *          List of of command line parameters.
+   * @param idx
+   *          The index of the command that is being processed.
+   * @return an exit code indicating success or failure.
+   * @throws IOException
+   */
+  public int fetchImage(String[] argv, int idx) throws IOException {
+    String infoServer = DFSUtil.getInfoServer(
+        HAUtil.getAddressOfActive(getDFS()), getConf(), true);
+    TransferFsImage.downloadMostRecentImageToDirectory(infoServer,
+        new File(argv[idx]));
+    return 0;
+  }
+
   private void printHelp(String cmd) {
     String summary = "hadoop dfsadmin is the command to execute DFS administrative commands.\n" +
       "The full syntax is: \n\n" +
@@ -506,6 +528,7 @@ public class DFSAdmin extends FsShell {
       "\t[-refreshNamenodes datanodehost:port]\n"+
       "\t[-deleteBlockPool datanodehost:port blockpoolId [force]]\n"+
       "\t[-setBalancerBandwidth <bandwidth>]\n" +
+      "\t[-fetchImage <local directory>]\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -592,6 +615,10 @@ public class DFSAdmin extends FsShell {
       "\t\tthe dfs.balance.bandwidthPerSec parameter.\n\n" +
       "\t\t--- NOTE: The new value is not persistent on the DataNode.---\n";
     
+    String fetchImage = "-fetchImage <local directory>:\n" +
+      "\tDownloads the most recent fsimage from the Name Node and saves it in" +
+      "\tthe specified local directory.\n";
+    
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -633,6 +660,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(deleteBlockPool);
     } else if ("setBalancerBandwidth".equals(cmd)) {
       System.out.println(setBalancerBandwidth);
+    } else if ("fetchImage".equals(cmd)) {
+      System.out.println(fetchImage);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -655,6 +684,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(printTopology);
       System.out.println(refreshNamenodes);
       System.out.println(deleteBlockPool);
+      System.out.println(setBalancerBandwidth);
+      System.out.println(fetchImage);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -917,6 +948,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-setBalancerBandwidth".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                   + " [-setBalancerBandwidth <bandwidth in bytes per second>]");
+    } else if ("-fetchImage".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+          + " [-fetchImage <local directory>]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
@@ -939,6 +973,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearSpaceQuotaCommand.USAGE+"]");      
       System.err.println("           [-setBalancerBandwidth <bandwidth in bytes per second>]");
+      System.err.println("           [-fetchImage <local directory>]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -1035,6 +1070,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-fetchImage".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -1089,6 +1129,8 @@ public class DFSAdmin extends FsShell {
         exitCode = deleteBlockPool(argv, i);
       } else if ("-setBalancerBandwidth".equals(cmd)) {
         exitCode = setBalancerBandwidth(argv, i);
+      } else if ("-fetchImage".equals(cmd)) {
+        exitCode = fetchImage(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);

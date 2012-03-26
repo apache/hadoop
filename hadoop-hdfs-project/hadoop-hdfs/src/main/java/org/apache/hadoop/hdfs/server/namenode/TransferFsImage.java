@@ -21,6 +21,7 @@ import java.io.*;
 import java.net.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.List;
 import java.lang.Math;
 
@@ -51,6 +52,13 @@ public class TransferFsImage {
   public final static String MD5_HEADER = "X-MD5-Digest";
 
   private static final Log LOG = LogFactory.getLog(TransferFsImage.class);
+  
+  public static void downloadMostRecentImageToDirectory(String fsName,
+      File dir) throws IOException {
+    String fileId = GetImageServlet.getParamStringForMostRecentImage();
+    getFileClient(fsName, fileId, Lists.newArrayList(dir),
+        null, false);
+  }
 
   public static MD5Hash downloadImageToStorage(
       String fsName, long imageTxId, NNStorage dstStorage, boolean needDigest)
@@ -227,6 +235,25 @@ public class TransferFsImage {
                             "by the namenode when trying to fetch " + str);
     }
     
+    if (localPaths != null) {
+      String fsImageName = connection.getHeaderField(
+          GetImageServlet.HADOOP_IMAGE_EDITS_HEADER);
+      // If the local paths refer to directories, use the server-provided header
+      // as the filename within that directory
+      List<File> newLocalPaths = new ArrayList<File>();
+      for (File localPath : localPaths) {
+        if (localPath.isDirectory()) {
+          if (fsImageName == null) {
+            throw new IOException("No filename header provided by server");
+          }
+          newLocalPaths.add(new File(localPath, fsImageName));
+        } else {
+          newLocalPaths.add(localPath);
+        }
+      }
+      localPaths = newLocalPaths;
+    }
+    
     MD5Hash advertisedDigest = parseMD5Header(connection);
 
     long received = 0;
@@ -251,7 +278,11 @@ public class TransferFsImage {
             outputStreams.add(new FileOutputStream(f));
           } catch (IOException ioe) {
             LOG.warn("Unable to download file " + f, ioe);
-            dstStorage.reportErrorOnFile(f);
+            // This will be null if we're downloading the fsimage to a file
+            // outside of an NNStorage directory.
+            if (dstStorage != null) {
+              dstStorage.reportErrorOnFile(f);
+            }
           }
         }
         

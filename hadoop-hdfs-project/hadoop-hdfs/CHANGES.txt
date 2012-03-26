@@ -11,6 +11,9 @@ Trunk (unreleased changes)
     HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
     via jitendra)
 
+    HDFS-2941. Add an administrative command to download a copy of the fsimage
+    from the NN. (atm)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->

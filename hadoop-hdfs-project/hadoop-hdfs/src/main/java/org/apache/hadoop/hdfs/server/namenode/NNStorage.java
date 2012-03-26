@@ -536,6 +536,10 @@ public class NNStorage extends Storage implements Closeable {
     }
     return null;
   }
+  
+  public File getHighestFsImageName() {
+    return getFsImageName(getMostRecentCheckpointTxId());
+  }
 
   /** Create new dfs name directory.  Caution: this destroys all files
    * in this filesystem. */
