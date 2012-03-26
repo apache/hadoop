@@ -21,6 +21,8 @@ package org.apache.hadoop.ha;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +34,7 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher.Event;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.AsyncCallback.*;
@@ -60,8 +63,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class ActiveStandbyElector implements Watcher, StringCallback,
-    StatCallback {
+public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   /**
    * Callback interface to interact with the ActiveStandbyElector object. <br/>
@@ -156,6 +158,9 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
   private final String zkBreadCrumbPath;
   private final String znodeWorkingDir;
 
+  private Lock sessionReestablishLockForTests = new ReentrantLock();
+  private boolean wantToBeInElection;
+  
   /**
    * Create a new ActiveStandbyElector object <br/>
    * The elector is created by providing to it the Zookeeper configuration, the
@@ -274,6 +279,8 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
         }
       }
     }
+    
+    LOG.info("Successfully created " + znodeWorkingDir + " in ZK.");
   }
 
   /**
@@ -290,13 +297,14 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
    * if a failover occurs due to dropping out of the election.
    */
   public synchronized void quitElection(boolean needFence) {
-    LOG.debug("Yielding from election");
+    LOG.info("Yielding from election");
     if (!needFence && state == State.ACTIVE) {
       // If active is gracefully going back to standby mode, remove
       // our permanent znode so no one fences us.
       tryDeleteOwnBreadCrumbNode();
     }
     reset();
+    wantToBeInElection = false;
   }
 
   /**
@@ -343,13 +351,9 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
   @Override
   public synchronized void processResult(int rc, String path, Object ctx,
       String name) {
+    if (isStaleClient(ctx)) return;
     LOG.debug("CreateNode result: " + rc + " for path: " + path
         + " connectionState: " + zkConnectionState);
-    if (zkClient == null) {
-      // zkClient is nulled before closing the connection
-      // this is the callback with session expired after we closed the session
-      return;
-    }
 
     Code code = Code.get(rc);
     if (isSuccess(code)) {
@@ -386,6 +390,10 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
       }
       errorMessage = errorMessage
           + ". Not retrying further znode create connection errors.";
+    } else if (isSessionExpired(code)) {
+      // This isn't fatal - the client Watcher will re-join the election
+      LOG.warn("Lock acquisition failed because session was lost");
+      return;
     }
 
     fatalError(errorMessage);
@@ -397,13 +405,9 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
   @Override
   public synchronized void processResult(int rc, String path, Object ctx,
       Stat stat) {
+    if (isStaleClient(ctx)) return;
     LOG.debug("StatNode result: " + rc + " for path: " + path
         + " connectionState: " + zkConnectionState);
-    if (zkClient == null) {
-      // zkClient is nulled before closing the connection
-      // this is the callback with session expired after we closed the session
-      return;
-    }
 
     Code code = Code.get(rc);
     if (isSuccess(code)) {
@@ -447,22 +451,18 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
   /**
    * interface implementation of Zookeeper watch events (connection and node)
    */
-  @Override
-  public synchronized void process(WatchedEvent event) {
+  synchronized void processWatchEvent(ZooKeeper zk, WatchedEvent event) {
     Event.EventType eventType = event.getType();
+    if (isStaleClient(zk)) return;
     LOG.debug("Watcher event type: " + eventType + " with state:"
         + event.getState() + " for path:" + event.getPath()
         + " connectionState: " + zkConnectionState);
-    if (zkClient == null) {
-      // zkClient is nulled before closing the connection
-      // this is the callback with session expired after we closed the session
-      return;
-    }
 
     if (eventType == Event.EventType.None) {
       // the connection state has changed
       switch (event.getState()) {
       case SyncConnected:
+        LOG.info("Session connected.");
         // if the listener was asked to move to safe state then it needs to
         // be undone
         ConnectionState prevConnectionState = zkConnectionState;
@@ -472,6 +472,8 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
         }
         break;
       case Disconnected:
+        LOG.info("Session disconnected. Entering neutral mode...");
+
         // ask the app to move to safe state because zookeeper connection
         // is not active and we dont know our state
         zkConnectionState = ConnectionState.DISCONNECTED;
@@ -480,6 +482,7 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
       case Expired:
         // the connection got terminated because of session timeout
         // call listener to reconnect
+        LOG.info("Session expired. Entering neutral mode and rejoining...");
         enterNeutralMode();
         reJoinElection();
         break;
@@ -527,7 +530,9 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
    * @throws IOException
    */
   protected synchronized ZooKeeper getNewZooKeeper() throws IOException {
-    return new ZooKeeper(zkHostPort, zkSessionTimeout, this);
+    ZooKeeper zk = new ZooKeeper(zkHostPort, zkSessionTimeout, null);
+    zk.register(new WatcherWithClientRef(zk));
+    return zk;
   }
 
   private void fatalError(String errorMessage) {
@@ -550,13 +555,42 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
     }
 
     createRetryCount = 0;
+    wantToBeInElection = true;
     createLockNodeAsync();
   }
 
   private void reJoinElection() {
-    LOG.debug("Trying to re-establish ZK session");
-    terminateConnection();
-    joinElectionInternal();
+    LOG.info("Trying to re-establish ZK session");
+    
+    // Some of the test cases rely on expiring the ZK sessions and
+    // ensuring that the other node takes over. But, there's a race
+    // where the original lease holder could reconnect faster than the other
+    // thread manages to take the lock itself. This lock allows the
+    // tests to block the reconnection. It's a shame that this leaked
+    // into non-test code, but the lock is only acquired here so will never
+    // be contended.
+    sessionReestablishLockForTests.lock();
+    try {
+      terminateConnection();
+      joinElectionInternal();
+    } finally {
+      sessionReestablishLockForTests.unlock();
+    }
+  }
+  
+  @VisibleForTesting
+  void preventSessionReestablishmentForTests() {
+    sessionReestablishLockForTests.lock();
+  }
+  
+  @VisibleForTesting
+  void allowSessionReestablishmentForTests() {
+    sessionReestablishLockForTests.unlock();
+  }
+  
+  @VisibleForTesting
+  long getZKSessionIdForTests() {
+    return zkClient.getSessionId();
   }
 
   private boolean reEstablishSession() {
@@ -605,6 +639,7 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
   }
 
   private void becomeActive() {
+    assert wantToBeInElection;
     if (state != State.ACTIVE) {
       try {
         Stat oldBreadcrumbStat = fenceOldActive();
@@ -727,12 +762,14 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
   }
 
   private void createLockNodeAsync() {
-    zkClient.create(zkLockFilePath, appData, zkAcl, CreateMode.EPHEMERAL, this,
-        null);
+    zkClient.create(zkLockFilePath, appData, zkAcl, CreateMode.EPHEMERAL,
+        this, zkClient);
   }
 
   private void monitorLockNodeAsync() {
-    zkClient.exists(zkLockFilePath, this, this, null);
+    zkClient.exists(zkLockFilePath, 
+        new WatcherWithClientRef(zkClient), this,
+        zkClient);
   }
 
   private String createWithRetries(final String path, final byte[] data,
@@ -778,9 +815,46 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
       }
     }
   }
-  
+
   private interface ZKAction<T> {
     T run() throws KeeperException, InterruptedException; 
+  }
+  
+  /**
+   * The callbacks and watchers pass a reference to the ZK client
+   * which made the original call. We don't want to take action
+   * based on any callbacks from prior clients after we quit
+   * the election.
+   * @param ctx the ZK client passed into the watcher
+   * @return true if it matches the current client
+   */
+  private synchronized boolean isStaleClient(Object ctx) {
+    Preconditions.checkNotNull(ctx);
+    if (zkClient != (ZooKeeper)ctx) {
+      LOG.warn("Ignoring stale result from old client with sessionId " +
+          String.format("0x%08x", ((ZooKeeper)ctx).getSessionId()));
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Watcher implementation which keeps a reference around to the
+   * original ZK connection, and passes it back along with any
+   * events.
+   */
+  private final class WatcherWithClientRef implements Watcher {
+    private final ZooKeeper zk;
+
+    private WatcherWithClientRef(ZooKeeper zk) {
+      this.zk = zk;
+    }
+
+    @Override
+    public void process(WatchedEvent event) {
+      ActiveStandbyElector.this.processWatchEvent(
+          zk, event);
+    }
   }
 
   private static boolean isSuccess(Code code) {
@@ -793,6 +867,10 @@ public class ActiveStandbyElector implements Watcher, StringCallback,
 
   private static boolean isNodeDoesNotExist(Code code) {
     return (code == Code.NONODE);
+  }
+  
+  private static boolean isSessionExpired(Code code) {
+    return (code == Code.SESSIONEXPIRED);
   }
 
   private static boolean shouldRetry(Code code) {

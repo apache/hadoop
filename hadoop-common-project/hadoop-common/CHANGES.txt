@@ -112,6 +112,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8193. Refactor FailoverController/HAAdmin code to add an abstract
     class for "target" services. (todd)
 
+    HADOOP-8212. Improve ActiveStandbyElector's behavior when session expires
+    (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

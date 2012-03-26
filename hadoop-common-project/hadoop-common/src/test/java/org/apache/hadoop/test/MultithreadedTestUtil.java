@@ -124,7 +124,7 @@ public abstract class MultithreadedTestUtil {
      * Checks for thread exceptions, and if they've occurred
      * throws them as RuntimeExceptions in a deferred manner.
      */
-    private synchronized void checkException() throws Exception {
+    public synchronized void checkException() throws Exception {
       if (err != null) {
         throw new RuntimeException("Deferred", err);
       }

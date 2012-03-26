@@ -26,6 +26,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.Watcher.Event;
 import org.apache.zookeeper.data.ACL;
@@ -111,7 +112,7 @@ public class TestActiveStandbyElector {
   public void testJoinElection() {
     elector.joinElection(data);
     Mockito.verify(mockZK, Mockito.times(1)).create(ZK_LOCK_NAME, data,
-        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, null);
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
   }
 
   /**
@@ -123,7 +124,7 @@ public class TestActiveStandbyElector {
     mockNoPriorActive();
     
     elector.joinElection(data);
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeActive();
     verifyExistCall(1);
@@ -133,14 +134,14 @@ public class TestActiveStandbyElector {
     Stat stat = new Stat();
     stat.setEphemeralOwner(1L);
     Mockito.when(mockZK.getSessionId()).thenReturn(1L);
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null, stat);
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
     // should not call neutral mode/standby/active
     Mockito.verify(mockApp, Mockito.times(0)).enterNeutralMode();
     Mockito.verify(mockApp, Mockito.times(0)).becomeStandby();
     Mockito.verify(mockApp, Mockito.times(1)).becomeActive();
     // another joinElection not called.
     Mockito.verify(mockZK, Mockito.times(1)).create(ZK_LOCK_NAME, data,
-        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, null);
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
     // no new monitor called
     verifyExistCall(1);
   }
@@ -155,7 +156,7 @@ public class TestActiveStandbyElector {
     mockPriorActive(fakeOldActiveData);
     
     elector.joinElection(data);
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     // Application fences active.
     Mockito.verify(mockApp, Mockito.times(1)).fenceOldActive(
@@ -173,7 +174,7 @@ public class TestActiveStandbyElector {
   public void testQuitElectionRemovesBreadcrumbNode() throws Exception {
     mockNoPriorActive();
     elector.joinElection(data);
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     // Writes its own active info
     Mockito.verify(mockZK, Mockito.times(1)).create(
@@ -197,7 +198,7 @@ public class TestActiveStandbyElector {
   public void testCreateNodeResultBecomeStandby() {
     elector.joinElection(data);
 
-    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
     verifyExistCall(1);
@@ -210,7 +211,7 @@ public class TestActiveStandbyElector {
   public void testCreateNodeResultError() {
     elector.joinElection(data);
 
-    elector.processResult(Code.APIERROR.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.APIERROR.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).notifyFatalError(
         "Received create error from Zookeeper. code:APIERROR " +
@@ -227,13 +228,13 @@ public class TestActiveStandbyElector {
     
     elector.joinElection(data);
 
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     // 4 errors results in fatalError
     Mockito
@@ -246,20 +247,20 @@ public class TestActiveStandbyElector {
     elector.joinElection(data);
     // recreate connection via getNewZooKeeper
     Assert.assertEquals(2, count);
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
-    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     verifyExistCall(1);
 
     Stat stat = new Stat();
     stat.setEphemeralOwner(1L);
     Mockito.when(mockZK.getSessionId()).thenReturn(1L);
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null, stat);
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
     Mockito.verify(mockApp, Mockito.times(1)).becomeActive();
     verifyExistCall(1);
     Mockito.verify(mockZK, Mockito.times(6)).create(ZK_LOCK_NAME, data,
-        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, null);
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
   }
 
   /**
@@ -270,16 +271,16 @@ public class TestActiveStandbyElector {
   public void testCreateNodeResultRetryBecomeStandby() {
     elector.joinElection(data);
 
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
-    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     verifyExistCall(1);
 
     Stat stat = new Stat();
     stat.setEphemeralOwner(0);
     Mockito.when(mockZK.getSessionId()).thenReturn(1L);
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null, stat);
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK, stat);
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
     verifyExistCall(1);
   }
@@ -293,19 +294,19 @@ public class TestActiveStandbyElector {
   public void testCreateNodeResultRetryNoNode() {
     elector.joinElection(data);
 
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
-    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     verifyExistCall(1);
 
-    elector.processResult(Code.NONODE.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NONODE.intValue(), ZK_LOCK_NAME, mockZK,
         (Stat) null);
     Mockito.verify(mockApp, Mockito.times(1)).enterNeutralMode();
     Mockito.verify(mockZK, Mockito.times(4)).create(ZK_LOCK_NAME, data,
-        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, null);
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
   }
 
   /**
@@ -313,13 +314,13 @@ public class TestActiveStandbyElector {
    */
   @Test
   public void testStatNodeRetry() {
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         (Stat) null);
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         (Stat) null);
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         (Stat) null);
-    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         (Stat) null);
     Mockito
         .verify(mockApp, Mockito.times(1))
@@ -334,7 +335,7 @@ public class TestActiveStandbyElector {
   @Test
   public void testStatNodeError() {
     elector.processResult(Code.RUNTIMEINCONSISTENCY.intValue(), ZK_LOCK_NAME,
-        null, (Stat) null);
+        mockZK, (Stat) null);
     Mockito.verify(mockApp, Mockito.times(0)).enterNeutralMode();
     Mockito.verify(mockApp, Mockito.times(1)).notifyFatalError(
         "Received stat error from Zookeeper. code:RUNTIMEINCONSISTENCY");
@@ -354,7 +355,7 @@ public class TestActiveStandbyElector {
     // first SyncConnected should not do anything
     Mockito.when(mockEvent.getState()).thenReturn(
         Event.KeeperState.SyncConnected);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     Mockito.verify(mockZK, Mockito.times(0)).exists(Mockito.anyString(),
         Mockito.anyBoolean(), Mockito.<AsyncCallback.StatCallback> anyObject(),
         Mockito.<Object> anyObject());
@@ -362,20 +363,20 @@ public class TestActiveStandbyElector {
     // disconnection should enter safe mode
     Mockito.when(mockEvent.getState()).thenReturn(
         Event.KeeperState.Disconnected);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     Mockito.verify(mockApp, Mockito.times(1)).enterNeutralMode();
 
     // re-connection should monitor master status
     Mockito.when(mockEvent.getState()).thenReturn(
         Event.KeeperState.SyncConnected);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     verifyExistCall(1);
 
     // session expired should enter safe mode and initiate re-election
     // re-election checked via checking re-creation of new zookeeper and
     // call to create lock znode
     Mockito.when(mockEvent.getState()).thenReturn(Event.KeeperState.Expired);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     // already in safe mode above. should not enter safe mode again
     Mockito.verify(mockApp, Mockito.times(1)).enterNeutralMode();
     // called getNewZooKeeper to create new session. first call was in
@@ -383,17 +384,17 @@ public class TestActiveStandbyElector {
     Assert.assertEquals(2, count);
     // once in initial joinElection and one now
     Mockito.verify(mockZK, Mockito.times(2)).create(ZK_LOCK_NAME, data,
-        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, null);
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
 
     // create znode success. become master and monitor
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeActive();
     verifyExistCall(2);
 
     // error event results in fatal error
     Mockito.when(mockEvent.getState()).thenReturn(Event.KeeperState.AuthFailed);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     Mockito.verify(mockApp, Mockito.times(1)).notifyFatalError(
         "Unexpected Zookeeper watch event state: AuthFailed");
     // only 1 state change callback is called at a time
@@ -409,7 +410,7 @@ public class TestActiveStandbyElector {
     elector.joinElection(data);
 
     // make the object go into the monitoring state
-    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
     verifyExistCall(1);
@@ -420,25 +421,25 @@ public class TestActiveStandbyElector {
     // monitoring should be setup again after event is received
     Mockito.when(mockEvent.getType()).thenReturn(
         Event.EventType.NodeDataChanged);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     verifyExistCall(2);
 
     // monitoring should be setup again after event is received
     Mockito.when(mockEvent.getType()).thenReturn(
         Event.EventType.NodeChildrenChanged);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     verifyExistCall(3);
 
     // lock node deletion when in standby mode should create znode again
     // successful znode creation enters active state and sets monitor
     Mockito.when(mockEvent.getType()).thenReturn(Event.EventType.NodeDeleted);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     // enterNeutralMode not called when app is standby and leader is lost
     Mockito.verify(mockApp, Mockito.times(0)).enterNeutralMode();
     // once in initial joinElection() and one now
     Mockito.verify(mockZK, Mockito.times(2)).create(ZK_LOCK_NAME, data,
-        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, null);
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null,
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeActive();
     verifyExistCall(4);
@@ -447,19 +448,19 @@ public class TestActiveStandbyElector {
     // znode again successful znode creation enters active state and sets
     // monitor
     Mockito.when(mockEvent.getType()).thenReturn(Event.EventType.NodeDeleted);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     Mockito.verify(mockApp, Mockito.times(1)).enterNeutralMode();
     // another joinElection called
     Mockito.verify(mockZK, Mockito.times(3)).create(ZK_LOCK_NAME, data,
-        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, null);
-    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, null,
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
+    elector.processResult(Code.OK.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(2)).becomeActive();
     verifyExistCall(5);
 
     // bad path name results in fatal error
     Mockito.when(mockEvent.getPath()).thenReturn(null);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     Mockito.verify(mockApp, Mockito.times(1)).notifyFatalError(
         "Unexpected watch error from Zookeeper");
     // fatal error means no new connection other than one from constructor
@@ -471,7 +472,9 @@ public class TestActiveStandbyElector {
 
   private void verifyExistCall(int times) {
     Mockito.verify(mockZK, Mockito.times(times)).exists(
-        ZK_LOCK_NAME, elector, elector, null);
+        Mockito.eq(ZK_LOCK_NAME), Mockito.<Watcher>any(),
+        Mockito.same(elector),
+        Mockito.same(mockZK));
   }
 
   /**
@@ -482,7 +485,7 @@ public class TestActiveStandbyElector {
     elector.joinElection(data);
 
     // make the object go into the monitoring standby state
-    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
     verifyExistCall(1);
@@ -493,14 +496,14 @@ public class TestActiveStandbyElector {
     // notify node deletion
     // monitoring should be setup again after event is received
     Mockito.when(mockEvent.getType()).thenReturn(Event.EventType.NodeDeleted);
-    elector.process(mockEvent);
+    elector.processWatchEvent(mockZK, mockEvent);
     // is standby. no need to notify anything now
     Mockito.verify(mockApp, Mockito.times(0)).enterNeutralMode();
     // another joinElection called.
     Mockito.verify(mockZK, Mockito.times(2)).create(ZK_LOCK_NAME, data,
-        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, null);
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
     // lost election
-    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     // still standby. so no need to notify again
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
@@ -523,7 +526,7 @@ public class TestActiveStandbyElector {
     elector.joinElection(data);
     // getNewZooKeeper called 2 times. once in constructor and once now
     Assert.assertEquals(2, count);
-    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, null,
+    elector.processResult(Code.NODEEXISTS.intValue(), ZK_LOCK_NAME, mockZK,
         ZK_LOCK_NAME);
     Mockito.verify(mockApp, Mockito.times(1)).becomeStandby();
     verifyExistCall(1);
