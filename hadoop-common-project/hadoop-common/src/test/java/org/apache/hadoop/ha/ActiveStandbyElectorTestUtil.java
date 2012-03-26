@@ -50,4 +50,15 @@ public abstract class ActiveStandbyElectorTestUtil {
       Thread.sleep(50);
     }
   }
+
+  public static void waitForElectorState(TestContext ctx,
+      ActiveStandbyElector elector,
+      ActiveStandbyElector.State state) throws Exception { 
+    while (elector.getStateForTests() != state) {
+      if (ctx != null) {
+        ctx.checkException();
+      }
+      Thread.sleep(50);
+    }
+  }
 }

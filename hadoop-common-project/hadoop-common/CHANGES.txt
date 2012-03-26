@@ -25,6 +25,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-7030. Add TableMapping topology implementation to read host to rack
     mapping from a file. (Patrick Angeles and tomwhite via tomwhite)
 
+    HADOOP-8206. Common portion of a ZK-based failover controller (todd)
+
   IMPROVEMENTS
 
     HADOOP-7524. Change RPC to allow multiple protocols including multuple

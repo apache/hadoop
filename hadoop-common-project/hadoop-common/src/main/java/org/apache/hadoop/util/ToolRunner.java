@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.util;
 
+import java.io.IOException;
 import java.io.PrintStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -92,4 +93,33 @@ public class ToolRunner {
     GenericOptionsParser.printGenericCommandUsage(out);
   }
   
+  
+  /**
+   * Print out a prompt to the user, and return true if the user
+   * responds with "y" or "yes". (case insensitive)
+   */
+  public static boolean confirmPrompt(String prompt) throws IOException {
+    while (true) {
+      System.err.print(prompt + " (Y or N) ");
+      StringBuilder responseBuilder = new StringBuilder();
+      while (true) {
+        int c = System.in.read();
+        if (c == -1 || c == '\r' || c == '\n') {
+          break;
+        }
+        responseBuilder.append((char)c);
+      }
+  
+      String response = responseBuilder.toString();
+      if (response.equalsIgnoreCase("y") ||
+          response.equalsIgnoreCase("yes")) {
+        return true;
+      } else if (response.equalsIgnoreCase("n") ||
+          response.equalsIgnoreCase("no")) {
+        return false;
+      }
+      System.err.println("Invalid input: " + response);
+      // else ask them again
+    }
+  }
 }

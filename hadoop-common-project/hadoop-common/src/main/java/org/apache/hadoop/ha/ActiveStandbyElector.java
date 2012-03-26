@@ -35,6 +35,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher.Event;
+import org.apache.zookeeper.ZKUtil;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.AsyncCallback.*;
@@ -135,11 +136,11 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   private static final int NUM_RETRIES = 3;
 
-  private enum ConnectionState {
+  private static enum ConnectionState {
     DISCONNECTED, CONNECTED, TERMINATED
   };
 
-  private enum State {
+  static enum State {
     INIT, ACTIVE, STANDBY, NEUTRAL
   };
 
@@ -282,6 +283,32 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     
     LOG.info("Successfully created " + znodeWorkingDir + " in ZK.");
   }
+  
+  /**
+   * Clear all of the state held within the parent ZNode.
+   * This recursively deletes everything within the znode as well as the
+   * parent znode itself. It should only be used when it's certain that
+   * no electors are currently participating in the election.
+   */
+  public synchronized void clearParentZNode()
+      throws IOException, InterruptedException {
+    try {
+      LOG.info("Recursively deleting " + znodeWorkingDir + " from ZK...");
+
+      zkDoWithRetries(new ZKAction<Void>() {
+        @Override
+        public Void run() throws KeeperException, InterruptedException {
+          ZKUtil.deleteRecursive(zkClient, znodeWorkingDir);
+          return null;
+        }
+      });
+    } catch (KeeperException e) {
+      throw new IOException("Couldn't clear parent znode " + znodeWorkingDir,
+          e);
+    }
+    LOG.info("Successfully deleted " + znodeWorkingDir + " from ZK.");
+  }
+
 
   /**
    * Any service instance can drop out of the election by calling quitElection. 
@@ -591,6 +618,11 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   @VisibleForTesting
   long getZKSessionIdForTests() {
     return zkClient.getSessionId();
+  }
+  
+  @VisibleForTesting
+  synchronized State getStateForTests() {
+    return state;
   }
 
   private boolean reEstablishSession() {

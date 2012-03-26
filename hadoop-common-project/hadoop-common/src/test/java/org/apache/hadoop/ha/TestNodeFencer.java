@@ -156,6 +156,10 @@ public class TestNodeFencer {
     @Override
     public void checkArgs(String args) {
     }
+    
+    public static HAServiceTarget getLastFencedService() {
+      return fencedSvc;
+    }
   }
   
   /**
