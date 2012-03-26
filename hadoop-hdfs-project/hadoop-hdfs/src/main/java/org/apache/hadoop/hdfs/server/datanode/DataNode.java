@@ -122,7 +122,6 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.datanode.web.resources.DatanodeWebHdfsMethods;
@@ -232,7 +231,7 @@ public class DataNode extends Configured
   
   volatile boolean shouldRun = true;
   private BlockPoolManager blockPoolManager;
-  volatile FsDatasetSpi<? extends FsVolumeSpi> data = null;
+  volatile FSDatasetInterface<? extends FsVolumeSpi> data = null;
   private String clusterId = null;
 
   public final static String EMPTY_DEL_HINT = "";
@@ -810,8 +809,8 @@ public class DataNode extends Configured
    * handshake with the the first namenode is completed.
    */
   private void initStorage(final NamespaceInfo nsInfo) throws IOException {
-    final FsDatasetSpi.Factory<? extends FsDatasetSpi<?>> factory
-        = FsDatasetSpi.Factory.getFactory(conf);
+    final FSDatasetInterface.Factory<? extends FSDatasetInterface<?>> factory
+        = FSDatasetInterface.Factory.getFactory(conf);
     
     if (!factory.isSimulated()) {
       final StartupOption startOpt = getStartupOption(conf);
@@ -829,7 +828,7 @@ public class DataNode extends Configured
 
     synchronized(this)  {
       if (data == null) {
-        data = factory.newInstance(this, storage, conf);
+        data = factory.createFSDatasetInterface(this, storage, conf);
       }
     }
   }
@@ -1696,7 +1695,7 @@ public class DataNode extends Configured
    * 
    * @return the fsdataset that stores the blocks
    */
-  FsDatasetSpi<?> getFSDataset() {
+  FSDatasetInterface<?> getFSDataset() {
     return data;
   }
 
