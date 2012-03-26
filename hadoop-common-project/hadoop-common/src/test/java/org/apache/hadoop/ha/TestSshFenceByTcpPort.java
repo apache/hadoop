@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.SshFenceByTcpPort.Args;
 import org.apache.log4j.Level;
 import org.junit.Assume;
@@ -34,12 +35,25 @@ public class TestSshFenceByTcpPort {
     ((Log4JLogger)SshFenceByTcpPort.LOG).getLogger().setLevel(Level.ALL);
   }
   
-  private String TEST_FENCING_HOST = System.getProperty(
+  private static String TEST_FENCING_HOST = System.getProperty(
       "test.TestSshFenceByTcpPort.host", "localhost");
-  private String TEST_FENCING_PORT = System.getProperty(
+  private static final String TEST_FENCING_PORT = System.getProperty(
       "test.TestSshFenceByTcpPort.port", "8020");
-  private final String TEST_KEYFILE = System.getProperty(
+  private static final String TEST_KEYFILE = System.getProperty(
       "test.TestSshFenceByTcpPort.key");
+  
+  private static final InetSocketAddress TEST_ADDR =
+    new InetSocketAddress(TEST_FENCING_HOST,
+      Integer.valueOf(TEST_FENCING_PORT));
+  private static final HAServiceTarget TEST_TARGET =
+    new DummyHAService(HAServiceState.ACTIVE, TEST_ADDR);
+  
+  /**
+   *  Connect to Google's DNS server - not running ssh!
+   */
+  private static final HAServiceTarget UNFENCEABLE_TARGET =
+    new DummyHAService(HAServiceState.ACTIVE,
+        new InetSocketAddress("8.8.8.8", 1234));
 
   @Test(timeout=20000)
   public void testFence() throws BadFencingConfigurationException {
@@ -49,8 +63,7 @@ public class TestSshFenceByTcpPort {
     SshFenceByTcpPort fence = new SshFenceByTcpPort();
     fence.setConf(conf);
     assertTrue(fence.tryFence(
-        new InetSocketAddress(TEST_FENCING_HOST,
-                              Integer.valueOf(TEST_FENCING_PORT)),
+        TEST_TARGET,
         null));
   }
 
@@ -65,8 +78,7 @@ public class TestSshFenceByTcpPort {
     conf.setInt(SshFenceByTcpPort.CONF_CONNECT_TIMEOUT_KEY, 3000);
     SshFenceByTcpPort fence = new SshFenceByTcpPort();
     fence.setConf(conf);
-    // Connect to Google's DNS server - not running ssh!
-    assertFalse(fence.tryFence(new InetSocketAddress("8.8.8.8", 1234), ""));
+    assertFalse(fence.tryFence(UNFENCEABLE_TARGET, ""));
   }
   
   @Test
