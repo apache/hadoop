@@ -18,12 +18,9 @@
 package org.apache.hadoop.ha;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-
-import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,9 +29,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HealthCheckFailedException;
-import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Daemon;
 
 import com.google.common.base.Preconditions;
@@ -64,8 +59,8 @@ class HealthMonitor {
   /** The connected proxy */
   private HAServiceProtocol proxy;
 
-  /** The address running the HA Service */
-  private final InetSocketAddress addrToMonitor;
+  /** The HA service to monitor */
+  private final HAServiceTarget targetToMonitor;
 
   private final Configuration conf;
   
@@ -109,9 +104,9 @@ class HealthMonitor {
   }
 
 
-  HealthMonitor(Configuration conf, InetSocketAddress addrToMonitor) {
+  HealthMonitor(Configuration conf, HAServiceTarget target) {
+    this.targetToMonitor = target;
     this.conf = conf;
-    this.addrToMonitor = addrToMonitor;
     
     this.sleepAfterDisconnectMillis = conf.getLong(
         HA_HM_SLEEP_AFTER_DISCONNECT_KEY,
@@ -170,7 +165,7 @@ class HealthMonitor {
         proxy = createProxy();
       }
     } catch (IOException e) {
-      LOG.warn("Could not connect to local service at " + addrToMonitor +
+      LOG.warn("Could not connect to local service at " + targetToMonitor +
           ": " + e.getMessage());
       proxy = null;
       enterState(State.SERVICE_NOT_RESPONDING);
@@ -181,10 +176,7 @@ class HealthMonitor {
    * Connect to the service to be monitored. Stubbed out for easier testing.
    */
   protected HAServiceProtocol createProxy() throws IOException {
-    SocketFactory socketFactory = NetUtils.getDefaultSocketFactory(conf);
-    return new HAServiceProtocolClientSideTranslatorPB(
-        addrToMonitor,
-        conf, socketFactory, rpcTimeout);
+    return targetToMonitor.getProxy(conf, rpcTimeout);
   }
 
   private void doHealthChecks() throws InterruptedException {
@@ -200,7 +192,7 @@ class HealthMonitor {
         enterState(State.SERVICE_UNHEALTHY);
       } catch (Throwable t) {
         LOG.warn("Transport-level exception trying to monitor health of " +
-            addrToMonitor + ": " + t.getLocalizedMessage());
+            targetToMonitor + ": " + t.getLocalizedMessage());
         RPC.stopProxy(proxy);
         proxy = null;
         enterState(State.SERVICE_NOT_RESPONDING);
@@ -258,7 +250,7 @@ class HealthMonitor {
   private class MonitorDaemon extends Daemon {
     private MonitorDaemon() {
       super();
-      setName("Health Monitor for " + addrToMonitor);
+      setName("Health Monitor for " + targetToMonitor);
       setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
         @Override
         public void uncaughtException(Thread t, Throwable e) {
@@ -297,24 +289,4 @@ class HealthMonitor {
   static interface Callback {
     void enteredState(State newState);
   }
-
-  /**
-   * Simple main() for testing.
-   */
-  public static void main(String[] args) throws InterruptedException {
-    if (args.length != 1) {
-      System.err.println("Usage: " + HealthMonitor.class.getName() +
-          " <addr to monitor>");
-      System.exit(1);
-    }
-    Configuration conf = new Configuration();
-    
-    String target = args[0];
-    InetSocketAddress addr = NetUtils.createSocketAddr(target);
-    
-    HealthMonitor hm = new HealthMonitor(conf, addr);
-    hm.start();
-    hm.join();
-  }
-
 }
