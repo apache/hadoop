@@ -52,7 +52,7 @@ public class ApplicationMasterLauncher extends AbstractService implements
       RMContext context) {
     super(ApplicationMasterLauncher.class.getName());
     this.context = context;
-    this.launcherPool = new ThreadPoolExecutor(1, 10, 1, 
+    this.launcherPool = new ThreadPoolExecutor(10, 10, 1, 
         TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
     this.launcherHandlingThread = new LauncherThread();
     this.applicationTokenSecretManager = applicationTokenSecretManager;
