@@ -58,6 +58,10 @@ Release 0.23.3 - UNRELEASED
     HDFS-2941. Add an administrative command to download a copy of the fsimage
     from the NN. (atm)
 
+    HDFS-2413. Add an API DistributedFileSystem.isInSafeMode() and change
+    DistributedFileSystem to @InterfaceAudience.LimitedPrivate.
+    (harsh via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

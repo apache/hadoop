@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
@@ -71,8 +72,8 @@ import org.apache.hadoop.util.Progressable;
  * DistributedFileSystem.
  *
  *****************************************************************/
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
+@InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
+@InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem {
   private Path workingDir;
   private URI uri;
@@ -853,5 +854,15 @@ public class DistributedFileSystem extends FileSystem {
     } else {
       return super.getCanonicalServiceName();
     }
+  }
+
+  /**
+   * Utility function that returns if the NameNode is in safemode or not.
+   *
+   * @return true if NameNode is in safemode, false otherwise.
+   * @throws IOException when there is an issue communicating with the NameNode
+   */
+  public boolean isInSafeMode() throws IOException {
+    return setSafeMode(SafeModeAction.SAFEMODE_GET);
   }
 }

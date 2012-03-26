@@ -59,7 +59,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * This class provides some DFS administrative access.
+ * This class provides some DFS administrative access shell commands.
  */
 @InterfaceAudience.Private
 public class DFSAdmin extends FsShell {
@@ -396,7 +396,7 @@ public class DFSAdmin extends FsShell {
         } catch (java.lang.InterruptedException e) {
           throw new IOException("Wait Interrupted");
         }
-        inSafeMode = dfs.setSafeMode(action);
+        inSafeMode = dfs.isInSafeMode();
       }
     }
 
