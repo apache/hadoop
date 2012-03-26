@@ -37,7 +37,7 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3970. Add ServiceOperations class to aid working with Services
     (stevel)
 
-    MAPREDUCE-3533. Add a channel between RM and AM to get information on
+    MAPREDUCE-3353. Add a channel between RM and AM to get information on
     nodes. (Bikas Saha via acmurthy) 
 
   OPTIMIZATIONS
