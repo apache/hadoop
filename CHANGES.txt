@@ -175,6 +175,9 @@ Release 1.1.0 - unreleased
     HADOOP-8159. NetworkTopology: getLeaf should check for invalid topologies.
     (Colin Patrick McCabe via eli)    
 
+    HDFS-3129. NetworkTopology: add test that getLeaf should check for
+    invalid topologies. (Colin Patrick McCabe via eli)
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES
