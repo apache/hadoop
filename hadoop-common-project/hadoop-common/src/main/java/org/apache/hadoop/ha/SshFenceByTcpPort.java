@@ -79,10 +79,11 @@ public class SshFenceByTcpPort extends Configured
   }
 
   @Override
-  public boolean tryFence(InetSocketAddress serviceAddr, String argsStr)
+  public boolean tryFence(HAServiceTarget target, String argsStr)
       throws BadFencingConfigurationException {
 
     Args args = new Args(argsStr);
+    InetSocketAddress serviceAddr = target.getAddress();
     String host = serviceAddr.getHostName();
     
     Session session;

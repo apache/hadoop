@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ha;
 
-import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -91,14 +90,14 @@ public class NodeFencer {
     return new NodeFencer(conf);
   }
 
-  public boolean fence(InetSocketAddress serviceAddr) {
+  public boolean fence(HAServiceTarget fromSvc) {
     LOG.info("====== Beginning Service Fencing Process... ======");
     int i = 0;
     for (FenceMethodWithArg method : methods) {
       LOG.info("Trying method " + (++i) + "/" + methods.size() +": " + method);
       
       try {
-        if (method.method.tryFence(serviceAddr, method.arg)) {
+        if (method.method.tryFence(fromSvc, method.arg)) {
           LOG.info("====== Fencing successful by method " + method + " ======");
           return true;
         }
