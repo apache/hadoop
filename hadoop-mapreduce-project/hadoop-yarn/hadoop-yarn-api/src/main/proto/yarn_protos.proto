@@ -172,6 +172,15 @@ message ApplicationReportProto {
   optional string originalTrackingUrl = 17;
 }
 
+enum NodeStateProto {
+  NS_NEW = 1; 
+  NS_RUNNING = 2; 
+  NS_UNHEALTHY = 3;
+  NS_DECOMMISSIONED = 4; 
+  NS_LOST = 5;
+  NS_REBOOTED = 6;
+}
+
 message NodeIdProto {
   optional string host = 1;
   optional int32 port = 2;
@@ -191,6 +200,7 @@ message NodeReportProto {
   optional ResourceProto capability = 5;
   optional int32 numContainers = 6;
   optional NodeHealthStatusProto node_health_status = 8;
+  optional NodeStateProto node_state = 9;
 }
 
 
@@ -210,6 +220,7 @@ message AMResponseProto {
   repeated ContainerProto allocated_containers = 3;
   repeated ContainerStatusProto completed_container_statuses = 4;
   optional ResourceProto limit = 5;
+  repeated NodeReportProto updated_nodes = 6;
 }
 
 

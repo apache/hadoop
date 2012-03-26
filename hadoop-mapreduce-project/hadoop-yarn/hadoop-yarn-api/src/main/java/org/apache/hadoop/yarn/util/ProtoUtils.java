@@ -26,13 +26,18 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.impl.pb.NodeIdPBImpl;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationResourceUsageReportPBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAccessTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationResourceUsageReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStateProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeStateProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.FinalApplicationStatusProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceTypeProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceVisibilityProto;
@@ -56,6 +61,26 @@ public class ProtoUtils {
     return ContainerState.valueOf(e.name().replace(CONTAINER_STATE_PREFIX, ""));
   }
 
+  /*
+   * NodeState
+   */
+  private static String NODE_STATE_PREFIX = "NS_";
+  public static NodeStateProto convertToProtoFormat(NodeState e) {
+    return NodeStateProto.valueOf(NODE_STATE_PREFIX + e.name());
+  }
+  public static NodeState convertFromProtoFormat(NodeStateProto e) {
+    return NodeState.valueOf(e.name().replace(NODE_STATE_PREFIX, ""));
+  }
+  
+  /*
+   * NodeId
+   */
+  public static NodeIdProto convertToProtoFormat(NodeId e) {
+    return ((NodeIdPBImpl)e).getProto();
+  }
+  public static NodeId convertFromProtoFormat(NodeIdProto e) {
+    return new NodeIdPBImpl(e);
+  }
 
   /*
    * YarnApplicationState

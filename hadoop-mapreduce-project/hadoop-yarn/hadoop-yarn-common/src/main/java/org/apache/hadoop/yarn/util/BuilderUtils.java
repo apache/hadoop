@@ -25,6 +25,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -42,7 +46,10 @@ import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
+import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -52,7 +59,6 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
-import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
 /**
  * Builder utilities to construct various objects.
@@ -203,6 +209,21 @@ public class BuilderUtils {
     nodeId.setHost(host);
     nodeId.setPort(port);
     return nodeId;
+  }
+  
+  public static NodeReport newNodeReport(NodeId nodeId, NodeState nodeState, 
+      String httpAddress, String rackName, Resource used, Resource capability,
+      int numContainers, NodeHealthStatus nodeHealthStatus) {
+    NodeReport nodeReport = recordFactory.newRecordInstance(NodeReport.class);
+    nodeReport.setNodeId(nodeId);
+    nodeReport.setNodeState(nodeState);
+    nodeReport.setHttpAddress(httpAddress);
+    nodeReport.setRackName(rackName);
+    nodeReport.setUsed(used);
+    nodeReport.setCapability(capability);
+    nodeReport.setNumContainers(numContainers);
+    nodeReport.setNodeHealthStatus(nodeHealthStatus);
+    return nodeReport;
   }
 
   public static ContainerStatus newContainerStatus(ContainerId containerId,

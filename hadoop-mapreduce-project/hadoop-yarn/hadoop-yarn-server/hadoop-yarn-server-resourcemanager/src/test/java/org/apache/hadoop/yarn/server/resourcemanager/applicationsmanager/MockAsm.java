@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -35,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.collect.Lists;
@@ -217,6 +219,10 @@ public abstract class MockAsm extends MockApps {
 
     @Override
     public FinalApplicationStatus getFinalApplicationStatus() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public int pullRMNodeUpdates(Collection<RMNode> updatedNodes) {
       throw new UnsupportedOperationException("Not supported yet.");
     }
   }

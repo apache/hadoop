@@ -122,4 +122,17 @@ public interface AMResponse {
   @Private
   @Unstable
   public void setCompletedContainersStatuses(List<ContainerStatus> containers);
+
+  /**
+   * Get the list of <em>updated <code>NodeReport</code>s</em>. Updates could be
+   * changes in health, availability etc of the nodes.
+   * @return The delta of updated nodes since the last response
+   */
+  @Public
+  @Unstable
+  public List<NodeReport> getUpdatedNodes();
+
+  @Private
+  @Unstable
+  public void setUpdatedNodes(final List<NodeReport> updatedNodes);
 }

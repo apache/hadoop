@@ -16,30 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
+package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
-//TODO yarn.api.records.NodeState is a clone of RMNodeState made for MR-3353. 
-// In a subsequent patch RMNodeState should be replaced with NodeState
-public enum RMNodeState {
-  NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST, REBOOTED;
-  
-  public static NodeState toNodeState(RMNodeState state) {
-    switch(state) {
-    case NEW:
-      return NodeState.NEW;
-    case RUNNING:
-      return NodeState.RUNNING;
-    case UNHEALTHY:
-      return NodeState.UNHEALTHY;
-    case DECOMMISSIONED:
-      return NodeState.DECOMMISSIONED;
-    case LOST:
-      return NodeState.LOST;
-    case REBOOTED:
-      return NodeState.REBOOTED;
-    }
-    return null;
+public class RMAppNodeUpdateEvent extends RMAppEvent {
+
+  public enum RMAppNodeUpdateType {
+    NODE_USABLE, 
+    NODE_UNUSABLE
   }
-};
+
+  private final RMNode node;
+  private final RMAppNodeUpdateType updateType;
+
+  public RMAppNodeUpdateEvent(ApplicationId appId, RMNode node,
+      RMAppNodeUpdateType updateType) {
+    super(appId, RMAppEventType.NODE_UPDATE);
+    this.node = node;
+    this.updateType = updateType;
+  }
+
+  public RMNode getNode() {
+    return node;
+  }
+
+  public RMAppNodeUpdateType getUpdateType() {
+    return updateType;
+  }
+
+}

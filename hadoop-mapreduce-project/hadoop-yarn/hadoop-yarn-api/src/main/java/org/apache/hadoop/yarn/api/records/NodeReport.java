@@ -57,6 +57,16 @@ public interface NodeReport {
   void setNodeId(NodeId nodeId);
   
   /**
+   * Get the <code>NodeState</code> of the node.
+   * @return <code>NodeState</code> of the node
+   */
+  NodeState getNodeState();
+  
+  @Private
+  @Unstable
+  void setNodeState(NodeState nodeState);
+  
+  /**
    * Get the <em>http address</em> of the node.
    * @return <em>http address</em> of the node
    */

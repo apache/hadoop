@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -45,6 +46,8 @@ import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -54,6 +57,8 @@ import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -61,9 +66,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAt
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptStatusupdateEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
 public class ApplicationMasterService extends AbstractService implements
@@ -279,8 +286,33 @@ public class ApplicationMasterService extends AbstractService implements
 
       RMApp app = this.rmContext.getRMApps().get(appAttemptId.getApplicationId());
       RMAppAttempt appAttempt = app.getRMAppAttempt(appAttemptId);
-
+      
       AMResponse response = recordFactory.newRecordInstance(AMResponse.class);
+
+      // update the response with the deltas of node status changes
+      List<RMNode> updatedNodes = new ArrayList<RMNode>();
+      if(app.pullRMNodeUpdates(updatedNodes) > 0) {
+        List<NodeReport> updatedNodeReports = new ArrayList<NodeReport>();
+        for(RMNode rmNode: updatedNodes) {
+          SchedulerNodeReport schedulerNodeReport =  
+              rScheduler.getNodeReport(rmNode.getNodeID());
+          Resource used = BuilderUtils.newResource(0);
+          int numContainers = 0;
+          if (schedulerNodeReport != null) {
+            used = schedulerNodeReport.getUsedResource();
+            numContainers = schedulerNodeReport.getNumContainers();
+          }
+          NodeReport report = BuilderUtils.newNodeReport(rmNode.getNodeID(),
+              RMNodeState.toNodeState(rmNode.getState()),
+              rmNode.getHttpAddress(), rmNode.getRackName(), used,
+              rmNode.getTotalCapability(), numContainers,
+              rmNode.getNodeHealthStatus());
+          
+          updatedNodeReports.add(report);
+        }
+        response.setUpdatedNodes(updatedNodeReports);
+      }
+
       response.setAllocatedContainers(allocation.getContainers());
       response.setCompletedContainersStatuses(appAttempt
           .pullJustFinishedContainers());

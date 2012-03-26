@@ -26,12 +26,14 @@ import java.util.List;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMResponseProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.AMResponseProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ContainerStatusProto;
+import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
 
 
@@ -47,6 +49,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   private List<ContainerStatus> completedContainersStatuses = null;
 //  private boolean hasLocalContainerList = false;
   
+  private List<NodeReport> updatedNodes = null;
   
   public AMResponsePBImpl() {
     builder = AMResponseProto.newBuilder();
@@ -76,6 +79,12 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
       Iterable<ContainerStatusProto> iterable = 
           getContainerStatusProtoIterable(this.completedContainersStatuses);
       builder.addAllCompletedContainerStatuses(iterable);
+    }
+    if (this.updatedNodes != null) {
+      builder.clearUpdatedNodes();
+      Iterable<NodeReportProto> iterable = 
+          getNodeReportProtoIterable(this.updatedNodes);
+      builder.addAllUpdatedNodes(iterable);
     }
     if (this.limit != null) {
       builder.setLimit(convertToProtoFormat(this.limit));
@@ -141,6 +150,36 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
       builder.clearLimit();
     this.limit = limit;
   }
+  
+  @Override
+  public synchronized List<NodeReport> getUpdatedNodes() {
+    initLocalNewNodeReportList();
+    return this.updatedNodes;
+  }
+  
+  //Once this is called. updatedNodes will never be null - until a getProto is called.
+  private synchronized void initLocalNewNodeReportList() {
+    if (this.updatedNodes != null) {
+      return;
+    }
+    AMResponseProtoOrBuilder p = viaProto ? proto : builder;
+    List<NodeReportProto> list = p.getUpdatedNodesList();
+    updatedNodes = new ArrayList<NodeReport>(list.size());
+
+    for (NodeReportProto n : list) {
+      updatedNodes.add(convertFromProtoFormat(n));
+    }
+  }
+
+  @Override
+  public synchronized void setUpdatedNodes(final List<NodeReport> updatedNodes) {
+    if (updatedNodes == null) {
+      this.updatedNodes.clear();
+      return;
+    }
+    this.updatedNodes = new ArrayList<NodeReport>(updatedNodes.size());
+    this.updatedNodes.addAll(updatedNodes);
+  }
 
   @Override
   public synchronized List<Container> getAllocatedContainers() {
@@ -148,7 +187,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
     return this.allocatedContainers;
   }
   
-  //Once this is called. containerList will never be null - untill a getProto is called.
+  //Once this is called. containerList will never be null - until a getProto is called.
   private synchronized void initLocalNewContainerList() {
     if (this.allocatedContainers != null) {
       return;
@@ -166,6 +205,7 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
   public synchronized void setAllocatedContainers(final List<Container> containers) {
     if (containers == null) 
       return;
+    // this looks like a bug because it results in append and not set
     initLocalNewContainerList();
     allocatedContainers.addAll(containers);
   }
@@ -232,6 +272,38 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
       }
     };
   }
+  
+  private synchronized Iterable<NodeReportProto> 
+  getNodeReportProtoIterable(
+      final List<NodeReport> newNodeReportsList) {
+    maybeInitBuilder();
+    return new Iterable<NodeReportProto>() {
+      @Override
+      public synchronized Iterator<NodeReportProto> iterator() {
+        return new Iterator<NodeReportProto>() {
+
+          Iterator<NodeReport> iter = newNodeReportsList.iterator();
+
+          @Override
+          public synchronized boolean hasNext() {
+            return iter.hasNext();
+          }
+
+          @Override
+          public synchronized NodeReportProto next() {
+            return convertToProtoFormat(iter.next());
+          }
+
+          @Override
+          public synchronized void remove() {
+            throw new UnsupportedOperationException();
+
+          }
+        };
+
+      }
+    };
+  }
 
   //// Finished containers
   @Override
@@ -261,6 +333,15 @@ public class AMResponsePBImpl extends ProtoBase<AMResponseProto> implements AMRe
       return;
     initLocalFinishedContainerList();
     completedContainersStatuses.addAll(containers);
+  }
+  
+  private synchronized NodeReportPBImpl convertFromProtoFormat(
+      NodeReportProto p) {
+    return new NodeReportPBImpl(p);
+  }
+
+  private synchronized NodeReportProto convertToProtoFormat(NodeReport t) {
+    return ((NodeReportPBImpl)t).getProto();
   }
   
   private synchronized ContainerPBImpl convertFromProtoFormat(

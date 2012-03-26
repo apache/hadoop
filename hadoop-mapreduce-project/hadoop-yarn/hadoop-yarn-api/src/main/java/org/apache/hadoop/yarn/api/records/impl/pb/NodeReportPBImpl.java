@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.api.records.impl.pb;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeHealthStatusProto;
@@ -28,6 +29,7 @@ import org.apache.hadoop.yarn.proto.YarnProtos.NodeIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.NodeReportProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.YarnProtos.ResourceProto;
+import org.apache.hadoop.yarn.util.ProtoUtils;
 
 public class NodeReportPBImpl extends ProtoBase<NodeReportProto>
     implements NodeReport {
@@ -131,6 +133,25 @@ public class NodeReportPBImpl extends ProtoBase<NodeReportProto>
     this.nodeId = nodeId;
   }
   
+  @Override
+  public NodeState getNodeState() {
+    NodeReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasNodeState()) {
+      return null;
+    }
+    return ProtoUtils.convertFromProtoFormat(p.getNodeState());
+  }
+  
+  @Override
+  public void setNodeState(NodeState nodeState) {
+    maybeInitBuilder();
+    if (nodeState == null) {
+      builder.clearNodeState();
+      return;
+    }
+    builder.setNodeState(ProtoUtils.convertToProtoFormat(nodeState));
+  }
+
   @Override
   public void setCapability(Resource capability) {
     maybeInitBuilder();
