@@ -15,37 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 
-/**************************************************
- * BlockVolumeChoosingPolicy allows a DataNode to
- * specify what policy is to be used while choosing
- * a volume for a block request.
- *
- * Note: This is an evolving i/f and is only for
- * advanced use.
- *
- ***************************************************/
+/**
+ * This interface specifies the policy for choosing volumes to store replicas.
+ */
 @InterfaceAudience.Private
-public interface BlockVolumeChoosingPolicy<V extends FsVolumeSpi> {
+public interface VolumeChoosingPolicy<V extends FsVolumeSpi> {
 
   /**
-   * Returns a specific FSVolume after applying a suitable choice algorithm
-   * to place a given block, given a list of FSVolumes and the block
-   * size sought for storage.
+   * Choose a volume to place a replica,
+   * given a list of volumes and the replica size sought for storage.
    * 
-   * (Policies that maintain state must be thread-safe.)
+   * The implementations of this interface must be thread-safe.
    * 
-   * @param volumes - the array of FSVolumes that are available.
-   * @param blockSize - the size of the block for which a volume is sought.
-   * @return the chosen volume to store the block.
+   * @param volumes - a list of available volumes.
+   * @param replicaSize - the size of the replica for which a volume is sought.
+   * @return the chosen volume.
    * @throws IOException when disks are unavailable or are full.
    */
-  public V chooseVolume(List<V> volumes, long blockSize) throws IOException;
+  public V chooseVolume(List<V> volumes, long replicaSize) throws IOException;
 }

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 
 import java.io.File;
@@ -31,10 +31,11 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.FSDataset;
+import org.apache.hadoop.hdfs.server.datanode.Replica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipelineInterface;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
@@ -42,19 +43,16 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * This is an interface for the underlying storage that stores blocks for
- * a data node. 
- * Examples are the FSDataset (which stores blocks on dirs)  and 
- * SimulatedFSDataset (which simulates data).
- *
+ * This is a service provider interface for the underlying storage that
+ * stores replicas for a data node.
+ * The default implementation stores replicas on local drives. 
  */
 @InterfaceAudience.Private
-public interface FSDatasetInterface<V extends FsVolumeSpi>
-    extends FSDatasetMBean {
+public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   /**
-   * A factory for creating FSDatasetInterface objects.
+   * A factory for creating {@link FsDatasetSpi} objects.
    */
-  public abstract class Factory<D extends FSDatasetInterface<?>> {
+  public static abstract class Factory<D extends FsDatasetSpi<?>> {
     /** @return the configured factory. */
     public static Factory<?> getFactory(Configuration conf) {
       @SuppressWarnings("rawtypes")
@@ -65,10 +63,9 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
       return ReflectionUtils.newInstance(clazz, conf);
     }
 
-    /** Create a FSDatasetInterface object. */
-    public abstract D createFSDatasetInterface(
-        DataNode datanode, DataStorage storage, Configuration conf
-        ) throws IOException;
+    /** Create a new object. */
+    public abstract D newInstance(DataNode datanode, DataStorage storage,
+        Configuration conf) throws IOException;
 
     /** Does the factory create simulated objects? */
     public boolean isSimulated() {
@@ -82,7 +79,8 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
    * @param prefix the prefix of the log names.
    * @return rolling logs
    */
-  public RollingLogs createRollingLogs(String bpid, String prefix) throws IOException;
+  public RollingLogs createRollingLogs(String bpid, String prefix
+      ) throws IOException;
 
   /** @return a list of volumes. */
   public List<V> getVolumes();
@@ -167,15 +165,15 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
   public ReplicaInputStreams getTmpInputStreams(ExtendedBlock b, long blkoff,
       long ckoff) throws IOException;
 
-     /**
+  /**
    * Creates a temporary replica and returns the meta information of the replica
    * 
    * @param b block
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public ReplicaInPipelineInterface createTemporary(ExtendedBlock b)
-  throws IOException;
+  public ReplicaInPipelineInterface createTemporary(ExtendedBlock b
+      ) throws IOException;
 
   /**
    * Creates a RBW replica and returns the meta info of the replica
@@ -184,7 +182,8 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public ReplicaInPipelineInterface createRbw(ExtendedBlock b) throws IOException;
+  public ReplicaInPipelineInterface createRbw(ExtendedBlock b
+      ) throws IOException;
 
   /**
    * Recovers a RBW replica and returns the meta info of the replica
@@ -197,8 +196,7 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
    * @throws IOException if an error occurs
    */
   public ReplicaInPipelineInterface recoverRbw(ExtendedBlock b, 
-      long newGS, long minBytesRcvd, long maxBytesRcvd)
-  throws IOException;
+      long newGS, long minBytesRcvd, long maxBytesRcvd) throws IOException;
 
   /**
    * Covert a temporary replica to a RBW.
@@ -217,8 +215,8 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
    * @return the meata info of the replica which is being written to
    * @throws IOException
    */
-  public ReplicaInPipelineInterface append(ExtendedBlock b, 
-      long newGS, long expectedBlockLen) throws IOException;
+  public ReplicaInPipelineInterface append(ExtendedBlock b, long newGS,
+      long expectedBlockLen) throws IOException;
 
   /**
    * Recover a failed append to a finalized replica
@@ -230,8 +228,8 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
    * @return the meta info of the replica which is being written to
    * @throws IOException
    */
-  public ReplicaInPipelineInterface recoverAppend(ExtendedBlock b,
-      long newGS, long expectedBlockLen) throws IOException;
+  public ReplicaInPipelineInterface recoverAppend(ExtendedBlock b, long newGS,
+      long expectedBlockLen) throws IOException;
   
   /**
    * Recover a failed pipeline close
@@ -242,8 +240,8 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
    * @param expectedBlockLen the number of bytes the replica is expected to have
    * @throws IOException
    */
-  public void recoverClose(ExtendedBlock b,
-      long newGS, long expectedBlockLen) throws IOException;
+  public void recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen
+      ) throws IOException;
   
   /**
    * Finalizes the block previously opened for writing using writeToBlock.
@@ -300,7 +298,7 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
      * @throws DiskErrorException
      */
   public void checkDataDir() throws DiskErrorException;
-      
+
   /**
    * Shutdown the FSDataset
    */
@@ -310,12 +308,12 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
    * Sets the file pointer of the checksum stream so that the last checksum
    * will be overwritten
    * @param b block
-   * @param stream The stream for the data file and checksum file
+   * @param outs The streams for the data file and checksum file
    * @param checksumSize number of bytes each checksum has
    * @throws IOException
    */
-  public void adjustCrcChannelPosition(ExtendedBlock b, ReplicaOutputStreams stream, 
-      int checksumSize) throws IOException;
+  public void adjustCrcChannelPosition(ExtendedBlock b,
+      ReplicaOutputStreams outs, int checksumSize) throws IOException;
 
   /**
    * Checks how many valid storage volumes there are in the DataNode.
@@ -334,8 +332,8 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
    * @return actual state of the replica on this data-node or 
    * null if data-node does not have the replica.
    */
-  public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
-      throws IOException;
+  public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock
+      ) throws IOException;
 
   /**
    * Update replica's generation stamp and length and finalize it.
@@ -372,6 +370,7 @@ public interface FSDatasetInterface<V extends FsVolumeSpi>
   
   /**
    * Get {@link BlockLocalPathInfo} for the given block.
-   **/
-  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b) throws IOException;
+   */
+  public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b
+      ) throws IOException;
 }

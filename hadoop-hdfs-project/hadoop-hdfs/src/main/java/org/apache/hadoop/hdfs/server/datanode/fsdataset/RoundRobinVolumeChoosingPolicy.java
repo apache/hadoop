@@ -15,16 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
-public class RoundRobinVolumesPolicy<V extends FsVolumeSpi>
-    implements BlockVolumeChoosingPolicy<V> {
+/**
+ * Choose volumes in round-robin order.
+ */
+public class RoundRobinVolumeChoosingPolicy<V extends FsVolumeSpi>
+    implements VolumeChoosingPolicy<V> {
 
   private int curVolume = 0;
 
@@ -55,13 +57,10 @@ public class RoundRobinVolumesPolicy<V extends FsVolumeSpi>
       }
       
       if (curVolume == startVolume) {
-        throw new DiskOutOfSpaceException(
-            "Insufficient space for an additional block. Volume with the most available space has "
-                + maxAvailable
-                + " bytes free, configured block size is "
-                + blockSize);
+        throw new DiskOutOfSpaceException("Out of space: "
+            + "The volume with the most available space (=" + maxAvailable
+            + " B) is less than the block size (=" + blockSize + " B).");
       }
     }
   }
-
 }

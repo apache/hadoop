@@ -24,6 +24,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 
 /**
@@ -48,7 +49,7 @@ public class DataNodeTestUtils {
    * 
    * @return the fsdataset that stores the blocks
    */
-  public static FSDatasetInterface<?> getFSDataset(DataNode dn) {
+  public static FsDatasetSpi<?> getFSDataset(DataNode dn) {
     return dn.getFSDataset();
   }
 

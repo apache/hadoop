@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -77,7 +78,7 @@ public class TestBPOfferService {
   private NNHAStatusHeartbeat[] mockHaStatuses = new NNHAStatusHeartbeat[2];
   private int heartbeatCounts[] = new int[2];
   private DataNode mockDn;
-  private FSDatasetInterface<?> mockFSDataset;
+  private FsDatasetSpi<?> mockFSDataset;
   
   @Before
   public void setupMocks() throws Exception {
