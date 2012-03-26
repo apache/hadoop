@@ -19,11 +19,14 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.security.AccessControlException;
 import org.mockito.Mockito;
+
+import com.google.common.collect.Lists;
 
 /**
  * Test-only implementation of {@link HAServiceTarget}, which returns
@@ -36,12 +39,20 @@ class DummyHAService extends HAServiceTarget {
   InetSocketAddress address;
   boolean isHealthy = true;
   boolean actUnreachable = false;
+  boolean failToBecomeActive;
+  
+  static ArrayList<DummyHAService> instances = Lists.newArrayList();
+  int index;
 
   DummyHAService(HAServiceState state, InetSocketAddress address) {
     this.state = state;
     this.proxy = makeMock();
     this.fencer = Mockito.mock(NodeFencer.class);
     this.address = address;
+    synchronized (instances) {
+      instances.add(this);
+      this.index = instances.size();
+    }
   }
   
   private HAServiceProtocol makeMock() {
@@ -59,6 +70,10 @@ class DummyHAService extends HAServiceTarget {
       public void transitionToActive() throws ServiceFailedException,
           AccessControlException, IOException {
         checkUnreachable();
+        if (failToBecomeActive) {
+          throw new ServiceFailedException("injected failure");
+        }
+
         state = HAServiceState.ACTIVE;
       }
 
@@ -97,7 +112,7 @@ class DummyHAService extends HAServiceTarget {
       throws IOException {
     return proxy;
   }
-
+  
   @Override
   public NodeFencer getFencer() {
     return fencer;
@@ -105,5 +120,14 @@ class DummyHAService extends HAServiceTarget {
 
   @Override
   public void checkFencingConfigured() throws BadFencingConfigurationException {
+  }
+  
+  @Override
+  public String toString() {
+    return "DummyHAService #" + index;
+  }
+
+  public static HAServiceTarget getInstance(int serial) {
+    return instances.get(serial - 1);
   }
 }

@@ -188,7 +188,8 @@ class HealthMonitor {
         proxy.monitorHealth();
         healthy = true;
       } catch (HealthCheckFailedException e) {
-        LOG.warn("Service health check failed: " + e.getMessage());
+        LOG.warn("Service health check failed for " + targetToMonitor
+            + ": " + e.getMessage());
         enterState(State.SERVICE_UNHEALTHY);
       } catch (Throwable t) {
         LOG.warn("Transport-level exception trying to monitor health of " +

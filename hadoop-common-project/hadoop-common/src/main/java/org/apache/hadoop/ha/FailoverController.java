@@ -24,7 +24,9 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ipc.RPC;
 
 import com.google.common.base.Preconditions;
 
@@ -39,6 +41,8 @@ import com.google.common.base.Preconditions;
 public class FailoverController {
 
   private static final Log LOG = LogFactory.getLog(FailoverController.class);
+
+  private static final int GRACEFUL_FENCE_TIMEOUT = 5000;
 
   /**
    * Perform pre-failover checks on the given service we plan to
@@ -96,7 +100,35 @@ public class FailoverController {
           "Got an IO exception", e);
     }
   }
-
+  
+  
+  /**
+   * Try to get the HA state of the node at the given address. This
+   * function is guaranteed to be "quick" -- ie it has a short timeout
+   * and no retries. Its only purpose is to avoid fencing a node that
+   * has already restarted.
+   */
+  static boolean tryGracefulFence(Configuration conf,
+      HAServiceTarget svc) {
+    HAServiceProtocol proxy = null;
+    try {
+      proxy = svc.getProxy(conf, GRACEFUL_FENCE_TIMEOUT);
+      proxy.transitionToStandby();
+      return true;
+    } catch (ServiceFailedException sfe) {
+      LOG.warn("Unable to gracefully make " + svc + " standby (" +
+          sfe.getMessage() + ")");
+    } catch (IOException ioe) {
+      LOG.warn("Unable to gracefully make " + svc +
+          " standby (unable to connect)", ioe);
+    } finally {
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+    }
+    return false;
+  }
+  
   /**
    * Failover from service 1 to service 2. If the failover fails
    * then try to failback.
@@ -118,16 +150,9 @@ public class FailoverController {
 
     // Try to make fromSvc standby
     boolean tryFence = true;
-    try {
-      HAServiceProtocolHelper.transitionToStandby(fromSvc.getProxy());
-      // We should try to fence if we failed or it was forced
-      tryFence = forceFence ? true : false;
-    } catch (ServiceFailedException sfe) {
-      LOG.warn("Unable to make " + fromSvc + " standby (" +
-          sfe.getMessage() + ")");
-    } catch (IOException ioe) {
-      LOG.warn("Unable to make " + fromSvc +
-          " standby (unable to connect)", ioe);
+    
+    if (tryGracefulFence(new Configuration(), fromSvc)) {
+      tryFence = forceFence;
     }
 
     // Fence fromSvc if it's required or forced by the user
