@@ -53,7 +53,7 @@ public class TaskCleanerImpl extends AbstractService implements TaskCleaner {
     ThreadFactory tf = new ThreadFactoryBuilder()
       .setNameFormat("TaskCleaner #%d")
       .build();
-    launcherPool = new ThreadPoolExecutor(1, 5, 1, 
+    launcherPool = new ThreadPoolExecutor(5, 5, 1, 
         TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>(), tf);
     eventHandlingThread = new Thread(new Runnable() {
       @Override

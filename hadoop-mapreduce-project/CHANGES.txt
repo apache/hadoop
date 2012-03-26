@@ -261,6 +261,8 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-4006. History server container log web UI sometimes combines
     stderr/stdout/syslog contents together (Siddharth Seth via tgraves)
 
+    MAPREDUCE-4061. RM only has 1 AM launcher thread (tgraves via bobby)
+
 Release 0.23.1 - 2012-02-17
 
   NEW FEATURES
