@@ -357,4 +357,19 @@ public class TestSafeMode {
     assertEquals("", cluster.getNamesystem().getSafemode());
   }
 
+  /*
+   * Tests some utility methods that surround the SafeMode's state.
+   * @throws IOException when there's an issue connecting to the test DFS.
+   */
+  public void testSafeModeUtils() throws IOException {
+    dfs = (DistributedFileSystem)cluster.getFileSystem();
+
+    // Enter safemode.
+    dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    assertTrue("State was expected to be in safemode.", dfs.isInSafeMode());
+
+    // Exit safemode.
+    dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+    assertFalse("State was expected to be out of safemode.", dfs.isInSafeMode());
+  }
 }
