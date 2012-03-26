@@ -39,10 +39,12 @@ import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolumeSet;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
@@ -65,10 +67,10 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
  * 
  * Note the synchronization is coarse grained - it is at each method. 
  */
-public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
-  static class Factory extends FSDatasetInterface.Factory<SimulatedFSDataset> {
+public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
+  static class Factory extends FsDatasetSpi.Factory<SimulatedFSDataset> {
     @Override
-    public SimulatedFSDataset createFSDatasetInterface(DataNode datanode,
+    public SimulatedFSDataset newInstance(DataNode datanode,
         DataStorage storage, Configuration conf) throws IOException {
       return new SimulatedFSDataset(datanode, storage, conf);
     }
@@ -427,7 +429,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return map;
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized void finalizeBlock(ExtendedBlock b) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
@@ -437,7 +439,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     binfo.finalizeBlock(b.getBlockPoolId(), b.getNumBytes());
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized void unfinalizeBlock(ExtendedBlock b) {
     if (isValidRbw(b)) {
       blockMap.remove(b.getLocalBlock());
@@ -483,7 +485,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return storage.getNumFailedVolumes();
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized long getLength(ExtendedBlock b) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
@@ -513,7 +515,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return r == null? "null": r.toString();
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public Block getStoredBlock(String bpid, long blkid) throws IOException {
     final Map<Block, BInfo> map = blockMap.get(bpid);
     if (map != null) {
@@ -526,7 +528,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return null;
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized void invalidate(String bpid, Block[] invalidBlks)
       throws IOException {
     boolean error = false;
@@ -557,12 +559,12 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return map == null? null: map.get(b.getLocalBlock());
   }
 
-  @Override // {@link FSDatasetInterface}
+  @Override // {@link FsDatasetSpi}
   public boolean contains(ExtendedBlock block) {
     return getBInfo(block) != null;
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized boolean isValidBlock(ExtendedBlock b) {
     final BInfo binfo = getBInfo(b);
     return binfo != null && binfo.isFinalized();
@@ -580,7 +582,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return getStorageInfo();
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized ReplicaInPipelineInterface append(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
@@ -593,7 +595,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return binfo;
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized ReplicaInPipelineInterface recoverAppend(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
@@ -611,7 +613,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return binfo;
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public void recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen)
       throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
@@ -628,7 +630,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     map.put(binfo.theBlock, binfo);
   }
   
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized ReplicaInPipelineInterface recoverRbw(ExtendedBlock b,
       long newGS, long minBytesRcvd, long maxBytesRcvd) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
@@ -647,13 +649,13 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return binfo;
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized ReplicaInPipelineInterface createRbw(ExtendedBlock b) 
   throws IOException {
     return createTemporary(b);
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized ReplicaInPipelineInterface createTemporary(ExtendedBlock b)
       throws IOException {
     if (isValidBlock(b)) {
@@ -681,7 +683,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     return binfo.getIStream();
   }
   
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized InputStream getBlockInputStream(ExtendedBlock b,
       long seekOffset) throws IOException {
     InputStream result = getBlockInputStream(b);
@@ -690,13 +692,13 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
   }
 
   /** Not supported */
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public ReplicaInputStreams getTmpInputStreams(ExtendedBlock b, long blkoff,
       long ckoff) throws IOException {
     throw new IOException("Not supported");
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized LengthInputStream getMetaDataInputStream(ExtendedBlock b
       ) throws IOException {
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
@@ -717,7 +719,7 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
     // nothing to check for simulated data set
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public synchronized void adjustCrcChannelPosition(ExtendedBlock b,
                                               ReplicaOutputStreams stream, 
                                               int checksumSize)
@@ -902,32 +904,32 @@ public class SimulatedFSDataset implements FSDatasetInterface<FsVolumeSpi> {
         binfo.isFinalized()?ReplicaState.FINALIZED : ReplicaState.RBW);
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public String updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                         long recoveryId,
                                         long newlength) {
     return storageId;
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public long getReplicaVisibleLength(ExtendedBlock block) {
     return block.getNumBytes();
   }
 
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public void addBlockPool(String bpid, Configuration conf) {
     Map<Block, BInfo> map = new HashMap<Block, BInfo>();
     blockMap.put(bpid, map);
     storage.addBlockPool(bpid);
   }
   
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public void shutdownBlockPool(String bpid) {
     blockMap.remove(bpid);
     storage.removeBlockPool(bpid);
   }
   
-  @Override // FSDatasetInterface
+  @Override // FsDatasetSpi
   public void deleteBlockPool(String bpid, boolean force) {
      return;
   }

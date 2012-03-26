@@ -165,6 +165,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3071. haadmin failover command does not provide enough detail when
     target NN is not ready to be active. (todd)
 
+    HDFS-3089. Move FSDatasetInterface and the related classes to a package.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
