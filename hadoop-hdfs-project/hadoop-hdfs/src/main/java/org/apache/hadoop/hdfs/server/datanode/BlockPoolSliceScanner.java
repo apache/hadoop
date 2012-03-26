@@ -44,9 +44,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 
@@ -74,7 +72,7 @@ class BlockPoolSliceScanner {
   private final AtomicLong lastScanTime = new AtomicLong();
 
   private final DataNode datanode;
-  private final FsDatasetSpi<? extends FsVolumeSpi> dataset;
+  private final FSDatasetInterface<? extends FsVolumeSpi> dataset;
   
   private final SortedSet<BlockScanInfo> blockInfoSet
       = new TreeSet<BlockScanInfo>();
@@ -136,7 +134,8 @@ class BlockPoolSliceScanner {
   }
   
   BlockPoolSliceScanner(String bpid, DataNode datanode,
-      FsDatasetSpi<? extends FsVolumeSpi> dataset, Configuration conf) {
+      FSDatasetInterface<? extends FsVolumeSpi> dataset,
+      Configuration conf) {
     this.datanode = datanode;
     this.dataset = dataset;
     this.blockPoolId  = bpid;
