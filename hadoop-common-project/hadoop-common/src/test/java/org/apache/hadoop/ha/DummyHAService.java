@@ -30,10 +30,12 @@ import org.mockito.Mockito;
  * a mock implementation.
  */
 class DummyHAService extends HAServiceTarget {
-  HAServiceState state;
+  volatile HAServiceState state;
   HAServiceProtocol proxy;
   NodeFencer fencer;
   InetSocketAddress address;
+  boolean isHealthy = true;
+  boolean actUnreachable = false;
 
   DummyHAService(HAServiceState state, InetSocketAddress address) {
     this.state = state;
@@ -47,27 +49,40 @@ class DummyHAService extends HAServiceTarget {
       @Override
       public void monitorHealth() throws HealthCheckFailedException,
           AccessControlException, IOException {
+        checkUnreachable();
+        if (!isHealthy) {
+          throw new HealthCheckFailedException("not healthy");
+        }
       }
 
       @Override
       public void transitionToActive() throws ServiceFailedException,
           AccessControlException, IOException {
+        checkUnreachable();
         state = HAServiceState.ACTIVE;
       }
 
       @Override
       public void transitionToStandby() throws ServiceFailedException,
           AccessControlException, IOException {
+        checkUnreachable();
         state = HAServiceState.STANDBY;
       }
 
       @Override
       public HAServiceStatus getServiceStatus() throws IOException {
+        checkUnreachable();
         HAServiceStatus ret = new HAServiceStatus(state);
         if (state == HAServiceState.STANDBY) {
           ret.setReadyToBecomeActive();
         }
         return ret;
+      }
+
+      private void checkUnreachable() throws IOException {
+        if (actUnreachable) {
+          throw new IOException("Connection refused (fake)");
+        }
       }
     });
   }
