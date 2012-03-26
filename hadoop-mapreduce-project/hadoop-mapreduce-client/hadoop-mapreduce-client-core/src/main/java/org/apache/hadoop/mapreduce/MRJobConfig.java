@@ -332,6 +332,8 @@ public interface MRJobConfig {
   /** The staging directory for map reduce.*/
   public static final String MR_AM_STAGING_DIR = 
     MR_AM_PREFIX+"staging-dir";
+  public static final String DEFAULT_MR_AM_STAGING_DIR = 
+    "/tmp/hadoop-yarn/staging";
 
   /** The amount of memory the MR app master needs.*/
   public static final String MR_AM_VMEM_MB =

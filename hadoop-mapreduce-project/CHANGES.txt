@@ -80,6 +80,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3992. Reduce fetcher doesn't verify HTTP status code of response
     (todd)
 
+    MAPREDUCE-4066. Use default value when fetching MR_AM_STAGING_DIR
+    (xieguiming via harsh)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
