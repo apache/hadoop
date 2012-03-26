@@ -16,30 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
+package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.event.AbstractEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
-//TODO yarn.api.records.NodeState is a clone of RMNodeState made for MR-3353. 
-// In a subsequent patch RMNodeState should be replaced with NodeState
-public enum RMNodeState {
-  NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST, REBOOTED;
-  
-  public static NodeState toNodeState(RMNodeState state) {
-    switch(state) {
-    case NEW:
-      return NodeState.NEW;
-    case RUNNING:
-      return NodeState.RUNNING;
-    case UNHEALTHY:
-      return NodeState.UNHEALTHY;
-    case DECOMMISSIONED:
-      return NodeState.DECOMMISSIONED;
-    case LOST:
-      return NodeState.LOST;
-    case REBOOTED:
-      return NodeState.REBOOTED;
-    }
-    return null;
+public class NodesListManagerEvent extends
+    AbstractEvent<NodesListManagerEventType> {
+  private final RMNode node;
+
+  public NodesListManagerEvent(NodesListManagerEventType type, RMNode node) {
+    super(type);
+    this.node = node;
   }
-};
+
+  public RMNode getNode() {
+    return node;
+  }
+}

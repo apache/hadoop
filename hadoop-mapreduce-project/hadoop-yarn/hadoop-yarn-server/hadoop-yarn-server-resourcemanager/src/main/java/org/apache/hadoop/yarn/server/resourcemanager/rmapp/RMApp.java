@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
+import java.util.Collection;
+
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -27,6 +29,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 /**
  * The read interface to an Application in the ResourceManager. Take a
@@ -108,6 +111,16 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the {@link ApplicationReport} detailing the status of the application.
    */
   ApplicationReport createAndGetApplicationReport(boolean allowAccess);
+  
+  /**
+   * To receive the collection of all {@link RMNode}s whose updates have been
+   * received by the RMApp. Updates can be node becoming lost or becoming
+   * healthy etc. The method clears the information from the {@link RMApp}. So
+   * each call to this method gives the delta from the previous call.
+   * @param updatedNodes Collection into which the updates are transferred
+   * @return the number of nodes added to the {@link Collection}
+   */
+  int pullRMNodeUpdates(Collection<RMNode> updatedNodes);
 
   /**
    * Application level metadata is stored in {@link ApplicationStore} which

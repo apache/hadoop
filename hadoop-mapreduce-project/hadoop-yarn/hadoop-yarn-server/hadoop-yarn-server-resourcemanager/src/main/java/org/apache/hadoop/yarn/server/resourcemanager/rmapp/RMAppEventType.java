@@ -29,5 +29,6 @@ public enum RMAppEventType {
   ATTEMPT_REGISTERED,
   ATTEMPT_FINISHED, // Will send the final state
   ATTEMPT_FAILED,
-  ATTEMPT_KILLED
+  ATTEMPT_KILLED,
+  NODE_UPDATE
 }
