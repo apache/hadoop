@@ -213,9 +213,9 @@ public class MRApps extends Apps {
   
   private static final String STAGING_CONSTANT = ".staging";
   public static Path getStagingAreaDir(Configuration conf, String user) {
-    return new Path(
-        conf.get(MRJobConfig.MR_AM_STAGING_DIR) + 
-        Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
+    return new Path(conf.get(MRJobConfig.MR_AM_STAGING_DIR,
+        MRJobConfig.DEFAULT_MR_AM_STAGING_DIR)
+        + Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
   }
 
   public static String getJobFile(Configuration conf, String user, 
