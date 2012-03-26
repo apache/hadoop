@@ -57,10 +57,14 @@ public class GetImageServlet extends HttpServlet {
 
   private static final Log LOG = LogFactory.getLog(GetImageServlet.class);
 
+  public final static String CONTENT_DISPOSITION = "Content-Disposition";
+  public final static String HADOOP_IMAGE_EDITS_HEADER = "X-Image-Edits-Name";
+  
   private static final String TXID_PARAM = "txid";
   private static final String START_TXID_PARAM = "startTxId";
   private static final String END_TXID_PARAM = "endTxId";
   private static final String STORAGEINFO_PARAM = "storageInfo";
+  private static final String LATEST_FSIMAGE_VALUE = "latest";
   
   private static Set<Long> currentlyDownloadingCheckpoints =
     Collections.<Long>synchronizedSet(new HashSet<Long>());
@@ -101,10 +105,18 @@ public class GetImageServlet extends HttpServlet {
         public Void run() throws Exception {
           if (parsedParams.isGetImage()) {
             long txid = parsedParams.getTxId();
-            File imageFile = nnImage.getStorage().getFsImageName(txid);
-            if (imageFile == null) {
-              throw new IOException("Could not find image with txid " + txid);
+            File imageFile = null;
+            String errorMessage = "Could not find image";
+            if (parsedParams.shouldFetchLatest()) {
+              imageFile = nnImage.getStorage().getHighestFsImageName();
+            } else {
+              errorMessage += " with txid " + txid;
+              imageFile = nnImage.getStorage().getFsImageName(txid);
             }
+            if (imageFile == null) {
+              throw new IOException(errorMessage);
+            }
+            setFileNameHeaders(response, imageFile);
             setVerificationHeaders(response, imageFile);
             // send fsImage
             TransferFsImage.getFileServer(response.getOutputStream(), imageFile,
@@ -117,6 +129,7 @@ public class GetImageServlet extends HttpServlet {
                 .findFinalizedEditsFile(startTxId, endTxId);
             setVerificationHeaders(response, editFile);
             
+            setFileNameHeaders(response, editFile);
             // send edits
             TransferFsImage.getFileServer(response.getOutputStream(), editFile,
                 getThrottler(conf));
@@ -182,6 +195,13 @@ public class GetImageServlet extends HttpServlet {
     }
   }
   
+  private static void setFileNameHeaders(HttpServletResponse response,
+      File file) {
+    response.setHeader(CONTENT_DISPOSITION, "attachment; filename=" +
+        file.getName());
+    response.setHeader(HADOOP_IMAGE_EDITS_HEADER, file.getName());
+  }
+  
   /**
    * Construct a throttler from conf
    * @param conf configuration
@@ -198,7 +218,6 @@ public class GetImageServlet extends HttpServlet {
     return throttler;
   }
   
-  @SuppressWarnings("deprecation")
   protected boolean isValidRequestor(String remoteUser, Configuration conf)
       throws IOException {
     if(remoteUser == null) { // This really shouldn't happen...
@@ -243,13 +262,16 @@ public class GetImageServlet extends HttpServlet {
       response.setHeader(TransferFsImage.MD5_HEADER, hash.toString());
     }
   }
+  
+  static String getParamStringForMostRecentImage() {
+    return "getimage=1&" + TXID_PARAM + "=" + LATEST_FSIMAGE_VALUE;
+  }
 
   static String getParamStringForImage(long txid,
       StorageInfo remoteStorageInfo) {
     return "getimage=1&" + TXID_PARAM + "=" + txid
       + "&" + STORAGEINFO_PARAM + "=" +
       remoteStorageInfo.toColonSeparatedString();
-    
   }
 
   static String getParamStringForLog(RemoteEditLog log,
@@ -280,6 +302,7 @@ public class GetImageServlet extends HttpServlet {
     private String machineName;
     private long startTxId, endTxId, txId;
     private String storageInfoString;
+    private boolean fetchLatest;
 
     /**
      * @param request the object from which this servlet reads the url contents
@@ -291,7 +314,7 @@ public class GetImageServlet extends HttpServlet {
                            ) throws IOException {
       @SuppressWarnings("unchecked")
       Map<String, String[]> pmap = request.getParameterMap();
-      isGetImage = isGetEdit = isPutImage = false;
+      isGetImage = isGetEdit = isPutImage = fetchLatest = false;
       remoteport = 0;
       machineName = null;
 
@@ -300,7 +323,15 @@ public class GetImageServlet extends HttpServlet {
         String[] val = entry.getValue();
         if (key.equals("getimage")) { 
           isGetImage = true;
-          txId = parseLongParam(request, TXID_PARAM);
+          try {
+            txId = parseLongParam(request, TXID_PARAM);
+          } catch (NumberFormatException nfe) {
+            if (request.getParameter(TXID_PARAM).equals(LATEST_FSIMAGE_VALUE)) {
+              fetchLatest = true;
+            } else {
+              throw nfe;
+            }
+          }
         } else if (key.equals("getedit")) { 
           isGetEdit = true;
           startTxId = parseLongParam(request, START_TXID_PARAM);
@@ -359,6 +390,10 @@ public class GetImageServlet extends HttpServlet {
         throw new IOException ("MachineName and port undefined");
       }
       return machineName + ":" + remoteport;
+    }
+    
+    boolean shouldFetchLatest() {
+      return fetchLatest;
     }
     
     private static long parseLongParam(HttpServletRequest request, String param)

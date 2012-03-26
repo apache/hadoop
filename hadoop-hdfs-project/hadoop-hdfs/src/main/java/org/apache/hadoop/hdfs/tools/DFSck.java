@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
-import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -32,14 +31,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -226,20 +222,7 @@ public class DFSck extends Configured implements Tool {
       return null;
     }
     
-    // force client address resolution.
-    fs.exists(new Path("/"));
-    
-    // Derive the nameservice ID from the filesystem connection. The URI may
-    // have been provided by a human, the server name may be aliased, or there
-    // may be multiple possible actual addresses (e.g. in an HA setup) so
-    // compare InetSocketAddresses instead of URI strings, and test against both
-    // possible configurations of RPC address (DFS_NAMENODE_RPC_ADDRESS_KEY and
-    // DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY).
-    DistributedFileSystem dfs = (DistributedFileSystem) fs;
-    DFSClient dfsClient = dfs.getClient();
-    InetSocketAddress addr = RPC.getServerAddress(dfsClient.getNamenode());
-    
-    return DFSUtil.getInfoServer(addr, conf, true);
+    return DFSUtil.getInfoServer(HAUtil.getAddressOfActive(fs), conf, true);
   }
 
   private int doWork(final String[] args) throws IOException {

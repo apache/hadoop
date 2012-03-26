@@ -55,6 +55,9 @@ Release 0.23.3 - UNRELEASED
     Suresh Srinivas, Jitendra Nath Pandey, Hari Mankude, Brandon Li, Sanjay
     Radia, Mingjie Lai, and Gregory Chanan
 
+    HDFS-2941. Add an administrative command to download a copy of the fsimage
+    from the NN. (atm)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
