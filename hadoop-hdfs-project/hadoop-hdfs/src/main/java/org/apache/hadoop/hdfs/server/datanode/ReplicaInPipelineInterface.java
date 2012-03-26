@@ -25,7 +25,7 @@ import org.apache.hadoop.util.DataChecksum;
 /** 
  * This defines the interface of a replica in Pipeline that's being written to
  */
-interface ReplicaInPipelineInterface extends Replica {
+public interface ReplicaInPipelineInterface extends Replica {
   /**
    * Set the number of bytes received
    * @param bytesReceived number of bytes received

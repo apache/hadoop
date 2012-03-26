@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.Daemon;
 
@@ -55,7 +56,7 @@ public class DirectoryScanner implements Runnable {
   private static final Log LOG = LogFactory.getLog(DirectoryScanner.class);
 
   private final DataNode datanode;
-  private final FSDatasetInterface<?> dataset;
+  private final FsDatasetSpi<?> dataset;
   private final ExecutorService reportCompileThreadPool;
   private final ScheduledExecutorService masterThread;
   private final long scanPeriodMsecs;
@@ -219,7 +220,7 @@ public class DirectoryScanner implements Runnable {
     }
   }
 
-  DirectoryScanner(DataNode dn, FSDatasetInterface<?> dataset, Configuration conf) {
+  DirectoryScanner(DataNode dn, FsDatasetSpi<?> dataset, Configuration conf) {
     this.datanode = dn;
     this.dataset = dataset;
     int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
@@ -411,7 +412,7 @@ public class DirectoryScanner implements Runnable {
   }
 
   /** Is the given volume still valid in the dataset? */
-  private static boolean isValid(final FSDatasetInterface<?> dataset,
+  private static boolean isValid(final FsDatasetSpi<?> dataset,
       final FsVolumeSpi volume) {
     for (FsVolumeSpi vol : dataset.getVolumes()) {
       if (vol == volume) {

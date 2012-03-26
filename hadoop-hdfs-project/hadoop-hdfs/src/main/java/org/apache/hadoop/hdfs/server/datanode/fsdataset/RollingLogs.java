@@ -15,16 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 
 /**
- * Rolling logs consist of a current log and a previous log.
- * When the roll operation is invoked, current is rolled to previous
- * and previous is deleted.
+ * Rolling logs consist of a current log and a set of previous logs.
+ *
  * The implementation should support a single appender and multiple readers.
  */
 public interface RollingLogs {
@@ -57,7 +56,7 @@ public interface RollingLogs {
   public Appender appender();
 
   /**
-   * Roll current to previous and delete the previous.
+   * Roll current to previous.
    *
    * @return true if the rolling succeeded.
    *   When it returns false, it is not equivalent to an error. 
