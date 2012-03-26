@@ -172,6 +172,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-3992. Reduce fetcher doesn't verify HTTP status code of response
     (todd)
 
+    HADOOP-8159. NetworkTopology: getLeaf should check for invalid topologies.
+    (Colin Patrick McCabe via eli)    
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES
