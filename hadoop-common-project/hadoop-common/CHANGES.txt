@@ -282,9 +282,6 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8159. NetworkTopology: getLeaf should check for invalid topologies.
     (Colin Patrick McCabe via eli)
 
-    HDFS-3129. NetworkTopology: add test that getLeaf should check for
-    invalid topologies (Colin Patrick McCabe via eli)
-
     HADOOP-8204. TestHealthMonitor fails occasionally (todd)
 
   BREAKDOWN OF HADOOP-7454 SUBTASKS
