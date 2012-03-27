@@ -11,6 +11,8 @@ Trunk (unreleased changes)
     HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
     via jitendra)
 
+    HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
