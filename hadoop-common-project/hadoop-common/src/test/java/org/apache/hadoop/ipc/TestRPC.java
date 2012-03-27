@@ -33,6 +33,7 @@ import java.util.Arrays;
 import javax.net.SocketFactory;
 
 import org.apache.commons.logging.*;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.UTF8;
@@ -584,9 +585,10 @@ public class TestRPC {
    * Test stopping a non-registered proxy
    * @throws Exception
    */
-  @Test
+  @Test(expected=HadoopIllegalArgumentException.class)
   public void testStopNonRegisteredProxy() throws Exception {
     RPC.stopProxy(mock(TestProtocol.class));
+    RPC.stopProxy(null);
   }
   
   @Test

@@ -178,6 +178,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8204. TestHealthMonitor fails occasionally (todd)
 
+    HADOOP-8202. RPC stopProxy() does not close the proxy correctly.
+    (Hari Mankude via suresh)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
