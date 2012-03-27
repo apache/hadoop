@@ -58,6 +58,8 @@ Trunk (unreleased changes)
     HDFS-309. FSEditLog should log progress during replay. (Sho Shimauchi
     via todd)
 
+    HDFS-3131. Improve TestStorageRestore. (Brandon Li via atm)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
