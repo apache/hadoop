@@ -117,6 +117,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8212. Improve ActiveStandbyElector's behavior when session expires
     (todd)
 
+    HADOOP-8216. Address log4j.properties inconsistencies btw main and
+    template dirs. (Patrick Hunt via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
