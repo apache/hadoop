@@ -39,6 +39,7 @@ import javax.net.SocketFactory;
 
 import org.apache.commons.logging.*;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
@@ -572,38 +573,41 @@ public class RPC {
   }
 
   /**
-   * Stop this proxy and release its invoker's resource by getting the
-   * invocation handler for the given proxy object and calling
-   * {@link Closeable#close} if that invocation handler implements
-   * {@link Closeable}.
+   * Stop the proxy. Proxy must either implement {@link Closeable} or must have
+   * associated {@link RpcInvocationHandler}.
    * 
-   * @param proxy the RPC proxy object to be stopped
+   * @param proxy
+   *          the RPC proxy object to be stopped
+   * @throws HadoopIllegalArgumentException
+   *           if the proxy does not implement {@link Closeable} interface or
+   *           does not have closeable {@link InvocationHandler}
    */
   public static void stopProxy(Object proxy) {
-    if (proxy instanceof ProtocolTranslator) {
-      RPC.stopProxy(((ProtocolTranslator)proxy)
-          .getUnderlyingProxyObject());
-      return;
+    if (proxy == null) {
+      throw new HadoopIllegalArgumentException(
+          "Cannot close proxy since it is null");
+    }
+    try {
+      if (proxy instanceof Closeable) {
+        ((Closeable) proxy).close();
+        return;
+      } else {
+        InvocationHandler handler = Proxy.getInvocationHandler(proxy);
+        if (handler instanceof Closeable) {
+          ((Closeable) handler).close();
+          return;
+        }
+      }
+    } catch (IOException e) {
+      LOG.error("Closing proxy or invocation handler caused exception", e);
+    } catch (IllegalArgumentException e) {
+      LOG.error("RPC.stopProxy called on non proxy.", e);
     }
     
-    InvocationHandler invocationHandler = null;
-    try {
-      invocationHandler = Proxy.getInvocationHandler(proxy);
-    } catch (IllegalArgumentException e) {
-      LOG.error("Tried to call RPC.stopProxy on an object that is not a proxy.", e);
-    }
-    if (proxy != null && invocationHandler != null &&
-        invocationHandler instanceof Closeable) {
-      try {
-        ((Closeable)invocationHandler).close();
-      } catch (IOException e) {
-        LOG.error("Stopping RPC invocation handler caused exception", e);
-      }
-    } else {
-      LOG.error("Could not get invocation handler " + invocationHandler +
-          " for proxy class " + (proxy == null ? null : proxy.getClass()) +
-          ", or invocation handler is not closeable.");
-    }
+    throw new HadoopIllegalArgumentException(
+        "Cannot close proxy - is not Closeable or "
+            + "does not provide closeable invocation handler "
+            + proxy.getClass());
   }
 
   /** 
