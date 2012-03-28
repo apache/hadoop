@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ha;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -33,7 +34,6 @@ import org.apache.hadoop.security.AccessControlException;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.stubbing.answers.ThrowsException;
-import org.mockito.stubbing.Answer;
 
 import static org.junit.Assert.*;
 
@@ -228,7 +228,10 @@ public class TestFailoverController {
     // Getting a proxy to a dead server will throw IOException on call,
     // not on creation of the proxy.
     HAServiceProtocol errorThrowingProxy = Mockito.mock(HAServiceProtocol.class,
-        new ThrowsException(new IOException("Could not connect to host")));
+        Mockito.withSettings()
+          .defaultAnswer(new ThrowsException(
+              new IOException("Could not connect to host")))
+          .extraInterfaces(Closeable.class));
     Mockito.doReturn(errorThrowingProxy).when(svc1).getProxy();
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());

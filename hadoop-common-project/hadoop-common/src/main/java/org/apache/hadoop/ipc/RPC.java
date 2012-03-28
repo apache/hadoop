@@ -604,6 +604,9 @@ public class RPC {
       LOG.error("RPC.stopProxy called on non proxy.", e);
     }
     
+    // If you see this error on a mock object in a unit test you're
+    // developing, make sure to use MockitoUtil.mockProtocol() to
+    // create your mock.
     throw new HadoopIllegalArgumentException(
         "Cannot close proxy - is not Closeable or "
             + "does not provide closeable invocation handler "

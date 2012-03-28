@@ -50,6 +50,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.MockitoUtil;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -57,8 +58,6 @@ import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.DescriptorProtos.EnumDescriptorProto;
 
 import static org.apache.hadoop.test.MetricsAsserts.*;
-
-import static org.mockito.Mockito.*;
 
 /** Unit tests for RPC. */
 @SuppressWarnings("deprecation")
@@ -587,8 +586,16 @@ public class TestRPC {
    */
   @Test(expected=HadoopIllegalArgumentException.class)
   public void testStopNonRegisteredProxy() throws Exception {
-    RPC.stopProxy(mock(TestProtocol.class));
     RPC.stopProxy(null);
+  }
+
+  /**
+   * Test that the mockProtocol helper returns mock proxies that can
+   * be stopped without error.
+   */
+  @Test
+  public void testStopMockObject() throws Exception {
+    RPC.stopProxy(MockitoUtil.mockProtocol(TestProtocol.class)); 
   }
   
   @Test

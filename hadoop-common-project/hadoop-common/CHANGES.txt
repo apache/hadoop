@@ -184,6 +184,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8202. RPC stopProxy() does not close the proxy correctly.
     (Hari Mankude via suresh)
 
+    HADOOP-8218. RPC.closeProxy shouldn't throw error when closing a mock
+    (todd)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
