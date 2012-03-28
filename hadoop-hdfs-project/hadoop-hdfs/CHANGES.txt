@@ -109,7 +109,7 @@ Trunk (unreleased changes)
 
     HDFS-3116. Typo in fetchdt error message. (AOE Takashi via atm)
 
-Release 0.23.3 - UNRELEASED 
+Release 2.0.0 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
 
