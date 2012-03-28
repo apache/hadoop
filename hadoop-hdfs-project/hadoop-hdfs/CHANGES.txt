@@ -258,6 +258,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3132. Fix findbugs warning on HDFS trunk. (todd)
 
+    HDFS-3156. TestDFSHAAdmin is failing post HADOOP-8202. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
