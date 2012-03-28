@@ -5070,6 +5070,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       innerinfo.put("lastContact", getLastContact(node));
       innerinfo.put("usedSpace", getDfsUsed(node));
       innerinfo.put("adminState", node.getAdminState().toString());
+      innerinfo.put("nonDfsUsedSpace", node.getNonDfsUsed());
+      innerinfo.put("capacity", node.getCapacity());
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
