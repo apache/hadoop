@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ha;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -56,50 +57,7 @@ class DummyHAService extends HAServiceTarget {
   }
   
   private HAServiceProtocol makeMock() {
-    return Mockito.spy(new HAServiceProtocol() {
-      @Override
-      public void monitorHealth() throws HealthCheckFailedException,
-          AccessControlException, IOException {
-        checkUnreachable();
-        if (!isHealthy) {
-          throw new HealthCheckFailedException("not healthy");
-        }
-      }
-
-      @Override
-      public void transitionToActive() throws ServiceFailedException,
-          AccessControlException, IOException {
-        checkUnreachable();
-        if (failToBecomeActive) {
-          throw new ServiceFailedException("injected failure");
-        }
-
-        state = HAServiceState.ACTIVE;
-      }
-
-      @Override
-      public void transitionToStandby() throws ServiceFailedException,
-          AccessControlException, IOException {
-        checkUnreachable();
-        state = HAServiceState.STANDBY;
-      }
-
-      @Override
-      public HAServiceStatus getServiceStatus() throws IOException {
-        checkUnreachable();
-        HAServiceStatus ret = new HAServiceStatus(state);
-        if (state == HAServiceState.STANDBY) {
-          ret.setReadyToBecomeActive();
-        }
-        return ret;
-      }
-
-      private void checkUnreachable() throws IOException {
-        if (actUnreachable) {
-          throw new IOException("Connection refused (fake)");
-        }
-      }
-    });
+    return Mockito.spy(new MockHAProtocolImpl());
   }
 
   @Override
@@ -129,5 +87,55 @@ class DummyHAService extends HAServiceTarget {
 
   public static HAServiceTarget getInstance(int serial) {
     return instances.get(serial - 1);
+  }
+  
+  private class MockHAProtocolImpl implements
+      HAServiceProtocol, Closeable {
+    @Override
+    public void monitorHealth() throws HealthCheckFailedException,
+        AccessControlException, IOException {
+      checkUnreachable();
+      if (!isHealthy) {
+        throw new HealthCheckFailedException("not healthy");
+      }
+    }
+    
+    @Override
+    public void transitionToActive() throws ServiceFailedException,
+        AccessControlException, IOException {
+      checkUnreachable();
+      if (failToBecomeActive) {
+        throw new ServiceFailedException("injected failure");
+      }
+    
+      state = HAServiceState.ACTIVE;
+    }
+    
+    @Override
+    public void transitionToStandby() throws ServiceFailedException,
+        AccessControlException, IOException {
+      checkUnreachable();
+      state = HAServiceState.STANDBY;
+    }
+    
+    @Override
+    public HAServiceStatus getServiceStatus() throws IOException {
+      checkUnreachable();
+      HAServiceStatus ret = new HAServiceStatus(state);
+      if (state == HAServiceState.STANDBY) {
+        ret.setReadyToBecomeActive();
+      }
+      return ret;
+    }
+    
+    private void checkUnreachable() throws IOException {
+      if (actUnreachable) {
+        throw new IOException("Connection refused (fake)");
+      }
+    }
+    
+    @Override
+    public void close() throws IOException {
+    }
   }
 }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.ha;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -195,9 +194,7 @@ class HealthMonitor {
       } catch (Throwable t) {
         LOG.warn("Transport-level exception trying to monitor health of " +
             targetToMonitor + ": " + t.getLocalizedMessage());
-        if (proxy instanceof Closeable) {
-          RPC.stopProxy(proxy);
-        }
+        RPC.stopProxy(proxy);
         proxy = null;
         enterState(State.SERVICE_NOT_RESPONDING);
         Thread.sleep(sleepAfterDisconnectMillis);
