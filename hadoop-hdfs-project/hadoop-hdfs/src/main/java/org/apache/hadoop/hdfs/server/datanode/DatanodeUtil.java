@@ -32,7 +32,7 @@ class DatanodeUtil {
 
   static final String UNLINK_BLOCK_SUFFIX = ".unlinked";
 
-  private final static String DISK_ERROR = "Possible disk error on file creation: ";
+  private static final String DISK_ERROR = "Possible disk error: ";
 
   /** Get the cause of an I/O exception if caused by a possible disk error
    * @param ioe an I/O exception

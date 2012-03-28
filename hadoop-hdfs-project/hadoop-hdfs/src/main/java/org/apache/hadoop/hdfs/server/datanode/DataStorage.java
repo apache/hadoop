@@ -760,8 +760,8 @@ public class DataStorage extends Storage {
   /**
    * Add bpStorage into bpStorageMap
    */
-  private void addBlockPoolStorage(String bpID, BlockPoolSliceStorage bpStorage)
-      throws IOException {
+  private void addBlockPoolStorage(String bpID, BlockPoolSliceStorage bpStorage
+      ) {
     if (!this.bpStorageMap.containsKey(bpID)) {
       this.bpStorageMap.put(bpID, bpStorage);
     }

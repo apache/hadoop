@@ -175,6 +175,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3129. NetworkTopology: add test that getLeaf should check for
     invalid topologies. (Colin Patrick McCabe via eli)
 
+    HDFS-3155. Clean up FSDataset implemenation related code.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

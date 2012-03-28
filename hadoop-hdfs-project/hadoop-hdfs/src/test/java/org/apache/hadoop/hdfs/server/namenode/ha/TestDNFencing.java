@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -47,7 +47,6 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSInodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -61,7 +60,6 @@ import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -72,9 +70,7 @@ import com.google.common.collect.Lists;
 
 public class TestDNFencing {
   
-  protected static final Log LOG = LogFactory.getLog(
-      TestDNFencing.class);
-  private static final String TEST_FILE_DATA = "hello highly available world";
+  protected static final Log LOG = LogFactory.getLog(TestDNFencing.class);
   private static final String TEST_FILE = "/testStandbyIsHot";
   private static final Path TEST_FILE_PATH = new Path(TEST_FILE);
   private static final int SMALL_BLOCK = 1024;
@@ -497,7 +493,7 @@ public class TestDNFencing {
 
       DataNode dn = cluster.getDataNodes().get(0);
       DatanodeProtocolClientSideTranslatorPB spy =
-        DataNodeAdapter.spyOnBposToNN(dn, nn2);
+        DataNodeTestUtils.spyOnBposToNN(dn, nn2);
       
       Mockito.doAnswer(delayer)
         .when(spy).blockReport(

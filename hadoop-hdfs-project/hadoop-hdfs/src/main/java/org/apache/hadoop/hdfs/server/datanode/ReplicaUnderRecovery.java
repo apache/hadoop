@@ -86,14 +86,6 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   ReplicaInfo getOriginalReplica() {
     return original;
   }
-  
-  /**
-   * Get the original replica's state
-   * @return the original replica's state
-   */
-  ReplicaState getOrignalReplicaState() {
-    return original.getState();
-  }
 
   @Override //ReplicaInfo
   boolean isUnlinked() {
@@ -170,6 +162,6 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   ReplicaRecoveryInfo createInfo() {
     return new ReplicaRecoveryInfo(original.getBlockId(), 
         original.getBytesOnDisk(), original.getGenerationStamp(),
-        getOrignalReplicaState()); 
+        original.getState()); 
   }
 }

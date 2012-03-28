@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -96,7 +96,7 @@ public abstract class HATestUtil {
       @Override
       public Boolean get() {
         for (DataNode dn : cluster.getDataNodes()) {
-          if (DataNodeAdapter.getPendingAsyncDeletions(dn) > 0) {
+          if (DataNodeTestUtils.getPendingAsyncDeletions(dn) > 0) {
             return false;
           }
         }

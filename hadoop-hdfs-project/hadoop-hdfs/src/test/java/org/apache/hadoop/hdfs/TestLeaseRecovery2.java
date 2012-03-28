@@ -18,8 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -454,7 +454,7 @@ public class TestLeaseRecovery2 {
     // Make sure the DNs don't send a heartbeat for a while, so the blocks
     // won't actually get completed during lease recovery.
     for (DataNode dn : cluster.getDataNodes()) {
-      DataNodeAdapter.setHeartbeatsDisabledForTests(dn, true);
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, true);
     }
     
     // set the hard limit to be 1 second 
@@ -474,7 +474,7 @@ public class TestLeaseRecovery2 {
     
     // Let the DNs send heartbeats again.
     for (DataNode dn : cluster.getDataNodes()) {
-      DataNodeAdapter.setHeartbeatsDisabledForTests(dn, false);
+      DataNodeTestUtils.setHeartbeatsDisabledForTests(dn, false);
     }
 
     cluster.waitActive();

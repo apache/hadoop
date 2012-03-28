@@ -358,9 +358,8 @@ class BlockReceiver implements Closeable {
    * This does not verify the original checksums, under the assumption
    * that they have already been validated.
    */
-  private void translateChunks( byte[] dataBuf, int dataOff, int len, 
-                             byte[] checksumBuf, int checksumOff ) 
-                             throws IOException {
+  private void translateChunks( byte[] dataBuf, int dataOff, int len,
+      byte[] checksumBuf, int checksumOff ) {
     if (len == 0) return;
     
     int numChunks = (len - 1)/bytesPerChecksum + 1;
@@ -702,7 +701,7 @@ class BlockReceiver implements Closeable {
     return lastPacketInBlock?-1:len;
   }
 
-  private void dropOsCacheBehindWriter(long offsetInBlock) throws IOException {
+  private void dropOsCacheBehindWriter(long offsetInBlock) {
     try {
       if (outFd != null &&
           offsetInBlock > lastCacheDropOffset + CACHE_DROP_LAG_BYTES) {
