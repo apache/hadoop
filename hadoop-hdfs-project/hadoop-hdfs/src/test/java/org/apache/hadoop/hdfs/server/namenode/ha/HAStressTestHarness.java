@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
@@ -83,8 +83,8 @@ public class HAStressTestHarness {
       @Override
       public void doAnAction() throws Exception {
         for (DataNode dn : cluster.getDataNodes()) {
-          DataNodeAdapter.triggerDeletionReport(dn);
-          DataNodeAdapter.triggerHeartbeat(dn);
+          DataNodeTestUtils.triggerDeletionReport(dn);
+          DataNodeTestUtils.triggerHeartbeat(dn);
         }
         for (int i = 0; i < 2; i++) {
           NameNode nn = cluster.getNameNode(i);
