@@ -135,7 +135,7 @@ public class TestGetBlocks extends TestCase {
         namenode.getBlocks(new DatanodeInfo(), 2);
     } catch(RemoteException e) {
       getException = true;
-      assertTrue(e.getMessage().contains("IllegalArgumentException"));
+      assertTrue(e.getClassName().contains("HadoopIllegalArgumentException"));
     }
     assertTrue(getException);
   }
