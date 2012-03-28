@@ -37,9 +37,9 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.StringUtils;
 
 /** 
- * DatanodeInfo represents the status of a DataNode.
- * This object is used for communication in the
- * Datanode Protocol and the Client Protocol.
+ * This class extends the primary identifier of a Datanode with ephemeral
+ * state, eg usage information, current administrative state, and the
+ * network location that is communicated to clients.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -52,12 +52,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
   protected int xceiverCount;
   protected String location = NetworkTopology.DEFAULT_RACK;
 
-  /** HostName as supplied by the datanode during registration as its 
-   * name. Namenode uses datanode IP address as the name.
-   */
+  // The FQDN of the IP associated with the Datanode's hostname
   protected String hostName = null;
   
-  // administrative states of a datanode
+  // Datanode administrative states
   public enum AdminStates {
     NORMAL("In Service"), 
     DECOMMISSION_INPROGRESS("Decommission In Progress"), 
@@ -241,12 +239,14 @@ public class DatanodeInfo extends DatanodeID implements Node {
     long nonDFSUsed = getNonDfsUsed();
     float usedPercent = getDfsUsedPercent();
     float remainingPercent = getRemainingPercent();
-    String hostName = NetUtils.getHostNameOfIP(name);
+    String lookupName = NetUtils.getHostNameOfIP(name);
 
     buffer.append("Name: "+ name);
-    if(hostName != null)
-      buffer.append(" (" + hostName + ")");
+    if (lookupName != null) {
+      buffer.append(" (" + lookupName + ")");
+    }
     buffer.append("\n");
+    buffer.append("Hostname: " + getHostName() + "\n");
 
     if (!NetworkTopology.DEFAULT_RACK.equals(location)) {
       buffer.append("Rack: "+location+"\n");

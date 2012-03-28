@@ -36,6 +36,7 @@ import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.NodeFencer;
+import org.apache.hadoop.test.MockitoUtil;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -79,7 +80,7 @@ public class TestDFSHAAdmin {
 
   @Before
   public void setup() throws IOException {
-    mockProtocol = Mockito.mock(HAServiceProtocol.class);
+    mockProtocol = MockitoUtil.mockProtocol(HAServiceProtocol.class);
     tool = new DFSHAAdmin() {
 
       @Override

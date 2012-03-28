@@ -111,10 +111,6 @@ class BlockSender implements java.io.Closeable {
   
   /** the block to read from */
   private final ExtendedBlock block;
-  /** the replica to read from */
-  private final Replica replica;
-  /** The visible length of a replica. */
-  private final long replicaVisibleLength;
   /** Stream to read block data from */
   private InputStream blockIn;
   /** updated while using transferTo() */
@@ -189,17 +185,18 @@ class BlockSender implements java.io.Closeable {
       this.readaheadLength = datanode.getDnConf().readaheadLength;
       this.shouldDropCacheBehindRead = datanode.getDnConf().dropCacheBehindReads;
       
+      final Replica replica;
+      final long replicaVisibleLength;
       synchronized(datanode.data) { 
-        this.replica = getReplica(block, datanode);
-        this.replicaVisibleLength = replica.getVisibleLength();
+        replica = getReplica(block, datanode);
+        replicaVisibleLength = replica.getVisibleLength();
       }
       // if there is a write in progress
       ChunkChecksum chunkChecksum = null;
       if (replica instanceof ReplicaBeingWritten) {
-        long minEndOffset = startOffset + length;
-        waitForMinLength((ReplicaBeingWritten)replica, minEndOffset);
-        ReplicaInPipeline rip = (ReplicaInPipeline) replica;
-        chunkChecksum = rip.getLastChecksumAndDataLen();
+        final ReplicaBeingWritten rbw = (ReplicaBeingWritten)replica;
+        waitForMinLength(rbw, startOffset + length);
+        chunkChecksum = rbw.getLastChecksumAndDataLen();
       }
 
       if (replica.getGenerationStamp() < block.getGenerationStamp()) {

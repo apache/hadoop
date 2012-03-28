@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -45,7 +48,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
@@ -54,9 +57,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
-
 import org.apache.log4j.Level;
-
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -297,7 +298,7 @@ public class TestPipelinesFailover {
       // active.
       DataNode primaryDN = cluster.getDataNode(expectedPrimary.getIpcPort());
       DatanodeProtocolClientSideTranslatorPB nnSpy =
-          DataNodeAdapter.spyOnBposToNN(primaryDN, nn0);
+          DataNodeTestUtils.spyOnBposToNN(primaryDN, nn0);
       
       // Delay the commitBlockSynchronization call
       DelayAnswer delayer = new DelayAnswer(LOG);

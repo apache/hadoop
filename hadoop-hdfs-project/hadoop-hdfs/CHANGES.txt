@@ -109,7 +109,7 @@ Trunk (unreleased changes)
 
     HDFS-3116. Typo in fetchdt error message. (AOE Takashi via atm)
 
-Release 0.23.3 - UNRELEASED 
+Release 2.0.0 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
 
@@ -277,6 +277,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3129. NetworkTopology: add test that getLeaf should check for
     invalid topologies (Colin Patrick McCabe via eli)
 
+    HDFS-3155. Clean up FSDataset implemenation related code.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -359,6 +361,10 @@ Release 0.23.3 - UNRELEASED
     checksum but the meta data does not exist.  (Brandon Li via szetszwo)
 
     HDFS-3132. Fix findbugs warning on HDFS trunk. (todd)
+
+    HDFS-3156. TestDFSHAAdmin is failing post HADOOP-8202. (atm)
+
+    HDFS-3143. TestGetBlocks.testGetBlocks is failing. (Arpit Gupta via atm)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
@@ -868,6 +874,8 @@ Release 0.23.1 - 2012-02-17
     (Robert Joseph Evans via jitendra)
 
     HDFS-2868. Expose xceiver counts via the DataNode MXBean. (harsh)
+
+    HDFS-3139. Minor Datanode logging improvement. (eli)
 
   OPTIMIZATIONS
 

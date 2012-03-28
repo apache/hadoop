@@ -1800,7 +1800,7 @@ public class FSDataset implements FsDatasetSpi<FSDataset.FSVolume> {
       ReplicaInfo replicaInfo) throws IOException {
     FinalizedReplica newReplicaInfo = null;
     if (replicaInfo.getState() == ReplicaState.RUR &&
-       ((ReplicaUnderRecovery)replicaInfo).getOrignalReplicaState() == 
+       ((ReplicaUnderRecovery)replicaInfo).getOriginalReplica().getState() == 
          ReplicaState.FINALIZED) {
       newReplicaInfo = (FinalizedReplica)
              ((ReplicaUnderRecovery)replicaInfo).getOriginalReplica();
@@ -2036,7 +2036,7 @@ public class FSDataset implements FsDatasetSpi<FSDataset.FSVolume> {
         ReplicaState replicaState = dinfo.getState();
         if (replicaState == ReplicaState.FINALIZED || 
             (replicaState == ReplicaState.RUR && 
-                ((ReplicaUnderRecovery)dinfo).getOrignalReplicaState() == 
+                ((ReplicaUnderRecovery)dinfo).getOriginalReplica().getState() == 
                   ReplicaState.FINALIZED)) {
           v.clearPath(bpid, parent);
         }

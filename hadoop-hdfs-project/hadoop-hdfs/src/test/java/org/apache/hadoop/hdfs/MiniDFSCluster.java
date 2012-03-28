@@ -80,7 +80,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeAdapter;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
@@ -1664,7 +1663,7 @@ public class MiniDFSCluster {
   public void triggerBlockReports()
       throws IOException {
     for (DataNode dn : getDataNodes()) {
-      DataNodeAdapter.triggerBlockReport(dn);
+      DataNodeTestUtils.triggerBlockReport(dn);
     }
   }
 
@@ -1672,14 +1671,14 @@ public class MiniDFSCluster {
   public void triggerDeletionReports()
       throws IOException {
     for (DataNode dn : getDataNodes()) {
-      DataNodeAdapter.triggerDeletionReport(dn);
+      DataNodeTestUtils.triggerDeletionReport(dn);
     }
   }
 
   public void triggerHeartbeats()
       throws IOException {
     for (DataNode dn : getDataNodes()) {
-      DataNodeAdapter.triggerHeartbeat(dn);
+      DataNodeTestUtils.triggerHeartbeat(dn);
     }
   }
 
