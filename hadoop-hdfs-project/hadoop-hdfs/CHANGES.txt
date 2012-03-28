@@ -279,6 +279,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3155. Clean up FSDataset implemenation related code.  (szetszwo)
 
+    HDFS-3158. LiveNodes member of NameNodeMXBean should list non-DFS used
+    space and capacity per DN. (atm)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
