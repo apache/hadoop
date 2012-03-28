@@ -38,16 +38,13 @@ import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 
-/**************************************************
- * DatanodeDescriptor tracks stats on a given DataNode, such as
- * available storage capacity, last update time, etc., and maintains a
- * set of blocks stored on the datanode.
- *
- * This data structure is internal to the namenode. It is *not* sent
- * over-the-wire to the Client or the Datanodes. Neither is it stored
- * persistently in the fsImage.
- **************************************************/
+/**
+ * This class extends the DatanodeInfo class with ephemeral information (eg
+ * health, capacity, what blocks are associated with the Datanode) that is
+ * private to the Namenode, ie this class is not exposed to clients.
+ */
 @InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DatanodeDescriptor extends DatanodeInfo {
   
   // Stores status of decommissioning.
@@ -590,14 +587,14 @@ public class DatanodeDescriptor extends DatanodeInfo {
   }
 
   /**
-   * @return Blanacer bandwidth in bytes per second for this datanode.
+   * @return balancer bandwidth in bytes per second for this datanode
    */
   public long getBalancerBandwidth() {
     return this.bandwidth;
   }
 
   /**
-   * @param bandwidth Blanacer bandwidth in bytes per second for this datanode.
+   * @param bandwidth balancer bandwidth in bytes per second for this datanode
    */
   public void setBalancerBandwidth(long bandwidth) {
     this.bandwidth = bandwidth;

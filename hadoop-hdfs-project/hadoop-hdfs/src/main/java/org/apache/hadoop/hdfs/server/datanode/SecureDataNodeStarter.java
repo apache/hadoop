@@ -69,18 +69,19 @@ public class SecureDataNodeStarter implements Daemon {
     args = context.getArguments();
     
     // Obtain secure port for data streaming to datanode
-    InetSocketAddress socAddr = DataNode.getStreamingAddr(conf);
+    InetSocketAddress streamingAddr  = DataNode.getStreamingAddr(conf);
     int socketWriteTimeout = conf.getInt(DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
         HdfsServerConstants.WRITE_TIMEOUT);
     
     ServerSocket ss = (socketWriteTimeout > 0) ? 
         ServerSocketChannel.open().socket() : new ServerSocket();
-    ss.bind(socAddr, 0);
+    ss.bind(streamingAddr, 0);
     
     // Check that we got the port we need
-    if(ss.getLocalPort() != socAddr.getPort())
+    if (ss.getLocalPort() != streamingAddr.getPort()) {
       throw new RuntimeException("Unable to bind on specified streaming port in secure " +
-      		"context. Needed " + socAddr.getPort() + ", got " + ss.getLocalPort());
+      		"context. Needed " + streamingAddr.getPort() + ", got " + ss.getLocalPort());
+    }
 
     // Obtain secure listener for web server
     SelectChannelConnector listener = 
@@ -90,15 +91,18 @@ public class SecureDataNodeStarter implements Daemon {
     listener.setPort(infoSocAddr.getPort());
     // Open listener here in order to bind to port as root
     listener.open(); 
-    if(listener.getPort() != infoSocAddr.getPort())
+    if (listener.getPort() != infoSocAddr.getPort()) {
       throw new RuntimeException("Unable to bind on specified info port in secure " +
-          "context. Needed " + socAddr.getPort() + ", got " + ss.getLocalPort());
+          "context. Needed " + streamingAddr.getPort() + ", got " + ss.getLocalPort());
+    }
     System.err.println("Successfully obtained privileged resources (streaming port = "
         + ss + " ) (http listener port = " + listener.getConnection() +")");
     
-    if(ss.getLocalPort() >= 1023 || listener.getPort() >= 1023)
+    if (ss.getLocalPort() >= 1023 || listener.getPort() >= 1023) {
       throw new RuntimeException("Cannot start secure datanode with unprivileged ports");
-    
+    }
+    System.err.println("Opened streaming server at " + streamingAddr);
+    System.err.println("Opened info server at " + infoSocAddr);
     resources = new SecureResources(ss, listener);
   }
 
