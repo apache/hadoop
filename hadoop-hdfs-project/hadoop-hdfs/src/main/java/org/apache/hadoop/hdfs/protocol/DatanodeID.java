@@ -28,20 +28,20 @@ import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * DatanodeID is composed of the data node 
- * name (hostname:portNumber) and the data storage ID, 
- * which it currently represents.
- * 
+ * This class represents the primary identifier for a Datanode.
+ * Datanodes are identified by how they can be contacted (hostname
+ * and ports) and their storage ID, a unique number that associates
+ * the Datanodes blocks with a particular Datanode.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeID implements WritableComparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {}; 
 
-  public String name;      /// hostname:portNumber
-  public String storageID; /// unique per cluster storageID
-  protected int infoPort;     /// the port where the infoserver is running
-  public int ipcPort;     /// the port where the ipc server is running
+  public String name;       // hostname:port (data transfer port)
+  public String storageID;  // unique per cluster storageID
+  protected int infoPort;   // info server port
+  public int ipcPort;       // ipc server port
 
   /** Equivalent to DatanodeID(""). */
   public DatanodeID() {this("");}

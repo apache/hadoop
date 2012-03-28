@@ -52,7 +52,7 @@ public class TestDFSAddressConfig extends TestCase {
 
     String selfSocketAddr = dn.getSelfAddr().toString();
     System.out.println("DN Self Socket Addr == " + selfSocketAddr);
-    assertTrue(selfSocketAddr.startsWith("/127.0.0.1:"));
+    assertTrue(selfSocketAddr.contains("/127.0.0.1:"));
 
     /*-------------------------------------------------------------------------
      * Shut down the datanodes, reconfigure, and bring them back up.
@@ -78,7 +78,7 @@ public class TestDFSAddressConfig extends TestCase {
     selfSocketAddr = dn.getSelfAddr().toString();
     System.out.println("DN Self Socket Addr == " + selfSocketAddr);
     // assert that default self socket address is 127.0.0.1
-    assertTrue(selfSocketAddr.startsWith("/127.0.0.1:"));
+    assertTrue(selfSocketAddr.contains("/127.0.0.1:"));
 
     /*-------------------------------------------------------------------------
      * Shut down the datanodes, reconfigure, and bring them back up.
@@ -103,7 +103,7 @@ public class TestDFSAddressConfig extends TestCase {
     selfSocketAddr = dn.getSelfAddr().toString();
     System.out.println("DN Self Socket Addr == " + selfSocketAddr);
     // assert that default self socket address is 0.0.0.0
-    assertTrue(selfSocketAddr.startsWith("/0.0.0.0:"));
+    assertTrue(selfSocketAddr.contains("/0.0.0.0:"));
 
     cluster.shutdown();
   }
