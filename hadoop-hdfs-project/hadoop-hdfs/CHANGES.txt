@@ -617,6 +617,9 @@ Release 0.23.2 - UNRELEASED
 
     HDFS-3104. Add tests for HADOOP-8175. (Daryn Sharp via szetszwo)
 
+    HDFS-3066. Cap space usage of default log4j rolling policy.
+    (Patrick Hunt via eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
