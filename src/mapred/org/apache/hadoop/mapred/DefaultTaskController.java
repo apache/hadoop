@@ -38,6 +38,7 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.Shell;
 
 /**
  * The default implementation for controlling tasks.
@@ -125,8 +126,8 @@ public class DefaultTaskController extends TaskController {
 
       String commandFile = writeCommand(cmdLine, rawFs, p);
       rawFs.setPermission(p, TaskController.TASK_LAUNCH_SCRIPT_PERMISSION);
-      shExec = new ShellCommandExecutor(new String[]{
-          "bash", "-c", commandFile},
+      shExec = new ShellCommandExecutor(Shell.WINDOWS? new String[]{"cmd", "/c", commandFile} :
+          new String[]{"bash", "-c", commandFile},
           currentWorkDirectory);
       shExec.execute();
     } catch (Exception e) {

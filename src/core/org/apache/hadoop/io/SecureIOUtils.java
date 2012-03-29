@@ -32,6 +32,7 @@ import org.apache.hadoop.io.nativeio.Errno;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
 
 /**
  * This class provides secure APIs for opening and creating files on the local
@@ -172,6 +173,8 @@ public class SecureIOUtils {
   }
 
   private static void checkStat(File f, String owner, String expectedOwner) throws IOException {
+    if (Shell.DISABLEWINDOWS_TEMPORARILY)
+      return;
     if (expectedOwner != null &&
         !expectedOwner.equals(owner)) {
       throw new IOException(

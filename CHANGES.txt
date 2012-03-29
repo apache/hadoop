@@ -1,4 +1,13 @@
+
+
+
+
 Hadoop Change Log
+
+branch-hadoop-1-win - unreleased
+  IMPROVEMENTS
+
+    HADOOP-8223 - Initial patch for branch-1-win (David Lao via Sanjay)
 
 Release 1.1.0 - unreleased
 

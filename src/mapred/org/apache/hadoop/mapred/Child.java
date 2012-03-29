@@ -95,7 +95,8 @@ class Child {
         "; from file=" + jobTokenFile);
     
     Token<JobTokenIdentifier> jt = TokenCache.getJobToken(credentials);
-    SecurityUtil.setTokenService(jt, address);
+    if (!Shell.WINDOWS) 
+      SecurityUtil.setTokenService(jt, address);
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     current.addToken(jt);
 
@@ -209,8 +210,9 @@ class Child {
         job.setBoolean("fs.file.impl.disable.cache", false);
 
         // set the jobTokenFile into task
-        task.setJobTokenSecret(JobTokenSecretManager.
-            createSecretKey(jt.getPassword()));
+        if (!Shell.WINDOWS) 
+          task.setJobTokenSecret(JobTokenSecretManager.
+                                 createSecretKey(jt.getPassword()));
 
         // setup the child's mapred-local-dir. The child is now sandboxed and
         // can only see files down and under attemtdir only.

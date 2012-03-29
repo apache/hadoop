@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -804,7 +805,11 @@ public class TestDFSShell extends TestCase {
   }
   
   public void testFilePermissions() throws IOException {
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration();    
+    if(Shell.WINDOWS) {
+      // windows does not match the expected security semantics
+      return;
+    }
     
     //test chmod on local fs
     FileSystem fs = FileSystem.getLocal(conf);
@@ -1141,6 +1146,10 @@ public class TestDFSShell extends TestCase {
   }
 
   public void testRemoteException() throws Exception {
+    if(Shell.WINDOWS) {
+      // windows does not match the expected security semantics
+      return;
+    }
     UserGroupInformation tmpUGI = 
       UserGroupInformation.createUserForTesting("tmpname", new String[] {"mygroup"});
     MiniDFSCluster dfs = null;
@@ -1242,6 +1251,10 @@ public class TestDFSShell extends TestCase {
   }
 
   public void testLsr() throws Exception {
+    if(Shell.WINDOWS) {
+      // windows does not match the expected security semantics
+      return;
+    }
     final Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();

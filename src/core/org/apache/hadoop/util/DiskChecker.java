@@ -103,6 +103,8 @@ public class DiskChecker {
                                      FsPermission expected, FsPermission actual) 
   throws IOException {
     // Check for permissions
+    if (org.apache.hadoop.util.Shell.DISABLEWINDOWS_TEMPORARILY)
+      return;
     if (!actual.equals(expected)) {
       throw new IOException("Incorrect permission for " + dir + 
                             ", expected: " + expected + ", while actual: " + 

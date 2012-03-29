@@ -66,7 +66,7 @@ abstract class TaskRunner extends Thread {
   static final String MAPRED_ADMIN_USER_SHELL =
     "mapreduce.admin.user.shell";
   
-  static final String DEFAULT_SHELL = "/bin/bash";
+  static final String DEFAULT_SHELL = Shell.WINDOWS? "cmd" : "/bin/bash";
   
   static final String MAPRED_ADMIN_USER_HOME_DIR =
     "mapreduce.admin.user.home.dir";
@@ -239,7 +239,7 @@ abstract class TaskRunner extends Thread {
       List <String> setupCmds = new ArrayList<String>();
       for(Entry<String, String> entry : env.entrySet()) {
         StringBuffer sb = new StringBuffer();
-        sb.append("export ");
+        sb.append(Shell.WINDOWS? "set " : "export ");
         sb.append(entry.getKey());
         sb.append("=\"");
         sb.append(entry.getValue());
@@ -498,7 +498,14 @@ abstract class TaskRunner extends Thread {
 
     // if temp directory path is not absolute, prepend it with workDir.
     if (!tmpDir.isAbsolute()) {
-      tmpDir = new Path(workDir.toString(), tmp);
+      if (Shell.WINDOWS) {
+        //review minwei:
+        String acmeDir = workDir.toString();
+        if (acmeDir.charAt(0) == '"') 
+          acmeDir = acmeDir.substring(1,acmeDir.length()-1);
+        tmpDir = new Path(acmeDir+ "/tmp");
+      } else
+        tmpDir = new Path(workDir.toString(), tmp);
       if (createDir) {
         FileSystem localFs = FileSystem.getLocal(conf);
         if (!localFs.mkdirs(tmpDir) && 
@@ -780,7 +787,13 @@ abstract class TaskRunner extends Thread {
   private static void symlink(File workDir, String target, String link)
       throws IOException {
     if (link != null) {
-      link = workDir.toString() + Path.SEPARATOR + link;
+      if (Shell.WINDOWS){
+        String path = workDir.toString();
+        path = path.substring(1,path.length()-1); //strip leading and trailing quotes
+        link = path + "\\" + link;
+      }
+      else
+        link = workDir.toString() + Path.SEPARATOR + link;
       File flink = new File(link);
       if (!flink.exists()) {
         LOG.info(String.format("Creating symlink: %s <- %s", target, link));

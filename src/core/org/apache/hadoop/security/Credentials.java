@@ -40,6 +40,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Shell;
 
 /**
  * A class that provides the facilities of reading and writing 
@@ -125,6 +126,8 @@ public class Credentials implements Writable {
                                                  ) throws IOException {
     FSDataInputStream in = null;
     Credentials credentials = new Credentials();
+    if (Shell.DISABLEWINDOWS_TEMPORARILY)
+      return credentials;
     try {
       in = filename.getFileSystem(conf).open(filename);
       credentials.readTokenStorageStream(in);

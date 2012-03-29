@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.Shell;
 
 /** 
  * Process tree related operations
@@ -50,6 +51,8 @@ public class ProcessTree {
 
   public static final boolean isSetsidAvailable = isSetsidSupported();
   private static boolean isSetsidSupported() {
+    if (Shell.DISABLEWINDOWS_TEMPORARILY)
+      return false;
     ShellCommandExecutor shexec = null;
     boolean setsidSupported = true;
     try {

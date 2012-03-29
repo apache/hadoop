@@ -58,7 +58,7 @@ public class TestTrash extends TestCase {
   // check that the specified file is in Trash
   protected static void checkTrash(FileSystem fs, Path trashRoot,
       Path path) throws IOException {
-    Path p = new Path(trashRoot+"/"+ path.toUri().getPath());
+    Path p = Path.mergePaths(trashRoot, path);
     assertTrue(fs.exists(p));
   }
 

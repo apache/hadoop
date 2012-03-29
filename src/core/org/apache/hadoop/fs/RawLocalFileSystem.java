@@ -403,6 +403,8 @@ public class RawLocalFileSystem extends FileSystem {
      * We recognize if the information is already loaded by check if
      * onwer.equals("").
      */
+    static final String loginUser = System.getProperty("user.name");
+
     private boolean isPermissionLoaded() {
       return !super.getOwner().equals(""); 
     }
@@ -438,6 +440,12 @@ public class RawLocalFileSystem extends FileSystem {
 
     /// loads permissions, owner, and group from `ls -ld`
     private void loadPermissionInfo() {
+      if (Shell.DISABLEWINDOWS_TEMPORARILY){
+        setPermission(null);
+        setOwner(null);
+        setGroup(null);
+        return;
+      }
       IOException e = null;
       try {
         StringTokenizer t = new StringTokenizer(
@@ -504,8 +512,9 @@ public class RawLocalFileSystem extends FileSystem {
    * Use the command chmod to set permission.
    */
   @Override
-  public void setPermission(Path p, FsPermission permission
-                            ) throws IOException {
+  public void setPermission(Path p, FsPermission permission) throws IOException {
+    if (Shell.DISABLEWINDOWS_TEMPORARILY)
+      return;
     FileUtil.setPermission(pathToFile(p), permission);
   }
 }

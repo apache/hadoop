@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.JvmFinishedEvent;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.ProcessTree.Signal;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.Shell;
 
 class JvmManager {
 
@@ -505,7 +506,8 @@ class JvmManager {
         } finally { // handle the exit code
           // although the process has exited before we get here,
           // make sure the entire process group has also been killed.
-          kill();
+          if (!Shell.WINDOWS)
+            kill();
           updateOnJvmExit(jvmId, exitCode);
           LOG.info("JVM : " + jvmId + " exited with exit code " + exitCode
               + ". Number of tasks it ran: " + numTasksRan);
@@ -545,7 +547,7 @@ class JvmManager {
           // Check inital context before issuing a kill to prevent situations
           // where kill is issued before task is launched.
           String pidStr = jvmIdToPid.get(jvmId);
-          if (pidStr != null) {
+          if (pidStr != null && !pidStr.equals("")){ 
             String user = env.conf.getUser();
             int pid = Integer.parseInt(pidStr);
             // start a thread that will kill the process dead

@@ -82,7 +82,7 @@ public class Trash extends Configured {
   }
   
   private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {
-    return new Path(basePath + rmFilePath.toUri().getPath());
+    return Path.mergePaths(basePath, rmFilePath);
   }
 
   /** Move a file or directory to the current trash directory.

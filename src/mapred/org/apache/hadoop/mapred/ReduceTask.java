@@ -91,6 +91,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterInt;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.util.Shell;
 
 /** A Reduce task. */
 class ReduceTask extends Task {
@@ -1484,7 +1485,11 @@ class ReduceTask extends Task {
         URL url = mapOutputLoc.getOutputLocation();
         URLConnection connection = url.openConnection();
         
-        InputStream input = setupSecureConnection(mapOutputLoc, connection);
+        InputStream input;
+        if (Shell.WINDOWS)
+          input = getInputStream(connection, shuffleConnectionTimeout, shuffleReadTimeout); 
+        else 
+          input = setupSecureConnection(mapOutputLoc, connection);
  
         // Validate header from map output
         TaskAttemptID mapId = null;
@@ -1661,7 +1666,10 @@ class ReduceTask extends Task {
           // Reconnect
           try {
             connection = mapOutputLoc.getOutputLocation().openConnection();
-            input = setupSecureConnection(mapOutputLoc, connection);
+            if (Shell.WINDOWS) 
+              input = getInputStream(connection, shuffleConnectionTimeout, shuffleReadTimeout); 
+            else 
+              input = setupSecureConnection(mapOutputLoc, connection);
           } catch (IOException ioe) {
             LOG.info("Failed reopen connection to fetch map-output from " + 
                      mapOutputLoc.getHost());

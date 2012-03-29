@@ -148,6 +148,14 @@ public class Path implements Comparable {
       throw new IllegalArgumentException(e);
     }
   }
+  
+  public static Path mergePaths(Path path1, Path path2) {
+    String path2Str = path2.toUri().getPath();
+    if(path2.hasWindowsDrive(path2Str, path2Str.charAt(0)=='/')) {
+      path2Str = path2Str.substring(path2Str.indexOf(':')+1);
+    }
+    return new Path(path1 + path2Str);
+  }
 
   private String normalizePath(String path) {
     // remove double slashes & backslashes

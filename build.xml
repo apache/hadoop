@@ -1589,6 +1589,119 @@
 
   </target>
 
+  <target name="ms-package" depends="compile, jar, examples, tools-jar, jar-test"
+          description="assembles isotope artifacts for distribution">
+    <delete dir="${dist.dir}"/>
+    <mkdir dir="${dist.dir}"/>
+    <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/contrib"/>
+    <mkdir dir="${dist.dir}/docs"/>
+    <mkdir dir="${dist.dir}/docs/api"/>
+    <mkdir dir="${dist.dir}/docs/jdiff"/>
+    <mkdir dir="${dist.dir}/lib"/>
+    <mkdir dir="${dist.dir}/libexec"/>
+    <mkdir dir="${dist.dir}/sbin"/>
+    <mkdir dir="${dist.dir}/share/${name}/templates/conf"/>
+
+    <copy todir="${dist.dir}/share/${name}/templates/conf" includeEmptyDirs="false">
+      <fileset dir="${basedir}/src/packages/templates/conf">
+        <include name="*"/>
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false" flatten="true">
+      <fileset dir="${common.ivy.lib.dir}"/>
+    </copy>
+
+    <copy todir="${dist.dir}/lib" includeEmptyDirs="false">
+      <fileset dir="lib">
+        <exclude name="**/native/**"/>
+      </fileset>
+    </copy>
+
+        <exec dir="${dist.dir}" executable="sh" failonerror="true">
+          <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
+          <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
+          <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
+          <arg line="${native.src.dir}/packageNativeHadoop.sh"/>
+    </exec>
+
+    <subant target="package">
+      <!--Pass down the version in case its needed again and the target
+      distribution directory so contribs know where to install to.-->
+      <property name="version" value="${version}"/>
+      <property name="dist.dir" value="${dist.dir}"/>
+      <fileset file="${contrib.dir}/build.xml"/>
+    </subant>
+
+    <copy todir="${dist.dir}/webapps">
+      <fileset dir="${build.webapps}"/>
+    </copy>
+
+    <copy todir="${dist.dir}">
+      <fileset file="${build.dir}/${name}-*-${version}.jar"/>
+    </copy>
+
+    <copy todir="${dist.dir}/bin">
+      <fileset dir="bin"/>
+    </copy>
+
+    <copy todir="${dist.dir}/libexec">
+      <fileset dir="bin">
+        <include name="hadoop-config.sh"/>
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/conf">
+      <fileset dir="${conf.dir}" excludes="**/*.template"/>
+    </copy>
+
+    <copy file="ivy.xml" tofile="${dist.dir}/ivy.xml"/>
+
+    <copy todir="${dist.dir}/ivy">
+      <fileset dir="ivy"/>
+    </copy>
+
+    <copy todir="${dist.dir}">
+      <fileset dir=".">
+        <include name="*.txt" />
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/sbin">
+      <fileset dir="${basedir}/src/packages">
+        <include name="*.sh" />
+      </fileset>
+    </copy>
+
+    <copy todir="${dist.dir}/src" includeEmptyDirs="true">
+      <fileset dir="src" excludes="**/*.template **/docs/build/**/*"/>
+    </copy>
+
+    <copy todir="${dist.dir}/c++" includeEmptyDirs="false">
+      <fileset dir="${build.dir}/c++"/>
+    </copy>
+
+    <copy todir="${dist.dir}/" file="build.xml"/>
+
+    <copy todir="${dist.dir}/.eclipse.templates">
+      <fileset dir="${basedir}/.eclipse.templates"/>
+    </copy>
+
+    <chmod perm="ugo+x" type="file" parallel="false">
+        <fileset dir="${dist.dir}/bin"/>
+        <fileset dir="${dist.dir}/sbin"/>
+        <fileset dir="${dist.dir}/src/contrib/">
+          <include name="*/bin/*" />
+        </fileset>
+        <fileset dir="${dist.dir}/src/contrib/ec2/bin/image"/>
+    </chmod>
+    <chmod perm="ugo+x" type="file">
+        <fileset dir="${dist.dir}/src/c++/pipes/debug"/>
+    </chmod>
+
+  </target>
+
   <!-- ================================================================== -->
   <!-- Make release tarball                                               -->
   <!-- ================================================================== -->

@@ -64,13 +64,17 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
    */
   private static List<String> getUnixGroups(final String user) throws IOException {
     String result = "";
-    try {
-      result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
-    } catch (ExitCodeException e) {
-      // if we didn't get the group - just return empty list;
-      LOG.warn("got exception trying to get groups for user " + user, e);
+    if (Shell.DISABLEWINDOWS_TEMPORARILY)
+      result = "hadoopusers";
+    else {
+      try {
+        result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
+      } catch (ExitCodeException e) {
+        // if we didn't get the group - just return empty list;
+        LOG.warn("got exception trying to get groups for user " + user, e);
+      }
     }
-    
+
     StringTokenizer tokenizer = new StringTokenizer(result);
     List<String> groups = new LinkedList<String>();
     while (tokenizer.hasMoreTokens()) {

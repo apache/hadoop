@@ -481,7 +481,7 @@ public class TaskLog {
     }
   }
 
-  private static final String bashCommand = "bash";
+  private static final String bashCommand = (Shell.WINDOWS)? "cmd": "bash";
   private static final String tailCommand = "tail";
   
   /**
@@ -610,7 +610,7 @@ public class TaskLog {
      ) throws IOException {
     List<String> result = new ArrayList<String>(3);
     result.add(bashCommand);
-    result.add("-c");
+    result.add((Shell.WINDOWS)? "/c" : "-c");
     String mergedCmd = buildCommandLine(setup,
         cmd,
         stdoutFilename,
@@ -648,20 +648,21 @@ public class TaskLog {
         && !Shell.WINDOWS) {
       mergedCmd.append("exec setsid ");
     } else {
-      mergedCmd.append("exec ");
+      if (!Shell.WINDOWS)
+        mergedCmd.append("exec ");
     }
     mergedCmd.append(addCommand(cmd, true));
-    mergedCmd.append(" < /dev/null ");
+    mergedCmd.append((Shell.WINDOWS)? " < nul ":" < /dev/null ");
     if (tailLength > 0) {
       mergedCmd.append(" | ");
       mergedCmd.append(tailCommand);
-      mergedCmd.append(" -c ");
+      mergedCmd.append((Shell.WINDOWS)?" /c ":" -c ");
       mergedCmd.append(tailLength);
       mergedCmd.append(" >> ");
       mergedCmd.append(stdout);
       mergedCmd.append(" ; exit $PIPESTATUS ) 2>&1 | ");
       mergedCmd.append(tailCommand);
-      mergedCmd.append(" -c ");
+      mergedCmd.append((Shell.WINDOWS)? " /c ":" -c ");
       mergedCmd.append(tailLength);
       mergedCmd.append(" >> ");
       mergedCmd.append(stderr);
@@ -687,18 +688,30 @@ public class TaskLog {
   public static String addCommand(List<String> cmd, boolean isExecutable) 
   throws IOException {
     StringBuffer command = new StringBuffer();
+    boolean firstArg = true;
     for(String s: cmd) {
-    	command.append('\'');
+      if (!Shell.WINDOWS) {
+        command.append('\'');
+      } else {
+        if (!firstArg)
+          command.append('"');
+      }
       if (isExecutable) {
         // the executable name needs to be expressed as a shell path for the  
         // shell to find it.
-    	  command.append(FileUtil.makeShellPath(new File(s)));
+        command.append(FileUtil.makeShellPath(new File(s)));
         isExecutable = false; 
       } else {
-    	  command.append(s);
+        command.append(s);
       }
-      command.append('\'');
+      if (!Shell.WINDOWS) {
+        command.append('\'');
+      } else {
+        if (!firstArg)
+          command.append('"');
+      }
       command.append(" ");
+      firstArg = false;
     }
     return command.toString();
   }
@@ -718,7 +731,7 @@ public class TaskLog {
     String debugout = FileUtil.makeShellPath(debugoutFilename);
     List<String> result = new ArrayList<String>(3);
     result.add(bashCommand);
-    result.add("-c");
+    result.add((Shell.WINDOWS)? "/c" : "-c");
     StringBuffer mergedCmd = new StringBuffer();
     mergedCmd.append("exec ");
     boolean isExecutable = true;

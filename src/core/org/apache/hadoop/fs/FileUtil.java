@@ -399,11 +399,7 @@ public class FileUtil {
    * @throws IOException on windows, there can be problems with the subprocess
    */
   public static String makeShellPath(String filename) throws IOException {
-    if (Path.WINDOWS) {
-      return new CygPathCommand(filename).getResult();
-    } else {
-      return filename;
-    }    
+    return filename;
   }
   
   /**
@@ -538,7 +534,7 @@ public class FileUtil {
     } else {
       untarCommand.append(FileUtil.makeShellPath(inFile));
     }
-    String[] shellCmd = { "bash", "-c", untarCommand.toString() };
+    String[] shellCmd = {(Path.WINDOWS)?"cmd":"bash", (Path.WINDOWS)?"/c":"-c", untarCommand.toString() };
     ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
     shexec.execute();
     int exitcode = shexec.getExitCode();
@@ -548,6 +544,80 @@ public class FileUtil {
     }
   }
 
+  //review minwei: temp hack to copy file
+  private static void copyDirectory(String fromFileName, String toFileName)
+      throws IOException {
+
+    File fromFolder = new File(fromFileName);
+    File toFolder = new File(toFileName);
+    if (fromFolder.isFile()) {
+      copyFile(fromFileName, toFileName);
+      return;
+    }
+
+    File[] filelist = fromFolder.listFiles();
+    if (filelist == null) {
+      return;
+    }
+
+    String fromPath = fromFileName;
+    String toPath = toFileName;
+    if (!toFolder.exists())
+      toFolder.mkdirs();
+    for (int i = 0; i < filelist.length; i++) {
+      String subPath = filelist[i].getName();
+      if (filelist[i].isDirectory()) {
+        copyDirectory(fromPath + "/" + subPath, toPath + "/" + subPath);
+      } else {
+        copyFile(fromPath + "/" + subPath, toPath + "/" + subPath);
+      }
+    }
+  }
+
+  private static void copyFile(String fromFileName, String toFileName)
+      throws IOException {
+    File fromFile = new File(fromFileName);
+    File toFile = new File(toFileName);
+
+    if (!fromFile.exists())
+      throw new IOException("FileCopy: " + "no such source file: "
+                            + fromFileName);
+
+    if (fromFile.isDirectory()) {
+      copyDirectory(fromFileName, toFileName);
+      return;
+    }
+
+    if (!fromFile.canRead())
+      throw new IOException("FileCopy: " + "source file is unreadable: "
+                            + fromFileName);
+
+    InputStream from = null;
+    OutputStream to = null;
+    try {
+      from = new BufferedInputStream(new FileInputStream(fromFile));
+      to = new BufferedOutputStream(new FileOutputStream(toFile));
+      byte[] buffer = new byte[4*1024*1024];
+      int bytesRead;
+
+      while ((bytesRead = from.read(buffer)) != -1)
+        to.write(buffer, 0, bytesRead); // write
+    } finally {
+      if (from != null)
+        try {
+          from.close();
+        } catch (IOException e) {
+          ;
+        }
+      if (to != null)
+        try {
+          to.close();
+        } catch (IOException e) {
+          ;
+        }
+    }
+  }
+  
   /**
    * Create a soft link between a src and destination
    * only on a local disk. HDFS does not support this
@@ -556,6 +626,11 @@ public class FileUtil {
    * @return value returned by the command
    */
   public static int symLink(String target, String linkname) throws IOException{
+    if (Shell.DISABLEWINDOWS_TEMPORARILY) {
+      copyFile(target, linkname);
+      return 0;
+    }
+
     String cmd = "ln -s " + target + " " + linkname;
     Process p = Runtime.getRuntime().exec(cmd, null);
     int returnVal = -1;
@@ -608,6 +683,8 @@ public class FileUtil {
    */
   public static int chmod(String filename, String perm, boolean recursive)
                             throws IOException {
+    if (Path.WINDOWS)
+      return 0;
     StringBuffer cmdBuf = new StringBuffer();
     cmdBuf.append("chmod ");
     if (recursive) {
@@ -637,6 +714,9 @@ public class FileUtil {
    */
   public static void setPermission(File f, FsPermission permission
                                    ) throws IOException {
+    if (Shell.DISABLEWINDOWS_TEMPORARILY)
+      return;
+
     FsAction user = permission.getUserAction();
     FsAction group = permission.getGroupAction();
     FsAction other = permission.getOtherAction();

@@ -67,6 +67,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell;
 
 /*************************************************************
  * JobInProgress maintains all the info for keeping
@@ -488,7 +489,8 @@ public class JobInProgress {
       //At this point, this constructor is called in the context of an RPC, and
       //hence the "current user" is actually referring to the kerberos
       //authenticated user (if security is ON).
-      FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
+      if (!Shell.DISABLEWINDOWS_TEMPORARILY)
+        FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
     }
   }
 

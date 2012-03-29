@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.TaskTracker.LocalStorage;
 import org.apache.hadoop.util.ProcessTree.Signal;
+import org.apache.hadoop.util.Shell;
 
 /**
  * Controls initialization, finalization and clean up of tasks, and
@@ -55,7 +56,7 @@ public abstract class TaskController implements Configurable {
   
   //Name of the executable script that will contain the child
   // JVM command line. See writeCommand for details.
-  protected static final String COMMAND_FILE = "taskjvm.sh";
+  protected static final String COMMAND_FILE = Shell.WINDOWS? "taskjvm.cmd": "taskjvm.sh";
   
   protected LocalDirAllocator allocator;
   protected LocalStorage localStorage;

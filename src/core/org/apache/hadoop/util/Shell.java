@@ -45,17 +45,19 @@ abstract public class Shell {
   public final static String USER_NAME_COMMAND = "whoami";
   /** a Unix command to get the current user's groups list */
   public static String[] getGroupsCommand() {
-    return new String[]{"bash", "-c", "groups"};
+    return (WINDOWS)? new String[]{"cmd", "/c", "groups"}:
+        new String[]{"bash", "-c", "groups"};
   }
   /** a Unix command to get a given user's groups list */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
-    return new String [] {"bash", "-c", "id -Gn " + user};
+    return (WINDOWS)? new String[] {"cmd", "/c", "id -Gn " + user}:
+        new String [] {"bash", "-c", "id -Gn " + user};
   }
   /** a Unix command to get a given netgroup's user list */
   public static String[] getUsersForNetgroupCommand(final String netgroup) {
     //'groups username' command return is non-consistent across different unixes
-    return new String [] {"bash", "-c", "getent netgroup " + netgroup};
+    return (WINDOWS)? new String [] {"cmd", "/c", "getent netgroup " + netgroup}: new String [] {"bash", "-c", "getent netgroup " + netgroup};
   }
   /** a Unix command to set permission */
   public static final String SET_PERMISSION_COMMAND = "chmod";
@@ -136,6 +138,10 @@ abstract public class Shell {
   /** Set to true on Windows platforms */
   public static final boolean WINDOWS /* borrowed from Path.WINDOWS */
                 = System.getProperty("os.name").startsWith("Windows");
+
+  /* Set flag for aiding Windows porting temporarily for branch-1-win*/
+  // TODO - this needs to be fixed
+  public static final boolean DISABLEWINDOWS_TEMPORARILY = WINDOWS; 
   
   private long    interval;   // refresh interval in msec
   private long    lastTime;   // last time the command was performed

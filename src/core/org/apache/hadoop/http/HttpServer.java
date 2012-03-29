@@ -51,6 +51,7 @@ import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector.MODE;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Shell;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
@@ -201,6 +202,13 @@ public class HttpServer implements FilterContainer {
     ret.setAcceptQueueSize(128);
     ret.setResolveNames(false);
     ret.setUseDirectBuffers(false);
+    if(Shell.WINDOWS) {
+      // result of setting the SO_REUSEADDR flag is different on Windows
+      // http://msdn.microsoft.com/en-us/library/ms740621(v=vs.85).aspx
+      // without this 2 NN's can start on the same machine and listen on 
+      // the same port with indeterminate routing of incoming requests to them
+      ret.setReuseAddress(false);
+    }
     return ret;   
   }
   

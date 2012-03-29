@@ -431,7 +431,7 @@ public class UserGroupInformation {
   static UserGroupInformation getCurrentUser() throws IOException {
     AccessControlContext context = AccessController.getContext();
     Subject subject = Subject.getSubject(context);
-    return subject == null ? getLoginUser() : new UserGroupInformation(subject);
+    return subject == null ? getLoginUser() : Shell.WINDOWS? getLoginUser() : new UserGroupInformation(subject);
   }
 
   /**
