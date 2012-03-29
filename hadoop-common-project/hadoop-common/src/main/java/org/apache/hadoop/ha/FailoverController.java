@@ -54,15 +54,22 @@ public class FailoverController {
    * allow it to become active, eg because it triggers a log roll
    * so the standby can learn about new blocks and leave safemode.
    *
+   * @param from currently active service
    * @param target service to make active
    * @param forceActive ignore toSvc if it reports that it is not ready
    * @throws FailoverFailedException if we should avoid failover
    */
-  private static void preFailoverChecks(HAServiceTarget target,
+  private static void preFailoverChecks(HAServiceTarget from,
+                                        HAServiceTarget target,
                                         boolean forceActive)
       throws FailoverFailedException {
     HAServiceStatus toSvcStatus;
     HAServiceProtocol toSvc;
+
+    if (from.getAddress().equals(target.getAddress())) {
+      throw new FailoverFailedException(
+          "Can't failover a service to itself");
+    }
 
     try {
       toSvc = target.getProxy();
@@ -146,7 +153,7 @@ public class FailoverController {
       throws FailoverFailedException {
     Preconditions.checkArgument(fromSvc.getFencer() != null,
         "failover requires a fencer");
-    preFailoverChecks(toSvc, forceActive);
+    preFailoverChecks(fromSvc, toSvc, forceActive);
 
     // Try to make fromSvc standby
     boolean tryFence = true;

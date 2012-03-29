@@ -377,4 +377,31 @@ public class TestFailoverController {
     assertEquals(HAServiceState.STANDBY, svc1.state);
     assertEquals(HAServiceState.STANDBY, svc2.state);
   }
+
+  @Test
+  public void testSelfFailoverFails() throws Exception {
+    DummyHAService svc1 = new DummyHAService(HAServiceState.ACTIVE, svc1Addr);
+    DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
+    svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
+    AlwaysSucceedFencer.fenceCalled = 0;
+
+    try {
+      FailoverController.failover(svc1, svc1, false, false);
+      fail("Can't failover to yourself");
+    } catch (FailoverFailedException ffe) {
+      // Expected
+    }
+    assertEquals(0, TestNodeFencer.AlwaysSucceedFencer.fenceCalled);
+    assertEquals(HAServiceState.ACTIVE, svc1.state);
+
+    try {
+      FailoverController.failover(svc2, svc2, false, false);
+      fail("Can't failover to yourself");
+    } catch (FailoverFailedException ffe) {
+      // Expected
+    }
+    assertEquals(0, TestNodeFencer.AlwaysSucceedFencer.fenceCalled);
+    assertEquals(HAServiceState.STANDBY, svc2.state);
+  }
+
 }

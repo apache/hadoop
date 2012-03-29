@@ -336,6 +336,8 @@ Release 0.23.2 - UNRELEASED
     HADOOP-8088. User-group mapping cache incorrectly does negative caching on
     transient failures (Khiwal Lee via bobby)
 
+    HADOOP-8208. Disallow self failover. (eli)
+
 Release 0.23.1 - 2012-02-17 
 
   INCOMPATIBLE CHANGES
