@@ -120,7 +120,7 @@ export CLASSPATH=$CLASSPATH
 
 #turn security logger on the namenode
 if [ $COMMAND = "namenode" ]; then
-  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,DRFAS}"
+  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,RFAS}"
 else
   HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
 fi
