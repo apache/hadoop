@@ -33,7 +33,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertTrue;
 
-public class TestConfInCheckSpec {
+public class TestMROutputFormat {
 
   @Test
   public void testJobSubmission() throws Exception {
