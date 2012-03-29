@@ -90,7 +90,7 @@ fi
 
 # some variables
 export YARN_LOGFILE=yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.log
-export YARN_ROOT_LOGGER=${YARN_ROOT_LOGGER:-INFO,DRFA}
+export YARN_ROOT_LOGGER=${YARN_ROOT_LOGGER:-INFO,RFA}
 log=$YARN_LOG_DIR/yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.out
 pid=$YARN_PID_DIR/yarn-$YARN_IDENT_STRING-$command.pid
 

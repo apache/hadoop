@@ -135,6 +135,9 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-4043. Secret keys set in Credentials are not seen by tasks
     (Jason Lowe via bobby) 
 
+    MAPREDUCE-3989. Cap space usage of default log4j rolling policy.
+    (Patrick Hunt via eli)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3901. Modified JobHistory records in YARN to lazily load job and
