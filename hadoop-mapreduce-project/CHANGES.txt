@@ -89,6 +89,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3377. Added a unit test to ensure OutputCommitter.checkOutputSpecs 
     is called prior to copying job.xml. (Jane Chen via acmurthy) 
 
+    MAPREDUCE-4081. TestMROutputFormat.java does not compile (Jason Lowe via
+    bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
