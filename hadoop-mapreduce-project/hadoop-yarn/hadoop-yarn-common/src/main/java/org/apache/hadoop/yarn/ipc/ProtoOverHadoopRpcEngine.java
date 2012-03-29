@@ -34,21 +34,15 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DataOutputOutputStream;
-import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Client;
-import org.apache.hadoop.ipc.ProtocolMetaInfoPB;
 import org.apache.hadoop.ipc.ProtocolProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcEngine;
 import org.apache.hadoop.ipc.ClientCache;
-import org.apache.hadoop.ipc.Client.ConnectionId;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.ipc.RpcProtos.ProtoSpecificRpcRequest;
 import org.apache.hadoop.yarn.ipc.RpcProtos.ProtoSpecificRpcResponse;
@@ -79,16 +73,14 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
   }
 
   @Override
-  public ProtocolProxy<ProtocolMetaInfoPB> getProtocolMetaInfoProxy(
-      ConnectionId connId, Configuration conf, SocketFactory factory)
-      throws IOException {
-    Class<ProtocolMetaInfoPB> protocol = ProtocolMetaInfoPB.class;
-    return new ProtocolProxy<ProtocolMetaInfoPB>(protocol,
-        (ProtocolMetaInfoPB) Proxy.newProxyInstance(protocol.getClassLoader(),
-            new Class[] { protocol }, new Invoker(protocol, connId, conf,
-                factory)), false);
+  public void stopProxy(Object proxy) {
+    try {
+      ((Invoker) Proxy.getInvocationHandler(proxy)).close();
+    } catch (IOException e) {
+      LOG.warn("Error while stopping " + proxy, e);
+    }
   }
-  
+
   private static class Invoker implements InvocationHandler, Closeable {
     private Map<String, Message> returnTypes = new ConcurrentHashMap<String, Message>();
     private boolean isClosed = false;
@@ -98,13 +90,8 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
     public Invoker(Class<?> protocol, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
         int rpcTimeout) throws IOException {
-      this(protocol, Client.ConnectionId.getConnectionId(addr, protocol,
-          ticket, rpcTimeout, conf), conf, factory);
-    }
-    
-    public Invoker(Class<?> protocol, Client.ConnectionId connId,
-        Configuration conf, SocketFactory factory) {
-      this.remoteId = connId;
+      this.remoteId = Client.ConnectionId.getConnectionId(addr, protocol,
+          ticket, rpcTimeout, conf);
       this.client = CLIENTS.getClient(conf, factory,
           ProtoSpecificResponseWritable.class);
     }
@@ -216,13 +203,13 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      ((Message)message).writeDelimitedTo(
-          DataOutputOutputStream.constructOutputStream(out));
+      out.writeInt(message.toByteArray().length);
+      out.write(message.toByteArray());
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int length = ProtoUtil.readRawVarint32(in);
+      int length = in.readInt();
       byte[] bytes = new byte[length];
       in.readFully(bytes);
       message = ProtoSpecificRpcRequest.parseFrom(bytes);
@@ -244,13 +231,13 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
 
     @Override
     public void write(DataOutput out) throws IOException {
-      ((Message)message).writeDelimitedTo(
-          DataOutputOutputStream.constructOutputStream(out));      
+      out.writeInt(message.toByteArray().length);
+      out.write(message.toByteArray());
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-      int length = ProtoUtil.readRawVarint32(in);
+      int length = in.readInt();
       byte[] bytes = new byte[length];
       in.readFully(bytes);
       message = ProtoSpecificRpcResponse.parseFrom(bytes);
@@ -330,13 +317,13 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
     }
 
     @Override
-    public Writable call(RpcKind rpcKind, String protocol, 
-        Writable writableRequest, long receiveTime) throws IOException {
+    public Writable call(Class<?> protocol, Writable writableRequest,
+        long receiveTime) throws IOException {
       ProtoSpecificRequestWritable request = (ProtoSpecificRequestWritable) writableRequest;
       ProtoSpecificRpcRequest rpcRequest = request.message;
       String methodName = rpcRequest.getMethodName();
       if (verbose) {
-        log("Call: protocol=" + protocol + ", method="
+        log("Call: protocol=" + protocol.getCanonicalName() + ", method="
             + methodName);
       }
       MethodDescriptor methodDescriptor = service.getDescriptorForType()

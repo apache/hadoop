@@ -52,8 +52,7 @@ public final class HdfsServerConstants {
     UPGRADE ("-upgrade"),
     ROLLBACK("-rollback"),
     FINALIZE("-finalize"),
-    IMPORT  ("-importCheckpoint"),
-    BOOTSTRAPSTANDBY("-bootstrapStandby");
+    IMPORT  ("-importCheckpoint");
     
     private String name = null;
     

@@ -82,12 +82,10 @@
       <code>36000</code>.
       </p>
 
-      <p><code>hadoop.http.authentication.signature.secret.file</code>: The signature secret 
-      file for signing the authentication tokens. If not set a random secret is generated at 
+      <p><code>hadoop.http.authentication.signature.secret</code>: The signature secret for  
+      signing the authentication tokens. If not set a random secret is generated at 
       startup time. The same secret should be used for all nodes in the cluster, JobTracker, 
-      NameNode, DataNode and TastTracker. The default value is 
-      <code>${user.home}/hadoop-http-auth-signature-secret</code>.
-      IMPORTANT: This file should be readable only by the Unix user running the daemons.
+      NameNode, DataNode and TastTracker. The default value is a <code>hadoop</code> value.
       </p>
         
       <p><code>hadoop.http.authentication.cookie.domain</code>: The domain to use for the HTTP 
@@ -111,8 +109,7 @@
       <p><code>hadoop.http.authentication.kerberos.principal</code>: Indicates the Kerberos 
       principal to be used for HTTP endpoint when using 'kerberos' authentication.
       The principal short name must be <code>HTTP</code> per Kerberos HTTP SPENGO specification.
-      The default value is <code>HTTP/_HOST@$LOCALHOST</code>, where <code>_HOST</code> -if present-
-      is replaced with bind address of the HTTP server.
+      The default value is <code>HTTP/localhost@$LOCALHOST</code>.
       </p>
 
       <p><code>hadoop.http.authentication.kerberos.keytab</code>: Location of the keytab file 

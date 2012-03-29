@@ -34,10 +34,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.util.Daemon;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -85,9 +81,6 @@ public class LeaseManager {
   // The map stores pathnames in lexicographical order.
   //
   private SortedMap<String, Lease> sortedLeasesByPath = new TreeMap<String, Lease>();
-
-  private Daemon lmthread;
-  private volatile boolean shouldRunMonitor;
 
   LeaseManager(FSNamesystem fsnamesystem) {this.fsnamesystem = fsnamesystem;}
 
@@ -153,9 +146,6 @@ public class LeaseManager {
     Lease lease = getLease(holder);
     if (lease != null) {
       removeLease(lease, src);
-    } else {
-      LOG.warn("Removing non-existent lease! holder=" + holder +
-          " src=" + src);
     }
   }
 
@@ -197,15 +187,6 @@ public class LeaseManager {
       sortedLeases.remove(lease);
       lease.renew();
       sortedLeases.add(lease);
-    }
-  }
-
-  /**
-   * Renew all of the currently open leases.
-   */
-  synchronized void renewAllLeases() {
-    for (Lease l : leases.values()) {
-      renewLease(l);
     }
   }
 
@@ -264,13 +245,13 @@ public class LeaseManager {
       return paths.remove(src);
     }
 
-    @Override
+    /** {@inheritDoc} */
     public String toString() {
       return "[Lease.  Holder: " + holder
           + ", pendingcreates: " + paths.size() + "]";
     }
   
-    @Override
+    /** {@inheritDoc} */
     public int compareTo(Lease o) {
       Lease l1 = this;
       Lease l2 = o;
@@ -285,7 +266,7 @@ public class LeaseManager {
       }
     }
   
-    @Override
+    /** {@inheritDoc} */
     public boolean equals(Object o) {
       if (!(o instanceof Lease)) {
         return false;
@@ -298,7 +279,7 @@ public class LeaseManager {
       return false;
     }
   
-    @Override
+    /** {@inheritDoc} */
     public int hashCode() {
       return holder.hashCode();
     }
@@ -314,11 +295,6 @@ public class LeaseManager {
     void replacePath(String oldpath, String newpath) {
       paths.remove(oldpath);
       paths.add(newpath);
-    }
-    
-    @VisibleForTesting
-    long getLastUpdate() {
-      return lastUpdate;
     }
   }
 
@@ -391,18 +367,18 @@ public class LeaseManager {
 
     /** Check leases periodically. */
     public void run() {
-      for(; shouldRunMonitor && fsnamesystem.isRunning(); ) {
+      for(; fsnamesystem.isRunning(); ) {
+        fsnamesystem.writeLock();
         try {
-          fsnamesystem.writeLockInterruptibly();
-          try {
-            if (!fsnamesystem.isInSafeMode()) {
-              checkLeases();
-            }
-          } finally {
-            fsnamesystem.writeUnlock();
+          if (!fsnamesystem.isInSafeMode()) {
+            checkLeases();
           }
-  
-  
+        } finally {
+          fsnamesystem.writeUnlock();
+        }
+
+
+        try {
           Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
         } catch(InterruptedException ie) {
           if (LOG.isDebugEnabled()) {
@@ -453,44 +429,12 @@ public class LeaseManager {
     }
   }
 
-  @Override
+  /** {@inheritDoc} */
   public synchronized String toString() {
     return getClass().getSimpleName() + "= {"
         + "\n leases=" + leases
         + "\n sortedLeases=" + sortedLeases
         + "\n sortedLeasesByPath=" + sortedLeasesByPath
         + "\n}";
-  }
-
-  void startMonitor() {
-    Preconditions.checkState(lmthread == null,
-        "Lease Monitor already running");
-    shouldRunMonitor = true;
-    lmthread = new Daemon(new Monitor());
-    lmthread.start();
-  }
-  
-  void stopMonitor() {
-    if (lmthread != null) {
-      shouldRunMonitor = false;
-      try {
-        lmthread.interrupt();
-        lmthread.join(3000);
-      } catch (InterruptedException ie) {
-        LOG.warn("Encountered exception ", ie);
-      }
-      lmthread = null;
-    }
-  }
-
-  /**
-   * Trigger the currently-running Lease monitor to re-check
-   * its leases immediately. This is for use by unit tests.
-   */
-  @VisibleForTesting
-  void triggerMonitorCheckNow() {
-    Preconditions.checkState(lmthread != null,
-        "Lease monitor is not running");
-    lmthread.interrupt();
   }
 }

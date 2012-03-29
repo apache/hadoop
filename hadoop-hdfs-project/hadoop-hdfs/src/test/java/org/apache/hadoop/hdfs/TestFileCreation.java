@@ -43,7 +43,6 @@ import java.util.EnumSet;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -61,7 +60,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
@@ -91,9 +89,9 @@ public class TestFileCreation extends junit.framework.TestCase {
   public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     System.out.println("createFile: Created " + name + " with " + repl + " replica.");
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true,
+                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+                                            (short)repl, (long)blockSize);
     return stm;
   }
 
@@ -211,10 +209,8 @@ public class TestFileCreation extends junit.framework.TestCase {
       // can't check capacities for real storage since the OS file system may be changing under us.
       if (simulatedStorage) {
         DataNode dn = cluster.getDataNodes().get(0);
-        FsDatasetSpi<?> dataset = DataNodeTestUtils.getFSDataset(dn);
-        assertEquals(fileSize, dataset.getDfsUsed());
-        assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY-fileSize,
-            dataset.getRemaining());
+        assertEquals(fileSize, dn.getFSDataset().getDfsUsed());
+        assertEquals(SimulatedFSDataset.DEFAULT_CAPACITY-fileSize, dn.getFSDataset().getRemaining());
       }
     } finally {
       cluster.shutdown();
@@ -656,6 +652,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       out = createNonRecursive(fs, path, 1, createFlag);
       out.close();
       // Create a file when parent dir exists as file, should fail
+      expectedException = null;
       try {
         createNonRecursive(fs, new Path(path, "Create"), 1, createFlag);
       } catch (IOException e) {
@@ -721,7 +718,7 @@ public class TestFileCreation extends junit.framework.TestCase {
         + " replica.");
     FSDataOutputStream stm = ((DistributedFileSystem) fs).createNonRecursive(
         name, FsPermission.getDefault(), flag, fs.getConf().getInt(
-            CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096), (short) repl,  blockSize, null);
+            "io.file.buffer.size", 4096), (short) repl, (long) blockSize, null);
     return stm;
   }
   
@@ -846,8 +843,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       for(DatanodeInfo datanodeinfo: locatedblock.getLocations()) {
         DataNode datanode = cluster.getDataNode(datanodeinfo.ipcPort);
         ExtendedBlock blk = locatedblock.getBlock();
-        Block b = DataNodeTestUtils.getFSDataset(datanode).getStoredBlock(
-            blk.getBlockPoolId(), blk.getBlockId());
+        Block b = datanode.data.getStoredBlock(blk.getBlockPoolId(), blk.getBlockId());
         final File blockfile = DataNodeTestUtils.getFile(datanode,
             blk.getBlockPoolId(), b.getBlockId());
         System.out.println("blockfile=" + blockfile);

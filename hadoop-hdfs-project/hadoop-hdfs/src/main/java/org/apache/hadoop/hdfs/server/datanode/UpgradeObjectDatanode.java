@@ -45,7 +45,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
   }
   
   protected DatanodeProtocol getNamenode() throws IOException {
-    return dataNode.getActiveNamenodeForBP(bpid);
+    return dataNode.getBPNamenode(bpid);
   }
 
   void setDatanode(DataNode dataNode, String bpid) {
@@ -92,7 +92,14 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
             + " Name-node version = " + nsInfo.getLayoutVersion() + ".";
     DataNode.LOG.fatal( errorMsg );
     String bpid = nsInfo.getBlockPoolID();
-    dataNode.trySendErrorReport(bpid, DatanodeProtocol.NOTIFY, errorMsg);
+    DatanodeProtocol nn = dataNode.getBPNamenode(bpid);
+    try {
+      nn.errorReport(dataNode.getDNRegistrationForBP(bpid),
+                                    DatanodeProtocol.NOTIFY, errorMsg);
+    } catch(SocketTimeoutException e) {  // namenode is busy
+      DataNode.LOG.info("Problem connecting to server: " 
+                        + dataNode.getNameNodeAddr(nsInfo.getBlockPoolID()));
+    }
     throw new IOException(errorMsg);
   }
 

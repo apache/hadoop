@@ -193,6 +193,9 @@ public class MRClientService extends AbstractService
     private Job verifyAndGetJob(JobId jobID, 
         boolean modifyAccess) throws YarnRemoteException {
       Job job = appContext.getJob(jobID);
+      if (job == null) {
+        throw RPCUtil.getRemoteException("Unknown job " + jobID);
+      }
       return job;
     }
  
@@ -234,12 +237,7 @@ public class MRClientService extends AbstractService
       Job job = verifyAndGetJob(jobId, false);
       GetJobReportResponse response = 
         recordFactory.newRecordInstance(GetJobReportResponse.class);
-      if (job != null) {
-        response.setJobReport(job.getReport());
-      }
-      else {
-        response.setJobReport(null);
-      }
+      response.setJobReport(job.getReport());
       return response;
     }
 

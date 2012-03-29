@@ -36,7 +36,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -310,16 +308,7 @@ class NamenodeJspHelper {
 
       long bpUsed = fsnStats[6];
       float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
-
-      // don't show under-replicated/missing blocks or corrupt files for SBN
-      // since the standby namenode doesn't compute replication queues 
-      String underReplicatedBlocks = "";
-      if (nn.getServiceState() == HAServiceState.ACTIVE) {
-    	  underReplicatedBlocks = rowTxt() 
-              + colTxt("Excludes missing blocks.")
-              + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
-              + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks(); 
-      }
+      
       out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
           + "Configured Capacity" + colTxt() + ":" + colTxt()
           + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
@@ -354,8 +343,10 @@ class NamenodeJspHelper {
           + rowTxt() + colTxt()
           + "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
           + "Decommissioning Nodes</a> "
-          + colTxt() + ":" + colTxt() + decommissioning.size()
-          + underReplicatedBlocks
+          + colTxt() + ":" + colTxt() + decommissioning.size() 
+          + rowTxt() + colTxt("Excludes missing blocks.")
+          + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
+          + fsn.getBlockManager().getUnderReplicatedNotMissingBlocks()
           + "</table></div><br>\n");
 
       if (live.isEmpty() && dead.isEmpty()) {
@@ -410,7 +401,7 @@ class NamenodeJspHelper {
       nodeToRedirect = nn.getHttpAddress().getHostName();
       redirectPort = nn.getHttpAddress().getPort();
     }
-    String addr = NetUtils.getHostPortString(nn.getNameNodeAddress());
+    String addr = NameNode.getHostPortString(nn.getNameNodeAddress());
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = "http://" + fqdn + ":" + redirectPort
         + "/browseDirectory.jsp?namenodeInfoPort="

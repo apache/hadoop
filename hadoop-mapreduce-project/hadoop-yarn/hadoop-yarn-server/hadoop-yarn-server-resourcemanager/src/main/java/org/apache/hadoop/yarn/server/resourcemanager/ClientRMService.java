@@ -80,7 +80,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
@@ -200,10 +199,6 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
   
-  /**
-   * It gives response which includes application report if the application
-   * present otherwise gives response with application report as null.
-   */
   @Override
   public GetApplicationReportResponse getApplicationReport(
       GetApplicationReportRequest request) throws YarnRemoteException {
@@ -219,10 +214,8 @@ public class ClientRMService extends AbstractService implements
 
     RMApp application = this.rmContext.getRMApps().get(applicationId);
     if (application == null) {
-      // If the RM doesn't have the application, provide the response with
-      // application report as null and let the clients to handle.
-      return recordFactory
-          .newRecordInstance(GetApplicationReportResponse.class);
+      throw RPCUtil.getRemoteException("Trying to get information for an "
+          + "absent application " + applicationId);
     }
 
     boolean allowAccess = checkAccess(callerUGI, application.getUser(),
@@ -406,7 +399,13 @@ public class ClientRMService extends AbstractService implements
     return response;
   }
 
-  private NodeReport createNodeReports(RMNode rmNode) {    
+  private NodeReport createNodeReports(RMNode rmNode) {
+    NodeReport report = recordFactory.newRecordInstance(NodeReport.class);
+    report.setNodeId(rmNode.getNodeID());
+    report.setRackName(rmNode.getRackName());
+    report.setCapability(rmNode.getTotalCapability());
+    report.setNodeHealthStatus(rmNode.getNodeHealthStatus());
+    
     SchedulerNodeReport schedulerNodeReport = 
         scheduler.getNodeReport(rmNode.getNodeID());
     Resource used = BuilderUtils.newResource(0);
@@ -415,12 +414,8 @@ public class ClientRMService extends AbstractService implements
       used = schedulerNodeReport.getUsedResource();
       numContainers = schedulerNodeReport.getNumContainers();
     } 
-    
-    NodeReport report = BuilderUtils.newNodeReport(rmNode.getNodeID(),
-        RMNodeState.toNodeState(rmNode.getState()),
-        rmNode.getHttpAddress(), rmNode.getRackName(), used,
-        rmNode.getTotalCapability(), numContainers,
-        rmNode.getNodeHealthStatus());
+    report.setUsed(used);
+    report.setNumContainers(numContainers);
 
     return report;
   }

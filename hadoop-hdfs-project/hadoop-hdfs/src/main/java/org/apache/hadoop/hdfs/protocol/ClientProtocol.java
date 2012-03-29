@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocol;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import org.apache.avro.reflect.Nullable;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ContentSummary;
@@ -39,7 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.retry.Idempotent;
+import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
@@ -59,32 +61,13 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @TokenInfo(DelegationTokenSelector.class)
-public interface ClientProtocol {
+public interface ClientProtocol extends VersionedProtocol {
 
   /**
-   * Until version 69, this class ClientProtocol served as both
-   * the client interface to the NN AND the RPC protocol used to 
-   * communicate with the NN.
-   * 
-   * Post version 70 (release 23 of Hadoop), the protocol is implemented in
-   * {@literal ../protocolR23Compatible/ClientNamenodeWireProtocol}
-   * 
-   * This class is used by both the DFSClient and the 
-   * NN server side to insulate from the protocol serialization.
-   * 
-   * If you are adding/changing this interface then you need to 
-   * change both this class and ALSO related protocol buffer
-   * wire protocol definition in ClientNamenodeProtocol.proto.
-   * 
-   * For more details on protocol buffer wire protocol, please see 
-   * .../org/apache/hadoop/hdfs/protocolPB/overview.html
-   * 
+   * Compared to the previous version the following changes have been introduced:
+   * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
    * 69: Eliminate overloaded method names.
-   * 
-   * 69L is the last version id when this class was used for protocols
-   *  serialization. DO not update this version any further. 
-   *  Changes are recorded in R23 classes.
    */
   public static final long versionID = 69L;
   
@@ -115,7 +98,7 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
+  @Nullable
   public LocatedBlocks getBlockLocations(String src,
                                          long offset,
                                          long length) 
@@ -127,7 +110,6 @@ public interface ClientProtocol {
    * @return a set of server default configuration values
    * @throws IOException
    */
-  @Idempotent
   public FsServerDefaults getServerDefaults() throws IOException;
 
   /**
@@ -231,7 +213,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException if <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public boolean setReplication(String src, short replication)
       throws AccessControlException, DSQuotaExceededException,
       FileNotFoundException, SafeModeException, UnresolvedLinkException,
@@ -246,7 +227,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public void setPermission(String src, FsPermission permission)
       throws AccessControlException, FileNotFoundException, SafeModeException,
       UnresolvedLinkException, IOException;
@@ -264,13 +244,12 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public void setOwner(String src, String username, String groupname)
       throws AccessControlException, FileNotFoundException, SafeModeException,
       UnresolvedLinkException, IOException;
 
   /**
-   * The client can give up on a block by calling abandonBlock().
+   * The client can give up on a blcok by calling abandonBlock().
    * The client can then
    * either obtain a new block, or complete or abandon the file.
    * Any partial writes to the block will be discarded.
@@ -314,7 +293,7 @@ public interface ClientProtocol {
    * @throws IOException If an I/O error occurred
    */
   public LocatedBlock addBlock(String src, String clientName,
-      ExtendedBlock previous, DatanodeInfo[] excludeNodes)
+      @Nullable ExtendedBlock previous, @Nullable DatanodeInfo[] excludeNodes)
       throws AccessControlException, FileNotFoundException,
       NotReplicatedYetException, SafeModeException, UnresolvedLinkException,
       IOException;
@@ -337,7 +316,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public LocatedBlock getAdditionalDatanode(final String src, final ExtendedBlock blk,
       final DatanodeInfo[] existings, final DatanodeInfo[] excludes,
       final int numAdditionalNodes, final String clientName
@@ -375,7 +353,6 @@ public interface ClientProtocol {
    * locations on datanodes).
    * @param blocks Array of located blocks to report
    */
-  @Idempotent
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
 
   ///////////////////////////////////////
@@ -388,8 +365,11 @@ public interface ClientProtocol {
    * @return true if successful, or false if the old name does not exist
    * or if the new name already belongs to the namespace.
    * 
-   * @throws IOException an I/O error occurred 
+   * @throws IOException an I/O error occurred
+   * 
+   * @deprecated Use {@link #rename(String, String, Options.Rename...)} instead.
    */
+  @Deprecated
   public boolean rename(String src, String dst) 
       throws UnresolvedLinkException, IOException;
 
@@ -490,7 +470,6 @@ public interface ClientProtocol {
    * RunTimeExceptions:
    * @throws InvalidPathException If <code>src</code> is invalid
    */
-  @Idempotent
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws AccessControlException, FileAlreadyExistsException,
       FileNotFoundException, NSQuotaExceededException,
@@ -511,7 +490,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException If <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public DirectoryListing getListing(String src,
                                      byte[] startAfter,
                                      boolean needLocation)
@@ -541,7 +519,6 @@ public interface ClientProtocol {
    * @throws AccessControlException permission denied
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public void renewLease(String clientName) throws AccessControlException,
       IOException;
 
@@ -554,7 +531,6 @@ public interface ClientProtocol {
    * @return true if the file is already closed
    * @throws IOException
    */
-  @Idempotent
   public boolean recoverLease(String src, String clientName) throws IOException;
 
   public int GET_STATS_CAPACITY_IDX = 0;
@@ -566,7 +542,7 @@ public interface ClientProtocol {
   
   /**
    * Get a set of statistics about the filesystem.
-   * Right now, only seven values are returned.
+   * Right now, only three values are returned.
    * <ul>
    * <li> [0] contains the total storage capacity of the system, in bytes.</li>
    * <li> [1] contains the total used space of the system, in bytes.</li>
@@ -579,7 +555,6 @@ public interface ClientProtocol {
    * Use public constants like {@link #GET_STATS_CAPACITY_IDX} in place of 
    * actual numbers to index into the array.
    */
-  @Idempotent
   public long[] getStats() throws IOException;
 
   /**
@@ -588,7 +563,6 @@ public interface ClientProtocol {
    * Return live datanodes if type is LIVE; dead datanodes if type is DEAD;
    * otherwise all datanodes if type is ALL.
    */
-  @Idempotent
   public DatanodeInfo[] getDatanodeReport(HdfsConstants.DatanodeReportType type)
       throws IOException;
 
@@ -599,7 +573,6 @@ public interface ClientProtocol {
    * @throws IOException
    * @throws UnresolvedLinkException if the path contains a symlink. 
    */
-  @Idempotent
   public long getPreferredBlockSize(String filename) 
       throws IOException, UnresolvedLinkException;
 
@@ -677,8 +650,7 @@ public interface ClientProtocol {
    * 
    * @throws AccessControlException if the superuser privilege is violated.
    */
-  public boolean restoreFailedStorage(String arg) 
-      throws AccessControlException, IOException;
+  public boolean restoreFailedStorage(String arg) throws AccessControlException;
 
   /**
    * Tells the namenode to reread the hosts and exclude files. 
@@ -702,6 +674,7 @@ public interface ClientProtocol {
    * @return upgrade status information or null if no upgrades are in progress
    * @throws IOException
    */
+  @Nullable
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) 
       throws IOException;
 
@@ -715,9 +688,9 @@ public interface ClientProtocol {
    * all corrupt files, call this method repeatedly and each time pass in the
    * cookie returned from the previous call.
    */
-  @Idempotent
-  public CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
-      throws IOException;
+  public CorruptFileBlocks
+    listCorruptFileBlocks(String path, String cookie)
+    throws IOException;
   
   /**
    * Dumps namenode data structures into specified file. If the file
@@ -734,7 +707,6 @@ public interface ClientProtocol {
    * @param bandwidth Blanacer bandwidth in bytes per second for this datanode.
    * @throws IOException
    */
-  @Idempotent
   public void setBalancerBandwidth(long bandwidth) throws IOException;
   
   /**
@@ -748,7 +720,7 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException if the path contains a symlink. 
    * @throws IOException If an I/O error occurred        
    */
-  @Idempotent
+  @Nullable
   public HdfsFileStatus getFileInfo(String src) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;
 
@@ -764,7 +736,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException if <code>src</code> contains a symlink
    * @throws IOException If an I/O error occurred        
    */
-  @Idempotent
   public HdfsFileStatus getFileLinkInfo(String src)
       throws AccessControlException, UnresolvedLinkException, IOException;
   
@@ -777,7 +748,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException if <code>path</code> contains a symlink. 
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public ContentSummary getContentSummary(String path)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
@@ -803,7 +773,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException if the <code>path</code> contains a symlink. 
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public void setQuota(String path, long namespaceQuota, long diskspaceQuota)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
@@ -819,7 +788,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException if <code>src</code> contains a symlink. 
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public void fsync(String src, String client) 
       throws AccessControlException, FileNotFoundException, 
       UnresolvedLinkException, IOException;
@@ -839,7 +807,6 @@ public interface ClientProtocol {
    * @throws UnresolvedLinkException if <code>src</code> contains a symlink. 
    * @throws IOException If an I/O error occurred
    */
-  @Idempotent
   public void setTimes(String src, long mtime, long atime)
       throws AccessControlException, FileNotFoundException, 
       UnresolvedLinkException, IOException;
@@ -880,7 +847,6 @@ public interface ClientProtocol {
    * @throws IOException If the given path does not refer to a symlink
    *           or an I/O error occurred
    */
-  @Idempotent
   public String getLinkTarget(String path) throws AccessControlException,
       FileNotFoundException, IOException; 
   
@@ -896,7 +862,6 @@ public interface ClientProtocol {
    * @return a located block with a new generation stamp and an access token
    * @throws IOException if any error occurs
    */
-  @Idempotent
   public LocatedBlock updateBlockForPipeline(ExtendedBlock block,
       String clientName) throws IOException;
 
@@ -920,7 +885,6 @@ public interface ClientProtocol {
    * @return Token<DelegationTokenIdentifier>
    * @throws IOException
    */
-  @Idempotent
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer) 
       throws IOException;
 
@@ -931,7 +895,6 @@ public interface ClientProtocol {
    * @return the new expiration time
    * @throws IOException
    */
-  @Idempotent
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException;
   

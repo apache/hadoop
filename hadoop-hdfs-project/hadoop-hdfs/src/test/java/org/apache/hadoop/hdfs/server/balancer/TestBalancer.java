@@ -18,10 +18,9 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import java.io.IOException;
-import java.net.URI;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
@@ -38,28 +37,28 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 /**
  * This class tests if a balancer schedules tasks correctly.
  */
 public class TestBalancer extends TestCase {
   private static final Log LOG = LogFactory.getLog(
-  "org.apache.hadoop.hdfs.TestBalancer");
+  "org.apache.hadoop.hdfs.TestReplication");
   
-  final static long CAPACITY = 500L;
-  final static String RACK0 = "/rack0";
-  final static String RACK1 = "/rack1";
-  final static String RACK2 = "/rack2";
-  final private static String fileName = "/tmp.txt";
-  final static Path filePath = new Path(fileName);
+  final private static long CAPACITY = 500L;
+  final private static String RACK0 = "/rack0";
+  final private static String RACK1 = "/rack1";
+  final private static String RACK2 = "/rack2";
+  final static private String fileName = "/tmp.txt";
+  final static private Path filePath = new Path(fileName);
   private MiniDFSCluster cluster;
 
   ClientProtocol client;
@@ -83,10 +82,9 @@ public class TestBalancer extends TestCase {
   }
 
   /* create a file with a length of <code>fileLen</code> */
-  static void createFile(MiniDFSCluster cluster, Path filePath, long fileLen,
-      short replicationFactor, int nnIndex)
+  private void createFile(long fileLen, short replicationFactor)
   throws IOException {
-    FileSystem fs = cluster.getFileSystem(nnIndex);
+    FileSystem fs = cluster.getFileSystem();
     DFSTestUtil.createFile(fs, filePath, fileLen, 
         replicationFactor, r.nextLong());
     DFSTestUtil.waitReplication(fs, filePath, replicationFactor);
@@ -101,12 +99,11 @@ public class TestBalancer extends TestCase {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numNodes).build();
     try {
       cluster.waitActive();
-      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
-          ClientProtocol.class).getProxy();
+      client = DFSUtil.createNamenode(conf);
 
       short replicationFactor = (short)(numNodes-1);
       long fileLen = size/replicationFactor;
-      createFile(cluster , filePath, fileLen, replicationFactor, 0);
+      createFile(fileLen, replicationFactor);
 
       List<LocatedBlock> locatedBlocks = client.
       getBlockLocations(fileName, 0, fileLen).getLocatedBlocks();
@@ -196,8 +193,7 @@ public class TestBalancer extends TestCase {
                                               .simulatedCapacities(capacities)
                                               .build();
     cluster.waitActive();
-    client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
-        ClientProtocol.class).getProxy();
+    client = DFSUtil.createNamenode(conf);
 
     for(int i = 0; i < blocksDN.length; i++)
       cluster.injectBlocks(i, Arrays.asList(blocksDN[i]));
@@ -215,8 +211,7 @@ public class TestBalancer extends TestCase {
    * @throws IOException - if getStats() fails
    * @throws TimeoutException
    */
-  static void waitForHeartBeat(long expectedUsedSpace,
-      long expectedTotalSpace, ClientProtocol client, MiniDFSCluster cluster)
+  private void waitForHeartBeat(long expectedUsedSpace, long expectedTotalSpace)
   throws IOException, TimeoutException {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
@@ -253,8 +248,7 @@ public class TestBalancer extends TestCase {
    * @throws IOException
    * @throws TimeoutException
    */
-  static void waitForBalancer(long totalUsedSpace, long totalCapacity,
-      ClientProtocol client, MiniDFSCluster cluster)
+  private void waitForBalancer(long totalUsedSpace, long totalCapacity) 
   throws IOException, TimeoutException {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
@@ -311,15 +305,13 @@ public class TestBalancer extends TestCase {
                                 .build();
     try {
       cluster.waitActive();
-      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
-          ClientProtocol.class).getProxy();
+      client = DFSUtil.createNamenode(conf);
 
       long totalCapacity = sum(capacities);
       
       // fill up the cluster to be 30% full
       long totalUsedSpace = totalCapacity*3/10;
-      createFile(cluster, filePath, totalUsedSpace / numOfDatanodes,
-          (short) numOfDatanodes, 0);
+      createFile(totalUsedSpace/numOfDatanodes, (short)numOfDatanodes);
       // start up an empty node with the same capacity and on the same rack
       cluster.startDataNodes(conf, 1, true, null,
           new String[]{newRack}, new long[]{newCapacity});
@@ -335,16 +327,17 @@ public class TestBalancer extends TestCase {
 
   private void runBalancer(Configuration conf,
       long totalUsedSpace, long totalCapacity) throws Exception {
-    waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
+    waitForHeartBeat(totalUsedSpace, totalCapacity);
 
     // start rebalancing
-    Collection<URI> namenodes = DFSUtil.getNsServiceRpcUris(conf);
+    final List<InetSocketAddress> namenodes =new ArrayList<InetSocketAddress>();
+    namenodes.add(NameNode.getServiceAddress(conf, true));
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
     assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
 
-    waitForHeartBeat(totalUsedSpace, totalCapacity, client, cluster);
+    waitForHeartBeat(totalUsedSpace, totalCapacity);
     LOG.info("Rebalancing with default ctor.");
-    waitForBalancer(totalUsedSpace, totalCapacity, client, cluster);
+    waitForBalancer(totalUsedSpace, totalCapacity);
   }
   
   /** one-node cluster test*/
@@ -403,15 +396,13 @@ public class TestBalancer extends TestCase {
                                 .build();
     try {
       cluster.waitActive();
-      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
-          ClientProtocol.class).getProxy();
+      client = DFSUtil.createNamenode(conf);
 
       long totalCapacity = sum(capacities);
 
       // fill up the cluster to be 30% full
       long totalUsedSpace = totalCapacity * 3 / 10;
-      createFile(cluster, filePath, totalUsedSpace / numOfDatanodes,
-          (short) numOfDatanodes, 0);
+      createFile(totalUsedSpace / numOfDatanodes, (short) numOfDatanodes);
       // start up an empty node with the same capacity and on the same rack
       cluster.startDataNodes(conf, 1, true, null, new String[] { newRack },
           new long[] { newCapacity });

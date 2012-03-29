@@ -23,7 +23,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -69,28 +68,14 @@ public final class Util {
   }
 
   /**
-   * Converts the passed File to a URI. This method trims the trailing slash if
-   * one is appended because the underlying file is in fact a directory that
-   * exists.
-   * 
+   * Converts the passed File to a URI.
+   *
    * @param f the file to convert
-   * @return the resulting URI
-   * @throws IOException
+   * @return the resulting URI 
+   * @throws IOException 
    */
   public static URI fileAsURI(File f) throws IOException {
-    URI u = f.getCanonicalFile().toURI();
-    
-    // trim the trailing slash, if it's present
-    if (u.getPath().endsWith("/")) {
-      String uriAsString = u.toString();
-      try {
-        u = new URI(uriAsString.substring(0, uriAsString.length() - 1));
-      } catch (URISyntaxException e) {
-        throw new IOException(e);
-      }
-    }
-    
-    return u;
+    return f.getCanonicalFile().toURI();
   }
 
   /**
@@ -98,9 +83,9 @@ public final class Util {
    * @param names collection of strings to convert to URIs
    * @return collection of URIs
    */
-  public static List<URI> stringCollectionAsURIs(
+  public static Collection<URI> stringCollectionAsURIs(
                                   Collection<String> names) {
-    List<URI> uris = new ArrayList<URI>(names.size());
+    Collection<URI> uris = new ArrayList<URI>(names.size());
     for(String name : names) {
       try {
         uris.add(stringAsURI(name));

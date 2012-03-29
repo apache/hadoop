@@ -64,7 +64,7 @@ class SerialNumberManager {
       return i2t.get(i);
     }
 
-    @Override
+    /** {@inheritDoc} */
     public String toString() {
       return "max=" + max + ",\n  t2i=" + t2i + ",\n  i2t=" + i2t;
     }

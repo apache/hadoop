@@ -21,15 +21,11 @@ import java.io.*;
 import java.net.*;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
-import java.util.ArrayList;
 import java.util.List;
 import java.lang.Math;
 
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -45,22 +41,14 @@ import com.google.common.collect.Lists;
 /**
  * This class provides fetching a specified file from the NameNode.
  */
-@InterfaceAudience.Private
-public class TransferFsImage {
+class TransferFsImage {
   
   public final static String CONTENT_LENGTH = "Content-Length";
   public final static String MD5_HEADER = "X-MD5-Digest";
 
   private static final Log LOG = LogFactory.getLog(TransferFsImage.class);
-  
-  public static void downloadMostRecentImageToDirectory(String fsName,
-      File dir) throws IOException {
-    String fileId = GetImageServlet.getParamStringForMostRecentImage();
-    getFileClient(fsName, fileId, Lists.newArrayList(dir),
-        null, false);
-  }
 
-  public static MD5Hash downloadImageToStorage(
+  static MD5Hash downloadImageToStorage(
       String fsName, long imageTxId, NNStorage dstStorage, boolean needDigest)
       throws IOException {
     String fileid = GetImageServlet.getParamStringForImage(
@@ -115,7 +103,7 @@ public class TransferFsImage {
    * @param storage the storage directory to transfer the image from
    * @param txid the transaction ID of the image to be uploaded
    */
-  public static void uploadImageFromStorage(String fsName,
+  static void uploadImageFromStorage(String fsName,
       InetSocketAddress imageListenAddress,
       NNStorage storage, long txid) throws IOException {
     
@@ -123,20 +111,7 @@ public class TransferFsImage {
         txid, imageListenAddress, storage);
     // this doesn't directly upload an image, but rather asks the NN
     // to connect back to the 2NN to download the specified image.
-    try {
-      TransferFsImage.getFileClient(fsName, fileid, null, null, false);
-    } catch (HttpGetFailedException e) {
-      if (e.getResponseCode() == HttpServletResponse.SC_CONFLICT) {
-        // this is OK - this means that a previous attempt to upload
-        // this checkpoint succeeded even though we thought it failed.
-        LOG.info("Image upload with txid " + txid + 
-            " conflicted with a previous image upload to the " +
-            "same NameNode. Continuing...", e);
-        return;
-      } else {
-        throw e;
-      }
-    }
+    TransferFsImage.getFileClient(fsName, fileid, null, null, false);
     LOG.info("Uploaded image with txid " + txid + " to namenode at " +
     		fsName);
   }
@@ -219,11 +194,10 @@ public class TransferFsImage {
     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
     
     if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-      throw new HttpGetFailedException(
+      throw new IOException(
           "Image transfer servlet at " + url +
           " failed with status code " + connection.getResponseCode() +
-          "\nResponse message:\n" + connection.getResponseMessage(),
-          connection);
+          "\nResponse message:\n" + connection.getResponseMessage());
     }
     
     long advertisedSize;
@@ -233,25 +207,6 @@ public class TransferFsImage {
     } else {
       throw new IOException(CONTENT_LENGTH + " header is not provided " +
                             "by the namenode when trying to fetch " + str);
-    }
-    
-    if (localPaths != null) {
-      String fsImageName = connection.getHeaderField(
-          GetImageServlet.HADOOP_IMAGE_EDITS_HEADER);
-      // If the local paths refer to directories, use the server-provided header
-      // as the filename within that directory
-      List<File> newLocalPaths = new ArrayList<File>();
-      for (File localPath : localPaths) {
-        if (localPath.isDirectory()) {
-          if (fsImageName == null) {
-            throw new IOException("No filename header provided by server");
-          }
-          newLocalPaths.add(new File(localPath, fsImageName));
-        } else {
-          newLocalPaths.add(localPath);
-        }
-      }
-      localPaths = newLocalPaths;
     }
     
     MD5Hash advertisedDigest = parseMD5Header(connection);
@@ -278,11 +233,7 @@ public class TransferFsImage {
             outputStreams.add(new FileOutputStream(f));
           } catch (IOException ioe) {
             LOG.warn("Unable to download file " + f, ioe);
-            // This will be null if we're downloading the fsimage to a file
-            // outside of an NNStorage directory.
-            if (dstStorage != null) {
-              dstStorage.reportErrorOnFile(f);
-            }
+            dstStorage.reportErrorOnFile(f);
           }
         }
         
@@ -337,20 +288,6 @@ public class TransferFsImage {
   private static MD5Hash parseMD5Header(HttpURLConnection connection) {
     String header = connection.getHeaderField(MD5_HEADER);
     return (header != null) ? new MD5Hash(header) : null;
-  }
-  
-  public static class HttpGetFailedException extends IOException {
-    private static final long serialVersionUID = 1L;
-    private final int responseCode;
-
-    HttpGetFailedException(String msg, HttpURLConnection connection) throws IOException {
-      super(msg);
-      this.responseCode = connection.getResponseCode();
-    }
-    
-    public int getResponseCode() {
-      return responseCode;
-    }
   }
 
 }

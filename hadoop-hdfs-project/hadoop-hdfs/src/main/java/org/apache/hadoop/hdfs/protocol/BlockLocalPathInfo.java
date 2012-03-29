@@ -67,11 +67,6 @@ public class BlockLocalPathInfo implements Writable {
   public String getBlockPath() {return localBlockPath;}
   
   /**
-   * @return the Block
-   */
-  public ExtendedBlock getBlock() { return block;}
-  
-  /**
    * Get the Block metadata file.
    * @return Block metadata file.
    */

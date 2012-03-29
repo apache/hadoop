@@ -26,7 +26,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Properties;
 
 import org.apache.commons.logging.Log;
@@ -48,8 +47,8 @@ public class TestClusterId {
   private String getClusterId(Configuration config) throws IOException {
     // see if cluster id not empty.
     Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(config);
-    List<URI> editsToFormat = FSNamesystem.getNamespaceEditsDirs(config);
-    FSImage fsImage = new FSImage(config, dirsToFormat, editsToFormat);
+    Collection<URI> editsToFormat = new ArrayList<URI>(0);
+    FSImage fsImage = new FSImage(config, null, dirsToFormat, editsToFormat);
     
     Iterator<StorageDirectory> sdit = 
       fsImage.getStorage().dirIterator(NNStorage.NameNodeDirType.IMAGE);

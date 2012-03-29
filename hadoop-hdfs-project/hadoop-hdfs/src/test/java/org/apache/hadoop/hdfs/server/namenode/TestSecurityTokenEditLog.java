@@ -24,7 +24,6 @@ import java.util.Iterator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -92,9 +91,6 @@ public class TestSecurityTokenEditLog extends TestCase {
     FileSystem fileSys = null;
 
     try {
-      conf.setBoolean(
-          DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
-
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
@@ -110,6 +106,7 @@ public class TestSecurityTokenEditLog extends TestCase {
   
       // set small size of flush buffer
       editLog.setOutputBufferCapacity(2048);
+      namesystem.getDelegationTokenSecretManager().startThreads();
     
       // Create threads and make them run transactions concurrently.
       Thread threadId[] = new Thread[NUM_THREADS];
@@ -144,7 +141,7 @@ public class TestSecurityTokenEditLog extends TestCase {
         System.out.println("Verifying file: " + editFile);
         
         FSEditLogLoader loader = new FSEditLogLoader(namesystem);        
-        long numEdits = loader.loadFSEdits(
+        int numEdits = loader.loadFSEdits(
             new EditLogFileInputStream(editFile), 1);
         assertEquals("Verification for " + editFile, expectedTransactions, numEdits);
       }

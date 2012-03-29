@@ -1,245 +1,6 @@
 Hadoop Change Log
 
-Release 0.23.3 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-    HADOOP-7920. Remove Avro Rpc. (suresh)
-
-  NEW FEATURES
-
-    HADOOP-7773. Add support for protocol buffer based RPC engine.
-    (suresh)
-
-    HADOOP-7875. Add helper class to unwrap protobuf ServiceException.
-    (suresh)
-
-    HADOOP-7454. Common side of High Availability Framework (HDFS-1623)
-    Contributed by Todd Lipcon, Aaron T. Myers, Eli Collins, Uma Maheswara Rao G,
-    Bikas Saha, Suresh Srinivas, Jitendra Nath Pandey, Hari Mankude, Brandon Li,
-    Sanjay Radia, Mingjie Lai, and Gregory Chanan
-
-    HADOOP-8121. Active Directory Group Mapping Service. (Jonathan Natkins via
-    atm)
-
-    HADOOP-7030. Add TableMapping topology implementation to read host to rack
-    mapping from a file. (Patrick Angeles and tomwhite via tomwhite)
-
-    HADOOP-8206. Common portion of a ZK-based failover controller (todd)
-
-  IMPROVEMENTS
-
-    HADOOP-7524. Change RPC to allow multiple protocols including multuple
-    versions of the same protocol (sanjay Radia)
-
-    HADOOP-7607. Simplify the RPC proxy cleanup process. (atm)
-
-    HADOOP-7687. Make getProtocolSignature public  (sanjay)
-
-    HADOOP-7693. Enhance AvroRpcEngine to support the new #addProtocol
-    interface introduced in HADOOP-7524.  (cutting)
-
-    HADOOP-7716. RPC protocol registration on SS does not log the protocol name
-    (only the class which may be different) (sanjay)
-
-    HADOOP-7776. Make the Ipc-Header in a RPC-Payload an explicit header.
-    (sanjay)
-
-    HADOOP-7717. Move handling of concurrent client fail-overs to
-    RetryInvocationHandler (atm)
-
-    HADOOP-7862. Move the support for multiple protocols to lower layer so
-    that Writable, PB and Avro can all use it (Sanjay)
-
-    HADOOP-7876. Provided access to encoded key in DelegationKey for
-    use in protobuf based RPCs. (suresh)
-
-    HADOOP-7899. Generate proto java files as part of the build. (tucu)
-
-    HADOOP-7957. Classes deriving GetGroupsBase should be able to override 
-    proxy creation. (jitendra)
-
-    HADOOP-7965. Support for protocol version and signature in PB. (jitendra)
-
-    HADOOP-8070. Add a standalone benchmark for RPC call performance. (todd)
-
-    HADOOP-8084. Updates ProtoBufRpc engine to not do an unnecessary copy 
-    for RPC request/response. (ddas)
-
-    HADOOP-8085. Add RPC metrics to ProtobufRpcEngine. (Hari Mankude via
-    suresh)
-
-    HADOOP-7621. alfredo config should be in a file not readable by users
-                 (Alejandro Abdelnur via atm)
-    HADOOP-8098. KerberosAuthenticatorHandler should use _HOST replacement to 
-    resolve principal name (tucu)
-
-    HADOOP-8118.  In metrics2.util.MBeans, change log level to trace for the
-    stack trace of InstanceAlreadyExistsException.  (szetszwo)
-
-    HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the
-    client side translator and server side implementation. (jitendra)
-
-    HADOOP-8125. make hadoop-client set of curated jars available in a
-    distribution tarball (rvs via tucu)
-
-    HADOOP-8142. Update versions from 0.23.2 to 0.23.3 in the build files.
-    (szetszwo)
-
-    HADOOP-8141. Add method to SecurityUtil to init krb5 cipher suites.
-    (todd)
-
-    HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
-    (Brandon Li via jitendra)
-
-    HADOOP-7557 Make IPC header be extensible (sanjay radia)
-
-    HADOOP-7806. Support binding to sub-interfaces (eli)
-
-    HADOOP-6941. Adds support for building Hadoop with IBM's JDK 
-    (Stephen Watt, Eli and ddas)
-
-    HADOOP-8183. Stop using "mapred.used.genericoptions.parser" (harsh)
-
-    HADOOP-7788. Add simple HealthMonitor class to watch an HAService (todd)
-
-    HADOOP-8200. Remove HADOOP_[JOBTRACKER|TASKTRACKER]_OPTS. (eli)
-
-    HADOOP-8184.  ProtoBuf RPC engine uses the IPC layer reply packet.
-    (Sanjay Radia via szetszwo)
-
-    HADOOP-8163. Improve ActiveStandbyElector to provide hooks for
-    fencing old active. (todd)
-
-    HADOOP-8193. Refactor FailoverController/HAAdmin code to add an abstract
-    class for "target" services. (todd)
-
-    HADOOP-8212. Improve ActiveStandbyElector's behavior when session expires
-    (todd)
-
-    HADOOP-8216. Address log4j.properties inconsistencies btw main and
-    template dirs. (Patrick Hunt via eli)
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    HADOOP-7900. LocalDirAllocator confChanged() accesses conf.get() twice
-    (Ravi Gummadi via Uma Maheswara Rao G)
-
-    HADOOP-7635. RetryInvocationHandler should release underlying resources on
-    close. (atm)
-
-    HADOOP-7695. RPC.stopProxy can throw unintended exception while logging
-    error. (atm)
-
-    HADOOP-7833. Fix findbugs warnings in protobuf generated code.
-    (John Lee via suresh)
-
-    HADOOP-7897. ProtobufRpcEngine client side exception mechanism is not
-    consistent with WritableRpcEngine. (suresh)
-
-    HADOOP-7913. Fix bug in ProtoBufRpcEngine.  (sanjay)
-
-    HADOOP-7892. IPC logs too verbose after "RpcKind" introduction. (todd)
-
-    HADOOP-7968. Errant println left in RPC.getHighestSupportedProtocol. (Sho
-    Shimauchi via harsh)
-
-    HADOOP-7931. o.a.h.ipc.WritableRpcEngine should have a way to force
-    initialization. (atm)
-
-    HADOOP-8104. Inconsistent Jackson versions (tucu)
-
-    HADOOP-7940. The Text.clear() method does not clear the bytes as intended. (Csaba Miklos via harsh)
-
-    HADOOP-8119. Fix javac warnings in TestAuthenticationFilter in hadoop-auth.
-    (szetszwo)
-
-    HADOOP-7888. TestFailoverProxy fails intermittently on trunk. (Jason Lowe
-    via atm)
-
-    HADOOP-8154. DNS#getIPs shouldn't silently return the local host
-    IP for bogus interface names. (eli)
-
-    HADOOP-8169.  javadoc generation fails with java.lang.OutOfMemoryError:
-    Java heap space (tgraves via bobby)
-
-    HADOOP-8167. Configuration deprecation logic breaks backwards compatibility (tucu)
-
-    HADOOP-8189. LdapGroupsMapping shouldn't throw away IOException. (Jonathan Natkins via atm)
-
-    HADOOP-8191. SshFenceByTcpPort uses netcat incorrectly (todd)
-
-    HADOOP-8157. Fix race condition in Configuration that could cause spurious
-    ClassNotFoundExceptions after a GC. (todd)
-
-    HADOOP-8197. Configuration logs WARNs on every use of a deprecated key (tucu)
-
-    HADOOP-8159. NetworkTopology: getLeaf should check for invalid topologies.
-    (Colin Patrick McCabe via eli)
-
-    HADOOP-8204. TestHealthMonitor fails occasionally (todd)
-
-    HADOOP-8202. RPC stopProxy() does not close the proxy correctly.
-    (Hari Mankude via suresh)
-
-    HADOOP-8218. RPC.closeProxy shouldn't throw error when closing a mock
-    (todd)
-
-  BREAKDOWN OF HADOOP-7454 SUBTASKS
-
-    HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
-    
-    HADOOP-7774. HA: Administrative CLI to control HA daemons. (todd)
-    
-    HADOOP-7896. HA: if both NNs are in Standby mode, client needs to try failing
-    back and forth several times with sleeps. (atm)
-    
-    HADOOP-7922. Improve some logging for client IPC failovers and
-    StandbyExceptions (todd)
-    
-    HADOOP-7921. StandbyException should extend IOException (todd)
-    
-    HADOOP-7928. HA: Client failover policy is incorrectly trying to fail over all
-    IOExceptions (atm)
-    
-    HADOOP-7925. Add interface and update CLI to query current state to
-    HAServiceProtocol (eli via todd)
-    
-    HADOOP-7932. Make client connection retries on socket time outs configurable.
-    (Uma Maheswara Rao G via todd)
-    
-    HADOOP-7924. FailoverController for client-based configuration (eli)
-    
-    HADOOP-7961. Move HA fencing to common. (eli)
-    
-    HADOOP-7970. HAServiceProtocol methods must throw IOException.  (Hari Mankude
-    via suresh).
-    
-    HADOOP-7992. Add ZKClient library to facilitate leader election.  (Bikas Saha
-    via suresh).
-    
-    HADOOP-7983. HA: failover should be able to pass args to fencers. (eli)
-    
-    HADOOP-7938. HA: the FailoverController should optionally fence the active
-    during failover. (eli)
-    
-    HADOOP-7991. HA: the FailoverController should check the standby is ready
-    before failing over. (eli)
-    
-    HADOOP-8038. Add 'ipc.client.connect.max.retries.on.timeouts' entry in
-    core-default.xml file. (Uma Maheswara Rao G via atm)
-    
-    HADOOP-8041. Log a warning when a failover is first attempted (todd)
-    
-    HADOOP-8068. void methods can swallow exceptions when going through failover
-    path (todd)
-    
-    HADOOP-8116. RetriableCommand is using RetryPolicy incorrectly after
-    HADOOP-7896. (atm)
-
-Release 0.23.2 - UNRELEASED 
+Release 0.23.2 - UNRELEASED
 
   NEW FEATURES
 
@@ -266,6 +27,9 @@ Release 0.23.2 - UNRELEASED
     (sharad, todd via todd)
 
   BUG FIXES
+
+    HADOOP-8146.  FsShell commands cannot be interrupted
+    (Daryn Sharp via Uma Maheswara Rao G)
 
     HADOOP-7660. Maven generated .classpath doesnot includes 
     "target/generated-test-source/java" as source directory.
@@ -332,9 +96,6 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8176.  Disambiguate the destination of FsShell copies (Daryn Sharp
     via bobby)
-
-    HADOOP-8088. User-group mapping cache incorrectly does negative caching on
-    transient failures (Khiwal Lee via bobby)
 
 Release 0.23.1 - 2012-02-17 
 
@@ -430,9 +191,6 @@ Release 0.23.1 - 2012-02-17
     projects. (tucu)
 
     HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
-
-    HADOOP-7729. Send back valid HTTP response if user hits IPC port with
-    HTTP GET. (todd)
 
     HADOOP-8027. Visiting /jmx on the daemon web interfaces may print
     unnecessary error in logs. (atm)
@@ -1568,9 +1326,6 @@ Release 0.22.0 - 2011-11-29
     HADOOP-7772. javadoc the topology classes (stevel)
 
     HADOOP-7786. Remove HDFS-specific config keys defined in FsConfig. (eli)
-
-    HADOOP-7358. Improve log levels when exceptions caught in RPC handler
-    (Todd Lipcon via shv)
 
   OPTIMIZATIONS
 

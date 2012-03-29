@@ -87,7 +87,6 @@ public abstract class HdfsProtoUtil {
       .setName(dni.getName())
       .setStorageID(dni.getStorageID())
       .setInfoPort(dni.getInfoPort())
-      .setIpcPort(dni.getIpcPort())
       .build();
   }
   
@@ -96,7 +95,7 @@ public abstract class HdfsProtoUtil {
         idProto.getName(),
         idProto.getStorageID(),
         idProto.getInfoPort(),
-        idProto.getIpcPort());
+        -1); // ipc port not serialized in writables either
   }
   
   //// DatanodeInfo ////

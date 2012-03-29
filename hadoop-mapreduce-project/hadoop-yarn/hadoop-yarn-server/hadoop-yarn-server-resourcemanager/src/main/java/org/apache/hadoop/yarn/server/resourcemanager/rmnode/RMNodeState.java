@@ -18,28 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmnode;
 
-import org.apache.hadoop.yarn.api.records.NodeState;
-
-//TODO yarn.api.records.NodeState is a clone of RMNodeState made for MR-3353. 
-// In a subsequent patch RMNodeState should be replaced with NodeState
 public enum RMNodeState {
-  NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST, REBOOTED;
-  
-  public static NodeState toNodeState(RMNodeState state) {
-    switch(state) {
-    case NEW:
-      return NodeState.NEW;
-    case RUNNING:
-      return NodeState.RUNNING;
-    case UNHEALTHY:
-      return NodeState.UNHEALTHY;
-    case DECOMMISSIONED:
-      return NodeState.DECOMMISSIONED;
-    case LOST:
-      return NodeState.LOST;
-    case REBOOTED:
-      return NodeState.REBOOTED;
-    }
-    return null;
-  }
-};
+  NEW, RUNNING, UNHEALTHY, DECOMMISSIONED, LOST, REBOOTED
+}

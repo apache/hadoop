@@ -195,7 +195,7 @@ public class CreateEditsLog {
 
     FileNameGenerator nameGenerator = new FileNameGenerator(BASE_PATH, 100);
     FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
-    editLog.openForWrite();
+    editLog.open();
     addFiles(editLog, numFiles, replication, numBlocksPerFile, startingBlockId,
              nameGenerator);
     editLog.logSync();

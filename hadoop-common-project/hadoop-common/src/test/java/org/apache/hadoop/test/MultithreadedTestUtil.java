@@ -124,7 +124,7 @@ public abstract class MultithreadedTestUtil {
      * Checks for thread exceptions, and if they've occurred
      * throws them as RuntimeExceptions in a deferred manner.
      */
-    public synchronized void checkException() throws Exception {
+    private synchronized void checkException() throws Exception {
       if (err != null) {
         throw new RuntimeException("Deferred", err);
       }
@@ -163,10 +163,6 @@ public abstract class MultithreadedTestUtil {
         t.join();
       }
       checkException();
-    }
-
-    public Iterable<? extends Thread> getTestThreads() {
-      return testThreads;
     }
   }
 

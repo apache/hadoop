@@ -253,7 +253,7 @@ public class LocalDirAllocator {
         throws IOException {
       String newLocalDirs = conf.get(contextCfgItemName);
       if (!newLocalDirs.equals(savedLocalDirs)) {
-        localDirs = StringUtils.getTrimmedStrings(newLocalDirs);
+        localDirs = conf.getTrimmedStrings(contextCfgItemName);
         localFS = FileSystem.getLocal(conf);
         int numDirs = localDirs.length;
         ArrayList<String> dirs = new ArrayList<String>(numDirs);

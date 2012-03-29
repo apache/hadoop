@@ -17,21 +17,17 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
-    <artifactId>hadoop-project-dist</artifactId>
-    <version>0.23.3-SNAPSHOT</version>
-    <relativePath>../hadoop-project-dist</relativePath>
+    <artifactId>hadoop-project</artifactId>
+    <version>0.23.2-SNAPSHOT</version>
+    <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-client</artifactId>
-  <version>0.23.3-SNAPSHOT</version>
+  <version>0.23.2-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <description>Apache Hadoop Client</description>
   <name>Apache Hadoop Client</name>
-
-<properties>
-   <hadoop.component>client</hadoop.component>
- </properties>
 
   <dependencies>
     <dependency>

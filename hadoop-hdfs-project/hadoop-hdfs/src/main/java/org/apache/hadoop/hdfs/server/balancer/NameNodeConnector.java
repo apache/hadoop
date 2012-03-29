@@ -21,25 +21,35 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.URI;
+import java.net.InetSocketAddress;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.NameNodeProxies;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 
@@ -51,7 +61,7 @@ class NameNodeConnector {
   private static final Log LOG = Balancer.LOG;
   private static final Path BALANCER_ID_PATH = new Path("/system/balancer.id");
 
-  final URI nameNodeUri;
+  final InetSocketAddress namenodeAddress;
   final String blockpoolID;
 
   final NamenodeProtocol namenode;
@@ -65,17 +75,12 @@ class NameNodeConnector {
   private BlockTokenSecretManager blockTokenSecretManager;
   private Daemon keyupdaterthread; // AccessKeyUpdater thread
 
-  NameNodeConnector(URI nameNodeUri,
-      Configuration conf) throws IOException {
-    this.nameNodeUri = nameNodeUri;
-    
-    this.namenode =
-      NameNodeProxies.createProxy(conf, nameNodeUri, NamenodeProtocol.class)
-        .getProxy();
-    this.client =
-      NameNodeProxies.createProxy(conf, nameNodeUri, ClientProtocol.class)
-        .getProxy();
-    this.fs = FileSystem.get(nameNodeUri, conf);
+  NameNodeConnector(InetSocketAddress namenodeAddress, Configuration conf
+      ) throws IOException {
+    this.namenodeAddress = namenodeAddress;
+    this.namenode = createNamenode(namenodeAddress, conf);
+    this.client = DFSUtil.createNamenode(conf);
+    this.fs = FileSystem.get(NameNode.getUri(namenodeAddress), conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
     this.blockpoolID = namespaceinfo.getBlockPoolID();
@@ -180,9 +185,35 @@ class NameNodeConnector {
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + "[namenodeUri=" + nameNodeUri
+    return getClass().getSimpleName() + "[namenodeAddress=" + namenodeAddress
         + ", id=" + blockpoolID
         + "]";
+  }
+
+  /** Build a NamenodeProtocol connection to the namenode and
+   * set up the retry policy
+   */ 
+  private static NamenodeProtocol createNamenode(InetSocketAddress address,
+      Configuration conf) throws IOException {
+    RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
+        5, 200, TimeUnit.MILLISECONDS);
+    Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
+        new HashMap<Class<? extends Exception>, RetryPolicy>();
+    RetryPolicy methodPolicy = RetryPolicies.retryByException(
+        timeoutPolicy, exceptionToPolicyMap);
+    Map<String,RetryPolicy> methodNameToPolicyMap =
+        new HashMap<String, RetryPolicy>();
+    methodNameToPolicyMap.put("getBlocks", methodPolicy);
+    methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
+
+    return (NamenodeProtocol) RetryProxy.create(NamenodeProtocol.class,
+        RPC.getProxy(NamenodeProtocol.class,
+            NamenodeProtocol.versionID,
+            address,
+            UserGroupInformation.getCurrentUser(),
+            conf,
+            NetUtils.getDefaultSocketFactory(conf)),
+        methodNameToPolicyMap);
   }
 
   /**

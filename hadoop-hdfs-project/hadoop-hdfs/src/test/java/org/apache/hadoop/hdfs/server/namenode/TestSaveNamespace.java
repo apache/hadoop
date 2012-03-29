@@ -31,10 +31,6 @@ import static org.mockito.Mockito.spy;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,9 +49,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.hdfs.util.MD5FileUtils;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -91,7 +84,7 @@ public class TestSaveNamespace {
 
     public Void answer(InvocationOnMock invocation) throws Throwable {
       Object[] args = invocation.getArguments();
-      StorageDirectory sd = (StorageDirectory)args[1];
+      StorageDirectory sd = (StorageDirectory)args[0];
 
       if (count++ == 1) {
         LOG.info("Injecting fault for sd: " + sd);
@@ -118,7 +111,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
+    FSNamesystem fsn = new FSNamesystem(conf);
 
     // Replace the FSImage with a spy
     FSImage originalImage = fsn.dir.fsImage;
@@ -136,25 +129,19 @@ public class TestSaveNamespace {
     case SAVE_SECOND_FSIMAGE_RTE:
       // The spy throws a RuntimeException when writing to the second directory
       doAnswer(new FaultySaveImage(true)).
-        when(spyImage).saveFSImage(
-            (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
       shouldFail = false;
       break;
     case SAVE_SECOND_FSIMAGE_IOE:
       // The spy throws an IOException when writing to the second directory
       doAnswer(new FaultySaveImage(false)).
-        when(spyImage).saveFSImage(
-            (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
       shouldFail = false;
       break;
     case SAVE_ALL_FSIMAGES:
       // The spy throws IOException in all directories
       doThrow(new RuntimeException("Injected")).
-      when(spyImage).saveFSImage(
-          (SaveNamespaceContext)anyObject(),
-          (StorageDirectory)anyObject());
+        when(spyImage).saveFSImage((StorageDirectory)anyObject(), anyLong());
       shouldFail = true;
       break;
     case WRITE_STORAGE_ALL:
@@ -202,7 +189,7 @@ public class TestSaveNamespace {
 
       // Start a new namesystem, which should be able to recover
       // the namespace from the previous incarnation.
-      fsn = FSNamesystem.loadFromDisk(conf);
+      fsn = new FSNamesystem(conf);
 
       // Make sure the image loaded including our edits.
       checkEditExists(fsn, 1);
@@ -227,7 +214,7 @@ public class TestSaveNamespace {
 
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
+    FSNamesystem fsn = new FSNamesystem(conf);
 
     // Replace the FSImage with a spy
     FSImage originalImage = fsn.dir.fsImage;
@@ -281,7 +268,7 @@ public class TestSaveNamespace {
       // Start a new namesystem, which should be able to recover
       // the namespace from the previous incarnation.
       LOG.info("Loading new FSmage from disk.");
-      fsn = FSNamesystem.loadFromDisk(conf);
+      fsn = new FSNamesystem(conf);
 
       // Make sure the image loaded including our edit.
       LOG.info("Checking reloaded image.");
@@ -362,7 +349,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
+    FSNamesystem fsn = new FSNamesystem(conf);
 
     // Replace the FSImage with a spy
     final FSImage originalImage = fsn.dir.fsImage;
@@ -378,9 +365,8 @@ public class TestSaveNamespace {
         FSNamesystem.getNamespaceEditsDirs(conf));
 
     doThrow(new IOException("Injected fault: saveFSImage")).
-        when(spyImage).saveFSImage(
-            (SaveNamespaceContext)anyObject(),
-            (StorageDirectory)anyObject());
+      when(spyImage).saveFSImage((StorageDirectory)anyObject(),
+                                 Mockito.anyLong());
 
     try {
       doAnEdit(fsn, 1);
@@ -409,7 +395,7 @@ public class TestSaveNamespace {
 
       // Start a new namesystem, which should be able to recover
       // the namespace from the previous incarnation.
-      fsn = FSNamesystem.loadFromDisk(conf);
+      fsn = new FSNamesystem(conf);
 
       // Make sure the image loaded including our edits.
       checkEditExists(fsn, 1);
@@ -425,7 +411,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
+    FSNamesystem fsn = new FSNamesystem(conf);
 
     try {
       doAnEdit(fsn, 1);
@@ -444,7 +430,7 @@ public class TestSaveNamespace {
 
       // Start a new namesystem, which should be able to recover
       // the namespace from the previous incarnation.
-      fsn = FSNamesystem.loadFromDisk(conf);
+      fsn = new FSNamesystem(conf);
 
       // Make sure the image loaded including our edits.
       checkEditExists(fsn, 1);
@@ -461,7 +447,7 @@ public class TestSaveNamespace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
+    FSNamesystem fsn = new FSNamesystem(conf);
 
     try {
       // We have a BEGIN_LOG_SEGMENT txn to start
@@ -483,7 +469,7 @@ public class TestSaveNamespace {
       assertEquals(5, fsn.getEditLog().getLastWrittenTxId());
       fsn = null;
       
-      fsn = FSNamesystem.loadFromDisk(conf);
+      fsn = new FSNamesystem(conf);
       // 1 more txn to start new segment on restart
       assertEquals(6, fsn.getEditLog().getLastWrittenTxId());
       
@@ -518,84 +504,6 @@ public class TestSaveNamespace {
       IOUtils.cleanup(LOG, out, fs);
       if (cluster != null) {
         cluster.shutdown();
-      }
-    }
-  }
-  
-  @Test(timeout=20000)
-  public void testCancelSaveNamespace() throws Exception {
-    Configuration conf = getConf();
-    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
-    DFSTestUtil.formatNameNode(conf);
-    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
-
-    // Replace the FSImage with a spy
-    final FSImage image = fsn.dir.fsImage;
-    NNStorage storage = image.getStorage();
-    storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
-    storage.setStorageDirectories(
-        FSNamesystem.getNamespaceDirs(conf), 
-        FSNamesystem.getNamespaceEditsDirs(conf));
-
-    FSNamesystem spyFsn = spy(fsn);
-    final FSNamesystem finalFsn = spyFsn;
-    DelayAnswer delayer = new GenericTestUtils.DelayAnswer(LOG);
-    doAnswer(delayer).when(spyFsn).getGenerationStamp();
-    
-    ExecutorService pool = Executors.newFixedThreadPool(2);
-    
-    try {
-      doAnEdit(fsn, 1);
-
-      // Save namespace
-      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      try {
-        Future<Void> saverFuture = pool.submit(new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            image.saveNamespace(finalFsn);
-            return null;
-          }
-        });
-
-        // Wait until saveNamespace calls getGenerationStamp
-        delayer.waitForCall();
-        // then cancel the saveNamespace
-        Future<Void> cancelFuture = pool.submit(new Callable<Void>() {
-          public Void call() throws Exception {
-            image.cancelSaveNamespace("cancelled");
-            return null;
-          }
-        });
-        // give the cancel call time to run
-        Thread.sleep(500);
-        
-        // allow saveNamespace to proceed - it should check the cancel flag after
-        // this point and throw an exception
-        delayer.proceed();
-
-        cancelFuture.get();
-        saverFuture.get();
-        fail("saveNamespace did not fail even though cancelled!");
-      } catch (Throwable t) {
-        GenericTestUtils.assertExceptionContains(
-            "SaveNamespaceCancelledException", t);
-      }
-      LOG.info("Successfully cancelled a saveNamespace");
-
-
-      // Check that we have only the original image and not any
-      // cruft left over from half-finished images
-      FSImageTestUtil.logStorageContents(LOG, storage);
-      for (StorageDirectory sd : storage.dirIterable(null)) {
-        File curDir = sd.getCurrentDir();
-        GenericTestUtils.assertGlobEquals(curDir, "fsimage_.*",
-            NNStorage.getImageFileName(0),
-            NNStorage.getImageFileName(0) + MD5FileUtils.MD5_SUFFIX);
-      }      
-    } finally {
-      if (fsn != null) {
-        fsn.close();
       }
     }
   }

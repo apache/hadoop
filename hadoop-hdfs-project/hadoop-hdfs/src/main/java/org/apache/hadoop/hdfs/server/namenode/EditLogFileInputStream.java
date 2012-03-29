@@ -27,7 +27,6 @@ import java.io.DataInputStream;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -38,16 +37,12 @@ import com.google.common.annotations.VisibleForTesting;
 class EditLogFileInputStream extends EditLogInputStream {
   private final File file;
   private final FileInputStream fStream;
-  final private long firstTxId;
-  final private long lastTxId;
   private final int logVersion;
   private final FSEditLogOp.Reader reader;
   private final FSEditLogLoader.PositionTrackingInputStream tracker;
-  private final boolean isInProgress;
   
   /**
    * Open an EditLogInputStream for the given file.
-   * The file is pretransactional, so has no txids
    * @param name filename to open
    * @throws LogHeaderCorruptException if the header is either missing or
    *         appears to be corrupt/truncated
@@ -55,22 +50,6 @@ class EditLogFileInputStream extends EditLogInputStream {
    *         header
    */
   EditLogFileInputStream(File name)
-      throws LogHeaderCorruptException, IOException {
-    this(name, HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID, false);
-  }
-
-  /**
-   * Open an EditLogInputStream for the given file.
-   * @param name filename to open
-   * @param firstTxId first transaction found in file
-   * @param lastTxId last transaction id found in file
-   * @throws LogHeaderCorruptException if the header is either missing or
-   *         appears to be corrupt/truncated
-   * @throws IOException if an actual IO error occurs while reading the
-   *         header
-   */
-  EditLogFileInputStream(File name, long firstTxId, long lastTxId,
-      boolean isInProgress)
       throws LogHeaderCorruptException, IOException {
     file = name;
     fStream = new FileInputStream(name);
@@ -86,37 +65,6 @@ class EditLogFileInputStream extends EditLogInputStream {
     }
 
     reader = new FSEditLogOp.Reader(in, logVersion);
-    this.firstTxId = firstTxId;
-    this.lastTxId = lastTxId;
-    this.isInProgress = isInProgress;
-  }
-
-  /**
-   * Skip over a number of transactions. Subsequent calls to
-   * {@link EditLogFileInputStream#readOp()} will begin after these skipped
-   * transactions. If more transactions are requested to be skipped than remain
-   * in the edit log, all edit log ops in the log will be skipped and subsequent
-   * calls to {@link EditLogInputStream#readOp} will return null.
-   * 
-   * @param transactionsToSkip number of transactions to skip over.
-   * @throws IOException if there's an error while reading an operation
-   */
-  public void skipTransactions(long transactionsToSkip) throws IOException {
-    assert firstTxId != HdfsConstants.INVALID_TXID &&
-        lastTxId != HdfsConstants.INVALID_TXID;
-    for (long i = 0; i < transactionsToSkip; i++) {
-      reader.readOp();
-    }
-  }
-
-  @Override
-  public long getFirstTxId() throws IOException {
-    return firstTxId;
-  }
-  
-  @Override
-  public long getLastTxId() throws IOException {
-    return lastTxId;
   }
 
   @Override // JournalStream
@@ -150,14 +98,9 @@ class EditLogFileInputStream extends EditLogInputStream {
   }
 
   @Override
-  public long length() throws IOException {
+  long length() throws IOException {
     // file size + size of both buffers
     return file.length();
-  }
-  
-  @Override
-  public boolean isInProgress() {
-    return isInProgress;
   }
   
   @Override
@@ -170,11 +113,10 @@ class EditLogFileInputStream extends EditLogInputStream {
     try {
       in = new EditLogFileInputStream(file);
     } catch (LogHeaderCorruptException corrupt) {
-      // If the header is malformed or the wrong value, this indicates a corruption
+      // If it's missing its header, this is equivalent to no transactions
       FSImage.LOG.warn("Log at " + file + " has no valid header",
           corrupt);
-      return new FSEditLogLoader.EditLogValidation(0,
-          HdfsConstants.INVALID_TXID, HdfsConstants.INVALID_TXID, true);
+      return new FSEditLogLoader.EditLogValidation(0, 0);
     }
     
     try {
@@ -200,13 +142,14 @@ class EditLogFileInputStream extends EditLogInputStream {
       throw new LogHeaderCorruptException(
           "Reached EOF when reading log header");
     }
-    if (logVersion < HdfsConstants.LAYOUT_VERSION || // future version
-        logVersion > Storage.LAST_UPGRADABLE_LAYOUT_VERSION) { // unsupported
+    if (logVersion < HdfsConstants.LAYOUT_VERSION) { // future version
       throw new LogHeaderCorruptException(
           "Unexpected version of the file system log file: "
           + logVersion + ". Current version = "
           + HdfsConstants.LAYOUT_VERSION + ".");
     }
+    assert logVersion <= Storage.LAST_UPGRADABLE_LAYOUT_VERSION :
+      "Unsupported version " + logVersion;
     return logVersion;
   }
   

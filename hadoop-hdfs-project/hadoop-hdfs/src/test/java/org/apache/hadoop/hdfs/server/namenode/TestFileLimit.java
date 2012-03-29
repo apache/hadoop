@@ -23,7 +23,6 @@ import java.util.Random;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,9 +44,9 @@ public class TestFileLimit extends TestCase {
   // creates a zero file.
   private void createFile(FileSystem fileSys, Path name)
     throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) 1, blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true,
+                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+                                            (short)1, (long)blockSize);
     byte[] buffer = new byte[1024];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);

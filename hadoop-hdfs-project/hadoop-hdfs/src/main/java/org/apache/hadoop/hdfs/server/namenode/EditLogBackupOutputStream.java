@@ -22,14 +22,12 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * An implementation of the abstract class {@link EditLogOutputStream},
@@ -42,7 +40,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 class EditLogBackupOutputStream extends EditLogOutputStream {
   static int DEFAULT_BUFFER_SIZE = 256;
 
-  private JournalProtocol backupNode;  // RPC proxy to backup node
+  private JournalProtocol backupNode;        // RPC proxy to backup node
   private NamenodeRegistration bnRegistration;  // backup node registration
   private NamenodeRegistration nnRegistration;  // active node registration
   private EditsDoubleBuffer doubleBuf;
@@ -56,10 +54,11 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     this.nnRegistration = nnReg;
     InetSocketAddress bnAddress =
       NetUtils.createSocketAddr(bnRegistration.getAddress());
+    Storage.LOG.info("EditLogBackupOutputStream connects to: " + bnAddress);
     try {
-      this.backupNode = NameNodeProxies.createNonHAProxy(new HdfsConfiguration(),
-          bnAddress, JournalProtocol.class, UserGroupInformation.getCurrentUser(),
-          true).getProxy();
+      this.backupNode =
+        RPC.getProxy(JournalProtocol.class,
+            JournalProtocol.versionID, bnAddress, new HdfsConfiguration());
     } catch(IOException e) {
       Storage.LOG.error("Error connecting to: " + bnAddress, e);
       throw e;
@@ -68,13 +67,23 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
     this.out = new DataOutputBuffer(DEFAULT_BUFFER_SIZE);
   }
   
+  @Override // JournalStream
+  public String getName() {
+    return bnRegistration.getAddress();
+  }
+
+  @Override // JournalStream
+  public JournalType getType() {
+    return JournalType.BACKUP;
+  }
+
   @Override // EditLogOutputStream
-  public void write(FSEditLogOp op) throws IOException {
+  void write(FSEditLogOp op) throws IOException {
     doubleBuf.writeOp(op);
  }
 
   @Override
-  public void writeRaw(byte[] bytes, int offset, int length) throws IOException {
+  void writeRaw(byte[] bytes, int offset, int length) throws IOException {
     throw new IOException("Not supported");
   }
 
@@ -82,7 +91,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
    * There is no persistent storage. Just clear the buffers.
    */
   @Override // EditLogOutputStream
-  public void create() throws IOException {
+  void create() throws IOException {
     assert doubleBuf.isFlushed() : "previous data is not flushed yet";
     this.doubleBuf = new EditsDoubleBuffer(DEFAULT_BUFFER_SIZE);
   }
@@ -108,7 +117,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   }
 
   @Override // EditLogOutputStream
-  public void setReadyToFlush() throws IOException {
+  void setReadyToFlush() throws IOException {
     doubleBuf.setReadyToFlush();
   }
 
@@ -130,6 +139,16 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
       backupNode.journal(nnRegistration,
           firstTxToFlush, numReadyTxns, data);
     }
+  }
+
+  /**
+   * There is no persistent storage. Therefore length is 0.<p>
+   * Length is used to check when it is large enough to start a checkpoint.
+   * This criteria should not be used for backup streams.
+   */
+  @Override // EditLogOutputStream
+  long length() throws IOException {
+    return 0;
   }
 
   /**

@@ -24,11 +24,17 @@ import org.junit.Test;
 
 public class TestServiceLifecycle extends ServiceAssert {
 
-  /**
-   * Walk the {@link BreakableService} through it's lifecycle, 
-   * more to verify that service's counters work than anything else
-   * @throws Throwable if necessary
-   */
+  void assertStateCount(BreakableService service,
+                        Service.STATE state,
+                        int expected) {
+    int actual = service.getCount(state);
+    if (expected != actual) {
+      fail("Expected entry count for state [" + state +"] of " + service
+               + " to be " + expected + " but was " + actual);
+    }
+  }
+
+
   @Test
   public void testWalkthrough() throws Throwable {
 
@@ -51,14 +57,12 @@ public class TestServiceLifecycle extends ServiceAssert {
 
   /**
    * call init twice
-   * @throws Throwable if necessary
+   * @throws Throwable
    */
   @Test
   public void testInitTwice() throws Throwable {
     BreakableService svc = new BreakableService();
-    Configuration conf = new Configuration();
-    conf.set("test.init","t");
-    svc.init(conf);
+    svc.init(new Configuration());
     try {
       svc.init(new Configuration());
       fail("Expected a failure, got " + svc);
@@ -66,12 +70,11 @@ public class TestServiceLifecycle extends ServiceAssert {
       //expected
     }
     assertStateCount(svc, Service.STATE.INITED, 2);
-    assertServiceConfigurationContains(svc, "test.init");
   }
 
   /**
-   * Call start twice
-   * @throws Throwable if necessary
+   * call start twice
+   * @throws Throwable
    */
   @Test
   public void testStartTwice() throws Throwable {
@@ -89,11 +92,11 @@ public class TestServiceLifecycle extends ServiceAssert {
 
 
   /**
-   * Verify that when a service is stopped more than once, no exception
-   * is thrown, and the counter is incremented.
-   * This is because the state change operations happen after the counter in
+   * verify that when a service is stopped more than once, no exception
+   * is thrown, and the counter is incremented
+   * this is because the state change operations happen after the counter in
    * the subclass is incremented, even though stop is meant to be a no-op
-   * @throws Throwable if necessary
+   * @throws Throwable
    */
   @Test
   public void testStopTwice() throws Throwable {
@@ -110,7 +113,7 @@ public class TestServiceLifecycle extends ServiceAssert {
   /**
    * Show that if the service failed during an init
    * operation, it stays in the created state, even after stopping it
-   * @throws Throwable if necessary
+   * @throws Throwable
    */
 
   @Test
@@ -136,7 +139,7 @@ public class TestServiceLifecycle extends ServiceAssert {
   /**
    * Show that if the service failed during an init
    * operation, it stays in the created state, even after stopping it
-   * @throws Throwable if necessary
+   * @throws Throwable
    */
 
   @Test
@@ -160,10 +163,11 @@ public class TestServiceLifecycle extends ServiceAssert {
   }
 
   /**
-   * verify that when a service fails during its stop operation,
-   * its state does not change, and the subclass invocation counter
-   * increments.
-   * @throws Throwable if necessary
+   * verify that when a service is stopped more than once, no exception
+   * is thrown, and the counter is incremented
+   * this is because the state change operations happen after the counter in
+   * the subclass is incremented, even though stop is meant to be a no-op
+   * @throws Throwable
    */
   @Test
   public void testFailingStop() throws Throwable {
@@ -177,7 +181,6 @@ public class TestServiceLifecycle extends ServiceAssert {
       //expected
     }
     assertStateCount(svc, Service.STATE.STOPPED, 1);
-    assertServiceStateStarted(svc);
     //now try again, and expect it to happen again
     try {
       svc.stop();
@@ -188,31 +191,4 @@ public class TestServiceLifecycle extends ServiceAssert {
     assertStateCount(svc, Service.STATE.STOPPED, 2);
   }
 
-  /**
-   * verify that when a service that is not started is stopped, its counter
-   * of stop calls is still incremented-and the service remains in its
-   * original state..
-   * @throws Throwable on a failure
-   */
-  @Test
-  public void testStopUnstarted() throws Throwable {
-    BreakableService svc = new BreakableService();
-    svc.stop();
-    assertServiceStateCreated(svc);
-    assertStateCount(svc, Service.STATE.STOPPED, 1);
-
-    //stop failed, now it can be initialised
-    svc.init(new Configuration());
-
-    //and try to stop again, with no state change but an increment
-    svc.stop();
-    assertServiceStateInited(svc);
-    assertStateCount(svc, Service.STATE.STOPPED, 2);
-
-    //once started, the service can be stopped reliably
-    svc.start();
-    ServiceOperations.stop(svc);
-    assertServiceStateStopped(svc);
-    assertStateCount(svc, Service.STATE.STOPPED, 3);
-  }
 }

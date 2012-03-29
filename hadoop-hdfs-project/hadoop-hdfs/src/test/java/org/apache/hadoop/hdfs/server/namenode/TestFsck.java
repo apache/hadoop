@@ -227,7 +227,7 @@ public class TestFsck extends TestCase {
     }
   }
 
-  public void testFsckMoveAndDelete() throws Exception {
+  public void testFsckMove() throws Exception {
     DFSTestUtil util = new DFSTestUtil("TestFsck", 5, 3, 8*1024);
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
@@ -248,9 +248,8 @@ public class TestFsck extends TestCase {
       String[] fileNames = util.getFileNames(topDir);
       DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                           cluster.getNameNodePort()), conf);
-      String corruptFileName = fileNames[0];
       ExtendedBlock block = dfsClient.getNamenode().getBlockLocations(
-          corruptFileName, 0, Long.MAX_VALUE).get(0).getBlock();
+          fileNames[0], 0, Long.MAX_VALUE).get(0).getBlock();
       for (int i=0; i<4; i++) {
         File blockFile = MiniDFSCluster.getBlockFile(i, block);
         if(blockFile != null && blockFile.exists()) {
@@ -268,21 +267,8 @@ public class TestFsck extends TestCase {
         outStr = runFsck(conf, 1, false, "/");
       } 
       
-      // After a fsck -move, the corrupted file should still exist.
-      outStr = runFsck(conf, 1, true, "/", "-move" );
-      assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
-      String[] newFileNames = util.getFileNames(topDir);
-      boolean found = false;
-      for (String f : newFileNames) {
-        if (f.equals(corruptFileName)) {
-          found = true;
-          break;
-        }
-      }
-      assertTrue(found);
-
       // Fix the filesystem by moving corrupted files to lost+found
-      outStr = runFsck(conf, 1, true, "/", "-move", "-delete");
+      outStr = runFsck(conf, 1, true, "/", "-move");
       assertTrue(outStr.contains(NamenodeFsck.CORRUPT_STATUS));
       
       // Check to make sure we have healthy filesystem

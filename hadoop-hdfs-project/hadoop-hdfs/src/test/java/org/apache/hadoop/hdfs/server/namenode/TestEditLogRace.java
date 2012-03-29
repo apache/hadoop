@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.log4j.Level;
 
@@ -237,7 +236,7 @@ public class TestEditLogRace {
         
       System.out.println("Verifying file: " + editFile);
       FSEditLogLoader loader = new FSEditLogLoader(namesystem);
-      long numEditsThisLog = loader.loadFSEdits(new EditLogFileInputStream(editFile), 
+      int numEditsThisLog = loader.loadFSEdits(new EditLogFileInputStream(editFile), 
           startTxId);
       
       System.out.println("Number of edits: " + numEditsThisLog);
@@ -351,13 +350,13 @@ public class TestEditLogRace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    final FSNamesystem namesystem = FSNamesystem.loadFromDisk(conf);
+    final FSNamesystem namesystem = new FSNamesystem(conf);
 
     try {
       FSImage fsimage = namesystem.getFSImage();
       FSEditLog editLog = fsimage.getEditLog();
 
-      JournalAndStream jas = editLog.getJournals().get(0);
+      FSEditLog.JournalAndStream jas = editLog.getJournals().get(0);
       EditLogFileOutputStream spyElos =
           spy((EditLogFileOutputStream)jas.getCurrentStream());
       jas.setCurrentStreamForTests(spyElos);
@@ -375,7 +374,6 @@ public class TestEditLogRace {
                 true);
             LOG.info("mkdirs complete");
           } catch (Throwable ioe) {
-            LOG.fatal("Got exception", ioe);
             deferredException.set(ioe);
             waitToEnterFlush.countDown();
           }
@@ -450,7 +448,7 @@ public class TestEditLogRace {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
     DFSTestUtil.formatNameNode(conf);
-    final FSNamesystem namesystem = FSNamesystem.loadFromDisk(conf);
+    final FSNamesystem namesystem = new FSNamesystem(conf);
 
     try {
       FSImage fsimage = namesystem.getFSImage();
@@ -470,7 +468,6 @@ public class TestEditLogRace {
                 true);
             LOG.info("mkdirs complete");
           } catch (Throwable ioe) {
-            LOG.fatal("Got exception", ioe);
             deferredException.set(ioe);
             waitToEnterSync.countDown();
           }

@@ -71,7 +71,7 @@ public class FileChecksumServlets {
         String tokenString = ugi.getTokens().iterator().next().encodeToUrlString();
         dtParam = JspHelper.getDelegationTokenUrlParam(tokenString);
       }
-      String addr = NetUtils.getHostPortString(nn.getNameNodeAddress());
+      String addr = NameNode.getHostPortString(nn.getNameNodeAddress());
       String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
 
       return new URL(scheme, hostname, port, 
@@ -80,7 +80,7 @@ public class FileChecksumServlets {
           dtParam + addrParam);
     }
 
-    @Override
+    /** {@inheritDoc} */
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
       final ServletContext context = getServletContext();
@@ -104,7 +104,7 @@ public class FileChecksumServlets {
     /** For java.io.Serializable */
     private static final long serialVersionUID = 1L;
     
-    @Override
+    /** {@inheritDoc} */
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
       final PrintWriter out = response.getWriter();

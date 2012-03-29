@@ -40,7 +40,7 @@ public class ContentSummaryServlet extends DfsServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
   
-  @Override
+  /** {@inheritDoc} */
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
     final Configuration conf = 

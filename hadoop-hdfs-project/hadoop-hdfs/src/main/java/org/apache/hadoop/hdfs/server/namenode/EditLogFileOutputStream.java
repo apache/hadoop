@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -28,7 +27,6 @@ import java.nio.channels.FileChannel;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.io.IOUtils;
 
@@ -38,9 +36,10 @@ import com.google.common.annotations.VisibleForTesting;
  * An implementation of the abstract class {@link EditLogOutputStream}, which
  * stores edits in a local file.
  */
-@InterfaceAudience.Private
-public class EditLogFileOutputStream extends EditLogOutputStream {
-  private static Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
+class EditLogFileOutputStream extends EditLogOutputStream {
+  private static Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);;
+
+  private static int EDITS_FILE_HEADER_SIZE_BYTES = Integer.SIZE / Byte.SIZE;
 
   private File file;
   private FileOutputStream fp; // file stream for storing edit logs
@@ -74,8 +73,19 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     fc.position(fc.size());
   }
 
+  @Override // JournalStream
+  public String getName() {
+    return file.getPath();
+  }
+
+  @Override // JournalStream
+  public JournalType getType() {
+    return JournalType.FILE;
+  }
+
+  /** {@inheritDoc} */
   @Override
-  public void write(FSEditLogOp op) throws IOException {
+  void write(FSEditLogOp op) throws IOException {
     doubleBuf.writeOp(op);
   }
 
@@ -88,7 +98,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    * </ul>
    * */
   @Override
-  public void writeRaw(byte[] bytes, int offset, int length) throws IOException {
+  void writeRaw(byte[] bytes, int offset, int length) throws IOException {
     doubleBuf.writeRaw(bytes, offset, length);
   }
 
@@ -96,24 +106,12 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    * Create empty edits logs file.
    */
   @Override
-  public void create() throws IOException {
+  void create() throws IOException {
     fc.truncate(0);
     fc.position(0);
-    writeHeader(doubleBuf.getCurrentBuf());
+    doubleBuf.getCurrentBuf().writeInt(HdfsConstants.LAYOUT_VERSION);
     setReadyToFlush();
     flush();
-  }
-
-  /**
-   * Write header information for this EditLogFileOutputStream to the provided
-   * DataOutputSream.
-   * 
-   * @param out the output stream to write the header to.
-   * @throws IOException in the event of error writing to the stream.
-   */
-  @VisibleForTesting
-  public static void writeHeader(DataOutputStream out) throws IOException {
-    out.writeInt(HdfsConstants.LAYOUT_VERSION);
   }
 
   @Override
@@ -164,7 +162,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    * data can be still written to the stream while flushing is performed.
    */
   @Override
-  public void setReadyToFlush() throws IOException {
+  void setReadyToFlush() throws IOException {
     doubleBuf.getCurrentBuf().write(FSEditLogOpCodes.OP_INVALID.getOpCode()); // insert eof marker
     doubleBuf.setReadyToFlush();
   }
@@ -178,10 +176,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
     if (fp == null) {
       throw new IOException("Trying to use aborted output stream");
     }
-    if (doubleBuf.isFlushed()) {
-      LOG.info("Nothing to flush");
-      return;
-    }
+    
     preallocate(); // preallocate file if necessary
     doubleBuf.flushTo(fp);
     fc.force(false); // metadata updates not needed because of preallocation
@@ -194,6 +189,16 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
   @Override
   public boolean shouldForceSync() {
     return doubleBuf.shouldForceSync();
+  }
+  
+  /**
+   * Return the size of the current edit log including buffered data.
+   */
+  @Override
+  long length() throws IOException {
+    // file size - header size + size of both buffers
+    return fc.size() - EDITS_FILE_HEADER_SIZE_BYTES + 
+      doubleBuf.countBufferedBytes();
   }
 
   // allocate a big chunk of data
@@ -218,11 +223,6 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    */
   File getFile() {
     return file;
-  }
-  
-  @Override
-  public String toString() {
-    return "EditLogFileOutputStream(" + file + ")";
   }
 
   /**

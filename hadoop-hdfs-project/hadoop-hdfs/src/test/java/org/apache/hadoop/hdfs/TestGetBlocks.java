@@ -32,7 +32,11 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocat
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+
 import junit.framework.TestCase;
 /**
  * This class tests if block replacement request to data nodes work correctly.
@@ -94,8 +98,10 @@ public class TestGetBlocks extends TestCase {
       // get RPC client to namenode
       InetSocketAddress addr = new InetSocketAddress("localhost",
           cluster.getNameNodePort());
-      NamenodeProtocol namenode = NameNodeProxies.createProxy(CONF,
-          NameNode.getUri(addr), NamenodeProtocol.class).getProxy();
+      NamenodeProtocol namenode = (NamenodeProtocol) RPC.getProxy(
+          NamenodeProtocol.class, NamenodeProtocol.versionID, addr,
+          UserGroupInformation.getCurrentUser(), CONF,
+          NetUtils.getDefaultSocketFactory(CONF));
 
       // get blocks of size fileLen from dataNodes[0]
       BlockWithLocations[] locs;

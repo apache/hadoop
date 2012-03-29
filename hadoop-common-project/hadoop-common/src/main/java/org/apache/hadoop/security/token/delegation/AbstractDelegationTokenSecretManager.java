@@ -40,8 +40,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
 
-import com.google.common.base.Preconditions;
-
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public abstract 
@@ -86,12 +84,6 @@ extends AbstractDelegationTokenIdentifier>
   private Thread tokenRemoverThread;
   protected volatile boolean running;
 
-  /**
-   * If the delegation token update thread holds this lock, it will
-   * not get interrupted.
-   */
-  protected Object noInterruptsLock = new Object();
-
   public AbstractDelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
       long delegationTokenRemoverScanInterval) {
@@ -103,7 +95,6 @@ extends AbstractDelegationTokenIdentifier>
 
   /** should be called before this object is used */
   public void startThreads() throws IOException {
-    Preconditions.checkState(!running);
     updateCurrentKey();
     synchronized (this) {
       running = true;
@@ -363,21 +354,12 @@ extends AbstractDelegationTokenIdentifier>
     }
   }
 
-  public void stopThreads() {
+  public synchronized void stopThreads() {
     if (LOG.isDebugEnabled())
       LOG.debug("Stopping expired delegation token remover thread");
     running = false;
-    
     if (tokenRemoverThread != null) {
-      synchronized (noInterruptsLock) {
-        tokenRemoverThread.interrupt();
-      }
-      try {
-        tokenRemoverThread.join();
-      } catch (InterruptedException e) {
-        throw new RuntimeException(
-            "Unable to join on token removal thread", e);
-      }
+      tokenRemoverThread.interrupt();
     }
   }
   
@@ -413,7 +395,7 @@ extends AbstractDelegationTokenIdentifier>
             lastTokenCacheCleanup = now;
           }
           try {
-            Thread.sleep(Math.min(5000, keyUpdateInterval)); // 5 seconds
+            Thread.sleep(5000); // 5 seconds
           } catch (InterruptedException ie) {
             LOG
             .error("InterruptedExcpetion recieved for ExpiredTokenRemover thread "

@@ -16,32 +16,39 @@
  * limitations under the License.
  */
 
+
 package org.apache.hadoop.net;
+
+import junit.framework.TestCase;
 
 import java.net.UnknownHostException;
 import java.net.InetAddress;
 
-import javax.naming.NameNotFoundException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
+import javax.naming.NameNotFoundException;
 
 /**
- * Test host name and IP resolution and caching.
+ *
  */
-public class TestDNS {
+public class TestDNS extends TestCase {
 
   private static final Log LOG = LogFactory.getLog(TestDNS.class);
   private static final String DEFAULT = "default";
 
   /**
-   * Test that asking for the default hostname works
-   * @throws Exception if hostname lookups fail
+   * Constructs a test case with the given name.
+   *
+   * @param name test name
    */
-  @Test
+  public TestDNS(String name) {
+    super(name);
+  }
+
+  /**
+   * Test that asking for the default hostname works
+   * @throws Exception if hostname lookups fail   */
   public void testGetLocalHost() throws Exception {
     String hostname = DNS.getDefaultHost(DEFAULT);
     assertNotNull(hostname);
@@ -52,27 +59,26 @@ public class TestDNS {
    * hence that caching is being used
    * @throws Exception if hostname lookups fail
    */
-  @Test
   public void testGetLocalHostIsFast() throws Exception {
-    String hostname1 = DNS.getDefaultHost(DEFAULT);
-    assertNotNull(hostname1);
-    String hostname2 = DNS.getDefaultHost(DEFAULT);
+    String hostname = DNS.getDefaultHost(DEFAULT);
+    assertNotNull(hostname);
     long t1 = System.currentTimeMillis();
-    String hostname3 = DNS.getDefaultHost(DEFAULT);
+    String hostname2 = DNS.getDefaultHost(DEFAULT);
     long t2 = System.currentTimeMillis();
+    String hostname3 = DNS.getDefaultHost(DEFAULT);
+    long t3 = System.currentTimeMillis();
     assertEquals(hostname3, hostname2);
-    assertEquals(hostname2, hostname1);
-    long interval = t2 - t1;
+    assertEquals(hostname2, hostname);
+    long interval2 = t3 - t2;
     assertTrue(
-        "Took too long to determine local host - caching is not working",
-        interval < 20000);
+            "It is taking to long to determine the local host -caching is not working",
+            interval2 < 20000);
   }
 
   /**
    * Test that our local IP address is not null
    * @throws Exception if something went wrong
    */
-  @Test
   public void testLocalHostHasAnAddress() throws Exception {
     assertNotNull(getLocalIPAddr());
   }
@@ -84,54 +90,34 @@ public class TestDNS {
   }
 
   /**
-   * Test null interface name
+   * Test that passing a null pointer is as the interface
+   * fails with a NullPointerException
+   * @throws Exception if something went wrong
    */
-  @Test
   public void testNullInterface() throws Exception {
     try {
       String host = DNS.getDefaultHost(null);
       fail("Expected a NullPointerException, got " + host);
-    } catch (NullPointerException npe) {
-      // Expected
-    }
-    try {
-      String ip = DNS.getDefaultIP(null);
-      fail("Expected a NullPointerException, got " + ip);
-    } catch (NullPointerException npe) {
-      // Expected
+    } catch (NullPointerException expected) {
+      //this is expected
     }
   }
 
   /**
-   * Get the IP addresses of an unknown interface
+   * Get the IP addresses of an unknown interface, expect to get something
+   * back
+   * @throws Exception if something went wrong
    */
-  @Test
   public void testIPsOfUnknownInterface() throws Exception {
-    try {
-      DNS.getIPs("name-of-an-unknown-interface");
-      fail("Got an IP for a bogus interface");
-    } catch (UnknownHostException e) {
-      assertEquals("No such interface name-of-an-unknown-interface",
-          e.getMessage());
-    }
-  }
-
-  /**
-   * Test the "default" IP addresses is the local IP addr
-   */
-  @Test
-  public void testGetIPWithDefault() throws Exception {
-    String[] ips = DNS.getIPs(DEFAULT);
-    assertEquals("Should only return 1 default IP", 1, ips.length);
-    assertEquals(getLocalIPAddr().getHostAddress(), ips[0].toString());
-    String ip = DNS.getDefaultIP(DEFAULT);
-    assertEquals(ip, ips[0].toString());
+    String[] ips = DNS.getIPs("name-of-an-unknown-interface");
+    assertNotNull(ips);
+    assertTrue(ips.length > 0);
   }
 
   /**
    * TestCase: get our local address and reverse look it up
+   * @throws Exception if that fails
    */
-  @Test
   public void testRDNS() throws Exception {
     InetAddress localhost = getLocalIPAddr();
     try {
@@ -154,8 +140,8 @@ public class TestDNS {
    * Test that the name "localhost" resolves to something.
    *
    * If this fails, your machine's network is in a mess, go edit /etc/hosts
+   * @throws Exception for any problems
    */
-  @Test
   public void testLocalhostResolves() throws Exception {
     InetAddress localhost = InetAddress.getByName("localhost");
     assertNotNull("localhost is null", localhost);

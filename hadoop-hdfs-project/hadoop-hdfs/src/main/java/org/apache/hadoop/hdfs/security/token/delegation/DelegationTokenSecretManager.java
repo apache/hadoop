@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.security.token.delegation;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
 
@@ -30,9 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -74,16 +71,6 @@ public class DelegationTokenSecretManager
   @Override //SecretManager
   public DelegationTokenIdentifier createIdentifier() {
     return new DelegationTokenIdentifier();
-  }
-  
-  @Override //SecretManager
-  public void checkAvailableForRead() throws StandbyException {
-    namesystem.readLock();
-    try {
-      namesystem.checkOperation(OperationCategory.READ);
-    } finally {
-      namesystem.readUnlock();
-    }
   }
 
   /**
@@ -296,18 +283,7 @@ public class DelegationTokenSecretManager
   @Override //AbstractDelegationTokenManager
   protected void logUpdateMasterKey(DelegationKey key)
       throws IOException {
-    synchronized (noInterruptsLock) {
-      // The edit logging code will fail catastrophically if it
-      // is interrupted during a logSync, since the interrupt
-      // closes the edit log files. Doing this inside the
-      // above lock and then checking interruption status
-      // prevents this bug.
-      if (Thread.interrupted()) {
-        throw new InterruptedIOException(
-            "Interrupted before updating master key");
-      }
-      namesystem.logUpdateMasterKey(key);
-    }
+    namesystem.logUpdateMasterKey(key);
   }
 
   /** A utility method for creating credentials. */

@@ -30,7 +30,6 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -116,9 +115,9 @@ public class TestDecommission {
   private void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
     // create and write a file that contains three blocks of data
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, blockSize);
+    FSDataOutputStream stm = fileSys.create(name, true, 
+                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+                                            (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -247,7 +246,7 @@ public class TestDecommission {
    * Wait till node is fully decommissioned.
    */
   private void waitNodeState(DatanodeInfo node,
-                             AdminStates state) {
+                             AdminStates state) throws IOException {
     boolean done = state == node.getAdminState();
     while (!done) {
       LOG.info("Waiting for node " + node + " to change state to "
@@ -279,8 +278,7 @@ public class TestDecommission {
    * @throws IOException */
   private void startCluster(int numNameNodes, int numDatanodes,
       Configuration conf) throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf)
-      .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(numNameNodes))
+    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(numNameNodes)
         .numDataNodes(numDatanodes).build();
     cluster.waitActive();
     for (int i = 0; i < numNameNodes; i++) {
@@ -508,8 +506,7 @@ public class TestDecommission {
       InterruptedException {
     conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     int numDatanodes = 1;
-    cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(numNameNodes))
+    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(numNameNodes)
         .numDataNodes(numDatanodes).setupHostsFile(true).build();
     cluster.waitActive();
     

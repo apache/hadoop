@@ -114,36 +114,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String 
   HADOOP_SECURITY_SERVICE_AUTHORIZATION_REFRESH_USER_MAPPINGS =
       "security.refresh.user.mappings.protocol.acl";
-  public static final String 
-  SECURITY_HA_SERVICE_PROTOCOL_ACL = "security.ha.service.protocol.acl";
   
   public static final String HADOOP_SECURITY_TOKEN_SERVICE_USE_IP =
       "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
       true;
-  
-  /**
-   * HA health monitor and failover controller.
-   */
- 
-  /** How often to retry connecting to the service. */
-  public static final String HA_HM_CONNECT_RETRY_INTERVAL_KEY =
-    "ha.health-monitor.connect-retry-interval.ms";
-  public static final long HA_HM_CONNECT_RETRY_INTERVAL_DEFAULT = 1000;
- 
-  /* How often to check the service. */
-  public static final String HA_HM_CHECK_INTERVAL_KEY =
-    "ha.health-monitor.check-interval.ms";  
-  public static final long HA_HM_CHECK_INTERVAL_DEFAULT = 1000;
- 
-  /* How long to sleep after an unexpected RPC error. */
-  public static final String HA_HM_SLEEP_AFTER_DISCONNECT_KEY =
-    "ha.health-monitor.sleep-after-disconnect.ms";
-  public static final long HA_HM_SLEEP_AFTER_DISCONNECT_DEFAULT = 1000;
- 
-  /* Timeout for the actual monitorHealth() calls. */
-  public static final String HA_HM_RPC_TIMEOUT_KEY =
-    "ha.health-monitor.rpc-timeout.ms";
-  public static final int HA_HM_RPC_TIMEOUT_DEFAULT = 45000;
+
 }
 

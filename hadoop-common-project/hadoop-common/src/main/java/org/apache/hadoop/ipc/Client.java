@@ -50,8 +50,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.ipc.RpcPayloadHeader.*;
-import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -67,7 +65,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.security.token.TokenInfo;
-import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
@@ -156,20 +153,16 @@ public class Client {
     return refCount==0;
   }
 
-  /** 
-   * Class that represents an RPC call
-   */
+  /** A call waiting for a value. */
   private class Call {
-    final int id;               // call id
-    final Writable rpcRequest;  // the serialized rpc request - RpcPayload
-    Writable rpcResponse;       // null if rpc has error
-    IOException error;          // exception, null if success
-    final RpcKind rpcKind;      // Rpc EngineKind
-    boolean done;               // true when call is done
+    int id;                                       // call id
+    Writable param;                               // parameter
+    Writable value;                               // value, null if error
+    IOException error;                            // exception, null if value
+    boolean done;                                 // true when call is done
 
-    protected Call(RpcKind rpcKind, Writable param) {
-      this.rpcKind = rpcKind;
-      this.rpcRequest = param;
+    protected Call(Writable param) {
+      this.param = param;
       synchronized (Client.this) {
         this.id = counter++;
       }
@@ -195,15 +188,15 @@ public class Client {
     /** Set the return value when there is no error. 
      * Notify the caller the call is done.
      * 
-     * @param rpcResponse return value of the rpc call.
+     * @param value return value of the call.
      */
-    public synchronized void setRpcResponse(Writable rpcResponse) {
-      this.rpcResponse = rpcResponse;
+    public synchronized void setValue(Writable value) {
+      this.value = value;
       callComplete();
     }
     
-    public synchronized Writable getRpcResult() {
-      return rpcResponse;
+    public synchronized Writable getValue() {
+      return value;
     }
   }
 
@@ -213,7 +206,7 @@ public class Client {
   private class Connection extends Thread {
     private InetSocketAddress server;             // server ip:port
     private String serverPrincipal;  // server's krb5 principal name
-    private IpcConnectionContextProto connectionContext;   // connection context
+    private ConnectionHeader header;              // connection header
     private final ConnectionId remoteId;                // connection id
     private AuthMethod authMethod; // authentication method
     private boolean useSasl;
@@ -227,8 +220,6 @@ public class Client {
     private int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
     private int maxRetries; //the max. no. of retries for socket connections
-    // the max. no. of retries for socket connections on time out exceptions
-    private int maxRetriesOnSocketTimeouts;
     private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
     private boolean doPing; //do we need to send ping message
     private int pingInterval; // how often sends ping to the server in msecs
@@ -252,7 +243,6 @@ public class Client {
       this.rpcTimeout = remoteId.getRpcTimeout();
       this.maxIdleTime = remoteId.getMaxIdleTime();
       this.maxRetries = remoteId.getMaxRetries();
-      this.maxRetriesOnSocketTimeouts = remoteId.getMaxRetriesOnSocketTimeouts();
       this.tcpNoDelay = remoteId.getTcpNoDelay();
       this.doPing = remoteId.getDoPing();
       this.pingInterval = remoteId.getPingInterval();
@@ -297,8 +287,8 @@ public class Client {
         authMethod = AuthMethod.KERBEROS;
       }
       
-      connectionContext = ProtoUtil.makeIpcConnectionContext(
-          RPC.getProtocolName(protocol), ticket, authMethod);
+      header = new ConnectionHeader(protocol == null ? null : protocol
+          .getName(), ticket, authMethod);
       
       if (LOG.isDebugEnabled())
         LOG.debug("Use " + authMethod + " authentication for protocol "
@@ -481,8 +471,11 @@ public class Client {
           if (updateAddress()) {
             timeoutFailures = ioFailures = 0;
           }
-          handleConnectionFailure(timeoutFailures++,
-              maxRetriesOnSocketTimeouts, toe);
+          /*
+           * The max number of retries is 45, which amounts to 20s*45 = 15
+           * minutes retries.
+           */
+          handleConnectionFailure(timeoutFailures++, 45, toe);
         } catch (IOException ie) {
           if (updateAddress()) {
             timeoutFailures = ioFailures = 0;
@@ -565,7 +558,7 @@ public class Client {
           setupConnection();
           InputStream inStream = NetUtils.getInputStream(socket);
           OutputStream outStream = NetUtils.getOutputStream(socket);
-          writeConnectionHeader(outStream);
+          writeRpcHeader(outStream);
           if (useSasl) {
             final InputStream in2 = inStream;
             final OutputStream out2 = outStream;
@@ -599,11 +592,8 @@ public class Client {
             } else {
               // fall back to simple auth because server told us so.
               authMethod = AuthMethod.SIMPLE;
-              // remake the connectionContext             
-              connectionContext = ProtoUtil.makeIpcConnectionContext(
-                  connectionContext.getProtocol(), 
-                  ProtoUtil.getUgi(connectionContext.getUserInfo()),
-                  authMethod);
+              header = new ConnectionHeader(header.getProtocol(), header
+                  .getUgi(), authMethod);
               useSasl = false;
             }
           }
@@ -683,26 +673,13 @@ public class Client {
           ". Already tried " + curRetries + " time(s).");
     }
 
-    /**
-     * Write the connection header - this is sent when connection is established
-     * +----------------------------------+
-     * |  "hrpc" 4 bytes                  |      
-     * +----------------------------------+
-     * |  Version (1 bytes)               |      
-     * +----------------------------------+
-     * |  Authmethod (1 byte)             |      
-     * +----------------------------------+
-     * |  IpcSerializationType (1 byte)   |      
-     * +----------------------------------+
-     */
-    private void writeConnectionHeader(OutputStream outStream)
-        throws IOException {
+    /* Write the RPC header */
+    private void writeRpcHeader(OutputStream outStream) throws IOException {
       DataOutputStream out = new DataOutputStream(new BufferedOutputStream(outStream));
       // Write out the header, version and authentication method
       out.write(Server.HEADER.array());
       out.write(Server.CURRENT_VERSION);
       authMethod.write(out);
-      Server.IpcSerializationType.PROTOBUF.write(out);
       out.flush();
     }
     
@@ -712,7 +689,7 @@ public class Client {
     private void writeHeader() throws IOException {
       // Write out the ConnectionHeader
       DataOutputBuffer buf = new DataOutputBuffer();
-      connectionContext.writeTo(buf);
+      header.write(buf);
       
       // Write out the payload length
       int bufLen = buf.getLength();
@@ -751,7 +728,6 @@ public class Client {
       }
     }
 
-    @SuppressWarnings("unused")
     public InetSocketAddress getRemoteAddress() {
       return server;
     }
@@ -813,10 +789,8 @@ public class Client {
           //data to be written
           d = new DataOutputBuffer();
           d.writeInt(0); // placeholder for data length
-          RpcPayloadHeader header = new RpcPayloadHeader(
-              call.rpcKind, RpcPayloadOperation.RPC_FINAL_PAYLOAD, call.id);
-          header.write(d);
-          call.rpcRequest.write(d);
+          d.writeInt(call.id);
+          call.param.write(d);
           byte[] data = d.getData();
           int dataLength = d.getLength() - 4;
           data[0] = (byte)((dataLength >>> 24) & 0xff);
@@ -856,7 +830,7 @@ public class Client {
         if (state == Status.SUCCESS.state) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
-          call.setRpcResponse(value);
+          call.setValue(value);
           calls.remove(id);
         } else if (state == Status.ERROR.state) {
           call.setException(new RemoteException(WritableUtils.readString(in),
@@ -940,7 +914,7 @@ public class Client {
     private int index;
     
     public ParallelCall(Writable param, ParallelResults results, int index) {
-      super(RpcKind.RPC_WRITABLE, param);
+      super(param);
       this.results = results;
       this.index = index;
     }
@@ -964,7 +938,7 @@ public class Client {
 
     /** Collect a result. */
     public synchronized void callComplete(ParallelCall call) {
-      values[call.index] = call.getRpcResult();       // store the value
+      values[call.index] = call.getValue();       // store the value
       count++;                                    // count it
       if (count == size)                          // if all values are in
         notify();                                 // then notify waiting caller
@@ -1024,25 +998,15 @@ public class Client {
     }
   }
 
-  /**
-   * Same as {@link #call(RpcPayloadHeader.RpcKind, Writable, ConnectionId)}
-   *  for RPC_BUILTIN
-   */
-  public Writable call(Writable param, InetSocketAddress address)
-  throws InterruptedException, IOException {
-    return call(RpcKind.RPC_BUILTIN, param, address);
-    
-  }
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
    * network problems or if the remote code threw an exception.
-   * @deprecated Use {@link #call(RpcPayloadHeader.RpcKind, Writable,
-   *  ConnectionId)} instead 
+   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
    */
   @Deprecated
-  public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress address)
+  public Writable call(Writable param, InetSocketAddress address)
   throws InterruptedException, IOException {
-      return call(rpcKind, param, address, null);
+      return call(param, address, null);
   }
   
   /** Make a call, passing <code>param</code>, to the IPC server running at
@@ -1050,16 +1014,15 @@ public class Client {
    * the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception.
-   * @deprecated Use {@link #call(RpcPayloadHeader.RpcKind, Writable, 
-   * ConnectionId)} instead 
+   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
    */
   @Deprecated
-  public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress addr, 
+  public Writable call(Writable param, InetSocketAddress addr, 
       UserGroupInformation ticket)  
       throws InterruptedException, IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, null, ticket, 0,
         conf);
-    return call(rpcKind, param, remoteId);
+    return call(param, remoteId);
   }
   
   /** Make a call, passing <code>param</code>, to the IPC server running at
@@ -1068,34 +1031,18 @@ public class Client {
    * timeout, returning the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception. 
-   * @deprecated Use {@link #call(RpcPayloadHeader.RpcKind, Writable,
-   *  ConnectionId)} instead 
+   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
    */
   @Deprecated
-  public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress addr, 
+  public Writable call(Writable param, InetSocketAddress addr, 
                        Class<?> protocol, UserGroupInformation ticket,
                        int rpcTimeout)  
                        throws InterruptedException, IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
-    return call(rpcKind, param, remoteId);
+    return call(param, remoteId);
   }
 
-  
-  /**
-   * Same as {@link #call(RpcPayloadHeader.RpcKind, Writable, InetSocketAddress, 
-   * Class, UserGroupInformation, int, Configuration)}
-   * except that rpcKind is writable.
-   */
-  public Writable call(Writable param, InetSocketAddress addr, 
-      Class<?> protocol, UserGroupInformation ticket,
-      int rpcTimeout, Configuration conf)  
-      throws InterruptedException, IOException {
-        ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
-        ticket, rpcTimeout, conf);
-    return call(RpcKind.RPC_BUILTIN, param, remoteId);
-  }
-  
   /**
    * Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code> which is servicing the <code>protocol</code> protocol,
@@ -1104,38 +1051,22 @@ public class Client {
    * value. Throws exceptions if there are network problems or if the remote
    * code threw an exception.
    */
-  public Writable call(RpcKind rpcKind, Writable param, InetSocketAddress addr, 
+  public Writable call(Writable param, InetSocketAddress addr, 
                        Class<?> protocol, UserGroupInformation ticket,
                        int rpcTimeout, Configuration conf)  
                        throws InterruptedException, IOException {
     ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
         ticket, rpcTimeout, conf);
-    return call(rpcKind, param, remoteId);
+    return call(param, remoteId);
   }
   
-  /**
-   * Same as {link {@link #call(RpcPayloadHeader.RpcKind, Writable, ConnectionId)}
-   * except the rpcKind is RPC_BUILTIN
-   */
+  /** Make a call, passing <code>param</code>, to the IPC server defined by
+   * <code>remoteId</code>, returning the value.  
+   * Throws exceptions if there are network problems or if the remote code 
+   * threw an exception. */
   public Writable call(Writable param, ConnectionId remoteId)  
       throws InterruptedException, IOException {
-     return call(RpcKind.RPC_BUILTIN, param, remoteId);
-  }
-  
-  /** 
-   * Make a call, passing <code>rpcRequest</code>, to the IPC server defined by
-   * <code>remoteId</code>, returning the rpc respond.
-   * 
-   * @param rpcKind
-   * @param rpcRequest -  contains serialized method and method parameters
-   * @param remoteId - the target rpc server
-   * @returns the rpc response
-   * Throws exceptions if there are network problems or if the remote code 
-   * threw an exception.
-   */
-  public Writable call(RpcKind rpcKind, Writable rpcRequest,
-      ConnectionId remoteId) throws InterruptedException, IOException {
-    Call call = new Call(rpcKind, rpcRequest);
+    Call call = new Call(param);
     Connection connection = getConnection(remoteId, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
@@ -1167,7 +1098,7 @@ public class Client {
                   call.error);
         }
       } else {
-        return call.rpcResponse;
+        return call.value;
       }
     }
   }
@@ -1279,24 +1210,22 @@ public class Client {
   public static class ConnectionId {
     InetSocketAddress address;
     UserGroupInformation ticket;
-    final Class<?> protocol;
+    Class<?> protocol;
     private static final int PRIME = 16777619;
-    private final int rpcTimeout;
-    private final String serverPrincipal;
-    private final int maxIdleTime; //connections will be culled if it was idle for 
+    private int rpcTimeout;
+    private String serverPrincipal;
+    private int maxIdleTime; //connections will be culled if it was idle for 
     //maxIdleTime msecs
-    private final int maxRetries; //the max. no. of retries for socket connections
-    // the max. no. of retries for socket connections on time out exceptions
-    private final int maxRetriesOnSocketTimeouts;
-    private final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
-    private final boolean doPing; //do we need to send ping message
-    private final int pingInterval; // how often sends ping to the server in msecs
+    private int maxRetries; //the max. no. of retries for socket connections
+    private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+    private boolean doPing; //do we need to send ping message
+    private int pingInterval; // how often sends ping to the server in msecs
     
     ConnectionId(InetSocketAddress address, Class<?> protocol, 
                  UserGroupInformation ticket, int rpcTimeout,
                  String serverPrincipal, int maxIdleTime, 
-                 int maxRetries, int maxRetriesOnSocketTimeouts,
-                 boolean tcpNoDelay, boolean doPing, int pingInterval) {
+                 int maxRetries, boolean tcpNoDelay,
+                 boolean doPing, int pingInterval) {
       this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
@@ -1304,7 +1233,6 @@ public class Client {
       this.serverPrincipal = serverPrincipal;
       this.maxIdleTime = maxIdleTime;
       this.maxRetries = maxRetries;
-      this.maxRetriesOnSocketTimeouts = maxRetriesOnSocketTimeouts;
       this.tcpNoDelay = tcpNoDelay;
       this.doPing = doPing;
       this.pingInterval = pingInterval;
@@ -1336,11 +1264,6 @@ public class Client {
     
     int getMaxRetries() {
       return maxRetries;
-    }
-    
-    /** max connection retries on socket time outs */
-    public int getMaxRetriesOnSocketTimeouts() {
-      return maxRetriesOnSocketTimeouts;
     }
     
     boolean getTcpNoDelay() {
@@ -1377,9 +1300,6 @@ public class Client {
               CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_DEFAULT),
           conf.getInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
               CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_DEFAULT),
-          conf.getInt(
-            CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
-            CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT),
           conf.getBoolean(CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_KEY,
               CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_DEFAULT),
           doPing, 

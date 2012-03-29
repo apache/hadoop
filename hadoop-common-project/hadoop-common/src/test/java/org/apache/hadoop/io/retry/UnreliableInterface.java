@@ -63,11 +63,4 @@ public interface UnreliableInterface {
       throws UnreliableException, StandbyException, IOException;
   public String succeedsTenTimesThenFailsReturningString()
       throws UnreliableException, StandbyException, IOException;
-  
-  @Idempotent
-  public String failsIfIdentifierDoesntMatch(String identifier)
-      throws UnreliableException, StandbyException, IOException;
-
-  void nonIdempotentVoidFailsIfIdentifierDoesntMatch(String identifier)
-      throws UnreliableException, StandbyException, IOException;
 }

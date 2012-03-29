@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
@@ -40,9 +39,4 @@ public interface CapacitySchedulerContext {
   RMContext getRMContext();
   
   Resource getClusterResources();
-
-  /**
-   * Get the yarn configuration.
-   */
-  Configuration getConf();
 }

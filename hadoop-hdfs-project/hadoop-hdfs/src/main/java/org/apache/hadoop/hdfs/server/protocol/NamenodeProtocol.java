@@ -36,24 +36,11 @@ import org.apache.hadoop.security.KerberosInfo;
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
     clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
-public interface NamenodeProtocol {
+public interface NamenodeProtocol extends VersionedProtocol {
   /**
-   * Until version 6L, this class served as both
-   * the client interface to the NN AND the RPC protocol used to 
-   * communicate with the NN.
-   * 
-   * Post version 70 (release 23 of Hadoop), the protocol is implemented in
-   * {@literal ../protocolR23Compatible/ClientNamenodeWireProtocol}
-   * 
-   * This class is used by both the DFSClient and the 
-   * NN server side to insulate from the protocol serialization.
-   * 
-   * If you are adding/changing NN's interface then you need to 
-   * change both this class and ALSO related protocol buffer
-   * wire protocol definition in NamenodeProtocol.proto.
-   * 
-   * For more details on protocol buffer wire protocol, please see 
-   * .../org/apache/hadoop/hdfs/protocolPB/overview.html
+   * Compared to the previous version the following changes have been introduced:
+   * (Only the latest change is reflected.
+   * The log of historical changes can be retrieved from the svn).
    * 
    * 6: Switch to txid-based file naming for image and edits
    */
@@ -75,7 +62,7 @@ public interface NamenodeProtocol {
    * @param datanode  a data node
    * @param size      requested size
    * @return          a list of blocks & their locations
-   * @throws IOException if size is less than or equal to 0 or
+   * @throws RemoteException if size is less than or equal to 0 or
                                    datanode does not exist
    */
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
@@ -101,7 +88,10 @@ public interface NamenodeProtocol {
    * call fails if the file system is in SafeMode.
    * @throws IOException
    * @return a unique token to identify this transaction.
+   * @deprecated 
+   *    See {@link org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode}
    */
+  @Deprecated
   public CheckpointSignature rollEditLog() throws IOException;
 
   /**

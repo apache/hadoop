@@ -193,8 +193,7 @@ public class JobHistoryUtils {
     String doneDirPrefix = conf
         .get(JHAdminConfig.MR_HISTORY_INTERMEDIATE_DONE_DIR);
     if (doneDirPrefix == null) {
-      doneDirPrefix = conf.get(MRJobConfig.MR_AM_STAGING_DIR,
-          MRJobConfig.DEFAULT_MR_AM_STAGING_DIR)
+      doneDirPrefix = conf.get(MRJobConfig.MR_AM_STAGING_DIR)
           + "/history/done_intermediate";
     }
     return doneDirPrefix;
@@ -209,8 +208,7 @@ public class JobHistoryUtils {
       Configuration conf) {
     String doneDirPrefix = conf.get(JHAdminConfig.MR_HISTORY_DONE_DIR);
     if (doneDirPrefix == null) {
-      doneDirPrefix = conf.get(MRJobConfig.MR_AM_STAGING_DIR,
-          MRJobConfig.DEFAULT_MR_AM_STAGING_DIR)
+      doneDirPrefix = conf.get(MRJobConfig.MR_AM_STAGING_DIR)
           + "/history/done";
     }
     return doneDirPrefix;

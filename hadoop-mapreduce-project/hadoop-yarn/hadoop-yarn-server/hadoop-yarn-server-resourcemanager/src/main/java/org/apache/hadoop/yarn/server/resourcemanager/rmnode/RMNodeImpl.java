@@ -46,8 +46,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEvent;
-import org.apache.hadoop.yarn.server.resourcemanager.NodesListManagerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
@@ -142,10 +140,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenUnHealthyTransition())
      .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
-     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
-         RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
-     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
-         RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
          
      // create the topology tables
      .installTopology(); 
@@ -450,9 +444,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // Inform the scheduler
       rmNode.context.getDispatcher().getEventHandler().handle(
           new NodeRemovedSchedulerEvent(rmNode));
-      rmNode.context.getDispatcher().getEventHandler().handle(
-          new NodesListManagerEvent(
-              NodesListManagerEventType.NODE_UNUSABLE, rmNode));
 
       // Deactivate the node
       rmNode.context.getRMNodes().remove(rmNode.nodeId);
@@ -482,9 +473,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         // Inform the scheduler
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeRemovedSchedulerEvent(rmNode));
-        rmNode.context.getDispatcher().getEventHandler().handle(
-            new NodesListManagerEvent(
-                NodesListManagerEventType.NODE_UNUSABLE, rmNode));
         // Update metrics
         rmNode.updateMetricsForDeactivatedNode(RMNodeState.UNHEALTHY);
         return RMNodeState.UNHEALTHY;
@@ -559,12 +547,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       if (remoteNodeHealthStatus.getIsNodeHealthy()) {
         rmNode.context.getDispatcher().getEventHandler().handle(
             new NodeAddedSchedulerEvent(rmNode));
-        rmNode.context.getDispatcher().getEventHandler().handle(
-                new NodesListManagerEvent(
-                    NodesListManagerEventType.NODE_USABLE, rmNode));
-        // ??? how about updating metrics before notifying to ensure that
-        // notifiers get update metadata because they will very likely query it
-        // upon notification
         // Update metrics
         rmNode.updateMetricsForRejoinedNode(RMNodeState.UNHEALTHY);
         return RMNodeState.RUNNING;

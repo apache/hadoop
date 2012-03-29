@@ -91,82 +91,47 @@ public class DNS {
   }
 
   /**
-   * @return NetworkInterface for the given subinterface name (eg eth0:0)
-   *    or null if no interface with the given name can be found  
-   */
-  private static NetworkInterface getSubinterface(String strInterface)
-      throws SocketException {
-    Enumeration<NetworkInterface> nifs = 
-      NetworkInterface.getNetworkInterfaces();
-      
-    while (nifs.hasMoreElements()) {
-      Enumeration<NetworkInterface> subNifs = 
-        nifs.nextElement().getSubInterfaces();
-
-      while (subNifs.hasMoreElements()) {
-        NetworkInterface nif = subNifs.nextElement();
-        if (nif.getName().equals(strInterface)) {
-          return nif;
-        }
-      }
-    }
-    return null;
-  }
-
-  /**
    * Returns all the IPs associated with the provided interface, if any, in
    * textual form.
    * 
    * @param strInterface
-   *            The name of the network interface or sub-interface to query
-   *            (eg eth0 or eth0:0) or the string "default"
+   *            The name of the network interface to query (e.g. eth0)
    * @return A string vector of all the IPs associated with the provided
-   *         interface. The local host IP is returned if the interface
-   *         name "default" is specified or there is an I/O error looking
-   *         for the given interface.
+   *         interface
    * @throws UnknownHostException
-   *             If the given interface is invalid
+   *             If an UnknownHostException is encountered in querying the
+   *             default interface
    * 
    */
   public static String[] getIPs(String strInterface)
     throws UnknownHostException {
-    if ("default".equals(strInterface)) {
-      return new String[] { cachedHostAddress };
-    }
-    NetworkInterface netIf;
     try {
-      netIf = NetworkInterface.getByName(strInterface);
-      if (netIf == null) {
-        netIf = getSubinterface(strInterface);
+      NetworkInterface netIF = NetworkInterface.getByName(strInterface);
+      if (netIF == null) {
+        return new String[] { cachedHostAddress };
+      } else {
+        Vector<String> ips = new Vector<String>();
+        Enumeration e = netIF.getInetAddresses();
+        while (e.hasMoreElements()) {
+          ips.add(((InetAddress) e.nextElement()).getHostAddress());
+        }
+        return ips.toArray(new String[] {});
       }
     } catch (SocketException e) {
-      LOG.warn("I/O error finding interface " + strInterface +
-          ": " + e.getMessage());
-      return new String[] { cachedHostAddress };
+      return new String[]  { cachedHostAddress };
     }
-    if (netIf == null) {
-      throw new UnknownHostException("No such interface " + strInterface);
-    }
-    Vector<String> ips = new Vector<String>();
-    Enumeration<InetAddress> addrs = netIf.getInetAddresses();
-    while (addrs.hasMoreElements()) {
-      ips.add(addrs.nextElement().getHostAddress());
-    }
-    return ips.toArray(new String[] {});
   }
 
 
-  /**
+    /**
    * Returns the first available IP address associated with the provided
-   * network interface or the local host IP if "default" is given.
+   * network interface
    *
    * @param strInterface
-   *            The name of the network interface or subinterface to query
-   *             (e.g. eth0 or eth0:0) or the string "default"
-   * @return The IP address in text form, the local host IP is returned
-   *         if the interface name "default" is specified
+   *            The name of the network interface to query (e.g. eth0)
+   * @return The IP address in text form
    * @throws UnknownHostException
-   *             If the given interface is invalid
+   *             If one is encountered in querying the default interface
    */
   public static String getDefaultIP(String strInterface)
     throws UnknownHostException {
@@ -179,28 +144,26 @@ public class DNS {
    * address bound to the specified network interface
    *
    * @param strInterface
-   *            The name of the network interface or subinterface to query
-   *            (e.g. eth0 or eth0:0)
+   *            The name of the network interface to query (e.g. eth0)
    * @param nameserver
    *            The DNS host name
    * @return A string vector of all host names associated with the IPs tied to
    *         the specified interface
-   * @throws UnknownHostException if the given interface is invalid
+   * @throws UnknownHostException if the hostname cannot be determined
    */
   public static String[] getHosts(String strInterface, String nameserver)
     throws UnknownHostException {
     String[] ips = getIPs(strInterface);
     Vector<String> hosts = new Vector<String>();
-    for (int ctr = 0; ctr < ips.length; ctr++) {
+    for (int ctr = 0; ctr < ips.length; ctr++)
       try {
         hosts.add(reverseDns(InetAddress.getByName(ips[ctr]),
                              nameserver));
       } catch (UnknownHostException ignored) {
       } catch (NamingException ignored) {
       }
-    }
+
     if (hosts.isEmpty()) {
-      LOG.warn("Unable to determine hostname for interface " + strInterface);
       return new String[] { cachedHostname };
     } else {
       return hosts.toArray(new String[hosts.size()]);
@@ -218,8 +181,8 @@ public class DNS {
     try {
       localhost = InetAddress.getLocalHost().getCanonicalHostName();
     } catch (UnknownHostException e) {
-      LOG.warn("Unable to determine local hostname "
-          + "-falling back to \"" + LOCALHOST + "\"", e);
+      LOG.info("Unable to determine local hostname "
+              + "-falling back to \"" + LOCALHOST + "\"", e);
       localhost = LOCALHOST;
     }
     return localhost;
@@ -241,7 +204,7 @@ public class DNS {
       try {
         address = InetAddress.getLocalHost().getHostAddress();
       } catch (UnknownHostException e) {
-        LOG.warn("Unable to determine address of the host"
+        LOG.info("Unable to determine address of the host"
                 + "-falling back to \"" + LOCALHOST + "\" address", e);
         try {
           address = InetAddress.getByName(LOCALHOST).getHostAddress();

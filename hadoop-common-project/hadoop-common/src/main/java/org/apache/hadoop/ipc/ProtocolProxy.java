@@ -57,11 +57,19 @@ public class ProtocolProxy<T> {
   
   private void fetchServerMethods(Method method) throws IOException {
     long clientVersion;
-    clientVersion = RPC.getProtocolVersion(method.getDeclaringClass());
+    try {
+      Field versionField = method.getDeclaringClass().getField("versionID");
+      versionField.setAccessible(true);
+      clientVersion = versionField.getLong(method.getDeclaringClass());
+    } catch (NoSuchFieldException ex) {
+      throw new RuntimeException(ex);
+    } catch (IllegalAccessException ex) {
+      throw new RuntimeException(ex);
+    }
     int clientMethodsHash = ProtocolSignature.getFingerprint(method
         .getDeclaringClass().getMethods());
     ProtocolSignature serverInfo = ((VersionedProtocol) proxy)
-        .getProtocolSignature(RPC.getProtocolName(protocol), clientVersion,
+        .getProtocolSignature(protocol.getName(), clientVersion,
             clientMethodsHash);
     long serverVersion = serverInfo.getVersion();
     if (serverVersion != clientVersion) {

@@ -51,7 +51,6 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
@@ -72,8 +71,8 @@ import org.apache.hadoop.util.Progressable;
  * DistributedFileSystem.
  *
  *****************************************************************/
-@InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
-@InterfaceStability.Unstable
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class DistributedFileSystem extends FileSystem {
   private Path workingDir;
   private URI uri;
@@ -107,7 +106,8 @@ public class DistributedFileSystem extends FileSystem {
       throw new IOException("Incomplete HDFS URI, no host: "+ uri);
     }
 
-    this.dfs = new DFSClient(uri, conf, statistics);
+    InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());
+    this.dfs = new DFSClient(namenode, conf, statistics);
     this.uri = URI.create(uri.getScheme()+"://"+uri.getAuthority());
     this.workingDir = getHomeDirectory();
   }
@@ -145,7 +145,7 @@ public class DistributedFileSystem extends FileSystem {
     workingDir = makeAbsolute(dir);
   }
 
-  
+  /** {@inheritDoc} */
   @Override
   public Path getHomeDirectory() {
     return makeQualified(new Path("/user/" + dfs.ugi.getShortUserName()));
@@ -272,7 +272,7 @@ public class DistributedFileSystem extends FileSystem {
     dfs.concat(getPathName(trg), srcs);
   }
 
-  
+  /** {@inheritDoc} */
   @SuppressWarnings("deprecation")
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
@@ -281,6 +281,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** 
+   * {@inheritDoc}
    * This rename operation is guaranteed to be atomic.
    */
   @SuppressWarnings("deprecation")
@@ -296,6 +297,7 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.delete(getPathName(f), recursive);
   }
   
+  /** {@inheritDoc} */
   @Override
   public ContentSummary getContentSummary(Path f) throws IOException {
     statistics.incrementReadOps(1);
@@ -476,7 +478,7 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.primitiveMkdir(getPathName(f), absolutePermission);
   }
 
- 
+  /** {@inheritDoc} */
   @Override
   public void close() throws IOException {
     try {
@@ -516,6 +518,7 @@ public class DistributedFileSystem extends FileSystem {
     }
   }
   
+  /** {@inheritDoc} */
   @Override
   public FsStatus getStatus(Path p) throws IOException {
     statistics.incrementReadOps(1);
@@ -577,6 +580,9 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.getCorruptBlocksCount();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
@@ -619,8 +625,7 @@ public class DistributedFileSystem extends FileSystem {
    * 
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#restoreFailedStorage(String arg)
    */
-  public boolean restoreFailedStorage(String arg)
-      throws AccessControlException, IOException {
+  public boolean restoreFailedStorage(String arg) throws AccessControlException {
     return dfs.restoreFailedStorage(arg);
   }
   
@@ -654,6 +659,7 @@ public class DistributedFileSystem extends FileSystem {
     dfs.metaSave(pathname);
   }
 
+  /** {@inheritDoc} */
   @Override
   public FsServerDefaults getServerDefaults() throws IOException {
     return dfs.getServerDefaults();
@@ -724,12 +730,14 @@ public class DistributedFileSystem extends FileSystem {
     }
   }
 
+  /** {@inheritDoc} */
   @Override
   public MD5MD5CRC32FileChecksum getFileChecksum(Path f) throws IOException {
     statistics.incrementReadOps(1);
     return dfs.getFileChecksum(getPathName(f));
   }
 
+  /** {@inheritDoc }*/
   @Override
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
@@ -737,6 +745,7 @@ public class DistributedFileSystem extends FileSystem {
     dfs.setPermission(getPathName(p), permission);
   }
 
+  /** {@inheritDoc }*/
   @Override
   public void setOwner(Path p, String username, String groupname
       ) throws IOException {
@@ -747,6 +756,7 @@ public class DistributedFileSystem extends FileSystem {
     dfs.setOwner(getPathName(p), username, groupname);
   }
 
+  /** {@inheritDoc }*/
   @Override
   public void setTimes(Path p, long mtime, long atime
       ) throws IOException {
@@ -840,29 +850,5 @@ public class DistributedFileSystem extends FileSystem {
    */
   public void setBalancerBandwidth(long bandwidth) throws IOException {
     dfs.setBalancerBandwidth(bandwidth);
-  }
-
-  /**
-   * Get a canonical service name for this file system. If the URI is logical,
-   * the hostname part of the URI will be returned.
-   * @return a service string that uniquely identifies this file system.
-   */
-  @Override
-  public String getCanonicalServiceName() {
-    if (HAUtil.isLogicalUri(getConf(), getUri())) {
-      return getUri().getHost();
-    } else {
-      return super.getCanonicalServiceName();
-    }
-  }
-
-  /**
-   * Utility function that returns if the NameNode is in safemode or not.
-   *
-   * @return true if NameNode is in safemode, false otherwise.
-   * @throws IOException when there is an issue communicating with the NameNode
-   */
-  public boolean isInSafeMode() throws IOException {
-    return setSafeMode(SafeModeAction.SAFEMODE_GET);
   }
 }

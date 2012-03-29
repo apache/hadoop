@@ -63,21 +63,9 @@ implements Writable, NodeRegistration {
    * Create DatanodeRegistration
    */
   public DatanodeRegistration(String nodeName) {
-    this(nodeName, new StorageInfo(), new ExportedBlockKeys());
-  }
-  
-  public DatanodeRegistration(DatanodeID dn, StorageInfo info,
-      ExportedBlockKeys keys) {
-    super(dn);
-    this.storageInfo = info;
-    this.exportedKeys = keys;
-  }
-  
-  public DatanodeRegistration(String nodeName, StorageInfo info,
-      ExportedBlockKeys keys) {
     super(nodeName);
-    this.storageInfo = info;
-    this.exportedKeys = keys;
+    this.storageInfo = new StorageInfo();
+    this.exportedKeys = new ExportedBlockKeys();
   }
   
   public void setStorageInfo(StorageInfo storage) {
@@ -113,7 +101,7 @@ implements Writable, NodeRegistration {
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
-  @Override
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     super.write(out);
 
@@ -124,7 +112,7 @@ implements Writable, NodeRegistration {
     exportedKeys.write(out);
   }
 
-  @Override
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
 

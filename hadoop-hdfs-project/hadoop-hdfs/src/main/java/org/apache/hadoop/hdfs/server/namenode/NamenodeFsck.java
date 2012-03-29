@@ -85,6 +85,13 @@ public class NamenodeFsck {
   public static final String NONEXISTENT_STATUS = "does not exist";
   public static final String FAILURE_STATUS = "FAILED";
   
+  /** Don't attempt any fixing . */
+  public static final int FIXING_NONE = 0;
+  /** Move corrupted files to /lost+found . */
+  public static final int FIXING_MOVE = 1;
+  /** Delete corrupted files. */
+  public static final int FIXING_DELETE = 2;
+  
   private final NameNode namenode;
   private final NetworkTopology networktopology;
   private final int totalDatanodes;
@@ -100,31 +107,17 @@ public class NamenodeFsck {
   private boolean showLocations = false;
   private boolean showRacks = false;
   private boolean showCorruptFileBlocks = false;
-
-  /** 
-   * True if the user specified the -move option.
-   *
-   * Whe this option is in effect, we will copy salvaged blocks into the lost
-   * and found. */
-  private boolean doMove = false;
-
-  /** 
-   * True if the user specified the -delete option.
-   *
-   * Whe this option is in effect, we will delete corrupted files.
-   */
-  private boolean doDelete = false;
-
+  private int fixing = FIXING_NONE;
   private String path = "/";
 
   // We return back N files that are corrupt; the list of files returned is
   // ordered by block id; to allow continuation support, pass in the last block
   // # from previous call
-  private String[] currentCookie = new String[] { null };
-
+  private String startBlockAfter = null;
+  
   private final Configuration conf;
   private final PrintWriter out;
-
+  
   /**
    * Filesystem checker.
    * @param conf configuration (namenode config)
@@ -151,8 +144,8 @@ public class NamenodeFsck {
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
       if (key.equals("path")) { this.path = pmap.get("path")[0]; }
-      else if (key.equals("move")) { this.doMove = true; }
-      else if (key.equals("delete")) { this.doDelete = true; }
+      else if (key.equals("move")) { this.fixing = FIXING_MOVE; }
+      else if (key.equals("delete")) { this.fixing = FIXING_DELETE; }
       else if (key.equals("files")) { this.showFiles = true; }
       else if (key.equals("blocks")) { this.showBlocks = true; }
       else if (key.equals("locations")) { this.showLocations = true; }
@@ -162,11 +155,11 @@ public class NamenodeFsck {
         this.showCorruptFileBlocks = true;
       }
       else if (key.equals("startblockafter")) {
-        this.currentCookie[0] = pmap.get("startblockafter")[0];
+        this.startBlockAfter = pmap.get("startblockafter")[0]; 
       }
     }
   }
-
+  
   /**
    * Check files on DFS, starting from the indicated path.
    */
@@ -222,20 +215,19 @@ public class NamenodeFsck {
       out.close();
     }
   }
-
+ 
   private void listCorruptFileBlocks() throws IOException {
     Collection<FSNamesystem.CorruptFileBlockInfo> corruptFiles = namenode.
-      getNamesystem().listCorruptFileBlocks(path, currentCookie);
+      getNamesystem().listCorruptFileBlocks(path, startBlockAfter);
     int numCorruptFiles = corruptFiles.size();
     String filler;
     if (numCorruptFiles > 0) {
       filler = Integer.toString(numCorruptFiles);
-    } else if (currentCookie[0].equals("0")) {
+    } else if (startBlockAfter == null) {
       filler = "no";
     } else {
       filler = "no more";
     }
-    out.println("Cookie:\t" + currentCookie[0]);
     for (FSNamesystem.CorruptFileBlockInfo c : corruptFiles) {
       out.println(c.toString());
     }
@@ -384,20 +376,16 @@ public class NamenodeFsck {
             + " blocks of total size " + missize + " B.");
       }
       res.corruptFiles++;
-      try {
-        if (doMove) {
-          if (!isOpen) {
-            copyBlocksToLostFound(parent, file, blocks);
-          }
-        }
-        if (doDelete) {
-          if (!isOpen) {
-            LOG.warn("\n - deleting corrupted file " + path);
-            namenode.getRpcServer().delete(path, true);
-          }
-        }
-      } catch (IOException e) {
-        LOG.error("error processing " + path + ": " + e.toString());
+      switch(fixing) {
+      case FIXING_NONE:
+        break;
+      case FIXING_MOVE:
+        if (!isOpen)
+          lostFoundMove(parent, file, blocks);
+        break;
+      case FIXING_DELETE:
+        if (!isOpen)
+          namenode.getRpcServer().delete(path, true);
       }
     }
     if (showFiles) {
@@ -412,8 +400,8 @@ public class NamenodeFsck {
     }
   }
   
-  private void copyBlocksToLostFound(String parent, HdfsFileStatus file,
-        LocatedBlocks blocks) throws IOException {
+  private void lostFoundMove(String parent, HdfsFileStatus file, LocatedBlocks blocks)
+    throws IOException {
     final DFSClient dfs = new DFSClient(NameNode.getAddress(conf), conf);
     try {
     if (!lfInited) {
@@ -447,10 +435,12 @@ public class NamenodeFsck {
         }
         if (fos == null) {
           fos = dfs.create(target + "/" + chain, true);
-          if (fos != null)
-            chain++;
+          if (fos != null) chain++;
           else {
-            throw new IOException(errmsg + ": could not store chain " + chain);
+            LOG.warn(errmsg + ": could not store chain " + chain);
+            // perhaps we should bail out here...
+            // return;
+            continue;
           }
         }
         
@@ -467,7 +457,8 @@ public class NamenodeFsck {
         }
       }
       if (fos != null) fos.close();
-      LOG.warn("\n - copied corrupted file " + fullName + " to /lost+found");
+      LOG.warn("\n - moved corrupted file " + fullName + " to /lost+found");
+      dfs.delete(fullName, true);
     }  catch (Exception e) {
       e.printStackTrace();
       LOG.warn(errmsg + ": " + e.getMessage());
@@ -655,7 +646,7 @@ public class NamenodeFsck {
       return (float) (totalReplicas) / (float) totalBlocks;
     }
     
-    @Override
+    /** {@inheritDoc} */
     public String toString() {
       StringBuilder res = new StringBuilder();
       res.append("Status: ").append((isHealthy() ? "HEALTHY" : "CORRUPT"))

@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 
 public class TestDFSRemove extends junit.framework.TestCase {
   final Path dir = new Path("/test/remove/");
@@ -46,7 +45,7 @@ public class TestDFSRemove extends junit.framework.TestCase {
   static long getTotalDfsUsed(MiniDFSCluster cluster) throws IOException {
     long total = 0;
     for(DataNode node : cluster.getDataNodes()) {
-      total += DataNodeTestUtils.getFSDataset(node).getDfsUsed();
+      total += node.getFSDataset().getDfsUsed();
     }
     return total;
   }

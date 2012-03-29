@@ -86,7 +86,7 @@ class EditsDoubleBuffer {
   }
   
   boolean shouldForceSync() {
-    return bufCurrent.size() >= initBufferSize;
+    return bufReady.size() >= initBufferSize;
   }
 
   DataOutputBuffer getCurrentBuf() {

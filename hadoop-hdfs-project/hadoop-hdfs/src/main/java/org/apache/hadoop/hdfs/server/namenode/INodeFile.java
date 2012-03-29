@@ -168,7 +168,7 @@ public class INodeFile extends INode {
     return 1;
   }
 
-  @Override
+  /** {@inheritDoc} */
   long[] computeContentSummary(long[] summary) {
     summary[0] += computeFileSize(true);
     summary[1]++;

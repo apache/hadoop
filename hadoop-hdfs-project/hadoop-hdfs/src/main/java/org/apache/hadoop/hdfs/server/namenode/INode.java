@@ -261,13 +261,13 @@ public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     this.name = name;
   }
 
-  @Override
+  /** {@inheritDoc} */
   public String getFullPathName() {
     // Get the full path name of this inode.
     return FSDirectory.getFullPathName(this);
   }
 
-  @Override
+  /** {@inheritDoc} */
   public String toString() {
     return "\"" + getFullPathName() + "\":"
     + getUserName() + ":" + getGroupName() + ":"

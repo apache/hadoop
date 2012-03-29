@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -98,10 +97,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     boolean contains(E e) {
       return blockq.contains(e);
     }
-
-    synchronized void clear() {
-      blockq.clear();
-    }
   }
 
   private volatile BlockInfo blockList = null;
@@ -111,24 +106,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public boolean isAlive = false;
   public boolean needKeyUpdate = false;
 
-  /**
-   * Set to false on any NN failover, and reset to true
-   * whenever a block report is received.
-   */
-  private boolean heartbeatedSinceFailover = false;
-  
-  /**
-   * At startup or at any failover, the DNs in the cluster may
-   * have pending block deletions from a previous incarnation
-   * of the NameNode. Thus, we consider their block contents
-   * stale until we have received a block report. When a DN
-   * is considered stale, any replicas on it are transitively
-   * considered stale. If any block has at least one stale replica,
-   * then no invalidations will be processed for this block.
-   * See HDFS-1972.
-   */
-  private boolean blockContentsStale = true;
-  
   // A system administrator can tune the balancer bandwidth parameter
   // (dfs.balance.bandwidthPerSec) dynamically by calling
   // "dfsadmin -setBalanacerBandwidth <newbandwidth>", at which point the
@@ -143,11 +120,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private BlockQueue<BlockInfoUnderConstruction> recoverBlocks =
                                 new BlockQueue<BlockInfoUnderConstruction>();
   /** A set of blocks to be invalidated by this datanode */
-  private LightWeightHashSet<Block> invalidateBlocks = new LightWeightHashSet<Block>();
+  private Set<Block> invalidateBlocks = new TreeSet<Block>();
 
   /* Variables for maintaining number of blocks scheduled to be written to
    * this datanode. This count is approximate and might be slightly bigger
-   * in case of errors (e.g. datanode does not report if an error occurs
+   * in case of errors (e.g. datanode does not report if an error occurs 
    * while writing the block).
    */
   private int currApproxBlocksScheduled = 0;
@@ -155,10 +132,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   private int volumeFailures = 0;
-  
-  /** Set to false after processing first block report */
-  private boolean firstBlockReport = true;
-  
   /** 
    * When set to true, the node is not in include list and is not allowed
    * to communicate with the namenode
@@ -271,24 +244,15 @@ public class DatanodeDescriptor extends DatanodeInfo {
 
   /**
    * Move block to the head of the list of blocks belonging to the data-node.
-   * @return the index of the head of the blockList
    */
-  int moveBlockToHead(BlockInfo b, int curIndex, int headIndex) {
-    blockList = b.moveBlockToHead(blockList, this, curIndex, headIndex);
-    return curIndex;
-  }
-
-  /**
-   * Used for testing only
-   * @return the head of the blockList
-   */
-  protected BlockInfo getHead(){
-    return blockList;
+  void moveBlockToHead(BlockInfo b) {
+    blockList = b.listRemove(blockList, this);
+    blockList = b.listInsert(blockList, this);
   }
 
   /**
    * Replace specified old block with a new one in the DataNodeDescriptor.
-   *
+   * 
    * @param oldBlock - block to be replaced
    * @param newBlock - a replacement block
    * @return the new block
@@ -311,14 +275,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.invalidateBlocks.clear();
     this.volumeFailures = 0;
   }
-  
-  public void clearBlockQueues() {
-    synchronized (invalidateBlocks) {
-      this.invalidateBlocks.clear();
-      this.recoverBlocks.clear();
-      this.replicateBlocks.clear();
-    }
-  }
 
   public int numBlocks() {
     return numBlocks;
@@ -336,7 +292,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.lastUpdate = System.currentTimeMillis();
     this.xceiverCount = xceiverCount;
     this.volumeFailures = volFailures;
-    this.heartbeatedSinceFailover = true;
     rollBlocksScheduled(lastUpdate);
   }
 
@@ -436,11 +391,45 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * Remove the specified number of blocks to be invalidated
    */
   public Block[] getInvalidateBlocks(int maxblocks) {
-    synchronized (invalidateBlocks) {
-      Block[] deleteList = invalidateBlocks.pollToArray(new Block[Math.min(
-          invalidateBlocks.size(), maxblocks)]);
-      return deleteList.length == 0 ? null : deleteList;
+    return getBlockArray(invalidateBlocks, maxblocks); 
+  }
+
+  static private Block[] getBlockArray(Collection<Block> blocks, int max) {
+    Block[] blockarray = null;
+    synchronized(blocks) {
+      int available = blocks.size();
+      int n = available;
+      if (max > 0 && n > 0) {
+        if (max < n) {
+          n = max;
+        }
+        // allocate the properly sized block array ... 
+        blockarray = new Block[n];
+
+        // iterate tree collecting n blocks... 
+        Iterator<Block> e = blocks.iterator();
+        int blockCount = 0;
+
+        while (blockCount < n && e.hasNext()) {
+          // insert into array ... 
+          blockarray[blockCount++] = e.next();
+
+          // remove from tree via iterator, if we are removing 
+          // less than total available blocks
+          if (n < available){
+            e.remove();
+          }
+        }
+        assert(blockarray.length == n);
+        
+        // now if the number of blocks removed equals available blocks,
+        // them remove all blocks in one fell swoop via clear
+        if (n == available) { 
+          blocks.clear();
+        }
+      }
     }
+    return blockarray;
   }
 
   /** Serialization for FSEditLog */
@@ -603,41 +592,5 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.bandwidth = bandwidth;
   }
 
-  public boolean areBlockContentsStale() {
-    return blockContentsStale;
-  }
 
-  public void markStaleAfterFailover() {
-    heartbeatedSinceFailover = false;
-    blockContentsStale = true;
-  }
-
-  public void receivedBlockReport() {
-    if (heartbeatedSinceFailover) {
-      blockContentsStale = false;
-    }
-    firstBlockReport = false;
-  }
-  
-  boolean isFirstBlockReport() {
-    return firstBlockReport;
-  }
-
-  @Override
-  public String dumpDatanode() {
-    StringBuilder sb = new StringBuilder(super.dumpDatanode());
-    int repl = replicateBlocks.size();
-    if (repl > 0) {
-      sb.append(" ").append(repl).append(" blocks to be replicated;");
-    }
-    int inval = invalidateBlocks.size();
-    if (inval > 0) {
-      sb.append(" ").append(inval).append(" blocks to be invalidated;");      
-    }
-    int recover = recoverBlocks.size();
-    if (recover > 0) {
-      sb.append(" ").append(recover).append(" blocks to be recovered;");
-    }
-    return sb.toString();
-  }
 }

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -31,11 +32,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
+import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -142,15 +144,14 @@ public class DFSck extends Configured implements Tool {
       throws IOException {
     int errCode = -1;
     int numCorrupt = 0;
-    int cookie = 0;
+    String lastBlock = null;
     final String noCorruptLine = "has no CORRUPT files";
     final String noMoreCorruptLine = "has no more CORRUPT files";
-    final String cookiePrefix = "Cookie:";
     boolean allDone = false;
     while (!allDone) {
       final StringBuffer url = new StringBuffer(baseUrl);
-      if (cookie > 0) {
-        url.append("&startblockafter=").append(String.valueOf(cookie));
+      if (lastBlock != null) {
+        url.append("&startblockafter=").append(lastBlock);
       }
       URL path = new URL(url.toString());
       SecurityUtil.fetchServiceTicket(path);
@@ -161,31 +162,29 @@ public class DFSck extends Configured implements Tool {
       try {
         String line = null;
         while ((line = input.readLine()) != null) {
-          if (line.startsWith(cookiePrefix)){
-            try{
-              cookie = Integer.parseInt(line.split("\t")[1]);
-            } catch (Exception e){
-              allDone = true;
-              break;
-            }
-            continue;
-          }
-          if ((line.endsWith(noCorruptLine)) ||
+          if ((line.endsWith(noCorruptLine)) || 
               (line.endsWith(noMoreCorruptLine)) ||
               (line.endsWith(NamenodeFsck.NONEXISTENT_STATUS))) {
             allDone = true;
             break;
           }
           if ((line.isEmpty())
-              || (line.startsWith("FSCK started by"))
+              || (line.startsWith("FSCK started by")) 
               || (line.startsWith("The filesystem under path")))
             continue;
           numCorrupt++;
           if (numCorrupt == 1) {
-            out.println("The list of corrupt files under path '"
+            out.println("The list of corrupt files under path '" 
                 + dir + "' are:");
           }
           out.println(line);
+          try {
+            // Get the block # that we need to send in next call
+            lastBlock = line.split("\t")[0];
+          } catch (Exception e) {
+            allDone = true;
+            break;
+          }
         }
       } finally {
         input.close();
@@ -202,9 +201,8 @@ public class DFSck extends Configured implements Tool {
    * Derive the namenode http address from the current file system,
    * either default or as set by "-fs" in the generic options.
    * @return Returns http address or null if failure.
-   * @throws IOException if we can't determine the active NN address
    */
-  private String getCurrentNamenodeAddress() throws IOException {
+  private String getCurrentNamenodeAddress() {
     //String nnAddress = null;
     Configuration conf = getConf();
 
@@ -221,14 +219,23 @@ public class DFSck extends Configured implements Tool {
       System.err.println("FileSystem is " + fs.getUri());
       return null;
     }
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+
+    // Derive the nameservice ID from the filesystem URI.
+    // The URI may have been provided by a human, and the server name may be
+    // aliased, so compare InetSocketAddresses instead of URI strings, and
+    // test against both possible variants of RPC address.
+    InetSocketAddress namenode = 
+      NameNode.getAddress(dfs.getUri().getAuthority());
     
-    return DFSUtil.getInfoServer(HAUtil.getAddressOfActive(fs), conf, true);
+    return DFSUtil.getInfoServer(namenode, conf, true);
   }
 
   private int doWork(final String[] args) throws IOException {
     String proto = "http://";
     if (UserGroupInformation.isSecurityEnabled()) {
-      SecurityUtil.initKrb5CipherSuites();
+      System.setProperty("https.cipherSuites",
+          Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
       proto = "https://";
     }
     final StringBuilder url = new StringBuilder(proto);

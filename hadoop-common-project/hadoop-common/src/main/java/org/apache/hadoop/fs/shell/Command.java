@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.shell;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -152,6 +153,9 @@ abstract public class Command extends Configured {
       }
       processOptions(args);
       processRawArguments(args);
+    } catch (CommandInterruptException e) {
+      displayError("Interrupted");
+      return 130;
     } catch (IOException e) {
       displayError(e);
     }
@@ -349,6 +353,10 @@ abstract public class Command extends Configured {
   public void displayError(Exception e) {
     // build up a list of exceptions that occurred
     exceptions.add(e);
+    // use runtime so it rips up through the stack and exits out 
+    if (e instanceof InterruptedIOException) {
+      throw new CommandInterruptException();
+    }
     
     String errorMessage = e.getLocalizedMessage();
     if (errorMessage == null) {
@@ -454,4 +462,7 @@ abstract public class Command extends Configured {
     }
     return value;
   }
+  
+  @SuppressWarnings("serial")
+  static class CommandInterruptException extends RuntimeException {}
 }

@@ -92,7 +92,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
           "UpgradeManagerDatanode.currentUpgrades is not null.";
         assert upgradeDaemon == null : 
           "UpgradeManagerDatanode.upgradeDaemon is not null.";
-        DatanodeProtocol nn = dataNode.getActiveNamenodeForBP(bpid);
+        DatanodeProtocol nn = dataNode.getBPNamenode(bpid);
         nn.processUpgradeCommand(broadcastCommand);
         return true;
       }

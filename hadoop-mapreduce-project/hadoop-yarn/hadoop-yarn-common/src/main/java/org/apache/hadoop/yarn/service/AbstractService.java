@@ -28,37 +28,14 @@ import org.apache.hadoop.conf.Configuration;
 public abstract class AbstractService implements Service {
 
   private static final Log LOG = LogFactory.getLog(AbstractService.class);
-
-  /**
-   * Service state: initially {@link STATE#NOTINITED}.
-   */
+  
   private STATE state = STATE.NOTINITED;
-
-  /**
-   * Service name.
-   */
   private final String name;
-  /**
-   * Service start time. Will be zero until the service is started.
-   */
   private long startTime;
-
-  /**
-   * The configuration. Will be null until the service is initialized.
-   */
   private Configuration config;
-
-  /**
-   * List of state change listeners; it is final to ensure
-   * that it will never be null.
-   */
   private List<ServiceStateChangeListener> listeners =
     new ArrayList<ServiceStateChangeListener>();
 
-  /**
-   * Construct the service.
-   * @param name service name
-   */
   public AbstractService(String name) {
     this.name = name;
   }
@@ -68,11 +45,6 @@ public abstract class AbstractService implements Service {
     return state;
   }
 
-  /**
-   * {@inheritDoc}
-   * @throws IllegalStateException if the current service state does not permit
-   * this action
-   */
   @Override
   public synchronized void init(Configuration conf) {
     ensureCurrentState(STATE.NOTINITED);
@@ -81,11 +53,6 @@ public abstract class AbstractService implements Service {
     LOG.info("Service:" + getName() + " is inited.");
   }
 
-  /**
-   * {@inheritDoc}
-   * @throws IllegalStateException if the current service state does not permit
-   * this action
-   */
   @Override
   public synchronized void start() {
     startTime = System.currentTimeMillis();
@@ -94,11 +61,6 @@ public abstract class AbstractService implements Service {
     LOG.info("Service:" + getName() + " is started.");
   }
 
-  /**
-   * {@inheritDoc}
-   * @throws IllegalStateException if the current service state does not permit
-   * this action
-   */
   @Override
   public synchronized void stop() {
     if (state == STATE.STOPPED ||
@@ -138,24 +100,13 @@ public abstract class AbstractService implements Service {
     return startTime;
   }
 
-  /**
-   * Verify that that a service is in a given state.
-   * @param currentState the desired state
-   * @throws IllegalStateException if the service state is different from
-   * the desired state
-   */
   private void ensureCurrentState(STATE currentState) {
-    ServiceOperations.ensureCurrentState(state, currentState);
+    if (state != currentState) {
+      throw new IllegalStateException("For this operation, current State must " +
+        "be " + currentState + " instead of " + state);
+    }
   }
 
-  /**
-   * Change to a new state and notify all listeners.
-   * This is a private method that is only invoked from synchronized methods,
-   * which avoid having to clone the listener list. It does imply that
-   * the state change listener methods should be short lived, as they
-   * will delay the state transition.
-   * @param newState new service state
-   */
   private void changeState(STATE newState) {
     state = newState;
     //notify listeners

@@ -29,7 +29,6 @@ import java.lang.InterruptedException;
 import java.util.Random;
 import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -51,8 +50,7 @@ public class TestMetaSave {
 
   private void createFile(FileSystem fileSys, Path name) throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) 2, blockSize);
+        .getInt("io.file.buffer.size", 4096), (short) 2, (long) blockSize);
     byte[] buffer = new byte[1024];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);

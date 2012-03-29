@@ -185,14 +185,14 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   /////////////////////////////////////////////////
   // Writable
   /////////////////////////////////////////////////
-  @Override
+  /** {@inheritDoc} */
   public void write(DataOutput out) throws IOException {
     DeprecatedUTF8.writeString(out, name);
     DeprecatedUTF8.writeString(out, storageID);
     out.writeShort(infoPort);
   }
 
-  @Override
+  /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
     name = DeprecatedUTF8.readString(in);
     storageID = DeprecatedUTF8.readString(in);

@@ -82,7 +82,7 @@ public class TestNMExpiry {
         dispatcher);
     nmLivelinessMonitor.init(conf);
     nmLivelinessMonitor.start();
-    NodesListManager nodesListManager = new NodesListManager(context);
+    NodesListManager nodesListManager = new NodesListManager();
     nodesListManager.init(conf);
     resourceTrackerService = new ResourceTrackerService(context,
         nodesListManager, nmLivelinessMonitor, containerTokenSecretManager);

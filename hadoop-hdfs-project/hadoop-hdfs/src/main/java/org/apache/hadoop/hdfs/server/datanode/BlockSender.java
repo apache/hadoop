@@ -22,7 +22,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -219,23 +218,10 @@ class BlockSender implements java.io.Closeable {
       this.transferToAllowed = datanode.getDnConf().transferToAllowed &&
         (!is32Bit || length <= Integer.MAX_VALUE);
 
-      /* 
-       * (corruptChecksumOK, meta_file_exist): operation
-       * True,   True: will verify checksum  
-       * True,  False: No verify, e.g., need to read data from a corrupted file 
-       * False,  True: will verify checksum
-       * False, False: throws IOException file not found
-       */
       DataChecksum csum;
-      final InputStream metaIn = datanode.data.getMetaDataInputStream(block);
-      if (!corruptChecksumOk || metaIn != null) {
-      	if (metaIn == null) {
-          //need checksum but meta-data not found
-          throw new FileNotFoundException("Meta-data not found for " + block);
-        } 
-      	
-        checksumIn = new DataInputStream(
-            new BufferedInputStream(metaIn, HdfsConstants.IO_FILE_BUFFER_SIZE));
+      if (!corruptChecksumOk || datanode.data.metaFileExists(block)) {
+        checksumIn = new DataInputStream(new BufferedInputStream(datanode.data
+            .getMetaDataInputStream(block), HdfsConstants.IO_FILE_BUFFER_SIZE));
 
         // read and handle the common header here. For now just a version
         BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);

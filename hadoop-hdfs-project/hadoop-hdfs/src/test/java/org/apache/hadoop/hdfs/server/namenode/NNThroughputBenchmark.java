@@ -25,14 +25,14 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -46,13 +46,10 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
-import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
-import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
-import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
@@ -80,7 +77,7 @@ import org.apache.log4j.LogManager;
  * <li>-logLevel L specifies the logging level when the benchmark runs.
  * The default logging level is {@link Level#ERROR}.</li>
  * <li>-UGCacheRefreshCount G will cause the benchmark to call
- * {@link NameNodeRpcServer#refreshUserToGroupsMappings} after
+ * {@link NameNode#refreshUserToGroupsMappings()} after
  * every G operations, which purges the name-node's user group cache.
  * By default the refresh is never called.</li>
  * <li>-keepResults do not clean up the name-space after execution.</li>
@@ -106,7 +103,7 @@ public class NNThroughputBenchmark {
   static NameNode nameNode;
   static NamenodeProtocols nameNodeProto;
 
-  NNThroughputBenchmark(Configuration conf) throws IOException {
+  NNThroughputBenchmark(Configuration conf) throws IOException, LoginException {
     config = conf;
     // We do not need many handlers, since each thread simulates a handler
     // by calling name-node methods directly
@@ -127,7 +124,7 @@ public class NNThroughputBenchmark {
     nameNodeProto = nameNode.getRpcServer();
   }
 
-  void close() {
+  void close() throws IOException {
     nameNode.stop();
   }
 
@@ -612,6 +609,7 @@ public class NNThroughputBenchmark {
       super.parseArguments(args);
     }
 
+    @SuppressWarnings("deprecation")
     void generateInputs(int[] opsPerThread) throws IOException {
       // create files using opsPerThread
       String[] createArgs = new String[] {
@@ -741,6 +739,7 @@ public class NNThroughputBenchmark {
       }
     }
 
+    @SuppressWarnings("deprecation")
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       long start = System.currentTimeMillis();
@@ -760,7 +759,6 @@ public class NNThroughputBenchmark {
     
     NamespaceInfo nsInfo;
     DatanodeRegistration dnRegistration;
-    DatanodeStorage storage; //only one storage 
     ArrayList<Block> blocks;
     int nrBlocks; // actual number of blocks
     long[] blockReportList;
@@ -797,14 +795,6 @@ public class NNThroughputBenchmark {
       DataNode.setNewStorageID(dnRegistration);
       // register datanode
       dnRegistration = nameNodeProto.registerDatanode(dnRegistration);
-      //first block reports
-      storage = new DatanodeStorage(dnRegistration.getStorageID());
-      final StorageBlockReport[] reports = {
-          new StorageBlockReport(storage,
-              new BlockListAsLongs(null, null).getBlockListAsLongs())
-      };
-      nameNodeProto.blockReport(dnRegistration, 
-          nameNode.getNamesystem().getBlockPoolId(), reports);
     }
 
     /**
@@ -814,10 +804,8 @@ public class NNThroughputBenchmark {
     void sendHeartbeat() throws IOException {
       // register datanode
       // TODO:FEDERATION currently a single block pool is supported
-      StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
-          false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0, 0, 0).getCommands();
+          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0);
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -860,10 +848,9 @@ public class NNThroughputBenchmark {
     @SuppressWarnings("unused") // keep it for future blockReceived benchmark
     int replicateBlocks() throws IOException {
       // register datanode
-      StorageReport[] rep = { new StorageReport(dnRegistration.getStorageID(),
-          false, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED) };
+      // TODO:FEDERATION currently a single block pool is supported
       DatanodeCommand[] cmds = nameNodeProto.sendHeartbeat(dnRegistration,
-          rep, 0, 0, 0).getCommands();
+          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0, 0);
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {
@@ -893,14 +880,10 @@ public class NNThroughputBenchmark {
           receivedDNReg.setStorageInfo(
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
-          ReceivedDeletedBlockInfo[] rdBlocks = {
-            new ReceivedDeletedBlockInfo(
-                  blocks[i], ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,
-                  null) };
-          StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-              receivedDNReg.getStorageID(), rdBlocks) };
-          nameNodeProto.blockReceivedAndDeleted(receivedDNReg, nameNode
-              .getNamesystem().getBlockPoolId(), report);
+          nameNodeProto.blockReceived( receivedDNReg, 
+                                  nameNode.getNamesystem().getBlockPoolId(),
+                                  new Block[] {blocks[i]},
+                                  new String[] {DataNode.EMPTY_DEL_HINT});
         }
       }
       return blocks.length;
@@ -932,7 +915,7 @@ public class NNThroughputBenchmark {
       config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3 * 60);
       parseArguments(args);
       // adjust replication to the number of data-nodes
-      this.replication = (short)Math.min(replication, getNumDatanodes());
+      this.replication = (short)Math.min((int)replication, getNumDatanodes());
     }
 
     /**
@@ -1012,13 +995,11 @@ public class NNThroughputBenchmark {
         for(DatanodeInfo dnInfo : loc.getLocations()) {
           int dnIdx = Arrays.binarySearch(datanodes, dnInfo.getName());
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
-          ReceivedDeletedBlockInfo[] rdBlocks = { new ReceivedDeletedBlockInfo(
-              loc.getBlock().getLocalBlock(),
-              ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK, null) };
-          StorageReceivedDeletedBlocks[] report = { new StorageReceivedDeletedBlocks(
-              datanodes[dnIdx].dnRegistration.getStorageID(), rdBlocks) };
-          nameNodeProto.blockReceivedAndDeleted(datanodes[dnIdx].dnRegistration, loc
-              .getBlock().getBlockPoolId(), report);
+          nameNodeProto.blockReceived(
+              datanodes[dnIdx].dnRegistration, 
+              loc.getBlock().getBlockPoolId(),
+              new Block[] {loc.getBlock().getLocalBlock()},
+              new String[] {""});
         }
       }
       return prevBlock;
@@ -1035,10 +1016,8 @@ public class NNThroughputBenchmark {
       assert daemonId < numThreads : "Wrong daemonId.";
       TinyDatanode dn = datanodes[daemonId];
       long start = System.currentTimeMillis();
-      StorageBlockReport[] report = { new StorageBlockReport(
-          dn.storage, dn.getBlockReportList()) };
       nameNodeProto.blockReport(dn.dnRegistration, nameNode.getNamesystem()
-          .getBlockPoolId(), report);
+          .getBlockPoolId(), dn.getBlockReportList());
       long end = System.currentTimeMillis();
       return end-start;
     }

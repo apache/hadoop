@@ -13,12 +13,12 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import com.sun.security.auth.module.Krb5LoginModule;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
-import org.ietf.jgss.Oid;
+import sun.security.jgss.GSSUtil;
 
 import javax.security.auth.Subject;
 import javax.security.auth.login.AppConfigurationEntry;
@@ -26,7 +26,6 @@ import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.AccessControlContext;
@@ -98,7 +97,7 @@ public class KerberosAuthenticator implements Authenticator {
     }
 
     private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
-      new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
+      new AppConfigurationEntry(Krb5LoginModule.class.getName(),
                                 AppConfigurationEntry.LoginModuleControlFlag.OPTIONAL,
                                 USER_KERBEROS_OPTIONS);
 
@@ -110,7 +109,7 @@ public class KerberosAuthenticator implements Authenticator {
       return USER_KERBEROS_CONF;
     }
   }
-  
+
   private URL url;
   private HttpURLConnection conn;
   private Base64 base64;
@@ -196,12 +195,9 @@ public class KerberosAuthenticator implements Authenticator {
           try {
             GSSManager gssManager = GSSManager.getInstance();
             String servicePrincipal = "HTTP/" + KerberosAuthenticator.this.url.getHost();
-            
             GSSName serviceName = gssManager.createName(servicePrincipal,
-                                                        GSSName.NT_HOSTBASED_SERVICE);
-            Oid oid = KerberosUtil.getOidClassInstance(servicePrincipal, 
-                gssManager);
-            gssContext = gssManager.createContext(serviceName, oid, null,
+                                                        GSSUtil.NT_GSS_KRB5_PRINCIPAL);
+            gssContext = gssManager.createContext(serviceName, GSSUtil.GSS_KRB5_MECH_OID, null,
                                                   GSSContext.DEFAULT_LIFETIME);
             gssContext.requestCredDeleg(true);
             gssContext.requestMutualAuth(true);

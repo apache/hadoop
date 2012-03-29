@@ -32,7 +32,6 @@ function print_usage(){
   echo "  namenode             run the DFS namenode"
   echo "  datanode             run a DFS datanode"
   echo "  dfsadmin             run a DFS admin client"
-  echo "  haadmin              run a DFS HA admin client"
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  balancer             run a cluster balancing utility"
   echo "  jmxget               get JMX exported values from NameNode or DataNode."
@@ -87,10 +86,6 @@ elif [ "$COMMAND" = "dfs" ] ; then
 elif [ "$COMMAND" = "dfsadmin" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DFSAdmin
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
-elif [ "$COMMAND" = "haadmin" ] ; then
-  CLASS=org.apache.hadoop.hdfs.tools.DFSHAAdmin
-  CLASSPATH=${CLASSPATH}:${TOOL_PATH}
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
 elif [ "$COMMAND" = "fsck" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DFSck
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
@@ -133,14 +128,7 @@ if [ "$starting_secure_dn" = "true" ]; then
    HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
-  JSVC=$JSVC_HOME/jsvc
-  if [ ! -f $JSVC ]; then
-    echo "JSVC_HOME is not set correctly so jsvc can not be found. Jsvc is required to run secure datanodes. "
-    echo "Please download and install jsvc from http://archive.apache.org/dist/commons/daemon/binaries/ "\
-      "and set JSVC_HOME to the directory containing the jsvc binary."
-    exit
-  fi
-  exec "$JSVC" \
+  exec "$HADOOP_HDFS_HOME/libexec/jsvc" \
            -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
            -errfile "$HADOOP_LOG_DIR/jsvc.err" \
            -pidfile "$HADOOP_SECURE_DN_PID" \

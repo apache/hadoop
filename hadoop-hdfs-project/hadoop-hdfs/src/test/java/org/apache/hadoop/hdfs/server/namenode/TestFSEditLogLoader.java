@@ -52,7 +52,6 @@ public class TestFSEditLogLoader {
   
   static {
     ((Log4JLogger)FSImage.LOG).getLogger().setLevel(Level.ALL);
-    ((Log4JLogger)FSEditLogLoader.LOG).getLogger().setLevel(Level.ALL);
   }
   
   private static final File TEST_DIR = new File(
@@ -91,17 +90,15 @@ public class TestFSEditLogLoader {
     }
     rwf.close();
     
-    StringBuilder bld = new StringBuilder();
-    bld.append("^Error replaying edit log at offset \\d+");
-    bld.append(" on transaction ID \\d+\n");
-    bld.append("Recent opcode offsets: (\\d+\\s*){4}$");
+    String expectedErrorMessage = "^Error replaying edit log at offset \\d+\n";
+    expectedErrorMessage += "Recent opcode offsets: (\\d+\\s*){4}$";
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)
           .format(false).build();
       fail("should not be able to start");
     } catch (IOException e) {
       assertTrue("error message contains opcodes message",
-          e.getMessage().matches(bld.toString()));
+          e.getMessage().matches(expectedErrorMessage));
     }
   }
   
@@ -168,7 +165,7 @@ public class TestFSEditLogLoader {
     SortedMap<Long, Long> offsetToTxId = Maps.newTreeMap();
     try {
       fsel = FSImageTestUtil.createStandaloneEditLog(testDir);
-      fsel.openForWrite();
+      fsel.open();
       assertTrue("should exist: " + logFile, logFile.exists());
       
       for (int i = 0; i < NUM_TXNS; i++) {
@@ -192,8 +189,8 @@ public class TestFSEditLogLoader {
     // Make sure that uncorrupted log has the expected length and number
     // of transactions.
     EditLogValidation validation = EditLogFileInputStream.validateEditLog(logFile);
-    assertEquals(NUM_TXNS + 2, validation.getNumTransactions());
-    assertEquals(validLength, validation.getValidLength());
+    assertEquals(NUM_TXNS + 2, validation.numTransactions);
+    assertEquals(validLength, validation.validLength);
     
     // Back up the uncorrupted log
     File logFileBak = new File(testDir, logFile.getName() + ".bak");
@@ -209,8 +206,8 @@ public class TestFSEditLogLoader {
       truncateFile(logFile, txOffset);
       validation = EditLogFileInputStream.validateEditLog(logFile);
       assertEquals("Failed when truncating to length " + txOffset,
-          txid - 1, validation.getNumTransactions());
-      assertEquals(txOffset, validation.getValidLength());
+          txid - 1, validation.numTransactions);
+      assertEquals(txOffset, validation.validLength);
 
       // Restore backup, truncate the file with one byte in the txn,
       // also isn't valid
@@ -218,24 +215,24 @@ public class TestFSEditLogLoader {
       truncateFile(logFile, txOffset + 1);
       validation = EditLogFileInputStream.validateEditLog(logFile);
       assertEquals("Failed when truncating to length " + (txOffset + 1),
-          txid - 1, validation.getNumTransactions());
-      assertEquals(txOffset, validation.getValidLength());
+          txid - 1, validation.numTransactions);
+      assertEquals(txOffset, validation.validLength);
 
       // Restore backup, corrupt the txn opcode
       Files.copy(logFileBak, logFile);
       corruptByteInFile(logFile, txOffset);
       validation = EditLogFileInputStream.validateEditLog(logFile);
       assertEquals("Failed when corrupting txn opcode at " + txOffset,
-          txid - 1, validation.getNumTransactions());
-      assertEquals(txOffset, validation.getValidLength());
+          txid - 1, validation.numTransactions);
+      assertEquals(txOffset, validation.validLength);
 
       // Restore backup, corrupt a byte a few bytes into the txn
       Files.copy(logFileBak, logFile);
       corruptByteInFile(logFile, txOffset+5);
       validation = EditLogFileInputStream.validateEditLog(logFile);
       assertEquals("Failed when corrupting txn data at " + (txOffset+5),
-          txid - 1, validation.getNumTransactions());
-      assertEquals(txOffset, validation.getValidLength());
+          txid - 1, validation.numTransactions);
+      assertEquals(txOffset, validation.validLength);
     }
     
     // Corrupt the log at every offset to make sure that validation itself
@@ -246,10 +243,8 @@ public class TestFSEditLogLoader {
       Files.copy(logFileBak, logFile);
       corruptByteInFile(logFile, offset);
       EditLogValidation val = EditLogFileInputStream.validateEditLog(logFile);
-      assertTrue(String.format("%d should have been >= %d",
-          val.getNumTransactions(), prevNumValid),
-          val.getNumTransactions() >= prevNumValid);
-      prevNumValid = val.getNumTransactions();
+      assertTrue(val.numTransactions >= prevNumValid);
+      prevNumValid = val.numTransactions;
     }
   }
 

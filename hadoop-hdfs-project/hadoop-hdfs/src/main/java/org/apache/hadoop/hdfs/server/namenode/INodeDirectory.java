@@ -372,7 +372,7 @@ class INodeDirectory extends INode {
     return parent;
   }
 
-  @Override
+  /** {@inheritDoc} */
   DirCounts spaceConsumedInTree(DirCounts counts) {
     counts.nsCount += 1;
     if (children != null) {
@@ -383,7 +383,7 @@ class INodeDirectory extends INode {
     return counts;    
   }
 
-  @Override
+  /** {@inheritDoc} */
   long[] computeContentSummary(long[] summary) {
     // Walk through the children of this node, using a new summary array
     // for the (sub)tree rooted at this node

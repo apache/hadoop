@@ -1,88 +1,5 @@
 Hadoop MapReduce Change Log
 
-Release 0.23.3 - UNRELEASED
-
-  INCOMPATIBLE CHANGES
-
-    MAPREDUCE-3545. Remove Avro RPC. (suresh)
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-    MAPREDUCE-2887. Due to HADOOP-7524, change RPC to allow multiple protocols
-    including multuple versions of the same protocol (Sanjay Radia)
-
-    MAPREDUCE-2934. MR portion of HADOOP-7607 - Simplify the RPC proxy cleanup
-    process (atm)
-
-    HADOOP-7862. MR changes to work with HADOOP 7862: Move the support for
-    multiple protocols to lower layer so that Writable, PB and Avro can all
-    use it (Sanjay Radia)
-
-    MAPREDUCE-3909 Javadoc the Service interfaces (stevel)
-
-    MAPREDUCE-3885. Avoid an unnecessary copy for all requests/responses in 
-    MRs ProtoOverHadoopRpcEngine. (Devaraj Das via sseth)
-
-	  MAPREDUCE-3935. Annotate Counters.Counter and Counters.Group as @Public.
-    (tomwhite)
-
-    MAPREDUCE-3991. Streaming FAQ has some wrong instructions about input files 
-    splitting. (harsh)
-
-    MAPREDUCE-3773. Add queue metrics with buckets for job run times. (omalley
-    via acmurthy)
-
-    MAPREDUCE-3970. Add ServiceOperations class to aid working with Services
-    (stevel)
-
-    MAPREDUCE-3353. Add a channel between RM and AM to get information on
-    nodes. (Bikas Saha via acmurthy) 
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
-    MAPREDUCE-3740. Fixed broken mapreduce compilation after the patch for
-    HADOOP-7965. (Devaraj K via vinodkv) 
-
-    MAPREDUCE-3818. Fixed broken compilation in TestSubmitJob after the patch
-    for HDFS-2895. (Suresh Srinivas via vinodkv)
-
-    MAPREDUCE-2942. TestNMAuditLogger.testNMAuditLoggerWithIP failing (Thomas
-    Graves via mahadev)
-
-    MAPREDUCE-3933. Failures because MALLOC_ARENA_MAX is not set (ahmed via tucu)
-
-    MAPREDUCE-3728. ShuffleHandler can't access results when configured in a
-    secure mode (ahmed via tucu)
-
-    MAPREDUCE-3952. In MR2, when Total input paths to process == 1,
-    CombinefileInputFormat.getSplits() returns 0 split. (zhenxiao via tucu)
-
-    MAPREDUCE-3578. Starting nodemanager as root gives "Unknown -jvm option"
-    (tomwhite)
-
-    MAPREDUCE-3348. Fixed a bug in MR client to redirect to JobHistoryServer
-    correctly when RM forgets the app. (Devaraj K via vinodkv)
-
-    MAPREDUCE-3974. TestSubmitJob in MR1 tests doesn't compile after HDFS-162
-    merge. (atm)
-
-    MAPREDUCE-4007. JobClient getJob(JobID) should return NULL if the job 
-    does not exist (for backwards compatibility) (tucu)
-
-    MAPREDUCE-3431 NPE in Resource Manager shutdown. (stevel)
-
-    MAPREDUCE-4010.  TestWritableJobConf fails on trunk (tucu via bobby)
-
-    MAPREDUCE-3992. Reduce fetcher doesn't verify HTTP status code of response
-    (todd)
-
-    MAPREDUCE-4066. Use default value when fetching MR_AM_STAGING_DIR
-    (xieguiming via harsh)
-
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -264,6 +181,8 @@ Release 0.23.2 - UNRELEASED
     MAPREDUCE-4061. RM only has 1 AM launcher thread (tgraves via bobby)
 
 Release 0.23.1 - 2012-02-17
+
+  INCOMPATIBLE CHANGES
 
   NEW FEATURES
 

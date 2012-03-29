@@ -17,44 +17,36 @@
  */
 package org.apache.hadoop.io.retry;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.ipc.RPC;
 
 /**
  * An implementation of {@link FailoverProxyProvider} which does nothing in the
  * event of failover, and always returns the same proxy object. 
  */
 @InterfaceStability.Evolving
-public class DefaultFailoverProxyProvider<T> implements FailoverProxyProvider<T> {
+public class DefaultFailoverProxyProvider implements FailoverProxyProvider {
   
-  private T proxy;
-  private Class<T> iface;
+  private Object proxy;
+  private Class<?> iface;
   
-  public DefaultFailoverProxyProvider(Class<T> iface, T proxy) {
+  public DefaultFailoverProxyProvider(Class<?> iface, Object proxy) {
     this.proxy = proxy;
     this.iface = iface;
   }
 
   @Override
-  public Class<T> getInterface() {
+  public Class<?> getInterface() {
     return iface;
   }
 
   @Override
-  public T getProxy() {
+  public Object getProxy() {
     return proxy;
   }
 
   @Override
-  public void performFailover(T currentProxy) {
+  public void performFailover(Object currentProxy) {
     // Nothing to do.
-  }
-
-  @Override
-  public void close() throws IOException {
-    RPC.stopProxy(proxy);
   }
 
 }

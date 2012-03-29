@@ -17,39 +17,39 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
-import java.net.URI;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.lang.reflect.Constructor;
+import java.util.SortedSet;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.*;
-import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Sets;
+
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.*;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -59,42 +59,30 @@ import com.google.common.collect.Lists;
 @InterfaceStability.Evolving
 public class FSEditLog  {
 
+  static final String NO_JOURNAL_STREAMS_WARNING = "!!! WARNING !!!" +
+      " File system changes are not persistent. No journal streams.";
+
   static final Log LOG = LogFactory.getLog(FSEditLog.class);
 
   /**
    * State machine for edit log.
-   * 
-   * In a non-HA setup:
-   * 
    * The log starts in UNITIALIZED state upon construction. Once it's
-   * initialized, it is usually in IN_SEGMENT state, indicating that edits may
-   * be written. In the middle of a roll, or while saving the namespace, it
-   * briefly enters the BETWEEN_LOG_SEGMENTS state, indicating that the previous
-   * segment has been closed, but the new one has not yet been opened.
-   * 
-   * In an HA setup:
-   * 
-   * The log starts in UNINITIALIZED state upon construction. Once it's
-   * initialized, it sits in the OPEN_FOR_READING state the entire time that the
-   * NN is in standby. Upon the NN transition to active, the log will be CLOSED,
-   * and then move to being BETWEEN_LOG_SEGMENTS, much as if the NN had just
-   * started up, and then will move to IN_SEGMENT so it can begin writing to the
-   * log. The log states will then revert to behaving as they do in a non-HA
-   * setup.
+   * initialized, it is usually in IN_SEGMENT state, indicating that edits
+   * may be written. In the middle of a roll, or while saving the namespace,
+   * it briefly enters the BETWEEN_LOG_SEGMENTS state, indicating that the
+   * previous segment has been closed, but the new one has not yet been opened.
    */
   private enum State {
     UNINITIALIZED,
     BETWEEN_LOG_SEGMENTS,
     IN_SEGMENT,
-    OPEN_FOR_READING,
     CLOSED;
   }  
   private State state = State.UNINITIALIZED;
-  
-  //initialize
-  private JournalSet journalSet = null;
-  private EditLogOutputStream editLogStream = null;
 
+
+  private List<JournalAndStream> journals = Lists.newArrayList();
+    
   // a monotonically increasing counter that represents transactionIds.
   private long txid = 0;
 
@@ -125,14 +113,6 @@ public class FSEditLog  {
   private NameNodeMetrics metrics;
 
   private NNStorage storage;
-  private Configuration conf;
-  
-  private List<URI> editsDirs;
-  
-  /**
-   * The edit directories that are shared between primary and secondary.
-   */
-  private List<URI> sharedEditsDirs;
 
   private static class TransactionId {
     public long txid;
@@ -149,145 +129,36 @@ public class FSEditLog  {
     }
   };
 
-  /**
-   * Construct FSEditLog with default configuration, taking editDirs from NNStorage
-   * 
-   * @param storage Storage object used by namenode
-   */
-  @VisibleForTesting
-  FSEditLog(NNStorage storage) throws IOException {
-    Configuration conf = new Configuration();
-    // Make sure the edits dirs are set in the provided configuration object.
-    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
-        StringUtils.join(storage.getEditsDirectories(), ","));
-    init(conf, storage, FSNamesystem.getNamespaceEditsDirs(conf));
-  }
-
-  /**
-   * Constructor for FSEditLog. Underlying journals are constructed, but 
-   * no streams are opened until open() is called.
-   * 
-   * @param conf The namenode configuration
-   * @param storage Storage object used by namenode
-   * @param editsDirs List of journals to use
-   */
-  FSEditLog(Configuration conf, NNStorage storage, List<URI> editsDirs) {
-    init(conf, storage, editsDirs);
-  }
-  
-  private void init(Configuration conf, NNStorage storage, List<URI> editsDirs) {
+  FSEditLog(NNStorage storage) {
     isSyncRunning = false;
-    this.conf = conf;
     this.storage = storage;
     metrics = NameNode.getNameNodeMetrics();
     lastPrintTime = now();
-     
-    // If this list is empty, an error will be thrown on first use
-    // of the editlog, as no journals will exist
-    this.editsDirs = Lists.newArrayList(editsDirs);
-
-    this.sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
-  }
-  
-  public synchronized void initJournalsForWrite() {
-    Preconditions.checkState(state == State.UNINITIALIZED ||
-        state == State.CLOSED, "Unexpected state: %s", state);
     
-    initJournals(this.editsDirs);
+    for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.EDITS)) {
+      journals.add(new JournalAndStream(new FileJournalManager(sd)));
+    }
+    
+    if (journals.isEmpty()) {
+      LOG.error("No edits directories configured!");
+    }
+    
     state = State.BETWEEN_LOG_SEGMENTS;
   }
   
-  public synchronized void initSharedJournalsForRead() {
-    if (state == State.OPEN_FOR_READING) {
-      LOG.warn("Initializing shared journals for READ, already open for READ",
-          new Exception());
-      return;
-    }
-    Preconditions.checkState(state == State.UNINITIALIZED ||
-        state == State.CLOSED);
-    
-    initJournals(this.sharedEditsDirs);
-    state = State.OPEN_FOR_READING;
-  }
-  
-  private synchronized void initJournals(List<URI> dirs) {
-    int minimumRedundantJournals = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY,
-        DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_DEFAULT);
-
-    journalSet = new JournalSet(minimumRedundantJournals);
-    for (URI u : dirs) {
-      boolean required = FSNamesystem.getRequiredNamespaceEditsDirs(conf)
-          .contains(u);
-      if (u.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
-        StorageDirectory sd = storage.getStorageDirectory(u);
-        if (sd != null) {
-          journalSet.add(new FileJournalManager(sd, storage), required);
-        }
-      } else {
-        journalSet.add(createJournal(u), required);
-      }
-    }
- 
-    if (journalSet.isEmpty()) {
-      LOG.error("No edits directories configured!");
-    } 
-  }
-
-  /**
-   * Get the list of URIs the editlog is using for storage
-   * @return collection of URIs in use by the edit log
-   */
-  Collection<URI> getEditURIs() {
-    return editsDirs;
-  }
-
   /**
    * Initialize the output stream for logging, opening the first
    * log segment.
    */
-  synchronized void openForWrite() throws IOException {
-    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
-        "Bad state: %s", state);
+  synchronized void open() throws IOException {
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS);
 
-    long segmentTxId = getLastWrittenTxId() + 1;
-    // Safety check: we should never start a segment if there are
-    // newer txids readable.
-    EditLogInputStream s = journalSet.getInputStream(segmentTxId, true);
-    try {
-      Preconditions.checkState(s == null,
-          "Cannot start writing at txid %s when there is a stream " +
-          "available for read: %s", segmentTxId, s);
-    } finally {
-      IOUtils.closeStream(s);
-    }
-    
-    startLogSegment(segmentTxId, true);
+    startLogSegment(getLastWrittenTxId() + 1, true);
     assert state == State.IN_SEGMENT : "Bad state: " + state;
   }
   
-  /**
-   * @return true if the log is currently open in write mode, regardless
-   * of whether it actually has an open segment.
-   */
-  synchronized boolean isOpenForWrite() {
-    return state == State.IN_SEGMENT ||
-      state == State.BETWEEN_LOG_SEGMENTS;
-  }
-  
-  /**
-   * @return true if the log is open in write mode and has a segment open
-   * ready to take edits.
-   */
-  synchronized boolean isSegmentOpen() {
+  synchronized boolean isOpen() {
     return state == State.IN_SEGMENT;
-  }
-
-  /**
-   * @return true if the log is open in read mode.
-   */
-  public synchronized boolean isOpenForRead() {
-    return state == State.OPEN_FOR_READING;
   }
 
   /**
@@ -298,16 +169,11 @@ public class FSEditLog  {
       LOG.debug("Closing log when already closed");
       return;
     }
+    
     if (state == State.IN_SEGMENT) {
-      assert editLogStream != null;
+      assert !journals.isEmpty();
       waitForSyncToFinish();
       endCurrentLogSegment(true);
-    }
-    
-    try {
-      journalSet.close();
-    } catch (IOException ioe) {
-      LOG.warn("Error closing journalSet", ioe);
     }
 
     state = State.CLOSED;
@@ -319,20 +185,25 @@ public class FSEditLog  {
    */
   void logEdit(final FSEditLogOp op) {
     synchronized (this) {
-      assert isOpenForWrite() :
-        "bad state: " + state;
+      assert state != State.CLOSED;
       
       // wait if an automatic sync is scheduled
       waitIfAutoSyncScheduled();
       
+      if (journals.isEmpty()) {
+        throw new java.lang.IllegalStateException(NO_JOURNAL_STREAMS_WARNING);
+      }
+      
       long start = beginTransaction();
       op.setTransactionId(txid);
 
-      try {
-        editLogStream.write(op);
-      } catch (IOException ex) {
-        // All journals failed, it is handled in logSync.
-      }
+      mapJournalsAndReportErrors(new JournalClosure() {
+        @Override 
+        public void apply(JournalAndStream jas) throws IOException {
+          if (!jas.isActive()) return;
+          jas.stream.write(op);
+        }
+      }, "logging edit");
 
       endTransaction(start);
       
@@ -377,7 +248,14 @@ public class FSEditLog  {
    * @return true if any of the edit stream says that it should sync
    */
   private boolean shouldForceSync() {
-    return editLogStream.shouldForceSync();
+    for (JournalAndStream jas : journals) {
+      if (!jas.isActive()) continue;
+
+      if (jas.getCurrentStream().shouldForceSync()) {
+        return true;
+      }
+    }
+    return false;
   }
   
   private long beginTransaction() {
@@ -407,7 +285,7 @@ public class FSEditLog  {
   /**
    * Return the transaction ID of the last transaction written to the log.
    */
-  public synchronized long getLastWrittenTxId() {
+  synchronized long getLastWrittenTxId() {
     return txid;
   }
   
@@ -415,7 +293,7 @@ public class FSEditLog  {
    * @return the first transaction ID in the current log segment
    */
   synchronized long getCurSegmentTxId() {
-    Preconditions.checkState(isSegmentOpen(),
+    Preconditions.checkState(state == State.IN_SEGMENT,
         "Bad state: %s", state);
     return curSegmentTxId;
   }
@@ -441,7 +319,7 @@ public class FSEditLog  {
    * NOTE: this should be done while holding the FSNamesystem lock, or
    * else more operations can start writing while this is in progress.
    */
-  void logSyncAll() {
+  void logSyncAll() throws IOException {
     // Record the most recent transaction ID as our own id
     synchronized (this) {
       TransactionId id = myTransactionId.get();
@@ -485,73 +363,74 @@ public class FSEditLog  {
     // Fetch the transactionId of this thread. 
     long mytxid = myTransactionId.get().txid;
     
+    List<JournalAndStream> candidateJournals =
+      Lists.newArrayListWithCapacity(journals.size());
+    List<JournalAndStream> badJournals = Lists.newArrayList();
+    
     boolean sync = false;
     try {
-      EditLogOutputStream logStream = null;
       synchronized (this) {
         try {
-          printStatistics(false);
-
-          // if somebody is already syncing, then wait
-          while (mytxid > synctxid && isSyncRunning) {
-            try {
-              wait(1000);
-            } catch (InterruptedException ie) {
-            }
-          }
+        printStatistics(false);
   
-          //
-          // If this transaction was already flushed, then nothing to do
-          //
-          if (mytxid <= synctxid) {
-            numTransactionsBatchedInSync++;
-            if (metrics != null) {
-              // Metrics is non-null only when used inside name node
-              metrics.incrTransactionsBatchedInSync();
-            }
-            return;
-          }
-     
-          // now, this thread will do the sync
-          syncStart = txid;
-          isSyncRunning = true;
-          sync = true;
-  
-          // swap buffers
+        // if somebody is already syncing, then wait
+        while (mytxid > synctxid && isSyncRunning) {
           try {
-            if (journalSet.isEmpty()) {
-              throw new IOException("No journals available to flush");
-            }
-            editLogStream.setReadyToFlush();
-          } catch (IOException e) {
-            LOG.fatal("Could not sync enough journals to persistent storage. "
-                + "Unsynced transactions: " + (txid - synctxid),
-                new Exception());
-            runtime.exit(1);
+            wait(1000);
+          } catch (InterruptedException ie) { 
           }
+        }
+  
+        //
+        // If this transaction was already flushed, then nothing to do
+        //
+        if (mytxid <= synctxid) {
+          numTransactionsBatchedInSync++;
+          if (metrics != null) // Metrics is non-null only when used inside name node
+            metrics.incrTransactionsBatchedInSync();
+          return;
+        }
+     
+        // now, this thread will do the sync
+        syncStart = txid;
+        isSyncRunning = true;
+        sync = true;
+  
+        // swap buffers
+        assert !journals.isEmpty() : "no editlog streams";
+        
+        for (JournalAndStream jas : journals) {
+          if (!jas.isActive()) continue;
+          try {
+            jas.getCurrentStream().setReadyToFlush();
+            candidateJournals.add(jas);
+          } catch (IOException ie) {
+            LOG.error("Unable to get ready to flush.", ie);
+            badJournals.add(jas);
+          }
+        }
         } finally {
           // Prevent RuntimeException from blocking other log edit write 
           doneWithAutoSyncScheduling();
         }
-        //editLogStream may become null,
-        //so store a local variable for flush.
-        logStream = editLogStream;
       }
-      
+  
       // do the sync
       long start = now();
-      try {
-        if (logStream != null) {
-          logStream.flush();
-        }
-      } catch (IOException ex) {
-        synchronized (this) {
-          LOG.fatal("Could not sync enough journals to persistent storage. "
-              + "Unsynced transactions: " + (txid - synctxid), new Exception());
-          runtime.exit(1);
+      for (JournalAndStream jas : candidateJournals) {
+        if (!jas.isActive()) continue;
+        try {
+          jas.getCurrentStream().flush();
+        } catch (IOException ie) {
+          LOG.error("Unable to sync edit log.", ie);
+          //
+          // remember the streams that encountered an error.
+          //
+          badJournals.add(jas);
         }
       }
       long elapsed = now() - start;
+      disableAndReportErrorOnJournals(badJournals);
   
       if (metrics != null) { // Metrics non-null only when used inside name node
         metrics.addSync(elapsed);
@@ -561,6 +440,13 @@ public class FSEditLog  {
       // Prevent RuntimeException from blocking other log edit sync 
       synchronized (this) {
         if (sync) {
+          if (badJournals.size() >= journals.size()) {
+            LOG.fatal("Could not sync any journal to persistent storage. " +
+                "Unsynced transactions: " + (txid - synctxid),
+                new Exception());
+            runtime.exit(1);
+          }
+
           synctxid = syncStart;
           isSyncRunning = false;
         }
@@ -577,6 +463,9 @@ public class FSEditLog  {
     if (lastPrintTime + 60000 > now && !force) {
       return;
     }
+    if (journals.isEmpty()) {
+      return;
+    }
     lastPrintTime = now;
     StringBuilder buf = new StringBuilder();
     buf.append("Number of transactions: ");
@@ -586,9 +475,20 @@ public class FSEditLog  {
     buf.append("Number of transactions batched in Syncs: ");
     buf.append(numTransactionsBatchedInSync);
     buf.append(" Number of syncs: ");
-    buf.append(editLogStream.getNumSync());
+    for (JournalAndStream jas : journals) {
+      if (!jas.isActive()) continue;
+      buf.append(jas.getCurrentStream().getNumSync());
+      break;
+    }
+
     buf.append(" SyncTimes(ms): ");
-    buf.append(journalSet.getSyncTimes());
+
+    for (JournalAndStream jas : journals) {
+      if (!jas.isActive()) continue;
+      EditLogOutputStream eStream = jas.getCurrentStream();
+      buf.append(eStream.getTotalSyncTime());
+      buf.append(" ");
+    }
     LOG.info(buf);
   }
 
@@ -624,13 +524,6 @@ public class FSEditLog  {
       .setBlocks(newNode.getBlocks())
       .setPermissionStatus(newNode.getPermissionStatus());
     
-    logEdit(op);
-  }
-  
-  public void logUpdateBlocks(String path, INodeFileUnderConstruction file) {
-    UpdateBlocksOp op = UpdateBlocksOp.getInstance()
-      .setPath(path)
-      .setBlocks(file.getBlocks());
     logEdit(op);
   }
   
@@ -768,6 +661,7 @@ public class FSEditLog  {
    * log delegation token to edit log
    * @param id DelegationTokenIdentifier
    * @param expiryTime of the token
+   * @return
    */
   void logGetDelegationToken(DelegationTokenIdentifier id,
       long expiryTime) {
@@ -806,19 +700,24 @@ public class FSEditLog  {
   }
   
   /**
-   * Used only by unit tests.
+   * @return the number of active (non-failed) journals
    */
-  @VisibleForTesting
-  synchronized List<JournalAndStream> getJournals() {
-    return journalSet.getAllJournalStreams();
+  private int countActiveJournals() {
+    int count = 0;
+    for (JournalAndStream jas : journals) {
+      if (jas.isActive()) {
+        count++;
+      }
+    }
+    return count;
   }
   
   /**
-   * Used only by tests.
+   * Used only by unit tests.
    */
   @VisibleForTesting
-  synchronized public JournalSet getJournalSet() {
-    return journalSet;
+  List<JournalAndStream> getJournals() {
+    return journals;
   }
   
   /**
@@ -827,23 +726,67 @@ public class FSEditLog  {
   @VisibleForTesting
   synchronized void setRuntimeForTesting(Runtime runtime) {
     this.runtime = runtime;
-    this.journalSet.setRuntimeForTesting(runtime);
-  }
-
-  /**
-   * Used only by tests.
-   */
-  @VisibleForTesting
-  void setMetricsForTests(NameNodeMetrics metrics) {
-    this.metrics = metrics;
   }
   
   /**
    * Return a manifest of what finalized edit logs are available
    */
-  public synchronized RemoteEditLogManifest getEditLogManifest(long fromTxId)
-      throws IOException {
-    return journalSet.getEditLogManifest(fromTxId);
+  public synchronized RemoteEditLogManifest getEditLogManifest(
+      long fromTxId) throws IOException {
+    // Collect RemoteEditLogs available from each FileJournalManager
+    List<RemoteEditLog> allLogs = Lists.newArrayList();
+    for (JournalAndStream j : journals) {
+      if (j.getManager() instanceof FileJournalManager) {
+        FileJournalManager fjm = (FileJournalManager)j.getManager();
+        try {
+          allLogs.addAll(fjm.getRemoteEditLogs(fromTxId));
+        } catch (Throwable t) {
+          LOG.warn("Cannot list edit logs in " + fjm, t);
+        }
+      }
+    }
+    
+    // Group logs by their starting txid
+    ImmutableListMultimap<Long, RemoteEditLog> logsByStartTxId =
+      Multimaps.index(allLogs, RemoteEditLog.GET_START_TXID);
+    long curStartTxId = fromTxId;
+
+    List<RemoteEditLog> logs = Lists.newArrayList();
+    while (true) {
+      ImmutableList<RemoteEditLog> logGroup = logsByStartTxId.get(curStartTxId);
+      if (logGroup.isEmpty()) {
+        // we have a gap in logs - for example because we recovered some old
+        // storage directory with ancient logs. Clear out any logs we've
+        // accumulated so far, and then skip to the next segment of logs
+        // after the gap.
+        SortedSet<Long> startTxIds = Sets.newTreeSet(logsByStartTxId.keySet());
+        startTxIds = startTxIds.tailSet(curStartTxId);
+        if (startTxIds.isEmpty()) {
+          break;
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Found gap in logs at " + curStartTxId + ": " +
+                "not returning previous logs in manifest.");
+          }
+          logs.clear();
+          curStartTxId = startTxIds.first();
+          continue;
+        }
+      }
+
+      // Find the one that extends the farthest forward
+      RemoteEditLog bestLog = Collections.max(logGroup);
+      logs.add(bestLog);
+      // And then start looking from after that point
+      curStartTxId = bestLog.getEndTxId() + 1;
+    }
+    RemoteEditLogManifest ret = new RemoteEditLogManifest(logs);
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Generated manifest for logs since " + fromTxId + ":"
+          + ret);      
+    }
+    return ret;
   }
  
   /**
@@ -886,11 +829,16 @@ public class FSEditLog  {
     // See HDFS-2174.
     storage.attemptRestoreRemovedStorage();
     
-    try {
-      editLogStream = journalSet.startLogSegment(segmentTxId);
-    } catch (IOException ex) {
+    mapJournalsAndReportErrors(new JournalClosure() {
+      @Override
+      public void apply(JournalAndStream jas) throws IOException {
+        jas.startLogSegment(segmentTxId);
+      }
+    }, "starting log segment " + segmentTxId);
+
+    if (countActiveJournals() == 0) {
       throw new IOException("Unable to start log segment " +
-          segmentTxId + ": too few journals successfully started.", ex);
+          segmentTxId + ": no journals successfully started.");
     }
     
     curSegmentTxId = segmentTxId;
@@ -909,7 +857,7 @@ public class FSEditLog  {
    */
   synchronized void endCurrentLogSegment(boolean writeEndTxn) {
     LOG.info("Ending log segment " + curSegmentTxId);
-    Preconditions.checkState(isSegmentOpen(),
+    Preconditions.checkState(state == State.IN_SEGMENT,
         "Bad state: %s", state);
     
     if (writeEndTxn) {
@@ -922,12 +870,14 @@ public class FSEditLog  {
     
     final long lastTxId = getLastWrittenTxId();
     
-    try {
-      journalSet.finalizeLogSegment(curSegmentTxId, lastTxId);
-      editLogStream = null;
-    } catch (IOException e) {
-      //All journals have failed, it will be handled in logSync.
-    }
+    mapJournalsAndReportErrors(new JournalClosure() {
+      @Override
+      public void apply(JournalAndStream jas) throws IOException {
+        if (jas.isActive()) {
+          jas.close(lastTxId);
+        }
+      }
+    }, "ending log segment");
     
     state = State.BETWEEN_LOG_SEGMENTS;
   }
@@ -936,34 +886,36 @@ public class FSEditLog  {
    * Abort all current logs. Called from the backup node.
    */
   synchronized void abortCurrentLogSegment() {
-    try {
-      //Check for null, as abort can be called any time.
-      if (editLogStream != null) {
-        editLogStream.abort();
-        editLogStream = null;
-        state = State.BETWEEN_LOG_SEGMENTS;
+    mapJournalsAndReportErrors(new JournalClosure() {
+      
+      @Override
+      public void apply(JournalAndStream jas) throws IOException {
+        jas.abort();
       }
-    } catch (IOException e) {
-      LOG.warn("All journals failed to abort", e);
-    }
+    }, "aborting all streams");
+    state = State.BETWEEN_LOG_SEGMENTS;
   }
 
   /**
    * Archive any log files that are older than the given txid.
    */
-  public synchronized void purgeLogsOlderThan(final long minTxIdToKeep) {
-    assert curSegmentTxId == HdfsConstants.INVALID_TXID || // on format this is no-op
-      minTxIdToKeep <= curSegmentTxId :
-      "cannot purge logs older than txid " + minTxIdToKeep +
-      " when current segment starts at " + curSegmentTxId;
-
-    // This could be improved to not need synchronization. But currently,
-    // journalSet is not threadsafe, so we need to synchronize this method.
-    try {
-      journalSet.purgeLogsOlderThan(minTxIdToKeep);
-    } catch (IOException ex) {
-      //All journals have failed, it will be handled in logSync.
+  public void purgeLogsOlderThan(final long minTxIdToKeep) {
+    synchronized (this) {
+      // synchronized to prevent findbugs warning about inconsistent
+      // synchronization. This will be JIT-ed out if asserts are
+      // off.
+      assert curSegmentTxId == HdfsConstants.INVALID_TXID || // on format this is no-op
+        minTxIdToKeep <= curSegmentTxId :
+        "cannot purge logs older than txid " + minTxIdToKeep +
+        " when current segment starts at " + curSegmentTxId;
     }
+    
+    mapJournalsAndReportErrors(new JournalClosure() {
+      @Override
+      public void apply(JournalAndStream jas) throws IOException {
+        jas.manager.purgeLogsOlderThan(minTxIdToKeep);
+      }
+    }, "purging logs older than " + minTxIdToKeep);
   }
 
   
@@ -990,8 +942,10 @@ public class FSEditLog  {
 
 
   // sets the initial capacity of the flush buffer.
-  synchronized void setOutputBufferCapacity(int size) {
-    journalSet.setOutputBufferCapacity(size);
+  public void setOutputBufferCapacity(int size) {
+    for (JournalAndStream jas : journals) {
+      jas.manager.setOutputBufferCapacity(size);
+    }
   }
 
   /**
@@ -1012,7 +966,7 @@ public class FSEditLog  {
     if(bnReg.isRole(NamenodeRole.CHECKPOINT))
       return; // checkpoint node does not stream edits
     
-    JournalManager jas = findBackupJournal(bnReg);
+    JournalAndStream jas = findBackupJournalAndStream(bnReg);
     if (jas != null) {
       // already registered
       LOG.info("Backup node " + bnReg + " re-registers");
@@ -1021,29 +975,35 @@ public class FSEditLog  {
     
     LOG.info("Registering new backup node: " + bnReg);
     BackupJournalManager bjm = new BackupJournalManager(bnReg, nnReg);
-    journalSet.add(bjm, true);
+    journals.add(new JournalAndStream(bjm));
   }
   
-  synchronized void releaseBackupStream(NamenodeRegistration registration)
-      throws IOException {
-    BackupJournalManager bjm = this.findBackupJournal(registration);
-    if (bjm != null) {
-      LOG.info("Removing backup journal " + bjm);
-      journalSet.remove(bjm);
+  synchronized void releaseBackupStream(NamenodeRegistration registration) {
+    for (Iterator<JournalAndStream> iter = journals.iterator();
+         iter.hasNext();) {
+      JournalAndStream jas = iter.next();
+      if (jas.manager instanceof BackupJournalManager &&
+          ((BackupJournalManager)jas.manager).matchesRegistration(
+              registration)) {
+        jas.abort();        
+        LOG.info("Removing backup journal " + jas);
+        iter.remove();
+      }
     }
   }
   
   /**
    * Find the JournalAndStream associated with this BackupNode.
-   * 
    * @return null if it cannot be found
    */
-  private synchronized BackupJournalManager findBackupJournal(
+  private synchronized JournalAndStream findBackupJournalAndStream(
       NamenodeRegistration bnReg) {
-    for (JournalManager bjm : journalSet.getJournalManagers()) {
-      if ((bjm instanceof BackupJournalManager)
-          && ((BackupJournalManager) bjm).matchesRegistration(bnReg)) {
-        return (BackupJournalManager) bjm;
+    for (JournalAndStream jas : journals) {
+      if (jas.manager instanceof BackupJournalManager) {
+        BackupJournalManager bjm = (BackupJournalManager)jas.manager;
+        if (bjm.matchesRegistration(bnReg)) {
+          return jas;
+        }
       }
     }
     return null;
@@ -1055,117 +1015,152 @@ public class FSEditLog  {
    */   
   synchronized void logEdit(final int length, final byte[] data) {
     long start = beginTransaction();
+    
+    mapJournalsAndReportErrors(new JournalClosure() {
+      @Override
+      public void apply(JournalAndStream jas) throws IOException {
+        if (jas.isActive()) {
+          jas.getCurrentStream().writeRaw(data, 0, length); // TODO writeRaw
+        }
+      }      
+    }, "Logging edit");
 
-    try {
-      editLogStream.writeRaw(data, 0, length);
-    } catch (IOException ex) {
-      // All journals have failed, it will be handled in logSync.
-    }
     endTransaction(start);
   }
 
+  //// Iteration across journals
+  private interface JournalClosure {
+    public void apply(JournalAndStream jas) throws IOException;
+  }
+
   /**
-   * Run recovery on all journals to recover any unclosed segments
+   * Apply the given function across all of the journal managers, disabling
+   * any for which the closure throws an IOException.
+   * @param status message used for logging errors (e.g. "opening journal")
    */
-  synchronized void recoverUnclosedStreams() {
-    Preconditions.checkState(
-        state == State.BETWEEN_LOG_SEGMENTS,
-        "May not recover segments - wrong state: %s", state);
-    try {
-      journalSet.recoverUnfinalizedSegments();
-    } catch (IOException ex) {
-      // All journals have failed, it is handled in logSync.
+  private void mapJournalsAndReportErrors(
+      JournalClosure closure, String status) {
+    List<JournalAndStream> badJAS = Lists.newLinkedList();
+    for (JournalAndStream jas : journals) {
+      try {
+        closure.apply(jas);
+      } catch (Throwable t) {
+        LOG.error("Error " + status + " (journal " + jas + ")", t);
+        badJAS.add(jas);
+      }
     }
+
+    disableAndReportErrorOnJournals(badJAS);
   }
   
-  Collection<EditLogInputStream> selectInputStreams(long fromTxId,
-      long toAtLeastTxId) throws IOException {
-    return selectInputStreams(fromTxId, toAtLeastTxId, true);
+  /**
+   * Called when some journals experience an error in some operation.
+   * This propagates errors to the storage level.
+   */
+  private void disableAndReportErrorOnJournals(List<JournalAndStream> badJournals) {
+    if (badJournals == null || badJournals.isEmpty()) {
+      return; // nothing to do
+    }
+ 
+    for (JournalAndStream j : badJournals) {
+      LOG.error("Disabling journal " + j);
+      j.abort();
+    }
   }
 
   /**
-   * Select a list of input streams to load.
+   * Container for a JournalManager paired with its currently
+   * active stream.
    * 
-   * @param fromTxId first transaction in the selected streams
-   * @param toAtLeast the selected streams must contain this transaction
-   * @param inProgessOk set to true if in-progress streams are OK
+   * If a Journal gets disabled due to an error writing to its
+   * stream, then the stream will be aborted and set to null.
    */
-  public synchronized Collection<EditLogInputStream> selectInputStreams(long fromTxId,
-      long toAtLeastTxId, boolean inProgressOk) throws IOException {
-    List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    EditLogInputStream stream = journalSet.getInputStream(fromTxId, inProgressOk);
-    while (stream != null) {
-      streams.add(stream);
-      // We're now looking for a higher range, so reset the fromTxId
-      fromTxId = stream.getLastTxId() + 1;
-      stream = journalSet.getInputStream(fromTxId, inProgressOk);
+  static class JournalAndStream {
+    private final JournalManager manager;
+    private EditLogOutputStream stream;
+    private long segmentStartsAtTxId = HdfsConstants.INVALID_TXID;
+    
+    private JournalAndStream(JournalManager manager) {
+      this.manager = manager;
+    }
+
+    private void startLogSegment(long txId) throws IOException {
+      Preconditions.checkState(stream == null);
+      stream = manager.startLogSegment(txId);
+      segmentStartsAtTxId = txId;
+    }
+
+    private void close(long lastTxId) throws IOException {
+      Preconditions.checkArgument(lastTxId >= segmentStartsAtTxId,
+          "invalid segment: lastTxId %s >= " +
+          "segment starting txid %s", lastTxId, segmentStartsAtTxId);
+          
+      if (stream == null) return;
+      stream.close();
+      manager.finalizeLogSegment(segmentStartsAtTxId, lastTxId);
+      stream = null;
     }
     
-    if (fromTxId <= toAtLeastTxId) {
-      closeAllStreams(streams);
-      throw new IOException(String.format("Gap in transactions. Expected to "
-          + "be able to read up until at least txid %d but unable to find any "
-          + "edit logs containing txid %d", toAtLeastTxId, fromTxId));
+    @VisibleForTesting
+    void abort() {
+      if (stream == null) return;
+      try {
+        stream.abort();
+      } catch (IOException ioe) {
+        LOG.error("Unable to abort stream " + stream, ioe);
+      }
+      stream = null;
+      segmentStartsAtTxId = HdfsConstants.INVALID_TXID;
     }
-    return streams;
-  }
 
-  /** 
-   * Close all the streams in a collection
-   * @param streams The list of streams to close
-   */
-  static void closeAllStreams(Iterable<EditLogInputStream> streams) {
-    for (EditLogInputStream s : streams) {
-      IOUtils.closeStream(s);
+    private boolean isActive() {
+      return stream != null;
     }
-  }
 
-  /**
-   * Retrieve the implementation class for a Journal scheme.
-   * @param conf The configuration to retrieve the information from
-   * @param uriScheme The uri scheme to look up.
-   * @return the class of the journal implementation
-   * @throws IllegalArgumentException if no class is configured for uri
-   */
-  static Class<? extends JournalManager> getJournalClass(Configuration conf,
-                               String uriScheme) {
-    String key
-      = DFSConfigKeys.DFS_NAMENODE_EDITS_PLUGIN_PREFIX + "." + uriScheme;
-    Class <? extends JournalManager> clazz = null;
-    try {
-      clazz = conf.getClass(key, null, JournalManager.class);
-    } catch (RuntimeException re) {
-      throw new IllegalArgumentException(
-          "Invalid class specified for " + uriScheme, re);
+    @VisibleForTesting
+    EditLogOutputStream getCurrentStream() {
+      return stream;
     }
-      
-    if (clazz == null) {
-      LOG.warn("No class configured for " +uriScheme
-               + ", " + key + " is empty");
-      throw new IllegalArgumentException(
-          "No class configured for " + uriScheme);
+    
+    @Override
+    public String toString() {
+      return "JournalAndStream(mgr=" + manager +
+        ", " + "stream=" + stream + ")";
     }
-    return clazz;
+
+    @VisibleForTesting
+    void setCurrentStreamForTests(EditLogOutputStream stream) {
+      this.stream = stream;
+    }
+    
+    @VisibleForTesting
+    JournalManager getManager() {
+      return manager;
+    }
+
+    private EditLogInputStream getInProgressInputStream() throws IOException {
+      return manager.getInProgressInputStream(segmentStartsAtTxId);
+    }
   }
 
   /**
-   * Construct a custom journal manager.
-   * The class to construct is taken from the configuration.
-   * @param uri Uri to construct
-   * @return The constructed journal manager
-   * @throws IllegalArgumentException if no class is configured for uri
+   * @return an EditLogInputStream that reads from the same log that
+   * the edit log is currently writing. This is used from the BackupNode
+   * during edits synchronization.
+   * @throws IOException if no valid logs are available.
    */
-  private JournalManager createJournal(URI uri) {
-    Class<? extends JournalManager> clazz
-      = getJournalClass(conf, uri.getScheme());
-
-    try {
-      Constructor<? extends JournalManager> cons
-        = clazz.getConstructor(Configuration.class, URI.class);
-      return cons.newInstance(conf, uri);
-    } catch (Exception e) {
-      throw new IllegalArgumentException("Unable to construct journal, "
-                                         + uri, e);
+  synchronized EditLogInputStream getInProgressFileInputStream()
+      throws IOException {
+    for (JournalAndStream jas : journals) {
+      if (!jas.isActive()) continue;
+      try {
+        EditLogInputStream in = jas.getInProgressInputStream();
+        if (in != null) return in;
+      } catch (IOException ioe) {
+        LOG.warn("Unable to get the in-progress input stream from " + jas,
+            ioe);
+      }
     }
+    throw new IOException("No in-progress stream provided edits");
   }
 }

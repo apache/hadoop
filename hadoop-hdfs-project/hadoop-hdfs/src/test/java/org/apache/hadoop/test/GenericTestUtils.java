@@ -19,21 +19,14 @@ package org.apache.hadoop.test;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
 import java.util.Arrays;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Layout;
-import org.apache.log4j.Logger;
-import org.apache.log4j.WriterAppender;
 import org.junit.Assert;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -86,8 +79,8 @@ public abstract class GenericTestUtils {
   public static void assertExceptionContains(String string, Throwable t) {
     String msg = t.getMessage();
     Assert.assertTrue(
-        "Expected to find '" + string + "' but got unexpected exception:"
-        + StringUtils.stringifyException(t), msg.contains(string));
+        "Unexpected exception:" + StringUtils.stringifyException(t),
+        msg.contains(string));    
   }  
 
   public static void waitFor(Supplier<Boolean> check,
@@ -106,35 +99,6 @@ public abstract class GenericTestUtils {
     throw new TimeoutException("Timed out waiting for condition");
   }
   
-  public static class LogCapturer {
-    private StringWriter sw = new StringWriter();
-    private WriterAppender appender;
-    private Logger logger;
-    
-    public static LogCapturer captureLogs(Log l) {
-      Logger logger = ((Log4JLogger)l).getLogger();
-      LogCapturer c = new LogCapturer(logger);
-      return c;
-    }
-    
-
-    private LogCapturer(Logger logger) {
-      this.logger = logger;
-      Layout layout = Logger.getRootLogger().getAppender("stdout").getLayout();
-      WriterAppender wa = new WriterAppender(layout, sw);
-      logger.addAppender(wa);
-    }
-    
-    public String getOutput() {
-      return sw.toString();
-    }
-    
-    public void stopCapturing() {
-      logger.removeAppender(appender);
-
-    }
-  }
-  
   
   /**
    * Mockito answer helper that triggers one latch as soon as the
@@ -145,11 +109,7 @@ public abstract class GenericTestUtils {
     
     private final CountDownLatch fireLatch = new CountDownLatch(1);
     private final CountDownLatch waitLatch = new CountDownLatch(1);
-    private final CountDownLatch resultLatch = new CountDownLatch(1);
-    
-    // Result fields set after proceed() is called.
-    private volatile Throwable thrown;
-    private volatile Object returnValue;
+  
     
     public DelayAnswer(Log log) {
       this.LOG = log;
@@ -184,40 +144,7 @@ public abstract class GenericTestUtils {
     }
 
     protected Object passThrough(InvocationOnMock invocation) throws Throwable {
-      try {
-        Object ret = invocation.callRealMethod();
-        returnValue = ret;
-        return ret;
-      } catch (Throwable t) {
-        thrown = t;
-        throw t;
-      } finally {
-        resultLatch.countDown();
-      }
-    }
-    
-    /**
-     * After calling proceed(), this will wait until the call has
-     * completed and a result has been returned to the caller.
-     */
-    public void waitForResult() throws InterruptedException {
-      resultLatch.await();
-    }
-    
-    /**
-     * After the call has gone through, return any exception that
-     * was thrown, or null if no exception was thrown.
-     */
-    public Throwable getThrown() {
-      return thrown;
-    }
-    
-    /**
-     * After the call has gone through, return the call's return value,
-     * or null in case it was void or an exception was thrown.
-     */
-    public Object getReturnValue() {
-      return returnValue;
+      return invocation.callRealMethod();
     }
   }
   
@@ -249,41 +176,4 @@ public abstract class GenericTestUtils {
     }
   }
 
-  /**
-   * An Answer implementation which sleeps for a random number of milliseconds
-   * between 0 and a configurable value before delegating to the real
-   * implementation of the method. This can be useful for drawing out race
-   * conditions.
-   */
-  public static class SleepAnswer implements Answer<Object> {
-    private final int maxSleepTime;
-    private static Random r = new Random();
-    
-    public SleepAnswer(int maxSleepTime) {
-      this.maxSleepTime = maxSleepTime;
-    }
-    
-    @Override
-    public Object answer(InvocationOnMock invocation) throws Throwable {
-      boolean interrupted = false;
-      try {
-        Thread.sleep(r.nextInt(maxSleepTime));
-      } catch (InterruptedException ie) {
-        interrupted = true;
-      }
-      try {
-        return invocation.callRealMethod();
-      } finally {
-        if (interrupted) {
-          Thread.currentThread().interrupt();
-        }
-      }
-    }
-  }
-
-  public static void assertMatches(String output, String pattern) {
-    Assert.assertTrue("Expected output to match /" + pattern + "/" +
-        " but got:\n" + output,
-        Pattern.compile(pattern).matcher(output).find());
-  }
 }

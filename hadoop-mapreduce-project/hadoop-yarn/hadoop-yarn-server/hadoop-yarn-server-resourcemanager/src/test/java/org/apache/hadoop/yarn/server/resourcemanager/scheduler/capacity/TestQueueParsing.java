@@ -22,7 +22,6 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.junit.Test;
@@ -35,13 +34,10 @@ public class TestQueueParsing {
   
   @Test
   public void testQueueParsing() throws Exception {
-    CapacitySchedulerConfiguration csConf = 
-      new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(csConf);
-    YarnConfiguration conf = new YarnConfiguration(csConf);
+    CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(conf);
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
-    capacityScheduler.setConf(conf);
     capacityScheduler.reinitialize(conf, null, null);
     
     CSQueue a = capacityScheduler.getQueue("a");
@@ -137,7 +133,6 @@ public class TestQueueParsing {
     conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 90);
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
-    capacityScheduler.setConf(new YarnConfiguration());
     capacityScheduler.reinitialize(conf, null, null);
   }
   
@@ -160,7 +155,6 @@ public class TestQueueParsing {
     CapacityScheduler capacityScheduler;
     try {
       capacityScheduler = new CapacityScheduler();
-      capacityScheduler.setConf(new YarnConfiguration());
       capacityScheduler.reinitialize(conf, null, null);
     } catch (IllegalArgumentException iae) {
       fail = true;
@@ -172,7 +166,6 @@ public class TestQueueParsing {
     
     // Now this should work
     capacityScheduler = new CapacityScheduler();
-    capacityScheduler.setConf(new YarnConfiguration());
     capacityScheduler.reinitialize(conf, null, null);
     
     fail = false;

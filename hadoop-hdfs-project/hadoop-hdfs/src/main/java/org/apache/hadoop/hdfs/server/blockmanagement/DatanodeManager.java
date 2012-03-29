@@ -60,7 +60,6 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
-import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.util.CyclicIteration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
@@ -863,7 +862,7 @@ public class DatanodeManager {
         try {
           nodeinfo = getDatanode(nodeReg);
         } catch(UnregisteredNodeException e) {
-          return new DatanodeCommand[]{RegisterCommand.REGISTER};
+          return new DatanodeCommand[]{DatanodeCommand.REGISTER};
         }
         
         // Check if this datanode should actually be shutdown instead. 
@@ -873,7 +872,7 @@ public class DatanodeManager {
         }
          
         if (nodeinfo == null || !nodeinfo.isAlive) {
-          return new DatanodeCommand[]{RegisterCommand.REGISTER};
+          return new DatanodeCommand[]{DatanodeCommand.REGISTER};
         }
 
         heartbeatManager.updateHeartbeat(nodeinfo, capacity, dfsUsed,
@@ -923,7 +922,7 @@ public class DatanodeManager {
       }
     }
 
-    return new DatanodeCommand[0];
+    return null;
   }
 
   /**
@@ -947,27 +946,4 @@ public class DatanodeManager {
       }
     }
   }
-  
-  public void markAllDatanodesStale() {
-    LOG.info("Marking all datandoes as stale");
-    synchronized (datanodeMap) {
-      for (DatanodeDescriptor dn : datanodeMap.values()) {
-        dn.markStaleAfterFailover();
-      }
-    }
-  }
-
-  /**
-   * Clear any actions that are queued up to be sent to the DNs
-   * on their next heartbeats. This includes block invalidations,
-   * recoveries, and replication requests.
-   */
-  public void clearPendingQueues() {
-    synchronized (datanodeMap) {
-      for (DatanodeDescriptor dn : datanodeMap.values()) {
-        dn.clearBlockQueues();
-      }
-    }
-  }
-
 }

@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public interface GetUserMappingsProtocol {
+public interface GetUserMappingsProtocol extends VersionedProtocol {
   
   /**
    * Version 1: Initial version.

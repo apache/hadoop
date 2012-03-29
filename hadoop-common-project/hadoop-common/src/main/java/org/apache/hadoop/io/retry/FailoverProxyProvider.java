@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.io.retry;
 
-import java.io.Closeable;
-
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
@@ -29,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * {@link RetryPolicy}.
  */
 @InterfaceStability.Evolving
-public interface FailoverProxyProvider<T> extends Closeable {
+public interface FailoverProxyProvider {
 
   /**
    * Get the proxy object which should be used until the next failover event
@@ -37,7 +35,7 @@ public interface FailoverProxyProvider<T> extends Closeable {
    * 
    * @return the proxy object to invoke methods upon
    */
-  public T getProxy();
+  public Object getProxy();
 
   /**
    * Called whenever the associated {@link RetryPolicy} determines that an error
@@ -46,7 +44,7 @@ public interface FailoverProxyProvider<T> extends Closeable {
    * @param currentProxy the proxy object which was being used before this
    *        failover event
    */
-  public void performFailover(T currentProxy);
+  public void performFailover(Object currentProxy);
 
   /**
    * Return a reference to the interface this provider's proxy objects actually
@@ -58,5 +56,5 @@ public interface FailoverProxyProvider<T> extends Closeable {
    * @return the interface implemented by the proxy objects returned by
    *         {@link FailoverProxyProvider#getProxy()}
    */
-  public Class<T> getInterface();
+  public Class<?> getInterface();
 }

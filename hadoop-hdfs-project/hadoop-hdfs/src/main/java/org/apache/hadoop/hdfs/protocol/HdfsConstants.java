@@ -30,16 +30,7 @@ public class HdfsConstants {
   /* Hidden constructor */
   protected HdfsConstants() {
   }
-  
-  /**
-   * HDFS Protocol Names:  
-   */
-  public static final String CLIENT_NAMENODE_PROTOCOL_NAME = 
-      "org.apache.hadoop.hdfs.protocol.ClientProtocol";
-  public static final String CLIENT_DATANODE_PROTOCOL_NAME = 
-      "org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol";
-  
-  
+
   public static int MIN_BLOCKS_FOR_WRITE = 5;
 
   // Long that indicates "leave current quota unchanged"
@@ -98,14 +89,6 @@ public class HdfsConstants {
    * URI Scheme for hdfs://namenode/ URIs.
    */
   public static final String HDFS_URI_SCHEME = "hdfs";
-
-  /**
-   * A prefix put before the namenode URI inside the "service" field
-   * of a delgation token, indicating that the URI is a logical (HA)
-   * URI.
-   */
-  public static final String HA_DT_SERVICE_PREFIX = "ha-hdfs:";
-
 
   /**
    * Please see {@link LayoutVersion} on adding new layout version.

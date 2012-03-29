@@ -190,12 +190,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, Class<?>>>();
 
   /**
-   * Sentinel value to store negative cache results in {@link #CACHE_CLASSES}.
-   */
-  private static final Class<?> NEGATIVE_CACHE_SENTINEL =
-    NegativeCacheSentinel.class;
-
-  /**
    * Stores the mapping of key to the resource which modifies or loads 
    * the key most recently
    */
@@ -309,29 +303,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return <code>true</code> if the key is deprecated and 
    *         <code>false</code> otherwise.
    */
-  public static boolean isDeprecated(String key) {
+  private static boolean isDeprecated(String key) {
     return deprecatedKeyMap.containsKey(key);
   }
-
-  /**
-   * Returns the alternate name for a key if the property name is deprecated
-   * or if deprecates a property name.
-   *
-   * @param name property name.
-   * @return alternate name.
-   */
-  private String getAlternateName(String name) {
-    String altName;
-    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
-    if (keyInfo != null) {
-      altName = (keyInfo.newKeys.length > 0) ? keyInfo.newKeys[0] : null;
-    }
-    else {
-      altName = reverseDeprecatedKeyMap.get(name);
-    }
-    return altName;
-  }
-
+ 
   /**
    * Checks for the presence of the property <code>name</code> in the
    * deprecation map. Returns the first of the list of new keys if present
@@ -347,7 +322,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private String handleDeprecation(String name) {
     if (isDeprecated(name)) {
       DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
-      warnOnceIfDeprecated(name);
+      if (!keyInfo.accessed) {
+        LOG.warn(keyInfo.getWarningMessage(name));
+      }
       for (String newKey : keyInfo.newKeys) {
         if(newKey != null) {
           name = newKey;
@@ -360,6 +337,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         getOverlay().containsKey(deprecatedKey)) {
       getProps().setProperty(name, getOverlay().getProperty(deprecatedKey));
       getOverlay().setProperty(name, getOverlay().getProperty(deprecatedKey));
+      
+      DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(deprecatedKey);
+      if (!keyInfo.accessed) {
+        LOG.warn(keyInfo.getWarningMessage(deprecatedKey));
+      }
     }
     return name;
   }
@@ -637,8 +619,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   /** 
    * Set the <code>value</code> of the <code>name</code> property. If 
-   * <code>name</code> is deprecated or there is a deprecated name associated to it,
-   * it sets the value to both names.
+   * <code>name</code> is deprecated, it sets the <code>value</code> to the keys
+   * that replace the deprecated key.
    * 
    * @param name property name.
    * @param value property value.
@@ -647,35 +629,29 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (deprecatedKeyMap.isEmpty()) {
       getProps();
     }
-    getOverlay().setProperty(name, value);
-    getProps().setProperty(name, value);
-    updatingResource.put(name, UNKNOWN_RESOURCE);
-    String altName = getAlternateName(name);
-    if (altName != null) {
-      getOverlay().setProperty(altName, value);
-      getProps().setProperty(altName, value);
+    if (!isDeprecated(name)) {
+      getOverlay().setProperty(name, value);
+      getProps().setProperty(name, value);
+      updatingResource.put(name, UNKNOWN_RESOURCE);
     }
-    warnOnceIfDeprecated(name);
-  }
-
-  private void warnOnceIfDeprecated(String name) {
-    DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
-    if (keyInfo != null && !keyInfo.accessed) {
+    else {
+      DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
       LOG.warn(keyInfo.getWarningMessage(name));
+      for (String newKey : keyInfo.newKeys) {
+        getOverlay().setProperty(newKey, value);
+        getProps().setProperty(newKey, value);
+      }
     }
   }
-
+  
   /**
    * Unset a previously set property.
    */
   public synchronized void unset(String name) {
-    String altName = getAlternateName(name);
+    name = handleDeprecation(name);
+
     getOverlay().remove(name);
     getProps().remove(name);
-    if (altName !=null) {
-      getOverlay().remove(altName);
-       getProps().remove(altName);
-    }
   }
 
   /**
@@ -1197,24 +1173,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
 
-    Class<?> clazz = map.get(name);
-    if (clazz == null) {
+    Class<?> clazz = null;
+    if (!map.containsKey(name)) {
       try {
         clazz = Class.forName(name, true, classLoader);
       } catch (ClassNotFoundException e) {
-        // Leave a marker that the class isn't found
-        map.put(name, NEGATIVE_CACHE_SENTINEL);
+        map.put(name, null); //cache negative that class is not found
         return null;
       }
       // two putters can race here, but they'll put the same class
       map.put(name, clazz);
-      return clazz;
-    } else if (clazz == NEGATIVE_CACHE_SENTINEL) {
-      return null; // not found
-    } else {
-      // cache hit
-      return clazz;
+    } else { // check already performed on this class name
+      clazz = map.get(name);
+      if (clazz == null) { // found the negative
+        return null;
+      }
     }
+
+    return clazz;
   }
 
   /** 
@@ -1916,10 +1892,4 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     Configuration.addDeprecation("fs.default.name", 
                new String[]{CommonConfigurationKeys.FS_DEFAULT_NAME_KEY});
   }
-  
-  /**
-   * A unique class which is used as a sentinel value in the caching
-   * for getClassByName. {@see Configuration#getClassByNameOrNull(String)}
-   */
-  private static abstract class NegativeCacheSentinel {}
 }

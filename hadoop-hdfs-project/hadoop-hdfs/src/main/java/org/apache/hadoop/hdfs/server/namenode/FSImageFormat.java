@@ -508,7 +508,6 @@ class FSImageFormat {
    * functions may be used to retrieve information about the file that was written.
    */
   static class Saver {
-    private final SaveNamespaceContext context;
     /** Set to true once an image has been written */
     private boolean saved = false;
     
@@ -530,11 +529,6 @@ class FSImageFormat {
         throw new IllegalStateException("FSImageSaver has already saved an image");
       }
     }
-    
-
-    Saver(SaveNamespaceContext context) {
-      this.context = context;
-    }
 
     /**
      * Return the MD5 checksum of the image file that was saved.
@@ -545,11 +539,12 @@ class FSImageFormat {
     }
 
     void save(File newFile,
+              long txid,
+              FSNamesystem sourceNamesystem,
               FSImageCompression compression)
       throws IOException {
       checkNotSaved();
 
-      final FSNamesystem sourceNamesystem = context.getSourceNamesystem();
       FSDirectory fsDir = sourceNamesystem.dir;
       long startTime = now();
       //
@@ -561,16 +556,11 @@ class FSImageFormat {
       DataOutputStream out = new DataOutputStream(fos);
       try {
         out.writeInt(HdfsConstants.LAYOUT_VERSION);
-        // We use the non-locked version of getNamespaceInfo here since
-        // the coordinating thread of saveNamespace already has read-locked
-        // the namespace for us. If we attempt to take another readlock
-        // from the actual saver thread, there's a potential of a
-        // fairness-related deadlock. See the comments on HDFS-2223.
-        out.writeInt(sourceNamesystem.unprotectedGetNamespaceInfo()
-            .getNamespaceID());
+        out.writeInt(sourceNamesystem.getFSImage()
+                     .getStorage().getNamespaceID()); // TODO bad dependency
         out.writeLong(fsDir.rootDir.numItemsInTree());
         out.writeLong(sourceNamesystem.getGenerationStamp());
-        out.writeLong(context.getTxId());
+        out.writeLong(txid);
 
         // write compression info and set up compressed stream
         out = compression.writeHeaderAndWrapStream(fos);
@@ -586,12 +576,10 @@ class FSImageFormat {
         saveImage(strbuf, fsDir.rootDir, out);
         // save files under construction
         sourceNamesystem.saveFilesUnderConstruction(out);
-        context.checkCancelled();
         sourceNamesystem.saveSecretManagerState(out);
         strbuf = null;
-        context.checkCancelled();
+
         out.flush();
-        context.checkCancelled();
         fout.getChannel().force(true);
       } finally {
         out.close();
@@ -610,10 +598,9 @@ class FSImageFormat {
      * This is a recursive procedure, which first saves all children of
      * a current directory and then moves inside the sub-directories.
      */
-    private void saveImage(ByteBuffer currentDirName,
+    private static void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
                                   DataOutputStream out) throws IOException {
-      context.checkCancelled();
       List<INode> children = current.getChildrenRaw();
       if (children == null || children.isEmpty())
         return;

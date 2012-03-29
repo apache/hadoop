@@ -18,11 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
@@ -49,8 +46,5 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   protected String getDefaultWorkingDirectory() {
     return defaultWorkingDirectory;
   }
-
-  public void testAppend() throws IOException {
-    AppendTestUtil.testAppend(fs, new Path("/testAppend/f"));
-  }
+  
 }

@@ -30,9 +30,6 @@ public interface RwLock {
 
   /** Acquire write lock. */
   public void writeLock();
-  
-  /** Acquire write lock, unless interrupted while waiting  */
-  void writeLockInterruptibly() throws InterruptedException;
 
   /** Release write lock. */
   public void writeUnlock();

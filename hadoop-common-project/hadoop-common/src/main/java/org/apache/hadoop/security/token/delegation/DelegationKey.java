@@ -42,20 +42,15 @@ public class DelegationKey implements Writable {
   @Nullable
   private byte[] keyBytes = null;
 
-  /** Default constructore required for Writable */
   public DelegationKey() {
-    this(0, 0L, (SecretKey)null);
+    this(0, 0L, null);
   }
 
   public DelegationKey(int keyId, long expiryDate, SecretKey key) {
-    this(keyId, expiryDate, key != null ? key.getEncoded() : null);
-  }
-  
-  public DelegationKey(int keyId, long expiryDate, byte[] encodedKey) {
     this.keyId = keyId;
     this.expiryDate = expiryDate;
-    if (encodedKey != null) {
-      this.keyBytes = encodedKey;
+    if (key!=null) {
+      this.keyBytes = key.getEncoded();
     }
   }
 
@@ -74,10 +69,6 @@ public class DelegationKey implements Writable {
       SecretKey key = AbstractDelegationTokenSecretManager.createSecretKey(keyBytes);
       return key;
     }
-  }
-  
-  public byte[] getEncodedKey() {
-    return keyBytes;
   }
 
   public void setExpiryDate(long expiryDate) {

@@ -20,11 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode;
 import junit.framework.TestCase;
 import java.io.*;
 import java.util.Random;
-import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -60,9 +58,9 @@ public class TestNameEditsConfigs extends TestCase {
 
   private void writeFile(FileSystem fileSys, Path name, int repl)
     throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, BLOCK_SIZE);
+    FSDataOutputStream stm = fileSys.create(name, true,
+                                            fileSys.getConf().getInt("io.file.buffer.size", 4096),
+                                            (short)repl, (long)BLOCK_SIZE);
     byte[] buffer = new byte[FILE_SIZE];
     Random rand = new Random(SEED);
     rand.nextBytes(buffer);
@@ -82,12 +80,10 @@ public class TestNameEditsConfigs extends TestCase {
       assertTrue("Expect no images in " + dir, ins.foundImages.isEmpty());      
     }
 
-    List<FileJournalManager.EditLogFile> editlogs 
-      = FileJournalManager.matchEditLogs(new File(dir, "current").listFiles()); 
     if (shouldHaveEdits) {
-      assertTrue("Expect edits in " + dir, editlogs.size() > 0);
+      assertTrue("Expect edits in " + dir, ins.foundEditLogs.size() > 0);
     } else {
-      assertTrue("Expect no edits in " + dir, editlogs.isEmpty());
+      assertTrue("Expect no edits in " + dir, ins.foundEditLogs.isEmpty());
     }
   }
 
@@ -97,7 +93,7 @@ public class TestNameEditsConfigs extends TestCase {
     int replication = fileSys.getFileStatus(name).getReplication();
     assertEquals("replication for " + name, repl, replication);
     long size = fileSys.getContentSummary(name).getLength();
-    assertEquals("file size for " + name, size, FILE_SIZE);
+    assertEquals("file size for " + name, size, (long)FILE_SIZE);
   }
 
   private void cleanupFile(FileSystem fileSys, Path name)

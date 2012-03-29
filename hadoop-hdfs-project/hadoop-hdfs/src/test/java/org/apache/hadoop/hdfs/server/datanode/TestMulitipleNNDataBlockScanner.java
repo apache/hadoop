@@ -30,7 +30,6 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.junit.Test;
 
 
@@ -42,13 +41,12 @@ public class TestMulitipleNNDataBlockScanner {
   String bpids[] = new String[3];
   FileSystem fs[] = new FileSystem[3];
   
-  public void setUp() throws IOException {
+  public void setUp(int port) throws IOException {
     conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 100);
-    cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(3))
-        .build();
+    cluster = new MiniDFSCluster.Builder(conf).numNameNodes(3).nameNodePort(
+        port).build();
     for (int i = 0; i < 3; i++) {
       cluster.waitActive(i);
     }
@@ -67,7 +65,7 @@ public class TestMulitipleNNDataBlockScanner {
   
   @Test
   public void testDataBlockScanner() throws IOException, InterruptedException {
-    setUp();
+    setUp(9923);
     try {
       DataNode dn = cluster.getDataNodes().get(0);
       for (int i = 0; i < 3; i++) {
@@ -91,10 +89,9 @@ public class TestMulitipleNNDataBlockScanner {
   @Test
   public void testBlockScannerAfterRefresh() throws IOException,
       InterruptedException {
-    setUp();
+    setUp(9933);
     try {
-      Configuration dnConf = cluster.getDataNodes().get(0).getConf();
-      Configuration conf = new HdfsConfiguration(dnConf);
+      Configuration conf = new HdfsConfiguration(cluster.getConfiguration(0));
       StringBuilder namenodesBuilder = new StringBuilder();
 
       String bpidToShutdown = cluster.getNamesystem(2).getBlockPoolId();
@@ -143,7 +140,7 @@ public class TestMulitipleNNDataBlockScanner {
   @Test
   public void testBlockScannerAfterRestart() throws IOException,
       InterruptedException {
-    setUp();
+    setUp(9943);
     try {
       cluster.restartDataNode(0);
       cluster.waitActive();

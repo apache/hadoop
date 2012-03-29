@@ -58,10 +58,13 @@ import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.authentication.util.KerberosName;
-import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
+
+import com.sun.security.auth.NTUserPrincipal;
+import com.sun.security.auth.UnixPrincipal;
+import com.sun.security.auth.module.Krb5LoginModule;
 
 /**
  * User and group information for Hadoop.
@@ -286,51 +289,20 @@ public class UserGroupInformation {
   private final boolean isKeytab;
   private final boolean isKrbTkt;
   
-  private static String OS_LOGIN_MODULE_NAME;
-  private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
+  private static final String OS_LOGIN_MODULE_NAME;
+  private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
   private static final boolean windows = 
                            System.getProperty("os.name").startsWith("Windows");
-  /* Return the OS login module class name */
-  private static String getOSLoginModuleName() {
-    if (System.getProperty("java.vendor").contains("IBM")) {
-      return windows ? "com.ibm.security.auth.module.NTLoginModule"
-       : "com.ibm.security.auth.module.LinuxLoginModule";
-    } else {
-      return windows ? "com.sun.security.auth.module.NTLoginModule"
-        : "com.sun.security.auth.module.UnixLoginModule";
-    }
-  }
-
-  /* Return the OS principal class */
-  @SuppressWarnings("unchecked")
-  private static Class<? extends Principal> getOsPrincipalClass() {
-    ClassLoader cl = ClassLoader.getSystemClassLoader();
-    try {
-      if (System.getProperty("java.vendor").contains("IBM")) {
-        if (windows) {
-          return (Class<? extends Principal>)
-            cl.loadClass("com.ibm.security.auth.UsernamePrincipal");
-        } else {
-          return (Class<? extends Principal>)
-            (System.getProperty("os.arch").contains("64")
-             ? cl.loadClass("com.ibm.security.auth.UsernamePrincipal")
-             : cl.loadClass("com.ibm.security.auth.LinuxPrincipal"));
-        }
-      } else {
-        return (Class<? extends Principal>) (windows
-           ? cl.loadClass("com.sun.security.auth.NTUserPrincipal")
-           : cl.loadClass("com.sun.security.auth.UnixPrincipal"));
-      }
-    } catch (ClassNotFoundException e) {
-      LOG.error("Unable to find JAAS classes:" + e.getMessage());
-    }
-    return null;
-  }
   static {
-    OS_LOGIN_MODULE_NAME = getOSLoginModuleName();
-    OS_PRINCIPAL_CLASS = getOsPrincipalClass();
+    if (windows) {
+      OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.NTLoginModule";
+      OS_PRINCIPAL_CLASS = NTUserPrincipal.class;
+    } else {
+      OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.UnixLoginModule";
+      OS_PRINCIPAL_CLASS = UnixPrincipal.class;
+    }
   }
-
+  
   private static class RealUser implements Principal {
     private final UserGroupInformation realUser;
     
@@ -410,7 +382,7 @@ public class UserGroupInformation {
       USER_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);
     }
     private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
-      new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
+      new AppConfigurationEntry(Krb5LoginModule.class.getName(),
                                 LoginModuleControlFlag.OPTIONAL,
                                 USER_KERBEROS_OPTIONS);
     private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS = 
@@ -423,7 +395,7 @@ public class UserGroupInformation {
       KEYTAB_KERBEROS_OPTIONS.putAll(BASIC_JAAS_OPTIONS);      
     }
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
-      new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
+      new AppConfigurationEntry(Krb5LoginModule.class.getName(),
                                 LoginModuleControlFlag.REQUIRED,
                                 KEYTAB_KERBEROS_OPTIONS);
     

@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -31,42 +33,22 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.HAServiceStatus;
-import org.apache.hadoop.ha.HealthCheckFailedException;
-import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
-import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
-import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
-import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
-import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
-import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
-import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 
@@ -114,22 +96,6 @@ public class NameNode {
   }
   
   /**
-   * Categories of operations supported by the namenode.
-   */
-  public static enum OperationCategory {
-    /** Operations that are state agnostic */
-    UNCHECKED,
-    /** Read operation that does not change the namespace state */
-    READ,
-    /** Write operation that changes the namespace state */
-    WRITE,
-    /** Operations related to checkpointing */
-    CHECKPOINT,
-    /** Operations related to {@link JournalProtocol} */
-    JOURNAL
-  }
-  
-  /**
    * HDFS federation configuration can have two types of parameters:
    * <ol>
    * <li>Parameter that is common for all the name services in the cluster.</li>
@@ -144,7 +110,6 @@ public class NameNode {
     DFS_NAMENODE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_NAME_DIR_KEY,
     DFS_NAMENODE_EDITS_DIR_KEY,
-    DFS_NAMENODE_SHARED_EDITS_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_DIR_KEY,
     DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
     DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
@@ -159,40 +124,14 @@ public class NameNode {
     DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY
   };
   
-  public long getProtocolVersion(String protocol, 
-                                 long clientVersion) throws IOException {
-    if (protocol.equals(ClientProtocol.class.getName())) {
-      return ClientProtocol.versionID; 
-    } else if (protocol.equals(DatanodeProtocol.class.getName())){
-      return DatanodeProtocol.versionID;
-    } else if (protocol.equals(NamenodeProtocol.class.getName())){
-      return NamenodeProtocol.versionID;
-    } else if (protocol.equals(RefreshAuthorizationPolicyProtocol.class.getName())){
-      return RefreshAuthorizationPolicyProtocol.versionID;
-    } else if (protocol.equals(RefreshUserMappingsProtocol.class.getName())){
-      return RefreshUserMappingsProtocol.versionID;
-    } else if (protocol.equals(GetUserMappingsProtocol.class.getName())){
-      return GetUserMappingsProtocol.versionID;
-    } else {
-      throw new IOException("Unknown protocol to name node: " + protocol);
-    }
-  }
-    
+
   public static final int DEFAULT_PORT = 8020;
+
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
-  public static final HAState ACTIVE_STATE = new ActiveState();
-  public static final HAState STANDBY_STATE = new StandbyState();
   
   protected FSNamesystem namesystem; 
-  protected final Configuration conf;
   protected NamenodeRole role;
-  private volatile HAState state;
-  private final boolean haEnabled;
-  private final HAContext haContext;
-  protected boolean allowStaleStandbyReads;
-
-  
   /** httpServer */
   protected NameNodeHttpServer httpServer;
   private Thread emptier;
@@ -208,7 +147,7 @@ public class NameNode {
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
   public static void format(Configuration conf) throws IOException {
-    format(conf, true);
+    format(conf, false);
   }
 
   static NameNodeMetrics metrics;
@@ -273,7 +212,7 @@ public class NameNode {
    * @param filesystemURI
    * @return address of file system
    */
-  public static InetSocketAddress getAddress(URI filesystemURI) {
+  static InetSocketAddress getAddress(URI filesystemURI) {
     String authority = filesystemURI.getAuthority();
     if (authority == null) {
       throw new IllegalArgumentException(String.format(
@@ -297,6 +236,13 @@ public class NameNode {
         + namenode.getHostName()+portString);
   }
 
+  /**
+   * Compose a "host:port" string from the address.
+   */
+  public static String getHostPortString(InetSocketAddress addr) {
+    return addr.getHostName() + ":" + addr.getPort();
+  }
+
   //
   // Common NameNode methods implementation for the active name-node role.
   //
@@ -312,11 +258,12 @@ public class NameNode {
    * Given a configuration get the address of the service rpc server
    * If the service rpc is not configured returns null
    */
-  protected InetSocketAddress getServiceRpcServerAddress(Configuration conf) {
+  protected InetSocketAddress getServiceRpcServerAddress(Configuration conf)
+    throws IOException {
     return NameNode.getServiceAddress(conf, false);
   }
 
-  protected InetSocketAddress getRpcServerAddress(Configuration conf) {
+  protected InetSocketAddress getRpcServerAddress(Configuration conf) throws IOException {
     return getAddress(conf);
   }
   
@@ -325,7 +272,7 @@ public class NameNode {
    */
   protected void setRpcServiceServerAddress(Configuration conf,
       InetSocketAddress serviceRPCAddress) {
-    setServiceAddress(conf, NetUtils.getHostPortString(serviceRPCAddress));
+    setServiceAddress(conf, getHostPortString(serviceRPCAddress));
   }
 
   protected void setRpcServerAddress(Configuration conf,
@@ -345,11 +292,11 @@ public class NameNode {
   
   protected void setHttpServerAddress(Configuration conf) {
     conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY,
-        NetUtils.getHostPortString(getHttpAddress()));
+        getHostPortString(getHttpAddress()));
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {
-    this.namesystem = FSNamesystem.loadFromDisk(conf);
+    this.namesystem = new FSNamesystem(conf);
   }
 
   NamenodeRegistration getRegistration() {
@@ -358,8 +305,8 @@ public class NameNode {
 
   NamenodeRegistration setRegistration() {
     nodeRegistration = new NamenodeRegistration(
-        NetUtils.getHostPortString(rpcServer.getRpcAddress()),
-        NetUtils.getHostPortString(getHttpAddress()),
+        getHostPortString(rpcServer.getRpcAddress()),
+        getHostPortString(getHttpAddress()),
         getFSImage().getStorage(), getRole());
     return nodeRegistration;
   }
@@ -394,7 +341,11 @@ public class NameNode {
       throw e;
     }
 
-    startCommonServices(conf);
+    activate(conf);
+    LOG.info(getRole() + " up at: " + rpcServer.getRpcAddress());
+    if (rpcServer.getServiceRpcAddress() != null) {
+      LOG.info(getRole() + " service server is up at: " + rpcServer.getServiceRpcAddress()); 
+    }
   }
   
   /**
@@ -428,11 +379,19 @@ public class NameNode {
     } 
   }
 
-  /** Start the services common to active and standby states */
-  private void startCommonServices(Configuration conf) throws IOException {
-    namesystem.startCommonServices(conf, haContext);
+  /**
+   * Activate name-node servers and threads.
+   */
+  void activate(Configuration conf) throws IOException {
+    if ((isRole(NamenodeRole.NAMENODE))
+        && (UserGroupInformation.isSecurityEnabled())) {
+      namesystem.activateSecretManager();
+    }
+    namesystem.activate(conf);
     startHttpServer(conf);
     rpcServer.start();
+    startTrashEmptier(conf);
+    
     plugins = conf.getInstances(DFS_NAMENODE_PLUGINS_KEY,
         ServicePlugin.class);
     for (ServicePlugin p: plugins) {
@@ -442,28 +401,8 @@ public class NameNode {
         LOG.warn("ServicePlugin " + p + " could not be started", t);
       }
     }
-    LOG.info(getRole() + " up at: " + rpcServer.getRpcAddress());
-    if (rpcServer.getServiceRpcAddress() != null) {
-      LOG.info(getRole() + " service server is up at: "
-          + rpcServer.getServiceRpcAddress());
-    }
   }
-  
-  private void stopCommonServices() {
-    if(namesystem != null) namesystem.close();
-    if(rpcServer != null) rpcServer.stop();
-    if (plugins != null) {
-      for (ServicePlugin p : plugins) {
-        try {
-          p.stop();
-        } catch (Throwable t) {
-          LOG.warn("ServicePlugin " + p + " could not be stopped", t);
-        }
-      }
-    }   
-    stopHttpServer();
-  }
-  
+
   private void startTrashEmptier(Configuration conf) throws IOException {
     long trashInterval 
       = conf.getLong(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 
@@ -475,25 +414,10 @@ public class NameNode {
     this.emptier.start();
   }
   
-  private void stopTrashEmptier() {
-    if (this.emptier != null) {
-      emptier.interrupt();
-      emptier = null;
-    }
-  }
-  
   private void startHttpServer(final Configuration conf) throws IOException {
     httpServer = new NameNodeHttpServer(conf, this, getHttpServerAddress(conf));
     httpServer.start();
     setHttpServerAddress(conf);
-  }
-  
-  private void stopHttpServer() {
-    try {
-      if (httpServer != null) httpServer.stop();
-    } catch (Exception e) {
-      LOG.error("Exception while stopping httpserver", e);
-    }
   }
 
   /**
@@ -529,23 +453,10 @@ public class NameNode {
 
   protected NameNode(Configuration conf, NamenodeRole role) 
       throws IOException { 
-    this.conf = conf;
     this.role = role;
-    String nsId = getNameServiceId(conf);
-    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
-    this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
-    if (!haEnabled) {
-      state = ACTIVE_STATE;
-    } else {
-      state = STANDBY_STATE;
-    }
-    this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
-    this.haContext = createHAContext();
     try {
-      initializeGenericKeys(conf, nsId, namenodeId);
+      initializeGenericKeys(conf, getNameServiceId(conf));
       initialize(conf);
-      state.prepareToEnterState(haContext);
-      state.enterState(haContext);
     } catch (IOException e) {
       this.stop();
       throw e;
@@ -553,10 +464,6 @@ public class NameNode {
       this.stop();
       throw e;
     }
-  }
-
-  protected HAContext createHAContext() {
-    return new NameNodeHAContext();
   }
 
   /**
@@ -567,7 +474,6 @@ public class NameNode {
     try {
       this.rpcServer.join();
     } catch (InterruptedException ie) {
-      LOG.info("Caught interrupted exception ", ie);
     }
   }
 
@@ -580,14 +486,23 @@ public class NameNode {
         return;
       stopRequested = true;
     }
-    try {
-      if (state != null) {
-        state.exitState(haContext);
+    if (plugins != null) {
+      for (ServicePlugin p : plugins) {
+        try {
+          p.stop();
+        } catch (Throwable t) {
+          LOG.warn("ServicePlugin " + p + " could not be stopped", t);
+        }
       }
-    } catch (ServiceFailedException e) {
-      LOG.warn("Encountered exception while exiting state ", e);
     }
-    stopCommonServices();
+    try {
+      if (httpServer != null) httpServer.stop();
+    } catch (Exception e) {
+      LOG.error("Exception while stopping httpserver", e);
+    }
+    if(namesystem != null) namesystem.close();
+    if(emptier != null) emptier.interrupt();
+    if(rpcServer != null) rpcServer.stop();
     if (metrics != null) {
       metrics.shutdown();
     }
@@ -645,23 +560,38 @@ public class NameNode {
    * for each existing directory and format them.
    * 
    * @param conf
-   * @param force
+   * @param isConfirmationNeeded
    * @return true if formatting was aborted, false otherwise
    * @throws IOException
    */
   private static boolean format(Configuration conf,
-                                boolean force)
+                                boolean isConfirmationNeeded)
       throws IOException {
-    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
-    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
-    initializeGenericKeys(conf, nsId, namenodeId);
-    checkAllowFormat(conf);
+    if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
+                         DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
+      throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
+                             + " is set to false for this filesystem, so it "
+                             + "cannot be formatted. You will need to set "
+                             + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
+                             + "to true in order to format this filesystem");
+    }
     
     Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    List<URI> editDirsToFormat = 
+    Collection<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
-    if (!confirmFormat(dirsToFormat, force, true)) {
-      return true; // aborted
+    for(Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
+      File curDir = new File(it.next().getPath());
+      // Its alright for a dir not to exist, or to exist (properly accessible)
+      // and be completely empty.
+      if (!curDir.exists() ||
+          (curDir.isDirectory() && FileUtil.listFiles(curDir).length == 0))
+        continue;
+      if (isConfirmationNeeded) {
+        if (!confirmPrompt("Re-format filesystem in " + curDir + " ?")) {
+          System.err.println("Format aborted in "+ curDir);
+          return true;
+        }
+      }
     }
 
     // if clusterID is not provided - see if you can find the current one
@@ -672,72 +602,16 @@ public class NameNode {
     }
     System.out.println("Formatting using clusterid: " + clusterId);
     
-    FSImage fsImage = new FSImage(conf, dirsToFormat, editDirsToFormat);
-    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
-    fsImage.format(fsn, clusterId);
+    FSImage fsImage = new FSImage(conf, null, dirsToFormat, editDirsToFormat);
+    FSNamesystem nsys = new FSNamesystem(fsImage, conf);
+    nsys.dir.fsImage.format(clusterId);
     return false;
-  }
-
-  /**
-   * Check whether the given storage directories already exist.
-   * If running in interactive mode, will prompt the user for each
-   * directory to allow them to format anyway. Otherwise, returns
-   * false, unless 'force' is specified.
-   * 
-   * @param dirsToFormat the dirs to check
-   * @param force format regardless of whether dirs exist
-   * @param interactive prompt the user when a dir exists
-   * @return true if formatting should proceed
-   * @throws IOException
-   */
-  public static boolean confirmFormat(Collection<URI> dirsToFormat,
-      boolean force, boolean interactive)
-      throws IOException {
-    for(Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
-      File curDir = new File(it.next().getPath());
-      // Its alright for a dir not to exist, or to exist (properly accessible)
-      // and be completely empty.
-      if (!curDir.exists() ||
-          (curDir.isDirectory() && FileUtil.listFiles(curDir).length == 0))
-        continue;
-      if (force) { // Don't confirm, always format.
-        System.err.println(
-            "Storage directory exists in " + curDir + ". Formatting anyway.");
-        continue;
-      }
-      if (!interactive) { // Don't ask - always don't format
-        System.err.println(
-            "Running in non-interactive mode, and image appears to exist in " +
-            curDir + ". Not formatting.");
-        return false;
-      }
-      if (!confirmPrompt("Re-format filesystem in " + curDir + " ?")) {
-        System.err.println("Format aborted in " + curDir);
-        return false;
-      }
-    }
-    return true;
-  }
-
-  public static void checkAllowFormat(Configuration conf) throws IOException {
-    if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
-        DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
-      throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
-                + " is set to false for this filesystem, so it "
-                + "cannot be formatted. You will need to set "
-                + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
-                + "to true in order to format this filesystem");
-    }
   }
 
   private static boolean finalize(Configuration conf,
                                boolean isConfirmationNeeded
                                ) throws IOException {
-    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
-    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
-    initializeGenericKeys(conf, nsId, namenodeId);
-
-    FSNamesystem nsys = new FSNamesystem(conf, new FSImage(conf));
+    FSNamesystem nsys = new FSNamesystem(new FSImage(conf), conf);
     System.err.print(
         "\"finalize\" will remove the previous state of the files system.\n"
         + "Recent upgrade will become permanent.\n"
@@ -762,8 +636,7 @@ public class NameNode {
       StartupOption.UPGRADE.getName() + "] | [" +
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
-      StartupOption.IMPORT.getName() + "] | [" +
-      StartupOption.BOOTSTRAPSTANDBY.getName() + "]");
+      StartupOption.IMPORT.getName() + "]");
   }
 
   private static StartupOption parseArguments(String args[]) {
@@ -801,12 +674,8 @@ public class NameNode {
         startOpt = StartupOption.FINALIZE;
       } else if (StartupOption.IMPORT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.IMPORT;
-      } else if (StartupOption.BOOTSTRAPSTANDBY.getName().equalsIgnoreCase(cmd)) {
-        startOpt = StartupOption.BOOTSTRAPSTANDBY;
-        return startOpt;
-      } else {
+      } else
         return null;
-      }
     }
     return startOpt;
   }
@@ -858,18 +727,10 @@ public class NameNode {
       return null;
     }
     setStartupOption(conf, startOpt);
-    
-    if (HAUtil.isHAEnabled(conf, DFSUtil.getNamenodeNameServiceId(conf)) &&
-        (startOpt == StartupOption.UPGRADE ||
-         startOpt == StartupOption.ROLLBACK ||
-         startOpt == StartupOption.FINALIZE)) {
-      throw new HadoopIllegalArgumentException("Invalid startup option. " +
-          "Cannot perform DFS upgrade with HA enabled.");
-    }
 
     switch (startOpt) {
       case FORMAT:
-        boolean aborted = format(conf, false);
+        boolean aborted = format(conf, true);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
       case GENCLUSTERID:
@@ -881,11 +742,6 @@ public class NameNode {
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
-      case BOOTSTRAPSTANDBY:
-        String toolArgs[] = Arrays.copyOfRange(argv, 1, argv.length);
-        int rc = BootstrapStandby.run(toolArgs, conf);
-        System.exit(rc);
-        return null; // avoid warning
       case BACKUP:
       case CHECKPOINT:
         NamenodeRole role = startOpt.toNodeRole();
@@ -911,26 +767,16 @@ public class NameNode {
    * @param conf
    *          Configuration object to lookup specific key and to set the value
    *          to the key passed. Note the conf object is modified
-   * @param nameserviceId name service Id (to distinguish federated NNs)
-   * @param namenodeId the namenode ID (to distinguish HA NNs)
-   * @see DFSUtil#setGenericConf(Configuration, String, String, String...)
+   * @param nameserviceId name service Id
+   * @see DFSUtil#setGenericConf(Configuration, String, String...)
    */
-  public static void initializeGenericKeys(Configuration conf,
-      String nameserviceId, String namenodeId) {
-    if ((nameserviceId == null || nameserviceId.isEmpty()) && 
-        (namenodeId == null || namenodeId.isEmpty())) {
+  public static void initializeGenericKeys(Configuration conf, String
+      nameserviceId) {
+    if ((nameserviceId == null) || nameserviceId.isEmpty()) {
       return;
     }
     
-    if (nameserviceId != null) {
-      conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
-    }
-    if (namenodeId != null) {
-      conf.set(DFS_HA_NAMENODE_ID_KEY, namenodeId);
-    }
-    
-    DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,
-        NAMESERVICE_SPECIFIC_KEYS);
+    DFSUtil.setGenericConf(conf, nameserviceId, NAMESERVICE_SPECIFIC_KEYS);
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
@@ -958,149 +804,5 @@ public class NameNode {
       LOG.error("Exception in namenode join", e);
       System.exit(-1);
     }
-  }
-
-  synchronized void monitorHealth() 
-      throws HealthCheckFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
-    if (!haEnabled) {
-      return; // no-op, if HA is not enabled
-    }
-    getNamesystem().checkAvailableResources();
-    if (!getNamesystem().nameNodeHasResourcesAvailable()) {
-      throw new HealthCheckFailedException(
-          "The NameNode has no resources available");
-    }
-  }
-  
-  synchronized void transitionToActive() 
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
-    if (!haEnabled) {
-      throw new ServiceFailedException("HA for namenode is not enabled");
-    }
-    state.setState(haContext, ACTIVE_STATE);
-  }
-  
-  synchronized void transitionToStandby() 
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
-    if (!haEnabled) {
-      throw new ServiceFailedException("HA for namenode is not enabled");
-    }
-    state.setState(haContext, STANDBY_STATE);
-  }
-
-  synchronized HAServiceStatus getServiceStatus()
-      throws ServiceFailedException, AccessControlException {
-    namesystem.checkSuperuserPrivilege();
-    if (!haEnabled) {
-      throw new ServiceFailedException("HA for namenode is not enabled");
-    }
-    if (state == null) {
-      return new HAServiceStatus(HAServiceState.INITIALIZING);
-    }
-    HAServiceState retState = state.getServiceState();
-    HAServiceStatus ret = new HAServiceStatus(retState);
-    if (retState == HAServiceState.STANDBY) {
-      String safemodeTip = namesystem.getSafeModeTip();
-      if (!safemodeTip.isEmpty()) {
-        ret.setNotReadyToBecomeActive(
-            "The NameNode is in safemode. " +
-            safemodeTip);
-      } else {
-        ret.setReadyToBecomeActive();
-      }
-    } else if (retState == HAServiceState.ACTIVE) {
-      ret.setReadyToBecomeActive();
-    } else {
-      ret.setNotReadyToBecomeActive("State is " + state);
-    }
-    return ret;
-  }
-
-  synchronized HAServiceState getServiceState() {
-    if (state == null) {
-      return HAServiceState.INITIALIZING;
-    }
-    return state.getServiceState();
-  }
-
-  /**
-   * Class used as expose {@link NameNode} as context to {@link HAState}
-   * 
-   * TODO(HA):
-   * When entering and exiting state, on failing to start services,
-   * appropriate action is needed todo either shutdown the node or recover
-   * from failure.
-   */
-  protected class NameNodeHAContext implements HAContext {
-    @Override
-    public void setState(HAState s) {
-      state = s;
-    }
-
-    @Override
-    public HAState getState() {
-      return state;
-    }
-
-    @Override
-    public void startActiveServices() throws IOException {
-      namesystem.startActiveServices();
-      startTrashEmptier(conf);
-    }
-
-    @Override
-    public void stopActiveServices() throws IOException {
-      if (namesystem != null) {
-        namesystem.stopActiveServices();
-      }
-      stopTrashEmptier();
-    }
-
-    @Override
-    public void startStandbyServices() throws IOException {
-      namesystem.startStandbyServices();
-    }
-
-    @Override
-    public void prepareToStopStandbyServices() throws ServiceFailedException {
-      namesystem.prepareToStopStandbyServices();
-    }
-    
-    @Override
-    public void stopStandbyServices() throws IOException {
-      if (namesystem != null) {
-        namesystem.stopStandbyServices();
-      }
-    }
-    
-    @Override
-    public void writeLock() {
-      namesystem.writeLock();
-    }
-    
-    @Override
-    public void writeUnlock() {
-      namesystem.writeUnlock();
-    }
-    
-    /** Check if an operation of given category is allowed */
-    @Override
-    public void checkOperation(final OperationCategory op)
-        throws StandbyException {
-      state.checkOperation(haContext, op);
-    }
-    
-    @Override
-    public boolean allowStaleReads() {
-      return allowStaleStandbyReads;
-    }
-
-  }
-  
-  public boolean isStandbyState() {
-    return (state.equals(STANDBY_STATE));
   }
 }

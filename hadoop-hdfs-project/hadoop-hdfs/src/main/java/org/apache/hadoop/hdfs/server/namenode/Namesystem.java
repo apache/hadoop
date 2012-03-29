@@ -32,10 +32,4 @@ public interface Namesystem extends RwLock, SafeMode {
 
   /** @return the block pool ID */
   public String getBlockPoolId();
-
-  public boolean isInStandbyState();
-
-  public boolean isGenStampInFuture(long generationStamp);
-
-  public void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal);
 }

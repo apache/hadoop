@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.namenode.UpgradeObjectNamenode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.test.GenericTestUtils;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -62,8 +61,7 @@ public class TestDistributedUpgrade {
    * Attempts to start a NameNode with the given operation.  Starting
    * the NameNode should throw an exception.
    */
-  void startNameNodeShouldFail(StartupOption operation,
-      String exceptionSubstring) {
+  void startNameNodeShouldFail(StartupOption operation) {
     try {
       //cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).startupOption(operation).build(); // should fail
       // we set manage dirs to true as NN has to start from untar'ed image with 
@@ -75,8 +73,8 @@ public class TestDistributedUpgrade {
                                               .build(); // should fail
       throw new AssertionError("NameNode should have failed to start");
     } catch (Exception expected) {
-      GenericTestUtils.assertExceptionContains(
-          exceptionSubstring, expected);
+      expected = null;
+      // expected
     }
   }
   
@@ -96,7 +94,7 @@ public class TestDistributedUpgrade {
  
   /**
    */
-  @Test(timeout=300000) // 5 min timeout
+  @Test(timeout=120000)
   public void testDistributedUpgrade() throws Exception {
     int numDirs = 1;
     TestDFSUpgradeFromImage testImg = new TestDFSUpgradeFromImage();
@@ -119,7 +117,7 @@ public class TestDistributedUpgrade {
     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // block scanning off
 
     log("NameNode start in regular mode when dustributed upgrade is required", numDirs);
-    startNameNodeShouldFail(StartupOption.REGULAR, "contains an old layout version");
+    startNameNodeShouldFail(StartupOption.REGULAR);
 
     log("Start NameNode only distributed upgrade", numDirs);
     // cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false)
@@ -132,12 +130,10 @@ public class TestDistributedUpgrade {
     cluster.shutdown();
 
     log("NameNode start in regular mode when dustributed upgrade has been started", numDirs);
-    startNameNodeShouldFail(StartupOption.REGULAR,
-        "Previous distributed upgrade was not completed");
+    startNameNodeShouldFail(StartupOption.REGULAR);
 
     log("NameNode rollback to the old version that require a dustributed upgrade", numDirs);
-    startNameNodeShouldFail(StartupOption.ROLLBACK,
-        "Cannot rollback to storage version -7 using this version");
+    startNameNodeShouldFail(StartupOption.ROLLBACK);
 
     log("Normal distributed upgrade for the cluster", numDirs);
     cluster = new MiniDFSCluster.Builder(conf)

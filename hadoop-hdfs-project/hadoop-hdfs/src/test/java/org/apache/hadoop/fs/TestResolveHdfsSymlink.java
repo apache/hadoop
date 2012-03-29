@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -48,11 +47,9 @@ public class TestResolveHdfsSymlink {
   @BeforeClass
   public static void setUp() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(
-        DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
-
+    NameNodeAdapter.getDtSecretManager(cluster.getNamesystem()).startThreads();
   }
 
   @AfterClass

@@ -149,7 +149,9 @@ public class TestNameNodeMetrics {
     fs.delete(file, true);
     filesTotal--; // reduce the filecount for deleted file
     
-    waitForDeletion();
+    // Wait for more than DATANODE_COUNT replication intervals to ensure all 
+    // the blocks pending deletion are sent for deletion to the datanodes.
+    Thread.sleep(DFS_REPLICATION_INTERVAL * (DATANODE_COUNT + 1) * 1000);
     updateMetrics();
     rb = getMetrics(NS_METRICS);
     assertGauge("FilesTotal", filesTotal, rb);
@@ -172,20 +174,15 @@ public class TestNameNodeMetrics {
     // Corrupt first replica of the block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
-    cluster.getNamesystem().writeLock();
-    try {
-      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
-          "TEST");
-    } finally {
-      cluster.getNamesystem().writeUnlock();
-    }
+    bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
+        "TEST");
     updateMetrics();
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("CorruptBlocks", 1L, rb);
     assertGauge("PendingReplicationBlocks", 1L, rb);
     assertGauge("ScheduledReplicationBlocks", 1L, rb);
     fs.delete(file, true);
-    waitForDeletion();
+    updateMetrics();
     rb = getMetrics(NS_METRICS);
     assertGauge("CorruptBlocks", 0L, rb);
     assertGauge("PendingReplicationBlocks", 0L, rb);
@@ -217,26 +214,15 @@ public class TestNameNodeMetrics {
     // Corrupt the only replica of the block to result in a missing block
     LocatedBlock block = NameNodeAdapter.getBlockLocations(
         cluster.getNameNode(), file.toString(), 0, 1).get(0);
-    cluster.getNamesystem().writeLock();
-    try {
-      bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
-          "TEST");
-    } finally {
-      cluster.getNamesystem().writeUnlock();
-    }
+    bm.findAndMarkBlockAsCorrupt(block.getBlock(), block.getLocations()[0],
+        "TEST");
     updateMetrics();
     MetricsRecordBuilder rb = getMetrics(NS_METRICS);
     assertGauge("UnderReplicatedBlocks", 1L, rb);
     assertGauge("MissingBlocks", 1L, rb);
     fs.delete(file, true);
-    waitForDeletion();
+    updateMetrics();
     assertGauge("UnderReplicatedBlocks", 0L, getMetrics(NS_METRICS));
-  }
-
-  private void waitForDeletion() throws InterruptedException {
-    // Wait for more than DATANODE_COUNT replication intervals to ensure all
-    // the blocks pending deletion are sent for deletion to the datanodes.
-    Thread.sleep(DFS_REPLICATION_INTERVAL * (DATANODE_COUNT + 1) * 1000);
   }
   
   @Test

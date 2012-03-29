@@ -24,7 +24,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.util.KerberosName;
-import org.apache.hadoop.security.authentication.util.KerberosUtil;
+
+import sun.security.krb5.Config;
+import sun.security.krb5.KrbException;
 
 /**
  * This class implements parsing and handling of Kerberos principal names. In 
@@ -38,8 +40,8 @@ public class HadoopKerberosName extends KerberosName {
 
   static {
     try {
-      KerberosUtil.getDefaultRealm();
-    } catch (Exception ke) {
+      Config.getInstance().getDefaultRealm();
+    } catch (KrbException ke) {
       if(UserGroupInformation.isSecurityEnabled())
         throw new IllegalArgumentException("Can't get Kerberos configuration",ke);
     }

@@ -50,7 +50,6 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeManager;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.JournalStream.JournalType;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 
 import org.apache.hadoop.io.IOUtils;
@@ -58,7 +57,6 @@ import org.apache.hadoop.net.DNS;
 
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Lists;
 
 /**
  * NNStorage is responsible for management of the StorageDirectories used by
@@ -69,8 +67,7 @@ public class NNStorage extends Storage implements Closeable {
   private static final Log LOG = LogFactory.getLog(NNStorage.class.getName());
 
   static final String DEPRECATED_MESSAGE_DIGEST_PROPERTY = "imageMD5Digest";
-  static final String LOCAL_URI_SCHEME = "file";
-
+  
   //
   // The filenames used for storing the images
   //
@@ -160,10 +157,7 @@ public class NNStorage extends Storage implements Closeable {
 
     storageDirs = new CopyOnWriteArrayList<StorageDirectory>();
     
-    // this may modify the editsDirs, so copy before passing in
-    setStorageDirectories(imageDirs, 
-                          Lists.newArrayList(editsDirs),
-                          FSNamesystem.getSharedEditsDirs(conf));
+    setStorageDirectories(imageDirs, editsDirs);
   }
 
   @Override // Storage
@@ -249,16 +243,6 @@ public class NNStorage extends Storage implements Closeable {
   List<StorageDirectory> getRemovedStorageDirs() {
     return this.removedStorageDirs;
   }
-  
-  /**
-   * See {@link NNStorage#setStorageDirectories(Collection, Collection, Collection)}
-   */
-  @VisibleForTesting
-  synchronized void setStorageDirectories(Collection<URI> fsNameDirs,
-                                          Collection<URI> fsEditsDirs)
-      throws IOException {
-    setStorageDirectories(fsNameDirs, fsEditsDirs, new ArrayList<URI>());
-  }
 
   /**
    * Set the storage directories which will be used. This should only ever be
@@ -275,8 +259,7 @@ public class NNStorage extends Storage implements Closeable {
    */
   @VisibleForTesting
   synchronized void setStorageDirectories(Collection<URI> fsNameDirs,
-                                          Collection<URI> fsEditsDirs,
-                                          Collection<URI> sharedEditsDirs)
+                                          Collection<URI> fsEditsDirs)
       throws IOException {
     this.storageDirs.clear();
     this.removedStorageDirs.clear();
@@ -300,8 +283,7 @@ public class NNStorage extends Storage implements Closeable {
       if(dirName.getScheme().compareTo(JournalType.FILE.name().toLowerCase())
           == 0){
         this.addStorageDir(new StorageDirectory(new File(dirName.getPath()),
-            dirType,
-            !sharedEditsDirs.contains(dirName))); // Don't lock the dir if it's shared.
+            dirType));
       }
     }
 
@@ -313,41 +295,28 @@ public class NNStorage extends Storage implements Closeable {
       if(dirName.getScheme().compareTo(JournalType.FILE.name().toLowerCase())
           == 0)
         this.addStorageDir(new StorageDirectory(new File(dirName.getPath()),
-                    NameNodeDirType.EDITS, !sharedEditsDirs.contains(dirName)));
+                    NameNodeDirType.EDITS));
     }
-  }
-
-  /**
-   * Return the storage directory corresponding to the passed URI
-   * @param uri URI of a storage directory
-   * @return The matching storage directory or null if none found
-   */
-  StorageDirectory getStorageDirectory(URI uri) {
-    try {
-      uri = Util.fileAsURI(new File(uri));
-      Iterator<StorageDirectory> it = dirIterator();
-      for (; it.hasNext(); ) {
-        StorageDirectory sd = it.next();
-        if (Util.fileAsURI(sd.getRoot()).equals(uri)) {
-          return sd;
-        }
-      }
-    } catch (IOException ioe) {
-      LOG.warn("Error converting file to URI", ioe);
-    }
-    return null;
   }
 
   /**
    * Checks the consistency of a URI, in particular if the scheme
-   * is specified 
+   * is specified and is supported by a concrete implementation
    * @param u URI whose consistency is being checked.
    */
   private static void checkSchemeConsistency(URI u) throws IOException {
     String scheme = u.getScheme();
     // the URI should have a proper scheme
-    if(scheme == null) {
+    if(scheme == null)
       throw new IOException("Undefined scheme for " + u);
+    else {
+      try {
+        // the scheme should be enumerated as JournalType
+        JournalType.valueOf(scheme.toUpperCase());
+      } catch (IllegalArgumentException iae){
+        throw new IOException("Unknown scheme " + scheme +
+            ". It should correspond to a JournalType enumeration value");
+      }
     }
   }
 
@@ -466,7 +435,7 @@ public class NNStorage extends Storage implements Closeable {
   /**
    * @return the transaction ID of the last checkpoint.
    */
-  public long getMostRecentCheckpointTxId() {
+  long getMostRecentCheckpointTxId() {
     return mostRecentCheckpointTxId;
   }
   
@@ -530,10 +499,6 @@ public class NNStorage extends Storage implements Closeable {
     }
     return null;
   }
-  
-  public File getHighestFsImageName() {
-    return getFsImageName(getMostRecentCheckpointTxId());
-  }
 
   /** Create new dfs name directory.  Caution: this destroys all files
    * in this filesystem. */
@@ -549,31 +514,12 @@ public class NNStorage extends Storage implements Closeable {
   /**
    * Format all available storage directories.
    */
-  public void format(NamespaceInfo nsInfo) throws IOException {
-    Preconditions.checkArgument(nsInfo.getLayoutVersion() == 0 ||
-        nsInfo.getLayoutVersion() == HdfsConstants.LAYOUT_VERSION,
-        "Bad layout version: %s", nsInfo.getLayoutVersion());
-    
-    this.setStorageInfo(nsInfo);
-    this.blockpoolID = nsInfo.getBlockPoolID();
-    for (Iterator<StorageDirectory> it =
-                           dirIterator(); it.hasNext();) {
-      StorageDirectory sd = it.next();
-      format(sd);
-    }
-  }
-  
-  public static NamespaceInfo newNamespaceInfo()
-      throws UnknownHostException {
-    return new NamespaceInfo(
-        newNamespaceID(),
-        newClusterID(),
-        newBlockPoolID(),
-        0L, 0);
-  }
-  
-  public void format() throws IOException {
+  public void format(String clusterId) throws IOException {
     this.layoutVersion = HdfsConstants.LAYOUT_VERSION;
+    this.namespaceID = newNamespaceID();
+    this.clusterID = clusterId;
+    this.blockpoolID = newBlockPoolID();
+    this.cTime = 0L;
     for (Iterator<StorageDirectory> it =
                            dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
@@ -593,7 +539,7 @@ public class NNStorage extends Storage implements Closeable {
    *
    * @return new namespaceID
    */
-  private static int newNamespaceID() {
+  private int newNamespaceID() {
     int newID = 0;
     while(newID == 0)
       newID = DFSUtil.getRandom().nextInt(0x7FFFFFFF);  // use 31 bits only
@@ -1014,7 +960,7 @@ public class NNStorage extends Storage implements Closeable {
    * 
    * @return new blockpoolID
    */ 
-  static String newBlockPoolID() throws UnknownHostException{
+  String newBlockPoolID() throws UnknownHostException{
     String ip = "unknownIP";
     try {
       ip = DNS.getDefaultIP("default");

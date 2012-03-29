@@ -24,7 +24,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 
 /**
@@ -40,17 +39,6 @@ public class DataNodeTestUtils {
   public static DatanodeRegistration 
   getDNRegistrationForBP(DataNode dn, String bpid) throws IOException {
     return dn.getDNRegistrationForBP(bpid);
-  }
-
-  /**
-   * This method is used for testing. 
-   * Examples are adding and deleting blocks directly.
-   * The most common usage will be when the data node's storage is simulated.
-   * 
-   * @return the fsdataset that stores the blocks
-   */
-  public static FsDatasetSpi<?> getFSDataset(DataNode dn) {
-    return dn.getFSDataset();
   }
 
   public static File getFile(DataNode dn, String bpid, long bid) {

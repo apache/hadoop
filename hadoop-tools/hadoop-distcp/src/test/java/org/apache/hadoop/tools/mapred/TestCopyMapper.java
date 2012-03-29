@@ -545,12 +545,7 @@ public class TestCopyMapper {
             Assert.fail("Didn't expect the file to be copied");
           } catch (AccessControlException ignore) {
           } catch (Exception e) {
-            // We want to make sure the underlying cause of the exception is
-            // due to permissions error. The exception we're interested in is
-            // wrapped twice - once in RetriableCommand and again in CopyMapper
-            // itself.
-            if (e.getCause() == null || e.getCause().getCause() == null ||
-                !(e.getCause().getCause() instanceof AccessControlException)) {
+            if (e.getCause() == null || !(e.getCause() instanceof AccessControlException)) {
               throw new RuntimeException(e);
             }
           }

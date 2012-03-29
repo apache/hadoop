@@ -323,10 +323,9 @@ public class TestListCorruptFileBlocks {
       FSNamesystem.CorruptFileBlockInfo[] cfb = corruptFileBlocks
           .toArray(new FSNamesystem.CorruptFileBlockInfo[0]);
       // now get the 2nd and 3rd file that is corrupt
-      String[] cookie = new String[]{"1"};
       Collection<FSNamesystem.CorruptFileBlockInfo> nextCorruptFileBlocks =
         namenode.getNamesystem()
-          .listCorruptFileBlocks("/corruptData", cookie);
+          .listCorruptFileBlocks("/corruptData", cfb[0].block.getBlockName());
       FSNamesystem.CorruptFileBlockInfo[] ncfb = nextCorruptFileBlocks
           .toArray(new FSNamesystem.CorruptFileBlockInfo[0]);
       numCorrupt = nextCorruptFileBlocks.size();
@@ -334,9 +333,9 @@ public class TestListCorruptFileBlocks {
       assertTrue(ncfb[0].block.getBlockName()
           .equalsIgnoreCase(cfb[1].block.getBlockName()));
 
-      corruptFileBlocks =
-        namenode.getNamesystem()
-          .listCorruptFileBlocks("/corruptData", cookie);
+      corruptFileBlocks = 
+        namenode.getNamesystem().listCorruptFileBlocks("/corruptData",
+          ncfb[1].block.getBlockName());
       numCorrupt = corruptFileBlocks.size();
       assertTrue(numCorrupt == 0);
       // Do a listing on a dir which doesn't have any corrupt blocks and

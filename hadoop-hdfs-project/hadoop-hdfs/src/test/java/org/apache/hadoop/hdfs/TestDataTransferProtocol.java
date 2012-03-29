@@ -208,7 +208,7 @@ public class TestDataTransferProtocol extends TestCase {
   @Test public void testOpWrite() throws IOException {
     int numDataNodes = 1;
     Configuration conf = new HdfsConfiguration();
-    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
+    conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
       cluster.waitActive();
@@ -302,7 +302,7 @@ public class TestDataTransferProtocol extends TestCase {
         testWrite(firstBlock, BlockConstructionStage.PIPELINE_SETUP_CREATE, 0L,
             "Cannot create a RBW block", true);
         // test PIPELINE_SETUP_APPEND on an existing block
-        newGS = firstBlock.getGenerationStamp() + 1;
+        newGS = newBlock.getGenerationStamp() + 1;
         testWrite(firstBlock, BlockConstructionStage.PIPELINE_SETUP_APPEND,
             newGS, "Cannot append to a RBW replica", true);
         // test PIPELINE_SETUP_APPEND on an existing block

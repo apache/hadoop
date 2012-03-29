@@ -34,11 +34,8 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -48,13 +45,10 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.mockito.Mockito;
-import org.mockito.Matchers;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
@@ -117,7 +111,7 @@ public abstract class FSImageTestUtil {
     Mockito.doReturn(type)
       .when(sd).getStorageDirType();
     Mockito.doReturn(currentDir).when(sd).getCurrentDir();
-    Mockito.doReturn(currentDir).when(sd).getRoot();
+    
     Mockito.doReturn(mockFile(true)).when(sd).getVersionFile();
     Mockito.doReturn(mockFile(false)).when(sd).getPreviousDir();
     return sd;
@@ -139,8 +133,7 @@ public abstract class FSImageTestUtil {
   
     // Version file should always exist
     doReturn(mockFile(true)).when(sd).getVersionFile();
-    doReturn(mockFile(true)).when(sd).getRoot();
-
+    
     // Previous dir optionally exists
     doReturn(mockFile(previousExists))
       .when(sd).getPreviousDir();   
@@ -155,7 +148,6 @@ public abstract class FSImageTestUtil {
     doReturn(files).when(mockDir).listFiles();
     doReturn(mockDir).when(sd).getCurrentDir();
     
-
     return sd;
   }
   
@@ -183,41 +175,13 @@ public abstract class FSImageTestUtil {
     assertTrue(logDir.mkdirs() || logDir.exists());
     Files.deleteDirectoryContents(logDir);
     NNStorage storage = Mockito.mock(NNStorage.class);
-    StorageDirectory sd 
-      = FSImageTestUtil.mockStorageDirectory(logDir, NameNodeDirType.EDITS);
-    List<StorageDirectory> sds = Lists.newArrayList(sd);
+    List<StorageDirectory> sds = Lists.newArrayList(
+        FSImageTestUtil.mockStorageDirectory(logDir, NameNodeDirType.EDITS));
     Mockito.doReturn(sds).when(storage).dirIterable(NameNodeDirType.EDITS);
-    Mockito.doReturn(sd).when(storage)
-      .getStorageDirectory(Matchers.<URI>anyObject());
 
-    FSEditLog editLog = new FSEditLog(new Configuration(), 
-                         storage,
-                         ImmutableList.of(logDir.toURI()));
-    editLog.initJournalsForWrite();
-    return editLog;
+    return new FSEditLog(storage);
   }
   
-
-  /**
-   * Create an aborted in-progress log in the given directory, containing
-   * only a specified number of "mkdirs" operations.
-   */
-  public static void createAbortedLogWithMkdirs(File editsLogDir, int numDirs,
-      long firstTxId) throws IOException {
-    FSEditLog editLog = FSImageTestUtil.createStandaloneEditLog(editsLogDir);
-    editLog.setNextTxId(firstTxId);
-    editLog.openForWrite();
-    
-    PermissionStatus perms = PermissionStatus.createImmutable("fakeuser", "fakegroup",
-        FsPermission.createImmutable((short)0755));
-    for (int i = 1; i <= numDirs; i++) {
-      String dirName = "dir" + i;
-      INodeDirectory dir = new INodeDirectory(dirName, perms);
-      editLog.logMkDir("/" + dirName, dir);
-    }
-    editLog.logSync();
-    editLog.abortCurrentLogSegment();
-  }
 
   /**
    * @param editLog a path of an edit log file
@@ -436,20 +400,13 @@ public abstract class FSImageTestUtil {
    * Assert that the NameNode has checkpoints at the expected
    * transaction IDs.
    */
-  public static void assertNNHasCheckpoints(MiniDFSCluster cluster,
+  static void assertNNHasCheckpoints(MiniDFSCluster cluster,
       List<Integer> txids) {
-    assertNNHasCheckpoints(cluster, 0, txids);
-  }
-  
-  public static void assertNNHasCheckpoints(MiniDFSCluster cluster,
-      int nnIdx, List<Integer> txids) {
 
-    for (File nameDir : getNameNodeCurrentDirs(cluster, nnIdx)) {
+    for (File nameDir : getNameNodeCurrentDirs(cluster)) {
       LOG.info("examining name dir with files: " +
           Joiner.on(",").join(nameDir.listFiles()));
       // Should have fsimage_N for the three checkpoints
-      LOG.info("Examining storage dir " + nameDir + " with contents: "
-          + StringUtils.join(nameDir.listFiles(), ", "));
       for (long checkpointTxId : txids) {
         File image = new File(nameDir,
                               NNStorage.getImageFileName(checkpointTxId));
@@ -458,9 +415,9 @@ public abstract class FSImageTestUtil {
     }
   }
 
-  public static List<File> getNameNodeCurrentDirs(MiniDFSCluster cluster, int nnIdx) {
+  public static List<File> getNameNodeCurrentDirs(MiniDFSCluster cluster) {
     List<File> nameDirs = Lists.newArrayList();
-    for (URI u : cluster.getNameDirs(nnIdx)) {
+    for (URI u : cluster.getNameDirs(0)) {
       nameDirs.add(new File(u.getPath(), "current"));
     }
     return nameDirs;
@@ -472,9 +429,12 @@ public abstract class FSImageTestUtil {
    */
   public static EditLogFile findLatestEditsLog(StorageDirectory sd)
   throws IOException {
-    File currentDir = sd.getCurrentDir();
-    List<EditLogFile> foundEditLogs 
-      = Lists.newArrayList(FileJournalManager.matchEditLogs(currentDir));
+    FSImageTransactionalStorageInspector inspector =
+      new FSImageTransactionalStorageInspector();
+    inspector.inspectDirectory(sd);
+    
+    List<EditLogFile> foundEditLogs = Lists.newArrayList(
+        inspector.getEditLogFiles());
     return Collections.max(foundEditLogs, EditLogFile.COMPARE_BY_START_TXID);
   }
 

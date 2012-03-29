@@ -18,8 +18,6 @@
 package org.apache.hadoop.metrics2.util;
 
 import java.lang.management.ManagementFactory;
-
-import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
@@ -57,15 +55,8 @@ public class MBeans {
       mbs.registerMBean(theMbean, name);
       LOG.debug("Registered "+ name);
       return name;
-    } catch (InstanceAlreadyExistsException iaee) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Failed to register MBean \""+ name + "\"", iaee);
-      } else {
-        LOG.warn("Failed to register MBean \""+ name
-            + "\": Instance already exists.");
-      }
     } catch (Exception e) {
-      LOG.warn("Failed to register MBean \""+ name + "\"", e);
+      LOG.warn("Error registering "+ name, e);
     }
     return null;
   }

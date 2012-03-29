@@ -17,11 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.Closeable;
 import java.io.IOException;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A JournalManager is responsible for managing a single place of storing
@@ -30,9 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * each conceptual place of storage corresponds to exactly one instance of
  * this class, which is created when the EditLog is first opened.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public interface JournalManager extends Closeable {
+interface JournalManager {
   /**
    * Begin writing to a new segment of the log stream, which starts at
    * the given transaction ID.
@@ -45,28 +39,6 @@ public interface JournalManager extends Closeable {
    */
   void finalizeLogSegment(long firstTxId, long lastTxId) throws IOException;
 
-   /**
-   * Get the input stream starting with fromTxnId from this journal manager
-   * @param fromTxnId the first transaction id we want to read
-   * @param inProgressOk whether or not in-progress streams should be returned
-   * @return the stream starting with transaction fromTxnId
-   * @throws IOException if a stream cannot be found.
-   */
-  EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
-    throws IOException;
-
-  /**
-   * Get the number of transaction contiguously available from fromTxnId.
-   *
-   * @param fromTxnId Transaction id to count from
-   * @param inProgressOk whether or not in-progress streams should be counted
-   * @return The number of transactions available from fromTxnId
-   * @throws IOException if the journal cannot be read.
-   * @throws CorruptionException if there is a gap in the journal at fromTxnId.
-   */
-  long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
-      throws IOException, CorruptionException;
-
   /**
    * Set the amount of memory that this stream should use to buffer edits
    */
@@ -78,32 +50,17 @@ public interface JournalManager extends Closeable {
    *
    * @param minTxIdToKeep the earliest txid that must be retained after purging
    *                      old logs
+   * @param purger the purging implementation to use
    * @throws IOException if purging fails
    */
   void purgeLogsOlderThan(long minTxIdToKeep)
     throws IOException;
 
   /**
-   * Recover segments which have not been finalized.
-   */
-  void recoverUnfinalizedSegments() throws IOException;
-
-  /**
-   * Close the journal manager, freeing any resources it may hold.
-   */
-  void close() throws IOException;
-
-  /** 
-   * Indicate that a journal is cannot be used to load a certain range of 
-   * edits.
-   * This exception occurs in the case of a gap in the transactions, or a
-   * corrupt edit file.
-   */
-  public static class CorruptionException extends IOException {
-    static final long serialVersionUID = -4687802717006172702L;
-    
-    public CorruptionException(String reason) {
-      super(reason);
-    }
-  }
+   * @return an EditLogInputStream that reads from the same log that
+   * the edit log is currently writing. May return null if this journal
+   * manager does not support this operation.
+   */  
+  EditLogInputStream getInProgressInputStream(long segmentStartsAtTxId)
+    throws IOException;
 }

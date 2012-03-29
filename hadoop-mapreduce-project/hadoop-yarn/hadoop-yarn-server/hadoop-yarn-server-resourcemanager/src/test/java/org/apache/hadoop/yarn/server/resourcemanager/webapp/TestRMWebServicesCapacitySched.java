@@ -61,7 +61,6 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
 
   private static MockRM rm;
   private CapacitySchedulerConfiguration csConf;
-  private YarnConfiguration conf;
 
   private class QueueInfo {
     float capacity;
@@ -95,11 +94,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
       bind(RMWebServices.class);
       bind(GenericExceptionHandler.class);
       csConf = new CapacitySchedulerConfiguration();
+      csConf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
+          ResourceScheduler.class);
       setupQueueConfiguration(csConf);
-      conf = new YarnConfiguration(csConf);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-		    ResourceScheduler.class);
-      rm = new MockRM(conf);
+      rm = new MockRM(csConf);
       bind(ResourceManager.class).toInstance(rm);
       bind(RMContext.class).toInstance(rm.getRMContext());
       bind(ApplicationACLsManager.class).toInstance(

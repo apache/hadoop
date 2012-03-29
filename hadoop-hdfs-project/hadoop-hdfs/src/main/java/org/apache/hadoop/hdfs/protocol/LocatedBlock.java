@@ -54,11 +54,6 @@ public class LocatedBlock implements Writable {
   public LocatedBlock() {
     this(new ExtendedBlock(), new DatanodeInfo[0], 0L, false);
   }
-  
-
-  public LocatedBlock(ExtendedBlock eb) {
-    this(eb, new DatanodeInfo[0], 0L, false);
-  }
 
   public LocatedBlock(String bpid, Block b, DatanodeInfo[] locs) {
     this(new ExtendedBlock(bpid, b), locs, -1, false); // startOffset is unknown
@@ -159,7 +154,7 @@ public class LocatedBlock implements Writable {
     return lb;
   }
 
-  @Override
+  /** {@inheritDoc} */
   public String toString() {
     return getClass().getSimpleName() + "{" + b
         + "; getBlockSize()=" + getBlockSize()

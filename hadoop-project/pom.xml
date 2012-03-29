@@ -17,11 +17,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-main</artifactId>
-    <version>0.23.3-SNAPSHOT</version>
+    <version>0.23.2-SNAPSHOT</version>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-project</artifactId>
-  <version>0.23.3-SNAPSHOT</version>
+  <version>0.23.2-SNAPSHOT</version>
   <description>Apache Hadoop Project POM</description>
   <name>Apache Hadoop Project POM</name>
   <packaging>pom</packaging>
@@ -45,9 +45,6 @@
 
     <commons-daemon.version>1.0.3</commons-daemon.version>
 
-    <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
-    <test.build.data>${test.build.dir}</test.build.data>
-    
     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
     <test.build.data>${test.build.dir}</test.build.data>
   </properties>
@@ -541,21 +538,6 @@
         <version>1.8.8</version>
       </dependency>
       <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-core-asl</artifactId>
-        <version>1.8.8</version>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-jaxrs</artifactId>
-        <version>1.8.8</version>
-      </dependency>
-      <dependency>
-        <groupId>org.codehaus.jackson</groupId>
-        <artifactId>jackson-xc</artifactId>
-        <version>1.8.8</version>
-      </dependency>
-      <dependency>
         <groupId>org.aspectj</groupId>
         <artifactId>aspectjtools</artifactId>
         <version>1.6.5</version>
@@ -573,6 +555,11 @@
       <dependency>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
+        <version>1.5.3</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-ipc</artifactId>
         <version>1.5.3</version>
       </dependency>
       <dependency>
@@ -594,11 +581,6 @@
         <groupId>commons-daemon</groupId>
         <artifactId>commons-daemon</artifactId>
         <version>${commons-daemon.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.jcraft</groupId>
-        <artifactId>jsch</artifactId>
-        <version>0.1.42</version>
       </dependency>
       <dependency>
         <groupId>org.jdom</groupId>
@@ -838,7 +820,6 @@
           <argLine>-Xmx1024m</argLine>
           <environmentVariables>
             <LD_LIBRARY_PATH>${env.LD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib</LD_LIBRARY_PATH>
-            <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
           <systemPropertyVariables>
 

@@ -73,13 +73,12 @@ public class TestCapacityScheduler {
   public void setUp() throws Exception {
     Store store = StoreFactory.getStore(new Configuration());
     resourceManager = new ResourceManager(store);
-    CapacitySchedulerConfiguration csConf 
-       = new CapacitySchedulerConfiguration();
-    setupQueueConfiguration(csConf);
-    YarnConfiguration conf = new YarnConfiguration(csConf);
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, 
+    CapacitySchedulerConfiguration csConf = 
+      new CapacitySchedulerConfiguration();
+    csConf.setClass(YarnConfiguration.RM_SCHEDULER, 
         CapacityScheduler.class, ResourceScheduler.class);
-    resourceManager.init(conf);
+    setupQueueConfiguration(csConf);
+    resourceManager.init(csConf);
     ((AsyncDispatcher)resourceManager.getRMContext().getDispatcher()).start();
   }
 
@@ -245,7 +244,6 @@ public class TestCapacityScheduler {
     CapacityScheduler cs = new CapacityScheduler();
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
-    cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, null, null);
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
@@ -334,7 +332,6 @@ public class TestCapacityScheduler {
   @Test(expected=IOException.class)
   public void testParseQueue() throws IOException {
     CapacityScheduler cs = new CapacityScheduler();
-    cs.setConf(new YarnConfiguration());
 
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
@@ -351,7 +348,6 @@ public class TestCapacityScheduler {
         new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
     CapacityScheduler cs = new CapacityScheduler();
-    cs.setConf(new YarnConfiguration());
     cs.reinitialize(csConf, null, null);
 
     RMNode n1 = MockNodes.newNodeInfo(0, MockNodes.newResource(4 * GB), 1);

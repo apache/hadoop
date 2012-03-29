@@ -22,7 +22,6 @@ import junit.framework.Assert;
 import java.io.*;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -58,19 +57,18 @@ public class TestCheckPointForSecurityTokens {
   }
   
   /**
-   * Tests save namespace.
+   * Tests save namepsace.
    */
   @Test
   public void testSaveNamespace() throws IOException {
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      conf.setBoolean(
-          DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
       cluster.waitActive();
       fs = (DistributedFileSystem)(cluster.getFileSystem());
       FSNamesystem namesystem = cluster.getNamesystem();
+      namesystem.getDelegationTokenSecretManager().startThreads();
       String renewer = UserGroupInformation.getLoginUser().getUserName();
       Token<DelegationTokenIdentifier> token1 = namesystem
           .getDelegationToken(new Text(renewer)); 
@@ -86,10 +84,8 @@ public class TestCheckPointForSecurityTokens {
       for (StorageDirectory sd : nn.getFSImage().getStorage().dirIterable(null)) {
         EditLogFile log = FSImageTestUtil.findLatestEditsLog(sd);
         assertTrue(log.isInProgress());
-        log.validateLog();
-        long numTransactions = (log.getLastTxId() - log.getFirstTxId()) + 1;
         assertEquals("In-progress log " + log + " should have 5 transactions",
-                     5, numTransactions);;
+            5, log.validateLog().numTransactions);
       }
 
       // Saving image in safe mode should succeed
@@ -103,10 +99,8 @@ public class TestCheckPointForSecurityTokens {
       for (StorageDirectory sd : nn.getFSImage().getStorage().dirIterable(null)) {
         EditLogFile log = FSImageTestUtil.findLatestEditsLog(sd);
         assertTrue(log.isInProgress());
-        log.validateLog();
-        long numTransactions = (log.getLastTxId() - log.getFirstTxId()) + 1;
         assertEquals("In-progress log " + log + " should only have START txn",
-            1, numTransactions);
+            1, log.validateLog().numTransactions);
       }
 
       // restart cluster
@@ -124,6 +118,7 @@ public class TestCheckPointForSecurityTokens {
       }
 
       namesystem = cluster.getNamesystem();
+      namesystem.getDelegationTokenSecretManager().startThreads();
       Token<DelegationTokenIdentifier> token3 = namesystem
           .getDelegationToken(new Text(renewer));
       Token<DelegationTokenIdentifier> token4 = namesystem
@@ -137,6 +132,7 @@ public class TestCheckPointForSecurityTokens {
       cluster.waitActive();
 
       namesystem = cluster.getNamesystem();
+      namesystem.getDelegationTokenSecretManager().startThreads();
       Token<DelegationTokenIdentifier> token5 = namesystem
           .getDelegationToken(new Text(renewer));
 
@@ -159,6 +155,7 @@ public class TestCheckPointForSecurityTokens {
       cluster.waitActive();
 
       namesystem = cluster.getNamesystem();
+      namesystem.getDelegationTokenSecretManager().startThreads();
       try {
         renewToken(token1);
         cancelToken(token1);

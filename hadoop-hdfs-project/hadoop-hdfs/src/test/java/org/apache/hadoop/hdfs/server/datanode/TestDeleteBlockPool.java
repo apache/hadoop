@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.junit.Test;
 
@@ -48,9 +47,8 @@ public class TestDeleteBlockPool {
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
           "namesServerId1,namesServerId2");
-      cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
-        .numDataNodes(2).build();
+      cluster = new MiniDFSCluster.Builder(conf).federation(true).numNameNodes(
+          2).numDataNodes(2).build();
 
       cluster.waitActive();
 
@@ -157,9 +155,8 @@ public class TestDeleteBlockPool {
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
           "namesServerId1,namesServerId2");
-      cluster = new MiniDFSCluster.Builder(conf)
-        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
-        .numDataNodes(1).build();
+      cluster = new MiniDFSCluster.Builder(conf).federation(true).numNameNodes(
+          2).numDataNodes(1).build();
 
       cluster.waitActive();
 

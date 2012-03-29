@@ -37,7 +37,9 @@ public class CheckpointSignature extends StorageInfo
                       implements WritableComparable<CheckpointSignature> {
   private static final String FIELD_SEPARATOR = ":";
   private static final int NUM_FIELDS = 7;
+
   String blockpoolID = "";
+  
   long mostRecentCheckpointTxId;
   long curSegmentTxId;
 
@@ -65,14 +67,6 @@ public class CheckpointSignature extends StorageInfo
     blockpoolID = fields[i++];
   }
 
-  public CheckpointSignature(StorageInfo info, String blockpoolID,
-      long mostRecentCheckpointTxId, long curSegmentTxId) {
-    super(info);
-    this.blockpoolID = blockpoolID;
-    this.mostRecentCheckpointTxId = mostRecentCheckpointTxId;
-    this.curSegmentTxId = curSegmentTxId;
-  }
-
   /**
    * Get the cluster id from CheckpointSignature
    * @return the cluster id
@@ -87,14 +81,6 @@ public class CheckpointSignature extends StorageInfo
    */
   public String getBlockpoolID() {
     return blockpoolID;
-  }
-
-  public long getMostRecentCheckpointTxId() {
-    return mostRecentCheckpointTxId;
-  }
-
-  public long getCurSegmentTxId() {
-    return curSegmentTxId;
   }
 
   /**

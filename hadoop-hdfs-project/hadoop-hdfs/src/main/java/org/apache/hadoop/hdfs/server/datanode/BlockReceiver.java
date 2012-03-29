@@ -38,12 +38,12 @@ import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
@@ -86,7 +86,7 @@ class BlockReceiver implements Closeable {
   private DataOutputStream mirrorOut;
   private Daemon responder = null;
   private DataTransferThrottler throttler;
-  private ReplicaOutputStreams streams;
+  private FSDataset.BlockWriteStreams streams;
   private DatanodeInfo srcDataNode = null;
   private Checksum partialCrc = null;
   private final DataNode datanode;
@@ -153,7 +153,6 @@ class BlockReceiver implements Closeable {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
           replicaInfo = datanode.data.createRbw(block);
-          datanode.notifyNamenodeReceivingBlock(block);
           break;
         case PIPELINE_SETUP_STREAMING_RECOVERY:
           replicaInfo = datanode.data.recoverRbw(
@@ -167,7 +166,6 @@ class BlockReceiver implements Closeable {
                 block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
-          datanode.notifyNamenodeReceivingBlock(block);
           break;
         case PIPELINE_SETUP_APPEND_RECOVERY:
           replicaInfo = datanode.data.recoverAppend(block, newGs, minBytesRcvd);
@@ -176,7 +174,6 @@ class BlockReceiver implements Closeable {
                 block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
-          datanode.notifyNamenodeReceivingBlock(block);
           break;
         case TRANSFER_RBW:
         case TRANSFER_FINALIZED:
@@ -202,16 +199,16 @@ class BlockReceiver implements Closeable {
       this.bytesPerChecksum = diskChecksum.getBytesPerChecksum();
       this.checksumSize = diskChecksum.getChecksumSize();
 
-      this.out = streams.getDataOut();
+      this.out = streams.dataOut;
       if (out instanceof FileOutputStream) {
         this.outFd = ((FileOutputStream)out).getFD();
       } else {
         LOG.warn("Could not get file descriptor for outputstream of class " +
             out.getClass());
       }
-      this.cout = streams.getChecksumOut();
+      this.cout = streams.checksumOut;
       this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-          cout, HdfsConstants.SMALL_BUFFER_SIZE));
+          streams.checksumOut, HdfsConstants.SMALL_BUFFER_SIZE));
       // write data chunk header if creating a new replica
       if (isCreate) {
         BlockMetadataHeader.writeHeader(checksumOut, diskChecksum);
@@ -323,6 +320,7 @@ class BlockReceiver implements Closeable {
   private void verifyChunks( byte[] dataBuf, int dataOff, int len, 
                              byte[] checksumBuf, int checksumOff ) 
                              throws IOException {
+    DatanodeProtocol nn = datanode.getBPNamenode(block.getBlockPoolId());
     while (len > 0) {
       int chunkLen = Math.min(len, bytesPerChecksum);
       
@@ -333,7 +331,9 @@ class BlockReceiver implements Closeable {
           try {
             LOG.info("report corrupt block " + block + " from datanode " +
                       srcDataNode + " to namenode");
-            datanode.reportRemoteBadBlock(srcDataNode, block);
+            LocatedBlock lb = new LocatedBlock(block, 
+                                            new DatanodeInfo[] {srcDataNode});
+            nn.reportBadBlocks(new LocatedBlock[] {lb});
           } catch (IOException e) {
             LOG.warn("Failed to report bad block " + block + 
                       " from datanode " + srcDataNode + " to namenode");
@@ -856,13 +856,13 @@ class BlockReceiver implements Closeable {
     //
     byte[] buf = new byte[sizePartialChunk];
     byte[] crcbuf = new byte[checksumSize];
-    ReplicaInputStreams instr = null;
+    FSDataset.BlockInputStreams instr = null;
     try { 
       instr = datanode.data.getTmpInputStreams(block, blkoff, ckoff);
-      IOUtils.readFully(instr.getDataIn(), buf, 0, sizePartialChunk);
+      IOUtils.readFully(instr.dataIn, buf, 0, sizePartialChunk);
 
       // open meta file and read in crc value computer earlier
-      IOUtils.readFully(instr.getChecksumIn(), crcbuf, 0, crcbuf.length);
+      IOUtils.readFully(instr.checksumIn, crcbuf, 0, crcbuf.length);
     } finally {
       IOUtils.closeStream(instr);
     }

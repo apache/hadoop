@@ -29,8 +29,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-
 public class ProtocolSignature implements Writable {
   static {               // register a ctor
     WritableFactories.setFactory
@@ -166,14 +164,9 @@ public class ProtocolSignature implements Writable {
   /**
    * A cache that maps a protocol's name to its signature & finger print
    */
-  private final static HashMap<String, ProtocolSigFingerprint> 
+  final private static HashMap<String, ProtocolSigFingerprint> 
      PROTOCOL_FINGERPRINT_CACHE = 
        new HashMap<String, ProtocolSigFingerprint>();
-  
-  @VisibleForTesting
-  public static void resetCache() {
-    PROTOCOL_FINGERPRINT_CACHE.clear();
-  }
   
   /**
    * Return a protocol's signature and finger print from cache
@@ -183,8 +176,8 @@ public class ProtocolSignature implements Writable {
    * @return its signature and finger print
    */
   private static ProtocolSigFingerprint getSigFingerprint(
-      Class <?> protocol, long serverVersion) {
-    String protocolName = RPC.getProtocolName(protocol);
+      Class <? extends VersionedProtocol> protocol, long serverVersion) {
+    String protocolName = protocol.getName();
     synchronized (PROTOCOL_FINGERPRINT_CACHE) {
       ProtocolSigFingerprint sig = PROTOCOL_FINGERPRINT_CACHE.get(protocolName);
       if (sig == null) {
@@ -206,7 +199,7 @@ public class ProtocolSignature implements Writable {
    * @param protocol protocol
    * @return the server's protocol signature
    */
-  public static ProtocolSignature getProtocolSignature(
+  static ProtocolSignature getProtocolSignature(
       int clientMethodsHashCode,
       long serverVersion,
       Class<? extends VersionedProtocol> protocol) {
@@ -219,12 +212,6 @@ public class ProtocolSignature implements Writable {
     } 
     
     return sig.signature;
-  }
-  
-  public static ProtocolSignature getProtocolSignature(String protocolName,
-      long version) throws ClassNotFoundException {
-    Class<?> protocol = Class.forName(protocolName);
-    return getSigFingerprint(protocol, version).signature;
   }
   
   /**

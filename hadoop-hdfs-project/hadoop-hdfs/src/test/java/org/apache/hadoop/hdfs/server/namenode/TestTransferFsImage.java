@@ -27,7 +27,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -55,7 +54,7 @@ public class TestTransferFsImage {
         new File("/xxxxx-does-not-exist/blah"));
        
     try {
-      String fsName = NetUtils.getHostPortString(
+      String fsName = NameNode.getHostPortString(
           cluster.getNameNode().getHttpAddress());
       String id = "getimage=1&txid=0";
 
@@ -87,7 +86,7 @@ public class TestTransferFsImage {
         );
        
     try {
-      String fsName = NetUtils.getHostPortString(
+      String fsName = NameNode.getHostPortString(
           cluster.getNameNode().getHttpAddress());
       String id = "getimage=1&txid=0";
 

@@ -34,7 +34,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -91,7 +90,7 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 @LimitedPrivate("yarn")
 @Evolving
 @SuppressWarnings("unchecked")
-public class FifoScheduler implements ResourceScheduler, Configurable {
+public class FifoScheduler implements ResourceScheduler {
 
   private static final Log LOG = LogFactory.getLog(FifoScheduler.class);
 
@@ -127,10 +126,10 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private Map<ApplicationAttemptId, SchedulerApp> applications
       = new TreeMap<ApplicationAttemptId, SchedulerApp>();
   
-  private ActiveUsersManager activeUsersManager;
+  private final ActiveUsersManager activeUsersManager;
 
   private static final String DEFAULT_QUEUE_NAME = "default";
-  private QueueMetrics metrics;
+  private final QueueMetrics metrics;
 
   private final Queue DEFAULT_QUEUE = new Queue() {
     @Override
@@ -182,18 +181,11 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     }
   };
 
-  @Override
-  public synchronized void setConf(Configuration conf) {
-    this.conf = conf;
-    metrics = QueueMetrics.forQueue(DEFAULT_QUEUE_NAME, null, false, conf);
+  public FifoScheduler() {
+    metrics = QueueMetrics.forQueue(DEFAULT_QUEUE_NAME, null, false);
     activeUsersManager = new ActiveUsersManager(metrics);
   }
   
-  @Override
-  public synchronized Configuration getConf() {
-    return conf;
-  }
-
   @Override
   public Resource getMinimumResourceCapability() {
     return minimumAllocation;
@@ -215,8 +207,8 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       RMContext rmContext) 
   throws IOException 
   {
-    setConf(conf);
     if (!this.initialized) {
+      this.conf = conf;
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.rmContext = rmContext;
       this.minimumAllocation = 
@@ -224,6 +216,8 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       this.maximumAllocation = 
         Resources.createResource(conf.getInt(MAXIMUM_ALLOCATION, MAXIMUM_MEMORY));
       this.initialized = true;
+    } else {
+      this.conf = conf;
     }
   }
 

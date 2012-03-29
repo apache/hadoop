@@ -18,21 +18,17 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
 
-import junit.framework.Assert;
 import junit.framework.TestCase;
+import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** Utilities for append-related tests */ 
@@ -113,18 +109,12 @@ public class AppendTestUtil {
     out.write(bytes);
   }
   
-  public static void check(FileSystem fs, Path p, long length) throws IOException {
+  static void check(FileSystem fs, Path p, long length) throws IOException {
     int i = -1;
     try {
       final FileStatus status = fs.getFileStatus(p);
-      FSDataInputStream in = fs.open(p);
-      if (in.getWrappedStream() instanceof DFSInputStream) {
-        long len = ((DFSInputStream)in.getWrappedStream()).getFileLength();
-        TestCase.assertEquals(length, len);
-      } else {
-        TestCase.assertEquals(length, status.getLen());
-      }
-      
+      TestCase.assertEquals(length, status.getLen());
+      InputStream in = fs.open(p);
       for(i++; i < length; i++) {
         TestCase.assertEquals((byte)i, (byte)in.read());  
       }
@@ -153,8 +143,8 @@ public class AppendTestUtil {
   public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
       throws IOException {
     return fileSys.create(name, true,
-        fileSys.getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, BLOCK_SIZE);
+        fileSys.getConf().getInt("io.file.buffer.size", 4096),
+        (short) repl, (long) BLOCK_SIZE);
   }
 
   /**
@@ -178,25 +168,6 @@ public class AppendTestUtil {
                    expected[from+idx]+" actual "+actual[idx],
                    expected[from+idx], actual[idx]);
       actual[idx] = 0;
-    }
-  }
-
-  public static void testAppend(FileSystem fs, Path p) throws IOException {
-    final byte[] bytes = new byte[1000];
-
-    { //create file
-      final FSDataOutputStream out = fs.create(p, (short)1);
-      out.write(bytes);
-      out.close();
-      Assert.assertEquals(bytes.length, fs.getFileStatus(p).getLen());
-    }
-
-    for(int i = 2; i < 500; i++) {
-      //append
-      final FSDataOutputStream out = fs.append(p);
-      out.write(bytes);
-      out.close();
-      Assert.assertEquals(i*bytes.length, fs.getFileStatus(p).getLen());
     }
   }
 }

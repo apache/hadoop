@@ -149,7 +149,7 @@ public class ClientServiceDelegate {
         || YarnApplicationState.RUNNING == application
             .getYarnApplicationState()) {
       if (application == null) {
-        LOG.info("Could not get Job info from RM for job " + jobId
+        LOG.debug("Could not get Job info from RM for job " + jobId
             + ". Redirecting to job history server.");
         return checkAndGetHSProxy(null, JobState.NEW);
       }
@@ -216,7 +216,7 @@ public class ClientServiceDelegate {
         }
         application = rm.getApplicationReport(appId);
         if (application == null) {
-          LOG.info("Could not get Job info from RM for job " + jobId
+          LOG.debug("Could not get Job info from RM for job " + jobId
               + ". Redirecting to job history server.");
           return checkAndGetHSProxy(null, JobState.RUNNING);
         }
@@ -372,21 +372,17 @@ public class ClientServiceDelegate {
     request.setJobId(jobId);
     JobReport report = ((GetJobReportResponse) invoke("getJobReport",
         GetJobReportRequest.class, request)).getJobReport();
-    JobStatus jobStatus = null;
-    if (report != null) {
-      if (StringUtils.isEmpty(report.getJobFile())) {
-        String jobFile = MRApps.getJobFile(conf, report.getUser(), oldJobID);
-        report.setJobFile(jobFile);
-      }
-      String historyTrackingUrl = report.getTrackingUrl();
-      String url = StringUtils.isNotEmpty(historyTrackingUrl)
-          ? historyTrackingUrl : trackingUrl;
-      if (!UNAVAILABLE.equals(url)) {
-        url = "http://" + url;
-      }
-      jobStatus = TypeConverter.fromYarn(report, url);
+    if (StringUtils.isEmpty(report.getJobFile())) {
+      String jobFile = MRApps.getJobFile(conf, report.getUser(), oldJobID);
+      report.setJobFile(jobFile);
     }
-    return jobStatus;
+    String historyTrackingUrl = report.getTrackingUrl();
+    String url = StringUtils.isNotEmpty(historyTrackingUrl)
+        ? historyTrackingUrl : trackingUrl;
+    if (!UNAVAILABLE.equals(url)) {
+      url = "http://" + url;
+    }
+    return TypeConverter.fromYarn(report, url);
   }
 
   public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)

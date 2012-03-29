@@ -25,7 +25,6 @@ import java.util.Random;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -52,8 +51,8 @@ public class TestJMXGet extends TestCase {
   private void writeFile(FileSystem fileSys, Path name, int repl)
   throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true,
-        fileSys.getConf().getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short)repl, blockSize);
+        fileSys.getConf().getInt("io.file.buffer.size", 4096),
+        (short)repl, (long)blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);

@@ -37,7 +37,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.FSVolumeInterface;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -73,7 +73,7 @@ public class TestDatanodeRestart {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
-    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
+    conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     cluster.waitActive();
     try {
@@ -98,7 +98,7 @@ public class TestDatanodeRestart {
       out.write(writeBuf);
       out.hflush();
       DataNode dn = cluster.getDataNodes().get(0);
-      for (FsVolumeSpi v : dn.data.getVolumes()) {
+      for (FSVolumeInterface v : dn.data.getVolumes()) {
         FSVolume volume = (FSVolume)v;
         File currentDir = volume.getCurrentDir().getParentFile().getParentFile();
         File rbwDir = new File(currentDir, "rbw");
@@ -138,7 +138,7 @@ public class TestDatanodeRestart {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024L);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, 512);
-    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
+    conf.setBoolean("dfs.support.append", true);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     try {

@@ -17,13 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import java.io.Closeable;
 import java.io.IOException;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * A generic abstract class to support reading edits log data from 
@@ -32,20 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * It should stream bytes from the storage exactly as they were written
  * into the #{@link EditLogOutputStream}.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Evolving
-public abstract class EditLogInputStream implements JournalStream, Closeable {
-  /** 
-   * @return the first transaction which will be found in this stream
-   */
-  public abstract long getFirstTxId() throws IOException;
-  
-  /** 
-   * @return the last transaction which will be found in this stream
-   */
-  public abstract long getLastTxId() throws IOException;
-
-
+abstract class EditLogInputStream implements JournalStream, Closeable {
   /**
    * Close the stream.
    * @throws IOException if an error occurred while closing
@@ -81,10 +63,5 @@ public abstract class EditLogInputStream implements JournalStream, Closeable {
   /**
    * Return the size of the current edits log.
    */
-  public abstract long length() throws IOException;
-  
-  /**
-   * Return true if this stream is in progress, false if it is finalized.
-   */
-  public abstract boolean isInProgress();
+  abstract long length() throws IOException;
 }
