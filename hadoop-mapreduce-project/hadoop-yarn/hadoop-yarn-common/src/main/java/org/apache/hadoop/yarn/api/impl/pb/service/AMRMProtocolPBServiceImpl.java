@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.impl.pb.service;
 
 import org.apache.hadoop.yarn.api.AMRMProtocol;
+import org.apache.hadoop.yarn.api.AMRMProtocolPB;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
@@ -29,7 +30,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.FinishApplicationMaste
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.RegisterApplicationMasterResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.proto.AMRMProtocol.AMRMProtocolService.BlockingInterface;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.AllocateResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.FinishApplicationMasterRequestProto;
@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.RegisterApplicationMasterR
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class AMRMProtocolPBServiceImpl implements BlockingInterface {
+public class AMRMProtocolPBServiceImpl implements AMRMProtocolPB {
 
   private AMRMProtocol real;
   

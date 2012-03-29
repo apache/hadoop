@@ -18,14 +18,23 @@
 
 package org.apache.hadoop.yarn.proto;
 
+import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
+import org.apache.hadoop.yarn.proto.MRClientProtocol.MRClientProtocolService;
+
 /**
  * Fake protocol to differentiate the blocking interfaces in the 
  * security info class loaders.
  */
 public interface HSClientProtocol {
   public abstract class HSClientProtocolService {
-    public interface BlockingInterface extends 
-    MRClientProtocol.MRClientProtocolService.BlockingInterface {
+    public interface BlockingInterface extends MRClientProtocolPB {
+    }
+
+    public static com.google.protobuf.BlockingService newReflectiveBlockingService(
+        final HSClientProtocolService.BlockingInterface impl) {
+      // The cast is safe
+      return MRClientProtocolService
+          .newReflectiveBlockingService((MRClientProtocolService.BlockingInterface) impl);
     }
   }
 }

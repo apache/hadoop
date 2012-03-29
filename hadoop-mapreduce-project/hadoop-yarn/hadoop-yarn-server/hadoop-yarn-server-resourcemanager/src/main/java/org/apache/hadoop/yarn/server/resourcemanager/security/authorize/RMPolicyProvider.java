@@ -21,12 +21,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
+import org.apache.hadoop.yarn.api.AMRMProtocolPB;
+import org.apache.hadoop.yarn.api.ClientRMProtocolPB;
+import org.apache.hadoop.yarn.api.ContainerManagerPB;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.proto.ContainerManager;
-import org.apache.hadoop.yarn.proto.ResourceTracker;
-import org.apache.hadoop.yarn.proto.RMAdminProtocol;
-import org.apache.hadoop.yarn.proto.ClientRMProtocol;
-import org.apache.hadoop.yarn.proto.AMRMProtocol;
+import org.apache.hadoop.yarn.server.api.ResourceTrackerPB;
+import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocolPB;
 
 /**
  * {@link PolicyProvider} for YARN ResourceManager protocols.
@@ -39,19 +39,19 @@ public class RMPolicyProvider extends PolicyProvider {
       new Service[] {
     new Service(
         YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_RESOURCETRACKER, 
-        ResourceTracker.ResourceTrackerService.BlockingInterface.class),
+        ResourceTrackerPB.class),
     new Service(
         YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CLIENT_RESOURCEMANAGER, 
-        ClientRMProtocol.ClientRMProtocolService.BlockingInterface.class),
+        ClientRMProtocolPB.class),
     new Service(
         YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_RESOURCEMANAGER, 
-        AMRMProtocol.AMRMProtocolService.BlockingInterface.class),
+        AMRMProtocolPB.class),
     new Service(
         YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_ADMIN, 
-        RMAdminProtocol.RMAdminProtocolService.BlockingInterface.class),
+        RMAdminProtocolPB.class),
     new Service(
         YarnConfiguration.YARN_SECURITY_SERVICE_AUTHORIZATION_CONTAINER_MANAGER, 
-        ContainerManager.ContainerManagerService.BlockingInterface.class),
+        ContainerManagerPB.class),
   };
 
   @Override

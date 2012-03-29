@@ -22,11 +22,14 @@ import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
 
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagerPB;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
@@ -84,6 +87,8 @@ public class TestRPC {
           "Unknown method getNewApplication called on.*"
               + "org.apache.hadoop.yarn.proto.ClientRMProtocol"
               + "\\$ClientRMProtocolService\\$BlockingInterface protocol."));
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 
@@ -101,6 +106,7 @@ public class TestRPC {
     Server server = rpc.getServer(ContainerManager.class, 
             new DummyContainerManager(), addr, conf, null, 1);
     server.start();
+    RPC.setProtocolEngine(conf, ContainerManagerPB.class, ProtobufRpcEngine.class);
     ContainerManager proxy = (ContainerManager) 
         rpc.getProxy(ContainerManager.class, 
             NetUtils.createSocketAddr("localhost:" + server.getPort()), conf);
@@ -144,11 +150,11 @@ public class TestRPC {
       proxy.stopContainer(stopRequest);
     } catch (YarnRemoteException e) {
       exception = true;
-      System.err.println(e.getMessage());
-      System.err.println(e.getCause().getMessage());
-      Assert.assertTrue(EXCEPTION_MSG.equals(e.getMessage()));
-      Assert.assertTrue(EXCEPTION_CAUSE.equals(e.getCause().getMessage()));
+      Assert.assertTrue(e.getMessage().contains(EXCEPTION_MSG));
+      Assert.assertTrue(e.getMessage().contains(EXCEPTION_CAUSE));
       System.out.println("Test Exception is " + RPCUtil.toString(e));
+    } catch (Exception ex) {
+      ex.printStackTrace();
     }
     Assert.assertTrue(exception);
     

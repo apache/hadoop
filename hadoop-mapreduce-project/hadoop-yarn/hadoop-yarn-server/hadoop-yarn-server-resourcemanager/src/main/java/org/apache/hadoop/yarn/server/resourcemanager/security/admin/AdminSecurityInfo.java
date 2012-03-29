@@ -25,13 +25,13 @@ import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.proto.RMAdminProtocol;
+import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocolPB;
 
 public class AdminSecurityInfo extends SecurityInfo {
 
   @Override
   public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
-    if (!protocol.equals(RMAdminProtocol.RMAdminProtocolService.BlockingInterface.class)) {
+    if (!protocol.equals(RMAdminProtocolPB.class)) {
       return null;
     }
     return new KerberosInfo() {

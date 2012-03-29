@@ -23,10 +23,10 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine;
-import org.apache.hadoop.yarn.proto.RMAdminProtocol.RMAdminProtocolService;
+import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshAdminAclsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshQueuesRequestProto;
@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.Refre
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshSuperUserGroupsConfigurationRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshUserToGroupsMappingsRequestProto;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
+import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocolPB;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshNodesRequest;
@@ -64,14 +65,14 @@ import com.google.protobuf.ServiceException;
 
 public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
 
-  private RMAdminProtocolService.BlockingInterface proxy;
+  private RMAdminProtocolPB proxy;
   
   public RMAdminProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, 
       Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, RMAdminProtocolService.BlockingInterface.class, 
-        ProtoOverHadoopRpcEngine.class);
-    proxy = (RMAdminProtocolService.BlockingInterface)RPC.getProxy(
-        RMAdminProtocolService.BlockingInterface.class, clientVersion, addr, conf);
+    RPC.setProtocolEngine(conf, RMAdminProtocolPB.class, 
+        ProtobufRpcEngine.class);
+    proxy = (RMAdminProtocolPB)RPC.getProxy(
+        RMAdminProtocolPB.class, clientVersion, addr, conf);
   }
 
   @Override
@@ -83,13 +84,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
       return new RefreshQueuesResponsePBImpl(
           proxy.refreshQueues(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -102,13 +97,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
       return new RefreshNodesResponsePBImpl(
           proxy.refreshNodes(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -122,13 +111,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
       return new RefreshSuperUserGroupsConfigurationResponsePBImpl(
           proxy.refreshSuperUserGroupsConfiguration(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -141,13 +124,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
       return new RefreshUserToGroupsMappingsResponsePBImpl(
           proxy.refreshUserToGroupsMappings(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -160,13 +137,7 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
       return new RefreshAdminAclsResponsePBImpl(
           proxy.refreshAdminAcls(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -175,18 +146,12 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
       RefreshServiceAclsRequest request) throws YarnRemoteException {
     RefreshServiceAclsRequestProto requestProto = 
         ((RefreshServiceAclsRequestPBImpl)request).getProto();
-      try {
-        return new RefreshServiceAclsResponsePBImpl(
-            proxy.refreshServiceAcls(null, requestProto));
-      } catch (ServiceException e) {
-        if (e.getCause() instanceof YarnRemoteException) {
-          throw (YarnRemoteException)e.getCause();
-        } else if (e.getCause() instanceof UndeclaredThrowableException) {
-          throw (UndeclaredThrowableException)e.getCause();
-        } else {
-          throw new UndeclaredThrowableException(e);
-        }
-      }
+    try {
+      return new RefreshServiceAclsResponsePBImpl(proxy.refreshServiceAcls(
+          null, requestProto));
+    } catch (ServiceException e) {
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
+    }
   }
 
   

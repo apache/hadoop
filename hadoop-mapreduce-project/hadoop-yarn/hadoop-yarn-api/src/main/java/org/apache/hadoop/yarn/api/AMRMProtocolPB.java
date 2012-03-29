@@ -15,15 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.api;
 
-package org.apache.hadoop.mapreduce.v2.api.impl.pb.service;
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.yarn.proto.AMRMProtocol.AMRMProtocolService;
 
-import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
-import org.apache.hadoop.mapreduce.v2.api.HSClientProtocolPB;
+@ProtocolInfo(protocolName = "org.apache.hadoop.yarn.api.AMRMProtocolPB",
+    protocolVersion = 1)
+public interface AMRMProtocolPB extends AMRMProtocolService.BlockingInterface {
 
-public class HSClientProtocolPBServiceImpl extends MRClientProtocolPBServiceImpl 
-  implements HSClientProtocolPB {
-  public HSClientProtocolPBServiceImpl(HSClientProtocol impl) {
-    super(impl);
-  } 
 }

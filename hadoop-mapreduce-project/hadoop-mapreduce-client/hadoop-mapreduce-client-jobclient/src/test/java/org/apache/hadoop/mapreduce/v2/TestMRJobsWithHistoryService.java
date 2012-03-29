@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TypeConverter;
-import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -142,7 +142,7 @@ public class TestMRJobsWithHistoryService {
     LOG.info("CounterMR " + counterMR);
     Assert.assertEquals(counterHS, counterMR);
     
-    MRClientProtocol historyClient = instantiateHistoryProxy();
+    HSClientProtocol historyClient = instantiateHistoryProxy();
     GetJobReportRequest gjReq = Records.newRecord(GetJobReportRequest.class);
     gjReq.setJobId(jobId);
     JobReport jobReport = historyClient.getJobReport(gjReq).getJobReport();
@@ -164,12 +164,12 @@ public class TestMRJobsWithHistoryService {
         && jobReport.getFinishTime() >= jobReport.getStartTime());
   }
   
-  private MRClientProtocol instantiateHistoryProxy() {
+  private HSClientProtocol instantiateHistoryProxy() {
     final String serviceAddr =
         mrCluster.getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS);
     final YarnRPC rpc = YarnRPC.create(conf);
-    MRClientProtocol historyClient =
-        (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
+    HSClientProtocol historyClient =
+        (HSClientProtocol) rpc.getProxy(HSClientProtocol.class,
             NetUtils.createSocketAddr(serviceAddr), mrCluster.getConfig());
     return historyClient;
   }

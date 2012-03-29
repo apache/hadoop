@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
-import org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine;
-import org.apache.hadoop.yarn.proto.HSClientProtocol.HSClientProtocolService;
+import org.apache.hadoop.mapreduce.v2.api.HSClientProtocolPB;
 
 public class HSClientProtocolPBClientImpl extends MRClientProtocolPBClientImpl
   implements HSClientProtocol {
@@ -33,9 +33,9 @@ public class HSClientProtocolPBClientImpl extends MRClientProtocolPBClientImpl
   public HSClientProtocolPBClientImpl(long clientVersion,
       InetSocketAddress addr, Configuration conf) throws IOException {
     super();
-    RPC.setProtocolEngine(conf, HSClientProtocolService.BlockingInterface.class,
-        ProtoOverHadoopRpcEngine.class);
-    proxy = (HSClientProtocolService.BlockingInterface)RPC.getProxy(
-        HSClientProtocolService.BlockingInterface.class, clientVersion, addr, conf);
+    RPC.setProtocolEngine(conf, HSClientProtocolPB.class,
+        ProtobufRpcEngine.class);
+    proxy = (HSClientProtocolPB)RPC.getProxy(
+        HSClientProtocolPB.class, clientVersion, addr, conf);
   }
 }
