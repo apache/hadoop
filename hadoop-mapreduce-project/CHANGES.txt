@@ -92,6 +92,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4081. TestMROutputFormat.java does not compile (Jason Lowe via
     bobby)
 
+    MAPREDUCE-4082. hadoop-mapreduce-client-app's mrapp-generated-classpath 
+    file should not be in the module JAR (tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

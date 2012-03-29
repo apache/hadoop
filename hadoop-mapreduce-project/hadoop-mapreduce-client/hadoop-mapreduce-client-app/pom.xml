@@ -97,7 +97,7 @@
               <goal>build-classpath</goal>
             </goals>
             <configuration>
-              <outputFile>target/classes/mrapp-generated-classpath</outputFile>
+              <outputFile>target/test-classes/mrapp-generated-classpath</outputFile>
             </configuration>
           </execution>
         </executions>
