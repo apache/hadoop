@@ -878,8 +878,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           }
           JobContext context = new JobContext(jobCopy, jobId);
 
-          jobCopy = (JobConf)context.getConfiguration();
-
           // Check the output specification
           if (reduces == 0 ? jobCopy.getUseNewMapper() : 
             jobCopy.getUseNewReducer()) {
@@ -890,6 +888,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           } else {
             jobCopy.getOutputFormat().checkOutputSpecs(fs, jobCopy);
           }
+          
+          jobCopy = (JobConf)context.getConfiguration();
 
           // Create the splits for the job
           FileSystem fs = submitJobDir.getFileSystem(jobCopy);

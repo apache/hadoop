@@ -22,6 +22,9 @@ Release 1.0.3 - unreleased
     HDFS-3127. Do not throw exceptions when FSImage.restoreStorageDirs() failes.
     (Brandon Li via szetszwo)
 
+    MAPREDUCE-3377. Ensure OutputCommitter.checkOutputSpecs is called prior to
+    copying job.xml. (Jane Chen via acmurthy)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
