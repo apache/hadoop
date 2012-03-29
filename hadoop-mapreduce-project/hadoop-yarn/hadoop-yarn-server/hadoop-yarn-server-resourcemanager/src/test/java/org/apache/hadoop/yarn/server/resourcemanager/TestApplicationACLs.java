@@ -323,8 +323,10 @@ public class TestApplicationACLs {
       Assert.fail("App killing by the enemy should fail!!");
     } catch (YarnRemoteException e) {
       LOG.info("Got exception while killing app as the enemy", e);
-      Assert.assertEquals("User enemy cannot perform operation MODIFY_APP on "
-          + applicationId, e.getMessage());
+      Assert
+          .assertTrue(e.getMessage().contains(
+              "User enemy cannot perform operation MODIFY_APP on "
+                  + applicationId));
     }
 
     rmClient.forceKillApplication(finishAppRequest);

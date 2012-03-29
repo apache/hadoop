@@ -19,10 +19,10 @@ package org.apache.hadoop.mapreduce.v2.app.security.authorize;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.mapreduce.v2.api.HSClientProtocolPB;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
-import org.apache.hadoop.yarn.proto.HSClientProtocol;
 
 /**
  * {@link PolicyProvider} for YARN MapReduce protocols.
@@ -35,7 +35,7 @@ public class ClientHSPolicyProvider extends PolicyProvider {
       new Service[] {
     new Service(
         JHAdminConfig.MR_HS_SECURITY_SERVICE_AUTHORIZATION,
-        HSClientProtocol.HSClientProtocolService.BlockingInterface.class)
+        HSClientProtocolPB.class)
   };
 
   @Override

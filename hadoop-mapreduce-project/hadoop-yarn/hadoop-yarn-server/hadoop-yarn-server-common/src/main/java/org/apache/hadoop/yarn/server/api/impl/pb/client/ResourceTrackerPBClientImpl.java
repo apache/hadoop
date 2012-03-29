@@ -19,17 +19,17 @@
 package org.apache.hadoop.yarn.server.api.impl.pb.client;
 
 import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine;
-import org.apache.hadoop.yarn.proto.ResourceTracker.ResourceTrackerService;
+import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.RegisterNodeManagerRequestProto;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
+import org.apache.hadoop.yarn.server.api.ResourceTrackerPB;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
@@ -43,12 +43,12 @@ import com.google.protobuf.ServiceException;
 
 public class ResourceTrackerPBClientImpl implements ResourceTracker {
 
-private ResourceTrackerService.BlockingInterface proxy;
+private ResourceTrackerPB proxy;
   
   public ResourceTrackerPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, ResourceTrackerService.BlockingInterface.class, ProtoOverHadoopRpcEngine.class);
-    proxy = (ResourceTrackerService.BlockingInterface)RPC.getProxy(
-        ResourceTrackerService.BlockingInterface.class, clientVersion, addr, conf);
+    RPC.setProtocolEngine(conf, ResourceTrackerPB.class, ProtobufRpcEngine.class);
+    proxy = (ResourceTrackerPB)RPC.getProxy(
+        ResourceTrackerPB.class, clientVersion, addr, conf);
   }
   
   @Override
@@ -58,13 +58,7 @@ private ResourceTrackerService.BlockingInterface proxy;
     try {
       return new RegisterNodeManagerResponsePBImpl(proxy.registerNodeManager(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -75,13 +69,7 @@ private ResourceTrackerService.BlockingInterface proxy;
     try {
       return new NodeHeartbeatResponsePBImpl(proxy.nodeHeartbeat(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 

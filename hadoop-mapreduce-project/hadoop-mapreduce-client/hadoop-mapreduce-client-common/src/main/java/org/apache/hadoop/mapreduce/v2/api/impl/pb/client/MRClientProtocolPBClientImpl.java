@@ -23,8 +23,10 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -86,21 +88,20 @@ import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillJobRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskAttemptRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskRequestProto;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine;
-import org.apache.hadoop.yarn.proto.MRClientProtocol.MRClientProtocolService;
+import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 
 import com.google.protobuf.ServiceException;
 
 public class MRClientProtocolPBClientImpl implements MRClientProtocol {
 
-  protected MRClientProtocolService.BlockingInterface proxy;
+  protected MRClientProtocolPB proxy;
   
   public MRClientProtocolPBClientImpl() {};
   
   public MRClientProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, MRClientProtocolService.BlockingInterface.class, ProtoOverHadoopRpcEngine.class);
-    proxy = (MRClientProtocolService.BlockingInterface)RPC.getProxy(
-        MRClientProtocolService.BlockingInterface.class, clientVersion, addr, conf);
+    RPC.setProtocolEngine(conf, MRClientProtocolPB.class, ProtobufRpcEngine.class);
+    proxy = (MRClientProtocolPB)RPC.getProxy(
+        MRClientProtocolPB.class, clientVersion, addr, conf);
   }
   
   @Override
@@ -110,13 +111,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new GetJobReportResponsePBImpl(proxy.getJobReport(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -127,13 +122,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new GetTaskReportResponsePBImpl(proxy.getTaskReport(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -144,13 +133,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new GetTaskAttemptReportResponsePBImpl(proxy.getTaskAttemptReport(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -161,13 +144,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new GetCountersResponsePBImpl(proxy.getCounters(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -178,13 +155,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new GetTaskAttemptCompletionEventsResponsePBImpl(proxy.getTaskAttemptCompletionEvents(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -195,13 +166,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new GetTaskReportsResponsePBImpl(proxy.getTaskReports(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -212,13 +177,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new GetDiagnosticsResponsePBImpl(proxy.getDiagnostics(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
   
@@ -231,13 +190,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
       return new GetDelegationTokenResponsePBImpl(proxy.getDelegationToken(
           null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
   
@@ -248,13 +201,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new KillJobResponsePBImpl(proxy.killJob(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -265,13 +212,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new KillTaskResponsePBImpl(proxy.killTask(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -282,13 +223,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new KillTaskAttemptResponsePBImpl(proxy.killTaskAttempt(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
@@ -299,13 +234,7 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
     try {
       return new FailTaskAttemptResponsePBImpl(proxy.failTaskAttempt(null, requestProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
   

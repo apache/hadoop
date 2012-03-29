@@ -40,6 +40,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3353. Add a channel between RM and AM to get information on
     nodes. (Bikas Saha via acmurthy) 
 
+    MAPREDUCE-3955. Change MR to use ProtobufRpcEngine from hadoop-common
+    instead of ProtoOverHadoopRpcEngine. (Jitendra Nath Pandey via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES

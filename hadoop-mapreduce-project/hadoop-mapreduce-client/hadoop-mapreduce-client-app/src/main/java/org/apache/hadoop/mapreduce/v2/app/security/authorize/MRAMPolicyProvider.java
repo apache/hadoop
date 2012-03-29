@@ -21,9 +21,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
-import org.apache.hadoop.yarn.proto.MRClientProtocol;
 
 /**
  * {@link PolicyProvider} for YARN MapReduce protocols.
@@ -39,7 +39,7 @@ public class MRAMPolicyProvider extends PolicyProvider {
         TaskUmbilicalProtocol.class),
     new Service(
         MRJobConfig.MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT,
-        MRClientProtocol.MRClientProtocolService.BlockingInterface.class)
+        MRClientProtocolPB.class)
   };
 
   @Override

@@ -24,13 +24,13 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.proto.LocalizationProtocol.LocalizationProtocolService.BlockingInterface;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalizerHeartbeatResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalizerStatusProto;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
+import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocolPB;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
 
-public class LocalizationProtocolPBServiceImpl implements BlockingInterface {
+public class LocalizationProtocolPBServiceImpl implements LocalizationProtocolPB {
 
   private LocalizationProtocol real;
   

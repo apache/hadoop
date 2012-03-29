@@ -19,11 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.api.impl.pb.service;
 
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.proto.RMAdminProtocol.RMAdminProtocolService.BlockingInterface;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.*;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
+import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocolPB;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshNodesResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshQueuesResponse;
@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.impl.pb
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class RMAdminProtocolPBServiceImpl implements BlockingInterface {
+public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
 
   private RMAdminProtocol real;
   

@@ -26,19 +26,23 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.factories.RpcServerFactory;
-import org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine;
 
 import com.google.protobuf.BlockingService;
 
 public class RpcServerFactoryPBImpl implements RpcServerFactory {
 
+  private static final Log LOG = LogFactory.getLog(RpcServerFactoryPBImpl.class);
   private static final String PROTO_GEN_PACKAGE_NAME = "org.apache.hadoop.yarn.proto";
   private static final String PROTO_GEN_CLASS_SUFFIX = "Service";
   private static final String PB_IMPL_PACKAGE_SUFFIX = "impl.pb.service";
@@ -96,6 +100,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
       throw new YarnException(e);
     }
 
+    Class<?> pbProtocol = service.getClass().getInterfaces()[0];
     Method method = protoCache.get(protocol);
     if (method == null) {
       Class<?> protoClazz = null;
@@ -106,7 +111,8 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
             + getProtoClassName(protocol) + "]", e);
       }
       try {
-        method = protoClazz.getMethod("newReflectiveBlockingService", service.getClass().getInterfaces()[0]);
+        method = protoClazz.getMethod("newReflectiveBlockingService",
+            pbProtocol.getInterfaces()[0]);
         method.setAccessible(true);
         protoCache.putIfAbsent(protocol, method);
       } catch (NoSuchMethodException e) {
@@ -115,7 +121,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
     }
     
     try {
-      return createServer(addr, conf, secretManager, numHandlers,
+      return createServer(pbProtocol, addr, conf, secretManager, numHandlers,
           (BlockingService)method.invoke(null, service));
     } catch (InvocationTargetException e) {
       throw new YarnException(e);
@@ -148,13 +154,15 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
     return clazz.getPackage().getName();
   }
 
-  private Server createServer(InetSocketAddress addr, Configuration conf, 
+  private Server createServer(Class<?> pbProtocol, InetSocketAddress addr, Configuration conf, 
       SecretManager<? extends TokenIdentifier> secretManager, int numHandlers, 
       BlockingService blockingService) throws IOException {
-    RPC.setProtocolEngine(conf, BlockingService.class, ProtoOverHadoopRpcEngine.class);
-    Server server = RPC.getServer(BlockingService.class, blockingService, 
+    RPC.setProtocolEngine(conf, pbProtocol, ProtobufRpcEngine.class);
+    RPC.Server server = RPC.getServer(pbProtocol, blockingService, 
         addr.getHostName(), addr.getPort(), numHandlers, false, conf, 
         secretManager);
+    LOG.info("Adding protocol "+pbProtocol.getCanonicalName()+" to the server");
+    server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, pbProtocol, blockingService);
     return server;
   }
 }

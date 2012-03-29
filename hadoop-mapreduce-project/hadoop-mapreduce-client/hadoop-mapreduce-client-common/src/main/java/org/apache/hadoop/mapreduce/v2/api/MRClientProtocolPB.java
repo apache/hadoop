@@ -15,15 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.mapreduce.v2.api;
 
-package org.apache.hadoop.mapreduce.v2.api.impl.pb.service;
+import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.yarn.proto.MRClientProtocol.MRClientProtocolService;
 
-import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
-import org.apache.hadoop.mapreduce.v2.api.HSClientProtocolPB;
-
-public class HSClientProtocolPBServiceImpl extends MRClientProtocolPBServiceImpl 
-  implements HSClientProtocolPB {
-  public HSClientProtocolPBServiceImpl(HSClientProtocol impl) {
-    super(impl);
-  } 
+@ProtocolInfo(
+    protocolName = "org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB",
+    protocolVersion = 1)
+public interface MRClientProtocolPB extends MRClientProtocolService.BlockingInterface {
+  
 }

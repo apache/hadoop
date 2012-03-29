@@ -18,32 +18,31 @@
 package org.apache.hadoop.yarn.server.nodemanager.api.impl.pb.client;
 
 import java.io.IOException;
-
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.ipc.ProtoOverHadoopRpcEngine;
-import org.apache.hadoop.yarn.proto.LocalizationProtocol.LocalizationProtocolService;
+import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
+import org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalizerStatusProto;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocol;
+import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocolPB;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerHeartbeatResponse;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.LocalizerStatus;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerHeartbeatResponsePBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.api.protocolrecords.impl.pb.LocalizerStatusPBImpl;
-import static org.apache.hadoop.yarn.proto.YarnServerNodemanagerServiceProtos.LocalizerStatusProto;
 
 import com.google.protobuf.ServiceException;
 
 public class LocalizationProtocolPBClientImpl implements LocalizationProtocol {
 
-  private LocalizationProtocolService.BlockingInterface proxy;
+  private LocalizationProtocolPB proxy;
   
   public LocalizationProtocolPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
-    RPC.setProtocolEngine(conf, LocalizationProtocolService.BlockingInterface.class, ProtoOverHadoopRpcEngine.class);
-    proxy = (LocalizationProtocolService.BlockingInterface)RPC.getProxy(
-        LocalizationProtocolService.BlockingInterface.class, clientVersion, addr, conf);
+    RPC.setProtocolEngine(conf, LocalizationProtocolPB.class, ProtobufRpcEngine.class);
+    proxy = (LocalizationProtocolPB)RPC.getProxy(
+        LocalizationProtocolPB.class, clientVersion, addr, conf);
   }
   
   @Override
@@ -54,13 +53,7 @@ public class LocalizationProtocolPBClientImpl implements LocalizationProtocol {
       return new LocalizerHeartbeatResponsePBImpl(
           proxy.heartbeat(null, statusProto));
     } catch (ServiceException e) {
-      if (e.getCause() instanceof YarnRemoteException) {
-        throw (YarnRemoteException)e.getCause();
-      } else if (e.getCause() instanceof UndeclaredThrowableException) {
-        throw (UndeclaredThrowableException)e.getCause();
-      } else {
-        throw new UndeclaredThrowableException(e);
-      }
+      throw YarnRemoteExceptionPBImpl.unwrapAndThrowException(e);
     }
   }
 
