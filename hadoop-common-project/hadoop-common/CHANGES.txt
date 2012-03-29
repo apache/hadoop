@@ -120,6 +120,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8216. Address log4j.properties inconsistencies btw main and
     template dirs. (Patrick Hunt via eli)
 
+    HADOOP-8149. Cap space usage of default log4j rolling policy.
+    (Patrick Hunt via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
