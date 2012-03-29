@@ -74,9 +74,6 @@ Release 1.1.0 - unreleased
 
     HDFS-3131. Improve TestStorageRestore. (Brandon Li via atm)
 
-    HDFS-3044. fsck move should be non-destructive by default.
-    (Colin Patrick McCabe via eli)
-
   BUG FIXES
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
