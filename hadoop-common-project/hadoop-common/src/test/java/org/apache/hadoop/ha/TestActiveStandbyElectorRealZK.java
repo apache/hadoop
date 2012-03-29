@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
+import org.apache.hadoop.ha.ActiveStandbyElector.State;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.server.ZooKeeperServer;
@@ -196,4 +197,48 @@ public class TestActiveStandbyElectorRealZK extends ClientBase {
 
     checkFatalsAndReset();
   }
+  
+  @Test(timeout=15000)
+  public void testHandleSessionExpirationOfStandby() throws Exception {
+    // Let elector 0 be active
+    electors[0].ensureParentZNode();
+    electors[0].joinElection(appDatas[0]);
+    ZooKeeperServer zks = getServer(serverFactory);
+    ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
+        zks, PARENT_DIR, appDatas[0]);
+    Mockito.verify(cbs[0], Mockito.timeout(1000)).becomeActive();
+    checkFatalsAndReset();
+    
+    // Let elector 1 be standby
+    electors[1].joinElection(appDatas[1]);
+    ActiveStandbyElectorTestUtil.waitForElectorState(null, electors[1],
+        State.STANDBY);
+    
+    LOG.info("========================== Expiring standby's session");
+    zks.closeSession(electors[1].getZKSessionIdForTests());
+
+    // Should enter neutral mode when disconnected
+    Mockito.verify(cbs[1], Mockito.timeout(1000)).enterNeutralMode();
+
+    // Should re-join the election and go back to STANDBY
+    ActiveStandbyElectorTestUtil.waitForElectorState(null, electors[1],
+        State.STANDBY);
+    checkFatalsAndReset();
+    
+    LOG.info("========================== Quitting election");
+    electors[1].quitElection(false);
+
+    // Double check that we don't accidentally re-join the election
+    // by quitting elector 0 and ensuring elector 1 doesn't become active
+    electors[0].quitElection(false);
+    
+    // due to receiving the "expired" event.
+    Thread.sleep(1000);
+    Mockito.verify(cbs[1], Mockito.never()).becomeActive();
+    ActiveStandbyElectorTestUtil.waitForActiveLockData(null,
+        zks, PARENT_DIR, null);
+
+    checkFatalsAndReset();
+  }
+
 }

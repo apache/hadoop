@@ -470,13 +470,18 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       }
       errorMessage = errorMessage
           + ". Not retrying further znode monitoring connection errors.";
+    } else if (isSessionExpired(code)) {
+      // This isn't fatal - the client Watcher will re-join the election
+      LOG.warn("Lock monitoring failed because session was lost");
+      return;
     }
 
     fatalError(errorMessage);
   }
 
   /**
-   * interface implementation of Zookeeper watch events (connection and node)
+   * interface implementation of Zookeeper watch events (connection and node),
+   * proxied by {@link WatcherWithClientRef}.
    */
   synchronized void processWatchEvent(ZooKeeper zk, WatchedEvent event) {
     Event.EventType eventType = event.getType();
