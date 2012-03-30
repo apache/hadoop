@@ -380,10 +380,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
   @Override
   public void write(DataOutput out) throws IOException {
     super.write(out);
-
-    //TODO: move it to DatanodeID once DatanodeID is not stored in FSImage
-    out.writeShort(ipcPort);
-
     out.writeLong(capacity);
     out.writeLong(dfsUsed);
     out.writeLong(remaining);
@@ -398,10 +394,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
   @Override
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
-
-    //TODO: move it to DatanodeID once DatanodeID is not stored in FSImage
-    this.ipcPort = in.readShort() & 0x0000ffff;
-
     this.capacity = in.readLong();
     this.dfsUsed = in.readLong();
     this.remaining = in.readLong();

@@ -170,7 +170,6 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     name = nodeReg.getName();
     infoPort = nodeReg.getInfoPort();
     ipcPort = nodeReg.getIpcPort();
-    // update any more fields added in future.
   }
     
   /** Comparable.
@@ -190,6 +189,7 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     DeprecatedUTF8.writeString(out, name);
     DeprecatedUTF8.writeString(out, storageID);
     out.writeShort(infoPort);
+    out.writeShort(ipcPort);
   }
 
   @Override
@@ -201,5 +201,6 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     // So chop off the first two bytes (and hence the signed bits) before 
     // setting the field.
     this.infoPort = in.readShort() & 0x0000ffff;
+    this.ipcPort = in.readShort() & 0x0000ffff;
   }
 }
