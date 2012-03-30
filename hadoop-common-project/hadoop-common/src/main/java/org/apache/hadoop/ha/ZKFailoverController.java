@@ -146,7 +146,12 @@ public abstract class ZKFailoverController implements Tool {
     }
 
     initHM();
-    mainLoop();
+    try {
+      mainLoop();
+    } finally {
+      healthMonitor.shutdown();
+      healthMonitor.join();
+    }
     return 0;
   }
 

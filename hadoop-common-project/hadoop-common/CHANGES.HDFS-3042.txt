@@ -6,3 +6,4 @@ branch is merged.
 
 HADOOP-8220. ZKFailoverController doesn't handle failure to become active correctly (todd)
 
+HADOOP-8228. Auto HA: Refactor tests and add stress tests. (todd)

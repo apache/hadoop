@@ -17,36 +17,24 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
-import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HealthMonitor.State;
-import org.apache.hadoop.test.MultithreadedTestUtil;
-import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
-import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
+import org.apache.hadoop.ha.MiniZKFCCluster.DummyZKFC;
 import org.apache.log4j.Level;
-import org.apache.zookeeper.KeeperException.NoNodeException;
-import org.apache.zookeeper.data.Stat;
-import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.test.ClientBase;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.primitives.Ints;
-
 public class TestZKFailoverController extends ClientBase {
   private Configuration conf;
-  private DummyHAService svc1;
-  private DummyHAService svc2;
-  private TestContext ctx;
-  private DummyZKFCThread thr1, thr2;
+  private MiniZKFCCluster cluster;
   
   static {
     ((Log4JLogger)ActiveStandbyElector.LOG).getLogger().setLevel(Level.ALL);
@@ -63,49 +51,7 @@ public class TestZKFailoverController extends ClientBase {
   public void setupConfAndServices() {
     conf = new Configuration();
     conf.set(ZKFailoverController.ZK_QUORUM_KEY, hostPort);
-    // Fast check interval so tests run faster
-    conf.setInt(CommonConfigurationKeys.HA_HM_CHECK_INTERVAL_KEY, 50);
-    conf.setInt(CommonConfigurationKeys.HA_HM_CONNECT_RETRY_INTERVAL_KEY, 50);
-    conf.setInt(CommonConfigurationKeys.HA_HM_SLEEP_AFTER_DISCONNECT_KEY, 50);
-    svc1 = new DummyHAService(HAServiceState.INITIALIZING,
-        new InetSocketAddress("svc1", 1234));
-    svc2 = new DummyHAService(HAServiceState.INITIALIZING,
-        new InetSocketAddress("svc2", 1234));
-  }
-  
-  /**
-   * Set up two services and their failover controllers. svc1 is started
-   * first, so that it enters ACTIVE state, and then svc2 is started,
-   * which enters STANDBY
-   */
-  private void setupFCs() throws Exception {
-    // Format the base dir, should succeed
-    assertEquals(0, runFC(svc1, "-formatZK"));
-
-    ctx = new MultithreadedTestUtil.TestContext();
-    thr1 = new DummyZKFCThread(ctx, svc1);
-    ctx.addThread(thr1);
-    thr1.start();
-    
-    LOG.info("Waiting for svc1 to enter active state");
-    waitForHAState(svc1, HAServiceState.ACTIVE);
-    
-    LOG.info("Adding svc2");
-    thr2 = new DummyZKFCThread(ctx, svc2);
-    thr2.start();
-    waitForHAState(svc2, HAServiceState.STANDBY);
-  }
-  
-  private void stopFCs() throws Exception {
-    if (thr1 != null) {
-      thr1.interrupt();
-    }
-    if (thr2 != null) {
-      thr2.interrupt();
-    }
-    if (ctx != null) {
-      ctx.stop();
-    }
+    this.cluster = new MiniZKFCCluster(conf, getServer(serverFactory));
   }
 
   /**
@@ -114,20 +60,21 @@ public class TestZKFailoverController extends ClientBase {
    */
   @Test(timeout=15000)
   public void testFormatZK() throws Exception {
+    DummyHAService svc = cluster.getService(1);
     // Run without formatting the base dir,
     // should barf
     assertEquals(ZKFailoverController.ERR_CODE_NO_PARENT_ZNODE,
-        runFC(svc1));
+        runFC(svc));
 
     // Format the base dir, should succeed
-    assertEquals(0, runFC(svc1, "-formatZK"));
+    assertEquals(0, runFC(svc, "-formatZK"));
 
     // Should fail to format if already formatted
     assertEquals(ZKFailoverController.ERR_CODE_FORMAT_DENIED,
-        runFC(svc1, "-formatZK", "-nonInteractive"));
+        runFC(svc, "-formatZK", "-nonInteractive"));
   
     // Unless '-force' is on
-    assertEquals(0, runFC(svc1, "-formatZK", "-force"));
+    assertEquals(0, runFC(svc, "-formatZK", "-force"));
   }
   
   /**
@@ -136,14 +83,14 @@ public class TestZKFailoverController extends ClientBase {
    */
   @Test(timeout=15000)
   public void testFencingMustBeConfigured() throws Exception {
-    svc1 = Mockito.spy(svc1);
+    DummyHAService svc = Mockito.spy(cluster.getService(0));
     Mockito.doThrow(new BadFencingConfigurationException("no fencing"))
-        .when(svc1).checkFencingConfigured();
+        .when(svc).checkFencingConfigured();
     // Format the base dir, should succeed
-    assertEquals(0, runFC(svc1, "-formatZK"));
+    assertEquals(0, runFC(svc, "-formatZK"));
     // Try to run the actual FC, should fail without a fencer
     assertEquals(ZKFailoverController.ERR_CODE_NO_FENCER,
-        runFC(svc1));
+        runFC(svc));
   }
   
   /**
@@ -155,66 +102,50 @@ public class TestZKFailoverController extends ClientBase {
   @Test(timeout=15000)
   public void testAutoFailoverOnBadHealth() throws Exception {
     try {
-      setupFCs();
+      cluster.start();
+      DummyHAService svc1 = cluster.getService(1);
       
-      LOG.info("Faking svc1 unhealthy, should failover to svc2");
-      svc1.isHealthy = false;
-      LOG.info("Waiting for svc1 to enter standby state");
-      waitForHAState(svc1, HAServiceState.STANDBY);
-      waitForHAState(svc2, HAServiceState.ACTIVE);
+      LOG.info("Faking svc0 unhealthy, should failover to svc1");
+      cluster.setHealthy(0, false);
+      
+      LOG.info("Waiting for svc0 to enter standby state");
+      cluster.waitForHAState(0, HAServiceState.STANDBY);
+      cluster.waitForHAState(1, HAServiceState.ACTIVE);
   
-      LOG.info("Allowing svc1 to be healthy again, making svc2 unreachable " +
+      LOG.info("Allowing svc0 to be healthy again, making svc1 unreachable " +
           "and fail to gracefully go to standby");
-      svc1.isHealthy = true;
-      svc2.actUnreachable = true;
-      
-      // Allow fencing to succeed
-      Mockito.doReturn(true).when(svc2.fencer).fence(Mockito.same(svc2));
-      // Should fail back to svc1 at this point
-      waitForHAState(svc1, HAServiceState.ACTIVE);
-      // and fence svc2
-      Mockito.verify(svc2.fencer).fence(Mockito.same(svc2));
+      cluster.setUnreachable(1, true);
+      cluster.setHealthy(0, true);
+ 
+      // Should fail back to svc0 at this point
+      cluster.waitForHAState(0, HAServiceState.ACTIVE);
+      // and fence svc1
+      Mockito.verify(svc1.fencer).fence(Mockito.same(svc1));
     } finally {
-      stopFCs();
+      cluster.stop();
     }
   }
   
   @Test(timeout=15000)
   public void testAutoFailoverOnLostZKSession() throws Exception {
     try {
-      setupFCs();
+      cluster.start();
 
-      // Expire svc1, it should fail over to svc2
-      expireAndVerifyFailover(thr1, thr2);
+      // Expire svc0, it should fail over to svc1
+      cluster.expireAndVerifyFailover(0, 1);
       
-      // Expire svc2, it should fail back to svc1
-      expireAndVerifyFailover(thr2, thr1);
+      // Expire svc1, it should fail back to svc0
+      cluster.expireAndVerifyFailover(1, 0);
       
       LOG.info("======= Running test cases second time to test " +
           "re-establishment =========");
-      // Expire svc1, it should fail over to svc2
-      expireAndVerifyFailover(thr1, thr2);
+      // Expire svc0, it should fail over to svc1
+      cluster.expireAndVerifyFailover(0, 1);
       
-      // Expire svc2, it should fail back to svc1
-      expireAndVerifyFailover(thr2, thr1);
+      // Expire svc1, it should fail back to svc0
+      cluster.expireAndVerifyFailover(1, 0);
     } finally {
-      stopFCs();
-    }
-  }
-  
-  private void expireAndVerifyFailover(DummyZKFCThread fromThr,
-      DummyZKFCThread toThr) throws Exception {
-    DummyHAService fromSvc = fromThr.zkfc.localTarget;
-    DummyHAService toSvc = toThr.zkfc.localTarget;
-    
-    fromThr.zkfc.getElectorForTests().preventSessionReestablishmentForTests();
-    try {
-      expireActiveLockHolder(fromSvc);
-      
-      waitForHAState(fromSvc, HAServiceState.STANDBY);
-      waitForHAState(toSvc, HAServiceState.ACTIVE);
-    } finally {
-      fromThr.zkfc.getElectorForTests().allowSessionReestablishmentForTests();
+      cluster.stop();
     }
   }
 
@@ -225,33 +156,32 @@ public class TestZKFailoverController extends ClientBase {
   @Test(timeout=15000)
   public void testDontFailoverToUnhealthyNode() throws Exception {
     try {
-      setupFCs();
+      cluster.start();
 
-      // Make svc2 unhealthy, and wait for its FC to notice the bad health.
-      svc2.isHealthy = false;
-      waitForHealthState(thr2.zkfc,
-          HealthMonitor.State.SERVICE_UNHEALTHY);
+      // Make svc1 unhealthy, and wait for its FC to notice the bad health.
+      cluster.setHealthy(1, false);
+      cluster.waitForHealthState(1, HealthMonitor.State.SERVICE_UNHEALTHY);
       
-      // Expire svc1
-      thr1.zkfc.getElectorForTests().preventSessionReestablishmentForTests();
+      // Expire svc0
+      cluster.getElector(0).preventSessionReestablishmentForTests();
       try {
-        expireActiveLockHolder(svc1);
+        cluster.expireActiveLockHolder(0);
 
-        LOG.info("Expired svc1's ZK session. Waiting a second to give svc2" +
+        LOG.info("Expired svc0's ZK session. Waiting a second to give svc1" +
             " a chance to take the lock, if it is ever going to.");
         Thread.sleep(1000);
         
         // Ensure that no one holds the lock.
-        waitForActiveLockHolder(null);
+        cluster.waitForActiveLockHolder(null);
         
       } finally {
-        LOG.info("Allowing svc1's elector to re-establish its connection");
-        thr1.zkfc.getElectorForTests().allowSessionReestablishmentForTests();
+        LOG.info("Allowing svc0's elector to re-establish its connection");
+        cluster.getElector(0).allowSessionReestablishmentForTests();
       }
-      // svc1 should get the lock again
-      waitForActiveLockHolder(svc1);
+      // svc0 should get the lock again
+      cluster.waitForActiveLockHolder(0);
     } finally {
-      stopFCs();
+      cluster.stop();
     }
   }
 
@@ -262,36 +192,38 @@ public class TestZKFailoverController extends ClientBase {
   @Test(timeout=15000)
   public void testBecomingActiveFails() throws Exception {
     try {
-      setupFCs();
+      cluster.start();
+      DummyHAService svc1 = cluster.getService(1);
       
-      LOG.info("Making svc2 fail to become active");
-      svc2.failToBecomeActive = true;
+      LOG.info("Making svc1 fail to become active");
+      cluster.setFailToBecomeActive(1, true);
       
-      LOG.info("Faking svc1 unhealthy, should NOT successfully " +
-          "failover to svc2");
-      svc1.isHealthy = false;
-      waitForHealthState(thr1.zkfc, State.SERVICE_UNHEALTHY);
-      waitForActiveLockHolder(null);
+      LOG.info("Faking svc0 unhealthy, should NOT successfully " +
+          "failover to svc1");
+      cluster.setHealthy(0, false);
+      cluster.waitForHealthState(0, State.SERVICE_UNHEALTHY);
+      cluster.waitForActiveLockHolder(null);
 
-      Mockito.verify(svc2.proxy, Mockito.timeout(2000).atLeastOnce())
+      
+      Mockito.verify(svc1.proxy, Mockito.timeout(2000).atLeastOnce())
         .transitionToActive();
 
-      waitForHAState(svc1, HAServiceState.STANDBY);
-      waitForHAState(svc2, HAServiceState.STANDBY);
+      cluster.waitForHAState(0, HAServiceState.STANDBY);
+      cluster.waitForHAState(1, HAServiceState.STANDBY);
       
-      LOG.info("Faking svc1 healthy again, should go back to svc1");
-      svc1.isHealthy = true;
-      waitForHAState(svc1, HAServiceState.ACTIVE);
-      waitForHAState(svc2, HAServiceState.STANDBY);
-      waitForActiveLockHolder(svc1);
+      LOG.info("Faking svc0 healthy again, should go back to svc0");
+      cluster.setHealthy(0, true);
+      cluster.waitForHAState(0, HAServiceState.ACTIVE);
+      cluster.waitForHAState(1, HAServiceState.STANDBY);
+      cluster.waitForActiveLockHolder(0);
       
-      // Ensure that we can fail back to thr2 once it it is able
+      // Ensure that we can fail back to svc1  once it it is able
       // to become active (e.g the admin has restarted it)
-      LOG.info("Allowing svc2 to become active, expiring svc1");
-      svc2.failToBecomeActive = false;
-      expireAndVerifyFailover(thr1, thr2);
+      LOG.info("Allowing svc1 to become active, expiring svc0");
+      svc1.failToBecomeActive = false;
+      cluster.expireAndVerifyFailover(0, 1);
     } finally {
-      stopFCs();
+      cluster.stop();
     }
   }
   
@@ -303,27 +235,25 @@ public class TestZKFailoverController extends ClientBase {
   @Test(timeout=15000)
   public void testZooKeeperFailure() throws Exception {
     try {
-      setupFCs();
+      cluster.start();
 
       // Record initial ZK sessions
-      long session1 = thr1.zkfc.getElectorForTests().getZKSessionIdForTests();
-      long session2 = thr2.zkfc.getElectorForTests().getZKSessionIdForTests();
+      long session0 = cluster.getElector(0).getZKSessionIdForTests();
+      long session1 = cluster.getElector(1).getZKSessionIdForTests();
 
       LOG.info("====== Stopping ZK server");
       stopServer();
       waitForServerDown(hostPort, CONNECTION_TIMEOUT);
       
       LOG.info("====== Waiting for services to enter NEUTRAL mode");
-      ActiveStandbyElectorTestUtil.waitForElectorState(ctx,
-          thr1.zkfc.getElectorForTests(),
+      cluster.waitForElectorState(0,
           ActiveStandbyElector.State.NEUTRAL);
-      ActiveStandbyElectorTestUtil.waitForElectorState(ctx,
-          thr2.zkfc.getElectorForTests(),
+      cluster.waitForElectorState(1,
           ActiveStandbyElector.State.NEUTRAL);
 
       LOG.info("====== Checking that the services didn't change HA state");
-      assertEquals(HAServiceState.ACTIVE, svc1.state);
-      assertEquals(HAServiceState.STANDBY, svc2.state);
+      assertEquals(HAServiceState.ACTIVE, cluster.getService(0).state);
+      assertEquals(HAServiceState.STANDBY, cluster.getService(1).state);
       
       LOG.info("====== Restarting server");
       startServer();
@@ -331,83 +261,21 @@ public class TestZKFailoverController extends ClientBase {
 
       // Nodes should go back to their original states, since they re-obtain
       // the same sessions.
-      ActiveStandbyElectorTestUtil.waitForElectorState(ctx,
-          thr1.zkfc.getElectorForTests(),
-          ActiveStandbyElector.State.ACTIVE);
-      ActiveStandbyElectorTestUtil.waitForElectorState(ctx,
-          thr2.zkfc.getElectorForTests(),
-          ActiveStandbyElector.State.STANDBY);
+      cluster.waitForElectorState(0, ActiveStandbyElector.State.ACTIVE);
+      cluster.waitForElectorState(1, ActiveStandbyElector.State.STANDBY);
       // Check HA states didn't change.
-      ActiveStandbyElectorTestUtil.waitForElectorState(ctx,
-          thr1.zkfc.getElectorForTests(),
-          ActiveStandbyElector.State.ACTIVE);
-      ActiveStandbyElectorTestUtil.waitForElectorState(ctx,
-          thr2.zkfc.getElectorForTests(),
-          ActiveStandbyElector.State.STANDBY);
+      cluster.waitForHAState(0, HAServiceState.ACTIVE);
+      cluster.waitForHAState(1, HAServiceState.STANDBY);
+
       // Check they re-used the same sessions and didn't spuriously reconnect
+      assertEquals(session0,
+          cluster.getElector(0).getZKSessionIdForTests());
       assertEquals(session1,
-          thr1.zkfc.getElectorForTests().getZKSessionIdForTests());
-      assertEquals(session2,
-          thr2.zkfc.getElectorForTests().getZKSessionIdForTests());
+          cluster.getElector(1).getZKSessionIdForTests());
     } finally {
-      stopFCs();
+      cluster.stop();
     }
   }
-
-  /**
-   * Expire the ZK session of the given service. This requires
-   * (and asserts) that the given service be the current active.
-   * @throws NoNodeException if no service holds the lock
-   */
-  private void expireActiveLockHolder(DummyHAService expectedActive)
-      throws NoNodeException {
-    ZooKeeperServer zks = getServer(serverFactory);
-    Stat stat = new Stat();
-    byte[] data = zks.getZKDatabase().getData(
-        ZKFailoverController.ZK_PARENT_ZNODE_DEFAULT + "/" +
-        ActiveStandbyElector.LOCK_FILENAME, stat, null);
-    
-    assertArrayEquals(Ints.toByteArray(expectedActive.index), data);
-    long session = stat.getEphemeralOwner();
-    LOG.info("Expiring svc " + expectedActive + "'s zookeeper session " + session);
-    zks.closeSession(session);
-  }
-  
-  /**
-   * Wait for the given HA service to enter the given HA state.
-   */
-  private void waitForHAState(DummyHAService svc, HAServiceState state)
-      throws Exception {
-    while (svc.state != state) {
-      ctx.checkException();
-      Thread.sleep(50);
-    }
-  }
-  
-  /**
-   * Wait for the ZKFC to be notified of a change in health state.
-   */
-  private void waitForHealthState(DummyZKFC zkfc, State state)
-      throws Exception {
-    while (zkfc.getLastHealthState() != state) {
-      ctx.checkException();
-      Thread.sleep(50);
-    }
-  }
-
-  /**
-   * Wait for the given HA service to become the active lock holder.
-   * If the passed svc is null, waits for there to be no active
-   * lock holder.
-   */
-  private void waitForActiveLockHolder(DummyHAService svc)
-      throws Exception {
-    ZooKeeperServer zks = getServer(serverFactory);
-    ActiveStandbyElectorTestUtil.waitForActiveLockData(ctx, zks,
-        ZKFailoverController.ZK_PARENT_ZNODE_DEFAULT,
-        (svc == null) ? null : Ints.toByteArray(svc.index));
-  }
-
 
   private int runFC(DummyHAService target, String ... args) throws Exception {
     DummyZKFC zkfc = new DummyZKFC(target);
@@ -415,50 +283,4 @@ public class TestZKFailoverController extends ClientBase {
     return zkfc.run(args);
   }
 
-  /**
-   * Test-thread which runs a ZK Failover Controller corresponding
-   * to a given dummy service.
-   */
-  private class DummyZKFCThread extends TestingThread {
-    private final DummyZKFC zkfc;
-
-    public DummyZKFCThread(TestContext ctx, DummyHAService svc) {
-      super(ctx);
-      this.zkfc = new DummyZKFC(svc);
-      zkfc.setConf(conf);
-    }
-
-    @Override
-    public void doWork() throws Exception {
-      try {
-        assertEquals(0, zkfc.run(new String[0]));
-      } catch (InterruptedException ie) {
-        // Interrupted by main thread, that's OK.
-      }
-    }
-  }
-  
-  private static class DummyZKFC extends ZKFailoverController {
-    private final DummyHAService localTarget;
-    
-    public DummyZKFC(DummyHAService localTarget) {
-      this.localTarget = localTarget;
-    }
-
-    @Override
-    protected byte[] targetToData(HAServiceTarget target) {
-      return Ints.toByteArray(((DummyHAService)target).index);
-    }
-    
-    @Override
-    protected HAServiceTarget dataToTarget(byte[] data) {
-      int index = Ints.fromByteArray(data);
-      return DummyHAService.getInstance(index);
-    }
-
-    @Override
-    protected HAServiceTarget getLocalTarget() {
-      return localTarget;
-    }
-  }
 }

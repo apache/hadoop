@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.security.AccessControlException;
@@ -34,6 +36,7 @@ import com.google.common.collect.Lists;
  * a mock implementation.
  */
 class DummyHAService extends HAServiceTarget {
+  public static final Log LOG = LogFactory.getLog(DummyHAService.class);
   volatile HAServiceState state;
   HAServiceProtocol proxy;
   NodeFencer fencer;
@@ -42,18 +45,30 @@ class DummyHAService extends HAServiceTarget {
   boolean actUnreachable = false;
   boolean failToBecomeActive;
   
+  DummySharedResource sharedResource;
+  
   static ArrayList<DummyHAService> instances = Lists.newArrayList();
   int index;
 
   DummyHAService(HAServiceState state, InetSocketAddress address) {
     this.state = state;
     this.proxy = makeMock();
-    this.fencer = Mockito.mock(NodeFencer.class);
+    try {
+      Configuration conf = new Configuration();
+      conf.set(NodeFencer.CONF_METHODS_KEY, DummyFencer.class.getName());
+      this.fencer = Mockito.spy(NodeFencer.create(conf));
+    } catch (BadFencingConfigurationException e) {
+      throw new RuntimeException(e);
+    }
     this.address = address;
     synchronized (instances) {
       instances.add(this);
       this.index = instances.size();
     }
+  }
+  
+  public void setSharedResource(DummySharedResource rsrc) {
+    this.sharedResource = rsrc;
   }
   
   private HAServiceProtocol makeMock() {
@@ -107,7 +122,9 @@ class DummyHAService extends HAServiceTarget {
       if (failToBecomeActive) {
         throw new ServiceFailedException("injected failure");
       }
-    
+      if (sharedResource != null) {
+        sharedResource.take(DummyHAService.this);
+      }
       state = HAServiceState.ACTIVE;
     }
     
@@ -115,6 +132,9 @@ class DummyHAService extends HAServiceTarget {
     public void transitionToStandby() throws ServiceFailedException,
         AccessControlException, IOException {
       checkUnreachable();
+      if (sharedResource != null) {
+        sharedResource.release(DummyHAService.this);
+      }
       state = HAServiceState.STANDBY;
     }
     
@@ -138,4 +158,20 @@ class DummyHAService extends HAServiceTarget {
     public void close() throws IOException {
     }
   }
+  
+  public static class DummyFencer implements FenceMethod {
+
+    public void checkArgs(String args) throws BadFencingConfigurationException {
+    }
+
+    @Override
+    public boolean tryFence(HAServiceTarget target, String args)
+        throws BadFencingConfigurationException {
+      LOG.info("tryFence(" + target + ")");
+      DummyHAService svc = (DummyHAService)target;
+      svc.sharedResource.release(svc);
+      return true;
+    }
+  }
+
 }

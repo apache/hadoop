@@ -140,7 +140,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
 
   public static final Log LOG = LogFactory.getLog(ActiveStandbyElector.class);
 
-  private static final int NUM_RETRIES = 3;
+  static int NUM_RETRIES = 3;
   private static final int SLEEP_AFTER_FAILURE_TO_BECOME_ACTIVE = 1000;
 
   private static enum ConnectionState {
@@ -662,8 +662,12 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   }
   
   @VisibleForTesting
-  long getZKSessionIdForTests() {
-    return zkClient.getSessionId();
+  synchronized long getZKSessionIdForTests() {
+    if (zkClient != null) {
+      return zkClient.getSessionId();
+    } else {
+      return -1;
+    }
   }
   
   @VisibleForTesting
