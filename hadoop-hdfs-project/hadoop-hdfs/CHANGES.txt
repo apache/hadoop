@@ -6,6 +6,8 @@ Trunk (unreleased changes)
 
     HDFS-3034. Remove the deprecated DFSOutputStream.sync() method.  (szetszwo)
 
+    HDFS-3137. Bump LAST_UPGRADABLE_LAYOUT_VERSION to -16. (eli)
+
   NEW FEATURES
 
     HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 

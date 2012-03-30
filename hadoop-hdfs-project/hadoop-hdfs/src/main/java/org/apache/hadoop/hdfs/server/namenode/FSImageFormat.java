@@ -131,34 +131,22 @@ class FSImageFormat {
 
       DataInputStream in = new DataInputStream(fin);
       try {
-        /*
-         * Note: Remove any checks for version earlier than 
-         * Storage.LAST_UPGRADABLE_LAYOUT_VERSION since we should never get 
-         * to here with older images.
-         */
-
-        /*
-         * TODO we need to change format of the image file
-         * it should not contain version and namespace fields
-         */
         // read image version: first appeared in version -1
         int imgVersion = in.readInt();
-        if(getLayoutVersion() != imgVersion)
+        if (getLayoutVersion() != imgVersion) {
           throw new InconsistentFSStateException(curFile, 
               "imgVersion " + imgVersion +
               " expected to be " + getLayoutVersion());
+        }
 
         // read namespaceID: first appeared in version -2
         in.readInt();
 
-        // read number of files
-        long numFiles = readNumFiles(in);
+        long numFiles = in.readLong();
 
         // read in the last generation stamp.
-        if (imgVersion <= -12) {
-          long genstamp = in.readLong();
-          namesystem.setGenerationStamp(genstamp); 
-        }
+        long genstamp = in.readLong();
+        namesystem.setGenerationStamp(genstamp); 
         
         // read the transaction ID of the last edit represented by
         // this image
@@ -167,7 +155,6 @@ class FSImageFormat {
         } else {
           imgTxId = 0;
         }
-        
 
         // read compression related info
         FSImageCompression compression;
@@ -189,13 +176,9 @@ class FSImageFormat {
           loadFullNameINodes(numFiles, in);
         }
 
-        // load datanode info
-        this.loadDatanodes(in);
+        loadFilesUnderConstruction(in);
 
-        // load Files Under Construction
-        this.loadFilesUnderConstruction(in);
-
-        this.loadSecretManagerState(in);
+        loadSecretManagerState(in);
 
         // make sure to read to the end of file
         int eof = in.read();
@@ -335,89 +318,44 @@ class FSImageFormat {
     if (LayoutVersion.supports(Feature.FILE_ACCESS_TIME, imgVersion)) {
       atime = in.readLong();
     }
-    if (imgVersion <= -8) {
-      blockSize = in.readLong();
-    }
+    blockSize = in.readLong();
     int numBlocks = in.readInt();
     BlockInfo blocks[] = null;
 
-    // for older versions, a blocklist of size 0
-    // indicates a directory.
-    if ((-9 <= imgVersion && numBlocks > 0) ||
-        (imgVersion < -9 && numBlocks >= 0)) {
+    if (numBlocks >= 0) {
       blocks = new BlockInfo[numBlocks];
       for (int j = 0; j < numBlocks; j++) {
         blocks[j] = new BlockInfo(replication);
-        if (-14 < imgVersion) {
-          blocks[j].set(in.readLong(), in.readLong(), 
-                        GenerationStamp.GRANDFATHER_GENERATION_STAMP);
-        } else {
-          blocks[j].readFields(in);
-        }
-      }
-    }
-    // Older versions of HDFS does not store the block size in inode.
-    // If the file has more than one block, use the size of the 
-    // first block as the blocksize. Otherwise use the default block size.
-    //
-    if (-8 <= imgVersion && blockSize == 0) {
-      if (numBlocks > 1) {
-        blockSize = blocks[0].getNumBytes();
-      } else {
-        long first = ((numBlocks == 1) ? blocks[0].getNumBytes(): 0);
-        blockSize = Math.max(namesystem.getDefaultBlockSize(), first);
+        blocks[j].readFields(in);
       }
     }
     
     // get quota only when the node is a directory
     long nsQuota = -1L;
-      if (LayoutVersion.supports(Feature.NAMESPACE_QUOTA, imgVersion)
-          && blocks == null && numBlocks == -1) {
-        nsQuota = in.readLong();
-      }
-      long dsQuota = -1L;
-      if (LayoutVersion.supports(Feature.DISKSPACE_QUOTA, imgVersion)
-          && blocks == null && numBlocks == -1) {
-        dsQuota = in.readLong();
-      }
-  
-      // Read the symlink only when the node is a symlink
-      String symlink = "";
-      if (numBlocks == -2) {
-        symlink = Text.readString(in);
-      }
-      
-      PermissionStatus permissions = namesystem.getUpgradePermission();
-      if (imgVersion <= -11) {
-        permissions = PermissionStatus.read(in);
-      }
-  
-      return INode.newINode(permissions, blocks, symlink, replication,
-          modificationTime, atime, nsQuota, dsQuota, blockSize);
+    if (blocks == null && numBlocks == -1) {
+      nsQuota = in.readLong();
+    }
+    long dsQuota = -1L;
+    if (LayoutVersion.supports(Feature.DISKSPACE_QUOTA, imgVersion)
+        && blocks == null && numBlocks == -1) {
+      dsQuota = in.readLong();
     }
 
-    private void loadDatanodes(DataInputStream in)
-        throws IOException {
-      int imgVersion = getLayoutVersion();
-
-      if (imgVersion > -3) // pre datanode image version
-        return;
-      if (imgVersion <= -12) {
-        return; // new versions do not store the datanodes any more.
-      }
-      int size = in.readInt();
-      for(int i = 0; i < size; i++) {
-        // We don't need to add these descriptors any more.
-        FSImageSerialization.DatanodeImage.skipOne(in);
-      }
+    // Read the symlink only when the node is a symlink
+    String symlink = "";
+    if (numBlocks == -2) {
+      symlink = Text.readString(in);
     }
+    
+    PermissionStatus permissions = PermissionStatus.read(in);
+
+    return INode.newINode(permissions, blocks, symlink, replication,
+        modificationTime, atime, nsQuota, dsQuota, blockSize);
+  }
 
     private void loadFilesUnderConstruction(DataInputStream in)
     throws IOException {
       FSDirectory fsDir = namesystem.dir;
-      int imgVersion = getLayoutVersion();
-      if (imgVersion > -13) // pre lease image version
-        return;
       int size = in.readInt();
 
       LOG.info("Number of files under construction = " + size);
@@ -455,17 +393,6 @@ class FSImageFormat {
 
     private int getLayoutVersion() {
       return namesystem.getFSImage().getStorage().getLayoutVersion();
-    }
-
-    private long readNumFiles(DataInputStream in)
-        throws IOException {
-      int imgVersion = getLayoutVersion();
-
-      if (LayoutVersion.supports(Feature.NAMESPACE_QUOTA, imgVersion)) {
-        return in.readLong();
-      } else {
-        return in.readInt();
-      }
     }
 
     private boolean isRoot(byte[][] path) {

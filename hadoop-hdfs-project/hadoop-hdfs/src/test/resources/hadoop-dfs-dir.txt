@@ -19,18 +19,6 @@
 # See HADOOP-1629 for more info if needed.
 # These two files are used by unit test TestDFSUpgradeFromImage.java 
 # 
-# hadoop-14-dfs-dir.tgz : 
-# ---------------------
-# This file contains the HDFS directory structure for one namenode and 4 datanodes.
-# The structure is setup similar to the structure used in MiniDFSCluster.
-# The directory was created with Hadoo-0.14.x.
-#
-# In the test, this directory is unpacked and MiniDFSCluster is run with 
-# "-upgrade" option. The test waits for the upgrade to complete 
-# (leave safe mode) and then all the files are read. The test checks that the
-# directory structure and file checksums exactly match the information
-# in this file.
-#
 # hadoop-dfs-dir.txt :
 # ---------------------
 # Along with this description this file contains the expected files and 
@@ -42,9 +30,6 @@
 # A similar set of files exist in two different DFS directories. 
 # For e.g. "top-dir-1Mb-512" contains files created with dfs.blocksize of 1Mb 
 # and io.bytes.per.checksum of 512.
-#
-# In the future, when Hadoop project no longer supports upgrade from
-# Hadoop-0.12, then a new DFS directory image must be created.
 #
 # To generate checksum info for new files :
 # ---------------------------------------

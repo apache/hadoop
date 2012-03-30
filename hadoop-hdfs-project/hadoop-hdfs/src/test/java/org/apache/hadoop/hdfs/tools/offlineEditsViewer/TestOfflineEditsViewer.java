@@ -65,12 +65,11 @@ public class TestOfflineEditsViewer {
    *
    * These are the opcodes that are not used anymore, some
    * are marked deprecated, we need to include them here to make
-   * sure we exclude them when checking for completness of testing,
+   * sure we exclude them when checking for completeness of testing,
    * that's why the "deprecation" warnings are suppressed.
    */
   @SuppressWarnings("deprecation")
   private static void initializeObsoleteOpCodes() {
-    // these are obsolete
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_DATANODE_ADD, true);
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_DATANODE_REMOVE, true);
     obsoleteOpCodes.put(FSEditLogOpCodes.OP_SET_NS_QUOTA, true);

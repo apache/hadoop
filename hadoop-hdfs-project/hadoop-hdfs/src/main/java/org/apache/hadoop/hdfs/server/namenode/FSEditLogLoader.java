@@ -62,7 +62,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateBlocksOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.util.Holder;
-import org.apache.hadoop.io.IOUtils;
 
 import com.google.common.base.Joiner;
 
@@ -231,37 +230,13 @@ public class FSEditLogLoader {
         // get name and replication
         final short replication  = fsNamesys.getBlockManager(
             ).adjustReplication(addCloseOp.replication);
-        PermissionStatus permissions = fsNamesys.getUpgradePermission();
-        if (addCloseOp.permissions != null) {
-          permissions = addCloseOp.permissions;
-        }
-        long blockSize = addCloseOp.blockSize;
-
-        // Versions of HDFS prior to 0.17 may log an OP_ADD transaction
-        // which includes blocks in it. When we update the minimum
-        // upgrade version to something more recent than 0.17, we can
-        // simplify this code by asserting that OP_ADD transactions
-        // don't have any blocks.
-        
-        // Older versions of HDFS does not store the block size in inode.
-        // If the file has more than one block, use the size of the
-        // first block as the blocksize. Otherwise use the default
-        // block size.
-        if (-8 <= logVersion && blockSize == 0) {
-          if (addCloseOp.blocks.length > 1) {
-            blockSize = addCloseOp.blocks[0].getNumBytes();
-          } else {
-            long first = ((addCloseOp.blocks.length == 1)?
-                addCloseOp.blocks[0].getNumBytes(): 0);
-            blockSize = Math.max(fsNamesys.getDefaultBlockSize(), first);
-          }
-        }
+        assert addCloseOp.blocks.length == 0;
 
         // add to the file tree
         newFile = (INodeFile)fsDir.unprotectedAddFile(
-            addCloseOp.path, permissions,
+            addCloseOp.path, addCloseOp.permissions,
             replication, addCloseOp.mtime,
-            addCloseOp.atime, blockSize,
+            addCloseOp.atime, addCloseOp.blockSize,
             true, addCloseOp.clientName, addCloseOp.clientMachine);
         fsNamesys.leaseManager.addLease(addCloseOp.clientName, addCloseOp.path);
 
@@ -373,12 +348,7 @@ public class FSEditLogLoader {
     }
     case OP_MKDIR: {
       MkdirOp mkdirOp = (MkdirOp)op;
-      PermissionStatus permissions = fsNamesys.getUpgradePermission();
-      if (mkdirOp.permissions != null) {
-        permissions = mkdirOp.permissions;
-      }
-
-      fsDir.unprotectedMkdir(mkdirOp.path, permissions,
+      fsDir.unprotectedMkdir(mkdirOp.path, mkdirOp.permissions,
                              mkdirOp.timestamp);
       break;
     }
@@ -493,9 +463,6 @@ public class FSEditLogLoader {
       // no data in here currently.
       break;
     }
-    case OP_DATANODE_ADD:
-    case OP_DATANODE_REMOVE:
-      break;
     default:
       throw new IOException("Invalid operation read " + op.opCode);
     }

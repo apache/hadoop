@@ -52,7 +52,6 @@ public class TestDFSUpgradeFromImage extends TestCase {
       .getLog(TestDFSUpgradeFromImage.class);
   private static File TEST_ROOT_DIR =
                       new File(MiniDFSCluster.getBaseDirectory());
-  private static final String HADOOP14_IMAGE = "hadoop-14-dfs-dir.tgz";
   private static final String HADOOP_DFS_DIR_TXT = "hadoop-dfs-dir.txt";
   private static final String HADOOP22_IMAGE = "hadoop-22-dfs-dir.tgz";
   
@@ -68,10 +67,6 @@ public class TestDFSUpgradeFromImage extends TestCase {
   
   boolean printChecksum = false;
   
-  public void unpackStorage() throws IOException {
-    unpackStorage(HADOOP14_IMAGE);
-  }
-
   private void unpackStorage(String tarFileName)
       throws IOException {
     String tarFile = System.getProperty("test.cache.data", "build/test/cache")
@@ -225,14 +220,6 @@ public class TestDFSUpgradeFromImage extends TestCase {
         throw ioe;
       }
     }
-  }
-  
-  /**
-   * Test upgrade from an 0.14 image
-   */
-  public void testUpgradeFromRel14Image() throws IOException {
-    unpackStorage();
-    upgradeAndVerify();
   }
   
   /**

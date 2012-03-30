@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.DataInput;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
@@ -31,7 +29,6 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
@@ -39,7 +36,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ShortWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -107,13 +103,10 @@ public class FSImageSerialization {
     String clientName = readString(in);
     String clientMachine = readString(in);
 
-    // These locations are not used at all
+    // We previously stored locations for the last block, now we
+    // just record that there are none
     int numLocs = in.readInt();
-    DatanodeDescriptor[] locations = new DatanodeDescriptor[numLocs];
-    for (i = 0; i < numLocs; i++) {
-      locations[i] = new DatanodeDescriptor();
-      locations[i].readFields(in);
-    }
+    assert numLocs == 0 : "Unexpected block locations";
 
     return new INodeFileUnderConstruction(name, 
                                           blockReplication, 
@@ -319,54 +312,5 @@ public class FSImageSerialization {
       prev = ret[i];
     }
     return ret;
-  }
-
-  /**
-   * DatanodeImage is used to store persistent information
-   * about datanodes into the fsImage.
-   */
-  static class DatanodeImage implements Writable {
-    DatanodeDescriptor node = new DatanodeDescriptor();
-
-    static void skipOne(DataInput in) throws IOException {
-      DatanodeImage nodeImage = new DatanodeImage();
-      nodeImage.readFields(in);
-    }
-
-    /////////////////////////////////////////////////
-    // Writable
-    /////////////////////////////////////////////////
-    /**
-     * Public method that serializes the information about a
-     * Datanode to be stored in the fsImage.
-     */
-    public void write(DataOutput out) throws IOException {
-      new DatanodeID(node).write(out);
-      out.writeLong(node.getCapacity());
-      out.writeLong(node.getRemaining());
-      out.writeLong(node.getLastUpdate());
-      out.writeInt(node.getXceiverCount());
-    }
-
-    /**
-     * Public method that reads a serialized Datanode
-     * from the fsImage.
-     */
-    public void readFields(DataInput in) throws IOException {
-      DatanodeID id = new DatanodeID();
-      id.readFields(in);
-      long capacity = in.readLong();
-      long remaining = in.readLong();
-      long lastUpdate = in.readLong();
-      int xceiverCount = in.readInt();
-
-      // update the DatanodeDescriptor with the data we read in
-      node.updateRegInfo(id);
-      node.setStorageID(id.getStorageID());
-      node.setCapacity(capacity);
-      node.setRemaining(remaining);
-      node.setLastUpdate(lastUpdate);
-      node.setXceiverCount(xceiverCount);
-    }
   }
 }
