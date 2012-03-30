@@ -81,9 +81,15 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    */
   public interface ActiveStandbyElectorCallback {
     /**
-     * This method is called when the app becomes the active leader
+     * This method is called when the app becomes the active leader.
+     * If the service fails to become active, it should throw
+     * ServiceFailedException. This will cause the elector to
+     * sleep for a short period, then re-join the election.
+     * 
+     * Callback implementations are expected to manage their own
+     * timeouts (e.g. when making an RPC to a remote node).
      */
-    void becomeActive();
+    void becomeActive() throws ServiceFailedException;
 
     /**
      * This method is called when the app becomes a standby
@@ -135,6 +141,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   public static final Log LOG = LogFactory.getLog(ActiveStandbyElector.class);
 
   private static final int NUM_RETRIES = 3;
+  private static final int SLEEP_AFTER_FAILURE_TO_BECOME_ACTIVE = 1000;
 
   private static enum ConnectionState {
     DISCONNECTED, CONNECTED, TERMINATED
@@ -385,8 +392,11 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     Code code = Code.get(rc);
     if (isSuccess(code)) {
       // we successfully created the znode. we are the leader. start monitoring
-      becomeActive();
-      monitorActiveStatus();
+      if (becomeActive()) {
+        monitorActiveStatus();
+      } else {
+        reJoinElectionAfterFailureToBecomeActive();
+      }
       return;
     }
 
@@ -442,7 +452,9 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
       // creation was retried
       if (stat.getEphemeralOwner() == zkClient.getSessionId()) {
         // we own the lock znode. so we are the leader
-        becomeActive();
+        if (!becomeActive()) {
+          reJoinElectionAfterFailureToBecomeActive();
+        }
       } else {
         // we dont own the lock znode. so we are a standby.
         becomeStandby();
@@ -477,6 +489,17 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     }
 
     fatalError(errorMessage);
+  }
+
+  /**
+   * We failed to become active. Re-join the election, but
+   * sleep for a few seconds after terminating our existing
+   * session, so that other nodes have a chance to become active.
+   * The failure to become active is already logged inside
+   * becomeActive().
+   */
+  private void reJoinElectionAfterFailureToBecomeActive() {
+    reJoinElection(SLEEP_AFTER_FAILURE_TO_BECOME_ACTIVE);
   }
 
   /**
@@ -516,7 +539,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
         // call listener to reconnect
         LOG.info("Session expired. Entering neutral mode and rejoining...");
         enterNeutralMode();
-        reJoinElection();
+        reJoinElection(0);
         break;
       default:
         fatalError("Unexpected Zookeeper watch event state: "
@@ -591,7 +614,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     createLockNodeAsync();
   }
 
-  private void reJoinElection() {
+  private void reJoinElection(int sleepTime) {
     LOG.info("Trying to re-establish ZK session");
     
     // Some of the test cases rely on expiring the ZK sessions and
@@ -604,12 +627,30 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     sessionReestablishLockForTests.lock();
     try {
       terminateConnection();
+      sleepFor(sleepTime);
+      
       joinElectionInternal();
     } finally {
       sessionReestablishLockForTests.unlock();
     }
   }
-  
+
+  /**
+   * Sleep for the given number of milliseconds.
+   * This is non-static, and separated out, so that unit tests
+   * can override the behavior not to sleep.
+   */
+  @VisibleForTesting
+  protected void sleepFor(int sleepMs) {
+    if (sleepMs > 0) {
+      try {
+        Thread.sleep(sleepMs);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
   @VisibleForTesting
   void preventSessionReestablishmentForTests() {
     sessionReestablishLockForTests.lock();
@@ -640,11 +681,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
         success = true;
       } catch(IOException e) {
         LOG.warn(e);
-        try {
-          Thread.sleep(5000);
-        } catch(InterruptedException e1) {
-          LOG.warn(e1);
-        }
+        sleepFor(5000);
       }
       ++connectionRetryCount;
     }
@@ -675,20 +712,24 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     terminateConnection();
   }
 
-  private void becomeActive() {
+  private boolean becomeActive() {
     assert wantToBeInElection;
-    if (state != State.ACTIVE) {
-      try {
-        Stat oldBreadcrumbStat = fenceOldActive();
-        writeBreadCrumbNode(oldBreadcrumbStat);
-      } catch (Exception e) {
-        LOG.warn("Exception handling the winning of election", e);
-        reJoinElection();
-        return;
-      }
+    if (state == State.ACTIVE) {
+      // already active
+      return true;
+    }
+    try {
+      Stat oldBreadcrumbStat = fenceOldActive();
+      writeBreadCrumbNode(oldBreadcrumbStat);
+      
       LOG.debug("Becoming active");
-      state = State.ACTIVE;
       appClient.becomeActive();
+      state = State.ACTIVE;
+      return true;
+    } catch (Exception e) {
+      LOG.warn("Exception handling the winning of election", e);
+      // Caller will handle quitting and rejoining the election.
+      return false;
     }
   }
 

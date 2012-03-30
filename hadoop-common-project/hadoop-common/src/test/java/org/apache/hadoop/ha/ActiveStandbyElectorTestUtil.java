@@ -19,16 +19,25 @@ package org.apache.hadoop.ha;
 
 import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.ZooKeeperServer;
 
 public abstract class ActiveStandbyElectorTestUtil {
+  
+  private static final Log LOG = LogFactory.getLog(
+      ActiveStandbyElectorTestUtil.class);
+  private static final long LOG_INTERVAL_MS = 500;
 
   public static void waitForActiveLockData(TestContext ctx,
       ZooKeeperServer zks, String parentDir, byte[] activeData)
       throws Exception {
+    long st = System.currentTimeMillis();
+    long lastPrint = st;
     while (true) {
       if (ctx != null) {
         ctx.checkException();
@@ -42,9 +51,17 @@ public abstract class ActiveStandbyElectorTestUtil {
             Arrays.equals(activeData, data)) {
           return;
         }
+        if (System.currentTimeMillis() > lastPrint + LOG_INTERVAL_MS) {
+          LOG.info("Cur data: " + StringUtils.byteToHexString(data));
+          lastPrint = System.currentTimeMillis();
+        }
       } catch (NoNodeException nne) {
         if (activeData == null) {
           return;
+        }
+        if (System.currentTimeMillis() > lastPrint + LOG_INTERVAL_MS) {
+          LOG.info("Cur data: no node");
+          lastPrint = System.currentTimeMillis();
         }
       }
       Thread.sleep(50);

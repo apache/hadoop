@@ -242,15 +242,20 @@ public abstract class ZKFailoverController implements Tool {
     notifyAll();
   }
   
-  private synchronized void becomeActive() {
+  private synchronized void becomeActive() throws ServiceFailedException {
     LOG.info("Trying to make " + localTarget + " active...");
     try {
-      localTarget.getProxy().transitionToActive();
+      HAServiceProtocolHelper.transitionToActive(localTarget.getProxy());
       LOG.info("Successfully transitioned " + localTarget +
           " to active state");
     } catch (Throwable t) {
       LOG.fatal("Couldn't make " + localTarget + " active", t);
-      elector.quitElection(true);
+      if (t instanceof ServiceFailedException) {
+        throw (ServiceFailedException)t;
+      } else {
+        throw new ServiceFailedException("Couldn't transition to active",
+            t);
+      }
 /*
 * TODO:
 * we need to make sure that if we get fenced and then quickly restarted,
@@ -297,7 +302,7 @@ public abstract class ZKFailoverController implements Tool {
    */
   class ElectorCallbacks implements ActiveStandbyElectorCallback {
     @Override
-    public void becomeActive() {
+    public void becomeActive() throws ServiceFailedException {
       ZKFailoverController.this.becomeActive();
     }
 

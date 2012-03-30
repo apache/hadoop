@@ -273,7 +273,8 @@ public class TestZKFailoverController extends ClientBase {
       waitForHealthState(thr1.zkfc, State.SERVICE_UNHEALTHY);
       waitForActiveLockHolder(null);
 
-      Mockito.verify(svc2.proxy).transitionToActive();
+      Mockito.verify(svc2.proxy, Mockito.timeout(2000).atLeastOnce())
+        .transitionToActive();
 
       waitForHAState(svc1, HAServiceState.STANDBY);
       waitForHAState(svc2, HAServiceState.STANDBY);
@@ -283,6 +284,12 @@ public class TestZKFailoverController extends ClientBase {
       waitForHAState(svc1, HAServiceState.ACTIVE);
       waitForHAState(svc2, HAServiceState.STANDBY);
       waitForActiveLockHolder(svc1);
+      
+      // Ensure that we can fail back to thr2 once it it is able
+      // to become active (e.g the admin has restarted it)
+      LOG.info("Allowing svc2 to become active, expiring svc1");
+      svc2.failToBecomeActive = false;
+      expireAndVerifyFailover(thr1, thr2);
     } finally {
       stopFCs();
     }
