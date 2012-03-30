@@ -97,6 +97,8 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-3916. various issues with running yarn proxyserver (devaraj via tucu)
 
+    MAPREDUCE-4091. tools testcases failing because of MAPREDUCE-4082 (tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
