@@ -95,6 +95,8 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4082. hadoop-mapreduce-client-app's mrapp-generated-classpath 
     file should not be in the module JAR (tucu)
 
+    MAPREDUCE-3916. various issues with running yarn proxyserver (devaraj via tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
