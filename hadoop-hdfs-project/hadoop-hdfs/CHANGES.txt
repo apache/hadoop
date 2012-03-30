@@ -9,6 +9,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-2303. Unbundle jsvc. (Roman Shaposhnik and Mingjie Lai via eli)
 
     HDFS-3137. Bump LAST_UPGRADABLE_LAYOUT_VERSION to -16. (eli)
+    
+    HDFS-3138. Move DatanodeInfo#ipcPort to DatanodeID. (eli)
 
   NEW FEATURES
 
