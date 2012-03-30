@@ -86,6 +86,11 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
+        <configuration>
+          <excludes>
+            <exclude>mrapp-generated-classpath</exclude>
+          </excludes>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>
@@ -97,7 +102,7 @@
               <goal>build-classpath</goal>
             </goals>
             <configuration>
-              <outputFile>target/test-classes/mrapp-generated-classpath</outputFile>
+              <outputFile>target/classes/mrapp-generated-classpath</outputFile>
             </configuration>
           </execution>
         </executions>
