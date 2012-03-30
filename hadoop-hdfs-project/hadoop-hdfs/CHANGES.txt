@@ -8,6 +8,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2303. Unbundle jsvc. (Roman Shaposhnik and Mingjie Lai via eli)
 
+    HDFS-3137. Bump LAST_UPGRADABLE_LAYOUT_VERSION to -16. (eli)
+
   NEW FEATURES
 
     HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)

@@ -877,14 +877,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_DEFAULT);
   }
 
-  /**
-   * Return the default path permission when upgrading from releases with no
-   * permissions (<=0.15) to releases with permissions (>=0.16)
-   */
-  protected PermissionStatus getUpgradePermission() {
-    return defaultPermission;
-  }
-  
   NamespaceInfo getNamespaceInfo() {
     readLock();
     try {

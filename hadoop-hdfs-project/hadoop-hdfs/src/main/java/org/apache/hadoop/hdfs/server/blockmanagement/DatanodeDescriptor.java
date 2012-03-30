@@ -440,23 +440,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
-  /** Serialization for FSEditLog */
-  public void readFieldsFromFSEditLog(DataInput in) throws IOException {
-    this.name = DeprecatedUTF8.readString(in);
-    this.storageID = DeprecatedUTF8.readString(in);
-    this.infoPort = in.readShort() & 0x0000ffff;
-
-    this.capacity = in.readLong();
-    this.dfsUsed = in.readLong();
-    this.remaining = in.readLong();
-    this.blockPoolUsed = in.readLong();
-    this.lastUpdate = in.readLong();
-    this.xceiverCount = in.readInt();
-    this.location = Text.readString(in);
-    this.hostName = Text.readString(in);
-    setAdminState(WritableUtils.readEnum(in, AdminStates.class));
-  }
-  
   /**
    * @return Approximate number of blocks currently scheduled to be written 
    * to this datanode.
