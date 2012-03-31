@@ -184,6 +184,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3158. LiveNodes member of NameNodeMXBean should list non-DFS used
     space and capacity per DN. (atm)
 
+    HDFS-3172. dfs.upgrade.permission is dead code. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
