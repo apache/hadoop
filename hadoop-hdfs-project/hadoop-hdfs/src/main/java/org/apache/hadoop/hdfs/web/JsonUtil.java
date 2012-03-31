@@ -306,6 +306,7 @@ public class JsonUtil {
 
     return new DatanodeInfo(
         (String)m.get("name"),
+        (String)m.get("hostName"),
         (String)m.get("storageID"),
         (int)(long)(Long)m.get("infoPort"),
         (int)(long)(Long)m.get("ipcPort"),
@@ -317,7 +318,6 @@ public class JsonUtil {
         (Long)m.get("lastUpdate"),
         (int)(long)(Long)m.get("xceiverCount"),
         (String)m.get("networkLocation"),
-        (String)m.get("hostName"),
         AdminStates.valueOf((String)m.get("adminState")));
   }
 

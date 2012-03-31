@@ -2620,7 +2620,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     StringBuilder nodeList = new StringBuilder();
     while (nodeIter.hasNext()) {
       DatanodeDescriptor node = nodeIter.next();
-      nodeList.append(node.name);
+      nodeList.append(node.getName());
       nodeList.append(" ");
     }
     LOG.info("Block: " + block + ", Expected Replicas: "
@@ -2630,7 +2630,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         + ", excess replicas: " + num.excessReplicas()
         + ", Is Open File: " + fileINode.isUnderConstruction()
         + ", Datanodes having this block: " + nodeList + ", Current Datanode: "
-        + srcNode.name + ", Is current datanode decommissioning: "
+        + srcNode.getName() + ", Is current datanode decommissioning: "
         + srcNode.isDecommissionInProgress());
   }
   

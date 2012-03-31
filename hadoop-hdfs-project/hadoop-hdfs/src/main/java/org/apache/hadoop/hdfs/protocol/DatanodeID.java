@@ -24,7 +24,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DeprecatedUTF8;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -38,16 +38,17 @@ import org.apache.hadoop.io.WritableComparable;
 public class DatanodeID implements WritableComparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {}; 
 
-  public String name;       // hostname:port (data transfer port)
-  public String storageID;  // unique per cluster storageID
-  protected int infoPort;   // info server port
-  public int ipcPort;       // ipc server port
+  protected String name;       // IP:port (data transfer port)
+  protected String hostName;   // hostname
+  protected String storageID;  // unique per cluster storageID
+  protected int infoPort;      // info server port
+  protected int ipcPort;       // IPC server port
 
   /** Equivalent to DatanodeID(""). */
   public DatanodeID() {this("");}
 
   /** Equivalent to DatanodeID(nodeName, "", -1, -1). */
-  public DatanodeID(String nodeName) {this(nodeName, "", -1, -1);}
+  public DatanodeID(String nodeName) {this(nodeName, "", "", -1, -1);}
 
   /**
    * DatanodeID copy constructor
@@ -56,6 +57,7 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
    */
   public DatanodeID(DatanodeID from) {
     this(from.getName(),
+        from.getHostName(),
         from.getStorageID(),
         from.getInfoPort(),
         from.getIpcPort());
@@ -63,14 +65,16 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   
   /**
    * Create DatanodeID
-   * @param nodeName (hostname:portNumber) 
+   * @param node IP:port
+   * @param hostName hostname
    * @param storageID data storage ID
    * @param infoPort info server port 
    * @param ipcPort ipc server port
    */
-  public DatanodeID(String nodeName, String storageID,
-      int infoPort, int ipcPort) {
-    this.name = nodeName;
+  public DatanodeID(String name, String hostName,
+      String storageID, int infoPort, int ipcPort) {
+    this.name = name;
+    this.hostName = hostName;
     this.storageID = storageID;
     this.infoPort = infoPort;
     this.ipcPort = ipcPort;
@@ -78,6 +82,10 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   
   public void setName(String name) {
     this.name = name;
+  }
+
+  public void setHostName(String hostName) {
+    this.hostName = hostName;
   }
 
   public void setInfoPort(int infoPort) {
@@ -94,7 +102,14 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   public String getName() {
     return name;
   }
-  
+
+  /**
+   * @return hostname
+   */
+  public String getHostName() {
+    return (hostName == null || hostName.length() == 0) ? getHost() : hostName;
+  }
+
   /**
    * @return data storage ID.
    */
@@ -186,17 +201,19 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   /////////////////////////////////////////////////
   @Override
   public void write(DataOutput out) throws IOException {
-    DeprecatedUTF8.writeString(out, name);
-    DeprecatedUTF8.writeString(out, storageID);
+    Text.writeString(out, name);
+    Text.writeString(out, hostName);
+    Text.writeString(out, storageID);
     out.writeShort(infoPort);
     out.writeShort(ipcPort);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    name = DeprecatedUTF8.readString(in);
-    storageID = DeprecatedUTF8.readString(in);
-    // the infoPort read could be negative, if the port is a large number (more
+    name = Text.readString(in);
+    hostName = Text.readString(in);
+    storageID = Text.readString(in);
+    // The port read could be negative, if the port is a large number (more
     // than 15 bits in storage size (but less than 16 bits).
     // So chop off the first two bytes (and hence the signed bits) before 
     // setting the field.

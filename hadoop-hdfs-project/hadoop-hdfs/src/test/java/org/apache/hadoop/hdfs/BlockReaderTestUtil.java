@@ -158,7 +158,7 @@ public class BlockReaderTestUtil {
    */
   public DataNode getDataNode(LocatedBlock testBlock) {
     DatanodeInfo[] nodes = testBlock.getLocations();
-    int ipcport = nodes[0].ipcPort;
+    int ipcport = nodes[0].getIpcPort();
     return cluster.getDataNode(ipcport);
   }
 

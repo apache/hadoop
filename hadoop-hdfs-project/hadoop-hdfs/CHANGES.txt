@@ -12,6 +12,8 @@ Release 2.0.0 - UNRELEASED
     
     HDFS-3138. Move DatanodeInfo#ipcPort to DatanodeID. (eli)
 
+    HDFS-3164. Move DatanodeInfo#hostName to DatanodeID. (eli)
+
   NEW FEATURES
 
     HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)

@@ -179,19 +179,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
-    this(nodeID, networkLocation, null);
-  }
-  
-  /** DatanodeDescriptor constructor
-   * 
-   * @param nodeID id of the data node
-   * @param networkLocation location of the data node in network
-   * @param hostName it could be different from host specified for DatanodeID
-   */
-  public DatanodeDescriptor(DatanodeID nodeID, 
-                            String networkLocation,
-                            String hostName) {
-    this(nodeID, networkLocation, hostName, 0L, 0L, 0L, 0L, 0, 0);
+    this(nodeID, networkLocation, 0L, 0L, 0L, 0L, 0, 0);
   }
   
   /** DatanodeDescriptor constructor
@@ -227,14 +215,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID,
                             String networkLocation,
-                            String hostName,
                             long capacity,
                             long dfsUsed,
                             long remaining,
                             long bpused,
                             int xceiverCount,
                             int failedVolumes) {
-    super(nodeID, networkLocation, hostName);
+    super(nodeID, networkLocation);
     updateHeartbeat(capacity, dfsUsed, remaining, bpused, xceiverCount, 
         failedVolumes);
   }

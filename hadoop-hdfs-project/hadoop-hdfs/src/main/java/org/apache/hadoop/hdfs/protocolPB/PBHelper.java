@@ -204,12 +204,13 @@ public class PBHelper {
 
   // DatanodeId
   public static DatanodeID convert(DatanodeIDProto dn) {
-    return new DatanodeID(dn.getName(), dn.getStorageID(), dn.getInfoPort(),
+    return new DatanodeID(dn.getName(), dn.getHostName(), dn.getStorageID(), dn.getInfoPort(),
         dn.getIpcPort());
   }
 
   public static DatanodeIDProto convert(DatanodeID dn) {
-    return DatanodeIDProto.newBuilder().setName(dn.getName())
+    return DatanodeIDProto.newBuilder()
+        .setName(dn.getName()).setHostName(dn.getHostName())
         .setInfoPort(dn.getInfoPort()).setIpcPort(dn.getIpcPort())
         .setStorageID(dn.getStorageID()).build();
   }
@@ -442,7 +443,6 @@ public class PBHelper {
     return new DatanodeInfo(
         PBHelper.convert(di.getId()),
         di.hasLocation() ? di.getLocation() : null , 
-        di.hasHostName() ? di.getHostName() : null,
         di.getCapacity(),  di.getDfsUsed(),  di.getRemaining(),
         di.getBlockPoolUsed()  ,  di.getLastUpdate() , di.getXceiverCount() ,
         PBHelper.convert(di.getAdminState())); 
@@ -451,9 +451,6 @@ public class PBHelper {
   static public DatanodeInfoProto convertDatanodeInfo(DatanodeInfo di) {
     if (di == null) return null;
     DatanodeInfoProto.Builder builder = DatanodeInfoProto.newBuilder();
-    if (di.getHostName() != null) {
-      builder.setHostName(di.getHostName());
-    }
     if (di.getNetworkLocation() != null) {
       builder.setLocation(di.getNetworkLocation());
     }
@@ -503,7 +500,6 @@ public class PBHelper {
     builder.setAdminState(PBHelper.convert(info.getAdminState()));
     builder.setCapacity(info.getCapacity())
         .setDfsUsed(info.getDfsUsed())
-        .setHostName(info.getHostName())
         .setId(PBHelper.convert((DatanodeID)info))
         .setLastUpdate(info.getLastUpdate())
         .setLocation(info.getNetworkLocation())
