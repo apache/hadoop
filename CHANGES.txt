@@ -2,6 +2,11 @@ Hadoop Change Log
 
 Release 1.1.0 - unreleased
 
+  INCOMPATIBLE CHANGES
+
+    HDFS-3044. fsck move should be non-destructive by default.
+    (Colin Patrick McCabe via eli)
+
   NEW FEATURES
 
     MAPREDUCE-3118. Backport Gridmix and Rumen features to
