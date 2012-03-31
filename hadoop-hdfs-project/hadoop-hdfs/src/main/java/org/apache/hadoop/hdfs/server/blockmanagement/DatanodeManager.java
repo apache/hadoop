@@ -564,6 +564,7 @@ public class DatanodeManager {
       
     // update the datanode's name with ip:port
     DatanodeID dnReg = new DatanodeID(dnAddress + ":" + nodeReg.getPort(),
+                                      hostName,
                                       nodeReg.getStorageID(),
                                       nodeReg.getInfoPort(),
                                       nodeReg.getIpcPort());
@@ -630,10 +631,10 @@ public class DatanodeManager {
     } 
 
     // this is a new datanode serving a new data storage
-    if (nodeReg.getStorageID().equals("")) {
+    if ("".equals(nodeReg.getStorageID())) {
       // this data storage has never been registered
       // it is either empty or was created by pre-storageID version of DFS
-      nodeReg.storageID = newStorageID();
+      nodeReg.setStorageID(newStorageID());
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug(
             "BLOCK* NameSystem.registerDatanode: "
@@ -642,7 +643,7 @@ public class DatanodeManager {
     }
     // register new datanode
     DatanodeDescriptor nodeDescr 
-      = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK, hostName);
+      = new DatanodeDescriptor(nodeReg, NetworkTopology.DEFAULT_RACK);
     resolveNetworkLocation(nodeDescr);
     addDatanode(nodeDescr);
     checkDecommissioning(nodeDescr, dnAddress);

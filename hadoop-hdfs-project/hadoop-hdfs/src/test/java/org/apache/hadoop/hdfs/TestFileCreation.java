@@ -844,7 +844,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       LocatedBlock locatedblock = locations.getLocatedBlocks().get(0);
       int successcount = 0;
       for(DatanodeInfo datanodeinfo: locatedblock.getLocations()) {
-        DataNode datanode = cluster.getDataNode(datanodeinfo.ipcPort);
+        DataNode datanode = cluster.getDataNode(datanodeinfo.getIpcPort());
         ExtendedBlock blk = locatedblock.getBlock();
         Block b = DataNodeTestUtils.getFSDataset(datanode).getStoredBlock(
             blk.getBlockPoolId(), blk.getBlockId());

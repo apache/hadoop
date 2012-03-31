@@ -240,7 +240,7 @@ class BlockReaderLocal implements BlockReader {
   private static BlockLocalPathInfo getBlockPathInfo(ExtendedBlock blk,
       DatanodeInfo node, Configuration conf, int timeout,
       Token<BlockTokenIdentifier> token) throws IOException {
-    LocalDatanodeInfo localDatanodeInfo = getLocalDatanodeInfo(node.ipcPort);
+    LocalDatanodeInfo localDatanodeInfo = getLocalDatanodeInfo(node.getIpcPort());
     BlockLocalPathInfo pathinfo = null;
     ClientDatanodeProtocol proxy = localDatanodeInfo.getDatanodeProxy(node,
         conf, timeout);

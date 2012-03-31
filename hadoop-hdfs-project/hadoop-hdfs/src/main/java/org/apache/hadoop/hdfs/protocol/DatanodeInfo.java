@@ -51,9 +51,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
   protected long lastUpdate;
   protected int xceiverCount;
   protected String location = NetworkTopology.DEFAULT_RACK;
-
-  // The FQDN of the IP associated with the Datanode's hostname
-  protected String hostName = null;
   
   // Datanode administrative states
   public enum AdminStates {
@@ -110,30 +107,27 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.adminState = null;    
   }
   
-  public DatanodeInfo(DatanodeID nodeID, String location, String hostName) {
+  public DatanodeInfo(DatanodeID nodeID, String location) {
     this(nodeID);
     this.location = location;
-    this.hostName = hostName;
   }
   
-  public DatanodeInfo(DatanodeID nodeID, String location, String hostName,
+  public DatanodeInfo(DatanodeID nodeID, String location,
       final long capacity, final long dfsUsed, final long remaining,
       final long blockPoolUsed, final long lastUpdate, final int xceiverCount,
       final AdminStates adminState) {
-    this(nodeID.getName(), nodeID.getStorageID(), nodeID.getInfoPort(), nodeID
+    this(nodeID.getName(), nodeID.getHostName(), nodeID.getStorageID(), nodeID.getInfoPort(), nodeID
         .getIpcPort(), capacity, dfsUsed, remaining, blockPoolUsed, lastUpdate,
-        xceiverCount, location, hostName, adminState);
+        xceiverCount, location, adminState);
   }
 
   /** Constructor */
-  public DatanodeInfo(final String name, final String storageID,
-      final int infoPort, final int ipcPort,
+  public DatanodeInfo(final String name, final String hostName,
+      final String storageID, final int infoPort, final int ipcPort,
       final long capacity, final long dfsUsed, final long remaining,
       final long blockPoolUsed, final long lastUpdate, final int xceiverCount,
-      final String networkLocation, final String hostName,
-      final AdminStates adminState) {
-    super(name, storageID, infoPort, ipcPort);
-
+      final String networkLocation, final AdminStates adminState) {
+    super(name, hostName, storageID, infoPort, ipcPort);
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
     this.remaining = remaining;
@@ -141,7 +135,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.lastUpdate = lastUpdate;
     this.xceiverCount = xceiverCount;
     this.location = networkLocation;
-    this.hostName = hostName;
     this.adminState = adminState;
   }
   
@@ -221,15 +214,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public synchronized void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
-  
-  public String getHostName() {
-    return (hostName == null || hostName.length()==0) ? getHost() : hostName;
-  }
-  
-  public void setHostName(String host) {
-    hostName = host;
-  }
-  
+    
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
     StringBuilder buffer = new StringBuilder();
@@ -387,7 +372,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
     out.writeLong(lastUpdate);
     out.writeInt(xceiverCount);
     Text.writeString(out, location);
-    Text.writeString(out, hostName == null? "": hostName);
     WritableUtils.writeEnum(out, getAdminState());
   }
 
@@ -401,7 +385,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();
     this.location = Text.readString(in);
-    this.hostName = Text.readString(in);
     setAdminState(WritableUtils.readEnum(in, AdminStates.class));
   }
 

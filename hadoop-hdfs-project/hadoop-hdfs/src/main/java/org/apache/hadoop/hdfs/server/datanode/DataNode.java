@@ -164,8 +164,8 @@ import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
 import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
-
 
 /**********************************************************
  * DataNode is a class (and program) that stores a set of
@@ -947,7 +947,7 @@ public class DataNode extends Configured
   
   public static void setNewStorageID(DatanodeID dnId) {
     LOG.info("Datanode is " + dnId);
-    dnId.storageID = createNewStorageId(dnId.getPort());
+    dnId.setStorageID(createNewStorageId(dnId.getPort()));
   }
   
   static String createNewStorageId(int port) {
@@ -2204,9 +2204,9 @@ public class DataNode extends Configured
     return true;
   }
   
-  /** Methods used by fault injection tests */
+  @VisibleForTesting
   public DatanodeID getDatanodeId() {
-    return new DatanodeID(getMachineName(), getStorageId(),
+    return new DatanodeID(getMachineName(), hostName, getStorageId(),
         infoServer.getPort(), getIpcPort());
   }
 
