@@ -156,10 +156,11 @@ class GenerateDistCacheData extends GridmixJob {
       FSDataOutputStream dos =
           FileSystem.create(fs, path, new FsPermission((short)0755));
 
-      for (long bytes = key.get(); bytes > 0; bytes -= val.getLength()) {
+      int size = 0;
+      for (long bytes = key.get(); bytes > 0; bytes -= size) {
         r.nextBytes(val.getBytes());
-        val.setSize((int)Math.min(val.getLength(), bytes));
-        dos.write(val.getBytes(), 0, val.getLength());// Write to distCache file
+        size = (int)Math.min(val.getLength(), bytes);
+        dos.write(val.getBytes(), 0, size);// Write to distCache file
       }
       dos.close();
     }

@@ -52,6 +52,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
+                    become slow in some cases (ravigummadi).
+
     MAPREDUCE-3953. [Gridmix] Gridmix throws NPE and does not simulate a
                     job if the trace contains null taskStatus for a task.
                     (ravigummadi)
