@@ -239,11 +239,6 @@ to the web server.</p>
 	<br />The name of the group of super-users.
 	</li>
 
-	<li><code>dfs.namenode.upgrade.permission = 0777</code>
-	<br />The choice of initial mode during upgrade. The <em>x</em> permission is <em>never</em> set for files. 
-		For configuration files, the decimal value <em>511<sub>10</sub></em> may be used.
-    </li>
-    
 	<li><code>fs.permissions.umask-mode = 022</code>
     <br />The <code>umask</code> used when creating files and directories. For configuration files, the decimal 
 		value <em>18<sub>10</sub></em> may be used.
