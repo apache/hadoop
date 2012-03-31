@@ -51,6 +51,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -1550,7 +1551,7 @@ public class Balancer {
    */
   public static void main(String[] args) {
     try {
-      System.exit(ToolRunner.run(null, new Cli(), args));
+      System.exit(ToolRunner.run(new HdfsConfiguration(), new Cli(), args));
     } catch (Throwable e) {
       LOG.error("Exiting balancer due an exception", e);
       System.exit(-1);
