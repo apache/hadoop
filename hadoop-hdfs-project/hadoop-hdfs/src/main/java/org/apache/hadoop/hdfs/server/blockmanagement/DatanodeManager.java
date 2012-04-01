@@ -337,7 +337,7 @@ public class DatanodeManager {
   }
 
   /** Physically remove node from datanodeMap. */
-  private void wipeDatanode(final DatanodeID node) throws IOException {
+  private void wipeDatanode(final DatanodeID node) {
     final String key = node.getStorageID();
     synchronized (datanodeMap) {
       host2DatanodeMap.remove(datanodeMap.remove(key));
@@ -481,8 +481,7 @@ public class DatanodeManager {
   /**
    * Decommission the node if it is in exclude list.
    */
-  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr) 
-    throws IOException {
+  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr) { 
     // If the registered node is in exclude list, then decommission it
     if (inExcludedHostsList(nodeReg, ipAddr)) {
       startDecommission(nodeReg);
@@ -506,7 +505,7 @@ public class DatanodeManager {
   }
 
   /** Start decommissioning the specified datanode. */
-  private void startDecommission(DatanodeDescriptor node) throws IOException {
+  private void startDecommission(DatanodeDescriptor node) {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       LOG.info("Start Decommissioning node " + node.getName() + " with " + 
           node.numBlocks() +  " blocks.");
@@ -519,7 +518,7 @@ public class DatanodeManager {
   }
 
   /** Stop decommissioning the specified datanodes. */
-  void stopDecommission(DatanodeDescriptor node) throws IOException {
+  void stopDecommission(DatanodeDescriptor node) {
     if (node.isDecommissionInProgress() || node.isDecommissioned()) {
       LOG.info("Stop Decommissioning node " + node.getName());
       heartbeatManager.stopDecommission(node);
@@ -545,8 +544,16 @@ public class DatanodeManager {
     return newID;
   }
 
-  public void registerDatanode(DatanodeRegistration nodeReg
-      ) throws IOException {
+  /**
+   * Register the given datanode with the namenode. NB: the given
+   * registration is mutated and given back to the datanode.
+   *
+   * @param nodeReg the datanode registration
+   * @throws DisallowedDatanodeException if the registration request is
+   *    denied because the datanode does not match includes/excludes
+   */
+  public void registerDatanode(DatanodeRegistration nodeReg)
+      throws DisallowedDatanodeException {
     String dnAddress = Server.getRemoteAddress();
     if (dnAddress == null) {
       // Mostly called inside an RPC.
@@ -560,16 +567,10 @@ public class DatanodeManager {
       throw new DisallowedDatanodeException(nodeReg);
     }
 
-    String hostName = nodeReg.getHost();
-      
-    // update the datanode's name with ip:port
-    DatanodeID dnReg = new DatanodeID(dnAddress + ":" + nodeReg.getPort(),
-                                      hostName,
-                                      nodeReg.getStorageID(),
-                                      nodeReg.getInfoPort(),
-                                      nodeReg.getIpcPort());
-    nodeReg.updateRegInfo(dnReg);
-    nodeReg.exportedKeys = blockManager.getBlockKeys();
+    // Update "name" with the IP address of the RPC request that
+    // is registering this datanode.
+    nodeReg.setName(dnAddress + ":" + nodeReg.getPort());
+    nodeReg.setExportedKeys(blockManager.getBlockKeys());
       
     NameNode.stateChangeLog.info("BLOCK* NameSystem.registerDatanode: "
         + "node registration from " + nodeReg.getName()
@@ -617,7 +618,6 @@ public class DatanodeManager {
       // update cluster map
       getNetworkTopology().remove(nodeS);
       nodeS.updateRegInfo(nodeReg);
-      nodeS.setHostName(hostName);
       nodeS.setDisallowed(false); // Node is in the include list
       
       // resolve network location
@@ -635,7 +635,7 @@ public class DatanodeManager {
       // this data storage has never been registered
       // it is either empty or was created by pre-storageID version of DFS
       nodeReg.setStorageID(newStorageID());
-      if(NameNode.stateChangeLog.isDebugEnabled()) {
+      if (NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug(
             "BLOCK* NameSystem.registerDatanode: "
             + "new storageID " + nodeReg.getStorageID() + " assigned.");

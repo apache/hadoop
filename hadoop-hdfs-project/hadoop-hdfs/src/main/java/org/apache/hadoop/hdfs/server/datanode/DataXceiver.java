@@ -168,13 +168,13 @@ class DataXceiver extends Receiver implements Runnable {
         ++opsProcessed;
       } while (!s.isClosed() && dnConf.socketKeepaliveTimeout > 0);
     } catch (Throwable t) {
-      LOG.error(datanode.getMachineName() + ":DataXceiver error processing " +
+      LOG.error(datanode.getDisplayName() + ":DataXceiver error processing " +
                 ((op == null) ? "unknown" : op.name()) + " operation " +
                 " src: " + remoteAddress +
                 " dest: " + localAddress, t);
     } finally {
       if (LOG.isDebugEnabled()) {
-        LOG.debug(datanode.getMachineName() + ":Number of active connections is: "
+        LOG.debug(datanode.getDisplayName() + ":Number of active connections is: "
             + datanode.getXceiverCount());
       }
       updateCurrentThreadName("Cleaning up");

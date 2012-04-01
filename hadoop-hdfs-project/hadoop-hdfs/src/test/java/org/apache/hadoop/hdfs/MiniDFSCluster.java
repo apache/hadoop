@@ -1041,9 +1041,9 @@ public class MiniDFSCluster {
       //      hadoop.security.token.service.use_ip=true
       //since the HDFS does things based on IP:port, we need to add the mapping
       //for IP:port to rackId
-      String ipAddr = dn.getSelfAddr().getAddress().getHostAddress();
+      String ipAddr = dn.getXferAddress().getAddress().getHostAddress();
       if (racks != null) {
-        int port = dn.getSelfAddr().getPort();
+        int port = dn.getXferAddress().getPort();
         LOG.info("Adding node with IP:port : " + ipAddr + ":" + port +
                             " to rack " + racks[i-curDatanodesNum]);
         StaticMapping.addNodeToRack(ipAddr + ":" + port,
@@ -1422,7 +1422,7 @@ public class MiniDFSCluster {
     DataNodeProperties dnprop = dataNodes.remove(i);
     DataNode dn = dnprop.datanode;
     LOG.info("MiniDFSCluster Stopping DataNode " +
-                       dn.getMachineName() +
+                       dn.getDisplayName() +
                        " from a total of " + (dataNodes.size() + 1) + 
                        " datanodes.");
     dn.shutdown();
@@ -1433,16 +1433,13 @@ public class MiniDFSCluster {
   /*
    * Shutdown a datanode by name.
    */
-  public synchronized DataNodeProperties stopDataNode(String name) {
+  public synchronized DataNodeProperties stopDataNode(String dnName) {
     int i;
     for (i = 0; i < dataNodes.size(); i++) {
       DataNode dn = dataNodes.get(i).datanode;
-      // get BP registration
-      DatanodeRegistration dnR = 
-        DataNodeTestUtils.getDNRegistrationByMachineName(dn, name);
-      LOG.info("for name=" + name + " found bp=" + dnR + 
-          "; with dnMn=" + dn.getMachineName());
-      if(dnR != null) {
+      LOG.info("DN name=" + dnName + " found DN=" + dn +
+          " with name=" + dn.getDisplayName());
+      if (dnName.equals(dn.getDatanodeId().getName())) {
         break;
       }
     }
@@ -1472,9 +1469,9 @@ public class MiniDFSCluster {
     String[] args = dnprop.dnArgs;
     Configuration newconf = new HdfsConfiguration(conf); // save cloned config
     if (keepPort) {
-      InetSocketAddress addr = dnprop.datanode.getSelfAddr();
-      conf.set(DFS_DATANODE_ADDRESS_KEY, addr.getAddress().getHostAddress() + ":"
-          + addr.getPort());
+      InetSocketAddress addr = dnprop.datanode.getXferAddress();
+      conf.set(DFS_DATANODE_ADDRESS_KEY, 
+          addr.getAddress().getHostAddress() + ":" + addr.getPort());
     }
     dataNodes.add(new DataNodeProperties(DataNode.createDataNode(args, conf),
         newconf, args));

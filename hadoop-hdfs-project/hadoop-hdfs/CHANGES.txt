@@ -188,6 +188,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3172. dfs.upgrade.permission is dead code. (eli)
 
+    HDFS-3171. The DatanodeID "name" field is overloaded. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

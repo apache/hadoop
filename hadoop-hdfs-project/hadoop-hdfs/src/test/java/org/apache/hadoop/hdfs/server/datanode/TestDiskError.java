@@ -136,7 +136,7 @@ public class TestDiskError {
     DataNode datanode = cluster.getDataNodes().get(sndNode);
     
     // replicate the block to the second datanode
-    InetSocketAddress target = datanode.getSelfAddr();
+    InetSocketAddress target = datanode.getXferAddress();
     Socket s = new Socket(target.getAddress(), target.getPort());
     // write the header.
     DataOutputStream out = new DataOutputStream(s.getOutputStream());

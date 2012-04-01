@@ -49,8 +49,8 @@ implements Writable, NodeRegistration {
        });
   }
 
-  public StorageInfo storageInfo;
-  public ExportedBlockKeys exportedKeys;
+  private StorageInfo storageInfo;
+  private ExportedBlockKeys exportedKeys;
 
   /**
    * Default constructor.
@@ -83,7 +83,19 @@ implements Writable, NodeRegistration {
   public void setStorageInfo(StorageInfo storage) {
     this.storageInfo = new StorageInfo(storage);
   }
-  
+
+  public StorageInfo getStorageInfo() {
+    return storageInfo;
+  }
+
+  public void setExportedKeys(ExportedBlockKeys keys) {
+    this.exportedKeys = keys;
+  }
+
+  public ExportedBlockKeys getExportedKeys() {
+    return exportedKeys;
+  }
+
   @Override // NodeRegistration
   public int getVersion() {
     return storageInfo.getLayoutVersion();

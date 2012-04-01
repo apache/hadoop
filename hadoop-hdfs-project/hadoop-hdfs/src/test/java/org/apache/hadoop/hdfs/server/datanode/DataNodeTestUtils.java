@@ -36,12 +36,7 @@ import com.google.common.base.Preconditions;
  * Utility class for accessing package-private DataNode information during tests.
  *
  */
-public class DataNodeTestUtils {
-  public static DatanodeRegistration 
-  getDNRegistrationByMachineName(DataNode dn, String mName) {
-    return dn.getDNRegistrationByMachineName(mName);
-  }
-  
+public class DataNodeTestUtils {  
   public static DatanodeRegistration 
   getDNRegistrationForBP(DataNode dn, String bpid) throws IOException {
     return dn.getDNRegistrationForBP(bpid);
