@@ -129,6 +129,8 @@ Release 2.0.0 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-8199. Fix issues in start-all.sh and stop-all.sh (Devaraj K via umamahesh)
+
     HADOOP-7900. LocalDirAllocator confChanged() accesses conf.get() twice
     (Ravi Gummadi via Uma Maheswara Rao G)
 
