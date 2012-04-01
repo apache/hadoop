@@ -123,6 +123,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8149. Cap space usage of default log4j rolling policy.
     (Patrick Hunt via eli)
 
+    HADOOP-8211. Update commons-net version to 3.1. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
