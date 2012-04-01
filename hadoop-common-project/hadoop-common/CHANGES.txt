@@ -194,6 +194,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8218. RPC.closeProxy shouldn't throw error when closing a mock
     (todd)
 
+    HADOOP-8238. NetUtils#getHostNameOfIP blows up if given ip:port
+    string w/o port. (eli)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
