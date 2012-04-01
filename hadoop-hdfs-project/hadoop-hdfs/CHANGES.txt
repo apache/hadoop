@@ -294,6 +294,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3171. The DatanodeID "name" field is overloaded. (eli)
 
+    HDFS-3144. Refactor DatanodeID#getName by use. (eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -306,8 +308,6 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
-
-    HDFS-3144. Refactor DatanodeID#getName by use. (eli)
 
   BUG FIXES
 
