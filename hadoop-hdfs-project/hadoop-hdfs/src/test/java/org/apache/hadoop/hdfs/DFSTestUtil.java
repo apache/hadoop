@@ -339,7 +339,7 @@ public class DFSTestUtil {
   }
 
   /*
-   * Wait up to 20s for the given DN (host:port) to be decommissioned.
+   * Wait up to 20s for the given DN (IP:port) to be decommissioned
    */
   public static void waitForDecommission(FileSystem fs, String name) 
       throws IOException, InterruptedException, TimeoutException {
@@ -351,7 +351,7 @@ public class DFSTestUtil {
       Thread.sleep(1000);
       DistributedFileSystem dfs = (DistributedFileSystem)fs;
       for (DatanodeInfo info : dfs.getDataNodeStats()) {
-        if (name.equals(info.getName())) {
+        if (name.equals(info.getXferAddr())) {
           dn = info;
         }
       }

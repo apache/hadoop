@@ -88,9 +88,6 @@ public class JspHelper {
   private static class NodeRecord extends DatanodeInfo {
     int frequency;
 
-    public NodeRecord() {
-      frequency = -1;
-    }
     public NodeRecord(DatanodeInfo info, int count) {
       super(info);
       this.frequency = count;
@@ -172,7 +169,7 @@ public class JspHelper {
 
       //just ping to check whether the node is alive
       InetSocketAddress targetAddr = NetUtils.createSocketAddr(
-          chosenNode.getHost() + ":" + chosenNode.getInfoPort());
+          chosenNode.getInfoAddr());
         
       try {
         s = NetUtils.getDefaultSocketFactory(conf).createSocket();

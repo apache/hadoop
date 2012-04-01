@@ -672,7 +672,9 @@ public class DataNode extends Configured
    * @param nsInfo the namespace info from the first part of the NN handshake
    */
   DatanodeRegistration createBPRegistration(NamespaceInfo nsInfo) {
-    DatanodeRegistration bpRegistration = new DatanodeRegistration(getXferAddr());
+    final String xferIp = streamingAddr.getAddress().getHostAddress();
+    DatanodeRegistration bpRegistration = new DatanodeRegistration(xferIp);
+    bpRegistration.setXferPort(getXferPort());
     bpRegistration.setInfoPort(getInfoPort());
     bpRegistration.setIpcPort(getIpcPort());
     bpRegistration.setHostName(hostName);
@@ -707,7 +709,7 @@ public class DataNode extends Configured
       storage.setStorageID(bpRegistration.getStorageID());
       storage.writeAll();
       LOG.info("New storage id " + bpRegistration.getStorageID()
-          + " is assigned to data-node " + bpRegistration.getName());
+          + " is assigned to data-node " + bpRegistration);
     } else if(!storage.getStorageID().equals(bpRegistration.getStorageID())) {
       throw new IOException("Inconsistent storage IDs. Name-node returned "
           + bpRegistration.getStorageID() 
@@ -878,13 +880,6 @@ public class DataNode extends Configured
   }
 
   /**
-   * @return the IP:port to report to the NN for data transfer
-   */
-  private String getXferAddr() {
-    return streamingAddr.getAddress().getHostAddress() + ":" + getXferPort();
-  }
-
-  /**
    * @return the datanode's IPC port
    */
   @VisibleForTesting
@@ -926,8 +921,8 @@ public class DataNode extends Configured
   public static InterDatanodeProtocol createInterDataNodeProtocolProxy(
       DatanodeID datanodeid, final Configuration conf, final int socketTimeout)
     throws IOException {
-    final InetSocketAddress addr = NetUtils.createSocketAddr(
-        datanodeid.getHost() + ":" + datanodeid.getIpcPort());
+    final InetSocketAddress addr =
+      NetUtils.createSocketAddr(datanodeid.getIpcAddr());
     if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
       InterDatanodeProtocol.LOG.debug("InterDatanodeProtocol addr=" + addr);
     }
@@ -951,7 +946,7 @@ public class DataNode extends Configured
   
   public static void setNewStorageID(DatanodeID dnId) {
     LOG.info("Datanode is " + dnId);
-    dnId.setStorageID(createNewStorageId(dnId.getPort()));
+    dnId.setStorageID(createNewStorageId(dnId.getXferPort()));
   }
   
   static String createNewStorageId(int port) {
@@ -1227,7 +1222,7 @@ public class DataNode extends Configured
       if (LOG.isInfoEnabled()) {
         StringBuilder xfersBuilder = new StringBuilder();
         for (int i = 0; i < numTargets; i++) {
-          xfersBuilder.append(xferTargets[i].getName());
+          xfersBuilder.append(xferTargets[i]);
           xfersBuilder.append(" ");
         }
         LOG.info(bpReg + " Starting thread to transfer block " + 
@@ -1385,7 +1380,7 @@ public class DataNode extends Configured
       
       try {
         InetSocketAddress curTarget = 
-          NetUtils.createSocketAddr(targets[0].getName());
+          NetUtils.createSocketAddr(targets[0].getXferAddr());
         sock = newSocket();
         NetUtils.connect(sock, curTarget, dnConf.socketTimeout);
         sock.setSoTimeout(targets.length * dnConf.socketTimeout);
@@ -1438,9 +1433,8 @@ public class DataNode extends Configured
           }
         }
       } catch (IOException ie) {
-        LOG.warn(
-            bpReg + ":Failed to transfer " + b + " to " + targets[0].getName()
-                + " got ", ie);
+        LOG.warn(bpReg + ":Failed to transfer " + b + " to " +
+            targets[0] + " got ", ie);
         // check if there are any disk problem
         checkDiskError();
         
@@ -1994,9 +1988,9 @@ public class DataNode extends Configured
   
   private static void logRecoverBlock(String who,
       ExtendedBlock block, DatanodeID[] targets) {
-    StringBuilder msg = new StringBuilder(targets[0].getName());
+    StringBuilder msg = new StringBuilder(targets[0].toString());
     for (int i = 1; i < targets.length; i++) {
-      msg.append(", " + targets[i].getName());
+      msg.append(", " + targets[i]);
     }
     LOG.info(who + " calls recoverBlock(block=" + block
         + ", targets=[" + msg + "])");

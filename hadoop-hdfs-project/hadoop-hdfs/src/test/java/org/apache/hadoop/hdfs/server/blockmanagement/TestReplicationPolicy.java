@@ -52,16 +52,16 @@ public class TestReplicationPolicy {
   private static final String filename = "/dummyfile.txt";
   private static final DatanodeDescriptor dataNodes[] = 
     new DatanodeDescriptor[] {
-      new DatanodeDescriptor(new DatanodeID("h1:5020"), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("h2:5020"), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("h3:5020"), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("h4:5020"), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("h5:5020"), "/d2/r3"),
-      new DatanodeDescriptor(new DatanodeID("h6:5020"), "/d2/r3")
+      new DatanodeDescriptor(new DatanodeID("h1", 5020), "/d1/r1"),
+      new DatanodeDescriptor(new DatanodeID("h2", 5020), "/d1/r1"),
+      new DatanodeDescriptor(new DatanodeID("h3", 5020), "/d1/r2"),
+      new DatanodeDescriptor(new DatanodeID("h4", 5020), "/d1/r2"),
+      new DatanodeDescriptor(new DatanodeID("h5", 5020), "/d2/r3"),
+      new DatanodeDescriptor(new DatanodeID("h6", 5020), "/d2/r3")
     };
    
   private final static DatanodeDescriptor NODE = 
-    new DatanodeDescriptor(new DatanodeID("h7:5020"), "/d2/r4");
+    new DatanodeDescriptor(new DatanodeID("h7", 5020), "/d2/r4");
   
   static {
     try {

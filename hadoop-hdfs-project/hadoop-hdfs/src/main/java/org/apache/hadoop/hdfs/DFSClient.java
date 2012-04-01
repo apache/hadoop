@@ -1380,7 +1380,8 @@ public class DFSClient implements java.io.Closeable {
           //connect to a datanode
           sock = socketFactory.createSocket();
           NetUtils.connect(sock,
-              NetUtils.createSocketAddr(datanodes[j].getName()), timeout);
+              NetUtils.createSocketAddr(datanodes[j].getXferAddr()),
+              timeout);
           sock.setSoTimeout(timeout);
 
           out = new DataOutputStream(
@@ -1389,7 +1390,7 @@ public class DFSClient implements java.io.Closeable {
           in = new DataInputStream(NetUtils.getInputStream(sock));
 
           if (LOG.isDebugEnabled()) {
-            LOG.debug("write to " + datanodes[j].getName() + ": "
+            LOG.debug("write to " + datanodes[j] + ": "
                 + Op.BLOCK_CHECKSUM + ", block=" + block);
           }
           // get block MD5
@@ -1404,7 +1405,7 @@ public class DFSClient implements java.io.Closeable {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Got access token error in response to OP_BLOCK_CHECKSUM "
                     + "for file " + src + " for block " + block
-                    + " from datanode " + datanodes[j].getName()
+                    + " from datanode " + datanodes[j]
                     + ". Will retry the block once.");
               }
               lastRetriedIndex = i;
@@ -1414,7 +1415,7 @@ public class DFSClient implements java.io.Closeable {
               break;
             } else {
               throw new IOException("Bad response " + reply + " for block "
-                  + block + " from datanode " + datanodes[j].getName());
+                  + block + " from datanode " + datanodes[j]);
             }
           }
           
@@ -1449,12 +1450,10 @@ public class DFSClient implements java.io.Closeable {
               LOG.debug("set bytesPerCRC=" + bytesPerCRC
                   + ", crcPerBlock=" + crcPerBlock);
             }
-            LOG.debug("got reply from " + datanodes[j].getName()
-                + ": md5=" + md5);
+            LOG.debug("got reply from " + datanodes[j] + ": md5=" + md5);
           }
         } catch (IOException ie) {
-          LOG.warn("src=" + src + ", datanodes[" + j + "].getName()="
-              + datanodes[j].getName(), ie);
+          LOG.warn("src=" + src + ", datanodes["+j+"]=" + datanodes[j], ie);
         } finally {
           IOUtils.closeStream(in);
           IOUtils.closeStream(out);

@@ -1439,7 +1439,7 @@ public class MiniDFSCluster {
       DataNode dn = dataNodes.get(i).datanode;
       LOG.info("DN name=" + dnName + " found DN=" + dn +
           " with name=" + dn.getDisplayName());
-      if (dnName.equals(dn.getDatanodeId().getName())) {
+      if (dnName.equals(dn.getDatanodeId().getXferAddr())) {
         break;
       }
     }

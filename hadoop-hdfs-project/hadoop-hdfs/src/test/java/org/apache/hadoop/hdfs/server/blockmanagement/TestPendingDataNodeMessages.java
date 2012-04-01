@@ -40,7 +40,7 @@ public class TestPendingDataNodeMessages {
   private final Block block2Gs1 = new Block(2, 0, 1);
   
   private final DatanodeDescriptor fakeDN = new DatanodeDescriptor(
-      new DatanodeID("fake"));
+      new DatanodeID("fake", 100));
   
   @Test
   public void testQueues() {

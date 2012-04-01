@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public interface NodeRegistration {
   /**
    * Get address of the server node.
-   * @return hostname:portNumber
+   * @return ipAddr:portNumber
    */
   public String getAddress();
 

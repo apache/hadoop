@@ -667,7 +667,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                 throw new IOException("Bad response " + reply +
                     " for block " + block +
                     " from datanode " + 
-                    targets[i].getName());
+                    targets[i]);
               }
             }
             
@@ -898,7 +898,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         if (errorIndex >= 0) {
           StringBuilder pipelineMsg = new StringBuilder();
           for (int j = 0; j < nodes.length; j++) {
-            pipelineMsg.append(nodes[j].getName());
+            pipelineMsg.append(nodes[j]);
             if (j < nodes.length - 1) {
               pipelineMsg.append(", ");
             }
@@ -911,7 +911,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           }
           DFSClient.LOG.warn("Error Recovery for block " + block +
               " in pipeline " + pipelineMsg + 
-              ": bad datanode " + nodes[errorIndex].getName());
+              ": bad datanode " + nodes[errorIndex]);
           failed.add(nodes[errorIndex]);
 
           DatanodeInfo[] newnodes = new DatanodeInfo[nodes.length-1];
@@ -1005,7 +1005,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       String firstBadLink = "";
       if (DFSClient.LOG.isDebugEnabled()) {
         for (int i = 0; i < nodes.length; i++) {
-          DFSClient.LOG.debug("pipeline = " + nodes[i].getName());
+          DFSClient.LOG.debug("pipeline = " + nodes[i]);
         }
       }
 
@@ -1061,7 +1061,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         // find the datanode that matches
         if (firstBadLink.length() != 0) {
           for (int i = 0; i < nodes.length; i++) {
-            if (nodes[i].getName().equals(firstBadLink)) {
+            if (nodes[i].getXferAddr().equals(firstBadLink)) {
               errorIndex = i;
               break;
             }
@@ -1165,9 +1165,10 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   static Socket createSocketForPipeline(final DatanodeInfo first,
       final int length, final DFSClient client) throws IOException {
     if(DFSClient.LOG.isDebugEnabled()) {
-      DFSClient.LOG.debug("Connecting to datanode " + first.getName());
+      DFSClient.LOG.debug("Connecting to datanode " + first);
     }
-    final InetSocketAddress isa = NetUtils.createSocketAddr(first.getName());
+    final InetSocketAddress isa =
+      NetUtils.createSocketAddr(first.getXferAddr());
     final Socket sock = client.socketFactory.createSocket();
     final int timeout = client.getDatanodeReadTimeout(length);
     NetUtils.connect(sock, isa, timeout);

@@ -32,23 +32,32 @@ import org.apache.hadoop.io.WritableComparable;
  * Datanodes are identified by how they can be contacted (hostname
  * and ports) and their storage ID, a unique number that associates
  * the Datanodes blocks with a particular Datanode.
+ *
+ * {@link DatanodeInfo#getName()} should be used to get the network
+ * location (for topology) of a datanode, instead of using
+ * {@link DatanodeID#getXferAddr()} here. Helpers are defined below
+ * for each context in which a DatanodeID is used.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeID implements WritableComparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {}; 
 
-  protected String name;       // IP:port (data transfer port)
+  protected String ipAddr;     // IP address
   protected String hostName;   // hostname
   protected String storageID;  // unique per cluster storageID
+  protected int xferPort;      // data streaming port
   protected int infoPort;      // info server port
   protected int ipcPort;       // IPC server port
 
   /** Equivalent to DatanodeID(""). */
   public DatanodeID() {this("");}
 
-  /** Equivalent to DatanodeID(nodeName, "", -1, -1). */
-  public DatanodeID(String nodeName) {this(nodeName, "", "", -1, -1);}
+  /** Equivalent to DatanodeID(ipAddr, "", -1, -1, -1). */
+  public DatanodeID(String ipAddr) {this(ipAddr, "", "", -1, -1, -1);}
+
+  /** Equivalent to DatanodeID(ipAddr, "", xferPort, -1, -1). */
+  public DatanodeID(String ipAddr, int xferPort) {this(ipAddr, "", "", xferPort, -1, -1);}
 
   /**
    * DatanodeID copy constructor
@@ -56,36 +65,43 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
    * @param from
    */
   public DatanodeID(DatanodeID from) {
-    this(from.getName(),
+    this(from.getIpAddr(),
         from.getHostName(),
         from.getStorageID(),
+        from.getXferPort(),
         from.getInfoPort(),
         from.getIpcPort());
   }
   
   /**
    * Create DatanodeID
-   * @param node IP:port
+   * @param ipAddr IP
    * @param hostName hostname
    * @param storageID data storage ID
+   * @param xferPort data transfer port
    * @param infoPort info server port 
    * @param ipcPort ipc server port
    */
-  public DatanodeID(String name, String hostName,
-      String storageID, int infoPort, int ipcPort) {
-    this.name = name;
+  public DatanodeID(String ipAddr, String hostName, String storageID,
+      int xferPort, int infoPort, int ipcPort) {
+    this.ipAddr = ipAddr;
     this.hostName = hostName;
     this.storageID = storageID;
+    this.xferPort = xferPort;
     this.infoPort = infoPort;
     this.ipcPort = ipcPort;
   }
   
-  public void setName(String name) {
-    this.name = name;
+  public void setIpAddr(String ipAddr) {
+    this.ipAddr = ipAddr;
   }
 
   public void setHostName(String hostName) {
     this.hostName = hostName;
+  }
+
+  public void setXferPort(int xferPort) {
+    this.xferPort = xferPort;
   }
 
   public void setInfoPort(int infoPort) {
@@ -95,26 +111,65 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   public void setIpcPort(int ipcPort) {
     this.ipcPort = ipcPort;
   }
-  
+
+  public void setStorageID(String storageID) {
+    this.storageID = storageID;
+  }
+
   /**
-   * @return hostname:portNumber.
+   * @return ipAddr;
    */
-  public String getName() {
-    return name;
+  public String getIpAddr() {
+    return ipAddr;
   }
 
   /**
    * @return hostname
    */
   public String getHostName() {
-    return (hostName == null || hostName.length() == 0) ? getHost() : hostName;
+    return hostName;
+  }
+
+  /**
+   * @return IP:xferPort string
+   */
+  public String getXferAddr() {
+    return ipAddr + ":" + xferPort;
+  }
+
+  /**
+   * @return IP:ipcPort string
+   */
+  public String getIpcAddr() {
+    return ipAddr + ":" + ipcPort;
+  }
+
+  /**
+   * @return IP:infoPort string
+   */
+  public String getInfoAddr() {
+    return ipAddr + ":" + infoPort;
+  }
+
+  /**
+   * @return hostname:xferPort
+   */
+  public String getXferAddrWithHostname() {
+    return hostName + ":" + xferPort;
   }
 
   /**
    * @return data storage ID.
    */
   public String getStorageID() {
-    return this.storageID;
+    return storageID;
+  }
+
+  /**
+   * @return xferPort (the port for data streaming)
+   */
+  public int getXferPort() {
+    return xferPort;
   }
 
   /**
@@ -131,33 +186,6 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     return ipcPort;
   }
 
-  /**
-   * sets the data storage ID.
-   */
-  public void setStorageID(String storageID) {
-    this.storageID = storageID;
-  }
-
-  /**
-   * @return hostname and no :portNumber.
-   */
-  public String getHost() {
-    int colon = name.indexOf(":");
-    if (colon < 0) {
-      return name;
-    } else {
-      return name.substring(0, colon);
-    }
-  }
-  
-  public int getPort() {
-    int colon = name.indexOf(":");
-    if (colon < 0) {
-      return 50010; // default port.
-    }
-    return Integer.parseInt(name.substring(colon+1));
-  }
-
   public boolean equals(Object to) {
     if (this == to) {
       return true;
@@ -165,16 +193,16 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     if (!(to instanceof DatanodeID)) {
       return false;
     }
-    return (name.equals(((DatanodeID)to).getName()) &&
+    return (getXferAddr().equals(((DatanodeID)to).getXferAddr()) &&
             storageID.equals(((DatanodeID)to).getStorageID()));
   }
   
   public int hashCode() {
-    return name.hashCode()^ storageID.hashCode();
+    return getXferAddr().hashCode()^ storageID.hashCode();
   }
   
   public String toString() {
-    return name;
+    return getXferAddr();
   }
   
   /**
@@ -182,43 +210,44 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
    * Note that this does not update storageID.
    */
   public void updateRegInfo(DatanodeID nodeReg) {
-    name = nodeReg.getName();
+    ipAddr = nodeReg.getIpAddr();
     hostName = nodeReg.getHostName();
+    xferPort = nodeReg.getXferPort();
     infoPort = nodeReg.getInfoPort();
     ipcPort = nodeReg.getIpcPort();
   }
     
-  /** Comparable.
-   * Basis of compare is the String name (host:portNumber) only.
+  /**
+   * Compare based on data transfer address.
+   *
    * @param that
-   * @return as specified by Comparable.
+   * @return as specified by Comparable
    */
   public int compareTo(DatanodeID that) {
-    return name.compareTo(that.getName());
+    return getXferAddr().compareTo(that.getXferAddr());
   }
 
-  /////////////////////////////////////////////////
-  // Writable
-  /////////////////////////////////////////////////
   @Override
   public void write(DataOutput out) throws IOException {
-    Text.writeString(out, name);
+    Text.writeString(out, ipAddr);
     Text.writeString(out, hostName);
     Text.writeString(out, storageID);
+    out.writeShort(xferPort);
     out.writeShort(infoPort);
     out.writeShort(ipcPort);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    name = Text.readString(in);
+    ipAddr = Text.readString(in);
     hostName = Text.readString(in);
     storageID = Text.readString(in);
     // The port read could be negative, if the port is a large number (more
     // than 15 bits in storage size (but less than 16 bits).
     // So chop off the first two bytes (and hence the signed bits) before 
     // setting the field.
-    this.infoPort = in.readShort() & 0x0000ffff;
-    this.ipcPort = in.readShort() & 0x0000ffff;
+    xferPort = in.readShort() & 0x0000ffff;
+    infoPort = in.readShort() & 0x0000ffff;
+    ipcPort = in.readShort() & 0x0000ffff;
   }
 }

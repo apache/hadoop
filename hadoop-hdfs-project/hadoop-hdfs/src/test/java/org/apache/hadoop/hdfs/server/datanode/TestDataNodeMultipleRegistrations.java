@@ -161,7 +161,7 @@ public class TestDataNodeMultipleRegistrations {
       assertEquals("number of volumes is wrong", 2, volInfos.size());
 
       for (BPOfferService bpos : dn.getAllBpOs()) {
-        LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.getName() + "; sid="
+        LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration + "; sid="
             + bpos.bpRegistration.getStorageID() + "; nna=" +
             getNNSocketAddress(bpos));
       }

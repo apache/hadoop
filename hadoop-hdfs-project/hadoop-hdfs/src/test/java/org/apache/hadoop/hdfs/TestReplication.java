@@ -117,7 +117,7 @@ public class TestReplication extends TestCase {
       isOnSameRack = false;
       isNotOnSameRack = false;
       for (int i = 0; i < datanodes.length-1; i++) {
-        LOG.info("datanode "+ i + ": "+ datanodes[i].getName());
+        LOG.info("datanode "+ i + ": "+ datanodes[i]);
         boolean onRack = false;
         for( int j=i+1; j<datanodes.length; j++) {
            if( datanodes[i].getNetworkLocation().equals(

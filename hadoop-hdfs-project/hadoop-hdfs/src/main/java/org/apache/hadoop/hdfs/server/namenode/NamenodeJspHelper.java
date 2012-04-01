@@ -260,14 +260,14 @@ class NamenodeJspHelper {
       // Find out common suffix. Should this be before or after the sort?
       String port_suffix = null;
       if (live.size() > 0) {
-        String name = live.get(0).getName();
+        String name = live.get(0).getXferAddr();
         int idx = name.indexOf(':');
         if (idx > 0) {
           port_suffix = name.substring(idx);
         }
 
         for (int i = 1; port_suffix != null && i < live.size(); i++) {
-          if (live.get(i).getName().endsWith(port_suffix) == false) {
+          if (live.get(i).getXferAddr().endsWith(port_suffix) == false) {
             port_suffix = null;
             break;
           }
@@ -404,7 +404,7 @@ class NamenodeJspHelper {
     final String nodeToRedirect;
     int redirectPort;
     if (datanode != null) {
-      nodeToRedirect = datanode.getHost();
+      nodeToRedirect = datanode.getIpAddr();
       redirectPort = datanode.getInfoPort();
     } else {
       nodeToRedirect = nn.getHttpAddress().getHostName();
@@ -466,14 +466,14 @@ class NamenodeJspHelper {
           + URLEncoder.encode("/", "UTF-8")
           + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnaddr);
 
-      String name = d.getHostName() + ":" + d.getPort();
+      String name = d.getXferAddrWithHostname();
       if (!name.matches("\\d+\\.\\d+.\\d+\\.\\d+.*"))
         name = name.replaceAll("\\.[^.:]*", "");
       int idx = (suffix != null && name.endsWith(suffix)) ? name
           .indexOf(suffix) : -1;
 
-      out.print(rowTxt() + "<td class=\"name\"><a title=\"" + d.getHost() + ":"
-          + d.getPort() + "\" href=\"" + url + "\">"
+      out.print(rowTxt() + "<td class=\"name\"><a title=\"" + d.getXferAddr()
+          + "\" href=\"" + url + "\">"
           + ((idx > 0) ? name.substring(0, idx) : name) + "</a>"
           + ((alive) ? "" : "\n"));
     }
@@ -599,14 +599,14 @@ class NamenodeJspHelper {
       // Find out common suffix. Should this be before or after the sort?
       String port_suffix = null;
       if (live.size() > 0) {
-        String name = live.get(0).getName();
+        String name = live.get(0).getXferAddr();
         int idx = name.indexOf(':');
         if (idx > 0) {
           port_suffix = name.substring(idx);
         }
 
         for (int i = 1; port_suffix != null && i < live.size(); i++) {
-          if (live.get(i).getName().endsWith(port_suffix) == false) {
+          if (live.get(i).getXferAddr().endsWith(port_suffix) == false) {
             port_suffix = null;
             break;
           }

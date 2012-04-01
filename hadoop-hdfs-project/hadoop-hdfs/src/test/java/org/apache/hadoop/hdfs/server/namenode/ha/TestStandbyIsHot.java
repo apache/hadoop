@@ -167,7 +167,7 @@ public class TestStandbyIsHot {
       
       // Stop the DN.
       DataNode dn = cluster.getDataNodes().get(0);
-      String dnName = dn.getDatanodeId().getName(); 
+      String dnName = dn.getDatanodeId().getXferAddr(); 
       DataNodeProperties dnProps = cluster.stopDataNode(0);
       
       // Make sure both NNs register it as dead.

@@ -147,7 +147,7 @@ public class TestHftpFileSystem {
     // if we were redirected to the right DN.
     BlockLocation[] locations = 
         hdfs.getFileBlockLocations(path, 0, 10);
-    String locationName = locations[0].getNames()[0];
+    String xferAddr = locations[0].getNames()[0];
 
     // Connect to the NN to get redirected
     URL u = hftpFs.getNamenodeURL(
@@ -164,7 +164,7 @@ public class TestHftpFileSystem {
     for (DataNode node : cluster.getDataNodes()) {
       DatanodeRegistration dnR = 
         DataNodeTestUtils.getDNRegistrationForBP(node, blockPoolId);
-      if (dnR.getName().equals(locationName)) {
+      if (dnR.getXferAddr().equals(xferAddr)) {
         checked = true;
         assertEquals(dnR.getInfoPort(), conn.getURL().getPort());
       }

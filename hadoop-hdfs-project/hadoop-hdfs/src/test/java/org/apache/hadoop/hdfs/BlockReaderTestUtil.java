@@ -139,7 +139,7 @@ public class BlockReaderTestUtil {
     Socket sock = null;
     ExtendedBlock block = testBlock.getBlock();
     DatanodeInfo[] nodes = testBlock.getLocations();
-    targetAddr = NetUtils.createSocketAddr(nodes[0].getName());
+    targetAddr = NetUtils.createSocketAddr(nodes[0].getXferAddr());
     sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
     sock.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
     sock.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);

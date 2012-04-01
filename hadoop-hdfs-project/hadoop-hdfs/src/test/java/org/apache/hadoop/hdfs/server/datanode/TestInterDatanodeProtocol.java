@@ -348,7 +348,7 @@ public class TestInterDatanodeProtocol {
 
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     DatanodeID fakeDnId = new DatanodeID(
-        "localhost:" + addr.getPort(), "localhost", "fake-storage", 0, addr.getPort());
+        "localhost", "localhost", "fake-storage", addr.getPort(), 0, addr.getPort());
     DatanodeInfo dInfo = new DatanodeInfo(fakeDnId);
     InterDatanodeProtocol proxy = null;
 

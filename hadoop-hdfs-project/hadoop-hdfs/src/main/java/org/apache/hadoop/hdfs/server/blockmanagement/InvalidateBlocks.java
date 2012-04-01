@@ -77,7 +77,7 @@ class InvalidateBlocks {
       numBlocks++;
       if (log) {
         NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
-            + ": add " + block + " to " + datanode.getName());
+            + ": add " + block + " to " + datanode);
       }
     }
   }
@@ -113,7 +113,8 @@ class InvalidateBlocks {
     for(Map.Entry<String,LightWeightHashSet<Block>> entry : node2blocks.entrySet()) {
       final LightWeightHashSet<Block> blocks = entry.getValue();
       if (blocks.size() > 0) {
-        out.println(datanodeManager.getDatanode(entry.getKey()).getName() + blocks);
+        out.println(datanodeManager.getDatanode(entry.getKey()));
+        out.println(blocks);
       }
     }
   }
@@ -137,7 +138,7 @@ class InvalidateBlocks {
 
     if (NameNode.stateChangeLog.isInfoEnabled()) {
       NameNode.stateChangeLog.info("BLOCK* " + getClass().getSimpleName()
-          + ": ask " + dn.getName() + " to delete " + toInvalidate);
+          + ": ask " + dn + " to delete " + toInvalidate);
     }
     return toInvalidate.size();
   }

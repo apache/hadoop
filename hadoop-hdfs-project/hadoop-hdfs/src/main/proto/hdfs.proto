@@ -48,11 +48,12 @@ message BlockTokenIdentifierProto {
  * Identifies a Datanode
  */
 message DatanodeIDProto {
-  required string name = 1;      // IP:port (data transfer port)
+  required string ipAddr = 1;    // IP address
   required string hostName = 2;  // hostname
   required string storageID = 3; // unique storage id
-  required uint32 infoPort = 4;  // info server port
-  required uint32 ipcPort = 5;   // ipc server port
+  required uint32 xferPort = 4;  // data streaming port
+  required uint32 infoPort = 5;  // info server port
+  required uint32 ipcPort = 6;   // ipc server port
 }
 
 /**

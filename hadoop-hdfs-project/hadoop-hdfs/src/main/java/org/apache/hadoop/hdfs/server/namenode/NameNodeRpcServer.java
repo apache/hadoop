@@ -855,7 +855,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     BlockListAsLongs blist = new BlockListAsLongs(reports[0].getBlocks());
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReport: "
-           + "from " + nodeReg.getName() + " " + blist.getNumberOfBlocks()
+           + "from " + nodeReg + " " + blist.getNumberOfBlocks()
            + " blocks");
     }
 
@@ -871,7 +871,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
     verifyRequest(nodeReg);
     if(stateChangeLog.isDebugEnabled()) {
       stateChangeLog.debug("*BLOCK* NameNode.blockReceivedAndDeleted: "
-          +"from "+nodeReg.getName()+" "+receivedAndDeletedBlocks.length
+          +"from "+nodeReg+" "+receivedAndDeletedBlocks.length
           +" blocks.");
     }
     namesystem.getBlockManager().processIncrementalBlockReport(
@@ -881,7 +881,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // DatanodeProtocol
   public void errorReport(DatanodeRegistration nodeReg,
                           int errorCode, String msg) throws IOException { 
-    String dnName = (nodeReg == null ? "unknown DataNode" : nodeReg.getName());
+    String dnName = 
+       (nodeReg == null) ? "Unknown DataNode" : nodeReg.toString();
 
     if (errorCode == DatanodeProtocol.NOTIFY) {
       LOG.info("Error report from " + dnName + ": " + msg);
@@ -910,13 +911,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   /** 
-   * Verify request.
+   * Verifies the given registration.
    * 
-   * Verifies correctness of the datanode version, registration ID, and 
-   * if the datanode does not need to be shutdown.
-   * 
-   * @param nodeReg data node registration
-   * @throws IOException
+   * @param nodeReg node registration
+   * @throws UnregisteredNodeException if the registration is invalid
    */
   void verifyRequest(NodeRegistration nodeReg) throws IOException {
     verifyVersion(nodeReg.getVersion());

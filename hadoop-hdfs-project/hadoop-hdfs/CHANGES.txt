@@ -192,6 +192,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3171. The DatanodeID "name" field is overloaded. (eli)
 
+    HDFS-3144. Refactor DatanodeID#getName by use. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

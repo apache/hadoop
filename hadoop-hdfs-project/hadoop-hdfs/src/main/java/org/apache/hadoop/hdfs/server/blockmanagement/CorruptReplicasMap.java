@@ -65,14 +65,14 @@ public class CorruptReplicasMap{
       nodes.add(dn);
       NameNode.stateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
                                    blk.getBlockName() +
-                                   " added as corrupt on " + dn.getName() +
+                                   " added as corrupt on " + dn +
                                    " by " + Server.getRemoteIp() +
                                    reasonText);
     } else {
       NameNode.stateChangeLog.info("BLOCK NameSystem.addToCorruptReplicasMap: "+
                                    "duplicate requested for " + 
                                    blk.getBlockName() + " to add as corrupt " +
-                                   "on " + dn.getName() +
+                                   "on " + dn +
                                    " by " + Server.getRemoteIp() +
                                    reasonText);
     }

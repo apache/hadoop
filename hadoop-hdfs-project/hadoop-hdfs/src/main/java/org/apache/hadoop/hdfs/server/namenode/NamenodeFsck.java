@@ -496,7 +496,7 @@ public class NamenodeFsck {
       
       try {
         chosenNode = bestNode(dfs, lblock.getLocations(), deadNodes);
-        targetAddr = NetUtils.createSocketAddr(chosenNode.getName());
+        targetAddr = NetUtils.createSocketAddr(chosenNode.getXferAddr());
       }  catch (IOException ie) {
         if (failures >= DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT) {
           throw new IOException("Could not obtain block " + lblock);

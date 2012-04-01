@@ -91,9 +91,9 @@ public class TestOverReplicatedBlocks extends TestCase {
         synchronized(hm) {
           // set live datanode's remaining space to be 0 
           // so they will be chosen to be deleted when over-replication occurs
-          String corruptMachineName = corruptDataNode.getName();
+          String corruptMachineName = corruptDataNode.getXferAddr();
           for (DatanodeDescriptor datanode : hm.getDatanodes()) {
-            if (!corruptMachineName.equals(datanode.getName())) {
+            if (!corruptMachineName.equals(datanode.getXferAddr())) {
               datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0, 0);
             }
           }

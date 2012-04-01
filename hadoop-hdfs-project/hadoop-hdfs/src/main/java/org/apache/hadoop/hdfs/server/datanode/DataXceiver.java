@@ -352,7 +352,7 @@ class DataXceiver extends Receiver implements Runnable {
       if (targets.length > 0) {
         InetSocketAddress mirrorTarget = null;
         // Connect to backup machine
-        mirrorNode = targets[0].getName();
+        mirrorNode = targets[0].getXferAddr();
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
         mirrorSock = datanode.newSocket();
         try {
@@ -667,8 +667,8 @@ class DataXceiver extends Receiver implements Runnable {
     
     try {
       // get the output stream to the proxy
-      InetSocketAddress proxyAddr = NetUtils.createSocketAddr(
-          proxySource.getName());
+      InetSocketAddress proxyAddr =
+        NetUtils.createSocketAddr(proxySource.getXferAddr());
       proxySock = datanode.newSocket();
       NetUtils.connect(proxySock, proxyAddr, dnConf.socketTimeout);
       proxySock.setSoTimeout(dnConf.socketTimeout);
@@ -820,7 +820,7 @@ class DataXceiver extends Receiver implements Runnable {
             if (mode == BlockTokenSecretManager.AccessMode.WRITE) {
               DatanodeRegistration dnR = 
                 datanode.getDNRegistrationForBP(blk.getBlockPoolId());
-              resp.setFirstBadLink(dnR.getName());
+              resp.setFirstBadLink(dnR.getXferAddr());
             }
             resp.build().writeDelimitedTo(out);
             out.flush();

@@ -489,7 +489,7 @@ public class DFSInputStream extends FSInputStream {
         return blockReader.read(buf, off, len);
       } catch ( ChecksumException ce ) {
         DFSClient.LOG.warn("Found Checksum error for "
-            + getCurrentBlock() + " from " + currentNode.getName()
+            + getCurrentBlock() + " from " + currentNode
             + " at " + ce.getPos());        
         ioe = ce;
         retryCurrentNode = false;
@@ -601,7 +601,7 @@ public class DFSInputStream extends FSInputStream {
       try {
         DatanodeInfo chosenNode = bestNode(nodes, deadNodes);
         InetSocketAddress targetAddr = 
-                          NetUtils.createSocketAddr(chosenNode.getName());
+          NetUtils.createSocketAddr(chosenNode.getXferAddr());
         return new DNAddrPair(chosenNode, targetAddr);
       } catch (IOException ie) {
         String blockInfo = block.getBlock() + " file=" + src;
@@ -676,7 +676,7 @@ public class DFSInputStream extends FSInputStream {
       } catch (ChecksumException e) {
         DFSClient.LOG.warn("fetchBlockByteRange(). Got a checksum exception for " +
                  src + " at " + block.getBlock() + ":" + 
-                 e.getPos() + " from " + chosenNode.getName());
+                 e.getPos() + " from " + chosenNode);
         // we want to remember what we have tried
         addIntoCorruptedBlockMap(block.getBlock(), chosenNode, corruptedBlockMap);
       } catch (AccessControlException ex) {
