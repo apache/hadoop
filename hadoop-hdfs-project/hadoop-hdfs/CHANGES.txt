@@ -68,6 +68,8 @@ Release 2.0.0 - UNRELEASED
     DistributedFileSystem to @InterfaceAudience.LimitedPrivate.
     (harsh via szetszwo)
 
+    HDFS-3167. CLI-based driver for MiniDFSCluster. (Henry Robinson via atm)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
