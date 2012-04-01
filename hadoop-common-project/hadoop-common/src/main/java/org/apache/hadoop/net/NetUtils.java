@@ -570,31 +570,29 @@ public class NetUtils {
     }
   }
 
-  private static final Pattern ipPattern = // Pattern for matching hostname to ip:port
-    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}:?\\d*");
+  private static final Pattern ipPortPattern = // Pattern for matching ip[:port]
+    Pattern.compile("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}(:\\d+)?");
   
   /**
-   * Attempt to obtain the host name of a name specified by ip address.  
-   * Check that the node name is an ip addr and if so, attempt to determine
-   * its host name.  If the name is not an IP addr, or the actual name cannot
-   * be determined, return null.
+   * Attempt to obtain the host name of the given string which contains
+   * an IP address and an optional port.
    * 
-   * @return Host name or null
+   * @param ipPort string of form ip[:port]
+   * @return Host name or null if the name can not be determined
    */
-  public static String getHostNameOfIP(String ip) {
-    // If name is not an ip addr, don't bother looking it up
-    if(!ipPattern.matcher(ip).matches())
-      return null;
-    
-    String hostname = "";
-    try {
-      String n = ip.substring(0, ip.indexOf(':'));
-      hostname = InetAddress.getByName(n).getHostName();
-    } catch (UnknownHostException e) {
+  public static String getHostNameOfIP(String ipPort) {
+    if (null == ipPort || !ipPortPattern.matcher(ipPort).matches()) {
       return null;
     }
     
-    return hostname; 
+    try {
+      int colonIdx = ipPort.indexOf(':');
+      String ip = (-1 == colonIdx) ? ipPort
+          : ipPort.substring(0, ipPort.indexOf(':'));
+      return InetAddress.getByName(ip).getHostName();
+    } catch (UnknownHostException e) {
+      return null;
+    }
   }
 
   /**

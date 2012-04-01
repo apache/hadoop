@@ -499,6 +499,18 @@ public class TestNetUtils {
     assertEquals("scheme://host.a.b/path", uri.toString());
   }
   
+  @Test
+  public void testGetHostNameOfIP() {
+    assertNull(NetUtils.getHostNameOfIP(null));
+    assertNull(NetUtils.getHostNameOfIP(""));
+    assertNull(NetUtils.getHostNameOfIP("crazytown"));
+    assertNull(NetUtils.getHostNameOfIP("127.0.0.1:"));   // no port
+    assertNull(NetUtils.getHostNameOfIP("127.0.0.1:-1")); // bogus port
+    assertNull(NetUtils.getHostNameOfIP("127.0.0.1:A"));  // bogus port
+    assertNotNull(NetUtils.getHostNameOfIP("127.0.0.1"));
+    assertNotNull(NetUtils.getHostNameOfIP("127.0.0.1:1"));
+  }
+
   private <T> void assertBetterArrayEquals(T[] expect, T[]got) {
     String expectStr = StringUtils.join(expect, ", ");
     String gotStr = StringUtils.join(got, ", ");
