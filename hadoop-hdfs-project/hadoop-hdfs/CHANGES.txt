@@ -290,6 +290,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3172. dfs.upgrade.permission is dead code. (eli)
 
+    HDFS-3171. The DatanodeID "name" field is overloaded. (eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)

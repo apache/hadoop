@@ -606,8 +606,8 @@ public class PBHelper {
     DatanodeRegistrationProto.Builder builder = DatanodeRegistrationProto
         .newBuilder();
     return builder.setDatanodeID(PBHelper.convert((DatanodeID) registration))
-        .setStorageInfo(PBHelper.convert(registration.storageInfo))
-        .setKeys(PBHelper.convert(registration.exportedKeys)).build();
+        .setStorageInfo(PBHelper.convert(registration.getStorageInfo()))
+        .setKeys(PBHelper.convert(registration.getExportedKeys())).build();
   }
 
   public static DatanodeRegistration convert(DatanodeRegistrationProto proto) {

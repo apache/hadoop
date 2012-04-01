@@ -194,7 +194,7 @@ public class DataStorage extends Storage {
     }
     
     // make sure we have storage id set - if not - generate new one
-    createStorageID(datanode.getPort());
+    createStorageID(datanode.getXferPort());
     
     // 3. Update all storages. Some of them might have just been formatted.
     this.writeAll();

@@ -183,6 +183,7 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
    */
   public void updateRegInfo(DatanodeID nodeReg) {
     name = nodeReg.getName();
+    hostName = nodeReg.getHostName();
     infoPort = nodeReg.getInfoPort();
     ipcPort = nodeReg.getIpcPort();
   }

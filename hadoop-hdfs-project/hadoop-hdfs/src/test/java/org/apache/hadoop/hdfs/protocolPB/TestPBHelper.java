@@ -432,8 +432,8 @@ public class TestPBHelper {
         new StorageInfo(), expKeys);
     DatanodeRegistrationProto proto = PBHelper.convert(reg);
     DatanodeRegistration reg2 = PBHelper.convert(proto);
-    compare(reg.storageInfo, reg2.storageInfo);
-    compare(reg.exportedKeys, reg2.exportedKeys);
+    compare(reg.getStorageInfo(), reg2.getStorageInfo());
+    compare(reg.getExportedKeys(), reg2.getExportedKeys());
     compare((DatanodeID)reg, (DatanodeID)reg2);
   }
   

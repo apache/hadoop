@@ -325,10 +325,10 @@ class BPOfferService {
   void registrationSucceeded(BPServiceActor bpServiceActor,
       DatanodeRegistration reg) throws IOException {
     if (bpRegistration != null) {
-      checkNSEquality(bpRegistration.storageInfo.getNamespaceID(),
-          reg.storageInfo.getNamespaceID(), "namespace ID");
-      checkNSEquality(bpRegistration.storageInfo.getClusterID(),
-          reg.storageInfo.getClusterID(), "cluster ID");
+      checkNSEquality(bpRegistration.getStorageInfo().getNamespaceID(),
+          reg.getStorageInfo().getNamespaceID(), "namespace ID");
+      checkNSEquality(bpRegistration.getStorageInfo().getClusterID(),
+          reg.getStorageInfo().getClusterID(), "cluster ID");
     } else {
       bpRegistration = reg;
     }

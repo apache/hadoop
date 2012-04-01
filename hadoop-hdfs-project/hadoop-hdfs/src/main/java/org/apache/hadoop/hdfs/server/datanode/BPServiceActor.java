@@ -602,7 +602,7 @@ class BPServiceActor implements Runnable {
 
     while (shouldRun()) {
       try {
-        // Use returned registration from namenode with updated machine name.
+        // Use returned registration from namenode with updated fields
         bpRegistration = bpNamenode.registerDatanode(bpRegistration);
         break;
       } catch(SocketTimeoutException e) {  // namenode is busy
