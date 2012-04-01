@@ -52,11 +52,13 @@ fi
 
 SECONDARY_NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -secondarynamenodes 2>&-)
 
-echo "Stopping secondary namenodes [$SECONDARY_NAMENODES]"
+if [ -n "$SECONDARY_NAMENODES" ]; then
+  echo "Stopping secondary namenodes [$SECONDARY_NAMENODES]"
 
-"$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
-    --config "$HADOOP_CONF_DIR" \
-    --hostnames "$SECONDARY_NAMENODES" \
-    --script "$bin/hdfs" stop secondarynamenode
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
+      --config "$HADOOP_CONF_DIR" \
+      --hostnames "$SECONDARY_NAMENODES" \
+      --script "$bin/hdfs" stop secondarynamenode
+fi
 
 # eof
