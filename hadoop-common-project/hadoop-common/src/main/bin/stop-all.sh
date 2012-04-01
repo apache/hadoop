@@ -18,7 +18,7 @@
 
 # Stop all hadoop daemons.  Run this on master node.
 
-echo "This script is Deprecated. Instead use stop-dfs.sh and stop-mapred.sh"
+echo "This script is Deprecated. Instead use stop-dfs.sh and stop-yarn.sh"
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
@@ -28,6 +28,11 @@ HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/hadoop-config.sh
 
 # stop hdfs daemons if hdfs is present
-if [ -f "${HADOOP_HDFS_HOME}"/bin/stop-dfs.sh ]; then
-  "${HADOOP_HDFS_HOME}"/bin/stop-dfs.sh --config $HADOOP_CONF_DIR
+if [ -f "${HADOOP_HDFS_HOME}"/sbin/stop-dfs.sh ]; then
+  "${HADOOP_HDFS_HOME}"/sbin/stop-dfs.sh --config $HADOOP_CONF_DIR
+fi
+
+# stop yarn daemons if yarn is present
+if [ -f "${HADOOP_HDFS_HOME}"/sbin/stop-yarn.sh ]; then
+  "${HADOOP_HDFS_HOME}"/sbin/stop-yarn.sh --config $HADOOP_CONF_DIR
 fi
