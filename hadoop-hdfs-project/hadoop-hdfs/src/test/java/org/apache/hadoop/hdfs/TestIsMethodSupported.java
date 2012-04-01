@@ -60,7 +60,7 @@ public class TestIsMethodSupported {
         .numDataNodes(1).build();
     nnAddress = cluster.getNameNode().getNameNodeAddress();
     DataNode dn = cluster.getDataNodes().get(0);
-    dnAddress = new InetSocketAddress(dn.getDatanodeId().getHost(),
+    dnAddress = new InetSocketAddress(dn.getDatanodeId().getIpAddr(),
                                       dn.getIpcPort());
   }
 

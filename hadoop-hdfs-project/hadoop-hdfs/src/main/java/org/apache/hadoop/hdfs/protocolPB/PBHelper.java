@@ -204,15 +204,18 @@ public class PBHelper {
 
   // DatanodeId
   public static DatanodeID convert(DatanodeIDProto dn) {
-    return new DatanodeID(dn.getName(), dn.getHostName(), dn.getStorageID(), dn.getInfoPort(),
-        dn.getIpcPort());
+    return new DatanodeID(dn.getIpAddr(), dn.getHostName(), dn.getStorageID(),
+        dn.getXferPort(), dn.getInfoPort(), dn.getIpcPort());
   }
 
   public static DatanodeIDProto convert(DatanodeID dn) {
     return DatanodeIDProto.newBuilder()
-        .setName(dn.getName()).setHostName(dn.getHostName())
-        .setInfoPort(dn.getInfoPort()).setIpcPort(dn.getIpcPort())
-        .setStorageID(dn.getStorageID()).build();
+        .setIpAddr(dn.getIpAddr())
+        .setHostName(dn.getHostName())
+        .setStorageID(dn.getStorageID())
+        .setXferPort(dn.getXferPort())
+        .setInfoPort(dn.getInfoPort())
+        .setIpcPort(dn.getIpcPort()).build();
   }
 
   // Arrays of DatanodeId

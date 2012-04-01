@@ -15741,6 +15741,10 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
+          <expected-output>Hostname: [-.a-zA-z0-9\.]+</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
           <expected-output>Decommission Status : [a-zA-Z]+</expected-output>
         </comparator>
         <comparator>
@@ -15835,6 +15839,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>Name: [0-9\.:]+ \([-.a-zA-z0-9\.]+\)</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>Hostname: [-.a-zA-z0-9\.]+</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>

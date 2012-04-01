@@ -84,9 +84,10 @@ public abstract class HdfsProtoUtil {
   private static HdfsProtos.DatanodeIDProto toProto(
       DatanodeID dni) {
     return HdfsProtos.DatanodeIDProto.newBuilder()
-      .setName(dni.getName())
+      .setIpAddr(dni.getIpAddr())
       .setHostName(dni.getHostName())
       .setStorageID(dni.getStorageID())
+      .setXferPort(dni.getXferPort())
       .setInfoPort(dni.getInfoPort())
       .setIpcPort(dni.getIpcPort())
       .build();
@@ -94,9 +95,10 @@ public abstract class HdfsProtoUtil {
   
   private static DatanodeID fromProto(HdfsProtos.DatanodeIDProto idProto) {
     return new DatanodeID(
-        idProto.getName(),
+        idProto.getIpAddr(),
         idProto.getHostName(),
         idProto.getStorageID(),
+        idProto.getXferPort(),
         idProto.getInfoPort(),
         idProto.getIpcPort());
   }

@@ -62,8 +62,8 @@ implements Writable, NodeRegistration {
   /**
    * Create DatanodeRegistration
    */
-  public DatanodeRegistration(String nodeName) {
-    this(nodeName, new StorageInfo(), new ExportedBlockKeys());
+  public DatanodeRegistration(String ipAddr) {
+    this(ipAddr, new StorageInfo(), new ExportedBlockKeys());
   }
   
   public DatanodeRegistration(DatanodeID dn, StorageInfo info,
@@ -73,9 +73,9 @@ implements Writable, NodeRegistration {
     this.exportedKeys = keys;
   }
   
-  public DatanodeRegistration(String nodeName, StorageInfo info,
+  public DatanodeRegistration(String ipAddr, StorageInfo info,
       ExportedBlockKeys keys) {
-    super(nodeName);
+    super(ipAddr);
     this.storageInfo = info;
     this.exportedKeys = keys;
   }
@@ -108,13 +108,13 @@ implements Writable, NodeRegistration {
 
   @Override // NodeRegistration
   public String getAddress() {
-    return getName();
+    return getXferAddr();
   }
 
   @Override
   public String toString() {
     return getClass().getSimpleName()
-      + "(" + name
+      + "(" + ipAddr
       + ", storageID=" + storageID
       + ", infoPort=" + infoPort
       + ", ipcPort=" + ipcPort

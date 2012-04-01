@@ -28,13 +28,13 @@ import org.junit.Test;
 public class TestHost2NodesMap {
   private Host2NodesMap map = new Host2NodesMap();
   private final DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
-    new DatanodeDescriptor(new DatanodeID("h1:5020"), "/d1/r1"),
-    new DatanodeDescriptor(new DatanodeID("h2:5020"), "/d1/r1"),
-    new DatanodeDescriptor(new DatanodeID("h3:5020"), "/d1/r2"),
-    new DatanodeDescriptor(new DatanodeID("h3:5030"), "/d1/r2"),
+    new DatanodeDescriptor(new DatanodeID("ip1", "h1", "", 5020, -1, -1), "/d1/r1"),
+    new DatanodeDescriptor(new DatanodeID("ip2", "h1", "", 5020, -1, -1), "/d1/r1"),
+    new DatanodeDescriptor(new DatanodeID("ip3", "h1", "", 5020, -1, -1), "/d1/r2"),
+    new DatanodeDescriptor(new DatanodeID("ip3", "h1", "", 5030, -1, -1), "/d1/r2"),
   };
   private final DatanodeDescriptor NULL_NODE = null; 
-  private final DatanodeDescriptor NODE = new DatanodeDescriptor(new DatanodeID("h3:5040"),
+  private final DatanodeDescriptor NODE = new DatanodeDescriptor(new DatanodeID("h3", 5040),
       "/d1/r4");
 
   @Before
@@ -56,24 +56,11 @@ public class TestHost2NodesMap {
 
   @Test
   public void testGetDatanodeByHost() throws Exception {
-    assertTrue(map.getDatanodeByHost("h1")==dataNodes[0]);
-    assertTrue(map.getDatanodeByHost("h2")==dataNodes[1]);
-    DatanodeDescriptor node = map.getDatanodeByHost("h3");
+    assertTrue(map.getDatanodeByHost("ip1")==dataNodes[0]);
+    assertTrue(map.getDatanodeByHost("ip2")==dataNodes[1]);
+    DatanodeDescriptor node = map.getDatanodeByHost("ip3");
     assertTrue(node==dataNodes[2] || node==dataNodes[3]);
-    assertTrue(null==map.getDatanodeByHost("h4"));
-  }
-
-  @Test
-  public void testGetDatanodeByName() throws Exception {
-    assertTrue(map.getDatanodeByName("h1:5020")==dataNodes[0]);
-    assertTrue(map.getDatanodeByName("h1:5030")==null);
-    assertTrue(map.getDatanodeByName("h2:5020")==dataNodes[1]);
-    assertTrue(map.getDatanodeByName("h2:5030")==null);
-    assertTrue(map.getDatanodeByName("h3:5020")==dataNodes[2]);
-    assertTrue(map.getDatanodeByName("h3:5030")==dataNodes[3]);
-    assertTrue(map.getDatanodeByName("h3:5040")==null);
-    assertTrue(map.getDatanodeByName("h4")==null);
-    assertTrue(map.getDatanodeByName(null)==null);
+    assertTrue(null==map.getDatanodeByHost("ip4"));
   }
 
   @Test
@@ -81,21 +68,21 @@ public class TestHost2NodesMap {
     assertFalse(map.remove(NODE));
     
     assertTrue(map.remove(dataNodes[0]));
-    assertTrue(map.getDatanodeByHost("h1")==null);
-    assertTrue(map.getDatanodeByHost("h2")==dataNodes[1]);
-    DatanodeDescriptor node = map.getDatanodeByHost("h3");
+    assertTrue(map.getDatanodeByHost("ip1")==null);
+    assertTrue(map.getDatanodeByHost("ip2")==dataNodes[1]);
+    DatanodeDescriptor node = map.getDatanodeByHost("ip3");
     assertTrue(node==dataNodes[2] || node==dataNodes[3]);
-    assertTrue(null==map.getDatanodeByHost("h4"));
+    assertTrue(null==map.getDatanodeByHost("ip4"));
     
     assertTrue(map.remove(dataNodes[2]));
-    assertTrue(map.getDatanodeByHost("h1")==null);
-    assertTrue(map.getDatanodeByHost("h2")==dataNodes[1]);
-    assertTrue(map.getDatanodeByHost("h3")==dataNodes[3]);
+    assertTrue(map.getDatanodeByHost("ip1")==null);
+    assertTrue(map.getDatanodeByHost("ip2")==dataNodes[1]);
+    assertTrue(map.getDatanodeByHost("ip3")==dataNodes[3]);
     
     assertTrue(map.remove(dataNodes[3]));
-    assertTrue(map.getDatanodeByHost("h1")==null);
-    assertTrue(map.getDatanodeByHost("h2")==dataNodes[1]);
-    assertTrue(map.getDatanodeByHost("h3")==null);
+    assertTrue(map.getDatanodeByHost("ip1")==null);
+    assertTrue(map.getDatanodeByHost("ip2")==dataNodes[1]);
+    assertTrue(map.getDatanodeByHost("ip3")==null);
     
     assertFalse(map.remove(NULL_NODE));
     assertTrue(map.remove(dataNodes[1]));

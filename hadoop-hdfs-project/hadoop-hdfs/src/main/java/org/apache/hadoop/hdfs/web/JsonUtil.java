@@ -280,10 +280,11 @@ public class JsonUtil {
     }
 
     final Map<String, Object> m = new TreeMap<String, Object>();
-    m.put("name", datanodeinfo.getName());
+    m.put("ipAddr", datanodeinfo.getIpAddr());
+    m.put("hostName", datanodeinfo.getHostName());
     m.put("storageID", datanodeinfo.getStorageID());
+    m.put("xferPort", datanodeinfo.getXferPort());
     m.put("infoPort", datanodeinfo.getInfoPort());
-
     m.put("ipcPort", datanodeinfo.getIpcPort());
 
     m.put("capacity", datanodeinfo.getCapacity());
@@ -293,7 +294,6 @@ public class JsonUtil {
     m.put("lastUpdate", datanodeinfo.getLastUpdate());
     m.put("xceiverCount", datanodeinfo.getXceiverCount());
     m.put("networkLocation", datanodeinfo.getNetworkLocation());
-    m.put("hostName", datanodeinfo.getHostName());
     m.put("adminState", datanodeinfo.getAdminState().name());
     return m;
   }
@@ -308,6 +308,7 @@ public class JsonUtil {
         (String)m.get("name"),
         (String)m.get("hostName"),
         (String)m.get("storageID"),
+        (int)(long)(Long)m.get("xferPort"),
         (int)(long)(Long)m.get("infoPort"),
         (int)(long)(Long)m.get("ipcPort"),
 

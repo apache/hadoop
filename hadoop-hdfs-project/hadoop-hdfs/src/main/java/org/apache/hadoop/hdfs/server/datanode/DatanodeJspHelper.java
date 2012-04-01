@@ -136,10 +136,8 @@ public class DatanodeJspHelper {
           out.print("Empty file");
         } else {
           DatanodeInfo chosenNode = JspHelper.bestNode(firstBlock, conf);
-          String fqdn = canonicalize(chosenNode.getHost());
-          String datanodeAddr = chosenNode.getName();
-          int datanodePort = Integer.parseInt(datanodeAddr.substring(
-              datanodeAddr.indexOf(':') + 1, datanodeAddr.length()));
+          String fqdn = canonicalize(chosenNode.getIpAddr());
+          int datanodePort = chosenNode.getXferPort();
           String redirectLocation = "http://" + fqdn + ":"
               + chosenNode.getInfoPort() + "/browseBlock.jsp?blockId="
               + firstBlock.getBlock().getBlockId() + "&blockSize="
@@ -313,7 +311,7 @@ public class DatanodeJspHelper {
       dfs.close();
       return;
     }
-    String fqdn = canonicalize(chosenNode.getHost());
+    String fqdn = canonicalize(chosenNode.getIpAddr());
     String tailUrl = "http://" + fqdn + ":" + chosenNode.getInfoPort()
         + "/tail.jsp?filename=" + URLEncoder.encode(filename, "UTF-8")
         + "&namenodeInfoPort=" + namenodeInfoPort
@@ -360,10 +358,9 @@ public class DatanodeJspHelper {
       out.print("<td>" + blockidstring + ":</td>");
       DatanodeInfo[] locs = cur.getLocations();
       for (int j = 0; j < locs.length; j++) {
-        String datanodeAddr = locs[j].getName();
-        datanodePort = Integer.parseInt(datanodeAddr.substring(datanodeAddr
-            .indexOf(':') + 1, datanodeAddr.length()));
-        fqdn = canonicalize(locs[j].getHost());
+        String datanodeAddr = locs[j].getXferAddr();
+        datanodePort = locs[j].getXferPort();
+        fqdn = canonicalize(locs[j].getIpAddr());
         String blockUrl = "http://" + fqdn + ":" + locs[j].getInfoPort()
             + "/browseBlock.jsp?blockId=" + blockidstring
             + "&blockSize=" + blockSize
@@ -519,10 +516,8 @@ public class DatanodeJspHelper {
             nextStartOffset = 0;
             nextBlockSize = nextBlock.getBlock().getNumBytes();
             DatanodeInfo d = JspHelper.bestNode(nextBlock, conf);
-            String datanodeAddr = d.getName();
-            nextDatanodePort = Integer.parseInt(datanodeAddr.substring(
-                datanodeAddr.indexOf(':') + 1, datanodeAddr.length()));
-            nextHost = d.getHost();
+            nextDatanodePort = d.getXferPort();
+            nextHost = d.getIpAddr();
             nextPort = d.getInfoPort();
           }
         }
@@ -573,10 +568,8 @@ public class DatanodeJspHelper {
               prevStartOffset = 0;
             prevBlockSize = prevBlock.getBlock().getNumBytes();
             DatanodeInfo d = JspHelper.bestNode(prevBlock, conf);
-            String datanodeAddr = d.getName();
-            prevDatanodePort = Integer.parseInt(datanodeAddr.substring(
-                datanodeAddr.indexOf(':') + 1, datanodeAddr.length()));
-            prevHost = d.getHost();
+            prevDatanodePort = d.getXferPort();
+            prevHost = d.getIpAddr();
             prevPort = d.getInfoPort();
           }
         }
@@ -693,7 +686,8 @@ public class DatanodeJspHelper {
       dfs.close();
       return;
     }
-    InetSocketAddress addr = NetUtils.createSocketAddr(chosenNode.getName());
+    InetSocketAddress addr = 
+      NetUtils.createSocketAddr(chosenNode.getXferAddr());
     // view the last chunkSizeToView bytes while Tailing
     final long startOffset = blockSize >= chunkSizeToView ? blockSize
         - chunkSizeToView : 0;

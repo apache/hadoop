@@ -137,7 +137,7 @@ public class TestBlockTokenWithDFS {
     ExtendedBlock block = lblock.getBlock();
     try {
       DatanodeInfo[] nodes = lblock.getLocations();
-      targetAddr = NetUtils.createSocketAddr(nodes[0].getName());
+      targetAddr = NetUtils.createSocketAddr(nodes[0].getXferAddr());
       s = NetUtils.getDefaultSocketFactory(conf).createSocket();
       s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
       s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);

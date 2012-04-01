@@ -307,6 +307,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
 
+    HDFS-3144. Refactor DatanodeID#getName by use. (eli)
+
   BUG FIXES
 
     HDFS-2481. Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol.
