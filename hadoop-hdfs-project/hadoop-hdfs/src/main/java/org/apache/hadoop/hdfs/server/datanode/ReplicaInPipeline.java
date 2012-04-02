@@ -37,7 +37,7 @@ import org.apache.hadoop.util.DataChecksum;
  * 
  * The base class implements a temporary replica
  */
-class ReplicaInPipeline extends ReplicaInfo
+public class ReplicaInPipeline extends ReplicaInfo
                         implements ReplicaInPipelineInterface {
   private long bytesAcked;
   private long bytesOnDisk;
@@ -50,9 +50,8 @@ class ReplicaInPipeline extends ReplicaInfo
    * @param genStamp replica generation stamp
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
-   * @param state replica state
    */
-    ReplicaInPipeline(long blockId, long genStamp, 
+  public ReplicaInPipeline(long blockId, long genStamp, 
         FsVolumeSpi vol, File dir) {
     this( blockId, 0L, genStamp, vol, dir, Thread.currentThread());
   }
@@ -91,7 +90,7 @@ class ReplicaInPipeline extends ReplicaInfo
    * Copy constructor.
    * @param from
    */
-  ReplicaInPipeline(ReplicaInPipeline from) {
+  public ReplicaInPipeline(ReplicaInPipeline from) {
     super(from);
     this.bytesAcked = from.getBytesAcked();
     this.bytesOnDisk = from.getBytesOnDisk();
@@ -151,7 +150,7 @@ class ReplicaInPipeline extends ReplicaInfo
    * Interrupt the writing thread and wait until it dies
    * @throws IOException the waiting is interrupted
    */
-  void stopWriter() throws IOException {
+  public void stopWriter() throws IOException {
     if (writer != null && writer != Thread.currentThread() && writer.isAlive()) {
       writer.interrupt();
       try {

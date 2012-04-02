@@ -296,6 +296,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3144. Refactor DatanodeID#getName by use. (eli)
 
+    HDFS-3130. Move fsdataset implementation to a package.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)

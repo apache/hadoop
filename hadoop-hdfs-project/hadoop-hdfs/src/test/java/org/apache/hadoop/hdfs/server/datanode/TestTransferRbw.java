@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.log4j.Level;
 import org.junit.Assert;
@@ -58,8 +59,8 @@ public class TestTransferRbw {
   }
   private static ReplicaInPipeline getReplica(final DataNode datanode,
       final String bpid, final ReplicaState expectedState) throws InterruptedException {
-    final FSDataset dataset = ((FSDataset)datanode.data);
-    final Collection<ReplicaInfo> replicas = dataset.volumeMap.replicas(bpid);
+    final Collection<ReplicaInfo> replicas = FsDatasetTestUtil.getReplicas(
+        datanode.getFSDataset(), bpid);
     for(int i = 0; i < 5 && replicas.size() == 0; i++) {
       LOG.info("wait since replicas.size() == 0; i=" + i);
       Thread.sleep(1000);

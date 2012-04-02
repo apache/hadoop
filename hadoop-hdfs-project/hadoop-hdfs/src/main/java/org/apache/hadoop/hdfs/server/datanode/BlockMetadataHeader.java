@@ -86,7 +86,7 @@ public class BlockMetadataHeader {
    * @return
    * @throws IOException
    */
-  static BlockMetadataHeader readHeader(File file) throws IOException {
+  public static BlockMetadataHeader readHeader(File file) throws IOException {
     DataInputStream in = null;
     try {
       in = new DataInputStream(new BufferedInputStream(
@@ -144,7 +144,7 @@ public class BlockMetadataHeader {
   /**
    * Returns the size of the header
    */
-  static int getHeaderSize() {
+  public static int getHeaderSize() {
     return Short.SIZE/Byte.SIZE + DataChecksum.getChecksumHeaderSize();
   }
 }

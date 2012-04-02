@@ -15,24 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+
 /**
- * Exception indicating that the target block already exists 
- * and is not set to be recovered/overwritten.  
+ * A factory for creating {@link FsDatasetImpl} objects.
  */
-public class ReplicaAlreadyExistsException extends IOException {
-  private static final long serialVersionUID = 1L;
-
-  public ReplicaAlreadyExistsException() {
-    super();
-  }
-
-  public ReplicaAlreadyExistsException(String msg) {
-    super(msg);
+public class FsDatasetFactory extends FsDatasetSpi.Factory<FsDatasetImpl> {
+  @Override
+  public FsDatasetImpl newInstance(DataNode datanode,
+      DataStorage storage, Configuration conf) throws IOException {
+    return new FsDatasetImpl(datanode, storage, conf);
   }
 }
