@@ -25,11 +25,13 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysFailFencer;
 import static org.apache.hadoop.ha.TestNodeFencer.setupFencer;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.test.MockitoUtil;
 
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -40,6 +42,8 @@ import static org.junit.Assert.*;
 public class TestFailoverController {
   private InetSocketAddress svc1Addr = new InetSocketAddress("svc1", 1234); 
   private InetSocketAddress svc2Addr = new InetSocketAddress("svc2", 5678);
+  
+  private Configuration conf = new Configuration();
 
   HAServiceStatus STATE_NOT_READY = new HAServiceStatus(HAServiceState.STANDBY)
       .setNotReadyToBecomeActive("injected not ready");
@@ -51,13 +55,13 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     AlwaysSucceedFencer.fenceCalled = 0;
-    FailoverController.failover(svc1, svc2, false, false);
+    doFailover(svc1, svc2, false, false);
     assertEquals(0, TestNodeFencer.AlwaysSucceedFencer.fenceCalled);
     assertEquals(HAServiceState.STANDBY, svc1.state);
     assertEquals(HAServiceState.ACTIVE, svc2.state);
 
     AlwaysSucceedFencer.fenceCalled = 0;
-    FailoverController.failover(svc2, svc1, false, false);
+    doFailover(svc2, svc1, false, false);
     assertEquals(0, TestNodeFencer.AlwaysSucceedFencer.fenceCalled);
     assertEquals(HAServiceState.ACTIVE, svc1.state);
     assertEquals(HAServiceState.STANDBY, svc2.state);
@@ -69,7 +73,7 @@ public class TestFailoverController {
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
-    FailoverController.failover(svc1, svc2, false, false);
+    doFailover(svc1, svc2, false, false);
     assertEquals(HAServiceState.STANDBY, svc1.state);
     assertEquals(HAServiceState.ACTIVE, svc2.state);
   }
@@ -81,7 +85,7 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Can't failover to an already active service");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -102,7 +106,7 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Can't failover when access is denied");
     } catch (FailoverFailedException ffe) {
       assertTrue(ffe.getCause().getMessage().contains("Access denied"));
@@ -118,7 +122,7 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Can't failover to a service that's not ready");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -131,7 +135,7 @@ public class TestFailoverController {
     assertEquals(HAServiceState.STANDBY, svc2.state);
 
     // Forcing it means we ignore readyToBecomeActive
-    FailoverController.failover(svc1, svc2, false, true);
+    doFailover(svc1, svc2, false, true);
     assertEquals(HAServiceState.STANDBY, svc1.state);
     assertEquals(HAServiceState.ACTIVE, svc2.state);
   }
@@ -145,7 +149,7 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Failover to unhealthy service");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -165,7 +169,7 @@ public class TestFailoverController {
 
     AlwaysSucceedFencer.fenceCalled = 0;
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
     } catch (FailoverFailedException ffe) {
       fail("Faulty active prevented failover");
     }
@@ -188,7 +192,7 @@ public class TestFailoverController {
 
     AlwaysFailFencer.fenceCalled = 0;
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Failed over even though fencing failed");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -208,7 +212,7 @@ public class TestFailoverController {
 
     AlwaysFailFencer.fenceCalled = 0;
     try {
-      FailoverController.failover(svc1, svc2, true, false);
+      doFailover(svc1, svc2, true, false);
       fail("Failed over even though fencing requested and failed");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -232,16 +236,26 @@ public class TestFailoverController {
           .defaultAnswer(new ThrowsException(
               new IOException("Could not connect to host")))
           .extraInterfaces(Closeable.class));
-    Mockito.doReturn(errorThrowingProxy).when(svc1).getProxy();
+    Mockito.doNothing().when((Closeable)errorThrowingProxy).close();
+
+    Mockito.doReturn(errorThrowingProxy).when(svc1).getProxy(
+        Mockito.<Configuration>any(),
+        Mockito.anyInt());
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
     } catch (FailoverFailedException ffe) {
       fail("Non-existant active prevented failover");
     }
-
+    // Verify that the proxy created to try to make it go to standby
+    // gracefully used the right rpc timeout
+    Mockito.verify(svc1).getProxy(
+        Mockito.<Configuration>any(),
+        Mockito.eq(
+          CommonConfigurationKeys.HA_FC_GRACEFUL_FENCE_TIMEOUT_DEFAULT));
+        
     // Don't check svc1 because we can't reach it, but that's OK, it's been fenced.
     assertEquals(HAServiceState.ACTIVE, svc2.state);
   }
@@ -256,7 +270,7 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Failed over to a non-existant standby");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -274,7 +288,7 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Failover to already active service");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -296,7 +310,7 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, true, false);
+      doFailover(svc1, svc2, true, false);
       fail("Failed over to service that won't transition to active");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -318,7 +332,7 @@ public class TestFailoverController {
     AlwaysSucceedFencer.fenceCalled = 0;
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Failed over to service that won't transition to active");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -342,7 +356,7 @@ public class TestFailoverController {
     AlwaysFailFencer.fenceCalled = 0;
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Failed over to service that won't transition to active");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -368,7 +382,7 @@ public class TestFailoverController {
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
-      FailoverController.failover(svc1, svc2, false, false);
+      doFailover(svc1, svc2, false, false);
       fail("Failover to already active service");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -386,7 +400,7 @@ public class TestFailoverController {
     AlwaysSucceedFencer.fenceCalled = 0;
 
     try {
-      FailoverController.failover(svc1, svc1, false, false);
+      doFailover(svc1, svc1, false, false);
       fail("Can't failover to yourself");
     } catch (FailoverFailedException ffe) {
       // Expected
@@ -395,13 +409,19 @@ public class TestFailoverController {
     assertEquals(HAServiceState.ACTIVE, svc1.state);
 
     try {
-      FailoverController.failover(svc2, svc2, false, false);
+      doFailover(svc2, svc2, false, false);
       fail("Can't failover to yourself");
     } catch (FailoverFailedException ffe) {
       // Expected
     }
     assertEquals(0, TestNodeFencer.AlwaysSucceedFencer.fenceCalled);
     assertEquals(HAServiceState.STANDBY, svc2.state);
+  }
+  
+  private void doFailover(HAServiceTarget tgt1, HAServiceTarget tgt2,
+      boolean forceFence, boolean forceActive) throws FailoverFailedException {
+    FailoverController fc = new FailoverController(conf);
+    fc.failover(tgt1, tgt2, forceFence, forceActive);
   }
 
 }

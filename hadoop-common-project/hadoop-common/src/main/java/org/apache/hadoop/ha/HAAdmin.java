@@ -30,7 +30,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -49,6 +51,8 @@ public abstract class HAAdmin extends Configured implements Tool {
   private static final String FORCEACTIVE = "forceactive";
   private static final Log LOG = LogFactory.getLog(HAAdmin.class);
 
+  private int rpcTimeoutForChecks = -1;
+  
   private static Map<String, UsageInfo> USAGE =
     ImmutableMap.<String, UsageInfo>builder()
     .put("-transitionToActive",
@@ -165,9 +169,10 @@ public abstract class HAAdmin extends Configured implements Tool {
     HAServiceTarget fromNode = resolveTarget(args[0]);
     HAServiceTarget toNode = resolveTarget(args[1]);
     
+    FailoverController fc = new FailoverController(getConf());
+    
     try {
-      FailoverController.failover(fromNode, toNode,
-          forceFence, forceActive); 
+      fc.failover(fromNode, toNode, forceFence, forceActive); 
       out.println("Failover from "+args[0]+" to "+args[1]+" successful");
     } catch (FailoverFailedException ffe) {
       errOut.println("Failover failed: " + ffe.getLocalizedMessage());
@@ -184,7 +189,8 @@ public abstract class HAAdmin extends Configured implements Tool {
       return -1;
     }
     
-    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy();
+    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy(
+        getConf(), rpcTimeoutForChecks);
     try {
       HAServiceProtocolHelper.monitorHealth(proto);
     } catch (HealthCheckFailedException e) {
@@ -202,7 +208,8 @@ public abstract class HAAdmin extends Configured implements Tool {
       return -1;
     }
 
-    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy();
+    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy(
+        getConf(), rpcTimeoutForChecks);
     out.println(proto.getServiceStatus().getState());
     return 0;
   }
@@ -213,6 +220,16 @@ public abstract class HAAdmin extends Configured implements Tool {
    */
   protected String getServiceAddr(String serviceId) {
     return serviceId;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    if (conf != null) {
+      rpcTimeoutForChecks = conf.getInt(
+          CommonConfigurationKeys.HA_FC_CLI_CHECK_TIMEOUT_KEY,
+          CommonConfigurationKeys.HA_FC_CLI_CHECK_TIMEOUT_DEFAULT);
+    }
   }
 
   @Override

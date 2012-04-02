@@ -320,8 +320,8 @@ public abstract class ZKFailoverController implements Tool {
       HAServiceTarget target = dataToTarget(data);
       
       LOG.info("Should fence: " + target);
-      boolean gracefulWorked =
-        FailoverController.tryGracefulFence(conf, target);
+      boolean gracefulWorked = new FailoverController(conf)
+          .tryGracefulFence(target);
       if (gracefulWorked) {
         // It's possible that it's in standby but just about to go into active,
         // no? Is there some race here?

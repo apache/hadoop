@@ -145,5 +145,21 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String HA_HM_RPC_TIMEOUT_KEY =
     "ha.health-monitor.rpc-timeout.ms";
   public static final int HA_HM_RPC_TIMEOUT_DEFAULT = 45000;
+  
+  /* Timeout that the FC waits for the new active to become active */
+  public static final String HA_FC_NEW_ACTIVE_TIMEOUT_KEY =
+    "ha.failover-controller.new-active.rpc-timeout.ms";
+  public static final int HA_FC_NEW_ACTIVE_TIMEOUT_DEFAULT = 60000;
+  
+  /* Timeout that the FC waits for the old active to go to standby */
+  public static final String HA_FC_GRACEFUL_FENCE_TIMEOUT_KEY =
+    "ha.failover-controller.graceful-fence.rpc-timeout.ms";
+  public static final int HA_FC_GRACEFUL_FENCE_TIMEOUT_DEFAULT = 5000;
+  
+  /* Timeout that the CLI (manual) FC waits for monitorHealth, getServiceState */
+  public static final String HA_FC_CLI_CHECK_TIMEOUT_KEY =
+    "ha.failover-controller.cli-check.rpc-timeout.ms";
+  public static final int HA_FC_CLI_CHECK_TIMEOUT_DEFAULT = 20000;
+
 }
 

@@ -125,6 +125,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8211. Update commons-net version to 3.1. (eli)
 
+    HADOOP-8236. haadmin should have configurable timeouts for failover
+    commands. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
