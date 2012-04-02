@@ -16,6 +16,9 @@ Release 1.1.0 - unreleased
 
     HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
 
+    HDFS-3148. The client should be able to use multiple local interfaces
+    for data transfer. (eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file

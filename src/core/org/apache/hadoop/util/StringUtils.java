@@ -734,6 +734,27 @@ public class StringUtils {
   }
 
   /**
+   * Concatenates objects, using a separator.
+   *
+   * @param separator to join with
+   * @param object to join
+   * @return the joined string
+   */
+  public static String join(CharSequence separator, Object[] objects) {
+    StringBuilder sb = new StringBuilder();
+    boolean first = true;
+    for (Object obj : objects) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(separator);
+      }
+      sb.append(obj);
+    }
+    return sb.toString();
+  }
+
+  /**
    * Capitalize a word
    *
    * @param s the input string

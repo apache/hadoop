@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
 
+import static org.junit.Assume.assumeTrue;
 
 /**
  * This class tests that a file need not be closed before its
@@ -171,29 +173,50 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   public void testFileCreation() throws IOException {
-    checkFileCreation(false);
+    checkFileCreation(null, null);
   }
 
+  /** Same test but the client should use DN hostname instead of IPs */
   public void testFileCreationByHostname() throws IOException {
-    checkFileCreation(true);
+    assumeTrue(System.getProperty("os.name").startsWith("Linux"));
+
+    // Since the mini cluster only listens on the loopback we have to
+    // ensure the hostname used to access DNs maps to the loopback. We
+    // do this by telling the DN to advertise localhost as its hostname
+    // instead of the default hostname.
+    checkFileCreation("localhost", null);
+  }
+
+  /** Same test but the client should bind to a local interface */
+  public void testFileCreationSetLocalInterface() throws IOException {
+    assumeTrue(System.getProperty("os.name").startsWith("Linux"));
+
+    // The mini cluster listens on the loopback so we can use it here
+    checkFileCreation(null, "lo");
+
+    try {
+      checkFileCreation(null, "bogus-interface");
+      fail("Able to specify a bogus interface");
+    } catch (UnknownHostException e) {
+      assertEquals("Unknown interface bogus-interface", e.getMessage());
+    }
   }
 
   /**
    * Test that file data becomes available before file is closed.
-   * @param useDnHostname if clients should access DNs by hostname (vs IP)
+   * @param hostname the hostname, if any, clients should use to access DNs
+   * @param netIf the local interface, if any, clients should use to access DNs
    */
-  public void checkFileCreation(boolean useDnHostname) throws IOException {
+  public void checkFileCreation(String hostname, String netIf) throws IOException {
     Configuration conf = new Configuration();
 
-    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME, useDnHostname);
-    if (useDnHostname) {
-      // Since the mini cluster only listens on the loopback we have to
-      // ensure the hostname used to access DNs maps to the loopback. We
-      // do this by telling the DN to advertise localhost as its hostname
-      // instead of the default hostname.
-      conf.set("slave.host.name", "localhost");
+    if (hostname != null) {
+      conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME, true);
+      conf.set("slave.host.name", hostname);
     }
-
+    if (netIf != null) {
+      conf.set(DFSConfigKeys.DFS_CLIENT_LOCAL_INTERFACES, netIf);
+    }
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }

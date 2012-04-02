@@ -22,7 +22,9 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.LinkedHashSet;
 import java.util.Vector;
 
 import javax.naming.NamingException;
@@ -101,12 +103,40 @@ public class DNS {
   }
 
   /**
+   * @param nif network interface to get addresses for
+   * @return set containing addresses for each subinterface of nif,
+   *    see below for the rationale for using an ordered set
+   */
+  private static LinkedHashSet<InetAddress> getSubinterfaceInetAddrs(
+      NetworkInterface nif) {
+    LinkedHashSet<InetAddress> addrs = new LinkedHashSet<InetAddress>();
+    Enumeration<NetworkInterface> subNifs = nif.getSubInterfaces();
+    while (subNifs.hasMoreElements()) {
+      NetworkInterface subNif = subNifs.nextElement();
+      addrs.addAll(Collections.list(subNif.getInetAddresses()));
+    }
+    return addrs;
+  }
+
+  /**
+   * Like {@link DNS#getIPs(String, boolean), but returns all
+   * IPs associated with the given interface and its subinterfaces.
+   */
+  public static String[] getIPs(String strInterface)
+      throws UnknownHostException {
+    return getIPs(strInterface, true);
+  }
+
+  /**
    * Returns all the IPs associated with the provided interface, if any, in
    * textual form.
    * 
    * @param strInterface
    *            The name of the network interface or subinterface to query
    *            (eg eth0 or eth0:0) or the string "default"
+   * @param returnSubinterfaces
+   *            Whether to return IPs associated with subinterfaces of
+   *            the given interface
    * @return A string vector of all the IPs associated with the provided
    *         interface
    * @throws UnknownHostException
@@ -114,8 +144,8 @@ public class DNS {
    *             default interface or the given interface can not be found
    * 
    */
-  public static String[] getIPs(String strInterface)
-    throws UnknownHostException {
+  public static String[] getIPs(String strInterface,
+      boolean returnSubinterfaces) throws UnknownHostException {
     if ("default".equals(strInterface)) {
       return new String[] {
           InetAddress.getLocalHost().getHostAddress()
@@ -136,11 +166,22 @@ public class DNS {
           InetAddress.getLocalHost().getHostAddress()
       };
     }
-    Vector<String> ips = new Vector<String>();
-    Enumeration<InetAddress> e = netIf.getInetAddresses();
-    while (e.hasMoreElements())
-      ips.add(e.nextElement().getHostAddress());
-    return ips.toArray(new String[] {});
+
+    // NB: Using a LinkedHashSet to preserve the order for callers
+    // that depend on a particular element being 1st in the array.
+    // For example, getDefaultIP always returns the first element.
+    LinkedHashSet<InetAddress> allAddrs = new LinkedHashSet<InetAddress>();
+    allAddrs.addAll(Collections.list(netIf.getInetAddresses()));
+    if (!returnSubinterfaces) {
+      allAddrs.removeAll(getSubinterfaceInetAddrs(netIf));
+    }
+
+    String ips[] = new String[allAddrs.size()];
+    int i = 0;
+    for (InetAddress addr : allAddrs) {
+      ips[i++] = addr.getHostAddress();
+    }
+    return ips;
   }
 
   /**
