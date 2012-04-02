@@ -48,12 +48,12 @@ import com.google.common.collect.Lists;
 
 public class TestBlockManager {
   private final List<DatanodeDescriptor> nodes = ImmutableList.of( 
-      new DatanodeDescriptor(new DatanodeID("h1:5020"), "/rackA"),
-      new DatanodeDescriptor(new DatanodeID("h2:5020"), "/rackA"),
-      new DatanodeDescriptor(new DatanodeID("h3:5020"), "/rackA"),
-      new DatanodeDescriptor(new DatanodeID("h4:5020"), "/rackB"),
-      new DatanodeDescriptor(new DatanodeID("h5:5020"), "/rackB"),
-      new DatanodeDescriptor(new DatanodeID("h6:5020"), "/rackB")
+      new DatanodeDescriptor(new DatanodeID("h1", 5020), "/rackA"),
+      new DatanodeDescriptor(new DatanodeID("h2", 5020), "/rackA"),
+      new DatanodeDescriptor(new DatanodeID("h3", 5020), "/rackA"),
+      new DatanodeDescriptor(new DatanodeID("h4", 5020), "/rackB"),
+      new DatanodeDescriptor(new DatanodeID("h5", 5020), "/rackB"),
+      new DatanodeDescriptor(new DatanodeID("h6", 5020), "/rackB")
     );
   private final List<DatanodeDescriptor> rackA = nodes.subList(0, 3);
   private final List<DatanodeDescriptor> rackB = nodes.subList(3, 6);
@@ -272,7 +272,7 @@ public class TestBlockManager {
 
     // the block is still under-replicated. Add a new node. This should allow
     // the third off-rack replica.
-    DatanodeDescriptor rackCNode = new DatanodeDescriptor(new DatanodeID("h7:5020"), "/rackC");
+    DatanodeDescriptor rackCNode = new DatanodeDescriptor(new DatanodeID("h7", 100), "/rackC");
     addNodes(ImmutableList.of(rackCNode));
     try {
       DatanodeDescriptor[] pipeline2 = scheduleSingleReplication(blockInfo);

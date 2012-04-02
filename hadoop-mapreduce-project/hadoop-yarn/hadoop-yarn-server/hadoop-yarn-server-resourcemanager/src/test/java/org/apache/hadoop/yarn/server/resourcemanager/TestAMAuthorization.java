@@ -235,10 +235,11 @@ public class TestAMAuthorization {
       client.registerApplicationMaster(request);
       Assert.fail("Should fail with authorization error");
     } catch (YarnRemoteException e) {
-      Assert.assertEquals("Unauthorized request from ApplicationMaster. "
-          + "Expected ApplicationAttemptID: "
-          + applicationAttemptId.toString() + " Found: "
-          + otherAppAttemptId.toString(), e.getMessage());
+      Assert.assertTrue(e.getMessage().contains(
+          "Unauthorized request from ApplicationMaster. "
+              + "Expected ApplicationAttemptID: "
+              + applicationAttemptId.toString() + " Found: "
+              + otherAppAttemptId.toString()));
     } finally {
       rm.stop();
     }

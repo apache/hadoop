@@ -389,9 +389,8 @@ public class TestDatanodeDeath extends TestCase {
         cluster.stopDataNode(victim);
       } else {
         int victim = datanodeToKill;
-        System.out.println("SimpleTest stopping datanode " +
-                            targets[victim].getName());
-        cluster.stopDataNode(targets[victim].getName());
+        System.out.println("SimpleTest stopping datanode " + targets[victim]);
+        cluster.stopDataNode(targets[victim].getXferAddr());
       }
       System.out.println("SimpleTest stopping datanode complete");
 

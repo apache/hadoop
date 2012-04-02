@@ -162,16 +162,16 @@ public class TestBlockReplacement extends TestCase {
       
       // start to replace the block
       // case 1: proxySource does not contain the block
-      LOG.info("Testcase 1: Proxy " + newNode.getName() 
+      LOG.info("Testcase 1: Proxy " + newNode
            + " does not contain the block " + b);
       assertFalse(replaceBlock(b, source, newNode, proxies.get(0)));
       // case 2: destination already contains the block
-      LOG.info("Testcase 2: Destination " + proxies.get(1).getName() 
+      LOG.info("Testcase 2: Destination " + proxies.get(1)
           + " contains the block " + b);
       assertFalse(replaceBlock(b, source, proxies.get(0), proxies.get(1)));
       // case 3: correct case
-      LOG.info("Testcase 3: Source=" + source.getName() + " Proxy=" + 
-          proxies.get(0).getName() + " Destination=" + newNode.getName() );
+      LOG.info("Testcase 3: Source=" + source + " Proxy=" + 
+          proxies.get(0) + " Destination=" + newNode );
       assertTrue(replaceBlock(b, source, proxies.get(0), newNode));
       // after cluster has time to resolve the over-replication,
       // block locations should contain two proxies and newNode
@@ -181,7 +181,7 @@ public class TestBlockReplacement extends TestCase {
           DEFAULT_BLOCK_SIZE, REPLICATION_FACTOR, client);
       // case 4: proxies.get(0) is not a valid del hint
       // expect either source or newNode replica to be deleted instead
-      LOG.info("Testcase 4: invalid del hint " + proxies.get(0).getName() );
+      LOG.info("Testcase 4: invalid del hint " + proxies.get(0) );
       assertTrue(replaceBlock(b, proxies.get(0), proxies.get(1), source));
       // after cluster has time to resolve the over-replication,
       // block locations should contain two proxies,
@@ -222,7 +222,7 @@ public class TestBlockReplacement extends TestCase {
         for (DatanodeInfo node : includeNodes) {
           if (!nodeLocations.contains(node) ) {
             notDone=true; 
-            LOG.info("Block is not located at " + node.getName() );
+            LOG.info("Block is not located at " + node );
             break;
           }
         }
@@ -231,9 +231,9 @@ public class TestBlockReplacement extends TestCase {
         String expectedNodesList = "";
         String currentNodesList = "";
         for (DatanodeInfo dn : includeNodes) 
-          expectedNodesList += dn.getName() + ", ";
+          expectedNodesList += dn + ", ";
         for (DatanodeInfo dn : nodes) 
-          currentNodesList += dn.getName() + ", ";
+          currentNodesList += dn + ", ";
         LOG.info("Expected replica nodes are: " + expectedNodesList);
         LOG.info("Current actual replica nodes are: " + currentNodesList);
         throw new TimeoutException(
@@ -254,7 +254,7 @@ public class TestBlockReplacement extends TestCase {
       DatanodeInfo sourceProxy, DatanodeInfo destination) throws IOException {
     Socket sock = new Socket();
     sock.connect(NetUtils.createSocketAddr(
-        destination.getName()), HdfsServerConstants.READ_TIMEOUT);
+        destination.getXferAddr()), HdfsServerConstants.READ_TIMEOUT); 
     sock.setKeepAlive(true);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());

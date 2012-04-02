@@ -175,19 +175,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation) {
-    this(nodeID, networkLocation, null);
-  }
-  
-  /** DatanodeDescriptor constructor
-   * 
-   * @param nodeID id of the data node
-   * @param networkLocation location of the data node in network
-   * @param hostName it could be different from host specified for DatanodeID
-   */
-  public DatanodeDescriptor(DatanodeID nodeID, 
-                            String networkLocation,
-                            String hostName) {
-    this(nodeID, networkLocation, hostName, 0L, 0L, 0L, 0L, 0, 0);
+    this(nodeID, networkLocation, 0L, 0L, 0L, 0L, 0, 0);
   }
   
   /** DatanodeDescriptor constructor
@@ -223,14 +211,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   public DatanodeDescriptor(DatanodeID nodeID,
                             String networkLocation,
-                            String hostName,
                             long capacity,
                             long dfsUsed,
                             long remaining,
                             long bpused,
                             int xceiverCount,
                             int failedVolumes) {
-    super(nodeID, networkLocation, hostName);
+    super(nodeID, networkLocation);
     updateHeartbeat(capacity, dfsUsed, remaining, bpused, xceiverCount, 
         failedVolumes);
   }
@@ -436,23 +423,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
 
-  /** Serialization for FSEditLog */
-  public void readFieldsFromFSEditLog(DataInput in) throws IOException {
-    this.name = DeprecatedUTF8.readString(in);
-    this.storageID = DeprecatedUTF8.readString(in);
-    this.infoPort = in.readShort() & 0x0000ffff;
-
-    this.capacity = in.readLong();
-    this.dfsUsed = in.readLong();
-    this.remaining = in.readLong();
-    this.blockPoolUsed = in.readLong();
-    this.lastUpdate = in.readLong();
-    this.xceiverCount = in.readInt();
-    this.location = Text.readString(in);
-    this.hostName = Text.readString(in);
-    setAdminState(WritableUtils.readEnum(in, AdminStates.class));
-  }
-  
   /**
    * @return Approximate number of blocks currently scheduled to be written 
    * to this datanode.

@@ -158,7 +158,7 @@ public class TestConnCache {
             testFile.toString(), 0, FILE_SIZE)
         .getLocatedBlocks().get(0);
     DataNode dn = util.getDataNode(block);
-    InetSocketAddress dnAddr = dn.getSelfAddr();
+    InetSocketAddress dnAddr = dn.getXferAddress();
 
     // Make some sockets to the DN
     Socket[] dnSockets = new Socket[CACHE_SIZE];

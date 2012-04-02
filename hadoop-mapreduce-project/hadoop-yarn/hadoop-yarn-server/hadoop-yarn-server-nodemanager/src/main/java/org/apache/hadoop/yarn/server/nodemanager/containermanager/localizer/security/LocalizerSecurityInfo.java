@@ -26,7 +26,7 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
-import org.apache.hadoop.yarn.proto.LocalizationProtocol;
+import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocolPB;
 
 public class LocalizerSecurityInfo extends SecurityInfo {
 
@@ -38,7 +38,7 @@ public class LocalizerSecurityInfo extends SecurityInfo {
   @Override
   public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
     if (!protocol
-        .equals(LocalizationProtocol.LocalizationProtocolService.BlockingInterface.class)) {
+        .equals(LocalizationProtocolPB.class)) {
       return null;
     }
     return new TokenInfo() {

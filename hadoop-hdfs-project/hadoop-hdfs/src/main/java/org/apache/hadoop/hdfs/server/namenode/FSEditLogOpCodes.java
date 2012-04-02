@@ -36,8 +36,8 @@ public enum FSEditLogOpCodes {
   OP_DELETE                     ((byte)  2),
   OP_MKDIR                      ((byte)  3),
   OP_SET_REPLICATION            ((byte)  4),
-  @Deprecated OP_DATANODE_ADD   ((byte)  5),
-  @Deprecated OP_DATANODE_REMOVE((byte)  6),
+  @Deprecated OP_DATANODE_ADD   ((byte)  5), // obsolete
+  @Deprecated OP_DATANODE_REMOVE((byte)  6), // obsolete
   OP_SET_PERMISSIONS            ((byte)  7),
   OP_SET_OWNER                  ((byte)  8),
   OP_CLOSE                      ((byte)  9),

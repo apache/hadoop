@@ -86,6 +86,11 @@
             <phase>test-compile</phase>
           </execution>
         </executions>
+        <configuration>
+          <excludes>
+            <exclude>mrapp-generated-classpath</exclude>
+          </excludes>
+        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-dependency-plugin</artifactId>

@@ -51,6 +51,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -304,8 +305,9 @@ public class Balancer {
       DataOutputStream out = null;
       DataInputStream in = null;
       try {
-        sock.connect(NetUtils.createSocketAddr(
-            target.datanode.getName()), HdfsServerConstants.READ_TIMEOUT);
+        sock.connect(
+            NetUtils.createSocketAddr(target.datanode.getXferAddr()),
+            HdfsServerConstants.READ_TIMEOUT);
         sock.setKeepAlive(true);
         out = new DataOutputStream( new BufferedOutputStream(
             sock.getOutputStream(), HdfsConstants.IO_FILE_BUFFER_SIZE));
@@ -586,7 +588,7 @@ public class Balancer {
     /** Add a node task */
     private void addNodeTask(NodeTask task) {
       assert (task.datanode != this) :
-        "Source and target are the same " + datanode.getName();
+        "Source and target are the same " + datanode;
       incScheduledSize(task.getSize());
       nodeTasks.add(task);
     }
@@ -1006,7 +1008,7 @@ public class Balancer {
         targetCandidates.remove();
       }
       LOG.info("Decided to move "+StringUtils.byteDesc(size)+" bytes from "
-          +source.datanode.getName() + " to " + target.datanode.getName());
+          +source.datanode + " to " + target.datanode);
       return true;
     }
     return false;
@@ -1054,7 +1056,7 @@ public class Balancer {
         sourceCandidates.remove();
       }
       LOG.info("Decided to move "+StringUtils.byteDesc(size)+" bytes from "
-          +source.datanode.getName() + " to " + target.datanode.getName());
+          +source.datanode + " to " + target.datanode);
       return true;
     }
     return false;
@@ -1550,7 +1552,7 @@ public class Balancer {
    */
   public static void main(String[] args) {
     try {
-      System.exit(ToolRunner.run(null, new Cli(), args));
+      System.exit(ToolRunner.run(new HdfsConfiguration(), new Cli(), args));
     } catch (Throwable e) {
       LOG.error("Exiting balancer due an exception", e);
       System.exit(-1);

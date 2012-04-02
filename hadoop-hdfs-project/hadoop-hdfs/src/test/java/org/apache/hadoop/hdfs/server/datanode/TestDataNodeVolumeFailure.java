@@ -270,7 +270,7 @@ public class TestDataNodeVolumeFailure {
     Socket s = null;
     ExtendedBlock block = lblock.getBlock(); 
    
-    targetAddr = NetUtils.createSocketAddr(datanode.getName());
+    targetAddr = NetUtils.createSocketAddr(datanode.getXferAddr());
       
     s = NetUtils.getDefaultSocketFactory(conf).createSocket();
     s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);

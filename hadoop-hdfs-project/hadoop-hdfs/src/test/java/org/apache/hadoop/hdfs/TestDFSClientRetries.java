@@ -334,7 +334,7 @@ public class TestDFSClientRetries extends TestCase {
       LocatedBlock badLocatedBlock = new LocatedBlock(
         goodLocatedBlock.getBlock(),
         new DatanodeInfo[] {
-          new DatanodeInfo(new DatanodeID("255.255.255.255:234"))
+          new DatanodeInfo(new DatanodeID("255.255.255.255", 234))
         },
         goodLocatedBlock.getStartOffset(),
         false);
@@ -608,7 +608,7 @@ public class TestDFSClientRetries extends TestCase {
           cluster.getNameNodeRpc(), f, 0, Long.MAX_VALUE)
             .getLocatedBlocks();
       final DatanodeInfo first = locatedblocks.get(0).getLocations()[0];
-      cluster.stopDataNode(first.getName());
+      cluster.stopDataNode(first.getXferAddr());
 
       //get checksum again
       final FileChecksum cs2 = fs.getFileChecksum(p);
@@ -629,7 +629,7 @@ public class TestDFSClientRetries extends TestCase {
 
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     DatanodeID fakeDnId = new DatanodeID(
-        "localhost:" + addr.getPort(), "fake-storage", 0, addr.getPort());
+        "localhost", "localhost", "fake-storage", addr.getPort(), 0, addr.getPort());
     
     ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
     LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[0]);

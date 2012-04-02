@@ -130,19 +130,19 @@ public class TestPBHelper {
 
   @Test
   public void testConvertDatanodeID() {
-    DatanodeID dn = new DatanodeID("node", "sid", 1, 2);
+    DatanodeID dn = new DatanodeID("node", "node", "sid", 1, 2, 3);
     DatanodeIDProto dnProto = PBHelper.convert(dn);
     DatanodeID dn2 = PBHelper.convert(dnProto);
     compare(dn, dn2);
   }
   
   void compare(DatanodeID dn, DatanodeID dn2) {
-    assertEquals(dn.getHost(), dn2.getHost());
+    assertEquals(dn.getIpAddr(), dn2.getIpAddr());
+    assertEquals(dn.getHostName(), dn2.getHostName());
+    assertEquals(dn.getStorageID(), dn2.getStorageID());
+    assertEquals(dn.getXferPort(), dn2.getXferPort());
     assertEquals(dn.getInfoPort(), dn2.getInfoPort());
     assertEquals(dn.getIpcPort(), dn2.getIpcPort());
-    assertEquals(dn.getName(), dn2.getName());
-    assertEquals(dn.getPort(), dn2.getPort());
-    assertEquals(dn.getStorageID(), dn2.getStorageID());
   }
 
   @Test
@@ -279,8 +279,8 @@ public class TestPBHelper {
     return new ExtendedBlock("bpid", blkid, 100, 2);
   }
   
-  public DatanodeInfo getDNInfo() {
-    return new DatanodeInfo(new DatanodeID("node", "sid", 1, 2));
+  private DatanodeInfo getDNInfo() {
+    return new DatanodeInfo(new DatanodeID("node", "node", "sid", 0, 1, 2));
   }
   
   private void compare(DatanodeInfo dn1, DatanodeInfo dn2) {
@@ -291,7 +291,7 @@ public class TestPBHelper {
       assertEquals(dn1.getDatanodeReport(), dn2.getDatanodeReport());
       assertEquals(dn1.getDfsUsed(), dn1.getDfsUsed());
       assertEquals(dn1.getDfsUsedPercent(), dn1.getDfsUsedPercent());
-      assertEquals(dn1.getHost(), dn2.getHost());
+      assertEquals(dn1.getIpAddr(), dn2.getIpAddr());
       assertEquals(dn1.getHostName(), dn2.getHostName());
       assertEquals(dn1.getInfoPort(), dn2.getInfoPort());
       assertEquals(dn1.getIpcPort(), dn2.getIpcPort());
@@ -400,12 +400,12 @@ public class TestPBHelper {
   @Test
   public void testConvertLocatedBlock() {
     DatanodeInfo [] dnInfos = new DatanodeInfo[3];
-    dnInfos[0] = new DatanodeInfo("host0", "0", 5000, 5001, 20000, 10001, 9999,
-        59, 69, 32, "local", "host0", AdminStates.DECOMMISSION_INPROGRESS);
-    dnInfos[1] = new DatanodeInfo("host1", "1", 5000, 5001, 20000, 10001, 9999,
-        59, 69, 32, "local", "host1", AdminStates.DECOMMISSIONED);
-    dnInfos[2] = new DatanodeInfo("host2", "2", 5000, 5001, 20000, 10001, 9999,
-        59, 69, 32, "local", "host1", AdminStates.NORMAL);
+    dnInfos[0] = new DatanodeInfo("host0", "host0", "0", 5000, 5001, 5002, 20000, 10001, 9999,
+        59, 69, 32, "local", AdminStates.DECOMMISSION_INPROGRESS);
+    dnInfos[1] = new DatanodeInfo("host1", "host1", "1", 5000, 5001, 5002, 20000, 10001, 9999,
+        59, 69, 32, "local", AdminStates.DECOMMISSIONED);
+    dnInfos[2] = new DatanodeInfo("host2", "host2", "2", 5000, 5001, 5002, 20000, 10001, 9999,
+        59, 69, 32, "local", AdminStates.NORMAL);
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);
     LocatedBlockProto lbProto = PBHelper.convert(lb);
@@ -423,7 +423,7 @@ public class TestPBHelper {
   
   @Test
   public void testConvertDatanodeRegistration() {
-    DatanodeID dnId = new DatanodeID("host", "xyz", 1, 0);
+    DatanodeID dnId = new DatanodeID("host", "host", "xyz", 0, 1, 0);
     BlockKey[] keys = new BlockKey[] { getBlockKey(2), getBlockKey(3) };
     ExportedBlockKeys expKeys = new ExportedBlockKeys(true, 9, 10,
         getBlockKey(1), keys);
@@ -431,8 +431,8 @@ public class TestPBHelper {
         new StorageInfo(), expKeys);
     DatanodeRegistrationProto proto = PBHelper.convert(reg);
     DatanodeRegistration reg2 = PBHelper.convert(proto);
-    compare(reg.storageInfo, reg2.storageInfo);
-    compare(reg.exportedKeys, reg2.exportedKeys);
+    compare(reg.getStorageInfo(), reg2.getStorageInfo());
+    compare(reg.getExportedKeys(), reg2.getExportedKeys());
     compare((DatanodeID)reg, (DatanodeID)reg2);
   }
   

@@ -55,8 +55,8 @@ if [ "${1}" = "stop" ]; then
 fi
 
 if [ "${HTTPFS_SILENT}" != "true" ]; then
-  ${HTTPFS_CATALINA_HOME}/bin/catalina.sh "$@"
+  exec ${HTTPFS_CATALINA_HOME}/bin/catalina.sh "$@"
 else
-  ${HTTPFS_CATALINA_HOME}/bin/catalina.sh "$@" > /dev/null
+  exec ${HTTPFS_CATALINA_HOME}/bin/catalina.sh "$@" > /dev/null
 fi
 

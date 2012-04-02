@@ -48,10 +48,12 @@ message BlockTokenIdentifierProto {
  * Identifies a Datanode
  */
 message DatanodeIDProto {
-  required string name = 1;      // hostname:portNumber
-  required string storageID = 2; // Unique storage id
-  required uint32 infoPort = 3;  // the port where the infoserver is running
-  required uint32 ipcPort = 4;   // the port where the ipc Server is running
+  required string ipAddr = 1;    // IP address
+  required string hostName = 2;  // hostname
+  required string storageID = 3; // unique storage id
+  required uint32 xferPort = 4;  // data streaming port
+  required uint32 infoPort = 5;  // info server port
+  required uint32 ipcPort = 6;   // ipc server port
 }
 
 /**
@@ -73,7 +75,6 @@ message DatanodeInfoProto {
   optional uint64 lastUpdate = 6 [default = 0];
   optional uint32 xceiverCount = 7 [default = 0];
   optional string location = 8;
-  optional string hostName = 9;
   enum AdminState {
     NORMAL = 0;
     DECOMMISSION_INPROGRESS = 1;

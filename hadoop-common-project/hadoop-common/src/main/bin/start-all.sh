@@ -18,7 +18,7 @@
 
 # Start all hadoop daemons.  Run this on master node.
 
-echo "This script is Deprecated. Instead use start-dfs.sh and start-mapred.sh"
+echo "This script is Deprecated. Instead use start-dfs.sh and start-yarn.sh"
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
@@ -28,6 +28,11 @@ HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
 . $HADOOP_LIBEXEC_DIR/hadoop-config.sh
 
 # start hdfs daemons if hdfs is present
-if [ -f "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh ]; then
-  "${HADOOP_HDFS_HOME}"/bin/start-dfs.sh --config $HADOOP_CONF_DIR
+if [ -f "${HADOOP_HDFS_HOME}"/sbin/start-dfs.sh ]; then
+  "${HADOOP_HDFS_HOME}"/sbin/start-dfs.sh --config $HADOOP_CONF_DIR
+fi
+
+# start yarn daemons if yarn is present
+if [ -f "${YARN_HOME}"/sbin/start-dfs.sh ]; then
+  "${YARN_HOME}"/sbin/start-yarn.sh --config $HADOOP_CONF_DIR
 fi

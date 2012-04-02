@@ -30,11 +30,8 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.util.PureJavaCrc32;
 
 import static org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes.*;
@@ -81,8 +78,6 @@ public abstract class FSEditLogOp {
         instances.put(OP_DELETE, new DeleteOp());
         instances.put(OP_MKDIR, new MkdirOp());
         instances.put(OP_SET_GENSTAMP, new SetGenstampOp());
-        instances.put(OP_DATANODE_ADD, new DatanodeAddOp());
-        instances.put(OP_DATANODE_REMOVE, new DatanodeRemoveOp());
         instances.put(OP_SET_PERMISSIONS, new SetPermissionsOp());
         instances.put(OP_SET_OWNER, new SetOwnerOp());
         instances.put(OP_SET_NS_QUOTA, new SetNSQuotaOp());
@@ -147,7 +142,6 @@ public abstract class FSEditLogOp {
     PermissionStatus permissions;
     String clientName;
     String clientMachine;
-    //final DatanodeDescriptor[] dataNodeDescriptors; UNUSED
 
     private AddCloseOp(FSEditLogOpCodes opCode) {
       super(opCode);
@@ -226,13 +220,10 @@ public abstract class FSEditLogOp {
     @Override
     void readFields(DataInputStream in, int logVersion)
         throws IOException {
-      // versions > 0 support per file replication
-      // get name and replication
       if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
         this.length = in.readInt();
       }
-      if (-7 == logVersion && length != 3||
-          -17 < logVersion && logVersion < -7 && length != 4 ||
+      if ((-17 < logVersion && length != 4) ||
           (logVersion <= -17 && length != 5 && !LayoutVersion.supports(
               Feature.EDITLOG_OP_OPTIMIZATION, logVersion))) {
         throw new IOException("Incorrect data format."  +
@@ -259,47 +250,24 @@ public abstract class FSEditLogOp {
       } else {
         this.atime = 0;
       }
-      if (logVersion < -7) {
-        if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
-          this.blockSize = FSImageSerialization.readLong(in);
-        } else {
-          this.blockSize = readLong(in);
-        }
+
+      if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
+        this.blockSize = FSImageSerialization.readLong(in);
       } else {
-        this.blockSize = 0;
+        this.blockSize = readLong(in);
       }
 
-      // get blocks
       this.blocks = readBlocks(in, logVersion);
-
-      if (logVersion <= -11) {
-        this.permissions = PermissionStatus.read(in);
-      } else {
-        this.permissions = null;
-      }
+      this.permissions = PermissionStatus.read(in);
 
       // clientname, clientMachine and block locations of last block.
-      if (this.opCode == OP_ADD && logVersion <= -12) {
+      if (this.opCode == OP_ADD) {
         this.clientName = FSImageSerialization.readString(in);
         this.clientMachine = FSImageSerialization.readString(in);
-        if (-13 <= logVersion) {
-          readDatanodeDescriptorArray(in);
-        }
       } else {
         this.clientName = "";
         this.clientMachine = "";
       }
-    }
-
-    /** This method is defined for compatibility reason. */
-    private static DatanodeDescriptor[] readDatanodeDescriptorArray(DataInput in)
-        throws IOException {
-      DatanodeDescriptor[] locations = new DatanodeDescriptor[in.readInt()];
-        for (int i = 0; i < locations.length; i++) {
-          locations[i] = new DatanodeDescriptor();
-          locations[i].readFieldsFromFSEditLog(in);
-        }
-        return locations;
     }
 
     private static Block[] readBlocks(
@@ -309,14 +277,7 @@ public abstract class FSEditLogOp {
       Block[] blocks = new Block[numBlocks];
       for (int i = 0; i < numBlocks; i++) {
         Block blk = new Block();
-        if (logVersion <= -14) {
-          blk.readFields(in);
-        } else {
-          BlockTwo oldblk = new BlockTwo();
-          oldblk.readFields(in);
-          blk.set(oldblk.blkid, oldblk.len,
-                  GenerationStamp.GRANDFATHER_GENERATION_STAMP);
-        }
+        blk.readFields(in);
         blocks[i] = blk;
       }
       return blocks;
@@ -788,17 +749,14 @@ public abstract class FSEditLogOp {
     }
     
     @Override
-    void readFields(DataInputStream in, int logVersion)
-        throws IOException {
-
+    void readFields(DataInputStream in, int logVersion) throws IOException {
       if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
         this.length = in.readInt();
       }
       if (-17 < logVersion && length != 2 ||
           logVersion <= -17 && length != 3
           && !LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
-        throw new IOException("Incorrect data format. "
-                              + "Mkdir operation.");
+        throw new IOException("Incorrect data format. Mkdir operation.");
       }
       this.path = FSImageSerialization.readString(in);
       if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
@@ -811,7 +769,6 @@ public abstract class FSEditLogOp {
       // However, currently this is not being updated/used because of
       // performance reasons.
       if (LayoutVersion.supports(Feature.FILE_ACCESS_TIME, logVersion)) {
-        /* unused this.atime = */
         if (LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
           FSImageSerialization.readLong(in);
         } else {
@@ -819,11 +776,7 @@ public abstract class FSEditLogOp {
         }
       }
 
-      if (logVersion <= -11) {
-        this.permissions = PermissionStatus.read(in);
-      } else {
-        this.permissions = null;
-      }
+      this.permissions = PermissionStatus.read(in);
     }
 
     @Override
@@ -880,77 +833,6 @@ public abstract class FSEditLogOp {
       builder.append("SetGenstampOp [genStamp=");
       builder.append(genStamp);
       builder.append(", opCode=");
-      builder.append(opCode);
-      builder.append(", txid=");
-      builder.append(txid);
-      builder.append("]");
-      return builder.toString();
-    }
-  }
-
-  @SuppressWarnings("deprecation")
-  static class DatanodeAddOp extends FSEditLogOp {
-    private DatanodeAddOp() {
-      super(OP_DATANODE_ADD);
-    }
-
-    static DatanodeAddOp getInstance() {
-      return (DatanodeAddOp)opInstances.get()
-        .get(OP_DATANODE_ADD);
-    }
-
-    @Override 
-    void writeFields(DataOutputStream out) throws IOException {
-      throw new IOException("Deprecated, should not write");
-    }
-
-    @Override
-    void readFields(DataInputStream in, int logVersion)
-        throws IOException {
-      //Datanodes are not persistent any more.
-      FSImageSerialization.DatanodeImage.skipOne(in);
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder builder = new StringBuilder();
-      builder.append("DatanodeAddOp [opCode=");
-      builder.append(opCode);
-      builder.append(", txid=");
-      builder.append(txid);
-      builder.append("]");
-      return builder.toString();
-    }
-  }
-
-  @SuppressWarnings("deprecation")
-  static class DatanodeRemoveOp extends FSEditLogOp {
-    private DatanodeRemoveOp() {
-      super(OP_DATANODE_REMOVE);
-    }
-
-    static DatanodeRemoveOp getInstance() {
-      return (DatanodeRemoveOp)opInstances.get()
-        .get(OP_DATANODE_REMOVE);
-    }
-
-    @Override 
-    void writeFields(DataOutputStream out) throws IOException {
-      throw new IOException("Deprecated, should not write");
-    }
-
-    @Override
-    void readFields(DataInputStream in, int logVersion)
-        throws IOException {
-      DatanodeID nodeID = new DatanodeID();
-      nodeID.readFields(in);
-      //Datanodes are not persistent any more.
-    }
-
-    @Override
-    public String toString() {
-      StringBuilder builder = new StringBuilder();
-      builder.append("DatanodeRemoveOp [opCode=");
       builder.append(opCode);
       builder.append(", txid=");
       builder.append(txid);

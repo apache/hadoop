@@ -34,6 +34,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
@@ -340,9 +341,10 @@ public class TestClientRedirect {
     }
   }
 
-  class HistoryService extends AMService {
+  class HistoryService extends AMService implements HSClientProtocol {
     public HistoryService() {
       super(HSHOSTADDRESS);
+      this.protocol = HSClientProtocol.class;
     }
 
     @Override
@@ -357,6 +359,7 @@ public class TestClientRedirect {
 
   class AMService extends AbstractService
       implements MRClientProtocol {
+    protected Class<?> protocol;
     private InetSocketAddress bindAddress;
     private Server server;
     private final String hostAddress;
@@ -367,6 +370,7 @@ public class TestClientRedirect {
 
     public AMService(String hostAddress) {
       super("AMService");
+      this.protocol = MRClientProtocol.class;
       this.hostAddress = hostAddress;
     }
 
@@ -383,7 +387,7 @@ public class TestClientRedirect {
       }
 
       server =
-          rpc.getServer(MRClientProtocol.class, this, address,
+          rpc.getServer(protocol, this, address,
               conf, null, 1);
       server.start();
       this.bindAddress =

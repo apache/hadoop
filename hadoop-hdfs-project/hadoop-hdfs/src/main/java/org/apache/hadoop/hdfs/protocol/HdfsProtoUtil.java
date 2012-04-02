@@ -84,8 +84,10 @@ public abstract class HdfsProtoUtil {
   private static HdfsProtos.DatanodeIDProto toProto(
       DatanodeID dni) {
     return HdfsProtos.DatanodeIDProto.newBuilder()
-      .setName(dni.getName())
+      .setIpAddr(dni.getIpAddr())
+      .setHostName(dni.getHostName())
       .setStorageID(dni.getStorageID())
+      .setXferPort(dni.getXferPort())
       .setInfoPort(dni.getInfoPort())
       .setIpcPort(dni.getIpcPort())
       .build();
@@ -93,8 +95,10 @@ public abstract class HdfsProtoUtil {
   
   private static DatanodeID fromProto(HdfsProtos.DatanodeIDProto idProto) {
     return new DatanodeID(
-        idProto.getName(),
+        idProto.getIpAddr(),
+        idProto.getHostName(),
         idProto.getStorageID(),
+        idProto.getXferPort(),
         idProto.getInfoPort(),
         idProto.getIpcPort());
   }
@@ -111,7 +115,6 @@ public abstract class HdfsProtoUtil {
       .setLastUpdate(dni.getLastUpdate())
       .setXceiverCount(dni.getXceiverCount())
       .setLocation(dni.getNetworkLocation())
-      .setHostName(dni.getHostName())
       .setAdminState(HdfsProtos.DatanodeInfoProto.AdminState.valueOf(
           dni.getAdminState().name()))
       .build();
@@ -119,7 +122,7 @@ public abstract class HdfsProtoUtil {
 
   public static DatanodeInfo fromProto(HdfsProtos.DatanodeInfoProto dniProto) {
     DatanodeInfo dniObj = new DatanodeInfo(fromProto(dniProto.getId()),
-        dniProto.getLocation(), dniProto.getHostName());
+        dniProto.getLocation());
 
     dniObj.setCapacity(dniProto.getCapacity());
     dniObj.setDfsUsed(dniProto.getDfsUsed());

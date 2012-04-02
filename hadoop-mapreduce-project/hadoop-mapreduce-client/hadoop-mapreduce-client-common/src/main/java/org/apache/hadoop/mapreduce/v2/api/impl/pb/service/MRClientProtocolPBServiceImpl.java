@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.api.impl.pb.service;
 
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
+import org.apache.hadoop.mapreduce.v2.api.MRClientProtocolPB;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -91,12 +92,11 @@ import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskAttemptRespo
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskRequestProto;
 import org.apache.hadoop.mapreduce.v2.proto.MRServiceProtos.KillTaskResponseProto;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.proto.MRClientProtocol.MRClientProtocolService.BlockingInterface;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class MRClientProtocolPBServiceImpl implements BlockingInterface {
+public class MRClientProtocolPBServiceImpl implements MRClientProtocolPB {
 
   private MRClientProtocol real;
   

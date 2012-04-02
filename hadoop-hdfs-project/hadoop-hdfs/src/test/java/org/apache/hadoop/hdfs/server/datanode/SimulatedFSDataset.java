@@ -383,7 +383,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   public SimulatedFSDataset(DataNode datanode, DataStorage storage,
       Configuration conf) {
     if (storage != null) {
-      storage.createStorageID(datanode.getPort());
+      storage.createStorageID(datanode.getXferPort());
       this.storageId = storage.getStorageID();
     } else {
       this.storageId = "unknownStorageId" + new Random().nextInt();

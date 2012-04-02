@@ -26,7 +26,7 @@ import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
-import org.apache.hadoop.yarn.proto.AMRMProtocol;
+import org.apache.hadoop.yarn.api.AMRMProtocolPB;
 
 public class SchedulerSecurityInfo extends SecurityInfo {
 
@@ -37,7 +37,7 @@ public class SchedulerSecurityInfo extends SecurityInfo {
 
   @Override
   public TokenInfo getTokenInfo(Class<?> protocol, Configuration conf) {
-    if (!protocol.equals(AMRMProtocol.AMRMProtocolService.BlockingInterface.class)) {
+    if (!protocol.equals(AMRMProtocolPB.class)) {
       return null;
     }
     return new TokenInfo() {

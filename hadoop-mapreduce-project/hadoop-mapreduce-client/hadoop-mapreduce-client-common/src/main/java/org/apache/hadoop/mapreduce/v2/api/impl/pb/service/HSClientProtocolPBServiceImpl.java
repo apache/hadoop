@@ -19,10 +19,10 @@
 package org.apache.hadoop.mapreduce.v2.api.impl.pb.service;
 
 import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
-import org.apache.hadoop.yarn.proto.HSClientProtocol.HSClientProtocolService.BlockingInterface;
+import org.apache.hadoop.mapreduce.v2.api.HSClientProtocolPB;
 
 public class HSClientProtocolPBServiceImpl extends MRClientProtocolPBServiceImpl 
-  implements BlockingInterface {
+  implements HSClientProtocolPB {
   public HSClientProtocolPBServiceImpl(HSClientProtocol impl) {
     super(impl);
   } 

@@ -40,7 +40,7 @@ public class TestPendingDataNodeMessages {
   private final Block block2Gs1 = new Block(2, 0, 1);
   
   private final DatanodeDescriptor fakeDN = new DatanodeDescriptor(
-      new DatanodeID("fake"));
+      new DatanodeID("fake", 100));
   
   @Test
   public void testQueues() {
@@ -56,8 +56,8 @@ public class TestPendingDataNodeMessages {
     Queue<ReportedBlockInfo> q =
       msgs.takeBlockQueue(block1Gs2DifferentInstance);
     assertEquals(
-        "ReportedBlockInfo [block=blk_1_1, dn=fake, reportedState=FINALIZED]," +
-        "ReportedBlockInfo [block=blk_1_2, dn=fake, reportedState=FINALIZED]",
+        "ReportedBlockInfo [block=blk_1_1, dn=fake:100, reportedState=FINALIZED]," +
+        "ReportedBlockInfo [block=blk_1_2, dn=fake:100, reportedState=FINALIZED]",
         Joiner.on(",").join(q));
     assertEquals(0, msgs.count());
     

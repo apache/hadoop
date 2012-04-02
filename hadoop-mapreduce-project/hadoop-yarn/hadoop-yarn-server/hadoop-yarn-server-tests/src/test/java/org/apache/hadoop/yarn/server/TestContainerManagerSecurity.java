@@ -247,10 +247,12 @@ public class TestContainerManagerSecurity {
           Assert.assertEquals(
               java.lang.reflect.UndeclaredThrowableException.class
                   .getCanonicalName(), e.getClass().getCanonicalName());
-          Assert.assertEquals(
-              "DIGEST-MD5: digest response format violation. "
-                  + "Mismatched response.", e.getCause().getCause()
-                  .getMessage());
+          Assert.assertTrue(e
+              .getCause()
+              .getMessage()
+              .contains(
+                  "DIGEST-MD5: digest response format violation. "
+                      + "Mismatched response."));
         }
         return null;
       }
@@ -468,9 +470,10 @@ public class TestContainerManagerSecurity {
           + "access is expected to fail.");
     } catch (YarnRemoteException e) {
       LOG.info("Got exception : ", e);
-      Assert.assertEquals("Unauthorized request to start container. "
-          + "\nExpected containerId: " + tokenId.getContainerID()
-          + " Found: " + newContainerId.toString(), e.getMessage());
+      Assert.assertTrue(e.getMessage().contains(
+          "Unauthorized request to start container. "
+              + "\nExpected containerId: " + tokenId.getContainerID()
+              + " Found: " + newContainerId.toString()));
     }
   }
 

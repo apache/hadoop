@@ -152,11 +152,11 @@ class DataXceiverServer implements Runnable {
         // another thread closed our listener socket - that's expected during shutdown,
         // but not in other circumstances
         if (datanode.shouldRun) {
-          LOG.warn(datanode.getMachineName() + ":DataXceiverServer: ", ace);
+          LOG.warn(datanode.getDisplayName() + ":DataXceiverServer: ", ace);
         }
       } catch (IOException ie) {
         IOUtils.closeSocket(s);
-        LOG.warn(datanode.getMachineName() + ":DataXceiverServer: ", ie);
+        LOG.warn(datanode.getDisplayName() + ":DataXceiverServer: ", ie);
       } catch (OutOfMemoryError ie) {
         IOUtils.closeSocket(s);
         // DataNode can run out of memory if there is too many transfers.
@@ -169,7 +169,7 @@ class DataXceiverServer implements Runnable {
           // ignore
         }
       } catch (Throwable te) {
-        LOG.error(datanode.getMachineName()
+        LOG.error(datanode.getDisplayName()
             + ":DataXceiverServer: Exiting due to: ", te);
         datanode.shouldRun = false;
       }
@@ -177,7 +177,7 @@ class DataXceiverServer implements Runnable {
     try {
       ss.close();
     } catch (IOException ie) {
-      LOG.warn(datanode.getMachineName()
+      LOG.warn(datanode.getDisplayName()
           + " :DataXceiverServer: close exception", ie);
     }
   }
@@ -188,7 +188,7 @@ class DataXceiverServer implements Runnable {
     try {
       this.ss.close();
     } catch (IOException ie) {
-      LOG.warn(datanode.getMachineName() + ":DataXceiverServer.kill(): ", ie);
+      LOG.warn(datanode.getDisplayName() + ":DataXceiverServer.kill(): ", ie);
     }
 
     // close all the sockets that were accepted earlier

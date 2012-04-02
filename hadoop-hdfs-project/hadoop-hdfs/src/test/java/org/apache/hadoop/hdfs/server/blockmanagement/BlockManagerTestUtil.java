@@ -165,7 +165,7 @@ public class BlockManagerTestUtil {
       DatanodeDescriptor[] dnds = hbm.getDatanodes();
       DatanodeDescriptor theDND = null;
       for (DatanodeDescriptor dnd : dnds) {
-        if (dnd.getName().equals(dnName)) {
+        if (dnd.getXferAddr().equals(dnName)) {
           theDND = dnd;
         }
       }

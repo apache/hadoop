@@ -38,6 +38,6 @@ public class DisallowedDatanodeException extends IOException {
   private static final long serialVersionUID = 1L;
 
   public DisallowedDatanodeException(DatanodeID nodeID) {
-    super("Datanode denied communication with namenode: " + nodeID.getName());
+    super("Datanode denied communication with namenode: " + nodeID);
   }
 }

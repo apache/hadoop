@@ -231,10 +231,20 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8216. Address log4j.properties inconsistencies btw main and
     template dirs. (Patrick Hunt via eli)
 
+    HADOOP-8149. Cap space usage of default log4j rolling policy.
+    (Patrick Hunt via eli)
+
+    HADOOP-8211. Update commons-net version to 3.1. (eli)
+
+    HADOOP-8236. haadmin should have configurable timeouts for failover
+    commands. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
 
+    HADOOP-8199. Fix issues in start-all.sh and stop-all.sh (Devaraj K via umamahesh)
+    
     HADOOP-7635. RetryInvocationHandler should release underlying resources on
     close. (atm)
 
@@ -294,6 +304,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8218. RPC.closeProxy shouldn't throw error when closing a mock
     (todd)
+
+    HADOOP-8238. NetUtils#getHostNameOfIP blows up if given ip:port
+    string w/o port. (eli)
 
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
@@ -444,6 +457,8 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8088. User-group mapping cache incorrectly does negative caching on
     transient failures (Khiwal Lee via bobby)
+
+    HADOOP-8208. Disallow self failover. (eli)
 
 Release 0.23.1 - 2012-02-17 
 

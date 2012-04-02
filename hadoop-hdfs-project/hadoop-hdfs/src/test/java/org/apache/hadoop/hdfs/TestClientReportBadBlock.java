@@ -220,7 +220,7 @@ public class TestClientReportBadBlock {
       final DataNode dn = cluster.getDataNode(dninfo.getIpcPort());
       corruptBlock(block, dn);
       LOG.debug("Corrupted block " + block.getBlockName() + " on data node "
-          + dninfo.getName());
+          + dninfo);
 
     }
   }

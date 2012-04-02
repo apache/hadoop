@@ -52,6 +52,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
+                    become slow in some cases (ravigummadi).
+
     MAPREDUCE-3953. [Gridmix] Gridmix throws NPE and does not simulate a
                     job if the trace contains null taskStatus for a task.
                     (ravigummadi)
@@ -133,6 +136,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3353. Add a channel between RM and AM to get information on
     nodes. (Bikas Saha via acmurthy) 
 
+    MAPREDUCE-3955. Change MR to use ProtobufRpcEngine from hadoop-common
+    instead of ProtoOverHadoopRpcEngine. (Jitendra Nath Pandey via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -176,6 +182,19 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4066. Use default value when fetching MR_AM_STAGING_DIR
     (xieguiming via harsh)
 
+    MAPREDUCE-3377. Added a unit test to ensure OutputCommitter.checkOutputSpecs 
+    is called prior to copying job.xml. (Jane Chen via acmurthy) 
+
+    MAPREDUCE-4081. TestMROutputFormat.java does not compile (Jason Lowe via
+    bobby)
+
+    MAPREDUCE-4082. hadoop-mapreduce-client-app's mrapp-generated-classpath 
+    file should not be in the module JAR (tucu)
+
+    MAPREDUCE-3916. various issues with running yarn proxyserver (devaraj via tucu)
+
+    MAPREDUCE-4091. tools testcases failing because of MAPREDUCE-4082 (tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -218,6 +237,9 @@ Release 0.23.2 - UNRELEASED
 
     MAPREDUCE-4043. Secret keys set in Credentials are not seen by tasks
     (Jason Lowe via bobby) 
+
+    MAPREDUCE-3989. Cap space usage of default log4j rolling policy.
+    (Patrick Hunt via eli)
 
   OPTIMIZATIONS
 

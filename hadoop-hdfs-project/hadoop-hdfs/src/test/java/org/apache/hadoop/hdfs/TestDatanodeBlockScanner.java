@@ -269,7 +269,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       if (corruptReplica(block, i)) {
         corruptReplicasDNIDs[j++] = i;
         LOG.info("successfully corrupted block " + block + " on node " 
-                 + i + " " + cluster.getDataNodes().get(i).getSelfAddr());
+                 + i + " " + cluster.getDataNodes().get(i).getDisplayName());
       }
     }
     
@@ -281,7 +281,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     for (int i = numCorruptReplicas - 1; i >= 0 ; i--) {
       LOG.info("restarting node with corrupt replica: position " 
           + i + " node " + corruptReplicasDNIDs[i] + " " 
-          + cluster.getDataNodes().get(corruptReplicasDNIDs[i]).getSelfAddr());
+          + cluster.getDataNodes().get(corruptReplicasDNIDs[i]).getDisplayName());
       cluster.restartDataNode(corruptReplicasDNIDs[i]);
     }
 
@@ -343,7 +343,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       if (!changeReplicaLength(block, 0, -1)) {
         throw new IOException(
             "failed to find or change length of replica on node 0 "
-            + cluster.getDataNodes().get(0).getSelfAddr());
+            + cluster.getDataNodes().get(0).getDisplayName());
       }      
     } finally {
       cluster.shutdown();

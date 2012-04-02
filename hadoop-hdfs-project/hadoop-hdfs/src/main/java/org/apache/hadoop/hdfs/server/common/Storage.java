@@ -64,18 +64,12 @@ import org.apache.hadoop.util.VersionInfo;
 public abstract class Storage extends StorageInfo {
   public static final Log LOG = LogFactory.getLog(Storage.class.getName());
 
-  // Constants
-  
   // last layout version that did not support upgrades
   public static final int LAST_PRE_UPGRADE_LAYOUT_VERSION = -3;
   
-  // this corresponds to Hadoop-0.14.
-  public static final int LAST_UPGRADABLE_LAYOUT_VERSION = -7;
-  protected static final String LAST_UPGRADABLE_HADOOP_VERSION = "Hadoop-0.14";
-
-  /* this should be removed when LAST_UPGRADABLE_LV goes beyond -13.
-   * any upgrade code that uses this constant should also be removed. */
-  public static final int PRE_GENERATIONSTAMP_LAYOUT_VERSION = -13;
+  // this corresponds to Hadoop-0.18
+  public static final int LAST_UPGRADABLE_LAYOUT_VERSION = -16;
+  protected static final String LAST_UPGRADABLE_HADOOP_VERSION = "Hadoop-0.18";
   
   /** Layout versions of 0.20.203 release */
   public static final int[] LAYOUT_VERSIONS_203 = {-19, -31};

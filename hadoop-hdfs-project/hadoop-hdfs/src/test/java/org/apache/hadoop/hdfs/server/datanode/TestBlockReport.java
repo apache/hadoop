@@ -679,8 +679,9 @@ public class TestBlockReport {
     assertEquals(datanodes.size(), 2);
 
     if(LOG.isDebugEnabled()) {
+      int lastDn = datanodes.size() - 1;
       LOG.debug("New datanode "
-          + cluster.getDataNodes().get(datanodes.size() - 1).getMachineName() 
+          + cluster.getDataNodes().get(lastDn).getDisplayName() 
           + " has been started");
     }
     if (waitReplicas) DFSTestUtil.waitReplication(fs, filePath, REPL_FACTOR);

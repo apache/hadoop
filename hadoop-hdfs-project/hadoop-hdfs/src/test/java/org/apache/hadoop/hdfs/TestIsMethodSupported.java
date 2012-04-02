@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RefreshAuthorizationPolicyProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.net.NetUtils;
@@ -58,8 +59,9 @@ public class TestIsMethodSupported {
     cluster = (new MiniDFSCluster.Builder(conf))
         .numDataNodes(1).build();
     nnAddress = cluster.getNameNode().getNameNodeAddress();
-    dnAddress = new InetSocketAddress(cluster.getDataNodes().get(0)
-        .getDatanodeId().getHost(), cluster.getDataNodes().get(0).getIpcPort());
+    DataNode dn = cluster.getDataNodes().get(0);
+    dnAddress = new InetSocketAddress(dn.getDatanodeId().getIpAddr(),
+                                      dn.getIpcPort());
   }
 
   @AfterClass

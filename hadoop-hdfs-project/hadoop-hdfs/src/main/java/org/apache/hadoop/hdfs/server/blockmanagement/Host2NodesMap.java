@@ -39,10 +39,10 @@ class Host2NodesMap {
       return false;
     }
       
-    String host = node.getHost();
+    String ipAddr = node.getIpAddr();
     hostmapLock.readLock().lock();
     try {
-      DatanodeDescriptor[] nodes = map.get(host);
+      DatanodeDescriptor[] nodes = map.get(ipAddr);
       if (nodes != null) {
         for(DatanodeDescriptor containedNode:nodes) {
           if (node==containedNode) {
@@ -66,8 +66,8 @@ class Host2NodesMap {
         return false;
       }
       
-      String host = node.getHost();
-      DatanodeDescriptor[] nodes = map.get(host);
+      String ipAddr = node.getIpAddr();
+      DatanodeDescriptor[] nodes = map.get(ipAddr);
       DatanodeDescriptor[] newNodes;
       if (nodes==null) {
         newNodes = new DatanodeDescriptor[1];
@@ -77,7 +77,7 @@ class Host2NodesMap {
         System.arraycopy(nodes, 0, newNodes, 0, nodes.length);
         newNodes[nodes.length] = node;
       }
-      map.put(host, newNodes);
+      map.put(ipAddr, newNodes);
       return true;
     } finally {
       hostmapLock.writeLock().unlock();
@@ -92,17 +92,17 @@ class Host2NodesMap {
       return false;
     }
       
-    String host = node.getHost();
+    String ipAddr = node.getIpAddr();
     hostmapLock.writeLock().lock();
     try {
 
-      DatanodeDescriptor[] nodes = map.get(host);
+      DatanodeDescriptor[] nodes = map.get(ipAddr);
       if (nodes==null) {
         return false;
       }
       if (nodes.length==1) {
         if (nodes[0]==node) {
-          map.remove(host);
+          map.remove(ipAddr);
           return true;
         } else {
           return false;
@@ -122,7 +122,7 @@ class Host2NodesMap {
         newNodes = new DatanodeDescriptor[nodes.length-1];
         System.arraycopy(nodes, 0, newNodes, 0, i);
         System.arraycopy(nodes, i+1, newNodes, i, nodes.length-i-1);
-        map.put(host, newNodes);
+        map.put(ipAddr, newNodes);
         return true;
       }
     } finally {
@@ -130,17 +130,18 @@ class Host2NodesMap {
     }
   }
     
-  /** get a data node by its host.
-   * @return DatanodeDescriptor if found; otherwise null.
+  /**
+   * Get a data node by its IP address.
+   * @return DatanodeDescriptor if found, null otherwise 
    */
-  DatanodeDescriptor getDatanodeByHost(String host) {
-    if (host==null) {
+  DatanodeDescriptor getDatanodeByHost(String ipAddr) {
+    if (ipAddr == null) {
       return null;
     }
       
     hostmapLock.readLock().lock();
     try {
-      DatanodeDescriptor[] nodes = map.get(host);
+      DatanodeDescriptor[] nodes = map.get(ipAddr);
       // no entry
       if (nodes== null) {
         return null;
@@ -151,42 +152,6 @@ class Host2NodesMap {
       }
       // more than one node
       return nodes[DFSUtil.getRandom().nextInt(nodes.length)];
-    } finally {
-      hostmapLock.readLock().unlock();
-    }
-  }
-    
-  /**
-   * Find data node by its name.
-   * 
-   * @return DatanodeDescriptor if found or null otherwise 
-   */
-  public DatanodeDescriptor getDatanodeByName(String name) {
-    if (name==null) {
-      return null;
-    }
-      
-    int colon = name.indexOf(":");
-    String host;
-    if (colon < 0) {
-      host = name;
-    } else {
-      host = name.substring(0, colon);
-    }
-
-    hostmapLock.readLock().lock();
-    try {
-      DatanodeDescriptor[] nodes = map.get(host);
-      // no entry
-      if (nodes== null) {
-        return null;
-      }
-      for(DatanodeDescriptor containedNode:nodes) {
-        if (name.equals(containedNode.getName())) {
-          return containedNode;
-        }
-      }
-      return null;
     } finally {
       hostmapLock.readLock().unlock();
     }

@@ -197,9 +197,9 @@ public class TestBlockRecovery {
         locs, RECOVERY_ID);
     ArrayList<BlockRecord> syncList = new ArrayList<BlockRecord>(2);
     BlockRecord record1 = new BlockRecord(
-        new DatanodeID("xx", "yy", 44, 55), dn1, replica1);
+        new DatanodeID("xx", "yy", "zz", 1, 2, 3), dn1, replica1);
     BlockRecord record2 = new BlockRecord(
-        new DatanodeID("aa", "bb", 11, 22), dn2, replica2);
+        new DatanodeID("aa", "bb", "cc", 1, 2, 3), dn2, replica2);
     syncList.add(record1);
     syncList.add(record2);
     
@@ -402,7 +402,7 @@ public class TestBlockRecovery {
   private Collection<RecoveringBlock> initRecoveringBlocks() throws IOException {
     Collection<RecoveringBlock> blocks = new ArrayList<RecoveringBlock>(1);
     DatanodeInfo mockOtherDN = new DatanodeInfo(
-        new DatanodeID("127.0.0.1", "storage-1234", 0, 0));
+        new DatanodeID("127.0.0.1", "localhost", "storage-1234", 0, 0, 0));
     DatanodeInfo[] locs = new DatanodeInfo[] {
         new DatanodeInfo(dn.getDNRegistrationForBP(block.getBlockPoolId())),
         mockOtherDN };

@@ -97,8 +97,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
    */
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
       Configuration conf, int socketTimeout) throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(datanodeid.getHost()
-        + ":" + datanodeid.getIpcPort());
+    InetSocketAddress addr = NetUtils.createSocketAddr(datanodeid.getIpcAddr());
     rpcProxy = createClientDatanodeProtocolProxy(addr,
         UserGroupInformation.getCurrentUser(), conf,
         NetUtils.getDefaultSocketFactory(conf), socketTimeout);
@@ -107,8 +106,7 @@ public class ClientDatanodeProtocolTranslatorPB implements
   static ClientDatanodeProtocolPB createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
       LocatedBlock locatedBlock) throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(
-      datanodeid.getHost() + ":" + datanodeid.getIpcPort());
+    InetSocketAddress addr = NetUtils.createSocketAddr(datanodeid.getIpcAddr());
     if (LOG.isDebugEnabled()) {
       LOG.debug("ClientDatanodeProtocol addr=" + addr);
     }

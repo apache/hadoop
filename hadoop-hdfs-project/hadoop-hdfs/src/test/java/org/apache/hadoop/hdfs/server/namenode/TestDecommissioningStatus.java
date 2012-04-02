@@ -156,7 +156,7 @@ public class TestDecommissioningStatus {
       throws IOException {
     DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
 
-    String nodename = info[nodeIndex].getName();
+    String nodename = info[nodeIndex].getXferAddr();
     System.out.println("Decommissioning node: " + nodename);
 
     // write nodename into the exclude file.

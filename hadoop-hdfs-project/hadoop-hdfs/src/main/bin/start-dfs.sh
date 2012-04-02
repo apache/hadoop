@@ -76,11 +76,13 @@ fi
 
 SECONDARY_NAMENODES=$($HADOOP_PREFIX/bin/hdfs getconf -secondarynamenodes 2>&-)
 
-echo "Starting secondary namenodes [$SECONDARY_NAMENODES]"
+if [ -n "$SECONDARY_NAMENODES" ]; then
+  echo "Starting secondary namenodes [$SECONDARY_NAMENODES]"
 
-"$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
-    --config "$HADOOP_CONF_DIR" \
-    --hostnames "$SECONDARY_NAMENODES" \
-    --script "$bin/hdfs" start secondarynamenode
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
+      --config "$HADOOP_CONF_DIR" \
+      --hostnames "$SECONDARY_NAMENODES" \
+      --script "$bin/hdfs" start secondarynamenode
+fi
 
 # eof

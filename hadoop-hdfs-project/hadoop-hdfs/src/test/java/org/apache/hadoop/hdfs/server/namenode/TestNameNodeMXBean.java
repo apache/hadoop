@@ -93,6 +93,15 @@ public class TestNameNodeMXBean {
       // get attribute alivenodeinfo
       String alivenodeinfo = (String) (mbs.getAttribute(mxbeanName,
           "LiveNodes"));
+      Map<String, Map<String, Object>> liveNodes =
+          (Map<String, Map<String, Object>>) JSON.parse(alivenodeinfo);
+      assertTrue(liveNodes.size() > 0);
+      for (Map<String, Object> liveNode : liveNodes.values()) {
+        assertTrue(liveNode.containsKey("nonDfsUsedSpace"));
+        assertTrue(((Long)liveNode.get("nonDfsUsedSpace")) > 0);
+        assertTrue(liveNode.containsKey("capacity"));
+        assertTrue(((Long)liveNode.get("capacity")) > 0);
+      }
       Assert.assertEquals(fsn.getLiveNodes(), alivenodeinfo);
       // get attribute deadnodeinfo
       String deadnodeinfo = (String) (mbs.getAttribute(mxbeanName,

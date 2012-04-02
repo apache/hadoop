@@ -204,14 +204,18 @@ public class PBHelper {
 
   // DatanodeId
   public static DatanodeID convert(DatanodeIDProto dn) {
-    return new DatanodeID(dn.getName(), dn.getStorageID(), dn.getInfoPort(),
-        dn.getIpcPort());
+    return new DatanodeID(dn.getIpAddr(), dn.getHostName(), dn.getStorageID(),
+        dn.getXferPort(), dn.getInfoPort(), dn.getIpcPort());
   }
 
   public static DatanodeIDProto convert(DatanodeID dn) {
-    return DatanodeIDProto.newBuilder().setName(dn.getName())
-        .setInfoPort(dn.getInfoPort()).setIpcPort(dn.getIpcPort())
-        .setStorageID(dn.getStorageID()).build();
+    return DatanodeIDProto.newBuilder()
+        .setIpAddr(dn.getIpAddr())
+        .setHostName(dn.getHostName())
+        .setStorageID(dn.getStorageID())
+        .setXferPort(dn.getXferPort())
+        .setInfoPort(dn.getInfoPort())
+        .setIpcPort(dn.getIpcPort()).build();
   }
 
   // Arrays of DatanodeId
@@ -442,7 +446,6 @@ public class PBHelper {
     return new DatanodeInfo(
         PBHelper.convert(di.getId()),
         di.hasLocation() ? di.getLocation() : null , 
-        di.hasHostName() ? di.getHostName() : null,
         di.getCapacity(),  di.getDfsUsed(),  di.getRemaining(),
         di.getBlockPoolUsed()  ,  di.getLastUpdate() , di.getXceiverCount() ,
         PBHelper.convert(di.getAdminState())); 
@@ -451,9 +454,6 @@ public class PBHelper {
   static public DatanodeInfoProto convertDatanodeInfo(DatanodeInfo di) {
     if (di == null) return null;
     DatanodeInfoProto.Builder builder = DatanodeInfoProto.newBuilder();
-    if (di.getHostName() != null) {
-      builder.setHostName(di.getHostName());
-    }
     if (di.getNetworkLocation() != null) {
       builder.setLocation(di.getNetworkLocation());
     }
@@ -503,7 +503,6 @@ public class PBHelper {
     builder.setAdminState(PBHelper.convert(info.getAdminState()));
     builder.setCapacity(info.getCapacity())
         .setDfsUsed(info.getDfsUsed())
-        .setHostName(info.getHostName())
         .setId(PBHelper.convert((DatanodeID)info))
         .setLastUpdate(info.getLastUpdate())
         .setLocation(info.getNetworkLocation())
@@ -610,8 +609,8 @@ public class PBHelper {
     DatanodeRegistrationProto.Builder builder = DatanodeRegistrationProto
         .newBuilder();
     return builder.setDatanodeID(PBHelper.convert((DatanodeID) registration))
-        .setStorageInfo(PBHelper.convert(registration.storageInfo))
-        .setKeys(PBHelper.convert(registration.exportedKeys)).build();
+        .setStorageInfo(PBHelper.convert(registration.getStorageInfo()))
+        .setKeys(PBHelper.convert(registration.getExportedKeys())).build();
   }
 
   public static DatanodeRegistration convert(DatanodeRegistrationProto proto) {

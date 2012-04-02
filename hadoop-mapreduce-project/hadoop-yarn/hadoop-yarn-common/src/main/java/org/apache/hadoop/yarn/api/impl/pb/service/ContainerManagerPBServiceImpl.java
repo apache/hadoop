@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.api.impl.pb.service;
 
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.ContainerManagerPB;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
@@ -29,7 +30,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerResponse
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerResponsePBImpl;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.proto.ContainerManager.ContainerManagerService.BlockingInterface;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerResponseProto
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class ContainerManagerPBServiceImpl implements BlockingInterface {
+public class ContainerManagerPBServiceImpl implements ContainerManagerPB  {
 
   private ContainerManager real;
   
