@@ -36,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -225,6 +226,7 @@ public class RMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppsInfo getApps(@Context HttpServletRequest hsr,
       @QueryParam("state") String stateQuery,
+      @QueryParam("finalStatus") String finalStatusQuery,
       @QueryParam("user") String userQuery,
       @QueryParam("queue") String queueQuery,
       @QueryParam("limit") String count,
@@ -294,19 +296,25 @@ public class RMWebServices {
         .getRMApps();
     AppsInfo allApps = new AppsInfo();
     for (RMApp rmapp : apps.values()) {
+
       if (checkCount && num == countNum) {
         break;
       }
-      AppInfo app = new AppInfo(rmapp, hasAccess(rmapp, hsr));
-
       if (stateQuery != null && !stateQuery.isEmpty()) {
         RMAppState.valueOf(stateQuery);
-        if (!app.getState().equalsIgnoreCase(stateQuery)) {
+        if (!rmapp.getState().toString().equalsIgnoreCase(stateQuery)) {
+          continue;
+        }
+      }
+      if (finalStatusQuery != null && !finalStatusQuery.isEmpty()) {
+        FinalApplicationStatus.valueOf(finalStatusQuery);
+        if (!rmapp.getFinalApplicationStatus().toString()
+            .equalsIgnoreCase(finalStatusQuery)) {
           continue;
         }
       }
       if (userQuery != null && !userQuery.isEmpty()) {
-        if (!app.getUser().equals(userQuery)) {
+        if (!rmapp.getUser().equals(userQuery)) {
           continue;
         }
       }
@@ -321,19 +329,20 @@ public class RMWebServices {
             throw new BadRequestException(e.getMessage());
           }
         }
-        if (!app.getQueue().equals(queueQuery)) {
+        if (!rmapp.getQueue().equals(queueQuery)) {
           continue;
         }
       }
 
       if (checkStart
-          && (app.getStartTime() < sBegin || app.getStartTime() > sEnd)) {
+          && (rmapp.getStartTime() < sBegin || rmapp.getStartTime() > sEnd)) {
         continue;
       }
       if (checkEnd
-          && (app.getFinishTime() < fBegin || app.getFinishTime() > fEnd)) {
+          && (rmapp.getFinishTime() < fBegin || rmapp.getFinishTime() > fEnd)) {
         continue;
       }
+      AppInfo app = new AppInfo(rmapp, hasAccess(rmapp, hsr));
 
       allApps.add(app);
       num++;

@@ -31,6 +31,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -96,6 +97,7 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobsInfo getJobs(@QueryParam("user") String userQuery,
       @QueryParam("limit") String count,
+      @QueryParam("state") String stateQuery,
       @QueryParam("queue") String queueQuery,
       @QueryParam("startedTimeBegin") String startedBegin,
       @QueryParam("startedTimeEnd") String startedEnd,
@@ -183,6 +185,13 @@ public class HsWebServices {
     for (Job job : appCtx.getAllJobs().values()) {
       if (checkCount && num == countNum) {
         break;
+      }
+
+      if (stateQuery != null && !stateQuery.isEmpty()) {
+        JobState.valueOf(stateQuery);
+        if (!job.getState().toString().equalsIgnoreCase(stateQuery)) {
+          continue;
+        }
       }
 
       // can't really validate queue is a valid one since queues could change
