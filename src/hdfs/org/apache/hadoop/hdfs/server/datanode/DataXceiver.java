@@ -28,6 +28,7 @@ import java.net.Socket;
 import java.net.SocketException;
 
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -58,6 +59,7 @@ class DataXceiver implements Runnable, FSConstants {
   final String localAddress;  // local address of this daemon
   DataNode datanode;
   DataXceiverServer dataXceiverServer;
+  private boolean connectToDnViaHostname;
   
   public DataXceiver(Socket s, DataNode datanode, 
       DataXceiverServer dataXceiverServer) {
@@ -69,6 +71,9 @@ class DataXceiver implements Runnable, FSConstants {
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
     LOG.debug("Number of active connections is: " + datanode.getXceiverCount());
+    this.connectToDnViaHostname = datanode.getConf().getBoolean(
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
   }
 
   /**
@@ -308,14 +313,17 @@ class DataXceiver implements Runnable, FSConstants {
       if (targets.length > 0) {
         InetSocketAddress mirrorTarget = null;
         // Connect to backup machine
+        final String mirrorAddrString = 
+          targets[0].getName(connectToDnViaHostname);
         mirrorNode = targets[0].getName();
-        mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
+        mirrorTarget = NetUtils.createSocketAddr(mirrorAddrString);
         mirrorSock = datanode.newSocket();
         try {
           int timeoutValue = datanode.socketTimeout +
                              (HdfsConstants.READ_TIMEOUT_EXTENSION * numTargets);
           int writeTimeout = datanode.socketWriteTimeout + 
                              (HdfsConstants.WRITE_TIMEOUT_EXTENSION * numTargets);
+          LOG.debug("Connecting to " + mirrorAddrString);
           NetUtils.connect(mirrorSock, mirrorTarget, timeoutValue);
           mirrorSock.setSoTimeout(timeoutValue);
           mirrorSock.setSendBufferSize(DEFAULT_DATA_SOCKET_SIZE);
@@ -608,9 +616,11 @@ class DataXceiver implements Runnable, FSConstants {
     
     try {
       // get the output stream to the proxy
-      InetSocketAddress proxyAddr = NetUtils.createSocketAddr(
-          proxySource.getName());
+      final String proxyAddrString = 
+        proxySource.getName(connectToDnViaHostname);
+      InetSocketAddress proxyAddr = NetUtils.createSocketAddr(proxyAddrString);
       proxySock = datanode.newSocket();
+      LOG.debug("Connecting to " + proxyAddrString);
       NetUtils.connect(proxySock, proxyAddr, datanode.socketTimeout);
       proxySock.setSoTimeout(datanode.socketTimeout);
 

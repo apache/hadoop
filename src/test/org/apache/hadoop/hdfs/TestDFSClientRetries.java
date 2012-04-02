@@ -466,7 +466,7 @@ public class TestDFSClientRetries extends TestCase {
 
     try {
       proxy = DFSClient.createClientDatanodeProtocolProxy(dnInfo, conf,
-          fakeBlock.getBlock(), fakeBlock.getBlockToken(), 500);
+          fakeBlock.getBlock(), fakeBlock.getBlockToken(), 500, false);
 
       fail ("Did not get expected exception: SocketTimeoutException");
     } catch (SocketTimeoutException e) {

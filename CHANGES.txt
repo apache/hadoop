@@ -14,6 +14,8 @@ Release 1.1.0 - unreleased
 
     HADOOP-7806. Support binding to sub-interfaces. (harsh, eli via eli)
 
+    HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file

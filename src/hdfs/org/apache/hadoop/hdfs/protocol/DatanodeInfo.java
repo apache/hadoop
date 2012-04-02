@@ -181,7 +181,20 @@ public class DatanodeInfo extends DatanodeID implements Node {
   public void setHostName(String host) {
     hostName = host;
   }
-  
+
+  /** Return hostname:port if requested, ip:port otherwise */
+  public String getName(boolean useHostname) {
+    return useHostname ? getHostName() + ":" + getPort() : getName();
+  }
+
+  /** Return hostname:ipcPort if requested, ip:ipcPort otherwise */
+  public String getNameWithIpcPort(boolean useHostname) {
+    // NB: DatanodeID#getHost returns the IP, ie the name without
+    // the port, not the hostname as the name implies
+    return useHostname ? getHostName() + ":" + getIpcPort()
+                       : getHost() + ":" + getIpcPort();
+  }
+
   /** A formatted string for reporting the status of the DataNode. */
   public String getDatanodeReport() {
     StringBuffer buffer = new StringBuffer();

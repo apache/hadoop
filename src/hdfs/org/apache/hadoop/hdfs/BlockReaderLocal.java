@@ -84,11 +84,11 @@ class BlockReaderLocal extends FSInputChecker implements BlockReader {
     }
 
     private synchronized ClientDatanodeProtocol getDatanodeProxy(
-        DatanodeInfo node, Configuration conf, int socketTimeout)
-        throws IOException {
+        DatanodeInfo node, Configuration conf, int socketTimeout,
+        boolean connectToDnViaHostname) throws IOException {
       if (proxy == null) {
         proxy = DFSClient.createClientDatanodeProtocolProxy(node, conf,
-            socketTimeout);
+            socketTimeout, connectToDnViaHostname);
       }
       return proxy;
     }
@@ -135,13 +135,14 @@ class BlockReaderLocal extends FSInputChecker implements BlockReader {
    */
   static BlockReaderLocal newBlockReader(Configuration conf,
     String file, Block blk, Token<BlockTokenIdentifier> token, DatanodeInfo node, 
-    int socketTimeout, long startOffset, long length) throws IOException {
+    int socketTimeout, long startOffset, long length, boolean connectToDnViaHostname)
+    throws IOException {
     
     LocalDatanodeInfo localDatanodeInfo =  getLocalDatanodeInfo(node.getIpcPort());
     // check the cache first
     BlockLocalPathInfo pathinfo = localDatanodeInfo.getBlockLocalPathInfo(blk);
     if (pathinfo == null) {
-      pathinfo = getBlockPathInfo(blk, node, conf, socketTimeout, token);
+      pathinfo = getBlockPathInfo(blk, node, conf, socketTimeout, token, connectToDnViaHostname);
     }
 
     // check to see if the file exists. It may so happen that the
@@ -216,11 +217,12 @@ class BlockReaderLocal extends FSInputChecker implements BlockReader {
   
   private static BlockLocalPathInfo getBlockPathInfo(Block blk,
       DatanodeInfo node, Configuration conf, int timeout,
-      Token<BlockTokenIdentifier> token) throws IOException {
+      Token<BlockTokenIdentifier> token, boolean connectToDnViaHostname) 
+      throws IOException {
     LocalDatanodeInfo localDatanodeInfo = getLocalDatanodeInfo(node.ipcPort);
     BlockLocalPathInfo pathinfo = null;
     ClientDatanodeProtocol proxy = localDatanodeInfo.getDatanodeProxy(node,
-        conf, timeout);
+        conf, timeout, connectToDnViaHostname);
     try {
       // make RPC to local datanode to find local pathnames of blocks
       pathinfo = proxy.getBlockLocalPathInfo(blk, token);

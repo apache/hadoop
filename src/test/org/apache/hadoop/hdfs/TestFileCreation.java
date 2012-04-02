@@ -170,11 +170,30 @@ public class TestFileCreation extends junit.framework.TestCase {
     stm.close();
   }
 
+  public void testFileCreation() throws IOException {
+    checkFileCreation(false);
+  }
+
+  public void testFileCreationByHostname() throws IOException {
+    checkFileCreation(true);
+  }
+
   /**
    * Test that file data becomes available before file is closed.
+   * @param useDnHostname if clients should access DNs by hostname (vs IP)
    */
-  public void testFileCreation() throws IOException {
+  public void checkFileCreation(boolean useDnHostname) throws IOException {
     Configuration conf = new Configuration();
+
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME, useDnHostname);
+    if (useDnHostname) {
+      // Since the mini cluster only listens on the loopback we have to
+      // ensure the hostname used to access DNs maps to the loopback. We
+      // do this by telling the DN to advertise localhost as its hostname
+      // instead of the default hostname.
+      conf.set("slave.host.name", "localhost");
+    }
+
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
