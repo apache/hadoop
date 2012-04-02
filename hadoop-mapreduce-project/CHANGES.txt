@@ -195,6 +195,9 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4091. tools testcases failing because of MAPREDUCE-4082 (tucu)
 
+    MAPREDUCE-4095. TestJobInProgress#testLocality uses a bogus topology.
+    (Colin Patrick McCabe via eli)
+    
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
