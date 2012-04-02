@@ -890,6 +890,7 @@ ResourceManager REST API's.
 
 ------
   * state - state of the application 
+  * finalStatus - the final status of the application - reported by the application itself
   * user - user name
   * queue - queue name
   * limit - total number of app objects to be returned

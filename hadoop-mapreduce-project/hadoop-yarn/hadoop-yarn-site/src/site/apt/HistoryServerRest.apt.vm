@@ -149,6 +149,7 @@ History Server REST API's.
 
 ------
   * user - user name
+  * state - the job state
   * queue - queue name
   * limit - total number of app objects to be returned
   * startedTimeBegin - jobs with start time beginning with this time, specified in ms since epoch
