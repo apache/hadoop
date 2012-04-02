@@ -26,6 +26,9 @@ Release 0.22.1 - Unreleased
     HDFS-2877. If locking of a storage dir fails, it will remove the other
     NN's lock file on exit. (todd)
 
+    HDFS-2991. Fix case where OP_ADD would not be logged in append().
+    (Todd Lipcon via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

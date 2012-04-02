@@ -218,13 +218,16 @@ public class FSEditLogLoader {
           } else {
             fsDir.updateFile(oldFile, path,  blocks, mtime, atime);
             if(opcode == Ops.OP_CLOSE) {  // OP_CLOSE
-              assert oldFile.isUnderConstruction() : 
-                "File is not under construction: " + path;
+              if (!oldFile.isUnderConstruction())
+                throw new IOException(
+                    "File is not under construction: " + path);
               fsNamesys.blockManager.completeBlock(
                   oldFile, blocks.length-1, true);
-              INodeFile newFile =
+              if (oldFile.isUnderConstruction()) {
+                INodeFile newFile =
                 ((INodeFileUnderConstruction)oldFile).convertToInodeFile();
-              fsDir.replaceNode(path, oldFile, newFile);
+                fsDir.replaceNode(path, oldFile, newFile);
+              }
             } else if(! oldFile.isUnderConstruction()) {  // OP_ADD for append
               INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
                   oldFile.getLocalNameBytes(),
@@ -245,8 +248,10 @@ public class FSEditLogLoader {
             fsNamesys.leaseManager.addLease(clientName, path);
           } else {  // Ops.OP_CLOSE
             numOpClose++;
-            fsNamesys.leaseManager.removeLease(
-                ((INodeFileUnderConstruction)oldFile).getClientName(), path);
+            if (oldFile.isUnderConstruction()) {
+              fsNamesys.leaseManager.removeLease(
+                  ((INodeFileUnderConstruction)oldFile).getClientName(), path);
+            }
           }
           break;
         } 
