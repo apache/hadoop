@@ -43,6 +43,8 @@ import javax.net.SocketFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.net.util.SubnetUtils;
+import org.apache.commons.net.util.SubnetUtils.SubnetInfo;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -50,6 +52,8 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import com.google.common.base.Preconditions;
 
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Unstable
@@ -469,11 +473,27 @@ public class NetUtils {
    * @see java.net.Socket#connect(java.net.SocketAddress, int)
    * 
    * @param socket
-   * @param endpoint 
-   * @param timeout - timeout in milliseconds
+   * @param address the remote address
+   * @param timeout timeout in milliseconds
+   */
+  public static void connect(Socket socket,
+      SocketAddress address,
+      int timeout) throws IOException {
+    connect(socket, address, null, timeout);
+  }
+
+  /**
+   * Like {@link NetUtils#connect(Socket, SocketAddress, int)} but
+   * also takes a local address and port to bind the socket to. 
+   * 
+   * @param socket
+   * @param address the remote address
+   * @param localAddr the local address to bind the socket to
+   * @param timeout timeout in milliseconds
    */
   public static void connect(Socket socket, 
-                             SocketAddress endpoint, 
+                             SocketAddress endpoint,
+                             SocketAddress localAddr,
                              int timeout) throws IOException {
     if (socket == null || endpoint == null || timeout < 0) {
       throw new IllegalArgumentException("Illegal argument for connect()");
@@ -481,6 +501,15 @@ public class NetUtils {
     
     SocketChannel ch = socket.getChannel();
     
+    if (localAddr != null) {
+      Class localClass = localAddr.getClass();
+      Class remoteClass = endpoint.getClass();
+      Preconditions.checkArgument(localClass.equals(remoteClass),
+          "Local address %s must be of same family as remote address %s.",
+          localAddr, endpoint);
+      socket.bind(localAddr);
+    }
+
     if (ch == null) {
       // let the default implementation handle it.
       socket.connect(endpoint, timeout);
@@ -768,5 +797,71 @@ public class NetUtils {
     return (hostname != null) ?
         ("\"" + hostname + "\"")
         : UNKNOWN_HOST;
+  }
+
+  /**
+   * @return true if the given string is a subnet specified
+   *     using CIDR notation, false otherwise
+   */
+  public static boolean isValidSubnet(String subnet) {
+    try {
+      new SubnetUtils(subnet);
+      return true;
+    } catch (IllegalArgumentException iae) {
+      return false;
+    }
+  }
+
+  /**
+   * Add all addresses associated with the given nif in the
+   * given subnet to the given list.
+   */
+  private static void addMatchingAddrs(NetworkInterface nif,
+      SubnetInfo subnetInfo, List<InetAddress> addrs) {
+    Enumeration<InetAddress> ifAddrs = nif.getInetAddresses();
+    while (ifAddrs.hasMoreElements()) {
+      InetAddress ifAddr = ifAddrs.nextElement();
+      if (subnetInfo.isInRange(ifAddr.getHostAddress())) {
+        addrs.add(ifAddr);
+      }
+    }
+  }
+
+  /**
+   * Return an InetAddress for each interface that matches the
+   * given subnet specified using CIDR notation.
+   *
+   * @param subnet subnet specified using CIDR notation
+   * @param returnSubinterfaces
+   *            whether to return IPs associated with subinterfaces
+   * @throws IllegalArgumentException if subnet is invalid
+   */
+  public static List<InetAddress> getIPs(String subnet,
+      boolean returnSubinterfaces) {
+    List<InetAddress> addrs = new ArrayList<InetAddress>();
+    SubnetInfo subnetInfo = new SubnetUtils(subnet).getInfo();
+    Enumeration<NetworkInterface> nifs;
+
+    try {
+      nifs = NetworkInterface.getNetworkInterfaces();
+    } catch (SocketException e) {
+      LOG.error("Unable to get host interfaces", e);
+      return addrs;
+    }
+
+    while (nifs.hasMoreElements()) {
+      NetworkInterface nif = nifs.nextElement();
+      // NB: adding addresses even if the nif is not up
+      addMatchingAddrs(nif, subnetInfo, addrs);
+
+      if (!returnSubinterfaces) {
+        continue;
+      }
+      Enumeration<NetworkInterface> subNifs = nif.getSubInterfaces();
+      while (subNifs.hasMoreElements()) {
+        addMatchingAddrs(subNifs.nextElement(), subnetInfo, addrs);
+      }
+    }
+    return addrs;
   }
 }
