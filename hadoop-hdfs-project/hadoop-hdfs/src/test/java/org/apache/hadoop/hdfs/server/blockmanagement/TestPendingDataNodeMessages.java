@@ -56,8 +56,8 @@ public class TestPendingDataNodeMessages {
     Queue<ReportedBlockInfo> q =
       msgs.takeBlockQueue(block1Gs2DifferentInstance);
     assertEquals(
-        "ReportedBlockInfo [block=blk_1_1, dn=fake, reportedState=FINALIZED]," +
-        "ReportedBlockInfo [block=blk_1_2, dn=fake, reportedState=FINALIZED]",
+        "ReportedBlockInfo [block=blk_1_1, dn=fake:100, reportedState=FINALIZED]," +
+        "ReportedBlockInfo [block=blk_1_2, dn=fake:100, reportedState=FINALIZED]",
         Joiner.on(",").join(q));
     assertEquals(0, msgs.count());
     
