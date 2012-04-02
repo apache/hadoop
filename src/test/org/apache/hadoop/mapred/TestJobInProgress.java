@@ -228,13 +228,9 @@ public class TestJobInProgress {
     Node r2n3 = new NodeBase("/default/rack2/node3");
     nt.add(r2n3);
 
-    Node r2n4 = new NodeBase("/default/rack2/s1/node4");
-    nt.add(r2n4);
-
     LOG.debug("r1n1 parent: " + r1n1.getParent() + "\n" +
               "r1n2 parent: " + r1n2.getParent() + "\n" +
-              "r2n3 parent: " + r2n3.getParent() + "\n" +
-              "r2n4 parent: " + r2n4.getParent());
+              "r2n3 parent: " + r2n3.getParent());
 
     // Same host
     assertEquals(0, JobInProgress.getMatchingLevelForNodes(r1n1, r1n1, 3));
@@ -242,8 +238,6 @@ public class TestJobInProgress {
     assertEquals(1, JobInProgress.getMatchingLevelForNodes(r1n1, r1n2, 3));
     // Different rack
     assertEquals(2, JobInProgress.getMatchingLevelForNodes(r1n1, r2n3, 3));
-    // Different rack at different depth
-    assertEquals(3, JobInProgress.getMatchingLevelForNodes(r1n1, r2n4, 3));
   }
 
   @AfterClass
