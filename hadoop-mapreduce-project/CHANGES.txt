@@ -111,6 +111,9 @@ Release 0.23.3 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4092.  commitJob Exception does not fail job (Jon Eagles via
+     bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

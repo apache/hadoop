@@ -727,7 +727,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         // Commit job & do cleanup
         job.getCommitter().commitJob(job.getJobContext());
       } catch (IOException e) {
-        LOG.warn("Could not do commit for Job", e);
+        LOG.error("Could not do commit for Job", e);
+        job.logJobHistoryFinishedEvent();
+        return job.finished(JobState.FAILED);
       }
       job.logJobHistoryFinishedEvent();
       return job.finished(JobState.SUCCEEDED);
