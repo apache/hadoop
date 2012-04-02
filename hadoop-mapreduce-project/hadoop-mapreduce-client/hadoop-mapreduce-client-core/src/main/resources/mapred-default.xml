@@ -351,7 +351,7 @@
   <value>600000</value>
   <description>The number of milliseconds before a task will be
   terminated if it neither reads an input, writes an output, nor
-  updates its status string.
+  updates its status string.  A value of 0 disables the timeout.
   </description>
 </property>
 

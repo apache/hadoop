@@ -112,7 +112,9 @@ Release 0.23.3 - UNRELEASED
   BUG FIXES
 
     MAPREDUCE-4092.  commitJob Exception does not fail job (Jon Eagles via
-     bobby)
+    bobby)
+
+    MAPREDUCE-4089. Hung Tasks never time out. (Robert Evans via tgraves)
 
 Release 0.23.2 - UNRELEASED
 
