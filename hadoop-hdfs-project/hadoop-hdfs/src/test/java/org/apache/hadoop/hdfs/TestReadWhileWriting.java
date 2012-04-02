@@ -56,8 +56,6 @@ public class TestReadWhileWriting {
   @Test
   public void pipeline_02_03() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    //enable append
-    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
 
     // create cluster

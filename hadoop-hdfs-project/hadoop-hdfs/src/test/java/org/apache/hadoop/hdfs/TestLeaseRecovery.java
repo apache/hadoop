@@ -70,7 +70,6 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
     final int ORG_FILE_SIZE = 3000; 
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
-    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
     MiniDFSCluster cluster = null;
 
     try {
