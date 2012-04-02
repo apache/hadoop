@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ipc.RPC;
 
@@ -42,7 +43,22 @@ public class FailoverController {
 
   private static final Log LOG = LogFactory.getLog(FailoverController.class);
 
-  private static final int GRACEFUL_FENCE_TIMEOUT = 5000;
+  private final int gracefulFenceTimeout;
+  private final int rpcTimeoutToNewActive;
+  
+  private final Configuration conf;
+
+  
+  public FailoverController(Configuration conf) {
+    this.conf = conf;
+    
+    this.gracefulFenceTimeout = conf.getInt(
+        CommonConfigurationKeys.HA_FC_GRACEFUL_FENCE_TIMEOUT_KEY,
+        CommonConfigurationKeys.HA_FC_GRACEFUL_FENCE_TIMEOUT_DEFAULT);
+    this.rpcTimeoutToNewActive = conf.getInt(
+        CommonConfigurationKeys.HA_FC_NEW_ACTIVE_TIMEOUT_KEY,
+        CommonConfigurationKeys.HA_FC_NEW_ACTIVE_TIMEOUT_DEFAULT);
+  }
 
   /**
    * Perform pre-failover checks on the given service we plan to
@@ -59,9 +75,9 @@ public class FailoverController {
    * @param forceActive ignore toSvc if it reports that it is not ready
    * @throws FailoverFailedException if we should avoid failover
    */
-  private static void preFailoverChecks(HAServiceTarget from,
-                                        HAServiceTarget target,
-                                        boolean forceActive)
+  private void preFailoverChecks(HAServiceTarget from,
+                                 HAServiceTarget target,
+                                 boolean forceActive)
       throws FailoverFailedException {
     HAServiceStatus toSvcStatus;
     HAServiceProtocol toSvc;
@@ -72,7 +88,7 @@ public class FailoverController {
     }
 
     try {
-      toSvc = target.getProxy();
+      toSvc = target.getProxy(conf, rpcTimeoutToNewActive);
       toSvcStatus = toSvc.getServiceStatus();
     } catch (IOException e) {
       String msg = "Unable to get service state for " + target;
@@ -115,11 +131,10 @@ public class FailoverController {
    * and no retries. Its only purpose is to avoid fencing a node that
    * has already restarted.
    */
-  static boolean tryGracefulFence(Configuration conf,
-      HAServiceTarget svc) {
+  boolean tryGracefulFence(HAServiceTarget svc) {
     HAServiceProtocol proxy = null;
     try {
-      proxy = svc.getProxy(conf, GRACEFUL_FENCE_TIMEOUT);
+      proxy = svc.getProxy(conf, gracefulFenceTimeout);
       proxy.transitionToStandby();
       return true;
     } catch (ServiceFailedException sfe) {
@@ -146,10 +161,10 @@ public class FailoverController {
    * @param forceActive try to make toSvc active even if it is not ready
    * @throws FailoverFailedException if the failover fails
    */
-  public static void failover(HAServiceTarget fromSvc,
-                              HAServiceTarget toSvc,
-                              boolean forceFence,
-                              boolean forceActive)
+  public void failover(HAServiceTarget fromSvc,
+                       HAServiceTarget toSvc,
+                       boolean forceFence,
+                       boolean forceActive)
       throws FailoverFailedException {
     Preconditions.checkArgument(fromSvc.getFencer() != null,
         "failover requires a fencer");
@@ -158,7 +173,7 @@ public class FailoverController {
     // Try to make fromSvc standby
     boolean tryFence = true;
     
-    if (tryGracefulFence(new Configuration(), fromSvc)) {
+    if (tryGracefulFence(fromSvc)) {
       tryFence = forceFence;
     }
 
@@ -174,7 +189,8 @@ public class FailoverController {
     boolean failed = false;
     Throwable cause = null;
     try {
-      HAServiceProtocolHelper.transitionToActive(toSvc.getProxy());
+      HAServiceProtocolHelper.transitionToActive(
+          toSvc.getProxy(conf, rpcTimeoutToNewActive));
     } catch (ServiceFailedException sfe) {
       LOG.error("Unable to make " + toSvc + " active (" +
           sfe.getMessage() + "). Failing back.");
