@@ -32,6 +32,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
@@ -120,7 +121,7 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
     public Job getPartialJob(JobId jobID) {
       return partialJobs.get(jobID);
     }
-    
+
     @Override
     public Map<JobId, Job> getAllJobs() {
       return partialJobs; // OK
@@ -196,6 +197,72 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
   }
 
   @Test
+  public void testJobsQueryStateNone() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("history")
+        .path("mapreduce").path("jobs").queryParam("state", JobState.KILL_WAIT.toString())
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals("jobs is not null", JSONObject.NULL, json.get("jobs"));
+  }
+
+  @Test
+  public void testJobsQueryState() throws JSONException, Exception {
+    WebResource r = resource();
+    // we only create 3 jobs and it cycles through states so we should have 3 unique states
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    String queryState = "BOGUS";
+    JobId jid = null;
+    for (Map.Entry<JobId, Job> entry : jobsMap.entrySet()) {
+      jid = entry.getValue().getID();
+      queryState = entry.getValue().getState().toString();
+      break;
+    }
+    ClientResponse response = r.path("ws").path("v1").path("history")
+        .path("mapreduce").path("jobs").queryParam("state", queryState)
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    JSONObject jobs = json.getJSONObject("jobs");
+    JSONArray arr = jobs.getJSONArray("job");
+    assertEquals("incorrect number of elements", 1, arr.length());
+    JSONObject info = arr.getJSONObject(0);
+    Job job = appContext.getPartialJob(jid);
+    VerifyJobsUtils.verifyHsJobPartial(info, job);
+  }
+
+  @Test
+  public void testJobsQueryStateInvalid() throws JSONException, Exception {
+    WebResource r = resource();
+
+    ClientResponse response = r.path("ws").path("v1").path("history")
+        .path("mapreduce").path("jobs").queryParam("state", "InvalidState")
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+
+    assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject msg = response.getEntity(JSONObject.class);
+    JSONObject exception = msg.getJSONObject("RemoteException");
+    assertEquals("incorrect number of elements", 3, exception.length());
+    String message = exception.getString("message");
+    String type = exception.getString("exception");
+    String classname = exception.getString("javaClassName");
+    WebServicesTestUtils
+        .checkStringMatch(
+            "exception message",
+            "No enum const class org.apache.hadoop.mapreduce.v2.api.records.JobState.InvalidState",
+            message);
+    WebServicesTestUtils.checkStringMatch("exception type",
+        "IllegalArgumentException", type);
+    WebServicesTestUtils.checkStringMatch("exception classname",
+        "java.lang.IllegalArgumentException", classname);
+  }
+
+
+  @Test
   public void testJobsQueryUserNone() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
@@ -215,6 +282,8 @@ public class TestHsWebServicesJobsQuery extends JerseyTest {
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
+    System.out.println(json.toString());
+
     assertEquals("incorrect number of elements", 1, json.length());
     JSONObject jobs = json.getJSONObject("jobs");
     JSONArray arr = jobs.getJSONArray("job");
