@@ -300,8 +300,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   NameNodeResourceChecker nnResourceChecker;
 
   private FsServerDefaults serverDefaults;
-  // allow appending to hdfs files
-  private boolean supportAppends = true;
+
+  private boolean supportAppends;
   private ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure = 
       ReplaceDatanodeOnFailure.DEFAULT;
 
@@ -1812,9 +1812,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
-    if (supportAppends == false) {
-      throw new UnsupportedOperationException("Append to hdfs not supported." +
-                            " Please refer to dfs.support.append configuration parameter.");
+    if (!supportAppends) {
+      throw new UnsupportedOperationException(
+          "Append is not enabled on this NameNode. Use the " +
+          DFS_SUPPORT_APPEND_KEY + " configuration option to enable it.");
     }
     LocatedBlock lb = null;
     writeLock();
@@ -2894,9 +2895,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
         //remove lease, close file
         finalizeINodeFileUnderConstruction(src, pendingFile);
-      } else if (supportAppends) {
+      } else {
         // If this commit does not want to close the file, persist blocks
-        // only if append is supported or we're explicitly told to
         dir.persistBlocks(src, pendingFile);
       }
     } finally {
@@ -4479,9 +4479,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     } finally {
       writeUnlock();
     }
-    if (supportAppends || persistBlocks) {
-      getEditLog().logSync();
-    }
+    getEditLog().logSync();
     LOG.info("updatePipeline(" + oldBlock + ") successfully to " + newBlock);
   }
 
@@ -4520,11 +4518,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     blockinfo.setExpectedLocations(descriptors);
 
-    // persist blocks only if append is supported
     String src = leaseManager.findPath(pendingFile);
-    if (supportAppends) {
-      dir.persistBlocks(src, pendingFile);
-    }
+    dir.persistBlocks(src, pendingFile);
   }
 
   // rename was successful. If any part of the renamed subtree had

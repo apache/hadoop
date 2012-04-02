@@ -836,4 +836,12 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.support.append</name>
+  <value>true</value>
+  <description>
+    Does HDFS allow appends to files?
+  </description>
+</property>
+
 </configuration>

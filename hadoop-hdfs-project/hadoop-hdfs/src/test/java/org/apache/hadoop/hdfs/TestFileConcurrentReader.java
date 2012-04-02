@@ -311,7 +311,6 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
     final int writeSize,
     Configuration conf
   ) throws IOException {
-    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, syncType == SyncType.APPEND);
     conf.setBoolean(DFSConfigKeys.DFS_DATANODE_TRANSFERTO_ALLOWED_KEY,
         transferToAllowed);
     init(conf);

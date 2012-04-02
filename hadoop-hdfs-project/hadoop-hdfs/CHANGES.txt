@@ -70,6 +70,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3167. CLI-based driver for MiniDFSCluster. (Henry Robinson via atm)
 
+    HDFS-3120. Enable hsync and hflush by default. (eli)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
