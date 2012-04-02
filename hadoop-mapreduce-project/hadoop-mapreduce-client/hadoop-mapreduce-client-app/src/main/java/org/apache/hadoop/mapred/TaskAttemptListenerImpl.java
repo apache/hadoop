@@ -175,7 +175,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);
 
-    taskHeartbeatHandler.receivedPing(attemptID);
+    taskHeartbeatHandler.progressing(attemptID);
 
     Job job = context.getJob(attemptID.getTaskId().getJobId());
     Task task = job.getTask(attemptID.getTaskId());
@@ -203,7 +203,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);
 
-    taskHeartbeatHandler.receivedPing(attemptID);
+    taskHeartbeatHandler.progressing(attemptID);
     //Ignorable TaskStatus? - since a task will send a LastStatusUpdate
     context.getEventHandler().handle(
         new TaskAttemptEvent(attemptID, 
@@ -217,7 +217,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
         TypeConverter.toYarn(taskAttemptID);
 
-    taskHeartbeatHandler.receivedPing(attemptID);
+    taskHeartbeatHandler.progressing(attemptID);
 
     context.getEventHandler().handle(
         new TaskAttemptEvent(attemptID, TaskAttemptEventType.TA_DONE));
@@ -270,7 +270,7 @@ public class TaskAttemptListenerImpl extends CompositeService
         context.getJob(attemptID.getTaskId().getJobId()).getTaskAttemptCompletionEvents(
             fromEventId, maxEvents);
 
-    taskHeartbeatHandler.receivedPing(attemptID);
+    taskHeartbeatHandler.progressing(attemptID);
 
     // filter the events to return only map completion events in old format
     List<TaskCompletionEvent> mapEvents = new ArrayList<TaskCompletionEvent>();
@@ -287,7 +287,7 @@ public class TaskAttemptListenerImpl extends CompositeService
   @Override
   public boolean ping(TaskAttemptID taskAttemptID) throws IOException {
     LOG.info("Ping from " + taskAttemptID.toString());
-    taskHeartbeatHandler.receivedPing(TypeConverter.toYarn(taskAttemptID));
+    taskHeartbeatHandler.pinged(TypeConverter.toYarn(taskAttemptID));
     return true;
   }
 
@@ -299,7 +299,7 @@ public class TaskAttemptListenerImpl extends CompositeService
 
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
       TypeConverter.toYarn(taskAttemptID);
-    taskHeartbeatHandler.receivedPing(attemptID);
+    taskHeartbeatHandler.progressing(attemptID);
 
     // This is mainly used for cases where we want to propagate exception traces
     // of tasks that fail.
@@ -317,7 +317,7 @@ public class TaskAttemptListenerImpl extends CompositeService
     LOG.info("Status update from " + taskAttemptID.toString());
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId yarnAttemptID =
         TypeConverter.toYarn(taskAttemptID);
-    taskHeartbeatHandler.receivedPing(yarnAttemptID);
+    taskHeartbeatHandler.progressing(yarnAttemptID);
     TaskAttemptStatus taskAttemptStatus =
         new TaskAttemptStatus();
     taskAttemptStatus.id = yarnAttemptID;
