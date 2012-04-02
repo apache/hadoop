@@ -84,20 +84,12 @@ abstract public class ReplicaInfo extends Block implements Replica {
   ReplicaInfo(ReplicaInfo from) {
     this(from, from.getVolume(), from.getDir());
   }
-
-  /**
-   * Get this replica's meta file name
-   * @return this replica's meta file name
-   */
-  private String getMetaFileName() {
-    return getBlockName() + "_" + getGenerationStamp() + METADATA_EXTENSION; 
-  }
   
   /**
    * Get the full path of this replica's data file
    * @return the full path of this replica's data file
    */
-  File getBlockFile() {
+  public File getBlockFile() {
     return new File(getDir(), getBlockName());
   }
   
@@ -105,15 +97,16 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * Get the full path of this replica's meta file
    * @return the full path of this replica's meta file
    */
-  File getMetaFile() {
-    return new File(getDir(), getMetaFileName());
+  public File getMetaFile() {
+    return new File(getDir(),
+        DatanodeUtil.getMetaName(getBlockName(), getGenerationStamp()));
   }
   
   /**
    * Get the volume where this replica is located on disk
    * @return the volume where this replica is located on disk
    */
-  FsVolumeSpi getVolume() {
+  public FsVolumeSpi getVolume() {
     return volume;
   }
   
@@ -136,7 +129,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * Set the parent directory where this replica is located
    * @param dir the parent directory where the replica is located
    */
-  void setDir(File dir) {
+  public void setDir(File dir) {
     this.dir = dir;
   }
 
@@ -145,14 +138,14 @@ abstract public class ReplicaInfo extends Block implements Replica {
    * @return true if the replica has already been unlinked 
    *         or no need to be detached; false otherwise
    */
-  boolean isUnlinked() {
+  public boolean isUnlinked() {
     return true;                // no need to be unlinked
   }
 
   /**
    * set that this replica is unlinked
    */
-  void setUnlinked() {
+  public void setUnlinked() {
     // no need to be unlinked
   }
   
@@ -201,7 +194,7 @@ abstract public class ReplicaInfo extends Block implements Replica {
    *         false if it is already detached or no need to be detached
    * @throws IOException if there is any copy error
    */
-  boolean unlinkBlock(int numLinks) throws IOException {
+  public boolean unlinkBlock(int numLinks) throws IOException {
     if (isUnlinked()) {
       return false;
     }

@@ -38,7 +38,9 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 
 /**
  * Tests {@link DirectoryScanner} handling of differences
@@ -51,7 +53,7 @@ public class TestDirectoryScanner extends TestCase {
 
   private MiniDFSCluster cluster;
   private String bpid;
-  private FSDataset fds = null;
+  private FsDatasetSpi<? extends FsVolumeSpi> fds = null;
   private DirectoryScanner scanner = null;
   private Random rand = new Random();
   private Random r = new Random();
@@ -72,7 +74,7 @@ public class TestDirectoryScanner extends TestCase {
   /** Truncate a block file */
   private long truncateBlockFile() throws IOException {
     synchronized (fds) {
-      for (ReplicaInfo b : fds.volumeMap.replicas(bpid)) {
+      for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File f = b.getBlockFile();
         File mf = b.getMetaFile();
         // Truncate a block file that has a corresponding metadata file
@@ -91,7 +93,7 @@ public class TestDirectoryScanner extends TestCase {
   /** Delete a block file */
   private long deleteBlockFile() {
     synchronized(fds) {
-      for (ReplicaInfo b : fds.volumeMap.replicas(bpid)) {
+      for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File f = b.getBlockFile();
         File mf = b.getMetaFile();
         // Delete a block file that has corresponding metadata file
@@ -107,7 +109,7 @@ public class TestDirectoryScanner extends TestCase {
   /** Delete block meta file */
   private long deleteMetaFile() {
     synchronized(fds) {
-      for (ReplicaInfo b : fds.volumeMap.replicas(bpid)) {
+      for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File file = b.getMetaFile();
         // Delete a metadata file
         if (file.exists() && file.delete()) {
@@ -124,7 +126,7 @@ public class TestDirectoryScanner extends TestCase {
     long id = rand.nextLong();
     while (true) {
       id = rand.nextLong();
-      if (fds.fetchReplicaInfo(bpid, id) == null) {
+      if (FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, id) == null) {
         break;
       }
     }
@@ -142,7 +144,7 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create a block file in a random volume*/
   private long createBlockFile() throws IOException {
-    List<FSVolume> volumes = fds.getVolumes();
+    List<? extends FsVolumeSpi> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
     File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
@@ -155,7 +157,7 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create a metafile in a random volume*/
   private long createMetaFile() throws IOException {
-    List<FSVolume> volumes = fds.getVolumes();
+    List<? extends FsVolumeSpi> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
     File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
@@ -168,7 +170,7 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create block file and corresponding metafile in a rondom volume */
   private long createBlockMetaFile() throws IOException {
-    List<FSVolume> volumes = fds.getVolumes();
+    List<? extends FsVolumeSpi> volumes = fds.getVolumes();
     int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
     File finalizedDir = volumes.get(index).getFinalizedDir(bpid);
@@ -228,8 +230,7 @@ public class TestDirectoryScanner extends TestCase {
     try {
       cluster.waitActive();
       bpid = cluster.getNamesystem().getBlockPoolId();
-      fds = (FSDataset)DataNodeTestUtils.getFSDataset(
-          cluster.getDataNodes().get(0));
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                   parallelism);
       DataNode dn = cluster.getDataNodes().get(0);
@@ -348,12 +349,13 @@ public class TestDirectoryScanner extends TestCase {
 
   private void verifyAddition(long blockId, long genStamp, long size) {
     final ReplicaInfo replicainfo;
-    replicainfo = fds.fetchReplicaInfo(bpid, blockId);
+    replicainfo = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
     assertNotNull(replicainfo);
 
     // Added block has the same file as the one created by the test
     File file = new File(getBlockFile(blockId));
-    assertEquals(file.getName(), fds.getFile(bpid, blockId).getName());
+    assertEquals(file.getName(),
+        FsDatasetTestUtil.getFile(fds, bpid, blockId).getName());
 
     // Generation stamp is same as that of created file
     assertEquals(genStamp, replicainfo.getGenerationStamp());
@@ -364,12 +366,12 @@ public class TestDirectoryScanner extends TestCase {
 
   private void verifyDeletion(long blockId) {
     // Ensure block does not exist in memory
-    assertNull(fds.fetchReplicaInfo(bpid, blockId));
+    assertNull(FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId));
   }
 
   private void verifyGenStamp(long blockId, long genStamp) {
     final ReplicaInfo memBlock;
-    memBlock = fds.fetchReplicaInfo(bpid, blockId);
+    memBlock = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
     assertNotNull(memBlock);
     assertEquals(genStamp, memBlock.getGenerationStamp());
   }

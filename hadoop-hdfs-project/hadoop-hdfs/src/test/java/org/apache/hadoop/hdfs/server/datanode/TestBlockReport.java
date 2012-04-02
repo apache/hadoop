@@ -613,14 +613,13 @@ public class TestBlockReport {
     
     // Look about specified DN for the replica of the block from 1st DN
     final DataNode dn1 = cluster.getDataNodes().get(DN_N1);
-    final FSDataset dataset1 = (FSDataset)DataNodeTestUtils.getFSDataset(dn1);
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    Replica r = dataset1.fetchReplicaInfo(bpid, bl.getBlockId());
+    Replica r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
     long start = System.currentTimeMillis();
     int count = 0;
     while (r == null) {
       waitTil(5);
-      r = dataset1.fetchReplicaInfo(bpid, bl.getBlockId());
+      r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
       long waiting_period = System.currentTimeMillis() - start;
       if (count++ % 100 == 0)
         if(LOG.isDebugEnabled()) {

@@ -15,14 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaAlreadyExistsException;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaBeingWritten;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInPipeline;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaUnderRecovery;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaWaitingToBeRecovered;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.junit.Assert;
 import org.junit.Test;
@@ -45,7 +54,7 @@ public class TestWriteToReplica {
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
-      FSDataset dataSet = (FSDataset)dn.data;
+      FsDatasetImpl dataSet = (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
 
       // set up replicasMap
       String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -66,7 +75,7 @@ public class TestWriteToReplica {
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
-      FSDataset dataSet = (FSDataset)dn.data;
+      FsDatasetImpl dataSet = (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
 
       // set up replicasMap
       String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -86,7 +95,7 @@ public class TestWriteToReplica {
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
-      FSDataset dataSet = (FSDataset)dn.data;
+      FsDatasetImpl dataSet = (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
 
       // set up replicasMap
       String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -106,7 +115,7 @@ public class TestWriteToReplica {
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
-      FSDataset dataSet = (FSDataset)dn.data;
+      FsDatasetImpl dataSet = (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
 
       // set up replicasMap
       String bpid = cluster.getNamesystem().getBlockPoolId();
@@ -128,7 +137,7 @@ public class TestWriteToReplica {
    * @return Contrived blocks for further testing.
    * @throws IOException
    */
-  private ExtendedBlock[] setup(String bpid, FSDataset dataSet) throws IOException {
+  private ExtendedBlock[] setup(String bpid, FsDatasetImpl dataSet) throws IOException {
     // setup replicas map
     
     ExtendedBlock[] blocks = new ExtendedBlock[] {
@@ -137,8 +146,8 @@ public class TestWriteToReplica {
         new ExtendedBlock(bpid, 5, 1, 2005), new ExtendedBlock(bpid, 6, 1, 2006)
     };
     
-    ReplicasMap replicasMap = dataSet.volumeMap;
-    FSVolume vol = dataSet.volumes.getNextVolume(0);
+    ReplicaMap replicasMap = dataSet.volumeMap;
+    FsVolumeImpl vol = dataSet.volumes.getNextVolume(0);
     ReplicaInfo replicaInfo = new FinalizedReplica(
         blocks[FINALIZED].getLocalBlock(), vol, vol.getCurrentDir().getParentFile());
     replicasMap.add(bpid, replicaInfo);
@@ -165,9 +174,9 @@ public class TestWriteToReplica {
     return blocks;
   }
   
-  private void testAppend(String bpid, FSDataset dataSet, ExtendedBlock[] blocks) throws IOException {
+  private void testAppend(String bpid, FsDatasetImpl dataSet, ExtendedBlock[] blocks) throws IOException {
     long newGS = blocks[FINALIZED].getGenerationStamp()+1;
-    final FSVolume v = (FSVolume)dataSet.volumeMap.get(
+    final FsVolumeImpl v = (FsVolumeImpl)dataSet.volumeMap.get(
         bpid, blocks[FINALIZED].getLocalBlock()).getVolume();
     long available = v.getCapacity()-v.getDfsUsed();
     long expectedLen = blocks[FINALIZED].getNumBytes();
@@ -285,7 +294,7 @@ public class TestWriteToReplica {
     }
   }
 
-  private void testClose(FSDataset dataSet, ExtendedBlock [] blocks) throws IOException {
+  private void testClose(FsDatasetImpl dataSet, ExtendedBlock [] blocks) throws IOException {
     long newGS = blocks[FINALIZED].getGenerationStamp()+1;
     dataSet.recoverClose(blocks[FINALIZED], newGS, 
         blocks[FINALIZED].getNumBytes());  // successful
@@ -335,7 +344,7 @@ public class TestWriteToReplica {
     }
   }
   
-  private void testWriteToRbw(FSDataset dataSet, ExtendedBlock[] blocks) throws IOException {
+  private void testWriteToRbw(FsDatasetImpl dataSet, ExtendedBlock[] blocks) throws IOException {
     try {
       dataSet.recoverRbw(blocks[FINALIZED],
           blocks[FINALIZED].getGenerationStamp()+1,
@@ -428,7 +437,7 @@ public class TestWriteToReplica {
     dataSet.createRbw(blocks[NON_EXISTENT]);
   }
   
-  private void testWriteToTemporary(FSDataset dataSet, ExtendedBlock[] blocks) throws IOException {
+  private void testWriteToTemporary(FsDatasetImpl dataSet, ExtendedBlock[] blocks) throws IOException {
     try {
       dataSet.createTemporary(blocks[FINALIZED]);
       Assert.fail("Should not have created a temporary replica that was " +

@@ -27,7 +27,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
  * Those are the replicas that
  * are created in a pipeline initiated by a dfs client.
  */
-class ReplicaBeingWritten extends ReplicaInPipeline {
+public class ReplicaBeingWritten extends ReplicaInPipeline {
   /**
    * Constructor for a zero length replica
    * @param blockId block id
@@ -35,7 +35,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  ReplicaBeingWritten(long blockId, long genStamp, 
+  public ReplicaBeingWritten(long blockId, long genStamp, 
         FsVolumeSpi vol, File dir) {
     super( blockId, genStamp, vol, dir);
   }
@@ -47,7 +47,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param dir directory path where block and meta files are located
    * @param writer a thread that is writing to this replica
    */
-  ReplicaBeingWritten(Block block, 
+  public ReplicaBeingWritten(Block block, 
       FsVolumeSpi vol, File dir, Thread writer) {
     super( block, vol, dir, writer);
   }
@@ -61,7 +61,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * @param dir directory path where block and meta files are located
    * @param writer a thread that is writing to this replica
    */
-  ReplicaBeingWritten(long blockId, long len, long genStamp,
+  public ReplicaBeingWritten(long blockId, long len, long genStamp,
       FsVolumeSpi vol, File dir, Thread writer ) {
     super( blockId, len, genStamp, vol, dir, writer);
   }
@@ -70,7 +70,7 @@ class ReplicaBeingWritten extends ReplicaInPipeline {
    * Copy constructor.
    * @param from
    */
-  ReplicaBeingWritten(ReplicaBeingWritten from) {
+  public ReplicaBeingWritten(ReplicaBeingWritten from) {
     super(from);
   }
 

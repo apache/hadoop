@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetFactory;
 import org.apache.hadoop.util.DataChecksum;
 
 /**
@@ -90,7 +91,7 @@ public class TestSimulatedFSDataset extends TestCase {
   public void testFSDatasetFactory() {
     final Configuration conf = new Configuration();
     FsDatasetSpi.Factory<?> f = FsDatasetSpi.Factory.getFactory(conf);
-    assertEquals(FSDataset.Factory.class, f.getClass());
+    assertEquals(FsDatasetFactory.class, f.getClass());
     assertFalse(f.isSimulated());
 
     SimulatedFSDataset.setFactory(conf);
@@ -243,7 +244,7 @@ public class TestSimulatedFSDataset extends TestCase {
     }
   }
 
-  public void checkInvalidBlock(ExtendedBlock b) throws IOException {
+  public void checkInvalidBlock(ExtendedBlock b) {
     final SimulatedFSDataset fsdataset = getSimulatedFSDataset();
     assertFalse(fsdataset.isValidBlock(b));
     try {

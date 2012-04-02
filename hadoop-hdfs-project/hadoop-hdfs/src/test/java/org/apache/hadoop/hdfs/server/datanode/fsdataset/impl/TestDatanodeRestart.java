@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,7 +36,10 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
@@ -98,8 +101,8 @@ public class TestDatanodeRestart {
       out.write(writeBuf);
       out.hflush();
       DataNode dn = cluster.getDataNodes().get(0);
-      for (FsVolumeSpi v : dn.data.getVolumes()) {
-        FSVolume volume = (FSVolume)v;
+      for (FsVolumeSpi v : dataset(dn).getVolumes()) {
+        final FsVolumeImpl volume = (FsVolumeImpl)v;
         File currentDir = volume.getCurrentDir().getParentFile().getParentFile();
         File rbwDir = new File(currentDir, "rbw");
         for (File file : rbwDir.listFiles()) {
@@ -114,7 +117,7 @@ public class TestDatanodeRestart {
 
       // check volumeMap: one rwr replica
       String bpid = cluster.getNamesystem().getBlockPoolId();
-      ReplicasMap replicas = ((FSDataset)(dn.data)).volumeMap;
+      ReplicaMap replicas = dataset(dn).volumeMap;
       Assert.assertEquals(1, replicas.size(bpid));
       ReplicaInfo replica = replicas.replicas(bpid).iterator().next();
       Assert.assertEquals(ReplicaState.RWR, replica.getState());
@@ -123,7 +126,7 @@ public class TestDatanodeRestart {
       } else {
         Assert.assertEquals(fileLen, replica.getNumBytes());
       }
-      dn.data.invalidate(bpid, new Block[]{replica});
+      dataset(dn).invalidate(bpid, new Block[]{replica});
     } finally {
       IOUtils.closeStream(out);
       if (fs.exists(src)) {
@@ -151,7 +154,7 @@ public class TestDatanodeRestart {
       String bpid = cluster.getNamesystem().getBlockPoolId();
       DataNode dn = cluster.getDataNodes().get(0);
       Iterator<ReplicaInfo> replicasItor = 
-        ((FSDataset)dn.data).volumeMap.replicas(bpid).iterator();
+          dataset(dn).volumeMap.replicas(bpid).iterator();
       ReplicaInfo replica = replicasItor.next();
       createUnlinkTmpFile(replica, true, true); // rename block file
       createUnlinkTmpFile(replica, false, true); // rename meta file
@@ -167,8 +170,7 @@ public class TestDatanodeRestart {
       dn = cluster.getDataNodes().get(0);
 
       // check volumeMap: 4 finalized replica
-      Collection<ReplicaInfo> replicas = 
-        ((FSDataset)(dn.data)).volumeMap.replicas(bpid);
+      Collection<ReplicaInfo> replicas = dataset(dn).volumeMap.replicas(bpid);
       Assert.assertEquals(4, replicas.size());
       replicasItor = replicas.iterator();
       while (replicasItor.hasNext()) {
@@ -178,6 +180,10 @@ public class TestDatanodeRestart {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  private static FsDatasetImpl dataset(DataNode dn) {
+    return (FsDatasetImpl)DataNodeTestUtils.getFSDataset(dn);
   }
 
   private static void createUnlinkTmpFile(ReplicaInfo replicaInfo, 

@@ -31,12 +31,12 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
  * A recovery with higher recovery id preempts recoveries with a lower id.
  *
  */
-class ReplicaUnderRecovery extends ReplicaInfo {
+public class ReplicaUnderRecovery extends ReplicaInfo {
   private ReplicaInfo original; // the original replica that needs to be recovered
   private long recoveryId; // recovery id; it is also the generation stamp 
                            // that the replica will be bumped to after recovery
 
-  ReplicaUnderRecovery(ReplicaInfo replica, long recoveryId) {
+  public ReplicaUnderRecovery(ReplicaInfo replica, long recoveryId) {
     super(replica.getBlockId(), replica.getNumBytes(), replica.getGenerationStamp(),
         replica.getVolume(), replica.getDir());
     if ( replica.getState() != ReplicaState.FINALIZED &&
@@ -52,7 +52,7 @@ class ReplicaUnderRecovery extends ReplicaInfo {
    * Copy constructor.
    * @param from
    */
-  ReplicaUnderRecovery(ReplicaUnderRecovery from) {
+  public ReplicaUnderRecovery(ReplicaUnderRecovery from) {
     super(from);
     this.original = from.getOriginalReplica();
     this.recoveryId = from.getRecoveryID();
@@ -62,7 +62,7 @@ class ReplicaUnderRecovery extends ReplicaInfo {
    * Get the recovery id
    * @return the generation stamp that the replica will be bumped to 
    */
-  long getRecoveryID() {
+  public long getRecoveryID() {
     return recoveryId;
   }
 
@@ -70,7 +70,7 @@ class ReplicaUnderRecovery extends ReplicaInfo {
    * Set the recovery id
    * @param recoveryId the new recoveryId
    */
-  void setRecoveryID(long recoveryId) {
+  public void setRecoveryID(long recoveryId) {
     if (recoveryId > this.recoveryId) {
       this.recoveryId = recoveryId;
     } else {
@@ -83,17 +83,17 @@ class ReplicaUnderRecovery extends ReplicaInfo {
    * Get the original replica that's under recovery
    * @return the original replica under recovery
    */
-  ReplicaInfo getOriginalReplica() {
+  public ReplicaInfo getOriginalReplica() {
     return original;
   }
 
   @Override //ReplicaInfo
-  boolean isUnlinked() {
+  public boolean isUnlinked() {
     return original.isUnlinked();
   }
 
   @Override //ReplicaInfo
-  void setUnlinked() {
+  public void setUnlinked() {
     original.setUnlinked();
   }
   
@@ -131,7 +131,7 @@ class ReplicaUnderRecovery extends ReplicaInfo {
   }
   
   @Override //ReplicaInfo
-  void setDir(File dir) {
+  public void setDir(File dir) {
     super.setDir(dir);
     original.setDir(dir);
   }
@@ -159,7 +159,7 @@ class ReplicaUnderRecovery extends ReplicaInfo {
         + "\n  original=" + original;
   }
 
-  ReplicaRecoveryInfo createInfo() {
+  public ReplicaRecoveryInfo createInfo() {
     return new ReplicaRecoveryInfo(original.getBlockId(), 
         original.getBytesOnDisk(), original.getGenerationStamp(),
         original.getState()); 

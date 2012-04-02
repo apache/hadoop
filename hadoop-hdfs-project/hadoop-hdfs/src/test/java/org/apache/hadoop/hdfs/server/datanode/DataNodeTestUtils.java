@@ -22,12 +22,16 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.File;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.mockito.Mockito;
 
 import com.google.common.base.Preconditions;
@@ -100,6 +104,19 @@ public class DataNodeTestUtils {
     return spy;
   }
 
+  public static InterDatanodeProtocol createInterDatanodeProtocolProxy(
+      DataNode dn, DatanodeID datanodeid, final Configuration conf
+      ) throws IOException {
+    return DataNode.createInterDataNodeProtocolProxy(datanodeid, conf,
+        dn.getDnConf().socketTimeout);
+  }
+  
+  public static void shutdownBlockScanner(DataNode dn) {
+    if (dn.blockScanner != null) {
+      dn.blockScanner.shutdown();
+    }
+  }
+
   /**
    * This method is used for testing. 
    * Examples are adding and deleting blocks directly.
@@ -111,26 +128,22 @@ public class DataNodeTestUtils {
     return dn.getFSDataset();
   }
 
-  public static FSDataset getFsDatasetImpl(DataNode dn) {
-    return (FSDataset)dn.getFSDataset();
-  }
-
   public static File getFile(DataNode dn, String bpid, long bid) {
-    return getFsDatasetImpl(dn).getFile(bpid, bid);
+    return FsDatasetTestUtil.getFile(dn.getFSDataset(), bpid, bid);
   }
 
   public static File getBlockFile(DataNode dn, String bpid, Block b
       ) throws IOException {
-    return getFsDatasetImpl(dn).getBlockFile(bpid, b);
+    return FsDatasetTestUtil.getBlockFile(dn.getFSDataset(), bpid, b);
   }
 
-  public static boolean unlinkBlock(DataNode dn, ExtendedBlock block, int numLinks
+  public static boolean unlinkBlock(DataNode dn, ExtendedBlock bk, int numLinks
       ) throws IOException {
-    return getFsDatasetImpl(dn).getReplicaInfo(block).unlinkBlock(numLinks);
+    return FsDatasetTestUtil.unlinkBlock(dn.getFSDataset(), bk, numLinks);
   }
 
   public static long getPendingAsyncDeletions(DataNode dn) {
-    return getFsDatasetImpl(dn).asyncDiskService.countPendingDeletions();
+    return FsDatasetTestUtil.getPendingAsyncDeletions(dn.getFSDataset());
   }
 
   /**
@@ -142,6 +155,6 @@ public class DataNodeTestUtils {
    */
   public static ReplicaInfo fetchReplicaInfo(final DataNode dn,
       final String bpid, final long blkId) {
-    return getFsDatasetImpl(dn).fetchReplicaInfo(bpid, blkId);
+    return FsDatasetTestUtil.fetchReplicaInfo(dn.getFSDataset(), bpid, blkId);
   }
 }

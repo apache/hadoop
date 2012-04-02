@@ -545,8 +545,8 @@ public class DataNode extends Configured
     }
   }
   
-  // calls specific to BP
-  protected void notifyNamenodeDeletedBlock(ExtendedBlock block) {
+  /** Notify the corresponding namenode to delete the block. */
+  public void notifyNamenodeDeletedBlock(ExtendedBlock block) {
     BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
     if (bpos != null) {
       bpos.notifyNamenodeDeletedBlock(block);
@@ -1139,9 +1139,8 @@ public class DataNode extends Configured
   
   /**
    *  Check if there is a disk failure and if so, handle the error
-   *
-   **/
-  protected void checkDiskError( ) {
+   */
+  public void checkDiskError() {
     try {
       data.checkDataDir();
     } catch (DiskErrorException de) {
@@ -1695,6 +1694,12 @@ public class DataNode extends Configured
   FsDatasetSpi<?> getFSDataset() {
     return data;
   }
+
+  /** @return the block scanner. */
+  public DataBlockScanner getBlockScanner() {
+    return blockScanner;
+  }
+
 
   public static void secureMain(String args[], SecureResources resources) {
     try {
