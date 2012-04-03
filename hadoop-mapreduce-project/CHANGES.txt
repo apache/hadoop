@@ -135,6 +135,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3988. mapreduce.job.local.dir doesn't point to a single directory
     on a node. (Eric Payne via bobby)
 
+    MAPREDUCE-3999. Tracking link gives an error if the AppMaster hasn't
+    started yet (Ravi Prakash via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
