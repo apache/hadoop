@@ -201,6 +201,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3120. Enable hsync and hflush by default. (eli)
 
+    HDFS-3187. Upgrade guava to 11.0.2 (todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
