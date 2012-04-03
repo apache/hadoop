@@ -124,6 +124,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3983. TestTTResourceReporting can fail, and should just be
     deleted (Ravi Prakash via bobby)
 
+    MAPREDUCE-4012 Hadoop Job setup error leaves no useful info to users 
+    (when LinuxTaskController is used). (tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

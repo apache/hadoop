@@ -172,7 +172,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       int exitCode = shExec.getExitCode();
       LOG.warn("Exit code from container is : " + exitCode);
       logOutput(shExec.getOutput());
-      throw new IOException("App initialization failed (" + exitCode + ")", e);
+      throw new IOException("App initialization failed (" + exitCode + 
+          ") with output: " + shExec.getOutput(), e);
     }
   }
 
