@@ -19,6 +19,7 @@
 package org.apache.hadoop.ha;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.zookeeper.AsyncCallback;
@@ -40,6 +41,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveNotFoundException;
+import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
 
 public class TestActiveStandbyElector {
 
@@ -55,7 +57,8 @@ public class TestActiveStandbyElector {
     
     ActiveStandbyElectorTester(String hostPort, int timeout, String parent,
         List<ACL> acl, ActiveStandbyElectorCallback app) throws IOException {
-      super(hostPort, timeout, parent, acl, app);
+      super(hostPort, timeout, parent, acl,
+          Collections.<ZKAuthInfo>emptyList(), app);
     }
 
     @Override

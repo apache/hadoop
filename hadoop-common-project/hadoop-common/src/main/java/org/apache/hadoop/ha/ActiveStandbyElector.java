@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.KeeperException;
@@ -161,6 +162,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   private final String zkHostPort;
   private final int zkSessionTimeout;
   private final List<ACL> zkAcl;
+  private final List<ZKAuthInfo> zkAuthInfo;
   private byte[] appData;
   private final String zkLockFilePath;
   private final String zkBreadCrumbPath;
@@ -192,6 +194,8 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    *          znode under which to create the lock
    * @param acl
    *          ZooKeeper ACL's
+   * @param authInfo a list of authentication credentials to add to the
+   *                 ZK connection
    * @param app
    *          reference to callback interface object
    * @throws IOException
@@ -199,6 +203,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
    */
   public ActiveStandbyElector(String zookeeperHostPorts,
       int zookeeperSessionTimeout, String parentZnodeName, List<ACL> acl,
+      List<ZKAuthInfo> authInfo,
       ActiveStandbyElectorCallback app) throws IOException,
       HadoopIllegalArgumentException {
     if (app == null || acl == null || parentZnodeName == null
@@ -208,6 +213,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     zkHostPort = zookeeperHostPorts;
     zkSessionTimeout = zookeeperSessionTimeout;
     zkAcl = acl;
+    zkAuthInfo = authInfo;
     appClient = app;
     znodeWorkingDir = parentZnodeName;
     zkLockFilePath = znodeWorkingDir + "/" + LOCK_FILENAME;
@@ -587,6 +593,9 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   protected synchronized ZooKeeper getNewZooKeeper() throws IOException {
     ZooKeeper zk = new ZooKeeper(zkHostPort, zkSessionTimeout, null);
     zk.register(new WatcherWithClientRef(zk));
+    for (ZKAuthInfo auth : zkAuthInfo) {
+      zk.addAuthInfo(auth.getScheme(), auth.getAuth());
+    }
     return zk;
   }
 

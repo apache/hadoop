@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY;
+
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
@@ -28,9 +32,9 @@ import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.proto.HAZKInfoProtos.ActiveNodeInfo;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -81,9 +85,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
   
   @Override
   public void setConf(Configuration conf) {
-    // Use HdfsConfiguration here to force hdfs-site.xml to load
-    localNNConf = new HdfsConfiguration(conf);
-    
+    localNNConf = DFSHAAdmin.addSecurityConfiguration(conf);
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
 
     if (!HAUtil.isHAEnabled(localNNConf, nsId)) {
@@ -105,6 +107,13 @@ public class DFSZKFailoverController extends ZKFailoverController {
     Preconditions.checkState(localTarget != null,
         "setConf() should have already been called");
     return localTarget;
+  }
+  
+  @Override
+  public void loginAsFCUser() throws IOException {
+    InetSocketAddress socAddr = NameNode.getAddress(localNNConf);
+    SecurityUtil.login(getConf(), DFS_NAMENODE_KEYTAB_FILE_KEY,
+        DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
   }
   
   public static void main(String args[])

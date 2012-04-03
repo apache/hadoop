@@ -22,11 +22,13 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.UUID;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.State;
+import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.server.ZooKeeperServer;
@@ -69,7 +71,8 @@ public class TestActiveStandbyElectorRealZK extends ClientBase {
       cbs[i] =  Mockito.mock(ActiveStandbyElectorCallback.class);
       appDatas[i] = Ints.toByteArray(i);
       electors[i] = new ActiveStandbyElector(
-          hostPort, 5000, PARENT_DIR, Ids.OPEN_ACL_UNSAFE, cbs[i]);
+          hostPort, 5000, PARENT_DIR, Ids.OPEN_ACL_UNSAFE,
+          Collections.<ZKAuthInfo>emptyList(), cbs[i]);
     }
   }
   

@@ -46,19 +46,30 @@ public class DFSHAAdmin extends HAAdmin {
   @Override
   public void setConf(Configuration conf) {
     if (conf != null) {
-      // Make a copy so we don't mutate it. Also use an HdfsConfiguration to
-      // force loading of hdfs-site.xml.
-      conf = new HdfsConfiguration(conf);
-      String nameNodePrincipal = conf.get(
-          DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, "");
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Using NN principal: " + nameNodePrincipal);
-      }
-
-      conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY,
-          nameNodePrincipal);
+      conf = addSecurityConfiguration(conf);
     }
     super.setConf(conf);
+  }
+
+  /**
+   * Add the requisite security principal settings to the given Configuration,
+   * returning a copy.
+   * @param conf the original config
+   * @return a copy with the security settings added
+   */
+  public static Configuration addSecurityConfiguration(Configuration conf) {
+    // Make a copy so we don't mutate it. Also use an HdfsConfiguration to
+    // force loading of hdfs-site.xml.
+    conf = new HdfsConfiguration(conf);
+    String nameNodePrincipal = conf.get(
+        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, "");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Using NN principal: " + nameNodePrincipal);
+    }
+
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY,
+        nameNodePrincipal);
+    return conf;
   }
 
   /**

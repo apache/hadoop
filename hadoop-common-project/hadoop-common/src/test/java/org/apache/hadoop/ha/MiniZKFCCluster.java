@@ -20,6 +20,7 @@ package org.apache.hadoop.ha;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
@@ -274,6 +275,10 @@ public class MiniZKFCCluster {
     @Override
     protected HAServiceTarget getLocalTarget() {
       return localTarget;
+    }
+
+    @Override
+    protected void loginAsFCUser() throws IOException {
     }
   }
 }

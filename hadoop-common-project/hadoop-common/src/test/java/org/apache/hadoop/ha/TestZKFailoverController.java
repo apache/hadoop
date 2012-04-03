@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.ha;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.io.File;
+import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,10 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.ha.MiniZKFCCluster.DummyZKFC;
 import org.apache.log4j.Level;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
+import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
 import org.apache.zookeeper.test.ClientBase;
 import org.junit.Before;
 import org.junit.Test;
@@ -35,6 +40,24 @@ import org.mockito.Mockito;
 public class TestZKFailoverController extends ClientBase {
   private Configuration conf;
   private MiniZKFCCluster cluster;
+  
+  // Set up ZK digest-based credentials for the purposes of the tests,
+  // to make sure all of our functionality works with auth and ACLs
+  // present.
+  private static final String DIGEST_USER_PASS="test-user:test-password";
+  private static final String TEST_AUTH_GOOD =
+    "digest:" + DIGEST_USER_PASS;
+  private static final String DIGEST_USER_HASH;
+  static {
+    try {
+      DIGEST_USER_HASH = DigestAuthenticationProvider.generateDigest(
+          DIGEST_USER_PASS);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  private static final String TEST_ACL =
+    "digest:" + DIGEST_USER_HASH + ":rwcda";
   
   static {
     ((Log4JLogger)ActiveStandbyElector.LOG).getLogger().setLevel(Level.ALL);
@@ -50,6 +73,9 @@ public class TestZKFailoverController extends ClientBase {
   @Before
   public void setupConfAndServices() {
     conf = new Configuration();
+    conf.set(ZKFailoverController.ZK_ACL_KEY, TEST_ACL);
+    conf.set(ZKFailoverController.ZK_AUTH_KEY, TEST_AUTH_GOOD);
+
     conf.set(ZKFailoverController.ZK_QUORUM_KEY, hostPort);
     this.cluster = new MiniZKFCCluster(conf, getServer(serverFactory));
   }
@@ -75,6 +101,28 @@ public class TestZKFailoverController extends ClientBase {
   
     // Unless '-force' is on
     assertEquals(0, runFC(svc, "-formatZK", "-force"));
+  }
+  
+  /**
+   * Test that, if ACLs are specified in the configuration, that
+   * it sets the ACLs when formatting the parent node.
+   */
+  @Test(timeout=15000)
+  public void testFormatSetsAcls() throws Exception {
+    // Format the base dir, should succeed
+    DummyHAService svc = cluster.getService(1);
+    assertEquals(0, runFC(svc, "-formatZK"));
+
+    ZooKeeper otherClient = createClient();
+    try {
+      // client without auth should not be able to read it
+      Stat stat = new Stat();
+      otherClient.getData(ZKFailoverController.ZK_PARENT_ZNODE_DEFAULT,
+          false, stat);
+      fail("Was able to read data without authenticating!");
+    } catch (KeeperException.NoAuthException nae) {
+      // expected
+    }
   }
   
   /**

@@ -19,6 +19,7 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -27,11 +28,12 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
+import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.data.ACL;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -47,6 +49,9 @@ public abstract class ZKFailoverController implements Tool {
   private static final String ZK_SESSION_TIMEOUT_KEY = "ha.zookeeper.session-timeout.ms";
   private static final int ZK_SESSION_TIMEOUT_DEFAULT = 5*1000;
   private static final String ZK_PARENT_ZNODE_KEY = "ha.zookeeper.parent-znode";
+  public static final String ZK_ACL_KEY = "ha.zookeeper.acl";
+  private static final String ZK_ACL_DEFAULT = "world:anyone:rwcda";
+  public static final String ZK_AUTH_KEY = "ha.zookeeper.auth";
   static final String ZK_PARENT_ZNODE_DEFAULT = "/hadoop-ha";
 
   /** Unable to format the parent znode in ZK */
@@ -80,7 +85,7 @@ public abstract class ZKFailoverController implements Tool {
   protected abstract byte[] targetToData(HAServiceTarget target);
   protected abstract HAServiceTarget getLocalTarget();  
   protected abstract HAServiceTarget dataToTarget(byte[] data);
-
+  protected abstract void loginAsFCUser() throws IOException;
 
   @Override
   public Configuration getConf() {
@@ -89,8 +94,7 @@ public abstract class ZKFailoverController implements Tool {
 
   @Override
   public int run(final String[] args) throws Exception {
-    // TODO: need to hook DFS here to find the NN keytab info, etc,
-    // similar to what DFSHAAdmin does. Annoying that this is in common.
+    loginAsFCUser();
     try {
       return SecurityUtil.doAsLoginUserOrFatal(new PrivilegedAction<Integer>() {
         @Override
@@ -107,6 +111,7 @@ public abstract class ZKFailoverController implements Tool {
     }
   }
   
+
   private int doRun(String[] args)
       throws HadoopIllegalArgumentException, IOException, InterruptedException {
     initZK();
@@ -218,9 +223,26 @@ public abstract class ZKFailoverController implements Tool {
         ZK_SESSION_TIMEOUT_DEFAULT);
     parentZnode = conf.get(ZK_PARENT_ZNODE_KEY,
         ZK_PARENT_ZNODE_DEFAULT);
-    // TODO: need ZK ACL support in config, also maybe auth!
-    List<ACL> zkAcls = Ids.OPEN_ACL_UNSAFE;
+    
+    // Parse ACLs from configuration.
+    String zkAclConf = conf.get(ZK_ACL_KEY, ZK_ACL_DEFAULT);
+    zkAclConf = HAZKUtil.resolveConfIndirection(zkAclConf);
+    List<ACL> zkAcls = HAZKUtil.parseACLs(zkAclConf);
+    if (zkAcls.isEmpty()) {
+      zkAcls = Ids.CREATOR_ALL_ACL;
+    }
+    
+    // Parse authentication from configuration.
+    String zkAuthConf = conf.get(ZK_AUTH_KEY);
+    zkAuthConf = HAZKUtil.resolveConfIndirection(zkAuthConf);
+    List<ZKAuthInfo> zkAuths;
+    if (zkAuthConf != null) {
+      zkAuths = HAZKUtil.parseAuth(zkAuthConf);
+    } else {
+      zkAuths = Collections.emptyList();
+    }
 
+    // Sanity check configuration.
     Preconditions.checkArgument(zkQuorum != null,
         "Missing required configuration '%s' for ZooKeeper quorum",
         ZK_QUORUM_KEY);
@@ -229,7 +251,8 @@ public abstract class ZKFailoverController implements Tool {
     
 
     elector = new ActiveStandbyElector(zkQuorum,
-        zkTimeout, parentZnode, zkAcls, new ElectorCallbacks());
+        zkTimeout, parentZnode, zkAcls, zkAuths,
+        new ElectorCallbacks());
   }
   
   private synchronized void mainLoop() throws InterruptedException {
