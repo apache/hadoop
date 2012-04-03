@@ -68,11 +68,4 @@ public abstract class HAServiceTarget {
         getAddress(),
         confCopy, factory, timeoutMs);
   }
-
-  /**
-   * @return a proxy to connect to the target HA Service.
-   */
-  public final HAServiceProtocol getProxy() throws IOException {
-    return getProxy(new Configuration(), 0); // default conf, timeout
-  }
 }
