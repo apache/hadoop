@@ -306,6 +306,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3120. Enable hsync and hflush by default. (eli)
 
+    HDFS-3187. Upgrade guava to 11.0.2 (todd)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
