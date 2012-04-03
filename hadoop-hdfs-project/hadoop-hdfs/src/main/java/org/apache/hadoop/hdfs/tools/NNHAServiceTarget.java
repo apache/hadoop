@@ -20,11 +20,11 @@ package org.apache.hadoop.hdfs.tools;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.BadFencingConfigurationException;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.NodeFencer;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetUtils;
 
@@ -38,11 +38,13 @@ public class NNHAServiceTarget extends HAServiceTarget {
   private final InetSocketAddress addr;
   private NodeFencer fencer;
   private BadFencingConfigurationException fenceConfigError;
+  private final String nnId;
+  private final String nsId;
 
-  public NNHAServiceTarget(HdfsConfiguration conf,
+  public NNHAServiceTarget(Configuration localNNConf,
       String nsId, String nnId) {
     String serviceAddr = 
-      DFSUtil.getNamenodeServiceAddr(conf, nsId, nnId);
+      DFSUtil.getNamenodeServiceAddr(localNNConf, nsId, nnId);
     if (serviceAddr == null) {
       throw new IllegalArgumentException(
           "Unable to determine service address for namenode '" + nnId + "'");
@@ -50,10 +52,12 @@ public class NNHAServiceTarget extends HAServiceTarget {
     this.addr = NetUtils.createSocketAddr(serviceAddr,
         NameNode.DEFAULT_PORT);
     try {
-      this.fencer = NodeFencer.create(conf);
+      this.fencer = NodeFencer.create(localNNConf);
     } catch (BadFencingConfigurationException e) {
       this.fenceConfigError = e;
     }
+    this.nnId = nnId;
+    this.nsId = nsId;
   }
 
   /**
@@ -69,6 +73,10 @@ public class NNHAServiceTarget extends HAServiceTarget {
     if (fenceConfigError != null) {
       throw fenceConfigError;
     }
+    if (fencer == null) {
+      throw new BadFencingConfigurationException(
+          "No fencer configured for " + this);
+    }
   }
   
   @Override
@@ -81,4 +89,11 @@ public class NNHAServiceTarget extends HAServiceTarget {
     return "NameNode at " + addr;
   }
 
+  public String getNameServiceId() {
+    return this.nsId;
+  }
+  
+  public String getNameNodeId() {
+    return this.nnId;
+  }
 }
