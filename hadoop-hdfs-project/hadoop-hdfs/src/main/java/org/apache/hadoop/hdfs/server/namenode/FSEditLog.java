@@ -1020,7 +1020,7 @@ public class FSEditLog  {
     
     LOG.info("Registering new backup node: " + bnReg);
     BackupJournalManager bjm = new BackupJournalManager(bnReg, nnReg);
-    journalSet.add(bjm, true);
+    journalSet.add(bjm, false);
   }
   
   synchronized void releaseBackupStream(NamenodeRegistration registration)

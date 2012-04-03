@@ -21,6 +21,8 @@ package org.apache.hadoop.mapreduce.v2.app.launcher;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,6 +32,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
@@ -44,18 +47,39 @@ import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ContainerManager;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.factory.providers.YarnRemoteExceptionFactoryProvider;
+import org.apache.hadoop.yarn.ipc.HadoopYarnProtoRPC;
+import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestContainerLauncher {
 
-  static final Log LOG = LogFactory
-      .getLog(TestContainerLauncher.class);
+  private static final RecordFactory recordFactory = RecordFactoryProvider
+      .getRecordFactory(null);
+  Configuration conf;
+  Server server;
+
+  static final Log LOG = LogFactory.getLog(TestContainerLauncher.class);
 
   @Test
   public void testPoolSize() throws InterruptedException {
@@ -104,10 +128,10 @@ public class TestContainerLauncher {
     Assert.assertEquals(10, containerLauncher.numEventsProcessed.get());
     containerLauncher.finishEventHandling = false;
     for (int i = 0; i < 10; i++) {
-      ContainerId containerId =
-          BuilderUtils.newContainerId(appAttemptId, i + 10);
-      TaskAttemptId taskAttemptId =
-          MRBuilderUtils.newTaskAttemptId(taskId, i + 10);
+      ContainerId containerId = BuilderUtils.newContainerId(appAttemptId,
+          i + 10);
+      TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId,
+          i + 10);
       containerLauncher.handle(new ContainerLauncherEvent(taskAttemptId,
         containerId, "host" + i + ":1234", null,
         ContainerLauncher.EventType.CONTAINER_REMOTE_LAUNCH));
@@ -119,8 +143,7 @@ public class TestContainerLauncher {
     // Different hosts, there should be an increase in core-thread-pool size to
     // 21(11hosts+10buffer)
     // Core pool size should be 21 but the live pool size should be only 11.
-    containerLauncher.expectedCorePoolSize =
-        11 + ContainerLauncherImpl.INITIAL_POOL_SIZE;
+    containerLauncher.expectedCorePoolSize = 11 + ContainerLauncherImpl.INITIAL_POOL_SIZE;
     containerLauncher.finishEventHandling = false;
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 21);
     TaskAttemptId taskAttemptId = MRBuilderUtils.newTaskAttemptId(taskId, 21);
@@ -200,26 +223,28 @@ public class TestContainerLauncher {
 
   @Test
   public void testSlowNM() throws Exception {
-    test(false);
+    test();
   }
 
-  @Test
-  public void testSlowNMWithInterruptsSwallowed() throws Exception {
-    test(true);
-  }
+  private void test() throws Exception {
 
-  private void test(boolean swallowInterrupts) throws Exception {
-
-    MRApp app = new MRAppWithSlowNM(swallowInterrupts);
-
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     int maxAttempts = 1;
     conf.setInt(MRJobConfig.MAP_MAX_ATTEMPTS, maxAttempts);
     conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
+    // set timeout low for the test
+    conf.setInt("yarn.rpc.nm-command-timeout", 3000);
+    conf.set(YarnConfiguration.IPC_RPC_IMPL, HadoopYarnProtoRPC.class.getName());
+    YarnRPC rpc = YarnRPC.create(conf);
+    String bindAddr = "localhost:0";
+    InetSocketAddress addr = NetUtils.createSocketAddr(bindAddr);
+    server = rpc.getServer(ContainerManager.class, new DummyContainerManager(),
+        addr, conf, null, 1);
+    server.start();
 
-    // Set low timeout for NM commands
-    conf.setInt(ContainerLauncher.MR_AM_NM_COMMAND_TIMEOUT, 3000);
+    MRApp app = new MRAppWithSlowNM();
 
+    try {
     Job job = app.submit(conf);
     app.waitForState(job, JobState.RUNNING);
 
@@ -231,8 +256,8 @@ public class TestContainerLauncher {
 
     Map<TaskAttemptId, TaskAttempt> attempts = tasks.values().iterator()
         .next().getAttempts();
-    Assert.assertEquals("Num attempts is not correct", maxAttempts, attempts
-        .size());
+      Assert.assertEquals("Num attempts is not correct", maxAttempts,
+          attempts.size());
 
     TaskAttempt attempt = attempts.values().iterator().next();
     app.waitForState(attempt, TaskAttemptState.ASSIGNED);
@@ -241,19 +266,17 @@ public class TestContainerLauncher {
 
     String diagnostics = attempt.getDiagnostics().toString();
     LOG.info("attempt.getDiagnostics: " + diagnostics);
-    if (swallowInterrupts) {
-      Assert.assertEquals("[Container launch failed for "
-          + "container_0_0000_01_000000 : Start-container for "
-          + "container_0_0000_01_000000 got interrupted. Returning.]",
-          diagnostics);
-    } else {
+
       Assert.assertTrue(diagnostics.contains("Container launch failed for "
           + "container_0_0000_01_000000 : "));
-      Assert.assertTrue(diagnostics
-          .contains(": java.lang.InterruptedException"));
-    }
+      Assert
+          .assertTrue(diagnostics
+              .contains("java.net.SocketTimeoutException: 3000 millis timeout while waiting for channel"));
 
+    } finally {
+      server.stop();
     app.stop();
+  }
   }
 
   private final class CustomContainerLauncher extends ContainerLauncherImpl {
@@ -317,13 +340,10 @@ public class TestContainerLauncher {
     }
   }
 
-  private static class MRAppWithSlowNM extends MRApp {
+  private class MRAppWithSlowNM extends MRApp {
 
-    final boolean swallowInterrupts;
-
-    public MRAppWithSlowNM(boolean swallowInterrupts) {
+    public MRAppWithSlowNM() {
       super(1, 0, false, "TestContainerLauncher", true);
-      this.swallowInterrupts = swallowInterrupts;
     }
 
     @Override
@@ -333,20 +353,57 @@ public class TestContainerLauncher {
         protected ContainerManager getCMProxy(ContainerId containerID,
             String containerManagerBindAddr, ContainerToken containerToken)
             throws IOException {
-          try {
-            synchronized (this) {
-              wait(); // Just hang the thread simulating a very slow NM.
-            }
-          } catch (InterruptedException e) {
-            LOG.info(e);
-            if (!MRAppWithSlowNM.this.swallowInterrupts) {
-              throw new IOException(e);
-            }
-            Thread.currentThread().interrupt();
-          }
-          return null;
+          // make proxy connect to our local containerManager server
+          ContainerManager proxy = (ContainerManager) rpc.getProxy(
+              ContainerManager.class,
+              NetUtils.createSocketAddr("localhost:" + server.getPort()), conf);
+          return proxy;
         }
       };
+
     };
   }
-}
+
+  public class DummyContainerManager implements ContainerManager {
+
+    private ContainerStatus status = null;
+
+    @Override
+    public GetContainerStatusResponse getContainerStatus(
+        GetContainerStatusRequest request) throws YarnRemoteException {
+      GetContainerStatusResponse response = recordFactory
+          .newRecordInstance(GetContainerStatusResponse.class);
+      response.setStatus(status);
+      return response;
+    }
+
+    @Override
+    public StartContainerResponse startContainer(StartContainerRequest request)
+        throws YarnRemoteException {
+      ContainerLaunchContext container = request.getContainerLaunchContext();
+      StartContainerResponse response = recordFactory
+          .newRecordInstance(StartContainerResponse.class);
+      status = recordFactory.newRecordInstance(ContainerStatus.class);
+          try {
+        // make the thread sleep to look like its not going to respond
+        Thread.sleep(15000);
+      } catch (Exception e) {
+        LOG.error(e);
+        throw new UndeclaredThrowableException(e);
+            }
+      status.setState(ContainerState.RUNNING);
+      status.setContainerId(container.getContainerId());
+      status.setExitStatus(0);
+      return response;
+            }
+
+    @Override
+    public StopContainerResponse stopContainer(StopContainerRequest request)
+        throws YarnRemoteException {
+      Exception e = new Exception("Dummy function", new Exception(
+          "Dummy function cause"));
+      throw YarnRemoteExceptionFactoryProvider.getYarnRemoteExceptionFactory(
+          null).createYarnRemoteException(e);
+          }
+        }
+  }

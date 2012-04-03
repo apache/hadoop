@@ -96,8 +96,16 @@ extends TokenIdentifier {
     }
   }
 
+  public Text getOwner() {
+    return owner;
+  }
+
   public Text getRenewer() {
     return renewer;
+  }
+  
+  public Text getRealUser() {
+    return realUser;
   }
   
   public void setIssueDate(long issueDate) {

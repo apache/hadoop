@@ -46,6 +46,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
 /**
@@ -171,6 +172,12 @@ public class BackupNode extends NameNode {
 
   @Override // NameNode
   public void stop() {
+    stop(true);
+  }
+  
+  @VisibleForTesting
+  void stop(boolean reportError) {
+   
     if(checkpointManager != null) {
       // Prevent from starting a new checkpoint.
       // Checkpoints that has already been started may proceed until 
@@ -180,7 +187,10 @@ public class BackupNode extends NameNode {
       // ClosedByInterruptException.
       checkpointManager.shouldRun = false;
     }
-    if(namenode != null && getRegistration() != null) {
+    
+    // reportError is a test hook to simulate backupnode crashing and not
+    // doing a clean exit w.r.t active namenode
+    if (reportError && namenode != null && getRegistration() != null) {
       // Exclude this node from the list of backup streams on the name-node
       try {
         namenode.errorReport(getRegistration(), NamenodeProtocol.FATAL,

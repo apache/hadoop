@@ -179,12 +179,22 @@ public class TestBackupNode {
       
       // do some edits
       assertTrue(fileSys.mkdirs(new Path("/edit-while-bn-down")));
-      
+  
       // start a new backup node
       backup = startBackupNode(conf, StartupOption.BACKUP, 1);
 
       testBNInSync(cluster, backup, 4);
       assertNotNull(backup.getNamesystem().getFileInfo("/edit-while-bn-down", false));
+      
+      // Trigger an unclean shutdown of the backup node. Backup node will not
+      // unregister from the active when this is done simulating a node crash.
+      backup.stop(false);
+           
+      // do some edits on the active. This should go through without failing.
+      // This will verify that active is still up and can add entries to
+      // master editlog.
+      assertTrue(fileSys.mkdirs(new Path("/edit-while-bn-down-2")));
+      
     } finally {
       LOG.info("Shutting down...");
       if (backup != null) backup.stop();

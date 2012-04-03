@@ -26,7 +26,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 /**
  * This class describes a replica that has been finalized.
  */
-class FinalizedReplica extends ReplicaInfo {
+public class FinalizedReplica extends ReplicaInfo {
   private boolean unlinked;      // copy-on-write done for block
 
   /**
@@ -37,7 +37,7 @@ class FinalizedReplica extends ReplicaInfo {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  FinalizedReplica(long blockId, long len, long genStamp,
+  public FinalizedReplica(long blockId, long len, long genStamp,
       FsVolumeSpi vol, File dir) {
     super(blockId, len, genStamp, vol, dir);
   }
@@ -48,7 +48,7 @@ class FinalizedReplica extends ReplicaInfo {
    * @param vol volume where replica is located
    * @param dir directory path where block and meta files are located
    */
-  FinalizedReplica(Block block, FsVolumeSpi vol, File dir) {
+  public FinalizedReplica(Block block, FsVolumeSpi vol, File dir) {
     super(block, vol, dir);
   }
 
@@ -56,7 +56,7 @@ class FinalizedReplica extends ReplicaInfo {
    * Copy constructor.
    * @param from
    */
-  FinalizedReplica(FinalizedReplica from) {
+  public FinalizedReplica(FinalizedReplica from) {
     super(from);
     this.unlinked = from.isUnlinked();
   }
@@ -67,12 +67,12 @@ class FinalizedReplica extends ReplicaInfo {
   }
   
   @Override // ReplicaInfo
-  boolean isUnlinked() {
+  public boolean isUnlinked() {
     return unlinked;
   }
 
   @Override  // ReplicaInfo
-  void setUnlinked() {
+  public void setUnlinked() {
     unlinked = true;
   }
   
@@ -99,6 +99,6 @@ class FinalizedReplica extends ReplicaInfo {
   @Override
   public String toString() {
     return super.toString()
-        + "\n  unlinked=" + unlinked;
+        + "\n  unlinked          =" + unlinked;
   }
 }

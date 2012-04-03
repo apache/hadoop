@@ -25,7 +25,7 @@ import java.io.IOException;
  * Exception indicating that the target block already exists 
  * and is not set to be recovered/overwritten.  
  */
-class ReplicaAlreadyExistsException extends IOException {
+public class ReplicaAlreadyExistsException extends IOException {
   private static final long serialVersionUID = 1L;
 
   public ReplicaAlreadyExistsException() {

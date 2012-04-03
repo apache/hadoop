@@ -30,6 +30,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -269,6 +270,85 @@ public class TestRMWebServicesApps extends JerseyTest {
           .checkStringMatch(
               "exception message",
               "No enum const class org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState.INVALID_test",
+              message);
+      WebServicesTestUtils.checkStringMatch("exception type",
+          "IllegalArgumentException", type);
+      WebServicesTestUtils.checkStringMatch("exception classname",
+          "java.lang.IllegalArgumentException", classname);
+
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test
+  public void testAppsQueryFinalStatus() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    RMApp app1 = rm.submitApp(1024);
+    amNodeManager.nodeHeartbeat(true);
+    WebResource r = resource();
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParam("finalStatus", FinalApplicationStatus.UNDEFINED.toString())
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    System.out.println(json.toString());
+    JSONObject apps = json.getJSONObject("apps");
+    assertEquals("incorrect number of elements", 1, apps.length());
+    JSONArray array = apps.getJSONArray("app");
+    assertEquals("incorrect number of elements", 1, array.length());
+    verifyAppInfo(array.getJSONObject(0), app1);
+    rm.stop();
+  }
+
+  @Test
+  public void testAppsQueryFinalStatusNone() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    rm.submitApp(1024);
+    amNodeManager.nodeHeartbeat(true);
+    WebResource r = resource();
+
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+        .path("apps").queryParam("finalStatus", FinalApplicationStatus.KILLED.toString())
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject json = response.getEntity(JSONObject.class);
+    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals("apps is not null", JSONObject.NULL, json.get("apps"));
+    rm.stop();
+  }
+
+  @Test
+  public void testAppsQueryFinalStatusInvalid() throws JSONException, Exception {
+    rm.start();
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    rm.submitApp(1024);
+    amNodeManager.nodeHeartbeat(true);
+    WebResource r = resource();
+
+    try {
+      r.path("ws").path("v1").path("cluster").path("apps")
+          .queryParam("finalStatus", "INVALID_test")
+          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+      fail("should have thrown exception on invalid state query");
+    } catch (UniformInterfaceException ue) {
+      ClientResponse response = ue.getResponse();
+      assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject msg = response.getEntity(JSONObject.class);
+      JSONObject exception = msg.getJSONObject("RemoteException");
+      assertEquals("incorrect number of elements", 3, exception.length());
+      String message = exception.getString("message");
+      String type = exception.getString("exception");
+      String classname = exception.getString("javaClassName");
+      WebServicesTestUtils
+          .checkStringMatch(
+              "exception message",
+              "No enum const class org.apache.hadoop.yarn.api.records.FinalApplicationStatus.INVALID_test",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);

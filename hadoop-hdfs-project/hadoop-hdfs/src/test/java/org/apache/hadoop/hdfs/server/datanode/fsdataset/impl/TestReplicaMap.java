@@ -15,21 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReplicaMap;
 import org.junit.Before;
 import org.junit.Test;
 
 /**
  * Unit test for ReplicasMap class
  */
-public class TestReplicasMap {
-  private final ReplicasMap map = new ReplicasMap(TestReplicasMap.class);
+public class TestReplicaMap {
+  private final ReplicaMap map = new ReplicaMap(TestReplicaMap.class);
   private final String bpid = "BP-TEST";
   private final  Block block = new Block(1234, 1234, 1234);
   

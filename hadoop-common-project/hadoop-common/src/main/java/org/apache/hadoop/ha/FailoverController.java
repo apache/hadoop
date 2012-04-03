@@ -52,14 +52,22 @@ public class FailoverController {
   public FailoverController(Configuration conf) {
     this.conf = conf;
     
-    this.gracefulFenceTimeout = conf.getInt(
+    this.gracefulFenceTimeout = getGracefulFenceTimeout(conf);
+    this.rpcTimeoutToNewActive = getRpcTimeoutToNewActive(conf);
+  }
+
+  static int getGracefulFenceTimeout(Configuration conf) {
+    return conf.getInt(
         CommonConfigurationKeys.HA_FC_GRACEFUL_FENCE_TIMEOUT_KEY,
         CommonConfigurationKeys.HA_FC_GRACEFUL_FENCE_TIMEOUT_DEFAULT);
-    this.rpcTimeoutToNewActive = conf.getInt(
+  }
+  
+  static int getRpcTimeoutToNewActive(Configuration conf) {
+    return conf.getInt(
         CommonConfigurationKeys.HA_FC_NEW_ACTIVE_TIMEOUT_KEY,
         CommonConfigurationKeys.HA_FC_NEW_ACTIVE_TIMEOUT_DEFAULT);
   }
-
+  
   /**
    * Perform pre-failover checks on the given service we plan to
    * failover to, eg to prevent failing over to a service (eg due

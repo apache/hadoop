@@ -109,6 +109,9 @@ Trunk (unreleased changes)
 
     HDFS-3116. Typo in fetchdt error message. (AOE Takashi via atm)
 
+    HDFS-3126. Journal stream from Namenode to BackupNode needs to have 
+    timeout. (Hari Mankude via suresh)
+    
 Release 2.0.0 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
@@ -178,6 +181,9 @@ Release 2.0.0 - UNRELEASED
     (harsh via szetszwo)
 
     HDFS-3167. CLI-based driver for MiniDFSCluster. (Henry Robinson via atm)
+
+    HDFS-3148. The client should be able to use multiple local interfaces
+    for data transfer. (eli)
 
   IMPROVEMENTS
 
@@ -295,6 +301,10 @@ Release 2.0.0 - UNRELEASED
     HDFS-3171. The DatanodeID "name" field is overloaded. (eli)
 
     HDFS-3144. Refactor DatanodeID#getName by use. (eli)
+
+    HDFS-3130. Move fsdataset implementation to a package.  (szetszwo)
+
+    HDFS-3120. Enable hsync and hflush by default. (eli)
 
   OPTIMIZATIONS
 
@@ -708,7 +718,24 @@ Release 2.0.0 - UNRELEASED
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
-Release 0.23.2 - UNRELEASED 
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3166. Add timeout to Hftp connections.  (Daryn Sharp via szetszwo)
+
+    HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
+    Lee via szetszwo)
+
+Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 

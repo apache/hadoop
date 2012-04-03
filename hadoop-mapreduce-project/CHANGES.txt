@@ -195,6 +195,51 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4091. tools testcases failing because of MAPREDUCE-4082 (tucu)
 
+    MAPREDUCE-4095. TestJobInProgress#testLocality uses a bogus topology.
+    (Colin Patrick McCabe via eli)
+    
+Release 0.23.3 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+    MAPREDUCE-4072. User set java.library.path seems to overwrite default
+    creating problems native lib loading (Anupam Seth via bobby)
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-4092.  commitJob Exception does not fail job (Jon Eagles via
+    bobby)
+
+    MAPREDUCE-4089. Hung Tasks never time out. (Robert Evans via tgraves)
+
+    MAPREDUCE-4024. RM webservices can't query on finalStatus (Tom Graves
+    via bobby)
+
+    MAPREDUCE-4060. Multiple SLF4J binding warning (Jason Lowe via bobby)
+
+    MAPREDUCE-3983. TestTTResourceReporting can fail, and should just be
+    deleted (Ravi Prakash via bobby)
+
+    MAPREDUCE-4012 Hadoop Job setup error leaves no useful info to users 
+    (when LinuxTaskController is used). (tgraves)
+
+    MAPREDUCE-4062. AM Launcher thread can hang forever (tgraves via bobby)
+
+    MAPREDUCE-3988. mapreduce.job.local.dir doesn't point to a single directory
+    on a node. (Eric Payne via bobby)
+
+    MAPREDUCE-3999. Tracking link gives an error if the AppMaster hasn't
+    started yet (Ravi Prakash via bobby)
+
+    MAPREDUCE-4020. Web services returns incorrect JSON for deep queue tree
+    (Anupam Seth via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

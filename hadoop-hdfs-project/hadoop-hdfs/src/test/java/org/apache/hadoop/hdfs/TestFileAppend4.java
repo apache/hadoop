@@ -79,7 +79,6 @@ public class TestFileAppend4 {
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
     }
-    conf.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
 
     // lower heartbeat interval for fast recognition of DN death
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,

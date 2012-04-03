@@ -250,7 +250,8 @@ public abstract class ZKFailoverController implements Tool {
   private synchronized void becomeActive() throws ServiceFailedException {
     LOG.info("Trying to make " + localTarget + " active...");
     try {
-      HAServiceProtocolHelper.transitionToActive(localTarget.getProxy());
+      HAServiceProtocolHelper.transitionToActive(localTarget.getProxy(
+          conf, FailoverController.getRpcTimeoutToNewActive(conf)));
       LOG.info("Successfully transitioned " + localTarget +
           " to active state");
     } catch (Throwable t) {
@@ -277,7 +278,8 @@ public abstract class ZKFailoverController implements Tool {
     LOG.info("ZK Election indicated that " + localTarget +
         " should become standby");
     try {
-      localTarget.getProxy().transitionToStandby();
+      int timeout = FailoverController.getGracefulFenceTimeout(conf);
+      localTarget.getProxy(conf, timeout).transitionToStandby();
       LOG.info("Successfully transitioned " + localTarget +
           " to standby state");
     } catch (Exception e) {

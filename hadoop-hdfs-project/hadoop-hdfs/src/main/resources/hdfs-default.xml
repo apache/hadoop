@@ -836,4 +836,26 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.support.append</name>
+  <value>true</value>
+  <description>
+    Does HDFS allow appends to files?
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.local.interfaces</name>
+  <value></value>
+  <description>A comma separated list of network interface names to use
+    for data transfer between the client and datanodes. When creating
+    a connection to read from or write to a datanode, the client
+    chooses one of the specified interfaces at random and binds its
+    socket to the IP of that interface. Individual names may be
+    specified as either an interface name (eg "eth0"), a subinterface
+    name (eg "eth0:0"), or an IP address (which may be specified using
+    CIDR notation to match a range of IPs).
+  </description>
+</property>
+
 </configuration>

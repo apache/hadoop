@@ -18,21 +18,17 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 
 /** Provide utility methods for Datanode. */
 @InterfaceAudience.Private
-class DatanodeUtil {
-  static final String METADATA_EXTENSION = ".meta";
+public class DatanodeUtil {
+  public static final String UNLINK_BLOCK_SUFFIX = ".unlinked";
 
-  static final String UNLINK_BLOCK_SUFFIX = ".unlinked";
-
-  private static final String DISK_ERROR = "Possible disk error: ";
+  public static final String DISK_ERROR = "Possible disk error: ";
 
   /** Get the cause of an I/O exception if caused by a possible disk error
    * @param ioe an I/O exception
@@ -52,55 +48,34 @@ class DatanodeUtil {
    * @throws IOException 
    * if the file already exists or if the file cannot be created.
    */
-  static File createTmpFile(Block b, File f) throws IOException {
+  public static File createTmpFile(Block b, File f) throws IOException {
     if (f.exists()) {
-      throw new IOException("Unexpected problem in creating temporary file for "
-          + b + ".  File " + f + " should not be present, but is.");
+      throw new IOException("Failed to create temporary file for " + b
+          + ".  File " + f + " should not be present, but is.");
     }
     // Create the zero-length temp file
     final boolean fileCreated;
     try {
       fileCreated = f.createNewFile();
     } catch (IOException ioe) {
-      throw (IOException)new IOException(DISK_ERROR + f).initCause(ioe);
+      throw new IOException(DISK_ERROR + "Failed to create " + f, ioe);
     }
     if (!fileCreated) {
-      throw new IOException("Unexpected problem in creating temporary file for "
-          + b + ".  File " + f + " should be creatable, but is already present.");
+      throw new IOException("Failed to create temporary file for " + b
+          + ".  File " + f + " should be creatable, but is already present.");
     }
     return f;
   }
   
-  static String getMetaFileName(String blockFileName, long genStamp) {
-    return blockFileName + "_" + genStamp + METADATA_EXTENSION;
-  }
-  
-  static File getMetaFile(File f, long genStamp) {
-    return new File(getMetaFileName(f.getAbsolutePath(), genStamp));
+  /**
+   * @return the meta name given the block name and generation stamp.
+   */
+  public static String getMetaName(String blockName, long generationStamp) {
+    return blockName + "_" + generationStamp + Block.METADATA_EXTENSION; 
   }
 
-  /** Find the corresponding meta data file from a given block file */
-  static File findMetaFile(final File blockFile) throws IOException {
-    final String prefix = blockFile.getName() + "_";
-    final File parent = blockFile.getParentFile();
-    File[] matches = parent.listFiles(new FilenameFilter() {
-      public boolean accept(File dir, String name) {
-        return dir.equals(parent)
-            && name.startsWith(prefix) && name.endsWith(METADATA_EXTENSION);
-      }
-    });
-
-    if (matches == null || matches.length == 0) {
-      throw new IOException("Meta file not found, blockFile=" + blockFile);
-    }
-    else if (matches.length > 1) {
-      throw new IOException("Found more than one meta files: " 
-          + Arrays.asList(matches));
-    }
-    return matches[0];
-  }
-  
-  static File getUnlinkTmpFile(File f) {
+  /** @return the unlink file. */
+  public static File getUnlinkTmpFile(File f) {
     return new File(f.getParentFile(), f.getName()+UNLINK_BLOCK_SUFFIX);
   }
 }

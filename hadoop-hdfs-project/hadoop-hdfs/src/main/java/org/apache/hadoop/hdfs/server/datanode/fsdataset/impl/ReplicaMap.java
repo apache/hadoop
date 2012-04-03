@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -23,11 +23,12 @@ import java.util.Map;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 
 /**
- * Maintains the replicas map. 
+ * Maintains the replica map. 
  */
-class ReplicasMap {
+class ReplicaMap {
   // Object using which this class is synchronized
   private final Object mutex;
   
@@ -35,7 +36,7 @@ class ReplicasMap {
   private Map<String, Map<Long, ReplicaInfo>> map = 
     new HashMap<String, Map<Long, ReplicaInfo>>();
   
-  ReplicasMap(Object mutex) {
+  ReplicaMap(Object mutex) {
     if (mutex == null) {
       throw new HadoopIllegalArgumentException(
           "Object to synchronize on cannot be null");
