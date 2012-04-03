@@ -138,6 +138,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3999. Tracking link gives an error if the AppMaster hasn't
     started yet (Ravi Prakash via bobby)
 
+    MAPREDUCE-4020. Web services returns incorrect JSON for deep queue tree
+    (Anupam Seth via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

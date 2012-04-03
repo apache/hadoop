@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import java.util.ArrayList;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -49,7 +47,7 @@ public class CapacitySchedulerQueueInfo {
   protected String usedResources;
   protected String queueName;
   protected QueueState state;
-  protected ArrayList<CapacitySchedulerQueueInfo> subQueues;
+  protected CapacitySchedulerQueueInfoList queues;
 
   CapacitySchedulerQueueInfo() {
   };
@@ -117,8 +115,8 @@ public class CapacitySchedulerQueueInfo {
     return this.queuePath;
   }
 
-  public ArrayList<CapacitySchedulerQueueInfo> getSubQueues() {
-    return this.subQueues;
+  public CapacitySchedulerQueueInfoList getQueues() {
+    return this.queues;
   }
 
   /**

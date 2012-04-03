@@ -151,7 +151,12 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     conf.setUserLimitFactor(B2, 100.0f);
     conf.setCapacity(B3, 20);
     conf.setUserLimitFactor(B3, 100.0f);
-
+    
+    conf.setQueues(A1, new String[] {"a1a", "a1b"});
+    final String A1A = A1 + ".a1a";
+    conf.setCapacity(A1A, 85);
+    final String A1B = A1 + ".a1b";
+    conf.setCapacity(A1B, 15);
   }
 
   @Before
@@ -232,12 +237,18 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
           WebServicesTestUtils.getXmlFloat(element, "maxCapacity"),
           WebServicesTestUtils.getXmlString(element, "queueName"));
 
-      NodeList queues = element.getElementsByTagName("queues");
-      for (int j = 0; j < queues.getLength(); j++) {
-        Element qElem = (Element) queues.item(j);
-        String qName = WebServicesTestUtils.getXmlString(qElem, "queueName");
-        String q = CapacitySchedulerConfiguration.ROOT + "." + qName;
-        verifySubQueueXML(qElem, q, 100, 100);
+      NodeList children = element.getChildNodes();
+      for (int j = 0; j < children.getLength(); j++) {
+        Element qElem = (Element) children.item(j);
+        if(qElem.getTagName().equals("queues")) {
+          NodeList qListInfos = qElem.getChildNodes();
+          for (int k = 0; k < qListInfos.getLength(); k++) {
+            Element qElem2 = (Element) qListInfos.item(k);
+            String qName2 = WebServicesTestUtils.getXmlString(qElem2, "queueName");
+            String q2 = CapacitySchedulerConfiguration.ROOT + "." + qName2;
+            verifySubQueueXML(qElem2, q2, 100, 100);
+          }
+        }
       }
     }
   }
@@ -245,8 +256,18 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
   public void verifySubQueueXML(Element qElem, String q, 
       float parentAbsCapacity, float parentAbsMaxCapacity)
       throws Exception {
-    NodeList queues = qElem.getElementsByTagName("subQueues");
-    QueueInfo qi = (queues != null) ? new QueueInfo() : new LeafQueueInfo();
+    NodeList children = qElem.getChildNodes();
+    boolean hasSubQueues = false;
+    for (int j = 0; j < children.getLength(); j++) {
+      Element qElem2 = (Element) children.item(j);
+      if(qElem2.getTagName().equals("queues")) {
+        NodeList qListInfos = qElem2.getChildNodes();
+        if (qListInfos.getLength() > 0) {
+          hasSubQueues = true;
+        }
+      }
+    }
+    QueueInfo qi = (hasSubQueues) ? new QueueInfo() : new LeafQueueInfo();
     qi.capacity = WebServicesTestUtils.getXmlFloat(qElem, "capacity");
     qi.usedCapacity =
         WebServicesTestUtils.getXmlFloat(qElem, "usedCapacity");
@@ -263,14 +284,18 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     qi.queueName = WebServicesTestUtils.getXmlString(qElem, "queueName");
     qi.state = WebServicesTestUtils.getXmlString(qElem, "state");
     verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
-
-    if (queues != null) {
-      for (int j = 0; j < queues.getLength(); j++) {
-        Element subqElem = (Element) queues.item(j);
-        String qName = WebServicesTestUtils.getXmlString(subqElem, "queueName");
-        String q2 = q + "." + qName;
-        verifySubQueueXML(subqElem, q2, 
-            qi.absoluteCapacity, qi.absoluteMaxCapacity);
+    if (hasSubQueues) {
+      for (int j = 0; j < children.getLength(); j++) {
+        Element qElem2 = (Element) children.item(j);
+        if(qElem2.getTagName().equals("queues")) {
+          NodeList qListInfos = qElem2.getChildNodes();
+          for (int k = 0; k < qListInfos.getLength(); k++) {
+            Element qElem3 = (Element) qListInfos.item(k);
+            String qName3 = WebServicesTestUtils.getXmlString(qElem3, "queueName");
+            String q3 = q + "." + qName3;
+            verifySubQueueXML(qElem3, q3, qi.absoluteCapacity, qi.absoluteMaxCapacity);
+          }
+        }
       }
     } else {
       LeafQueueInfo lqi = (LeafQueueInfo) qi;
@@ -307,7 +332,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
         (float) info.getDouble("capacity"),
         (float) info.getDouble("maxCapacity"), info.getString("queueName"));
 
-    JSONArray arr = info.getJSONArray("queues");
+    JSONArray arr = info.getJSONObject("queues").getJSONArray("queue");
     assertEquals("incorrect number of elements", 2, arr.length());
 
     // test subqueues
@@ -333,7 +358,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
       throws JSONException, Exception {
     int numExpectedElements = 11;
     boolean isParentQueue = true;
-    if (!info.has("subQueues")) {
+    if (!info.has("queues")) {
       numExpectedElements = 20;
       isParentQueue = false;
     }
@@ -354,7 +379,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     verifySubQueueGeneric(q, qi, parentAbsCapacity, parentAbsMaxCapacity);
 
     if (isParentQueue) {
-      JSONArray arr = info.getJSONArray("subQueues");
+      JSONArray arr = info.getJSONObject("queues").getJSONArray("queue");
       // test subqueues
       for (int i = 0; i < arr.length(); i++) {
         JSONObject obj = arr.getJSONObject(i);
