@@ -132,6 +132,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4062. AM Launcher thread can hang forever (tgraves via bobby)
 
+    MAPREDUCE-3988. mapreduce.job.local.dir doesn't point to a single directory
+    on a node. (Eric Payne via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
