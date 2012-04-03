@@ -114,7 +114,8 @@ public abstract class HAAdmin extends Configured implements Tool {
       return -1;
     }
     
-    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy();
+    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy(
+        getConf(), 0);
     HAServiceProtocolHelper.transitionToActive(proto);
     return 0;
   }
@@ -127,7 +128,8 @@ public abstract class HAAdmin extends Configured implements Tool {
       return -1;
     }
     
-    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy();
+    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy(
+        getConf(), 0);
     HAServiceProtocolHelper.transitionToStandby(proto);
     return 0;
   }
