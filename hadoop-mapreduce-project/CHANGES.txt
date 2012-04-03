@@ -119,6 +119,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4024. RM webservices can't query on finalStatus (Tom Graves
     via bobby)
 
+    MAPREDUCE-4060. Multiple SLF4J binding warning (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
