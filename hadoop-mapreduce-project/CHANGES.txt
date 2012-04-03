@@ -127,6 +127,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4012 Hadoop Job setup error leaves no useful info to users 
     (when LinuxTaskController is used). (tgraves)
 
+    MAPREDUCE-4062. AM Launcher thread can hang forever (tgraves via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

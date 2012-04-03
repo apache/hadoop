@@ -23,8 +23,6 @@ import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -72,8 +70,6 @@ public class ContainerLauncherImpl extends AbstractService implements
 
   static final Log LOG = LogFactory.getLog(ContainerLauncherImpl.class);
 
-  int nmTimeOut;
-
   private ConcurrentHashMap<ContainerId, Container> containers = 
     new ConcurrentHashMap<ContainerId, Container>(); 
   private AppContext context;
@@ -83,7 +79,6 @@ public class ContainerLauncherImpl extends AbstractService implements
   private Thread eventHandlingThread;
   protected BlockingQueue<ContainerLauncherEvent> eventQueue =
       new LinkedBlockingQueue<ContainerLauncherEvent>();
-  final Timer commandTimer = new Timer(true);
   YarnRPC rpc;
 
   private Container getContainer(ContainerId id) {
@@ -130,30 +125,18 @@ public class ContainerLauncherImpl extends AbstractService implements
             "Container was killed before it was launched");
         return;
       }
-      CommandTimerTask timerTask = new CommandTimerTask(Thread
-          .currentThread(), event);
       
+
       final String containerManagerBindAddr = event.getContainerMgrAddress();
       ContainerId containerID = event.getContainerID();
       ContainerToken containerToken = event.getContainerToken();
 
       ContainerManager proxy = null;
       try {
-        commandTimer.schedule(timerTask, nmTimeOut);
 
         proxy = getCMProxy(containerID, containerManagerBindAddr,
             containerToken);
 
-        // Interrupted during getProxy, but that didn't throw exception
-        if (Thread.interrupted()) {
-          // The timer canceled the command in the mean while.
-          String message = "Container launch failed for " + containerID
-              + " : Start-container for " + event.getContainerID()
-              + " got interrupted. Returning.";
-          this.state = ContainerState.FAILED;
-          sendContainerLaunchFailedMsg(taskAttemptID, message);
-          return;
-        }
         // Construct the actual Container
         ContainerLaunchContext containerLaunchContext =
           event.getContainer();
@@ -163,19 +146,6 @@ public class ContainerLauncherImpl extends AbstractService implements
           .newRecord(StartContainerRequest.class);
         startRequest.setContainerLaunchContext(containerLaunchContext);
         StartContainerResponse response = proxy.startContainer(startRequest);
-
-        // container started properly. Stop the timer
-        timerTask.cancel();
-        if (Thread.interrupted()) {
-          // The timer canceled the command in the mean while, but
-          // startContainer didn't throw exception
-          String message = "Container launch failed for " + containerID
-              + " : Start-container for " + event.getContainerID()
-              + " got interrupted. Returning.";
-          this.state = ContainerState.FAILED;
-          sendContainerLaunchFailedMsg(taskAttemptID, message);
-          return;
-        }
 
         ByteBuffer portInfo = response
           .getServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID);
@@ -198,17 +168,11 @@ public class ContainerLauncherImpl extends AbstractService implements
             new TaskAttemptContainerLaunchedEvent(taskAttemptID, port));
         this.state = ContainerState.RUNNING;
       } catch (Throwable t) {
-        if (Thread.interrupted()) {
-          // The timer canceled the command in the mean while.
-          LOG.info("Start-container for " + event.getContainerID()
-              + " got interrupted.");
-        }
         String message = "Container launch failed for " + containerID + " : "
             + StringUtils.stringifyException(t);
         this.state = ContainerState.FAILED;
         sendContainerLaunchFailedMsg(taskAttemptID, message);
       } finally {
-        timerTask.cancel();
         if (proxy != null) {
           ContainerLauncherImpl.this.rpc.stopProxy(proxy, getConfig());
         }
@@ -220,41 +184,24 @@ public class ContainerLauncherImpl extends AbstractService implements
       if(this.state == ContainerState.PREP) {
         this.state = ContainerState.KILLED_BEFORE_LAUNCH;
       } else {
-        CommandTimerTask timerTask = new CommandTimerTask(Thread
-            .currentThread(), event);
-
         final String containerManagerBindAddr = event.getContainerMgrAddress();
         ContainerId containerID = event.getContainerID();
         ContainerToken containerToken = event.getContainerToken();
         TaskAttemptId taskAttemptID = event.getTaskAttemptID();
         LOG.info("KILLING " + taskAttemptID);
-        commandTimer.schedule(timerTask, nmTimeOut);
 
         ContainerManager proxy = null;
         try {
           proxy = getCMProxy(containerID, containerManagerBindAddr,
               containerToken);
 
-          if (Thread.interrupted()) {
-            // The timer canceled the command in the mean while. No need to
-            // return, send cleaned up event anyways.
-            LOG.info("Stop-container for " + event.getContainerID()
-                + " got interrupted.");
-          } else {
             // kill the remote container if already launched
             StopContainerRequest stopRequest = Records
               .newRecord(StopContainerRequest.class);
             stopRequest.setContainerId(event.getContainerID());
             proxy.stopContainer(stopRequest);
-          }
-        } catch (Throwable t) {
 
-          if (Thread.interrupted()) {
-            // The timer canceled the command in the mean while, clear the
-            // interrupt flag
-            LOG.info("Stop-container for " + event.getContainerID()
-                + " got interrupted.");
-          }
+        } catch (Throwable t) {
 
           // ignore the cleanup failure
           String message = "cleanup failed for container "
@@ -264,15 +211,6 @@ public class ContainerLauncherImpl extends AbstractService implements
             new TaskAttemptDiagnosticsUpdateEvent(taskAttemptID, message));
           LOG.warn(message);
         } finally {
-          timerTask.cancel();
-          if (Thread.interrupted()) {
-            LOG.info("Stop-container for " + event.getContainerID()
-                + " got interrupted.");
-            // ignore the cleanup failure
-            context.getEventHandler().handle(
-              new TaskAttemptDiagnosticsUpdateEvent(taskAttemptID,
-                "cleanup failed for container " + event.getContainerID()));
-          }
           if (proxy != null) {
             ContainerLauncherImpl.this.rpc.stopProxy(proxy, getConfig());
           }
@@ -303,8 +241,6 @@ public class ContainerLauncherImpl extends AbstractService implements
         MRJobConfig.MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT,
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT);
     LOG.info("Upper limit on the thread pool size is " + this.limitOnPoolSize);
-    this.nmTimeOut = conf.getInt(ContainerLauncher.MR_AM_NM_COMMAND_TIMEOUT,
-        ContainerLauncher.DEFAULT_NM_COMMAND_TIMEOUT);
     this.rpc = createYarnRPC(conf);
     super.init(conf);
   }
@@ -409,44 +345,6 @@ public class ContainerLauncherImpl extends AbstractService implements
     return proxy;
   }
 
-  private static class CommandTimerTask extends TimerTask {
-    private final Thread commandThread;
-    protected final String message;
-    private boolean cancelled = false;
-
-    public CommandTimerTask(Thread thread, ContainerLauncherEvent event) {
-      super();
-      this.commandThread = thread;
-      this.message = "Couldn't complete " + event.getType() + " on "
-          + event.getContainerID() + "/" + event.getTaskAttemptID()
-          + ". Interrupting and returning";
-    }
-
-    @Override
-    public void run() {
-      synchronized (this) {
-        if (this.cancelled) {
-          return;
-        }
-        LOG.warn(this.message);
-        StackTraceElement[] trace = this.commandThread.getStackTrace();
-        StringBuilder logMsg = new StringBuilder();
-        for (int i = 0; i < trace.length; i++) {
-          logMsg.append("\n\tat " + trace[i]);
-        }
-        LOG.info("Stack trace of the command-thread: \n" + logMsg.toString());
-        this.commandThread.interrupt();
-      }
-    }
-
-    @Override
-    public boolean cancel() {
-      synchronized (this) {
-        this.cancelled = true;
-        return super.cancel();
-      }
-    }
-  }
 
   /**
    * Setup and start the container on remote nodemanager.
