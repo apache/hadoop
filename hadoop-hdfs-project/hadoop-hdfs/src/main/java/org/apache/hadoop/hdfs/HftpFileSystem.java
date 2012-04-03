@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
+import org.apache.hadoop.hdfs.web.URLUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
@@ -293,15 +294,6 @@ public class HftpFileSystem extends FileSystem
     }
     return ugiParamenter.toString();
   }
-  
-  static Void throwIOExceptionFromConnection(
-      final HttpURLConnection connection, final IOException ioe
-      ) throws IOException {
-    final int code = connection.getResponseCode();
-    final String s = connection.getResponseMessage();
-    throw s == null? ioe:
-        new IOException(s + " (error code=" + code + ")", ioe);
-  }
 
   /**
    * Open an HTTP connection to the namenode to read file data and metadata.
@@ -312,13 +304,10 @@ public class HftpFileSystem extends FileSystem
       throws IOException {
     query = addDelegationTokenParam(query);
     final URL url = getNamenodeURL(path, query);
-    final HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-    try {
-      connection.setRequestMethod("GET");
-      connection.connect();
-    } catch (IOException ioe) {
-      throwIOExceptionFromConnection(connection, ioe);
-    }
+    final HttpURLConnection connection =
+        (HttpURLConnection)URLUtils.openConnection(url);
+    connection.setRequestMethod("GET");
+    connection.connect();
     return connection;
   }
 
@@ -342,7 +331,7 @@ public class HftpFileSystem extends FileSystem
 
     @Override
     protected HttpURLConnection openConnection() throws IOException {
-      return (HttpURLConnection)url.openConnection();
+      return (HttpURLConnection)URLUtils.openConnection(url);
     }
 
     /** Use HTTP Range header for specifying offset. */
