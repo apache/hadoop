@@ -109,6 +109,9 @@ Trunk (unreleased changes)
 
     HDFS-3116. Typo in fetchdt error message. (AOE Takashi via atm)
 
+    HDFS-3126. Journal stream from Namenode to BackupNode needs to have 
+    timeout. (Hari Mankude via suresh)
+    
 Release 2.0.0 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
