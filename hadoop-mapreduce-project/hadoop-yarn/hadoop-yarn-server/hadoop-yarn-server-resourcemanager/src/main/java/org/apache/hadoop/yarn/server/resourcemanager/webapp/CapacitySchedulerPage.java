@@ -100,8 +100,8 @@ class CapacitySchedulerPage extends RmView {
     @Override
     public void render(Block html) {
       ArrayList<CapacitySchedulerQueueInfo> subQueues =
-          (csqinfo.qinfo == null) ? csqinfo.csinfo.getSubQueues()
-              : csqinfo.qinfo.getSubQueues();
+          (csqinfo.qinfo == null) ? csqinfo.csinfo.getQueues().getQueueInfoList()
+              : csqinfo.qinfo.getQueues().getQueueInfoList();
       UL<Hamlet> ul = html.ul("#pq");
       for (CapacitySchedulerQueueInfo info : subQueues) {
         float used = info.getUsedCapacity() / 100;
@@ -122,7 +122,7 @@ class CapacitySchedulerPage extends RmView {
               _(join(percent(used), " used"))._();
 
         csqinfo.qinfo = info;
-        if (info.getSubQueues() == null) {
+        if (info.getQueues() == null) {
           li.ul("#lq").li()._(LeafQueueInfoBlock.class)._()._();
         } else {
           li._(QueueBlock.class);
