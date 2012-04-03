@@ -625,6 +625,8 @@ Release 0.23.3 - UNRELEASED
 
   BUG FIXES
 
+    HDFS-3166. Add timeout to Hftp connections.  (Daryn Sharp via szetszwo)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
