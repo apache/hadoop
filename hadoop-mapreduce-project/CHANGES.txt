@@ -103,6 +103,9 @@ Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    MAPREDUCE-4072. User set java.library.path seems to overwrite default
+    creating problems native lib loading (Anupam Seth via bobby)
+
   NEW FEATURES
 
   IMPROVEMENTS

@@ -779,6 +779,13 @@ Hadoop MapReduce Next Generation - Writing YARN Applications
   need to increase the value of the the cluster-wide configuration variable
   <<<yarn.nodemanager.vmem-pmem-ratio>>>.
 
+** How do I include native libraries?
+
+
+  Setting -Djava.library.path on the command line while launching a container 
+  can cause native libraries used by Hadoop to not be loaded correctly and can
+  result in errors. It is cleaner to use LD_LIBRARY_PATH instead.
+
 * Useful Links
 
   * {{{https://issues.apache.org/jira/secure/attachment/12486023/MapReduce_NextGen_Architecture.pdf}Map Reduce Next Generation Architecture}}
