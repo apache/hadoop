@@ -24,6 +24,8 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.ContainerManager;
 import org.apache.hadoop.yarn.api.ContainerManagerPB;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusRequest;
@@ -38,6 +40,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerRequestP
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StartContainerResponsePBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerRequestPBImpl;
 import org.apache.hadoop.yarn.api.protocolrecords.impl.pb.StopContainerResponsePBImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.GetContainerStatusRequestProto;
@@ -48,12 +51,25 @@ import com.google.protobuf.ServiceException;
 
 public class ContainerManagerPBClientImpl implements ContainerManager {
 
+  // Not a documented config. Only used for tests
+  static final String NM_COMMAND_TIMEOUT = YarnConfiguration.YARN_PREFIX
+      + "rpc.nm-command-timeout";
+
+  /**
+   *  Maximum of 1 minute timeout for a Node to react to the command
+   */
+  static final int DEFAULT_COMMAND_TIMEOUT = 60000;
+
   private ContainerManagerPB proxy;
   
   public ContainerManagerPBClientImpl(long clientVersion, InetSocketAddress addr, Configuration conf) throws IOException {
     RPC.setProtocolEngine(conf, ContainerManagerPB.class, ProtobufRpcEngine.class);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+
+    int expireIntvl = conf.getInt(NM_COMMAND_TIMEOUT, DEFAULT_COMMAND_TIMEOUT);
     proxy = (ContainerManagerPB)RPC.getProxy(
-        ContainerManagerPB.class, clientVersion, addr, conf);
+        ContainerManagerPB.class, clientVersion, addr, ugi, conf,
+        NetUtils.getDefaultSocketFactory(conf), expireIntvl);
   }
 
   public void close() {
