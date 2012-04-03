@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretMan
 import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
+import org.apache.hadoop.hdfs.web.URLUtils;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
@@ -224,8 +225,7 @@ public class DelegationTokenFetcher {
       
       URL remoteURL = new URL(url.toString());
       SecurityUtil.fetchServiceTicket(remoteURL);
-      URLConnection connection = remoteURL.openConnection();
-
+      URLConnection connection = URLUtils.openConnection(remoteURL);
       InputStream in = connection.getInputStream();
       Credentials ts = new Credentials();
       dis = new DataInputStream(in);
@@ -265,7 +265,7 @@ public class DelegationTokenFetcher {
     try {
       URL url = new URL(buf.toString());
       SecurityUtil.fetchServiceTicket(url);
-      connection = (HttpURLConnection) url.openConnection();
+      connection = (HttpURLConnection)URLUtils.openConnection(url);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error renewing token: " + 
             connection.getResponseMessage());
@@ -359,7 +359,7 @@ public class DelegationTokenFetcher {
     try {
       URL url = new URL(buf.toString());
       SecurityUtil.fetchServiceTicket(url);
-      connection = (HttpURLConnection) url.openConnection();
+      connection = (HttpURLConnection)URLUtils.openConnection(url);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error cancelling token: " + 
             connection.getResponseMessage());

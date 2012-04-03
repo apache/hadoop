@@ -41,6 +41,7 @@ import javax.net.ssl.X509TrustManager;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.web.URLUtils;
 
 /**
  * An implementation of a protocol for accessing filesystems over HTTPS. The
@@ -137,15 +138,11 @@ public class HsftpFileSystem extends HftpFileSystem {
     query = addDelegationTokenParam(query);
     final URL url = new URL("https", nnAddr.getHostName(), 
         nnAddr.getPort(), path + '?' + query);
-    HttpsURLConnection conn = (HttpsURLConnection)url.openConnection();
+    HttpsURLConnection conn = (HttpsURLConnection)URLUtils.openConnection(url);
     // bypass hostname verification
-    try {
-      conn.setHostnameVerifier(new DummyHostnameVerifier());
-      conn.setRequestMethod("GET");
-      conn.connect();
-    } catch (IOException ioe) {
-      throwIOExceptionFromConnection(conn, ioe);
-    }
+    conn.setHostnameVerifier(new DummyHostnameVerifier());
+    conn.setRequestMethod("GET");
+    conn.connect();
 
     // check cert expiration date
     final int warnDays = ExpWarnDays;
