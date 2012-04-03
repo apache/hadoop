@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
@@ -228,6 +229,10 @@ public class TestMiniMRChildTask {
       // check if X=$(tt's X var):/tmp for an old env variable inherited from 
       // the tt
       checkEnv("PATH",  path + ":/tmp", "noappend");
+
+      String jobLocalDir = job.get(MRJobConfig.JOB_LOCAL_DIR);
+      assertNotNull(MRJobConfig.JOB_LOCAL_DIR + " is null",
+                    jobLocalDir);
     }
 
     public void map(WritableComparable key, Writable value,
