@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-import java.util.ArrayList;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -38,7 +36,7 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
   protected float usedCapacity;
   protected float maxCapacity;
   protected String queueName;
-  protected ArrayList<CapacitySchedulerQueueInfo> queues;
+  protected CapacitySchedulerQueueInfoList queues;
 
   @XmlTransient
   static final float EPSILON = 1e-8f;
@@ -74,22 +72,22 @@ public class CapacitySchedulerInfo extends SchedulerInfo {
     return this.queueName;
   }
 
-  public ArrayList<CapacitySchedulerQueueInfo> getSubQueues() {
+  public CapacitySchedulerQueueInfoList getQueues() {
     return this.queues;
   }
 
-  protected ArrayList<CapacitySchedulerQueueInfo> getQueues(CSQueue parent) {
+  protected CapacitySchedulerQueueInfoList getQueues(CSQueue parent) {
     CSQueue parentQueue = parent;
-    ArrayList<CapacitySchedulerQueueInfo> queuesInfo = new ArrayList<CapacitySchedulerQueueInfo>();
+    CapacitySchedulerQueueInfoList queuesInfo = new CapacitySchedulerQueueInfoList();
     for (CSQueue queue : parentQueue.getChildQueues()) {
       CapacitySchedulerQueueInfo info;
       if (queue instanceof LeafQueue) {
         info = new CapacitySchedulerLeafQueueInfo((LeafQueue)queue);
       } else {
         info = new CapacitySchedulerQueueInfo(queue);
-        info.subQueues = getQueues(queue);
+        info.queues = getQueues(queue);
       }
-      queuesInfo.add(info);
+      queuesInfo.addToQueueInfoList(info);
     }
     return queuesInfo;
   }
