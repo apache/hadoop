@@ -149,6 +149,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3682 Tracker URL says AM tasks run on localhost.
     (Ravi Prakash via tgraves)
 
+    MAPREDUCE-3082. Archive command take wrong path for input file with current
+    directory (John George via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
