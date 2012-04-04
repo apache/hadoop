@@ -278,6 +278,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8088. User-group mapping cache incorrectly does negative caching on
     transient failures (Khiwal Lee via bobby)
 
+    HADOOP-8179. risk of NPE in CopyCommands processArguments() (Daryn Sharp
+    via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES

@@ -81,10 +81,9 @@ class CopyCommands {
       }
       FSDataOutputStream out = dst.fs.create(dst.path);
       try {
-        FSDataInputStream in = null;
         for (PathData src : srcs) {
+          FSDataInputStream in = src.fs.open(src.path);
           try {
-            in = src.fs.open(src.path);
             IOUtils.copyBytes(in, out, getConf(), false);
             if (delimiter != null) {
               out.write(delimiter.getBytes("UTF-8"));
