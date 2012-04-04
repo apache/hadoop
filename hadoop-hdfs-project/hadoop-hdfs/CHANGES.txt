@@ -308,6 +308,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3187. Upgrade guava to 11.0.2 (todd)
 
+    HDFS-3168. Remove unnecessary "throw IOException" and change fields to
+    final in FSNamesystem and BlockManager.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)

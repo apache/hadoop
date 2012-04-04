@@ -61,6 +61,7 @@ public class EditLogTailer {
   
   private final EditLogTailerThread tailerThread;
   
+  private final Configuration conf;
   private final FSNamesystem namesystem;
   private FSEditLog editLog;
   
@@ -98,13 +99,12 @@ public class EditLogTailer {
    */
   private long sleepTimeMs;
   
-  public EditLogTailer(FSNamesystem namesystem) {
+  public EditLogTailer(FSNamesystem namesystem, Configuration conf) {
     this.tailerThread = new EditLogTailerThread();
+    this.conf = conf;
     this.namesystem = namesystem;
     this.editLog = namesystem.getEditLog();
     
-
-    Configuration conf = namesystem.getConf();
     lastLoadTimestamp = now();
 
     logRollPeriodMs = conf.getInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY,
@@ -129,14 +129,12 @@ public class EditLogTailer {
   }
   
   private InetSocketAddress getActiveNodeAddress() {
-    Configuration conf = namesystem.getConf();
     Configuration activeConf = HAUtil.getConfForOtherNode(conf);
     return NameNode.getServiceAddress(activeConf, true);
   }
   
   private NamenodeProtocol getActiveNodeProxy() throws IOException {
     if (cachedActiveProxy == null) {
-      Configuration conf = namesystem.getConf();
       NamenodeProtocolPB proxy = 
         RPC.waitForProxy(NamenodeProtocolPB.class,
             RPC.getProtocolVersion(NamenodeProtocolPB.class), activeAddr, conf);
