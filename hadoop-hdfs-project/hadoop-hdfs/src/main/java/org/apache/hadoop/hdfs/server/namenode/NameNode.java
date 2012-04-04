@@ -1061,7 +1061,7 @@ public class NameNode {
 
     @Override
     public void startStandbyServices() throws IOException {
-      namesystem.startStandbyServices();
+      namesystem.startStandbyServices(conf);
     }
 
     @Override

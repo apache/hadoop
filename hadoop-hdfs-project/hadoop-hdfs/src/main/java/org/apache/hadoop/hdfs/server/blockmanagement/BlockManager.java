@@ -255,9 +255,9 @@ public class BlockManager {
     this.replicationRecheckInterval = 
       conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
                   DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000L;
-    LOG.info("defaultReplication = " + defaultReplication);
-    LOG.info("maxReplication     = " + maxReplication);
-    LOG.info("minReplication     = " + minReplication);
+    LOG.info("defaultReplication         = " + defaultReplication);
+    LOG.info("maxReplication             = " + maxReplication);
+    LOG.info("minReplication             = " + minReplication);
     LOG.info("maxReplicationStreams      = " + maxReplicationStreams);
     LOG.info("shouldCheckForEnoughRacks  = " + shouldCheckForEnoughRacks);
     LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
@@ -1032,7 +1032,7 @@ public class BlockManager {
    *
    * @return number of blocks scheduled for replication during this iteration.
    */
-  int computeReplicationWork(int blocksToProcess) throws IOException {
+  int computeReplicationWork(int blocksToProcess) {
     List<List<Block>> blocksToReplicate = null;
     namesystem.writeLock();
     try {
@@ -2176,7 +2176,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   
   /** Set replication for the blocks. */
   public void setReplication(final short oldRepl, final short newRepl,
-      final String src, final Block... blocks) throws IOException {
+      final String src, final Block... blocks) {
     if (newRepl == oldRepl) {
       return;
     }
@@ -2939,8 +2939,6 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         } catch (InterruptedException ie) {
           LOG.warn("ReplicationMonitor thread received InterruptedException.", ie);
           break;
-        } catch (IOException ie) {
-          LOG.warn("ReplicationMonitor thread received exception. " , ie);
         } catch (Throwable t) {
           LOG.warn("ReplicationMonitor thread received Runtime exception. ", t);
           Runtime.getRuntime().exit(-1);
@@ -2958,14 +2956,14 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    * @return number of blocks scheduled for replication or removal.
    * @throws IOException
    */
-  int computeDatanodeWork() throws IOException {
-    int workFound = 0;
+  int computeDatanodeWork() {
     // Blocks should not be replicated or removed if in safe mode.
     // It's OK to check safe mode here w/o holding lock, in the worst
     // case extra replications will be scheduled, and these will get
     // fixed up later.
-    if (namesystem.isInSafeMode())
-      return workFound;
+    if (namesystem.isInSafeMode()) {
+      return 0;
+    }
 
     final int numlive = heartbeatManager.getLiveDatanodeCount();
     final int blocksToProcess = numlive
@@ -2973,7 +2971,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     final int nodesToProcess = (int) Math.ceil(numlive
         * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100.0);
 
-    workFound = this.computeReplicationWork(blocksToProcess);
+    int workFound = this.computeReplicationWork(blocksToProcess);
 
     // Update counters
     namesystem.writeLock();
