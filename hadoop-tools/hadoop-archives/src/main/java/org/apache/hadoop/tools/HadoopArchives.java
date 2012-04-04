@@ -830,11 +830,18 @@ public class HadoopArchives implements Tool {
         throw new IOException("Parent path not specified.");
       }
       parentPath = new Path(args[i+1]);
+      if (!parentPath.isAbsolute()) {
+        parentPath= parentPath.getFileSystem(getConf()).makeQualified(parentPath);
+      }
+
       i+=2;
       //read the rest of the paths
       for (; i < args.length; i++) {
         if (i == (args.length - 1)) {
           destPath = new Path(args[i]);
+          if (!destPath.isAbsolute()) {
+            destPath = destPath.getFileSystem(getConf()).makeQualified(destPath);
+          }
         }
         else {
           Path argPath = new Path(args[i]);
