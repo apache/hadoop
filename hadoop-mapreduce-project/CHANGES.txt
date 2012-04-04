@@ -99,6 +99,8 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4091. tools testcases failing because of MAPREDUCE-4082 (tucu)
 
+    MAPREDUCE-4098. TestMRApps testSetClasspath fails (tucu)
+ 
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
