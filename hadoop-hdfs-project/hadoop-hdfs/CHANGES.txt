@@ -73,6 +73,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3148. The client should be able to use multiple local interfaces
     for data transfer. (eli)
 
+    HDFS-3000. Add a public API for setting quotas. (atm)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
