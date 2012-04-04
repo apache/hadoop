@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.tools;
 import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 
@@ -41,6 +42,7 @@ import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
+import com.google.common.io.Files;
 
 /**
  * Tests for HAAdmin command with {@link MiniDFSCluster} set up in HA mode.
@@ -59,6 +61,8 @@ public class TestDFSHAAdminMiniCluster {
 
   private String errOutput;
 
+  private int nn1Port;
+
   @Before
   public void setup() throws IOException {
     conf = new Configuration();
@@ -69,6 +73,8 @@ public class TestDFSHAAdminMiniCluster {
     tool.setConf(conf);
     tool.setErrOut(new PrintStream(errOutBytes));
     cluster.waitActive();
+    
+    nn1Port = cluster.getNameNodePort(0);
   }
 
   @After
@@ -124,9 +130,17 @@ public class TestDFSHAAdminMiniCluster {
   public void testFencer() throws Exception { 
     // Test failover with no fencer
     assertEquals(-1, runTool("-failover", "nn1", "nn2"));
-    
+
+    // Set up fencer to write info about the fencing target into a
+    // tmp file, so we can verify that the args were substituted right
+    File tmpFile = File.createTempFile("testFencer", ".txt");
+    tmpFile.deleteOnExit();
+    conf.set(NodeFencer.CONF_METHODS_KEY,
+        "shell(echo -n $target_nameserviceid.$target_namenodeid " +
+        "$target_port $dfs_ha_namenode_id > " +
+        tmpFile.getAbsolutePath() + ")");
+
     // Test failover with fencer
-    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
     tool.setConf(conf);
     assertEquals(0, runTool("-transitionToActive", "nn1"));
     assertEquals(0, runTool("-failover", "nn1", "nn2"));
@@ -134,21 +148,36 @@ public class TestDFSHAAdminMiniCluster {
     // Test failover with fencer and nameservice
     assertEquals(0, runTool("-ns", "minidfs-ns", "-failover", "nn2", "nn1"));
 
+    // Fencer has not run yet, since none of the above required fencing 
+    assertEquals("", Files.toString(tmpFile, Charsets.UTF_8));
+
     // Test failover with fencer and forcefence option
     assertEquals(0, runTool("-failover", "nn1", "nn2", "--forcefence"));
-      
+    
+    // The fence script should run with the configuration from the target
+    // node, rather than the configuration from the fencing node
+    assertEquals("minidfs-ns.nn1 " + nn1Port + " nn1",
+        Files.toString(tmpFile, Charsets.UTF_8));
+    tmpFile.delete();
+    
     // Test failover with forceactive option
     assertEquals(0, runTool("-failover", "nn2", "nn1", "--forceactive"));
+
+    // Fencing should not occur, since it was graceful
+    assertFalse(tmpFile.exists());
+
           
     // Test failover with not fencer and forcefence option
     conf.unset(NodeFencer.CONF_METHODS_KEY);
     tool.setConf(conf);
     assertEquals(-1, runTool("-failover", "nn1", "nn2", "--forcefence"));
-    
+    assertFalse(tmpFile.exists());
+
     // Test failover with bad fencer and forcefence option
     conf.set(NodeFencer.CONF_METHODS_KEY, "foobar!");
     tool.setConf(conf);
     assertEquals(-1, runTool("-failover", "nn1", "nn2", "--forcefence"));
+    assertFalse(tmpFile.exists());
 
     // Test failover with force fence listed before the other arguments
     conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");

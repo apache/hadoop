@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.BadFencingConfigurationException;
@@ -28,6 +29,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetUtils;
 
+import com.google.common.base.Preconditions;
+
 /**
  * One of the NN NameNodes acting as the target of an administrative command
  * (e.g. failover).
@@ -35,14 +38,36 @@ import org.apache.hadoop.net.NetUtils;
 @InterfaceAudience.Private
 public class NNHAServiceTarget extends HAServiceTarget {
 
+  // Keys added to the fencing script environment
+  private static final String NAMESERVICE_ID_KEY = "nameserviceid";
+  private static final String NAMENODE_ID_KEY = "namenodeid";
+  
   private final InetSocketAddress addr;
   private NodeFencer fencer;
   private BadFencingConfigurationException fenceConfigError;
+  private final String nnId;
+  private final String nsId;
 
   public NNHAServiceTarget(HdfsConfiguration conf,
       String nsId, String nnId) {
+    Preconditions.checkNotNull(nnId);
+    
+    if (nsId == null) {
+      nsId = DFSUtil.getOnlyNameServiceIdOrNull(conf);
+      if (nsId == null) {
+        throw new IllegalArgumentException(
+            "Unable to determine the nameservice id.");
+      }
+    }
+    assert nsId != null;
+    
+    // Make a copy of the conf, and override configs based on the
+    // target node -- not the node we happen to be running on.
+    HdfsConfiguration targetConf = new HdfsConfiguration(conf);
+    NameNode.initializeGenericKeys(targetConf, nsId, nnId);
+    
     String serviceAddr = 
-      DFSUtil.getNamenodeServiceAddr(conf, nsId, nnId);
+      DFSUtil.getNamenodeServiceAddr(targetConf, nsId, nnId);
     if (serviceAddr == null) {
       throw new IllegalArgumentException(
           "Unable to determine service address for namenode '" + nnId + "'");
@@ -50,10 +75,12 @@ public class NNHAServiceTarget extends HAServiceTarget {
     this.addr = NetUtils.createSocketAddr(serviceAddr,
         NameNode.DEFAULT_PORT);
     try {
-      this.fencer = NodeFencer.create(conf);
+      this.fencer = NodeFencer.create(targetConf);
     } catch (BadFencingConfigurationException e) {
       this.fenceConfigError = e;
     }
+    this.nnId = nnId;
+    this.nsId = nsId;
   }
 
   /**
@@ -81,4 +108,19 @@ public class NNHAServiceTarget extends HAServiceTarget {
     return "NameNode at " + addr;
   }
 
+  public String getNameServiceId() {
+    return this.nsId;
+  }
+  
+  public String getNameNodeId() {
+    return this.nnId;
+  }
+
+  @Override
+  protected void addFencingParameters(Map<String, String> ret) {
+    super.addFencingParameters(ret);
+    
+    ret.put(NAMESERVICE_ID_KEY, getNameServiceId());
+    ret.put(NAMENODE_ID_KEY, getNameNodeId());
+  }
 }
