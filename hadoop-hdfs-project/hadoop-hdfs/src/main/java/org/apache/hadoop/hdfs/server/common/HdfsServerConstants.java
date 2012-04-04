@@ -53,7 +53,8 @@ public final class HdfsServerConstants {
     ROLLBACK("-rollback"),
     FINALIZE("-finalize"),
     IMPORT  ("-importCheckpoint"),
-    BOOTSTRAPSTANDBY("-bootstrapStandby");
+    BOOTSTRAPSTANDBY("-bootstrapStandby"),
+    INITIALIZESHAREDEDITS("-initializeSharedEdits");
     
     private String name = null;
     

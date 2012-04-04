@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
@@ -69,6 +70,9 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 
 /**********************************************************
  * NameNode serves as both directory namespace manager and
@@ -729,6 +733,67 @@ public class NameNode {
                 + "to true in order to format this filesystem");
     }
   }
+  
+  @VisibleForTesting
+  public static boolean initializeSharedEdits(Configuration conf) {
+    return initializeSharedEdits(conf, true);
+  }
+  
+  @VisibleForTesting
+  public static boolean initializeSharedEdits(Configuration conf,
+      boolean force) {
+    return initializeSharedEdits(conf, force, false);
+  }
+  
+  /**
+   * Format a new shared edits dir.
+   * 
+   * @param conf configuration
+   * @param force format regardless of whether or not the shared edits dir exists
+   * @param interactive prompt the user when a dir exists
+   * @return true if the command aborts, false otherwise
+   */
+  private static boolean initializeSharedEdits(Configuration conf,
+      boolean force, boolean interactive) {
+    NNStorage existingStorage = null;
+    try {
+      FSNamesystem fsns = FSNamesystem.loadFromDisk(conf,
+          FSNamesystem.getNamespaceDirs(conf),
+          FSNamesystem.getNamespaceEditsDirs(conf, false));
+      
+      existingStorage = fsns.getFSImage().getStorage();
+      
+      Collection<URI> sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
+      if (!confirmFormat(sharedEditsDirs, force, interactive)) {
+        return true; // aborted
+      }
+      NNStorage newSharedStorage = new NNStorage(conf,
+          Lists.<URI>newArrayList(),
+          sharedEditsDirs);
+      
+      newSharedStorage.format(new NamespaceInfo(
+          existingStorage.getNamespaceID(),
+          existingStorage.getClusterID(),
+          existingStorage.getBlockPoolID(),
+          existingStorage.getCTime(),
+          existingStorage.getDistributedUpgradeVersion()));
+    } catch (Exception e) {
+      LOG.error("Could not format shared edits dir", e);
+      return true; // aborted
+    } finally {
+      // Have to unlock storage explicitly for the case when we're running in a
+      // unit test, which runs in the same JVM as NNs.
+      if (existingStorage != null) {
+        try {
+          existingStorage.unlockAll();
+        } catch (IOException ioe) {
+          LOG.warn("Could not unlock storage directories", ioe);
+          return true; // aborted
+        }
+      }
+    }
+    return false; // did not abort
+  }
 
   private static boolean finalize(Configuration conf,
                                boolean isConfirmationNeeded
@@ -763,7 +828,8 @@ public class NameNode {
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
       StartupOption.IMPORT.getName() + "] | [" +
-      StartupOption.BOOTSTRAPSTANDBY.getName() + "]");
+      StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" +
+      StartupOption.INITIALIZESHAREDEDITS.getName() + "]");
   }
 
   private static StartupOption parseArguments(String args[]) {
@@ -803,6 +869,9 @@ public class NameNode {
         startOpt = StartupOption.IMPORT;
       } else if (StartupOption.BOOTSTRAPSTANDBY.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.BOOTSTRAPSTANDBY;
+        return startOpt;
+      } else if (StartupOption.INITIALIZESHAREDEDITS.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.INITIALIZESHAREDEDITS;
         return startOpt;
       } else {
         return null;
@@ -868,29 +937,39 @@ public class NameNode {
     }
 
     switch (startOpt) {
-      case FORMAT:
+      case FORMAT: {
         boolean aborted = format(conf, false);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
-      case GENCLUSTERID:
+      }
+      case GENCLUSTERID: {
         System.err.println("Generating new cluster id:");
         System.out.println(NNStorage.newClusterID());
         System.exit(0);
         return null;
-      case FINALIZE:
-        aborted = finalize(conf, true);
+      }
+      case FINALIZE: {
+        boolean aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
-      case BOOTSTRAPSTANDBY:
+      }
+      case BOOTSTRAPSTANDBY: {
         String toolArgs[] = Arrays.copyOfRange(argv, 1, argv.length);
         int rc = BootstrapStandby.run(toolArgs, conf);
         System.exit(rc);
         return null; // avoid warning
+      }
+      case INITIALIZESHAREDEDITS: {
+        boolean aborted = initializeSharedEdits(conf, false, true);
+        System.exit(aborted ? 1 : 0);
+        return null; // avoid warning
+      }
       case BACKUP:
-      case CHECKPOINT:
+      case CHECKPOINT: {
         NamenodeRole role = startOpt.toNodeRole();
         DefaultMetricsSystem.initialize(role.toString().replace(" ", ""));
         return new BackupNode(conf, role);
+      }
       default:
         DefaultMetricsSystem.initialize("NameNode");
         return new NameNode(conf);
