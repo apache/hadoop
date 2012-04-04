@@ -103,7 +103,42 @@ public class TestHadoopArchives extends TestCase {
     super.tearDown();
   }
   
-  
+   
+  public void testRelativePath() throws Exception {
+    fs.delete(archivePath, true);
+
+    final Path sub1 = new Path(inputPath, "dir1");
+    fs.mkdirs(sub1);
+    createFile(sub1, "a", fs);
+    final Configuration conf = mapred.createJobConf();
+    final FsShell shell = new FsShell(conf);
+
+    final List<String> originalPaths = lsr(shell, "input");
+    System.out.println("originalPath: " + originalPaths);
+    final URI uri = fs.getUri();
+    final String prefix = "har://hdfs-" + uri.getHost() +":" + uri.getPort()
+        + archivePath.toUri().getPath() + Path.SEPARATOR;
+
+    {
+      final String harName = "foo.har";
+      final String[] args = {
+          "-archiveName",
+          harName,
+          "-p",
+          "input",
+          "*",
+          "archive"
+      };
+      System.setProperty(HadoopArchives.TEST_HADOOP_ARCHIVES_JAR_PATH, HADOOP_ARCHIVES_JAR);
+      final HadoopArchives har = new HadoopArchives(mapred.createJobConf());
+      assertEquals(0, ToolRunner.run(har, args));
+
+      //compare results
+      final List<String> harPaths = lsr(shell, prefix + harName);
+      assertEquals(originalPaths, harPaths);
+    }
+  }
+
   public void testPathWithSpaces() throws Exception {
     fs.delete(archivePath, true);
 
@@ -170,8 +205,11 @@ public class TestHadoopArchives extends TestCase {
       System.setErr(oldErr);
     }
     System.out.println("lsr results:\n" + results);
+    String dirname = dir;
+    if (dir.lastIndexOf(Path.SEPARATOR) != -1 ) {
+      dirname = dir.substring(dir.lastIndexOf(Path.SEPARATOR));
+    }
 
-    final String dirname = dir.substring(dir.lastIndexOf(Path.SEPARATOR));
     final List<String> paths = new ArrayList<String>();
     for(StringTokenizer t = new StringTokenizer(results, "\n");
         t.hasMoreTokens(); ) {
