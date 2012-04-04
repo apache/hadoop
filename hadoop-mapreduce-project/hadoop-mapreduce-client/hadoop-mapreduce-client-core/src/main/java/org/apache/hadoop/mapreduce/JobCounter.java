@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 public enum JobCounter {
   NUM_FAILED_MAPS, 
   NUM_FAILED_REDUCES,
+  NUM_KILLED_MAPS,
+  NUM_KILLED_REDUCES,
   TOTAL_LAUNCHED_MAPS,
   TOTAL_LAUNCHED_REDUCES,
   OTHER_LOCAL_MAPS,
