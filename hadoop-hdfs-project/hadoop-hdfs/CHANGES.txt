@@ -75,6 +75,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3000. Add a public API for setting quotas. (atm)
 
+    HDFS-3102. Add CLI tool to initialize the shared-edits dir. (atm)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
