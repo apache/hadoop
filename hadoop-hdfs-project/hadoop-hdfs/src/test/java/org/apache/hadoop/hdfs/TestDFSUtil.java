@@ -179,6 +179,17 @@ public class TestDFSUtil {
     assertEquals("nn1", it.next().toString());
     assertEquals("nn2", it.next().toString());
   }
+  
+  @Test
+  public void testGetOnlyNameServiceIdOrNull() {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.set(DFS_FEDERATION_NAMESERVICES, "ns1,ns2");
+    assertNull(DFSUtil.getOnlyNameServiceIdOrNull(conf));
+    conf.set(DFS_FEDERATION_NAMESERVICES, "");
+    assertNull(DFSUtil.getOnlyNameServiceIdOrNull(conf));
+    conf.set(DFS_FEDERATION_NAMESERVICES, "ns1");
+    assertEquals("ns1", DFSUtil.getOnlyNameServiceIdOrNull(conf));
+  }
 
   /**
    * Test for {@link DFSUtil#getNNServiceRpcAddresses(Configuration)}

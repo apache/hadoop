@@ -211,6 +211,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
     (Hari Mankude via eli)
 
+    HDFS-3084. FenceMethod.tryFence() and ShellCommandFencer should pass
+    namenodeId as well as host:port (todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

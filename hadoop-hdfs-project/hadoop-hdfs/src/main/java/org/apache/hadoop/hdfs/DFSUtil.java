@@ -1033,13 +1033,7 @@ public class DFSUtil {
       String nsId, String nnId) {
 
     if (nsId == null) {
-      Collection<String> nsIds = getNameServiceIds(conf);
-      if (1 == nsIds.size()) {
-        nsId = nsIds.toArray(new String[1])[0];
-      } else {
-        // No nameservice ID was given and more than one is configured
-        return null;
-      }
+      nsId = getOnlyNameServiceIdOrNull(conf);
     }
 
     String serviceAddrKey = concatSuffixes(
@@ -1053,5 +1047,19 @@ public class DFSUtil {
       serviceRpcAddr = conf.get(addrKey);
     }
     return serviceRpcAddr;
+  }
+
+  /**
+   * If the configuration refers to only a single nameservice, return the
+   * name of that nameservice. If it refers to 0 or more than 1, return null.
+   */
+  public static String getOnlyNameServiceIdOrNull(Configuration conf) {
+    Collection<String> nsIds = getNameServiceIds(conf);
+    if (1 == nsIds.size()) {
+      return nsIds.toArray(new String[1])[0];
+    } else {
+      // No nameservice ID was given and more than one is configured
+      return null;
+    }
   }
 }
