@@ -146,6 +146,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3672. Killed maps shouldn't be counted towards 
     JobCounter.NUM_FAILED_MAPS. (Anupam Seth via tgraves)
 
+    MAPREDUCE-3682 Tracker URL says AM tasks run on localhost.
+    (Ravi Prakash via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
