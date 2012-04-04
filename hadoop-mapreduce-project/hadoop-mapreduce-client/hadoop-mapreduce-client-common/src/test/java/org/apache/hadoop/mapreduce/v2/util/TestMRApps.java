@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 
 import org.junit.Test;
@@ -130,15 +131,12 @@ public class TestMRApps {
     Job job = Job.getInstance();
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, job.getConfiguration());
-    assertEquals("$PWD:$HADOOP_CONF_DIR:" +
-        "$HADOOP_COMMON_HOME/share/hadoop/common/*:" +
-        "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*:" +
-        "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*:" +
-        "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*:" +
-        "$YARN_HOME/share/hadoop/mapreduce/*:" +
-        "$YARN_HOME/share/hadoop/mapreduce/lib/*:" +
-        "job.jar:$PWD/*",
-        environment.get("CLASSPATH"));
+    assertTrue(environment.get("CLASSPATH").startsWith("$PWD:"));
+    String confClasspath = job.getConfiguration().get(YarnConfiguration.YARN_APPLICATION_CLASSPATH);
+    if (confClasspath != null) {
+      confClasspath = confClasspath.replaceAll(",\\s*", ":").trim();
+    }
+    assertTrue(environment.get("CLASSPATH").contains(confClasspath));
   }
 
  @Test public void testSetClasspathWithUserPrecendence() {
