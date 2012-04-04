@@ -244,7 +244,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    * Return total capacity, used and unused
    */
   @Override // FSDatasetMBean
-  public long getCapacity() throws IOException {
+  public long getCapacity() {
     synchronized(statsLock) {
       return volumes.getCapacity();
     }

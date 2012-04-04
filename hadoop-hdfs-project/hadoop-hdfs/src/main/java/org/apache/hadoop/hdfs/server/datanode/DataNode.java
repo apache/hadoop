@@ -229,8 +229,7 @@ public class DataNode extends Configured
    * Use {@link NetUtils#createSocketAddr(String)} instead.
    */
   @Deprecated
-  public static InetSocketAddress createSocketAddr(String target
-                                                   ) throws IOException {
+  public static InetSocketAddress createSocketAddr(String target) {
     return NetUtils.createSocketAddr(target);
   }
   
@@ -1350,7 +1349,7 @@ public class DataNode extends Configured
      * entire target list, the block, and the data.
      */
     DataTransfer(DatanodeInfo targets[], ExtendedBlock b, BlockConstructionStage stage,
-        final String clientname) throws IOException {
+        final String clientname)  {
       if (DataTransferProtocol.LOG.isDebugEnabled()) {
         DataTransferProtocol.LOG.debug(getClass().getSimpleName() + ": "
             + b + " (numBytes=" + b.getNumBytes() + ")"

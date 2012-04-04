@@ -1798,7 +1798,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       lb = startFileInternal(src, null, holder, clientMachine, 
                         EnumSet.of(CreateFlag.APPEND), 
-                        false, blockManager.maxReplication, (long)0);
+                        false, blockManager.maxReplication, 0);
     } finally {
       writeUnlock();
     }
@@ -1883,7 +1883,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       fileLength = pendingFile.computeContentSummary().getLength();
       blockSize = pendingFile.getPreferredBlockSize();
       clientNode = pendingFile.getClientNode();
-      replication = (int)pendingFile.getReplication();
+      replication = pendingFile.getReplication();
     } finally {
       writeUnlock();
     }
@@ -2657,6 +2657,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // If the penultimate block is not COMPLETE, then it must be COMMITTED.
     if(nrCompleteBlocks < nrBlocks - 2 ||
        nrCompleteBlocks == nrBlocks - 2 &&
+         curBlock != null &&
          curBlock.getBlockUCState() != BlockUCState.COMMITTED) {
       final String message = "DIR* NameSystem.internalReleaseLease: "
         + "attempt to release a create lock on "
@@ -2742,7 +2743,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
   
   Lease reassignLeaseInternal(Lease lease, String src, String newHolder,
-      INodeFileUnderConstruction pendingFile) throws IOException {
+      INodeFileUnderConstruction pendingFile) {
     assert hasWriteLock();
     pendingFile.setClientName(newHolder);
     return leaseManager.reassignLease(lease, src, newHolder);
@@ -2850,7 +2851,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 newtargets[i]);
           }
         }
-        if (closeFile) {
+        if ((closeFile) && (descriptors != null)) {
           // the file is getting closed. Insert block locations into blockManager.
           // Otherwise fsck will report these blocks as MISSING, especially if the
           // blocksReceived from Datanodes take a long time to arrive.
@@ -3592,7 +3593,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       this.blockTotal = total;
       this.blockThreshold = (int) (blockTotal * threshold);
       this.blockReplQueueThreshold = 
-        (int) (((double) blockTotal) * replQueueThreshold);
+        (int) (blockTotal * replQueueThreshold);
       if (haEnabled) {
         // After we initialize the block count, any further namespace
         // modifications done while in safe mode need to keep track

@@ -206,6 +206,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3168. Remove unnecessary "throw IOException" and change fields to
     final in FSNamesystem and BlockManager.  (szetszwo)
 
+    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
+    (Hari Mankude via eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
