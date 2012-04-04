@@ -19,16 +19,11 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -60,6 +55,9 @@ public class ShellCommandFencer
 
   /** Length at which to abbreviate command in long messages */
   private static final int ABBREV_LENGTH = 20;
+
+  /** Prefix for target parameters added to the environment */
+  private static final String TARGET_PREFIX = "target_";
   
   @VisibleForTesting
   static Log LOG = LogFactory.getLog(
@@ -76,19 +74,10 @@ public class ShellCommandFencer
 
   @Override
   public boolean tryFence(HAServiceTarget target, String cmd) {
-    InetSocketAddress serviceAddr = target.getAddress();
-    List<String> cmdList = Arrays.asList(cmd.split("\\s+"));
-
-    // Create arg list with service as the first argument
-    List<String> argList = new ArrayList<String>();
-    argList.add(cmdList.get(0));
-    argList.add(serviceAddr.getHostName() + ":" + serviceAddr.getPort());
-    argList.addAll(cmdList.subList(1, cmdList.size()));
-    String cmdWithSvc = StringUtils.join(" ", argList);
-
     ProcessBuilder builder = new ProcessBuilder(
-        "bash", "-e", "-c", cmdWithSvc);
+        "bash", "-e", "-c", cmd);
     setConfAsEnvVars(builder.environment());
+    addTargetInfoAsEnvVars(target, builder.environment());
 
     Process p;
     try {
@@ -183,6 +172,23 @@ public class ShellCommandFencer
   private void setConfAsEnvVars(Map<String, String> env) {
     for (Map.Entry<String, String> pair : getConf()) {
       env.put(pair.getKey().replace('.', '_'), pair.getValue());
+    }
+  }
+
+  /**
+   * Add information about the target to the the environment of the
+   * subprocess.
+   * 
+   * @param target
+   * @param environment
+   */
+  private void addTargetInfoAsEnvVars(HAServiceTarget target,
+      Map<String, String> environment) {
+    for (Map.Entry<String, String> e :
+         target.getFencingParameters().entrySet()) {
+      String key = TARGET_PREFIX + e.getKey();
+      key = key.replace('.', '_');
+      environment.put(key, e.getValue());
     }
   }
 }
