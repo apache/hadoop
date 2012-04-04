@@ -234,8 +234,10 @@ public class TestSpeculativeExecution {
             .getValue());
     Assert.assertEquals(2, counters.findCounter(JobCounter.TOTAL_LAUNCHED_REDUCES)
             .getValue());
-    Assert.assertEquals(1, counters.findCounter(JobCounter.NUM_FAILED_MAPS)
+    Assert.assertEquals(0, counters.findCounter(JobCounter.NUM_FAILED_MAPS)
             .getValue());
+    Assert.assertEquals(1, counters.findCounter(JobCounter.NUM_KILLED_MAPS)
+        .getValue());
 
     /*----------------------------------------------------------------------
      * Test that Reducer speculates if REDUCE_SPECULATIVE is true and
