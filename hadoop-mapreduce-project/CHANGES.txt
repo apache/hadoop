@@ -152,6 +152,7 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3082. Archive command take wrong path for input file with current
     directory (John George via bobby)
 
+    MAPREDUCE-3650. testGetTokensForHftpFS() fails (Ravi Prakash via bobby)
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
