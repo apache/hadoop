@@ -22,9 +22,6 @@ Trunk (unreleased changes)
 
     HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
 
-    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
-    (Hari Mankude via eli)
-
     HDFS-2857. Cleanup BlockInfo class. (suresh)
 
     HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal Lee
@@ -312,6 +309,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3168. Remove unnecessary "throw IOException" and change fields to
     final in FSNamesystem and BlockManager.  (szetszwo)
+
+    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
+    (Hari Mankude via eli)
 
   OPTIMIZATIONS
 
