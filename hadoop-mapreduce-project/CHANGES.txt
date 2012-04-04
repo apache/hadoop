@@ -201,6 +201,9 @@ Release 2.0.0 - UNRELEASED
     (Colin Patrick McCabe via eli)
 
     MAPREDUCE-4098. TestMRApps testSetClasspath fails (tucu)
+
+    MAPREDUCE-4097. tools testcases fail because missing mrapp-generated-classpath 
+    file in classpath (rvs via tucu)
  
 Release 0.23.3 - UNRELEASED
 
