@@ -389,6 +389,7 @@ public class TestActiveStandbyElector {
    */
   @Test
   public void testStatNodeRetry() {
+    elector.joinElection(data);
     elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
         (Stat) null);
     elector.processResult(Code.CONNECTIONLOSS.intValue(), ZK_LOCK_NAME, mockZK,
@@ -409,6 +410,7 @@ public class TestActiveStandbyElector {
    */
   @Test
   public void testStatNodeError() {
+    elector.joinElection(data);
     elector.processResult(Code.RUNTIMEINCONSISTENCY.intValue(), ZK_LOCK_NAME,
         mockZK, (Stat) null);
     Mockito.verify(mockApp, Mockito.times(0)).enterNeutralMode();
@@ -592,6 +594,8 @@ public class TestActiveStandbyElector {
    */
   @Test
   public void testQuitElection() throws Exception {
+    elector.joinElection(data);
+    Mockito.verify(mockZK, Mockito.times(0)).close();
     elector.quitElection(true);
     Mockito.verify(mockZK, Mockito.times(1)).close();
     // no watches added

@@ -17,15 +17,10 @@
  */
 package org.apache.hadoop.ha;
 
-import java.io.File;
 import java.util.Random;
-import java.util.Set;
 
-import javax.management.ObjectName;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.zookeeper.test.ClientBase;
-import org.apache.zookeeper.test.JMXEnv;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +34,7 @@ import org.mockito.stubbing.Answer;
  * failovers. While doing so, ensures that a fake "shared resource"
  * (simulating the shared edits dir) is only owned by one service at a time. 
  */
-public class TestZKFailoverControllerStress extends ClientBase {
+public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
   
   private static final int STRESS_RUNTIME_SECS = 30;
   private static final int EXTRA_TIMEOUT_SECS = 10;
@@ -47,13 +42,6 @@ public class TestZKFailoverControllerStress extends ClientBase {
   private Configuration conf;
   private MiniZKFCCluster cluster;
 
-  @Override
-  public void setUp() throws Exception {
-    // build.test.dir is used by zookeeper
-    new File(System.getProperty("build.test.dir", "build")).mkdirs();
-    super.setUp();
-  }
-  
   @Before
   public void setupConfAndServices() throws Exception {
     conf = new Configuration();
@@ -65,22 +53,6 @@ public class TestZKFailoverControllerStress extends ClientBase {
   @After
   public void stopCluster() throws Exception {
     cluster.stop();
-  }
-
-  /**
-   * ZK seems to have a bug when we muck with its sessions
-   * behind its back, causing disconnects, etc. This bug
-   * ends up leaving JMX beans around at the end of the test,
-   * and ClientBase's teardown method will throw an exception
-   * if it finds JMX beans leaked. So, clear them out there
-   * to workaround the ZK bug. See ZOOKEEPER-1438.
-   */
-  @After
-  public void clearZKJMX() throws Exception {
-    Set<ObjectName> names = JMXEnv.ensureAll();
-    for (ObjectName n : names) {
-      JMXEnv.conn().unregisterMBean(n);
-    }
   }
 
   /**

@@ -19,12 +19,12 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.ClientBaseWithFixes;
 import org.apache.hadoop.ha.NodeFencer;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.tools.DFSZKFailoverController;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
-import org.apache.zookeeper.test.ClientBase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,20 +43,13 @@ import org.junit.Test;
 
 import com.google.common.base.Supplier;
 
-public class TestDFSZKFailoverController extends ClientBase {
+public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   private Configuration conf;
   private MiniDFSCluster cluster;
   private TestContext ctx;
   private ZKFCThread thr1, thr2;
   private FileSystem fs;
   
-  @Override
-  public void setUp() throws Exception {
-    // build.test.dir is used by zookeeper
-    new File(System.getProperty("build.test.dir", "build")).mkdirs();
-    super.setUp();
-  }
-
   @Before
   public void setup() throws Exception {
     conf = new Configuration();

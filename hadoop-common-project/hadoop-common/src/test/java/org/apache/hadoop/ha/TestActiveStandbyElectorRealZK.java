@@ -21,7 +21,6 @@ package org.apache.hadoop.ha;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.util.Collections;
 import java.util.UUID;
 
@@ -32,7 +31,6 @@ import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.server.ZooKeeperServer;
-import org.apache.zookeeper.test.ClientBase;
 import org.junit.Test;
 import org.mockito.AdditionalMatchers;
 import org.mockito.Mockito;
@@ -42,7 +40,7 @@ import com.google.common.primitives.Ints;
 /**
  * Test for {@link ActiveStandbyElector} using real zookeeper.
  */
-public class TestActiveStandbyElectorRealZK extends ClientBase {
+public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
   static final int NUM_ELECTORS = 2;
   
   static {
@@ -61,8 +59,6 @@ public class TestActiveStandbyElectorRealZK extends ClientBase {
   
   @Override
   public void setUp() throws Exception {
-    // build.test.dir is used by zookeeper
-    new File(System.getProperty("build.test.dir", "build")).mkdirs();
     super.setUp();
     
     zkServer = getServer(serverFactory);
@@ -244,4 +240,19 @@ public class TestActiveStandbyElectorRealZK extends ClientBase {
     checkFatalsAndReset();
   }
 
+  @Test(timeout=15000)
+  public void testDontJoinElectionOnDisconnectAndReconnect() throws Exception {
+    electors[0].ensureParentZNode();
+
+    stopServer();
+    ActiveStandbyElectorTestUtil.waitForElectorState(
+        null, electors[0], State.NEUTRAL);
+    startServer();
+    waitForServerUp(hostPort, CONNECTION_TIMEOUT);
+    // Have to sleep to allow time for the clients to reconnect.
+    Thread.sleep(2000);
+    Mockito.verify(cbs[0], Mockito.never()).becomeActive();
+    Mockito.verify(cbs[1], Mockito.never()).becomeActive();
+    checkFatalsAndReset();
+  }
 }

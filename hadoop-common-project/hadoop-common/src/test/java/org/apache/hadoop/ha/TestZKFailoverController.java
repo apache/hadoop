@@ -19,7 +19,6 @@ package org.apache.hadoop.ha;
 
 import static org.junit.Assert.*;
 
-import java.io.File;
 import java.security.NoSuchAlgorithmException;
 
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -32,12 +31,11 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.auth.DigestAuthenticationProvider;
-import org.apache.zookeeper.test.ClientBase;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-public class TestZKFailoverController extends ClientBase {
+public class TestZKFailoverController extends ClientBaseWithFixes {
   private Configuration conf;
   private MiniZKFCCluster cluster;
   
@@ -61,13 +59,6 @@ public class TestZKFailoverController extends ClientBase {
   
   static {
     ((Log4JLogger)ActiveStandbyElector.LOG).getLogger().setLevel(Level.ALL);
-  }
-  
-  @Override
-  public void setUp() throws Exception {
-    // build.test.dir is used by zookeeper
-    new File(System.getProperty("build.test.dir", "build")).mkdirs();
-    super.setUp();
   }
   
   @Before

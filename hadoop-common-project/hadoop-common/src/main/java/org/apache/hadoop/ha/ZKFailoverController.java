@@ -154,6 +154,7 @@ public abstract class ZKFailoverController implements Tool {
     try {
       mainLoop();
     } finally {
+      elector.quitElection(true);
       healthMonitor.shutdown();
       healthMonitor.join();
     }
@@ -378,6 +379,11 @@ public abstract class ZKFailoverController implements Tool {
         // won't it? We need some kind of backoff
         throw new RuntimeException("Unable to fence " + target);
       }
+    }
+    
+    @Override
+    public String toString() {
+      return "Elector callbacks for " + localTarget;
     }
   }
   
