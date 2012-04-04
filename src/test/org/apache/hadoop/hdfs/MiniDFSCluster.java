@@ -1001,4 +1001,9 @@ public class MiniDFSCluster {
   public String getDataDirectory() {
     return data_dir.getAbsolutePath();
   }
+
+  public static File getBaseDir() {
+    return new File(System.getProperty(
+      "test.build.data", "build/test/data"), "dfs/");
+  }
 }

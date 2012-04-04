@@ -25,9 +25,12 @@ import java.io.EOFException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FilterInputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.lang.Math;
 import java.nio.channels.FileChannel;
@@ -502,7 +505,14 @@ public class FSEditLog {
     long highestGenStamp = -1;
     long startTime = FSNamesystem.now();
 
-    DataInputStream in = new DataInputStream(new BufferedInputStream(edits));
+    // Keep track of the file offsets of the last several opcodes.
+    // This is handy when manually recovering corrupted edits files.
+    PositionTrackingInputStream tracker = 
+      new PositionTrackingInputStream(new BufferedInputStream(edits));
+    long recentOpcodeOffsets[] = new long[4];
+    Arrays.fill(recentOpcodeOffsets, -1);
+
+    DataInputStream in = new DataInputStream(tracker);
     try {
       // Read log file version. Could be missing. 
       in.mark(4);
@@ -542,6 +552,8 @@ public class FSEditLog {
         } catch (EOFException e) {
           break; // no more transactions
         }
+        recentOpcodeOffsets[numEdits % recentOpcodeOffsets.length] =
+          tracker.getPos();
         numEdits++;
         switch (opcode) {
         case OP_ADD:
@@ -850,21 +862,34 @@ public class FSEditLog {
         }
         }
       }
-    } catch (IOException ex) {
-      // Failed to load 0.20.203 version edits during upgrade. This version has
-      // conflicting opcodes with the later releases. The editlog must be 
-      // emptied by restarting the namenode, before proceeding with the upgrade.
+    } catch (Throwable t) {
+      // Catch Throwable because in the case of a truly corrupt edits log, any
+      // sort of error might be thrown (NumberFormat, NullPointer, EOF, etc.)
       if (Storage.is203LayoutVersion(logVersion) &&
           logVersion != FSConstants.LAYOUT_VERSION) {
+        // Failed to load 0.20.203 version edits during upgrade. This version has
+        // conflicting opcodes with the later releases. The editlog must be 
+        // emptied by restarting the namenode, before proceeding with the upgrade.
         String msg = "During upgrade, failed to load the editlog version " + 
-        logVersion + " from release 0.20.203. Please go back to the old " + 
-        " release and restart the namenode. This empties the editlog " +
-        " and saves the namespace. Resume the upgrade after this step.";
-        throw new IOException(msg, ex);
-      } else {
-        throw ex;
+          logVersion + " from release 0.20.203. Please go back to the old " + 
+          " release and restart the namenode. This empties the editlog " +
+          " and saves the namespace. Resume the upgrade after this step.";
+        throw new IOException(msg, t);
       }
-      
+      StringBuilder sb = new StringBuilder();
+      sb.append("Error replaying edit log at offset " + tracker.getPos());
+      if (recentOpcodeOffsets[0] != -1) {
+        Arrays.sort(recentOpcodeOffsets);
+        sb.append("\nRecent opcode offsets:");
+        for (long offset : recentOpcodeOffsets) {
+          if (offset != -1) {
+            sb.append(' ').append(offset);
+          }
+        }
+      }
+      String errorMessage = sb.toString();
+      FSImage.LOG.error(errorMessage);
+      throw new IOException(errorMessage, t);
     } finally {
       in.close();
     }
@@ -1406,5 +1431,53 @@ public class FSEditLog {
       blocks[i].readFields(in);
     }
     return blocks;
+  }
+
+  /**
+   * Stream wrapper that keeps track of the current file position.
+   */
+  private static class PositionTrackingInputStream extends FilterInputStream {
+    private long curPos = 0;
+    private long markPos = -1;
+
+    public PositionTrackingInputStream(InputStream is) {
+      super(is);
+    }
+
+    public int read() throws IOException {
+      int ret = super.read();
+      if (ret != -1) curPos++;
+      return ret;
+    }
+
+    public int read(byte[] data) throws IOException {
+      int ret = super.read(data);
+      if (ret > 0) curPos += ret;
+      return ret;
+    }
+
+    public int read(byte[] data, int offset, int length) throws IOException {
+      int ret = super.read(data, offset, length);
+      if (ret > 0) curPos += ret;
+      return ret;
+    }
+
+    public void mark(int limit) {
+      super.mark(limit);
+      markPos = curPos;
+    }
+
+    public void reset() throws IOException {
+      if (markPos == -1) {
+        throw new IOException("Not marked!");
+      }
+      super.reset();
+      curPos = markPos;
+      markPos = -1;
+    }
+
+    public long getPos() {
+      return curPos;
+    }
   }
 }

@@ -84,6 +84,9 @@ Release 1.1.0 - unreleased
 
     HDFS-3131. Improve TestStorageRestore. (Brandon Li via atm)
 
+    HDFS-1378. Edit log replay should track and report file offsets in case of
+    errors. (atm and todd, backport by Colin Patrick McCabe via todd)
+
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
