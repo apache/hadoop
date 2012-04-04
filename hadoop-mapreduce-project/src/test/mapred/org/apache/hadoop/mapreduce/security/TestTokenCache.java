@@ -321,7 +321,7 @@ public class TestTokenCache {
     final Token<DelegationTokenIdentifier> t = 
       new Token<DelegationTokenIdentifier>(dtId, dtSecretManager);
 
-    final URI uri = new URI("hftp://host:2222/file1");
+    final URI uri = new URI("hftp://127.0.0.1:2222/file1");
     final String fs_addr = 
       SecurityUtil.buildDTServiceName(uri, NameNode.DEFAULT_PORT);
     t.setService(new Text(fs_addr));
