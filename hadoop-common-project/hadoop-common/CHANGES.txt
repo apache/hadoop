@@ -245,6 +245,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8242. AbstractDelegationTokenIdentifier: add getter methods
     for owner and realuser. (Colin Patrick McCabe via eli)
 
+    HADOOP-8007. Use substitution tokens for fencing argument (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -381,6 +383,9 @@ Release 0.23.3 - UNRELEASED
 
   BUG FIXES
 
+    HADOOP-8088. User-group mapping cache incorrectly does negative caching on
+    transient failures (Khiwal Lee via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
@@ -475,9 +480,6 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8176.  Disambiguate the destination of FsShell copies (Daryn Sharp
     via bobby)
-
-    HADOOP-8088. User-group mapping cache incorrectly does negative caching on
-    transient failures (Khiwal Lee via bobby)
 
     HADOOP-8208. Disallow self failover. (eli)
 

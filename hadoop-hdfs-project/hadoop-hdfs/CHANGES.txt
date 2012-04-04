@@ -22,9 +22,6 @@ Trunk (unreleased changes)
 
     HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
 
-    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
-    (Hari Mankude via eli)
-
     HDFS-2857. Cleanup BlockInfo class. (suresh)
 
     HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal Lee
@@ -185,6 +182,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3148. The client should be able to use multiple local interfaces
     for data transfer. (eli)
 
+    HDFS-3000. Add a public API for setting quotas. (atm)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
@@ -305,6 +304,17 @@ Release 2.0.0 - UNRELEASED
     HDFS-3130. Move fsdataset implementation to a package.  (szetszwo)
 
     HDFS-3120. Enable hsync and hflush by default. (eli)
+
+    HDFS-3187. Upgrade guava to 11.0.2 (todd)
+
+    HDFS-3168. Remove unnecessary "throw IOException" and change fields to
+    final in FSNamesystem and BlockManager.  (szetszwo)
+
+    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
+    (Hari Mankude via eli)
+
+    HDFS-3084. FenceMethod.tryFence() and ShellCommandFencer should pass
+    namenodeId as well as host:port (todd)
 
   OPTIMIZATIONS
 

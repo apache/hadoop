@@ -139,6 +139,8 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3955. Change MR to use ProtobufRpcEngine from hadoop-common
     instead of ProtoOverHadoopRpcEngine. (Jitendra Nath Pandey via sseth)
 
+    MAPREDUCE-4103. Fix HA docs for changes to shell command fencer args (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -197,7 +199,9 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4095. TestJobInProgress#testLocality uses a bogus topology.
     (Colin Patrick McCabe via eli)
-    
+
+    MAPREDUCE-4098. TestMRApps testSetClasspath fails (tucu)
+ 
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -240,6 +244,16 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4020. Web services returns incorrect JSON for deep queue tree
     (Anupam Seth via tgraves)
 
+    MAPREDUCE-3672. Killed maps shouldn't be counted towards 
+    JobCounter.NUM_FAILED_MAPS. (Anupam Seth via tgraves)
+
+    MAPREDUCE-3682 Tracker URL says AM tasks run on localhost.
+    (Ravi Prakash via tgraves)
+
+    MAPREDUCE-3082. Archive command take wrong path for input file with current
+    directory (John George via bobby)
+
+    MAPREDUCE-3650. testGetTokensForHftpFS() fails (Ravi Prakash via bobby)
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

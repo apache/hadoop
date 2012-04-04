@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.util.Daemon;
@@ -143,8 +143,7 @@ public class BlockManagerTestUtil {
    * {@link DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY} to
    * a high value to ensure that all work is calculated.
    */
-  public static int computeAllPendingWork(BlockManager bm)
-    throws IOException {
+  public static int computeAllPendingWork(BlockManager bm) {
     int work = computeInvalidationWork(bm);
     work += bm.computeReplicationWork(Integer.MAX_VALUE);
     return work;

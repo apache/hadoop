@@ -731,7 +731,9 @@ public class MiniDFSCluster {
       Preconditions.checkArgument(!dstDir.equals(srcDir));
       File dstDirF = new File(dstDir);
       if (dstDirF.exists()) {
-        Files.deleteRecursively(dstDirF);
+        if (!FileUtil.fullyDelete(dstDirF)) {
+          throw new IOException("Unable to delete: " + dstDirF);
+        }
       }
       LOG.info("Copying namedir from primary node dir "
           + srcDir + " to " + dstDir);
