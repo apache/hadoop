@@ -322,13 +322,40 @@ HDFS High Availability
       The string between '(' and ')' is passed directly to a bash shell and may not
       include any closing parentheses.
 
-      When executed, the first argument to the configured script will be the address
-      of the NameNode to be fenced, followed by all arguments specified in the
-      configuration.
-
       The shell command will be run with an environment set up to contain all of the
       current Hadoop configuration variables, with the '_' character replacing any
-      '.' characters in the configuration keys. If the shell command returns an exit
+      '.' characters in the configuration keys. The configuration used has already had
+      any namenode-specific configurations promoted to their generic forms -- for example
+      <<dfs_namenode_rpc-address>> will contain the RPC address of the target node, even
+      though the configuration may specify that variable as
+      <<dfs.namenode.rpc-address.ns1.nn1>>.
+      
+      Additionally, the following variables referring to the target node to be fenced
+      are also available:
+
+*-----------------------:-----------------------------------+
+| $target_host          | hostname of the node to be fenced |
+*-----------------------:-----------------------------------+
+| $target_port          | IPC port of the node to be fenced |
+*-----------------------:-----------------------------------+
+| $target_address       | the above two, combined as host:port |
+*-----------------------:-----------------------------------+
+| $target_nameserviceid | the nameservice ID of the NN to be fenced |
+*-----------------------:-----------------------------------+
+| $target_namenodeid    | the namenode ID of the NN to be fenced |
+*-----------------------:-----------------------------------+
+      
+      These environment variables may also be used as substitutions in the shell
+      command itself. For example:
+
+---
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>shell(/path/to/my/script.sh --nameservice=$target_nameserviceid $target_host:$target_port)</value>
+</property>
+---
+      
+      If the shell command returns an exit
       code of 0, the fencing is determined to be successful. If it returns any other
       exit code, the fencing was not successful and the next fencing method in the
       list will be attempted.

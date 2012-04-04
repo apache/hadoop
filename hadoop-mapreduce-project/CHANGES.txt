@@ -43,6 +43,8 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3955. Change MR to use ProtobufRpcEngine from hadoop-common
     instead of ProtoOverHadoopRpcEngine. (Jitendra Nath Pandey via sseth)
 
+    MAPREDUCE-4103. Fix HA docs for changes to shell command fencer args (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
