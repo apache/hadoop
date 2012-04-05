@@ -64,7 +64,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    *          Size of flush buffer
    * @throws IOException
    */
-  EditLogFileOutputStream(File name, int size) throws IOException {
+  public EditLogFileOutputStream(File name, int size) throws IOException {
     super();
     file = name;
     doubleBuf = new EditsDoubleBuffer(size);
@@ -174,7 +174,7 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
    * accumulates new log records while readyBuffer will be flushed and synced.
    */
   @Override
-  protected void flushAndSync() throws IOException {
+  public void flushAndSync() throws IOException {
     if (fp == null) {
       throw new IOException("Trying to use aborted output stream");
     }

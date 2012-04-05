@@ -19,49 +19,44 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.File;
 import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
+
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
+
+import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 
 /**
- * BinaryEditsVisitor implements a binary EditsVisitor
+ * OfflineEditsLoader walks an EditsVisitor over an EditLogInputStream
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class BinaryEditsVisitor implements OfflineEditsVisitor {
-  final private EditLogFileOutputStream elfos;
-
-  /**
-   * Create a processor that writes to a given file
-   *
-   * @param filename Name of file to write output to
-   */
-  public BinaryEditsVisitor(String outputName) throws IOException {
-    this.elfos = new EditLogFileOutputStream(new File(outputName), 0);
-    elfos.create();
-  }
-
-  /**
-   * Start the visitor (initialization)
-   */
-  @Override
-  public void start(int version) throws IOException {
-  }
-
-  /**
-   * Finish the visitor
-   */
-  @Override
-  public void close(Throwable error) throws IOException {
-    elfos.setReadyToFlush();
-    elfos.flushAndSync();
-    elfos.close();
-  }
-
-  @Override
-  public void visitOp(FSEditLogOp op) throws IOException {
-    elfos.write(op);
+interface OfflineEditsLoader {
+  
+  abstract public void loadEdits() throws IOException;
+  
+  public abstract void setFixTxIds();
+  
+  static class OfflineEditsLoaderFactory {
+    static OfflineEditsLoader createLoader(OfflineEditsVisitor visitor,
+        String inputFileName, boolean xmlInput) throws IOException {
+      if (xmlInput) {
+        return new OfflineEditsXmlLoader(visitor, new File(inputFileName));
+      } else {
+        File file = null;
+        EditLogInputStream elis = null;
+        OfflineEditsLoader loader = null;
+        try {
+          file = new File(inputFileName);
+          elis = new EditLogFileInputStream(file, -1, -1, false);
+          loader = new OfflineEditsBinaryLoader(visitor, elis);
+        } finally {
+          if ((loader == null) && (elis != null)) {
+            elis.close();
+          }
+        }
+        return loader;
+      }
+    }
   }
 }

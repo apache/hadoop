@@ -216,6 +216,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3084. FenceMethod.tryFence() and ShellCommandFencer should pass
     namenodeId as well as host:port (todd)
 
+    HDFS-3050. rework OEV to share more code with the NameNode.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
