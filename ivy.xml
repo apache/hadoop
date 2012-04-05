@@ -85,6 +85,11 @@
       rev="${commons-cli.version}"
       conf="client->default"/>
 
+    <dependency org="commons-io"
+      name="commons-io"
+      rev="${commons-io.version}"
+      conf="client->default"/>
+
     <dependency org="checkstyle"
       name="checkstyle"
       rev="${checkstyle.version}"

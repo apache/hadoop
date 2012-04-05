@@ -78,6 +78,9 @@ public class TestFileUtil {
     File linkDir = new File(del, "tmpDir");
     FileUtil.symLink(tmp.toString(), linkDir.toString());
     Assert.assertEquals(5, del.listFiles().length);
+
+    // create a cycle using symlinks. Cycles should be handled
+    FileUtil.symLink(del.toString(), del.toString() + "/" + DIR + "1/cycle");
   }
 
   @After
@@ -302,5 +305,18 @@ public class TestFileUtil {
     } catch(IOException ioe) {
       //Expected an IOException
     }
+  }
+
+  /**
+   * Test that getDU is able to handle cycles caused due to symbolic links
+   * and that directory sizes are not added to the final calculated size
+   * @throws IOException
+   */
+  @Test
+  public void testGetDU() throws IOException {
+    setupDirs();
+
+    long du = FileUtil.getDU(TEST_DIR);
+    Assert.assertEquals(du, 0);
   }
 }

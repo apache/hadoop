@@ -28,6 +28,9 @@ Release 1.0.3 - unreleased
     HADOOP-5528. Ensure BinaryPartitioner is present in mapred libs. (Klaas
     Bosteels via acmurthy)
 
+    HADOOP-6963. In FileUtil.getDU(..), neither include the size of directories
+    nor follow symbolic links.  (Ravi Prakash via szetszwo)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
