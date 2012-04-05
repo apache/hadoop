@@ -158,6 +158,10 @@ Release 0.23.3 - UNRELEASED
     directory (John George via bobby)
 
     MAPREDUCE-3650. testGetTokensForHftpFS() fails (Ravi Prakash via bobby)
+
+    MAPREDUCE-3621. TestDBJob and TestDataDrivenDBInputFormat ant tests fail
+    (Ravi Prakash via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

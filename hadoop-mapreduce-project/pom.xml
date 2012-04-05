@@ -100,10 +100,6 @@
           <groupId>org.mortbay.jetty</groupId>
           <artifactId>jsp-2.1-jetty</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>hsqldb</groupId>
-          <artifactId>hsqldb</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
 
