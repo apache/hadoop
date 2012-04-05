@@ -49,7 +49,7 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.hsqldb.Server;
+import org.hsqldb.server.Server;
 
 /**
  * This is a demonstrative program, which uses DBInputFormat for reading
@@ -78,7 +78,7 @@ public class DBCountPageView extends Configured implements Tool {
   
   private static final String DB_URL = 
     "jdbc:hsqldb:hsql://localhost/URLAccess";
-  private static final String DRIVER_CLASS = "org.hsqldb.jdbcDriver";
+  private static final String DRIVER_CLASS = "org.hsqldb.jdbc.JDBCDriver";
   
   private Server server;
   
