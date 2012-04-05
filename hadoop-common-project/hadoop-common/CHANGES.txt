@@ -18,6 +18,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8179. risk of NPE in CopyCommands processArguments() (Daryn Sharp
     via bobby)
 
+    HADOOP-6963. In FileUtil.getDU(..), neither include the size of directories
+    nor follow symbolic links.  (Ravi Prakash via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
