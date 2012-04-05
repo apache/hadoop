@@ -162,6 +162,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3621. TestDBJob and TestDataDrivenDBInputFormat ant tests fail
     (Ravi Prakash via tgraves)
 
+    MAPREDUCE-4073. CS assigns multiple off-switch containers when using
+    multi-level-queues (Siddharth Seth via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
