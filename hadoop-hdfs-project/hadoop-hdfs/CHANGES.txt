@@ -319,6 +319,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3202. NamespaceInfo PB translation drops build version. (atm)
 
+    HDFS-3109. Remove hsqldf exclusions from pom.xml. (Ravi Prakash
+    via suresh)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

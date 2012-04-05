@@ -146,10 +146,6 @@
           <artifactId>jets3t</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>hsqldb</groupId>
-          <artifactId>hsqldb</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.eclipse.jdt</groupId>
           <artifactId>core</artifactId>
         </exclusion>
@@ -211,10 +207,6 @@
         <exclusion>
           <groupId>net.java.dev.jets3t</groupId>
           <artifactId>jets3t</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>hsqldb</groupId>
-          <artifactId>hsqldb</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jdt</groupId>
