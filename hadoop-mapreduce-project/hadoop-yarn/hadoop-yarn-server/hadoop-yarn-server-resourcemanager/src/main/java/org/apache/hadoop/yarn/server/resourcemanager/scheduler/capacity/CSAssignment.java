@@ -26,7 +26,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 @Unstable
 public class CSAssignment {
   final private Resource resource;
-  final private NodeType type;
+  private NodeType type;
   
   public CSAssignment(Resource resource, NodeType type) {
     this.resource = resource;
@@ -39,6 +39,10 @@ public class CSAssignment {
 
   public NodeType getType() {
     return type;
+  }
+  
+  public void setType(NodeType type) {
+    this.type = type;
   }
   
   @Override

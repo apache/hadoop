@@ -59,6 +59,9 @@ Trunk (unreleased changes)
 
     HDFS-3131. Improve TestStorageRestore. (Brandon Li via atm)
 
+    HDFS-3178. Add states and state handler for journal synchronization in
+    JournalService.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.

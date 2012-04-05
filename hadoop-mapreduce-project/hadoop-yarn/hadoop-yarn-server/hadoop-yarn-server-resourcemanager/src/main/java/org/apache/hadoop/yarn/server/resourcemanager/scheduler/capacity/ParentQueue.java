@@ -519,7 +519,6 @@ public class ParentQueue implements CSQueue {
       Resource clusterResource, SchedulerNode node) {
     CSAssignment assignment = 
         new CSAssignment(Resources.createResource(0), NodeType.NODE_LOCAL);
-    boolean assignedOffSwitch = false;
     
     while (canAssign(node)) {
       if (LOG.isDebugEnabled()) {
@@ -535,7 +534,7 @@ public class ParentQueue implements CSQueue {
       // Schedule
       CSAssignment assignedToChild = 
           assignContainersToChildQueues(clusterResource, node);
-      assignedOffSwitch = (assignedToChild.getType() == NodeType.OFF_SWITCH);
+      assignment.setType(assignedToChild.getType());
       
       // Done if no child-queue assigned anything
       if (Resources.greaterThan(assignedToChild.getResource(), 
@@ -566,15 +565,13 @@ public class ParentQueue implements CSQueue {
 
       // Do not assign more than one container if this isn't the root queue
       // or if we've already assigned an off-switch container
-      if (rootQueue) {
-        if (assignedOffSwitch) {
-          if (LOG.isDebugEnabled()) {
+      if (!rootQueue || assignment.getType() == NodeType.OFF_SWITCH) {
+        if (LOG.isDebugEnabled()) {
+          if (rootQueue && assignment.getType() == NodeType.OFF_SWITCH) {
             LOG.debug("Not assigning more than one off-switch container," +
-            		" assignments so far: " + assignment);
+                " assignments so far: " + assignment);
           }
-          break;
         }
-      } else {
         break;
       }
     } 
