@@ -18,29 +18,50 @@
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.IOException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import java.io.OutputStream;
 
 /**
- * TokenizerFactory for different implementations of Tokenizer
- *
+ * A TeeOutputStream writes its output to multiple output streams.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class TokenizerFactory {
+public class TeeOutputStream extends OutputStream {
+  private OutputStream outs[];
 
-  /**
-   * Factory function that creates a Tokenizer object, the input format
-   * is set based on filename (*.xml is XML, otherwise binary)
-   *
-   * @param filename input filename
-   */
-  static public Tokenizer getTokenizer(String filename) throws IOException {
-    if(filename.toLowerCase().endsWith("xml")) {
-      return new XmlTokenizer(filename);
-    } else {
-      return new BinaryTokenizer(filename);
+  public TeeOutputStream(OutputStream outs[]) {
+    this.outs = outs;
+  }
+
+  @Override
+  public void write(int c) throws IOException {
+    for (OutputStream o : outs) {
+     o.write(c);
     }
   }
 
+  @Override
+  public void write(byte[] b) throws IOException {
+    for (OutputStream o : outs) {
+     o.write(b);
+    }
+  }
+
+  @Override
+  public void write(byte[] b, int off, int len) throws IOException {
+    for (OutputStream o : outs) {
+     o.write(b, off, len);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    for (OutputStream o : outs) {
+     o.close();
+    }
+  }
+
+  @Override
+  public void flush() throws IOException {
+    for (OutputStream o : outs) {
+     o.flush();
+    }
+  }
 }

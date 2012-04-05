@@ -17,51 +17,43 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import java.io.FileInputStream;
-import java.io.DataInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 
 /**
- * Tokenizer that reads tokens from a binary file
- *
+ * An implementation of OfflineEditsVisitor can traverse the structure of an
+ * Hadoop edits log and respond to each of the structures within the file.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class BinaryTokenizer implements Tokenizer {
-
-  private DataInputStream in;
+abstract public interface OfflineEditsVisitor {
+  /**
+   * Begin visiting the edits log structure.  Opportunity to perform
+   * any initialization necessary for the implementing visitor.
+   * 
+   * @param version     Edit log version
+   */
+  abstract void start(int version) throws IOException;
 
   /**
-   * BinaryTokenizer constructor
-   *
-   * @param filename input filename
+   * Finish visiting the edits log structure.  Opportunity to perform any
+   * clean up necessary for the implementing visitor.
+   * 
+   * @param error        If the visitor was closed because of an 
+   *                     unrecoverable error in the input stream, this 
+   *                     is the exception.
    */
-  public BinaryTokenizer(String filename) throws FileNotFoundException {
-    in = new DataInputStream(new FileInputStream(filename));
-  }
+  abstract void close(Throwable error) throws IOException;
 
   /**
-   * BinaryTokenizer constructor
+   * Begin visiting an element that encloses another element, such as
+   * the beginning of the list of blocks that comprise a file.
    *
-   * @param in input stream
+   * @param value Token being visited
    */
-  public BinaryTokenizer(DataInputStream in) throws IOException {
-    this.in = in;
-  }
-
-  /**
-   * @see org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer#read
-   *
-   * @param t a Token to read
-   * @return token that was just read
-   */
-  @Override
-  public Token read(Token t) throws IOException {
-    t.fromBinary(in);
-    return t;
-  }
+  abstract void visitOp(FSEditLogOp op)
+     throws IOException;
 }
