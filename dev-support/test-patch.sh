@@ -311,7 +311,7 @@ checkTests () {
   echo "======================================================================"
   echo ""
   echo ""
-  testReferences=`$GREP -c -i '/test' $PATCH_DIR/patch`
+  testReferences=`$GREP -c -i -e '^+++.*/test' $PATCH_DIR/patch`
   echo "There appear to be $testReferences test files referenced in the patch."
   if [[ $testReferences == 0 ]] ; then
     if [[ $JENKINS == "true" ]] ; then
@@ -333,7 +333,7 @@ checkTests () {
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 tests included.  The patch appears to include $testReferences new or modified tests."
+    +1 tests included.  The patch appears to include $testReferences new or modified test files."
   return 0
 }
 

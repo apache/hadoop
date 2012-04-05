@@ -55,6 +55,9 @@ Trunk (unreleased changes)
     HADOOP-8244. Improve comments on ByteBufferReadable.read. (Henry Robinson
     via atm)
 
+    HADOOP-7757. Test file reference count is at least 3x actual value (Jon
+    Eagles via bobby)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
