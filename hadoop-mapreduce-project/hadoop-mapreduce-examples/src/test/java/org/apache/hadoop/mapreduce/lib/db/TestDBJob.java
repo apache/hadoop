@@ -30,10 +30,10 @@ public class TestDBJob extends HadoopTestCase {
   public TestDBJob() throws IOException {
     super(LOCAL_MR, LOCAL_FS, 3, 1);
   }
-  
+
   public void testRun() throws Exception {
     DBCountPageView testDriver = new DBCountPageView();
     ToolRunner.run(createJobConf(), testDriver, new String[0]);
   }
-  
+
 }
