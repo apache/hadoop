@@ -18,12 +18,16 @@
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.EOFException;
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
+import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
+import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsLoader.OfflineEditsLoaderFactory;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -33,6 +37,7 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.xml.sax.SAXParseException;
 
 /**
  * This class implements an offline edits viewer, tool that
@@ -42,27 +47,7 @@ import org.apache.commons.cli.PosixParser;
 @InterfaceStability.Unstable
 public class OfflineEditsViewer extends Configured implements Tool {
 
-  private EditsLoader  editsLoader;
   private final static String defaultProcessor = "xml";
-
-  /**
-   * Set editsLoader
-   *
-   * @param editsLoader EditsLoader
-   */
-  private void setEditsLoader(EditsLoader editsLoader) {
-    this.editsLoader = editsLoader;
-  }
-
-  /**
-   * Process EditLog file.
-   *
-   * @param visitor use this visitor to process the file
-   */
-  public void go(EditsVisitor visitor) throws IOException  {
-    setEditsLoader(EditsLoader.LoaderFactory.getLoader(visitor));
-    editsLoader.loadEdits();
-  }
 
   /**
    * Print help.
@@ -90,6 +75,9 @@ public class OfflineEditsViewer extends Configured implements Tool {
       "                       format), stats (prints statistics about\n" +
       "                       edits file)\n" +
       "-h,--help              Display usage information and exit\n" +
+      "-f,--fix-txids         Renumber the transaction IDs in the input,\n" +
+      "                       so that there are no gaps or invalid " +
+      "                       transaction IDs.\n" +
       "-v,--verbose           More verbose output, prints the input and\n" +
       "                       output filenames, for processors that write\n" +
       "                       to a file, also output to screen. On large\n" +
@@ -124,9 +112,46 @@ public class OfflineEditsViewer extends Configured implements Tool {
     
     options.addOption("p", "processor", true, "");
     options.addOption("v", "verbose", false, "");
+    options.addOption("f", "fix-txids", false, "");
     options.addOption("h", "help", false, "");
 
     return options;
+  }
+
+  /** Process an edit log using the chosen processor or visitor.
+   * 
+   * @param inputFilename   The file to process
+   * @param outputFilename  The output file name
+   * @param processor       If visitor is null, the processor to use
+   * @param visitor         If non-null, the visitor to use.
+   * 
+   * @return                0 on success; error code otherwise
+   */
+  public int go(String inputFileName, String outputFileName, String processor,
+      boolean printToScreen, boolean fixTxIds, OfflineEditsVisitor visitor)
+  {
+    if (printToScreen) {
+      System.out.println("input  [" + inputFileName  + "]");
+      System.out.println("output [" + outputFileName + "]");
+    }
+    try {
+      if (visitor == null) {
+        visitor = OfflineEditsVisitorFactory.getEditsVisitor(
+            outputFileName, processor, printToScreen);
+      }
+      boolean xmlInput = inputFileName.endsWith(".xml");
+      OfflineEditsLoader loader = OfflineEditsLoaderFactory.
+          createLoader(visitor, inputFileName, xmlInput);
+      if (fixTxIds) {
+        loader.setFixTxIds();
+      }
+      loader.loadEdits();
+    } catch(Exception e) {
+      System.err.println("Encountered exception. Exiting: " + e.getMessage());
+      e.printStackTrace(System.err);
+      return -1;
+    }
+    return 0;
   }
 
   /**
@@ -137,17 +162,13 @@ public class OfflineEditsViewer extends Configured implements Tool {
    */
   @Override
   public int run(String[] argv) throws Exception {
-    int exitCode = 0;
-
     Options options = buildOptions();
     if(argv.length == 0) {
       printHelp();
       return -1;
     }
-
     CommandLineParser parser = new PosixParser();
     CommandLine cmd;
-
     try {
       cmd = parser.parse(options, argv);
     } catch (ParseException e) {
@@ -156,37 +177,20 @@ public class OfflineEditsViewer extends Configured implements Tool {
       printHelp();
       return -1;
     }
-
     if(cmd.hasOption("h")) { // print help and exit
       printHelp();
       return -1;
     }
-
-    boolean printToScreen    = false;
-    String inputFilenameArg  = cmd.getOptionValue("i");
-    String outputFilenameArg = cmd.getOptionValue("o");
-    String processor         = cmd.getOptionValue("p");
-    if(processor == null) { processor = defaultProcessor; }
-
-    if(cmd.hasOption("v")) { // print output to screen too
-      printToScreen = true;
-      System.out.println("input  [" + inputFilenameArg  + "]");
-      System.out.println("output [" + outputFilenameArg + "]");
+    String inputFileName = cmd.getOptionValue("i");
+    String outputFileName = cmd.getOptionValue("o");
+    String processor = cmd.getOptionValue("p");
+    if(processor == null) {
+      processor = defaultProcessor;
     }
-
-    try {
-      go(EditsVisitorFactory.getEditsVisitor(
-        outputFilenameArg,
-        processor,
-        TokenizerFactory.getTokenizer(inputFilenameArg),
-        printToScreen));
-    } catch (EOFException e) {
-      System.err.println("Input file ended unexpectedly. Exiting");
-    } catch(IOException e) {
-      System.err.println("Encountered exception. Exiting: " + e.getMessage());
-    }
-
-    return exitCode;
+    boolean printToScreen = cmd.hasOption("v");
+    boolean fixTxIds = cmd.hasOption("f");
+    return go(inputFileName, outputFileName, processor,
+        printToScreen, fixTxIds, null);
   }
 
   /**

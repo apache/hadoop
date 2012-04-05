@@ -50,13 +50,18 @@ public class NamespaceInfo extends StorageInfo {
     super();
     buildVersion = null;
   }
-  
-  public NamespaceInfo(int nsID, String clusterID, String bpID, 
-      long cT, int duVersion) {
+
+  public NamespaceInfo(int nsID, String clusterID, String bpID,
+      long cT, int duVersion, String buildVersion) {
     super(HdfsConstants.LAYOUT_VERSION, nsID, clusterID, cT);
     blockPoolID = bpID;
-    buildVersion = Storage.getBuildVersion();
+    this.buildVersion = buildVersion;
     this.distributedUpgradeVersion = duVersion;
+  }
+
+  public NamespaceInfo(int nsID, String clusterID, String bpID, 
+      long cT, int duVersion) {
+    this(nsID, clusterID, bpID, cT, duVersion, Storage.getBuildVersion());
   }
   
   public String getBuildVersion() {

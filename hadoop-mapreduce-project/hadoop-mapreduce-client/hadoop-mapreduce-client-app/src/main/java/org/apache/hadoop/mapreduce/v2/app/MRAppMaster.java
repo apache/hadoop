@@ -643,7 +643,8 @@ public class MRAppMaster extends CompositeService {
     public synchronized void start() {
       if (job.isUber()) {
         this.containerAllocator = new LocalContainerAllocator(
-            this.clientService, this.context);
+            this.clientService, this.context, nmHost, nmPort, nmHttpPort
+            , containerID);
       } else {
         this.containerAllocator = new RMContainerAllocator(
             this.clientService, this.context);

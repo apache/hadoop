@@ -52,6 +52,11 @@ Trunk (unreleased changes)
     HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the 
     client side translator and server side implementation. (jitendra)
 
+    HADOOP-8244. Improve comments on ByteBufferReadable.read. (Henry Robinson
+    via atm)
+
+    HADOOP-7757. Test file reference count is at least 3x actual value (Jon
+    Eagles via bobby)
 
   BUG FIXES
 
@@ -245,6 +250,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8242. AbstractDelegationTokenIdentifier: add getter methods
     for owner and realuser. (Colin Patrick McCabe via eli)
 
+    HADOOP-8007. Use substitution tokens for fencing argument (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -314,6 +321,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8238. NetUtils#getHostNameOfIP blows up if given ip:port
     string w/o port. (eli)
 
+    HADOOP-8243. Security support broken in CLI (manual) failover controller
+    (todd)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -377,6 +387,18 @@ Release 0.23.3 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HADOOP-8088. User-group mapping cache incorrectly does negative caching on
+    transient failures (Khiwal Lee via bobby)
+
+    HADOOP-8179. risk of NPE in CopyCommands processArguments() (Daryn Sharp
+    via bobby)
+
+    HADOOP-6963. In FileUtil.getDU(..), neither include the size of directories
+    nor follow symbolic links.  (Ravi Prakash via szetszwo)
+
+    HADOOP-8180. Remove hsqldb since its not needed from pom.xml (Ravi Prakash
+    via tgraves)
 
 Release 0.23.2 - UNRELEASED 
 
@@ -472,9 +494,6 @@ Release 0.23.2 - UNRELEASED
 
     HADOOP-8176.  Disambiguate the destination of FsShell copies (Daryn Sharp
     via bobby)
-
-    HADOOP-8088. User-group mapping cache incorrectly does negative caching on
-    transient failures (Khiwal Lee via bobby)
 
     HADOOP-8208. Disallow self failover. (eli)
 

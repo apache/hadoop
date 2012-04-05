@@ -17,104 +17,51 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import java.io.FileOutputStream;
-import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 
 /**
  * BinaryEditsVisitor implements a binary EditsVisitor
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class BinaryEditsVisitor extends EditsVisitor {
-  final private DataOutputStream out;
+public class BinaryEditsVisitor implements OfflineEditsVisitor {
+  final private EditLogFileOutputStream elfos;
 
   /**
-   * Create a processor that writes to a given file and
-   * reads using a given Tokenizer
+   * Create a processor that writes to a given file
    *
    * @param filename Name of file to write output to
-   * @param tokenizer Input tokenizer
    */
-  public BinaryEditsVisitor(String filename, Tokenizer tokenizer)
-    throws IOException {
-
-    this(filename, tokenizer, false);
-  }
-
-  /**
-   * Create a processor that writes to a given file and reads using
-   * a given Tokenizer, may also print to screen
-   *
-   * @param filename Name of file to write output to
-   * @param tokenizer Input tokenizer
-   * @param printToScreen Mirror output to screen? (ignored for binary)
-   */
-  public BinaryEditsVisitor(String filename,
-    Tokenizer tokenizer,
-    boolean printToScreen) throws IOException {
-
-    super(tokenizer);
-    out = new DataOutputStream(new FileOutputStream(filename));
+  public BinaryEditsVisitor(String outputName) throws IOException {
+    this.elfos = new EditLogFileOutputStream(new File(outputName), 0);
+    elfos.create();
   }
 
   /**
    * Start the visitor (initialization)
    */
   @Override
-  void start() throws IOException {
-    // nothing to do for binary format
+  public void start(int version) throws IOException {
   }
 
   /**
    * Finish the visitor
    */
   @Override
-  void finish() throws IOException {
-    close();
+  public void close(Throwable error) throws IOException {
+    elfos.setReadyToFlush();
+    elfos.flushAndSync();
+    elfos.close();
   }
 
-  /**
-   * Finish the visitor and indicate an error
-   */
   @Override
-  void finishAbnormally() throws IOException {
-    System.err.println("Error processing EditLog file.  Exiting.");
-    close();
-  }
-
-  /**
-   * Close output stream and prevent further writing
-   */
-  private void close() throws IOException {
-    out.close();
-  }
-
-  /**
-   * Visit a enclosing element (element that has other elements in it)
-   */
-  @Override
-  void visitEnclosingElement(Tokenizer.Token value) throws IOException {
-    // nothing to do for binary format
-  }
-
-  /**
-   * End of eclosing element
-   */
-  @Override
-  void leaveEnclosingElement() throws IOException {
-    // nothing to do for binary format
-  }  
-
-  /**
-   * Visit a Token
-   */
-  @Override
-  Tokenizer.Token visit(Tokenizer.Token value) throws IOException {
-    value.toBinary(out);
-    return value;
+  public void visitOp(FSEditLogOp op) throws IOException {
+    elfos.write(op);
   }
 }

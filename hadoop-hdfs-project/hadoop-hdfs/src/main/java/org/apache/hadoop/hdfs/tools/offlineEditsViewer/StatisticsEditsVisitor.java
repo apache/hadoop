@@ -19,12 +19,15 @@ package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.Map;
 import java.util.HashMap;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 
 /**
@@ -34,24 +37,12 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class StatisticsEditsVisitor extends EditsVisitor {
-  private boolean printToScreen = false;
-  private boolean okToWrite = false;
-  final private FileWriter fw;
+public class StatisticsEditsVisitor implements OfflineEditsVisitor {
+  final private PrintStream out;
 
-  public final Map<FSEditLogOpCodes, Long> opCodeCount =
+  private int version = -1;
+  private final Map<FSEditLogOpCodes, Long> opCodeCount =
     new HashMap<FSEditLogOpCodes, Long>();
-
-  /**
-   * Create a processor that writes to the file named.
-   *
-   * @param filename Name of file to write output to
-   */
-  public StatisticsEditsVisitor(String filename, Tokenizer tokenizer)
-    throws IOException {
-
-    this(filename, tokenizer, false);
-  }
 
   /**
    * Create a processor that writes to the file named and may or may not
@@ -61,103 +52,29 @@ public class StatisticsEditsVisitor extends EditsVisitor {
    * @param tokenizer Input tokenizer
    * @param printToScreen Mirror output to screen?
    */
-  public StatisticsEditsVisitor(String filename,
-    Tokenizer tokenizer,
-    boolean printToScreen) throws IOException {
-
-    super(tokenizer);
-    this.printToScreen = printToScreen;
-    fw = new FileWriter(filename);
-    okToWrite = true;
+  public StatisticsEditsVisitor(OutputStream out) throws IOException {
+    this.out = new PrintStream(out);
   }
 
-  /**
-   * Start the visitor (initialization)
-   */
+  /** Start the visitor */
   @Override
-  void start() throws IOException {
-    // nothing to do
+  public void start(int version) throws IOException {
+    this.version = version;
   }
   
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hdfs.tools.offlineEditsViewer.EditsVisitor#finish()
-   */
+  /** Close the visitor */
   @Override
-  void finish() throws IOException {
-    write(getStatisticsString());
-    close();
-  }
-
-  /* (non-Javadoc)
-   * @see org.apache.hadoop.hdfs.tools.offlineEditsViewer.EditsVisitor#finishAbnormally()
-   */
-  @Override
-  void finishAbnormally() throws IOException {
-    close();
-  }
-
-  /**
-   * Close output stream and prevent further writing
-   */
-  private void close() throws IOException {
-    fw.close();
-    okToWrite = false;
-  }
-
-  /**
-   * Visit a enclosing element (element that has other elements in it)
-   */
-  @Override
-  void visitEnclosingElement(Tokenizer.Token value) throws IOException {
-    // nothing to do
-  }
-
-  /**
-   * End of eclosing element
-   */
-  @Override
-  void leaveEnclosingElement() throws IOException {
-    // nothing to do
-  }  
-
-  /**
-   * Visit a Token, calculate statistics
-   *
-   * @param value a Token to visit
-   */
-  @Override
-  Tokenizer.Token visit(Tokenizer.Token value) throws IOException {
-    // count the opCodes
-    if(value.getEditsElement() == EditsElement.OPCODE) {
-      if(value instanceof Tokenizer.ByteToken) {
-        incrementOpCodeCount(
-          FSEditLogOpCodes.fromByte(((Tokenizer.ByteToken)value).value));
-      } else {
-        throw new IOException("Token for EditsElement.OPCODE should be " +
-          "of type Tokenizer.ByteToken, not " + value.getClass());
-      }
+  public void close(Throwable error) throws IOException {
+    out.print(getStatisticsString());
+    if (error != null) {
+      out.print("EXITING ON ERROR: " + error.toString() + "\n");
     }
-    return value;
+    out.close();
   }
 
-  /**
-   * Write parameter to output file (and possibly screen).
-   *
-   * @param toWrite Text to write to file
-   */
-  protected void write(String toWrite) throws IOException  {
-    if(!okToWrite)
-      throw new IOException("file not open for writing.");
-
-    if(printToScreen)
-      System.out.print(toWrite);
-
-    try {
-      fw.write(toWrite);
-    } catch (IOException e) {
-      okToWrite = false;
-      throw e;
-    }
+  @Override
+  public void visitOp(FSEditLogOp op) throws IOException {
+    incrementOpCodeCount(op.opCode);
   }
 
   /**
@@ -189,10 +106,13 @@ public class StatisticsEditsVisitor extends EditsVisitor {
    */
   public String getStatisticsString() {
     StringBuffer sb = new StringBuffer();
+    sb.append(String.format(
+        "    %-30.30s      : %d%n",
+        "VERSION", version));
     for(FSEditLogOpCodes opCode : FSEditLogOpCodes.values()) {
       sb.append(String.format(
         "    %-30.30s (%3d): %d%n",
-        opCode,
+        opCode.toString(),
         opCode.getOpCode(),
         opCodeCount.get(opCode)));
     }

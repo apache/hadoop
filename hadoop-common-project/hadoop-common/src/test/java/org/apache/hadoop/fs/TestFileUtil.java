@@ -93,6 +93,9 @@ public class TestFileUtil {
     // create files in partitioned directories
     createFile(partitioned, "part-r-00000", "foo");
     createFile(partitioned, "part-r-00001", "bar");
+
+    // create a cycle using symlinks. Cycles should be handled
+    FileUtil.symLink(del.toString(), dir1.toString() + "/cycle");
   }
 
   /**
@@ -457,5 +460,19 @@ public class TestFileUtil {
     }
 
     return result;
+  }
+
+  /**
+   * Test that getDU is able to handle cycles caused due to symbolic links
+   * and that directory sizes are not added to the final calculated size
+   * @throws IOException
+   */
+  @Test
+  public void testGetDU() throws IOException {
+    setupDirs();
+
+    long du = FileUtil.getDU(TEST_DIR);
+    //Only two files (in partitioned) have 4 bytes each
+    Assert.assertEquals(du, 8);
   }
 }

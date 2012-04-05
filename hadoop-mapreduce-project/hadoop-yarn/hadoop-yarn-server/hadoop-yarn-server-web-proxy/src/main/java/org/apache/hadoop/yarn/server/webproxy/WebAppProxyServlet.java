@@ -37,9 +37,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.httpclient.Header;
+import org.apache.commons.httpclient.HostConfiguration;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
-import org.apache.commons.httpclient.HostConfiguration;
 import org.apache.commons.httpclient.cookie.CookiePolicy;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.params.HttpClientParams;
@@ -260,7 +260,24 @@ public class WebAppProxyServlet extends HttpServlet {
       URI trackingUri = ProxyUriUtils.getUriFromAMUrl(
           applicationReport.getOriginalTrackingUrl());
       if(applicationReport.getOriginalTrackingUrl().equals("N/A")) {
-        notFound(resp, "The MRAppMaster died before writing anything.");
+        String message;
+        switch(applicationReport.getFinalApplicationStatus()) {
+          case FAILED:
+          case KILLED:
+          case SUCCEEDED:
+            message =
+              "The requested application exited before setting a tracking URL.";
+            break;
+          case UNDEFINED:
+            message = "The requested application does not appear to be running "
+              +"yet, and has not set a tracking URL.";
+            break;
+          default:
+            //This should never happen, but just to be safe
+            message = "The requested application has not set a tracking URL.";
+            break;
+        }
+        notFound(resp, message);
         return;
       }
 

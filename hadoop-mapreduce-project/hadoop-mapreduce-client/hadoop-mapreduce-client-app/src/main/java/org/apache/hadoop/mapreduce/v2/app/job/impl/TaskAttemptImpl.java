@@ -988,6 +988,23 @@ public abstract class TaskAttemptImpl implements
     }
     return jce;
   }
+  
+  private static JobCounterUpdateEvent createJobCounterUpdateEventTAKilled(
+      TaskAttemptImpl taskAttempt) {
+    TaskType taskType = taskAttempt.getID().getTaskId().getTaskType();
+    JobCounterUpdateEvent jce = new JobCounterUpdateEvent(taskAttempt.getID().getTaskId().getJobId());
+    
+    long slotMillisIncrement = computeSlotMillis(taskAttempt);
+    
+    if (taskType == TaskType.MAP) {
+      jce.addCounterUpdate(JobCounter.NUM_KILLED_MAPS, 1);
+      jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_MAPS, slotMillisIncrement);
+    } else {
+      jce.addCounterUpdate(JobCounter.NUM_KILLED_REDUCES, 1);
+      jce.addCounterUpdate(JobCounter.SLOTS_MILLIS_REDUCES, slotMillisIncrement);
+    }
+    return jce;
+  }  
 
   private static
       TaskAttemptUnsuccessfulCompletionEvent
@@ -1214,8 +1231,13 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptUnsuccessfulCompletionEvent tauce =
             createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
                 finalState);
-        taskAttempt.eventHandler
+        if(finalState == TaskAttemptState.FAILED) {
+          taskAttempt.eventHandler
             .handle(createJobCounterUpdateEventTAFailed(taskAttempt));
+        } else if(finalState == TaskAttemptState.KILLED) {
+          taskAttempt.eventHandler
+          .handle(createJobCounterUpdateEventTAKilled(taskAttempt));
+        }
         taskAttempt.eventHandler.handle(new JobHistoryEvent(
             taskAttempt.attemptId.getTaskId().getJobId(), tauce));
       } else {
@@ -1441,7 +1463,7 @@ public abstract class TaskAttemptImpl implements
       taskAttempt.setFinishTime();
       if (taskAttempt.getLaunchTime() != 0) {
         taskAttempt.eventHandler
-            .handle(createJobCounterUpdateEventTAFailed(taskAttempt));
+            .handle(createJobCounterUpdateEventTAKilled(taskAttempt));
         TaskAttemptUnsuccessfulCompletionEvent tauce =
             createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
                 TaskAttemptState.KILLED);

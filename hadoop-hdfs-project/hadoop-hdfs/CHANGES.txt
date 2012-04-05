@@ -22,9 +22,6 @@ Trunk (unreleased changes)
 
     HDFS-2572. Remove unnecessary double-check in DN#getHostName. (harsh)
 
-    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
-    (Hari Mankude via eli)
-
     HDFS-2857. Cleanup BlockInfo class. (suresh)
 
     HDFS-2786. Fix host-based token incompatibilities in DFSUtil. (Kihwal Lee
@@ -109,6 +106,9 @@ Trunk (unreleased changes)
 
     HDFS-3116. Typo in fetchdt error message. (AOE Takashi via atm)
 
+    HDFS-3126. Journal stream from Namenode to BackupNode needs to have 
+    timeout. (Hari Mankude via suresh)
+    
 Release 2.0.0 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
@@ -181,6 +181,10 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3148. The client should be able to use multiple local interfaces
     for data transfer. (eli)
+
+    HDFS-3000. Add a public API for setting quotas. (atm)
+
+    HDFS-3102. Add CLI tool to initialize the shared-edits dir. (atm)
 
   IMPROVEMENTS
 
@@ -303,6 +307,20 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3120. Enable hsync and hflush by default. (eli)
 
+    HDFS-3187. Upgrade guava to 11.0.2 (todd)
+
+    HDFS-3168. Remove unnecessary "throw IOException" and change fields to
+    final in FSNamesystem and BlockManager.  (szetszwo)
+
+    HDFS-2564. Cleanup unnecessary exceptions thrown and unnecessary casts.
+    (Hari Mankude via eli)
+
+    HDFS-3084. FenceMethod.tryFence() and ShellCommandFencer should pass
+    namenodeId as well as host:port (todd)
+
+    HDFS-3050. rework OEV to share more code with the NameNode.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -398,6 +416,13 @@ Release 2.0.0 - UNRELEASED
     with dfs.namenode.secondary.http-address configured. (eli)
 
     HDFS-3174. Fix assert in TestPendingDataNodeMessages. (eli)
+
+    HDFS-3199. TestValidateConfigurationSettings is failing. (todd via eli)
+
+    HDFS-3202. NamespaceInfo PB translation drops build version. (atm)
+
+    HDFS-3109. Remove hsqldf exclusions from pom.xml. (Ravi Prakash
+    via suresh)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
@@ -727,7 +752,12 @@ Release 0.23.3 - UNRELEASED
 
   BUG FIXES
 
-Release 0.23.2 - UNRELEASED 
+    HDFS-3166. Add timeout to Hftp connections.  (Daryn Sharp via szetszwo)
+
+    HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
+    Lee via szetszwo)
+
+Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 

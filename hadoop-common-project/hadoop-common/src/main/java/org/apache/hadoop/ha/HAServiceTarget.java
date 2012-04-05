@@ -19,6 +19,7 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Map;
 
 import javax.net.SocketFactory;
 
@@ -29,12 +30,18 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
 import org.apache.hadoop.net.NetUtils;
 
+import com.google.common.collect.Maps;
+
 /**
  * Represents a target of the client side HA administration commands.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class HAServiceTarget {
+
+  private static final String HOST_SUBST_KEY = "host";
+  private static final String PORT_SUBST_KEY = "port";
+  private static final String ADDRESS_SUBST_KEY = "address";
 
   /**
    * @return the IPC address of the target node.
@@ -68,11 +75,28 @@ public abstract class HAServiceTarget {
         getAddress(),
         confCopy, factory, timeoutMs);
   }
-
+  
+  public final Map<String, String> getFencingParameters() {
+    Map<String, String> ret = Maps.newHashMap();
+    addFencingParameters(ret);
+    return ret;
+  }
+  
   /**
-   * @return a proxy to connect to the target HA Service.
+   * Hook to allow subclasses to add any parameters they would like to
+   * expose to fencing implementations/scripts. Fencing methods are free
+   * to use this map as they see fit -- notably, the shell script
+   * implementation takes each entry, prepends 'target_', substitutes
+   * '_' for '.', and adds it to the environment of the script.
+   *
+   * Subclass implementations should be sure to delegate to the superclass
+   * implementation as well as adding their own keys.
+   *
+   * @param ret map which can be mutated to pass parameters to the fencer
    */
-  public final HAServiceProtocol getProxy() throws IOException {
-    return getProxy(new Configuration(), 0); // default conf, timeout
+  protected void addFencingParameters(Map<String, String> ret) {
+    ret.put(ADDRESS_SUBST_KEY, String.valueOf(getAddress()));
+    ret.put(HOST_SUBST_KEY, getAddress().getHostName());
+    ret.put(PORT_SUBST_KEY, String.valueOf(getAddress().getPort()));
   }
 }

@@ -15,53 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import java.io.FileInputStream;
-import java.io.DataInputStream;
-import java.io.FileNotFoundException;
+package org.apache.hadoop.hdfs.web;
+
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLConnection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Tokenizer that reads tokens from a binary file
- *
+ * Utilities for handling URLs
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({"HDFS"})
 @InterfaceStability.Unstable
-public class BinaryTokenizer implements Tokenizer {
-
-  private DataInputStream in;
+public class URLUtils {
+  /**
+   * Timeout for socket connects and reads
+   */
+  public static int SOCKET_TIMEOUT = 1*60*1000; // 1 minute
 
   /**
-   * BinaryTokenizer constructor
-   *
-   * @param filename input filename
+   * Opens a url with read and connect timeouts
+   * @param url to open
+   * @return URLConnection
+   * @throws IOException
    */
-  public BinaryTokenizer(String filename) throws FileNotFoundException {
-    in = new DataInputStream(new FileInputStream(filename));
-  }
-
-  /**
-   * BinaryTokenizer constructor
-   *
-   * @param in input stream
-   */
-  public BinaryTokenizer(DataInputStream in) throws IOException {
-    this.in = in;
-  }
-
-  /**
-   * @see org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer#read
-   *
-   * @param t a Token to read
-   * @return token that was just read
-   */
-  @Override
-  public Token read(Token t) throws IOException {
-    t.fromBinary(in);
-    return t;
+  public static URLConnection openConnection(URL url) throws IOException {
+    URLConnection connection = url.openConnection();
+    connection.setConnectTimeout(SOCKET_TIMEOUT);
+    connection.setReadTimeout(SOCKET_TIMEOUT);
+    return connection;    
   }
 }

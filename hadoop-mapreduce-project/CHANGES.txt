@@ -139,6 +139,8 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3955. Change MR to use ProtobufRpcEngine from hadoop-common
     instead of ProtoOverHadoopRpcEngine. (Jitendra Nath Pandey via sseth)
 
+    MAPREDUCE-4103. Fix HA docs for changes to shell command fencer args (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -197,10 +199,18 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4095. TestJobInProgress#testLocality uses a bogus topology.
     (Colin Patrick McCabe via eli)
-    
+
+    MAPREDUCE-4098. TestMRApps testSetClasspath fails (tucu)
+
+    MAPREDUCE-4097. tools testcases fail because missing mrapp-generated-classpath 
+    file in classpath (rvs via tucu)
+ 
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
+
+    MAPREDUCE-4072. User set java.library.path seems to overwrite default
+    creating problems native lib loading (Anupam Seth via bobby)
 
   NEW FEATURES
 
@@ -217,6 +227,39 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4024. RM webservices can't query on finalStatus (Tom Graves
     via bobby)
+
+    MAPREDUCE-4060. Multiple SLF4J binding warning (Jason Lowe via bobby)
+
+    MAPREDUCE-3983. TestTTResourceReporting can fail, and should just be
+    deleted (Ravi Prakash via bobby)
+
+    MAPREDUCE-4012 Hadoop Job setup error leaves no useful info to users 
+    (when LinuxTaskController is used). (tgraves)
+
+    MAPREDUCE-4062. AM Launcher thread can hang forever (tgraves via bobby)
+
+    MAPREDUCE-3988. mapreduce.job.local.dir doesn't point to a single directory
+    on a node. (Eric Payne via bobby)
+
+    MAPREDUCE-3999. Tracking link gives an error if the AppMaster hasn't
+    started yet (Ravi Prakash via bobby)
+
+    MAPREDUCE-4020. Web services returns incorrect JSON for deep queue tree
+    (Anupam Seth via tgraves)
+
+    MAPREDUCE-3672. Killed maps shouldn't be counted towards 
+    JobCounter.NUM_FAILED_MAPS. (Anupam Seth via tgraves)
+
+    MAPREDUCE-3682 Tracker URL says AM tasks run on localhost.
+    (Ravi Prakash via tgraves)
+
+    MAPREDUCE-3082. Archive command take wrong path for input file with current
+    directory (John George via bobby)
+
+    MAPREDUCE-3650. testGetTokensForHftpFS() fails (Ravi Prakash via bobby)
+
+    MAPREDUCE-3621. TestDBJob and TestDataDrivenDBInputFormat ant tests fail
+    (Ravi Prakash via tgraves)
 
 Release 0.23.2 - UNRELEASED
 

@@ -25,7 +25,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.examples.DBCountPageView;
+//import org.apache.hadoop.examples.DBCountPageView;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
@@ -36,7 +36,7 @@ import org.apache.hadoop.mapreduce.lib.db.*;
 import org.apache.hadoop.mapreduce.lib.input.*;
 import org.apache.hadoop.mapreduce.lib.output.*;
 import org.apache.hadoop.util.StringUtils;
-import org.hsqldb.Server;
+import org.hsqldb.server.Server;
 
 /**
  * Test aspects of DataDrivenDBInputFormat
@@ -47,9 +47,9 @@ public class TestDataDrivenDBInputFormat extends HadoopTestCase {
       TestDataDrivenDBInputFormat.class);
 
   private static final String DB_NAME = "dddbif";
-  private static final String DB_URL = 
+  private static final String DB_URL =
     "jdbc:hsqldb:hsql://localhost/" + DB_NAME;
-  private static final String DRIVER_CLASS = "org.hsqldb.jdbcDriver";
+  private static final String DRIVER_CLASS = "org.hsqldb.jdbc.JDBCDriver";
 
   private Server server;
   private Connection connection;
@@ -181,7 +181,7 @@ public class TestDataDrivenDBInputFormat extends HadoopTestCase {
     }
 
     // Create the table.
-    s.executeUpdate("CREATE TABLE " + DATE_TABLE + "(" + COL + " TIMESTAMP)");
+    s.executeUpdate("CREATE TABLE " + DATE_TABLE + "(" + COL + " DATE)");
     s.executeUpdate("INSERT INTO " + DATE_TABLE + " VALUES('2010-04-01')");
     s.executeUpdate("INSERT INTO " + DATE_TABLE + " VALUES('2010-04-02')");
     s.executeUpdate("INSERT INTO " + DATE_TABLE + " VALUES('2010-05-01')");

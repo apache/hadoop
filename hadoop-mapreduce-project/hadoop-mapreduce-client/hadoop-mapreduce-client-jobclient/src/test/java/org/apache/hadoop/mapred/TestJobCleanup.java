@@ -195,6 +195,8 @@ public class TestJobCleanup {
     RunningJob job = jobClient.submitJob(jc);
     JobID id = job.getID();
     job.waitForCompletion();
+    Counters counters = job.getCounters();
+    assertTrue("No. of failed maps should be 1",counters.getCounter(JobCounter.NUM_FAILED_MAPS) == 1);
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);
@@ -240,6 +242,9 @@ public class TestJobCleanup {
     job.killJob(); // kill the job
 
     job.waitForCompletion(); // wait for the job to complete
+    
+    counters = job.getCounters();
+    assertTrue("No. of killed maps should be 1", counters.getCounter(JobCounter.NUM_KILLED_MAPS) == 1);
 
     if (fileName != null) {
       Path testFile = new Path(outDir, fileName);

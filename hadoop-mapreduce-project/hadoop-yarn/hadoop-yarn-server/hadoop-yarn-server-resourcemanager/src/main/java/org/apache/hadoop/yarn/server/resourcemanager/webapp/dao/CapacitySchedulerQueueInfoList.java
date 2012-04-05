@@ -15,25 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
-package org.apache.hadoop.mapreduce.lib.db;
+import java.util.ArrayList;
 
-import java.io.IOException;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.hadoop.examples.DBCountPageView;
-import org.apache.hadoop.mapred.HadoopTestCase;
-import org.apache.hadoop.util.ToolRunner;
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
+public class CapacitySchedulerQueueInfoList {
+  protected ArrayList<CapacitySchedulerQueueInfo> queue;
+  
+  public CapacitySchedulerQueueInfoList() {
+    queue = new ArrayList<CapacitySchedulerQueueInfo>();
+  }
 
-
-public class TestDBJob extends HadoopTestCase {
-
-  public TestDBJob() throws IOException {
-    super(LOCAL_MR, LOCAL_FS, 3, 1);
+  public ArrayList<CapacitySchedulerQueueInfo> getQueueInfoList() {
+    return this.queue;
   }
   
-  public void testRun() throws Exception {
-    DBCountPageView testDriver = new DBCountPageView();
-    ToolRunner.run(createJobConf(), testDriver, new String[0]);
+  public boolean addToQueueInfoList(CapacitySchedulerQueueInfo e) {
+    return this.queue.add(e);
   }
   
+  public CapacitySchedulerQueueInfo getQueueInfo(int i) {
+    return this.queue.get(i);
+  }
 }
