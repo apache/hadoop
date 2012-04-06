@@ -23,6 +23,7 @@ import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.FsConstants;
@@ -170,7 +171,15 @@ public class TestChRootedFileSystem {
     Assert.assertTrue(fSys.isDirectory(FileSystemTestHelper.getTestRootPath(fSys,"/newDir/dirFooBar")));
     Assert.assertTrue(fSysTarget.isDirectory(new Path(chrootedTo,"newDir/dirFooBar")));
   }
-  
+
+  @Test
+  public void testGetContentSummary() throws IOException {
+    // GetContentSummary of a dir
+    fSys.mkdirs(new Path("/newDir/dirFoo"));
+    ContentSummary cs = fSys.getContentSummary(new Path("/newDir/dirFoo"));
+    Assert.assertEquals(-1L, cs.getQuota());
+    Assert.assertEquals(-1L, cs.getSpaceQuota());
+  }
   
   /**
    * We would have liked renames across file system to fail but 

@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
@@ -209,11 +210,6 @@ class ChRootedFileSystem extends FilterFileSystem {
   }
 
   @Override
-  public FsServerDefaults getServerDefaults() throws IOException {
-    return super.getServerDefaults();
-  }
-
-  @Override
   public FileStatus[] listStatus(final Path f) 
       throws IOException {
     return super.listStatus(fullPath(f));
@@ -273,4 +269,42 @@ class ChRootedFileSystem extends FilterFileSystem {
   public Path resolvePath(final Path p) throws IOException {
     return super.resolvePath(fullPath(p));
   }
+
+  @Override
+  public ContentSummary getContentSummary(Path f) throws IOException {
+    return super.getContentSummary(fullPath(f));
+  }
+  
+
+  private static Path rootPath = new Path(Path.SEPARATOR);
+
+  @Override
+  public long getDefaultBlockSize() {
+    return getDefaultBlockSize(fullPath(rootPath));
+  }
+  
+  @Override
+  public long getDefaultBlockSize(Path f) {
+    return super.getDefaultBlockSize(fullPath(f));
+  }  
+
+  @Override
+  public short getDefaultReplication() {
+    return getDefaultReplication(fullPath(rootPath));
+  }
+
+  @Override
+  public short getDefaultReplication(Path f) {
+    return super.getDefaultReplication(fullPath(f));
+  }
+  
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    return getServerDefaults(fullPath(rootPath));
+  }  
+
+  @Override
+  public FsServerDefaults getServerDefaults(Path f) throws IOException {
+    return super.getServerDefaults(fullPath(f));
+  }  
 }
