@@ -47,7 +47,6 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
     conf = new Configuration();
     conf.set(ZKFailoverController.ZK_QUORUM_KEY, hostPort);
     this.cluster = new MiniZKFCCluster(conf, getServer(serverFactory));
-    cluster.start();
   }
   
   @After
@@ -61,6 +60,7 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
    */
   @Test(timeout=(STRESS_RUNTIME_SECS + EXTRA_TIMEOUT_SECS) * 1000)
   public void testExpireBackAndForth() throws Exception {
+    cluster.start();
     long st = System.currentTimeMillis();
     long runFor = STRESS_RUNTIME_SECS * 1000;
 
@@ -86,6 +86,7 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
    */
   @Test(timeout=(STRESS_RUNTIME_SECS + EXTRA_TIMEOUT_SECS) * 1000)
   public void testRandomExpirations() throws Exception {
+    cluster.start();
     long st = System.currentTimeMillis();
     long runFor = STRESS_RUNTIME_SECS * 1000;
 
@@ -118,6 +119,11 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
     Mockito.doAnswer(new RandomlyThrow(1))
         .when(cluster.getService(1).proxy).monitorHealth();
     ActiveStandbyElector.NUM_RETRIES = 100;
+    
+    // Don't start until after the above mocking. Otherwise we can get
+    // Mockito errors if the HM calls the proxy in the middle of
+    // setting up the mock.
+    cluster.start();
     
     long st = System.currentTimeMillis();
     while (System.currentTimeMillis() - st < runFor) {

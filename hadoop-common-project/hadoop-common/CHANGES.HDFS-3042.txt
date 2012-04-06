@@ -11,3 +11,5 @@ HADOOP-8228. Auto HA: Refactor tests and add stress tests. (todd)
 HADOOP-8215. Security support for ZK Failover controller (todd)
 
 HADOOP-8245. Fix flakiness in TestZKFailoverController (todd)
+
+HADOOP-8257. TestZKFailoverControllerStress occasionally fails with Mockito error (todd)
