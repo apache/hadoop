@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.io.DataInput;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -30,13 +28,10 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
@@ -162,18 +157,18 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   private boolean disallowed = false;
 
-  /** Default constructor */
   public DatanodeDescriptor() {}
   
-  /** DatanodeDescriptor constructor
+  /**
+   * DatanodeDescriptor constructor
    * @param nodeID id of the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID) {
     this(nodeID, 0L, 0L, 0L, 0L, 0, 0);
   }
 
-  /** DatanodeDescriptor constructor
-   * 
+  /**
+   * DatanodeDescriptor constructor
    * @param nodeID id of the data node
    * @param networkLocation location of the data node in network
    */
@@ -182,8 +177,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this(nodeID, networkLocation, 0L, 0L, 0L, 0L, 0, 0);
   }
   
-  /** DatanodeDescriptor constructor
-   * 
+  /**
+   * DatanodeDescriptor constructor
    * @param nodeID id of the data node
    * @param capacity capacity of the data node
    * @param dfsUsed space used by the data node
@@ -203,8 +198,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
         failedVolumes);
   }
 
-  /** DatanodeDescriptor constructor
-   * 
+  /**
+   * DatanodeDescriptor constructor
    * @param nodeID id of the data node
    * @param networkLocation location of the data node in network
    * @param capacity capacity of the data node, including space used by non-dfs

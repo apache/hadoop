@@ -325,6 +325,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3210. JsonUtil#toJsonMap for for a DatanodeInfo should use
     "ipAddr" instead of "name". (eli)
 
+    HDFS-3208. Bogus entries in hosts files are incorrectly displayed
+    in the report. (eli)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

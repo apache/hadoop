@@ -672,8 +672,7 @@ public class DataNode extends Configured
    */
   DatanodeRegistration createBPRegistration(NamespaceInfo nsInfo) {
     final String xferIp = streamingAddr.getAddress().getHostAddress();
-    DatanodeRegistration bpRegistration = new DatanodeRegistration(xferIp);
-    bpRegistration.setXferPort(getXferPort());
+    DatanodeRegistration bpRegistration = new DatanodeRegistration(xferIp, getXferPort());
     bpRegistration.setInfoPort(getInfoPort());
     bpRegistration.setIpcPort(getIpcPort());
     bpRegistration.setHostName(hostName);

@@ -24,6 +24,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -52,18 +53,9 @@ implements Writable, NodeRegistration {
   private StorageInfo storageInfo;
   private ExportedBlockKeys exportedKeys;
 
-  /**
-   * Default constructor.
-   */
   public DatanodeRegistration() {
-    this("");
-  }
-  
-  /**
-   * Create DatanodeRegistration
-   */
-  public DatanodeRegistration(String ipAddr) {
-    this(ipAddr, new StorageInfo(), new ExportedBlockKeys());
+    this("", DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+        new StorageInfo(), new ExportedBlockKeys());
   }
   
   public DatanodeRegistration(DatanodeID dn, StorageInfo info,
@@ -72,10 +64,14 @@ implements Writable, NodeRegistration {
     this.storageInfo = info;
     this.exportedKeys = keys;
   }
-  
-  public DatanodeRegistration(String ipAddr, StorageInfo info,
+
+  public DatanodeRegistration(String ipAddr, int xferPort) {
+    this(ipAddr, xferPort, new StorageInfo(), new ExportedBlockKeys());
+  }
+
+  public DatanodeRegistration(String ipAddr, int xferPort, StorageInfo info,
       ExportedBlockKeys keys) {
-    super(ipAddr);
+    super(ipAddr, xferPort);
     this.storageInfo = info;
     this.exportedKeys = keys;
   }
@@ -114,7 +110,7 @@ implements Writable, NodeRegistration {
   @Override
   public String toString() {
     return getClass().getSimpleName()
-      + "(" + ipAddr
+      + "(" + getIpAddr()
       + ", storageID=" + storageID
       + ", infoPort=" + infoPort
       + ", ipcPort=" + ipcPort

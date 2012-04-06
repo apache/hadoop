@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
@@ -516,7 +517,8 @@ public class TestDecommission {
     // Now empty hosts file and ensure the datanode is disallowed
     // from talking to namenode, resulting in it's shutdown.
     ArrayList<String>list = new ArrayList<String>();
-    list.add("invalidhost");
+    final String badHostname = "BOGUSHOST";
+    list.add(badHostname);
     writeConfigFile(hostsFile, list);
     
     for (int j = 0; j < numNameNodes; j++) {
@@ -530,6 +532,17 @@ public class TestDecommission {
         info = client.datanodeReport(DatanodeReportType.LIVE);
       }
       assertEquals("Number of live nodes should be 0", 0, info.length);
+      
+      // Test that non-live and bogus hostnames are considered "dead".
+      // The dead report should have an entry for (1) the DN  that is
+      // now considered dead because it is no longer allowed to connect
+      // and (2) the bogus entry in the hosts file (these entries are
+      // always added last)
+      info = client.datanodeReport(DatanodeReportType.DEAD);
+      assertEquals("There should be 2 dead nodes", 2, info.length);
+      DatanodeID id = cluster.getDataNodes().get(0).getDatanodeId();
+      assertEquals(id.getHostName(), info[0].getHostName());
+      assertEquals(badHostname, info[1].getHostName());
     }
   }
 }
