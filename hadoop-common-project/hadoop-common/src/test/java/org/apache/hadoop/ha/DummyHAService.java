@@ -37,6 +37,7 @@ import com.google.common.collect.Lists;
  */
 class DummyHAService extends HAServiceTarget {
   public static final Log LOG = LogFactory.getLog(DummyHAService.class);
+  private static final String DUMMY_FENCE_KEY = "dummy.fence.key";
   volatile HAServiceState state;
   HAServiceProtocol proxy;
   NodeFencer fencer;
@@ -55,8 +56,9 @@ class DummyHAService extends HAServiceTarget {
     this.proxy = makeMock();
     try {
       Configuration conf = new Configuration();
-      this.fencer = Mockito.spy(NodeFencer.create(conf,
-          DummyFencer.class.getName()));
+      conf.set(DUMMY_FENCE_KEY, DummyFencer.class.getName()); 
+      this.fencer = Mockito.spy(
+          NodeFencer.create(conf, DUMMY_FENCE_KEY));
     } catch (BadFencingConfigurationException e) {
       throw new RuntimeException(e);
     }
