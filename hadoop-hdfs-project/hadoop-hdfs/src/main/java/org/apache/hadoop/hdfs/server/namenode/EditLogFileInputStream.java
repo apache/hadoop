@@ -33,7 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
  * An implementation of the abstract class {@link EditLogInputStream}, which
  * reads edits from a local file.
  */
-class EditLogFileInputStream extends EditLogInputStream {
+public class EditLogFileInputStream extends EditLogInputStream {
   private final File file;
   private final FileInputStream fStream;
   final private long firstTxId;
@@ -67,7 +67,7 @@ class EditLogFileInputStream extends EditLogInputStream {
    * @throws IOException if an actual IO error occurs while reading the
    *         header
    */
-  EditLogFileInputStream(File name, long firstTxId, long lastTxId,
+  public EditLogFileInputStream(File name, long firstTxId, long lastTxId,
       boolean isInProgress)
       throws LogHeaderCorruptException, IOException {
     file = name;

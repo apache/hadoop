@@ -29,6 +29,7 @@ import org.apache.hadoop.ha.NodeFencer;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -56,7 +57,7 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     // Specify the quorum per-nameservice, to ensure that these configs
     // can be nameservice-scoped.
     conf.set(ZKFailoverController.ZK_QUORUM_KEY + ".ns1", hostPort);
-    conf.set(NodeFencer.CONF_METHODS_KEY,
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
         AlwaysSucceedFencer.class.getName());
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()

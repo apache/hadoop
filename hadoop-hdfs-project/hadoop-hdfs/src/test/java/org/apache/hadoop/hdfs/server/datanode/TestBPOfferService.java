@@ -115,7 +115,7 @@ public class TestBPOfferService {
             0, HdfsConstants.LAYOUT_VERSION))
       .when(mock).versionRequest();
     
-    Mockito.doReturn(new DatanodeRegistration("fake-node"))
+    Mockito.doReturn(new DatanodeRegistration("fake-node", 100))
       .when(mock).registerDatanode(Mockito.any(DatanodeRegistration.class));
     
     Mockito.doAnswer(new HeartbeatAnswer(nnIdx))

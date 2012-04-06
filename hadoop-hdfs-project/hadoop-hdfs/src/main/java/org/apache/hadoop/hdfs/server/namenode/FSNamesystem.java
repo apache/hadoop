@@ -164,6 +164,7 @@ import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyCheckpointer;
 import org.apache.hadoop.hdfs.server.namenode.ha.StandbyState;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
@@ -346,10 +347,27 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException if loading fails
    */
   public static FSNamesystem loadFromDisk(Configuration conf)
-    throws IOException {
+      throws IOException {
     Collection<URI> namespaceDirs = FSNamesystem.getNamespaceDirs(conf);
     List<URI> namespaceEditsDirs = 
       FSNamesystem.getNamespaceEditsDirs(conf);
+    return loadFromDisk(conf, namespaceDirs, namespaceEditsDirs);
+  }
+
+  /**
+   * Instantiates an FSNamesystem loaded from the image and edits
+   * directories passed.
+   * 
+   * @param conf the Configuration which specifies the storage directories
+   *             from which to load
+   * @param namespaceDirs directories to load the fsimages
+   * @param namespaceEditsDirs directories to load the edits from
+   * @return an FSNamesystem which contains the loaded namespace
+   * @throws IOException if loading fails
+   */
+  public static FSNamesystem loadFromDisk(Configuration conf,
+      Collection<URI> namespaceDirs, List<URI> namespaceEditsDirs)
+      throws IOException {
 
     if (namespaceDirs.size() == 1) {
       LOG.warn("Only one " + DFS_NAMENODE_NAME_DIR_KEY
@@ -370,8 +388,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       HAUtil.isHAEnabled(conf, nameserviceId));
     long timeTakenToLoadFSImage = now() - loadStart;
     LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
-    NameNode.getNameNodeMetrics().setFsImageLoadTime(
-                              (int) timeTakenToLoadFSImage);
+    NameNodeMetrics nnMetrics = NameNode.getNameNodeMetrics();
+    if (nnMetrics != null) {
+      nnMetrics.setFsImageLoadTime((int) timeTakenToLoadFSImage);
+    }
     return namesystem;
   }
 

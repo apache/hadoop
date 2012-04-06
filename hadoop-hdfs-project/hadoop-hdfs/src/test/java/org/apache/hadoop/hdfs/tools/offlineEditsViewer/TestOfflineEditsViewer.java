@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -33,8 +34,6 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.TokenizerFactory;
-import org.apache.hadoop.hdfs.tools.offlineEditsViewer.EditsVisitorFactory;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 
 import org.apache.hadoop.hdfs.server.namenode.OfflineEditsViewerHelper;
@@ -158,11 +157,8 @@ public class TestOfflineEditsViewer {
     LOG.info("Running oev [" + inFilename + "] [" + outFilename + "]");
 
     OfflineEditsViewer oev = new OfflineEditsViewer();
-    oev.go( EditsVisitorFactory.getEditsVisitor(
-      outFilename,
-      processor,
-      TokenizerFactory.getTokenizer(inFilename),
-      false));
+    if (oev.go(inFilename, outFilename, processor, true, false, null) != 0)
+      throw new RuntimeException("oev failed");
   }
 
   /**
@@ -173,14 +169,11 @@ public class TestOfflineEditsViewer {
    */
   private boolean hasAllOpCodes(String inFilename) throws IOException {
     String outFilename = inFilename + ".stats";
-    StatisticsEditsVisitor visitor =
-      (StatisticsEditsVisitor)EditsVisitorFactory.getEditsVisitor(
-        outFilename,
-        "stats",
-        TokenizerFactory.getTokenizer(inFilename),
-        false);
+    FileOutputStream fout = new FileOutputStream(outFilename);
+    StatisticsEditsVisitor visitor = new StatisticsEditsVisitor(fout);
     OfflineEditsViewer oev = new OfflineEditsViewer();
-    oev.go(visitor);
+    if (oev.go(inFilename, outFilename, "stats", false, false, visitor) != 0)
+      return false;
     LOG.info("Statistics for " + inFilename + "\n" +
       visitor.getStatisticsString());
     
@@ -190,6 +183,8 @@ public class TestOfflineEditsViewer {
       if(obsoleteOpCodes.containsKey(opCode)) {
         continue;
       }
+      if (opCode == FSEditLogOpCodes.OP_INVALID)
+        continue;
       Long count = visitor.getStatistics().get(opCode);
       if((count == null) || (count == 0)) {
         hasAllOpCodes = false;

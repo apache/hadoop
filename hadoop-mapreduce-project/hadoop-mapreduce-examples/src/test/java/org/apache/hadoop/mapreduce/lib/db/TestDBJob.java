@@ -15,32 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
+
+package org.apache.hadoop.mapreduce.lib.db;
 
 import java.io.IOException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 
-/**
- * TokenizerFactory for different implementations of Tokenizer
- *
- */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-public class TokenizerFactory {
+import org.apache.hadoop.examples.DBCountPageView;
+import org.apache.hadoop.mapred.HadoopTestCase;
+import org.apache.hadoop.util.ToolRunner;
 
-  /**
-   * Factory function that creates a Tokenizer object, the input format
-   * is set based on filename (*.xml is XML, otherwise binary)
-   *
-   * @param filename input filename
-   */
-  static public Tokenizer getTokenizer(String filename) throws IOException {
-    if(filename.toLowerCase().endsWith("xml")) {
-      return new XmlTokenizer(filename);
-    } else {
-      return new BinaryTokenizer(filename);
-    }
+
+public class TestDBJob extends HadoopTestCase {
+
+  public TestDBJob() throws IOException {
+    super(LOCAL_MR, LOCAL_FS, 3, 1);
+  }
+
+  public void testRun() throws Exception {
+    DBCountPageView testDriver = new DBCountPageView();
+    ToolRunner.run(createJobConf(), testDriver, new String[0]);
   }
 
 }

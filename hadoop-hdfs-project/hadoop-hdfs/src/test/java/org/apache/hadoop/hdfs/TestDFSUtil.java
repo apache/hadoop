@@ -395,9 +395,9 @@ public class TestDFSUtil {
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
     String httpsport = DFSUtil.getInfoServer(null, conf, true);
-    assertEquals("0.0.0.0:50470", httpsport);
+    assertEquals("0.0.0.0:"+DFS_NAMENODE_HTTPS_PORT_DEFAULT, httpsport);
     String httpport = DFSUtil.getInfoServer(null, conf, false);
-    assertEquals("0.0.0.0:50070", httpport);
+    assertEquals("0.0.0.0:"+DFS_NAMENODE_HTTP_PORT_DEFAULT, httpport);
   }
   
   @Test

@@ -132,8 +132,7 @@ public class TestNodeFencer {
       throws BadFencingConfigurationException {
     System.err.println("Testing configuration:\n" + confStr);
     Configuration conf = new Configuration();
-    conf.set(NodeFencer.CONF_METHODS_KEY, confStr);
-    return new NodeFencer(conf);
+    return new NodeFencer(conf, confStr);
   }
   
   /**

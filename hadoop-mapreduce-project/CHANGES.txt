@@ -201,6 +201,9 @@ Release 2.0.0 - UNRELEASED
     (Colin Patrick McCabe via eli)
 
     MAPREDUCE-4098. TestMRApps testSetClasspath fails (tucu)
+
+    MAPREDUCE-4097. tools testcases fail because missing mrapp-generated-classpath 
+    file in classpath (rvs via tucu)
  
 Release 0.23.3 - UNRELEASED
 
@@ -254,6 +257,13 @@ Release 0.23.3 - UNRELEASED
     directory (John George via bobby)
 
     MAPREDUCE-3650. testGetTokensForHftpFS() fails (Ravi Prakash via bobby)
+
+    MAPREDUCE-3621. TestDBJob and TestDataDrivenDBInputFormat ant tests fail
+    (Ravi Prakash via tgraves)
+
+    MAPREDUCE-4073. CS assigns multiple off-switch containers when using
+    multi-level-queues (Siddharth Seth via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

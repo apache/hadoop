@@ -62,7 +62,7 @@ public class FileChecksumServlets {
           ? ((DatanodeInfo)host).getHostName() : host.getIpAddr();
       final String scheme = request.getScheme();
       final int port = "https".equals(scheme)
-          ? (Integer)getServletContext().getAttribute("datanode.https.port")
+          ? (Integer)getServletContext().getAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY)
           : host.getInfoPort();
       final String encodedPath = ServletUtil.getRawPath(request, "/fileChecksum");
 

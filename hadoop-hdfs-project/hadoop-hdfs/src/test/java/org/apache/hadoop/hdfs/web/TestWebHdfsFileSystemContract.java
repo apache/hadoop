@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletResponse;
@@ -133,8 +134,20 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     final BlockLocation[] expected = cluster.getFileSystem().getFileBlockLocations(
         new Path(f), 0L, 1L);
     assertEquals(expected.length, computed.length);
-    for(int i = 0; i < computed.length; i++) {
+    for (int i = 0; i < computed.length; i++) {
       assertEquals(expected[i].toString(), computed[i].toString());
+      // Check names
+      String names1[] = expected[i].getNames();
+      String names2[] = computed[i].getNames();
+      Arrays.sort(names1);
+      Arrays.sort(names2);
+      Assert.assertArrayEquals("Names differ", names1, names2);
+      // Check topology
+      String topos1[] = expected[i].getTopologyPaths();
+      String topos2[] = computed[i].getTopologyPaths();
+      Arrays.sort(topos1);
+      Arrays.sort(topos2);
+      Assert.assertArrayEquals("Topology differs", topos1, topos2);
     }
   }
 

@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.test.GenericTestUtils;
 
 /**
  * This class tests the validation of the configuration object when passed 
@@ -72,6 +74,7 @@ public class TestValidateConfigurationSettings {
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:9000");
     DFSTestUtil.formatNameNode(conf);
     NameNode nameNode = new NameNode(conf); // should be OK!
+    nameNode.stop();
   }
 
   /**
@@ -82,16 +85,30 @@ public class TestValidateConfigurationSettings {
   public void testGenericKeysForNameNodeFormat()
       throws IOException {
     Configuration conf = new HdfsConfiguration();
-    FileSystem.setDefaultUri(conf, "hdfs://localhost:8070");
+
+    // Set ephemeral ports 
+    conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY,
+        "127.0.0.1:0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        "127.0.0.1:0");
+    
     conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "ns1");
-    String nameDir = System.getProperty("java.io.tmpdir") + "/test.dfs.name";
-    File dir = new File(nameDir);
+    
+    // Set a nameservice-specific configuration for name dir
+    File dir = new File(MiniDFSCluster.getBaseDirectory(),
+        "testGenericKeysForNameNodeFormat");
     if (dir.exists()) {
       FileUtil.fullyDelete(dir);
     }
-    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + ".ns1", nameDir);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + ".ns1",
+        dir.getAbsolutePath());
+    
+    // Format and verify the right dir is formatted.
     DFSTestUtil.formatNameNode(conf);
+    GenericTestUtils.assertExists(dir);
+
+    // Ensure that the same dir is picked up by the running NN
     NameNode nameNode = new NameNode(conf);
-    FileUtil.fullyDelete(dir);
+    nameNode.stop();
   }
 }

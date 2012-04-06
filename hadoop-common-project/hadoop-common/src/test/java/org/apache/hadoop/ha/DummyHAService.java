@@ -55,8 +55,8 @@ class DummyHAService extends HAServiceTarget {
     this.proxy = makeMock();
     try {
       Configuration conf = new Configuration();
-      conf.set(NodeFencer.CONF_METHODS_KEY, DummyFencer.class.getName());
-      this.fencer = Mockito.spy(NodeFencer.create(conf));
+      this.fencer = Mockito.spy(NodeFencer.create(conf,
+          DummyFencer.class.getName()));
     } catch (BadFencingConfigurationException e) {
       throw new RuntimeException(e);
     }

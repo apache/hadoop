@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.codehaus.jackson.sym.NameN;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

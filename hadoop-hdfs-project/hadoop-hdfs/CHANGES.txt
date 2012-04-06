@@ -59,6 +59,12 @@ Trunk (unreleased changes)
 
     HDFS-3131. Improve TestStorageRestore. (Brandon Li via atm)
 
+    HDFS-3178. Add states and state handler for journal synchronization in
+    JournalService.  (szetszwo)
+
+    HDFS-3204. Minor modification to JournalProtocol.proto to make
+    it generic. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
@@ -183,6 +189,8 @@ Release 2.0.0 - UNRELEASED
     for data transfer. (eli)
 
     HDFS-3000. Add a public API for setting quotas. (atm)
+
+    HDFS-3102. Add CLI tool to initialize the shared-edits dir. (atm)
 
   IMPROVEMENTS
 
@@ -316,6 +324,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3084. FenceMethod.tryFence() and ShellCommandFencer should pass
     namenodeId as well as host:port (todd)
 
+    HDFS-3050. rework OEV to share more code with the NameNode.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -411,6 +422,19 @@ Release 2.0.0 - UNRELEASED
     with dfs.namenode.secondary.http-address configured. (eli)
 
     HDFS-3174. Fix assert in TestPendingDataNodeMessages. (eli)
+
+    HDFS-3199. TestValidateConfigurationSettings is failing. (todd via eli)
+
+    HDFS-3202. NamespaceInfo PB translation drops build version. (atm)
+
+    HDFS-3109. Remove hsqldf exclusions from pom.xml. (Ravi Prakash
+    via suresh)
+
+    HDFS-3210. JsonUtil#toJsonMap for for a DatanodeInfo should use
+    "ipAddr" instead of "name". (eli)
+
+    HDFS-3208. Bogus entries in hosts files are incorrectly displayed
+    in the report. (eli)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

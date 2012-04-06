@@ -48,7 +48,7 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
   public JournalResponseProto journal(RpcController unused,
       JournalRequestProto req) throws ServiceException {
     try {
-      impl.journal(PBHelper.convert(req.getRegistration()),
+      impl.journal(PBHelper.convert(req.getJournalInfo()),
           req.getFirstTxnId(), req.getNumTxns(), req.getRecords()
               .toByteArray());
     } catch (IOException e) {
@@ -62,7 +62,7 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
   public StartLogSegmentResponseProto startLogSegment(RpcController controller,
       StartLogSegmentRequestProto req) throws ServiceException {
     try {
-      impl.startLogSegment(PBHelper.convert(req.getRegistration()),
+      impl.startLogSegment(PBHelper.convert(req.getJournalInfo()),
           req.getTxid());
     } catch (IOException e) {
       throw new ServiceException(e);

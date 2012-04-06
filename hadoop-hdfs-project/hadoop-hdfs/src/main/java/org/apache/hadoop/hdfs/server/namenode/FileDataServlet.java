@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -62,7 +63,7 @@ public class FileDataServlet extends DfsServlet {
       hostname = host.getIpAddr();
     }
     final int port = "https".equals(scheme)
-      ? (Integer)getServletContext().getAttribute("datanode.https.port")
+      ? (Integer)getServletContext().getAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY)
       : host.getInfoPort();
 
     String dtParam = "";

@@ -18,12 +18,19 @@
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.io.OutputStream;
 
-import org.apache.hadoop.hdfs.tools.offlineImageViewer.DepthCounter;
+import org.apache.hadoop.hdfs.util.XMLUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.AttributesImpl;
+
+import com.sun.org.apache.xml.internal.serialize.OutputFormat;
+import com.sun.org.apache.xml.internal.serialize.XMLSerializer;
 
 /**
  * An XmlEditsVisitor walks over an EditLog structure and writes out
@@ -31,140 +38,85 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class XmlEditsVisitor extends TextEditsVisitor {
-  final private LinkedList<EditsElement> tagQ =
-    new LinkedList<EditsElement>();
-
-  final private DepthCounter depthCounter = new DepthCounter();
+public class XmlEditsVisitor implements OfflineEditsVisitor {
+  private OutputStream out;
+  private ContentHandler contentHandler;
 
   /**
    * Create a processor that writes to the file named and may or may not
    * also output to the screen, as specified.
    *
    * @param filename Name of file to write output to
-   * @param tokenizer Input tokenizer
+   * @param printToScreen Mirror output to screen?
    */
-  public XmlEditsVisitor(String filename, Tokenizer tokenizer)
-    throws IOException {
-
-    super(filename, tokenizer, false);
-  }
-
-  /**
-   * Create a processor that writes to the file named and may or may not
-   * also output to the screen, as specified.
-   *
-   * @param filename Name of file to write output to
-   * @param tokenizer Input tokenizer
-   * @param printToScreen Mirror output to screen? (ignored for binary)
-   */
-  public XmlEditsVisitor(String filename,
-    Tokenizer tokenizer,
-    boolean printToScreen) throws IOException {
-
-    super(filename, tokenizer, printToScreen);
+  public XmlEditsVisitor(OutputStream out)
+      throws IOException {
+    this.out = out;
+    OutputFormat outFormat = new OutputFormat("XML", "UTF-8", true);
+    outFormat.setIndenting(true);
+    outFormat.setIndent(2);
+    outFormat.setDoctype(null, null);
+    XMLSerializer serializer = new XMLSerializer(out, outFormat);
+    contentHandler = serializer.asContentHandler();
+    try {
+      contentHandler.startDocument();
+      contentHandler.startElement("", "", "EDITS", new AttributesImpl());
+    } catch (SAXException e) {
+      throw new IOException("SAX error: " + e.getMessage());
+    }
   }
 
   /**
    * Start visitor (initialization)
    */
   @Override
-  void start() throws IOException {
-    write("<?xml version=\"1.0\"?>\n");
+  public void start(int version) throws IOException {
+    try {
+      contentHandler.startElement("", "", "EDITS_VERSION", new AttributesImpl());
+      StringBuilder bld = new StringBuilder();
+      bld.append(version);
+      addString(bld.toString());
+      contentHandler.endElement("", "", "EDITS_VERSION");
+    }
+    catch (SAXException e) {
+      throw new IOException("SAX error: " + e.getMessage());
+    }
   }
 
+  public void addString(String str) throws SAXException {
+    int slen = str.length();
+    char arr[] = new char[slen];
+    str.getChars(0, slen, arr, 0);
+    contentHandler.characters(arr, 0, slen);
+  }
+  
   /**
    * Finish visitor
    */
   @Override
-  void finish() throws IOException {
-    super.finish();
-  }
-
-  /**
-   * Finish with error
-   */
-  @Override
-  void finishAbnormally() throws IOException {
-    write("\n<!-- Error processing EditLog file.  Exiting -->\n");
-    super.finishAbnormally();
-  }
-
-  /**
-   * Visit a Token
-   *
-   * @param value a Token to visit
-   */
-  @Override
-  Tokenizer.Token visit(Tokenizer.Token value) throws IOException {
-    writeTag(value.getEditsElement().toString(), value.toString());
-    return value;
-  }
-
-  /**
-   * Visit an enclosing element (element that cntains other elements)
-   *
-   * @param value a Token to visit
-   */
-  @Override
-  void visitEnclosingElement(Tokenizer.Token value) throws IOException {
-    printIndents();
-    write("<" + value.getEditsElement().toString() + ">\n");
-    tagQ.push(value.getEditsElement());
-    depthCounter.incLevel();
-  }
-
-  /**
-   * Leave enclosing element
-   */
-  @Override
-  void leaveEnclosingElement() throws IOException {
-    depthCounter.decLevel();
-    if(tagQ.size() == 0)
-      throw new IOException("Tried to exit non-existent enclosing element " +
-                "in EditLog file");
-
-    EditsElement element = tagQ.pop();
-    printIndents();
-    write("</" + element.toString() + ">\n");
-  }
-
-  /**
-   * Write an XML tag
-   *
-   * @param tag a tag name
-   * @param value a tag value
-   */
-  private void writeTag(String tag, String value) throws IOException {
-    printIndents();
-    if(value.length() > 0) {
-      write("<" + tag + ">" + value + "</" + tag + ">\n");
-    } else {
-      write("<" + tag + "/>\n");
-    }
-  }
-
-  // prepared values that printIndents is likely to use
-  final private static String [] indents = {
-     "",
-     "  ",
-     "    ",
-     "      ",
-     "        ",
-     "          ",
-     "            " };
-
-  /**
-   * Prints the leading spaces based on depth level
-   */
-  private void printIndents() throws IOException {
+  public void close(Throwable error) throws IOException {
     try {
-      write(indents[depthCounter.getLevel()]);
-    } catch (IndexOutOfBoundsException e) {
-      // unlikely needed so can be slow
-      for(int i = 0; i < depthCounter.getLevel(); i++)
-        write("  ");
+      contentHandler.endElement("", "", "EDITS");
+      if (error != null) {
+        String msg = error.getMessage();
+        XMLUtils.addSaxString(contentHandler, "ERROR",
+            (msg == null) ? "null" : msg);
+      }
+      contentHandler.endDocument();
     }
-   
+    catch (SAXException e) {
+      throw new IOException("SAX error: " + e.getMessage());
+    }
+    out.close();
+  }
+
+  @Override
+  public void visitOp(FSEditLogOp op) throws IOException {
+    try {
+      op.outputToXml(contentHandler);
+    }
+    catch (SAXException e) {
+      throw new IOException("SAX error: " + e.getMessage());
+    }
   }
 }
