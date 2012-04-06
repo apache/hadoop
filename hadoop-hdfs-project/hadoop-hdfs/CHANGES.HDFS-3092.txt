@@ -1,0 +1,16 @@
+Hadoop HDFS Change Log
+
+HDFS-3092 branch changes
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+    HDFS-3185. Add configuration of Journal Service Daemons. 
+    (Hari Mankude via suresh)
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+

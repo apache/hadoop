@@ -25,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1054,5 +1055,27 @@ public class DFSUtil {
       // No nameservice ID was given and more than one is configured
       return null;
     }
+  }
+  
+  
+  /**
+   * Returns list of InetSocketAddresses of journalnodes from the
+   * configuration.
+   * 
+   * @param conf configuration
+   * @return list of InetSocketAddresses
+   */
+  public static Collection<InetSocketAddress> getJournalNodeAddresses(
+      Configuration conf) {
+    Collection<String> jnames = conf
+        .getTrimmedStringCollection(DFS_JOURNALNODE_ADDRESS_KEY);
+    Collection<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
+    for (String jname : emptyAsSingletonNull(jnames)) {
+      if (jname == null) {
+        continue;
+      }
+      ret.add(NetUtils.createSocketAddr(jname));
+    }
+    return ret;
   }
 }

@@ -539,4 +539,34 @@ public class TestDFSUtil {
     assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_HOST)));
     assertTrue(uris.contains(new URI("hdfs://" + NN_HOST)));
   }
+  
+  @Test
+  public void testJournalNodeConf() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration(false);
+    String str1 = "localhost:50200";
+    String str2 = "localhost:50210";
+    InetSocketAddress isa1 = NetUtils.createSocketAddr(str1);
+    InetSocketAddress isa2 = NetUtils.createSocketAddr(str2);
+    
+    // If nothing is added, zero length collection is returned.
+    Collection<InetSocketAddress> ret = DFSUtil.getJournalNodeAddresses(conf);
+    assertEquals(ret.size(), 0);
+    
+    // Setup single journal node
+    conf.set(DFS_JOURNALNODE_ADDRESS_KEY, str1);  
+    ret = DFSUtil.getJournalNodeAddresses(conf);
+    assertEquals(ret.size(), 1);
+    for (InetSocketAddress addr : ret) {
+      assertTrue(addr.equals(isa1));
+    }
+    
+    // Add two entries now.
+    conf.set(DFS_JOURNALNODE_ADDRESS_KEY, "localhost:50200, localhost:50210");
+    ret = DFSUtil.getJournalNodeAddresses(conf);
+    assertEquals(ret.size(), 2);
+    
+    for (InetSocketAddress addr: ret) {
+      assertTrue(addr.equals(isa1) || addr.equals(isa2));
+    }
+  }
 }
