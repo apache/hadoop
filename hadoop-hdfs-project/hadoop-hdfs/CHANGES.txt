@@ -658,6 +658,9 @@ Release 0.23.3 - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-2505. Add a test to verify getFileChecksum(..) with ViewFS.  (Ravi
+    Prakash via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
