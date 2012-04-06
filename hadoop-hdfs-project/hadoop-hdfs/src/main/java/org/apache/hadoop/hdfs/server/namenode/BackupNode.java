@@ -27,17 +27,15 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -215,8 +213,6 @@ public class BackupNode extends NameNode {
   
   static class BackupNodeRpcServer extends NameNodeRpcServer implements
       JournalProtocol {
-    private final String nnRpcAddress;
-    
     private BackupNodeRpcServer(Configuration conf, BackupNode nn)
         throws IOException {
       super(conf, nn);
@@ -226,8 +222,31 @@ public class BackupNode extends NameNode {
           .newReflectiveBlockingService(journalProtocolTranslator);
       DFSUtil.addPBProtocol(conf, JournalProtocolPB.class, service,
           this.clientRpcServer);
-      nnRpcAddress = nn.nnRpcAddress;
     }
+    
+    /** 
+     * Verifies a journal request
+     * @param nodeReg node registration
+     * @throws UnregisteredNodeException if the registration is invalid
+     */
+    void verifyJournalRequest(NamenodeRegistration reg) throws IOException {
+      verifyVersion(reg.getLayoutVersion());
+      String errorMsg = null;
+      int expectedNamespaceID = namesystem.getNamespaceInfo().getNamespaceID();
+      if (reg.getNamespaceID() != expectedNamespaceID) {
+        errorMsg = "Invalid namespaceID in journal request - expected " + expectedNamespaceID
+            + " actual " + reg.getNamespaceID();
+        LOG.warn(errorMsg);
+        throw new UnregisteredNodeException(reg);
+      } 
+      if (!reg.getClusterID().equals(namesystem.getClusterId())) {
+        errorMsg = "Invalid clusterId in journal request - expected "
+            + reg.getClusterID() + " actual " + namesystem.getClusterId();
+        LOG.warn(errorMsg);
+        throw new UnregisteredNodeException(reg);
+      }
+    }
+
 
     /////////////////////////////////////////////////////
     // BackupNodeProtocol implementation for backup node.
@@ -236,8 +255,7 @@ public class BackupNode extends NameNode {
     public void startLogSegment(NamenodeRegistration registration, long txid)
         throws IOException {
       namesystem.checkOperation(OperationCategory.JOURNAL);
-      verifyRequest(registration);
-      
+      verifyJournalRequest(registration);
       getBNImage().namenodeStartedLogSegment(txid);
     }
     
@@ -246,10 +264,7 @@ public class BackupNode extends NameNode {
         long firstTxId, int numTxns,
         byte[] records) throws IOException {
       namesystem.checkOperation(OperationCategory.JOURNAL);
-      verifyRequest(nnReg);
-      if(!nnRpcAddress.equals(nnReg.getAddress()))
-        throw new IOException("Journal request from unexpected name-node: "
-            + nnReg.getAddress() + " expecting " + nnRpcAddress);
+      verifyJournalRequest(nnReg);
       getBNImage().journal(firstTxId, numTxns, records);
     }
 

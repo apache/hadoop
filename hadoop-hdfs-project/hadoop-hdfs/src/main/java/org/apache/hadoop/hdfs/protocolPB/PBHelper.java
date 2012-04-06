@@ -95,6 +95,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProt
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.UpgradeStatusReportProto;
+import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -127,7 +128,6 @@ import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
-import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
@@ -1345,5 +1345,27 @@ public class PBHelper {
         .setBlockPoolUsed(r.getBlockPoolUsed()).setCapacity(r.getCapacity())
         .setDfsUsed(r.getDfsUsed()).setRemaining(r.getRemaining())
         .setStorageID(r.getStorageID()).build();
+  }
+
+  public static NamenodeRegistration convert(JournalInfoProto info) {
+    int lv = info.hasLayoutVersion() ? info.getLayoutVersion() : 0;
+    int nsID = info.hasNamespaceID() ? info.getNamespaceID() : 0;
+    StorageInfo storage = new StorageInfo(lv, nsID, info.getClusterID(), 0);
+    
+    // Note that the role is always {@link NamenodeRole#NAMENODE} as this
+    // conversion happens for messages from Namenode to Journal receivers.
+    // Addresses in the registration are unused.
+    return new NamenodeRegistration("", "", storage, NamenodeRole.NAMENODE);
+  }
+
+  /**
+   * Method used for converting {@link JournalInfoProto} sent from Namenode
+   * to Journal receivers to {@link NamenodeRegistration}.
+   */
+  public static JournalInfoProto convertToJournalInfo(
+      NamenodeRegistration reg) {
+    return JournalInfoProto.newBuilder().setClusterID(reg.getClusterID())
+        .setLayoutVersion(reg.getLayoutVersion())
+        .setNamespaceID(reg.getNamespaceID()).build();
   }
 }

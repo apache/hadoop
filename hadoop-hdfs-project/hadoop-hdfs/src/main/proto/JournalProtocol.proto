@@ -27,16 +27,25 @@ option java_generate_equals_and_hash = true;
 import "hdfs.proto";
 
 /**
- * registration - the registration info of the active NameNode
- * firstTxnId - the first txid in the rolled edit log
+ * Journal information used by the journal receiver to identify a journal.
+ */
+message JournalInfoProto {
+  required string clusterID = 1;     // ID of the cluster
+  optional uint32 layoutVersion = 2; // Layout version
+  optional uint32 namespaceID = 3;    // Namespace ID
+}
+
+/**
+ * JournalInfo - the information about the journal
+ * firstTxnId - the first txid in the journal records
  * numTxns - Number of transactions in editlog
  * records - bytes containing serialized journal records
  */
 message JournalRequestProto {
-  required NamenodeRegistrationProto registration = 1; // Registration info
-  required uint64 firstTxnId = 2; // Transaction ID
-  required uint32 numTxns = 3;    // Transaction ID
-  required bytes records = 4;     // Journal record
+  required JournalInfoProto journalInfo = 1;
+  required uint64 firstTxnId = 2;
+  required uint32 numTxns = 3;
+  required bytes records = 4;
 }
 
 /**
@@ -46,12 +55,12 @@ message JournalResponseProto {
 }
 
 /**
- * registration - the registration info of the active NameNode
+ * JournalInfo - the information about the journal
  * txid - first txid in the new log
  */
 message StartLogSegmentRequestProto {
-  required NamenodeRegistrationProto registration = 1; // Registration info
-  required uint64 txid = 2; // Transaction ID
+  required JournalInfoProto journalInfo = 1;
+  required uint64 txid = 2;
 }
 
 /**
