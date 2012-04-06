@@ -174,6 +174,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4073. CS assigns multiple off-switch containers when using
     multi-level-queues (Siddharth Seth via bobby)
 
+    MAPREDUCE-4051. Remove the empty hadoop-mapreduce-project/assembly/all.xml
+    file (Ravi Prakash via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
