@@ -7,3 +7,5 @@ branch is merged.
 HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
 
 HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
+
+HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
