@@ -298,6 +298,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8180. Remove hsqldb since its not needed from pom.xml (Ravi Prakash
     via tgraves)
 
+    HADOOP-8014. ViewFileSystem does not correctly implement getDefaultBlockSize,
+    getDefaultReplication, getContentSummary (John George via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES

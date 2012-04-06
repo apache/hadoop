@@ -36,6 +36,7 @@ public final class FileSystemTestHelper {
     System.getProperty("test.build.data", "target/test/data") + "/test";
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private static final int DEFAULT_NUM_BLOCKS = 2;
+  private static final short DEFAULT_NUM_REPL = 1;
   private static String absTestRootDir = null;
 
   /** Hidden constructor */
@@ -99,9 +100,9 @@ public final class FileSystemTestHelper {
    * Create files with numBlocks blocks each with block size blockSize.
    */
   public static long createFile(FileSystem fSys, Path path, int numBlocks,
-      int blockSize, boolean createParent) throws IOException {
+      int blockSize, short numRepl, boolean createParent) throws IOException {
     FSDataOutputStream out = 
-      fSys.create(path, false, 4096, fSys.getDefaultReplication(), blockSize );
+      fSys.create(path, false, 4096, numRepl, blockSize );
 
     byte[] data = getFileData(numBlocks, blockSize);
     out.write(data, 0, data.length);
@@ -109,13 +110,19 @@ public final class FileSystemTestHelper {
     return data.length;
   }
 
+
+  public static long createFile(FileSystem fSys, Path path, int numBlocks,
+      int blockSize, boolean createParent) throws IOException {
+      return createFile(fSys, path, numBlocks, blockSize, fSys.getDefaultReplication(), true);
+  }
+
   public static long createFile(FileSystem fSys, Path path, int numBlocks,
       int blockSize) throws IOException {
       return createFile(fSys, path, numBlocks, blockSize, true);
-    }
+  }
 
   public static long createFile(FileSystem fSys, Path path) throws IOException {
-    return createFile(fSys, path, DEFAULT_NUM_BLOCKS, DEFAULT_BLOCK_SIZE, true);
+    return createFile(fSys, path, DEFAULT_NUM_BLOCKS, DEFAULT_BLOCK_SIZE, DEFAULT_NUM_REPL, true);
   }
 
   public static long createFile(FileSystem fSys, String name) throws IOException {
