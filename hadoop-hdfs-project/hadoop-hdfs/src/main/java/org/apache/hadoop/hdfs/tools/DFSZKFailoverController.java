@@ -94,6 +94,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
     }
     String nnId = HAUtil.getNameNodeId(localNNConf, nsId);
     NameNode.initializeGenericKeys(localNNConf, nsId, nnId);
+    DFSUtil.setGenericConf(localNNConf, nsId, nnId, ZKFC_CONF_KEYS);
     
     localTarget = new NNHAServiceTarget(localNNConf, nsId, nnId);
     

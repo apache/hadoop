@@ -53,7 +53,9 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   @Before
   public void setup() throws Exception {
     conf = new Configuration();
-    conf.set(ZKFailoverController.ZK_QUORUM_KEY, hostPort);
+    // Specify the quorum per-nameservice, to ensure that these configs
+    // can be nameservice-scoped.
+    conf.set(ZKFailoverController.ZK_QUORUM_KEY + ".ns1", hostPort);
     conf.set(NodeFencer.CONF_METHODS_KEY,
         AlwaysSucceedFencer.class.getName());
 

@@ -44,7 +44,6 @@ public abstract class ZKFailoverController implements Tool {
 
   static final Log LOG = LogFactory.getLog(ZKFailoverController.class);
   
-  // TODO: this should be namespace-scoped
   public static final String ZK_QUORUM_KEY = "ha.zookeeper.quorum";
   private static final String ZK_SESSION_TIMEOUT_KEY = "ha.zookeeper.session-timeout.ms";
   private static final int ZK_SESSION_TIMEOUT_DEFAULT = 5*1000;
@@ -53,6 +52,19 @@ public abstract class ZKFailoverController implements Tool {
   private static final String ZK_ACL_DEFAULT = "world:anyone:rwcda";
   public static final String ZK_AUTH_KEY = "ha.zookeeper.auth";
   static final String ZK_PARENT_ZNODE_DEFAULT = "/hadoop-ha";
+
+  /**
+   * All of the conf keys used by the ZKFC. This is used in order to allow
+   * them to be overridden on a per-nameservice or per-namenode basis.
+   */
+  protected static final String[] ZKFC_CONF_KEYS = new String[] {
+    ZK_QUORUM_KEY,
+    ZK_SESSION_TIMEOUT_KEY,
+    ZK_PARENT_ZNODE_KEY,
+    ZK_ACL_KEY,
+    ZK_AUTH_KEY
+  };
+  
 
   /** Unable to format the parent znode in ZK */
   static final int ERR_CODE_FORMAT_DENIED = 2;
