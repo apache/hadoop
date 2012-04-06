@@ -117,6 +117,9 @@ Trunk (unreleased changes)
 
     HDFS-3126. Journal stream from Namenode to BackupNode needs to have 
     timeout. (Hari Mankude via suresh)
+
+    HDFS-3121. Add HDFS tests for HADOOP-8014 change. (John George via
+    suresh)
     
 Release 2.0.0 - UNRELEASED 
 
