@@ -305,7 +305,7 @@ public class JsonUtil {
     }
 
     return new DatanodeInfo(
-        (String)m.get("name"),
+        (String)m.get("ipAddr"),
         (String)m.get("hostName"),
         (String)m.get("storageID"),
         (int)(long)(Long)m.get("xferPort"),

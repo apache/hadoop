@@ -322,6 +322,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3109. Remove hsqldf exclusions from pom.xml. (Ravi Prakash
     via suresh)
 
+    HDFS-3210. JsonUtil#toJsonMap for for a DatanodeInfo should use
+    "ipAddr" instead of "name". (eli)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
