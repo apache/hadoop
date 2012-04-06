@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -41,6 +42,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
@@ -471,6 +473,57 @@ public class ViewFileSystem extends FileSystem {
   }
   
   @Override
+  public long getDefaultBlockSize() {
+    throw new NotInMountpointException("getDefaultBlockSize");
+  }
+
+  @Override
+  public short getDefaultReplication() {
+    throw new NotInMountpointException("getDefaultReplication");
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    throw new NotInMountpointException("getServerDefaults");
+  }
+
+  @Override
+  public long getDefaultBlockSize(Path f) {
+    try {
+      InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+      return res.targetFileSystem.getDefaultBlockSize(res.remainingPath);
+    } catch (FileNotFoundException e) {
+      throw new NotInMountpointException(f, "getDefaultBlockSize"); 
+    }
+  }
+
+  @Override
+  public short getDefaultReplication(Path f) {
+    try {
+      InodeTree.ResolveResult<FileSystem> res =
+        fsState.resolve(getUriPath(f), true);
+      return res.targetFileSystem.getDefaultReplication(res.remainingPath);
+    } catch (FileNotFoundException e) {
+      throw new NotInMountpointException(f, "getDefaultReplication"); 
+    }
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(Path f) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.getServerDefaults(res.remainingPath);    
+  }
+
+  @Override
+  public ContentSummary getContentSummary(Path f) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.getContentSummary(res.remainingPath);
+  }
+
+  @Override
   public void setWriteChecksum(final boolean writeChecksum) { 
     List<InodeTree.MountPoint<FileSystem>> mountPoints = 
         fsState.getMountPoints();
@@ -741,6 +794,21 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public void setVerifyChecksum(boolean verifyChecksum) {
       // Noop for viewfs
+    }
+
+    @Override
+    public FsServerDefaults getServerDefaults(Path f) throws IOException {
+      throw new NotInMountpointException(f, "getServerDefaults");
+    }
+    
+    @Override
+    public long getDefaultBlockSize(Path f) {
+      throw new NotInMountpointException(f, "getDefaultBlockSize");
+    }
+
+    @Override
+    public short getDefaultReplication(Path f) {
+      throw new NotInMountpointException(f, "getDefaultReplication");
     }
   }
 }

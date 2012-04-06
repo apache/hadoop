@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -267,6 +268,7 @@ public class FilterFileSystem extends FileSystem {
     return fs.mkdirs(f, permission);
   }
 
+
   /**
    * The src file is on the local disk.  Add it to FS at
    * the given dst name.
@@ -336,17 +338,40 @@ public class FilterFileSystem extends FileSystem {
     return fs.getUsed();
   }
   
-  /** Return the number of bytes that large input files should be optimally
-   * be split into to minimize i/o time. */
+  @Override
   public long getDefaultBlockSize() {
     return fs.getDefaultBlockSize();
   }
   
-  /**
-   * Get the default replication.
-   */
+  @Override
   public short getDefaultReplication() {
     return fs.getDefaultReplication();
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults() throws IOException {
+    return fs.getServerDefaults();
+  }
+
+  // path variants delegate to underlying filesystem 
+  @Override
+  public ContentSummary getContentSummary(Path f) throws IOException {
+    return fs.getContentSummary(f);
+  }
+
+  @Override
+  public long getDefaultBlockSize(Path f) {
+    return fs.getDefaultBlockSize(f);
+  }
+
+  @Override
+  public short getDefaultReplication(Path f) {
+    return fs.getDefaultReplication(f);
+  }
+
+  @Override
+  public FsServerDefaults getServerDefaults(Path f) throws IOException {
+    return fs.getServerDefaults(f);
   }
 
   /**
