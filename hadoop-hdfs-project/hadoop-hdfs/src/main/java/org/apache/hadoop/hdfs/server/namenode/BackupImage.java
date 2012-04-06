@@ -331,8 +331,7 @@ public class BackupImage extends FSImage {
    */
   private synchronized void setState(BNState newState) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("State transition " + bnState + " -> " + newState,
-          new Exception("trace"));
+      LOG.debug("State transition " + bnState + " -> " + newState);
     }
     bnState = newState;
   }

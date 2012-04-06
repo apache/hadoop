@@ -62,6 +62,9 @@ Trunk (unreleased changes)
     HDFS-3178. Add states and state handler for journal synchronization in
     JournalService.  (szetszwo)
 
+    HDFS-3204. Minor modification to JournalProtocol.proto to make
+    it generic. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
