@@ -70,6 +70,9 @@ Trunk (unreleased changes)
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
     (Henry Robinson via todd)
 
+    HDFS-3110. Use directRead API to reduce the number of buffer copies in
+    libhdfs (Henry Robinson via todd)
+
   BUG FIXES
 
     HDFS-2299. TestOfflineEditsViewer is failing on trunk. (Uma Maheswara Rao G
