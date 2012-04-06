@@ -17,26 +17,26 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.*;
+import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.apache.hadoop.security.*;
-import org.junit.Ignore;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
  */
-@Ignore
-public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
+public class TestMiniMRWithDFSWithDistinctUsers {
   static final UserGroupInformation DFS_UGI = createUGI("dfs", true); 
   static final UserGroupInformation ALICE_UGI = createUGI("alice", false); 
   static final UserGroupInformation BOB_UGI = createUGI("bob", false); 
@@ -45,7 +45,6 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
   MiniDFSCluster dfs = null;
   FileSystem fs = null;
   Configuration conf = new Configuration();
-  String jobTrackerName;
 
   static UserGroupInformation createUGI(String name, boolean issuper) {
     String group = issuper? "supergroup": name;
@@ -71,9 +70,10 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
       });
 
     rj.waitForCompletion();
-    assertEquals("SUCCEEDED", JobStatus.getJobRunState(rj.getJobState()));
+    Assert.assertEquals("SUCCEEDED", JobStatus.getJobRunState(rj.getJobState()));
   }
 
+  @Before
   public void setUp() throws Exception {
     dfs = new MiniDFSCluster(conf, 4, true, null);
 
@@ -96,29 +96,30 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
 
     mr = new MiniMRCluster(0, 0, 4, dfs.getFileSystem().getUri().toString(),
                            1, null, null, MR_UGI, mrConf);
-    jobTrackerName = "localhost:" + mr.getJobTrackerPort();
   }
 
+  @After
   public void tearDown() throws Exception {
     if (mr != null) { mr.shutdown();}
     if (dfs != null) { dfs.shutdown(); }
   }
   
+  @Test
   public void testDistinctUsers() throws Exception {
     JobConf job1 = mr.createJobConf();
     String input = "The quick brown fox\nhas many silly\n" 
       + "red fox sox\n";
     Path inDir = new Path("/testing/distinct/input");
     Path outDir = new Path("/user/alice/output");
-    TestMiniMRClasspath.configureWordCount(fs, jobTrackerName, job1, 
-                                           input, 2, 1, inDir, outDir);
+    TestMiniMRClasspath
+        .configureWordCount(fs, job1, input, 2, 1, inDir, outDir);
     runJobAsUser(job1, ALICE_UGI);
 
     JobConf job2 = mr.createJobConf();
     Path inDir2 = new Path("/testing/distinct/input2");
     Path outDir2 = new Path("/user/bob/output2");
-    TestMiniMRClasspath.configureWordCount(fs, jobTrackerName, job2, 
-                                           input, 2, 1, inDir2, outDir2);
+    TestMiniMRClasspath.configureWordCount(fs, job2, input, 2, 1, inDir2,
+        outDir2);
     runJobAsUser(job2, BOB_UGI);
   }
 
@@ -127,6 +128,7 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
    * task makes lots of spills (more than fit in the spill index cache)
    * that it will succeed.
    */
+  @Test
   public void testMultipleSpills() throws Exception {
     JobConf job1 = mr.createJobConf();
 
@@ -141,8 +143,8 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
       + "red fox sox\n";
     Path inDir = new Path("/testing/distinct/input");
     Path outDir = new Path("/user/alice/output");
-    TestMiniMRClasspath.configureWordCount(fs, jobTrackerName, job1, 
-                                           input, 2, 1, inDir, outDir);
+    TestMiniMRClasspath
+        .configureWordCount(fs, job1, input, 2, 1, inDir, outDir);
     runJobAsUser(job1, ALICE_UGI);
   }
 }
