@@ -20,12 +20,9 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.junit.Ignore;
-
 /**
  * Tests Job end notification in cluster mode.
  */
-@Ignore
 public class TestClusterMRNotification extends NotificationTestCase {
 
   public TestClusterMRNotification() throws IOException {
