@@ -155,4 +155,12 @@ public class ContainerTokenPBImpl extends ProtoBase<ContainerTokenProto> impleme
     builder.setService((service));
   }
 
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("ContainerToken { ");
+    sb.append("kind: ").append(getKind()).append(", ");
+    sb.append("service: ").append(getService()).append(" }");
+    return sb.toString();
+  }
 }  
