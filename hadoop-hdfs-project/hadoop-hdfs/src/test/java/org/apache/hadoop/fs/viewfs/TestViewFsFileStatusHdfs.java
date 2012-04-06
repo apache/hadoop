@@ -30,6 +30,7 @@ import java.net.URISyntaxException;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
@@ -48,13 +49,13 @@ import static org.junit.Assert.*;
 public class TestViewFsFileStatusHdfs {
   
   static final String testfilename = "/tmp/testFileStatusSerialziation";
+  static final String someFile = "/hdfstmp/someFileForTestGetFileChecksum";
 
-  
-  
   private static MiniDFSCluster cluster;
   private static Path defaultWorkingDirectory;
   private static Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
+  private static FileSystem vfs;
   
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
@@ -65,18 +66,19 @@ public class TestViewFsFileStatusHdfs {
     defaultWorkingDirectory = fHdfs.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fHdfs.mkdirs(defaultWorkingDirectory);
+
+    // Setup the ViewFS to be used for all tests.
+    Configuration conf = ViewFileSystemTestSetup.createConfig();
+    ConfigUtil.addLink(conf, "/vfstmp", new URI(fHdfs.getUri() + "/hdfstmp"));
+    ConfigUtil.addLink(conf, "/tmp", new URI(fHdfs.getUri() + "/tmp"));
+    vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
+    assertEquals(ViewFileSystem.class, vfs.getClass());
   }
 
   @Test
   public void testFileStatusSerialziation()
       throws IOException, URISyntaxException {
-
    long len = FileSystemTestHelper.createFile(fHdfs, testfilename);
-
-    Configuration conf = ViewFileSystemTestSetup.createConfig();
-    ConfigUtil.addLink(conf, "/tmp", new URI(fHdfs.getUri().toString() + "/tmp"));
-    FileSystem vfs = FileSystem.get(FsConstants.VIEWFS_URI, conf);
-    assertEquals(ViewFileSystem.class, vfs.getClass());
     FileStatus stat = vfs.getFileStatus(new Path(testfilename));
     assertEquals(len, stat.getLen());
     // check serialization/deserialization
@@ -89,9 +91,34 @@ public class TestViewFsFileStatusHdfs {
     assertEquals(len, deSer.getLen());
   }
 
+  @Test
+  public void testGetFileChecksum() throws IOException, URISyntaxException {
+    // Create two different files in HDFS
+    FileSystemTestHelper.createFile(fHdfs, someFile);
+    FileSystemTestHelper.createFile(fHdfs, FileSystemTestHelper
+      .getTestRootPath(fHdfs, someFile + "other"), 1, 512);
+    // Get checksum through ViewFS
+    FileChecksum viewFSCheckSum = vfs.getFileChecksum(
+      new Path("/vfstmp/someFileForTestGetFileChecksum"));
+    // Get checksum through HDFS. 
+    FileChecksum hdfsCheckSum = fHdfs.getFileChecksum(
+      new Path(someFile));
+    // Get checksum of different file in HDFS
+    FileChecksum otherHdfsFileCheckSum = fHdfs.getFileChecksum(
+      new Path(someFile+"other"));
+    // Checksums of the same file (got through HDFS and ViewFS should be same)
+    assertEquals("HDFS and ViewFS checksums were not the same", viewFSCheckSum,
+      hdfsCheckSum);
+    // Checksum of different files should be different.
+    assertFalse("Some other HDFS file which should not have had the same " +
+      "checksum as viewFS did!", viewFSCheckSum.equals(otherHdfsFileCheckSum));
+  }
+
   @AfterClass
   public static void cleanup() throws IOException {
     fHdfs.delete(new Path(testfilename), true);
+    fHdfs.delete(new Path(someFile), true);
+    fHdfs.delete(new Path(someFile + "other"), true);
   }
 
 }
