@@ -53,9 +53,6 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class NodeFencer {
-  public static final String CONF_METHODS_KEY =
-    "dfs.ha.fencing.methods";
-  
   private static final String CLASS_RE = "([a-zA-Z0-9\\.\\$]+)";
   private static final Pattern CLASS_WITH_ARGUMENT =
     Pattern.compile(CLASS_RE + "\\((.+?)\\)");
@@ -76,18 +73,18 @@ public class NodeFencer {
   
   private final List<FenceMethodWithArg> methods;
   
-  public NodeFencer(Configuration conf)
+  NodeFencer(Configuration conf, String spec)
       throws BadFencingConfigurationException {
-    this.methods = parseMethods(conf);
+    this.methods = parseMethods(conf, spec);
   }
   
-  public static NodeFencer create(Configuration conf)
+  public static NodeFencer create(Configuration conf, String confKey)
       throws BadFencingConfigurationException {
-    String confStr = conf.get(CONF_METHODS_KEY);
+    String confStr = conf.get(confKey);
     if (confStr == null) {
       return null;
     }
-    return new NodeFencer(conf);
+    return new NodeFencer(conf, confStr);
   }
 
   public boolean fence(HAServiceTarget fromSvc) {
@@ -115,10 +112,10 @@ public class NodeFencer {
     return false;
   }
 
-  private static List<FenceMethodWithArg> parseMethods(Configuration conf)
+  private static List<FenceMethodWithArg> parseMethods(Configuration conf,
+      String spec)
       throws BadFencingConfigurationException {
-    String confStr = conf.get(CONF_METHODS_KEY);
-    String[] lines = confStr.split("\\s*\n\\s*");
+    String[] lines = spec.split("\\s*\n\\s*");
     
     List<FenceMethodWithArg> methods = Lists.newArrayList();
     for (String line : lines) {

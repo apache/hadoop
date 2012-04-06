@@ -71,8 +71,7 @@ public class TestShellCommandFencer {
   public void testCheckNoArgs() {
     try {
       Configuration conf = new Configuration();
-      conf.set(NodeFencer.CONF_METHODS_KEY, "shell");
-      new NodeFencer(conf);
+      new NodeFencer(conf, "shell");
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
       assertTrue(
@@ -85,8 +84,7 @@ public class TestShellCommandFencer {
   public void testCheckParensNoArgs() {
     try {
       Configuration conf = new Configuration();
-      conf.set(NodeFencer.CONF_METHODS_KEY, "shell()");
-      new NodeFencer(conf);
+      new NodeFencer(conf, "shell()");
       fail("Didn't throw when passing no args to shell");
     } catch (BadFencingConfigurationException confe) {
       assertTrue(
