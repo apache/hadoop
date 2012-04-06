@@ -211,6 +211,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8243. Security support broken in CLI (manual) failover controller
     (todd)
 
+    HADOOP-8251. Fix SecurityUtil.fetchServiceTicket after HADOOP-6941 (todd)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
