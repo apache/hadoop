@@ -51,7 +51,7 @@ abstract public class Shell {
   /** a Unix command to get a given user's groups list */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
-    return (WINDOWS)? new String[] {"cmd", "/c", "id -Gn " + user}:
+	  return (WINDOWS)? new String[] {"cmd", "/c", "net user " + user}:
         new String [] {"bash", "-c", "id -Gn " + user};
   }
   /** a Unix command to get a given netgroup's user list */

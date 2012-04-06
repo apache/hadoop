@@ -89,14 +89,19 @@ class Child {
     // file name is passed thru env
     String jobTokenFile = 
       System.getenv().get(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    if(Shell.WINDOWS) {
+      if(jobTokenFile.charAt(0)=='"')
+        jobTokenFile = jobTokenFile.substring(1);
+      if(jobTokenFile.charAt(jobTokenFile.length()-1) == '"')
+        jobTokenFile = jobTokenFile.substring(0, jobTokenFile.length()-1);
+    }
     Credentials credentials = 
       TokenCache.loadTokens(jobTokenFile, defaultConf);
     LOG.debug("loading token. # keys =" +credentials.numberOfSecretKeys() + 
         "; from file=" + jobTokenFile);
     
     Token<JobTokenIdentifier> jt = TokenCache.getJobToken(credentials);
-    if (!Shell.WINDOWS) 
-      SecurityUtil.setTokenService(jt, address);
+    SecurityUtil.setTokenService(jt, address);
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     current.addToken(jt);
 
@@ -210,9 +215,8 @@ class Child {
         job.setBoolean("fs.file.impl.disable.cache", false);
 
         // set the jobTokenFile into task
-        if (!Shell.WINDOWS) 
-          task.setJobTokenSecret(JobTokenSecretManager.
-                                 createSecretKey(jt.getPassword()));
+        task.setJobTokenSecret(JobTokenSecretManager.
+                               createSecretKey(jt.getPassword()));
 
         // setup the child's mapred-local-dir. The child is now sandboxed and
         // can only see files down and under attemtdir only.

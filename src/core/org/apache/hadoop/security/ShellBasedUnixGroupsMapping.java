@@ -20,11 +20,7 @@ package org.apache.hadoop.security;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.StringTokenizer;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,7 +29,7 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 
 /**
  * A simple shell-based implementation of {@link GroupMappingServiceProvider} 
- * that exec's the <code>groups</code> shell command to fetch the group
+ * that exec's a shell command to fetch the group
  * memberships of a given user.
  */
 public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider {
@@ -42,7 +38,7 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
   
   @Override
   public List<String> getGroups(String user) throws IOException {
-    return getUnixGroups(user);
+    return getUserGroups(user);
   }
 
   @Override
@@ -62,24 +58,53 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
    * @return the groups list that the <code>user</code> belongs to
    * @throws IOException if encounter any error when running the command
    */
-  private static List<String> getUnixGroups(final String user) throws IOException {
-    String result = "";
-    if (Shell.DISABLEWINDOWS_TEMPORARILY)
-      result = "hadoopusers";
+  private static List<String> getUserGroups(final String user) throws IOException {
+    List<String> groups = new LinkedList<String>();
+    if (Shell.WINDOWS) {
+      String result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
+      String[] lines = result.split("\\r\\n");
+        String line = lines[0];
+        if (!line.startsWith("User name")) {
+          throw new IOException(
+              "Command result did not start with \"User name\"");
+        }
+        String[] splits = line.substring(9).split("\\s");
+        if (splits.length == 0 || !splits[splits.length-1].equals(user)) {
+          throw new IOException("Bad user name returned");
+        }
+        for (int i=1; i<lines.length; ++i) {
+          line = lines[i];
+          // not handling global group memberships now
+          // it might be better to handle them via a specific domain controller
+          // plugin
+          if (line.startsWith("Local Group Memberships")) {
+            splits = line.substring(23).split("\\s");
+            for (String group : splits) {
+              if (group.length() > 0) {
+                if (group.charAt(0) == '*') {
+                  group = group.substring(1);
+                }
+                groups.add(group);
+              }
+            }
+          }
+        }
+    }
     else {
+      String result = "";
       try {
         result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
       } catch (ExitCodeException e) {
         // if we didn't get the group - just return empty list;
         LOG.warn("got exception trying to get groups for user " + user, e);
       }
+      StringTokenizer tokenizer = new StringTokenizer(result);
+      
+      while (tokenizer.hasMoreTokens()) {
+        groups.add(tokenizer.nextToken());
+      }
     }
-
-    StringTokenizer tokenizer = new StringTokenizer(result);
-    List<String> groups = new LinkedList<String>();
-    while (tokenizer.hasMoreTokens()) {
-      groups.add(tokenizer.nextToken());
-    }
+    
     return groups;
   }
 }

@@ -489,8 +489,7 @@ public class JobInProgress {
       //At this point, this constructor is called in the context of an RPC, and
       //hence the "current user" is actually referring to the kerberos
       //authenticated user (if security is ON).
-      if (!Shell.DISABLEWINDOWS_TEMPORARILY)
-        FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
+      FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
     }
   }
 

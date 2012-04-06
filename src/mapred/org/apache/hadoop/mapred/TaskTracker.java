@@ -3266,8 +3266,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   
   private void authorizeJVM(org.apache.hadoop.mapreduce.JobID jobId) 
   throws IOException {
-    if (Shell.DISABLEWINDOWS_TEMPORARILY)
-      return;
     String currentJobId = 
       UserGroupInformation.getCurrentUser().getUserName();
     if (!currentJobId.equals(jobId.toString())) {
@@ -3286,8 +3284,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    */
   public synchronized JvmTask getTask(JvmContext context) 
   throws IOException {
-    if (!Shell.WINDOWS)
-      authorizeJVM(context.jvmId.getJobId());
+    authorizeJVM(context.jvmId.getJobId());
     JVMId jvmId = context.jvmId;
     LOG.debug("JVM with ID : " + jvmId + " asked for a task");
     // save pid of task JVM sent by child
@@ -3815,8 +3812,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       String exceptionMsgRegex =
         (String) context.getAttribute("exceptionMsgRegex");
 
-      if (!Shell.WINDOWS)
-        verifyRequest(request, response, tracker, jobId);
+      verifyRequest(request, response, tracker, jobId);
 
       long startTime = 0;
       try {

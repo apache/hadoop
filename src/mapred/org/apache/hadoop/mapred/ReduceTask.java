@@ -1485,11 +1485,7 @@ class ReduceTask extends Task {
         URL url = mapOutputLoc.getOutputLocation();
         URLConnection connection = url.openConnection();
         
-        InputStream input;
-        if (Shell.WINDOWS)
-          input = getInputStream(connection, shuffleConnectionTimeout, shuffleReadTimeout); 
-        else 
-          input = setupSecureConnection(mapOutputLoc, connection);
+        InputStream input = setupSecureConnection(mapOutputLoc, connection);
  
         // Validate header from map output
         TaskAttemptID mapId = null;
@@ -1666,10 +1662,7 @@ class ReduceTask extends Task {
           // Reconnect
           try {
             connection = mapOutputLoc.getOutputLocation().openConnection();
-            if (Shell.WINDOWS) 
-              input = getInputStream(connection, shuffleConnectionTimeout, shuffleReadTimeout); 
-            else 
-              input = setupSecureConnection(mapOutputLoc, connection);
+            input = setupSecureConnection(mapOutputLoc, connection);
           } catch (IOException ioe) {
             LOG.info("Failed reopen connection to fetch map-output from " + 
                      mapOutputLoc.getHost());

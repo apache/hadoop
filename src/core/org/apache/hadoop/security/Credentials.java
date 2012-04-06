@@ -126,8 +126,6 @@ public class Credentials implements Writable {
                                                  ) throws IOException {
     FSDataInputStream in = null;
     Credentials credentials = new Credentials();
-    if (Shell.DISABLEWINDOWS_TEMPORARILY)
-      return credentials;
     try {
       in = filename.getFileSystem(conf).open(filename);
       credentials.readTokenStorageStream(in);
