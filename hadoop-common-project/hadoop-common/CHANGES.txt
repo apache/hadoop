@@ -139,6 +139,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8077. HA: fencing method should be able to be configured on
     a per-NN or per-NS basis (todd)
 
+    HADOOP-8086. KerberosName silently sets defaultRealm to "" if the 
+    Kerberos config is not found, it should log a WARN (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
