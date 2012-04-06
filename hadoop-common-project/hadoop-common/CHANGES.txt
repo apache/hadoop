@@ -136,6 +136,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8007. Use substitution tokens for fencing argument (todd)
 
+    HADOOP-8077. HA: fencing method should be able to be configured on
+    a per-NN or per-NS basis (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

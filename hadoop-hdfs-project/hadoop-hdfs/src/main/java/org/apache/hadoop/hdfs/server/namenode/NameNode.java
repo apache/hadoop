@@ -40,6 +40,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -160,7 +162,8 @@ public class NameNode {
     DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
     DFS_NAMENODE_BACKUP_ADDRESS_KEY,
     DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
-    DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY
+    DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY,
+    DFS_HA_FENCE_METHODS_KEY
   };
   
   public long getProtocolVersion(String protocol, 

@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -113,7 +114,7 @@ public class TestDFSHAAdminMiniCluster {
   
   @Test
   public void testTryFailoverToSafeMode() throws Exception {
-    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
     tool.setConf(conf);
 
     NameNodeAdapter.enterSafeMode(cluster.getNameNode(0), false);
@@ -135,7 +136,7 @@ public class TestDFSHAAdminMiniCluster {
     // tmp file, so we can verify that the args were substituted right
     File tmpFile = File.createTempFile("testFencer", ".txt");
     tmpFile.deleteOnExit();
-    conf.set(NodeFencer.CONF_METHODS_KEY,
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
         "shell(echo -n $target_nameserviceid.$target_namenodeid " +
         "$target_port $dfs_ha_namenode_id > " +
         tmpFile.getAbsolutePath() + ")");
@@ -168,19 +169,19 @@ public class TestDFSHAAdminMiniCluster {
 
           
     // Test failover with not fencer and forcefence option
-    conf.unset(NodeFencer.CONF_METHODS_KEY);
+    conf.unset(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY);
     tool.setConf(conf);
     assertEquals(-1, runTool("-failover", "nn1", "nn2", "--forcefence"));
     assertFalse(tmpFile.exists());
 
     // Test failover with bad fencer and forcefence option
-    conf.set(NodeFencer.CONF_METHODS_KEY, "foobar!");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "foobar!");
     tool.setConf(conf);
     assertEquals(-1, runTool("-failover", "nn1", "nn2", "--forcefence"));
     assertFalse(tmpFile.exists());
 
     // Test failover with force fence listed before the other arguments
-    conf.set(NodeFencer.CONF_METHODS_KEY, "shell(true)");
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
     tool.setConf(conf);
     assertEquals(0, runTool("-failover", "--forcefence", "nn1", "nn2"));
   }

@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.BadFencingConfigurationException;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.NodeFencer;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -75,7 +76,8 @@ public class NNHAServiceTarget extends HAServiceTarget {
     this.addr = NetUtils.createSocketAddr(serviceAddr,
         NameNode.DEFAULT_PORT);
     try {
-      this.fencer = NodeFencer.create(targetConf);
+      this.fencer = NodeFencer.create(targetConf,
+          DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY);
     } catch (BadFencingConfigurationException e) {
       this.fenceConfigError = e;
     }
