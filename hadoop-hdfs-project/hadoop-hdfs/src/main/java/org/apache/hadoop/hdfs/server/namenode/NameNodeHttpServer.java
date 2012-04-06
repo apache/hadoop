@@ -165,10 +165,11 @@ public class NameNodeHttpServer {
             httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth,
                 useKrb);
             // assume same ssl port for all datanodes
-            InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf
-                .get(DFS_DATANODE_HTTPS_ADDRESS_KEY, infoHost + ":" + 50475));
-            httpServer.setAttribute("datanode.https.port", datanodeSslPort
-                .getPort());
+            InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(
+                conf.get(DFS_DATANODE_HTTPS_ADDRESS_KEY,
+                    infoHost + ":" + DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT));
+            httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY,
+                datanodeSslPort.getPort());
           }
           httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
           httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,

@@ -71,6 +71,8 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
 
+import com.google.common.net.InetAddresses;
+
 /**
  * Manage datanodes, include decommission and other activities.
  */
@@ -353,14 +355,9 @@ public class DatanodeManager {
   private void resolveNetworkLocation (DatanodeDescriptor node) {
     List<String> names = new ArrayList<String>(1);
     if (dnsToSwitchMapping instanceof CachedDNSToSwitchMapping) {
-      // get the node's IP address
       names.add(node.getIpAddr());
     } else {
-      // get the node's host name
-      String hostName = node.getHostName();
-      int colon = hostName.indexOf(":");
-      hostName = (colon==-1)?hostName:hostName.substring(0,colon);
-      names.add(hostName);
+      names.add(node.getHostName());
     }
     
     // resolve its network location
@@ -771,6 +768,40 @@ public class DatanodeManager {
     }
   }
 
+  /**
+   * Parse a DatanodeID from a hosts file entry
+   * @param hostLine of form [hostname|ip][:port]?
+   * @return DatanodeID constructed from the given string
+   */
+  private DatanodeID parseDNFromHostsEntry(String hostLine) {
+    DatanodeID dnId;
+    String hostStr;
+    int port;
+    int idx = hostLine.indexOf(':');
+
+    if (-1 == idx) {
+      hostStr = hostLine;
+      port = DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT;
+    } else {
+      hostStr = hostLine.substring(0, idx);
+      port = Integer.valueOf(hostLine.substring(idx));
+    }
+
+    if (InetAddresses.isInetAddress(hostStr)) {
+      // The IP:port is sufficient for listing in a report
+      dnId = new DatanodeID(hostStr, "", port);
+    } else {
+      String ipAddr = "";
+      try {
+        ipAddr = InetAddress.getByName(hostStr).getHostAddress();
+      } catch (UnknownHostException e) {
+        LOG.warn("Invalid hostname " + hostStr + " in hosts file");
+      }
+      dnId = new DatanodeID(ipAddr, hostStr, port);
+    }
+    return dnId;
+  }
+
   /** For generating datanode reports */
   public List<DatanodeDescriptor> getDatanodeListForReport(
       final DatanodeReportType type) {
@@ -782,7 +813,7 @@ public class DatanodeManager {
     HashMap<String, String> mustList = new HashMap<String, String>();
 
     if (listDeadNodes) {
-      //first load all the nodes listed in include and exclude files.
+      // Put all nodes referenced in the hosts files in the map
       Iterator<String> it = hostsReader.getHosts().iterator();
       while (it.hasNext()) {
         mustList.put(it.next(), "");
@@ -805,7 +836,7 @@ public class DatanodeManager {
         if ( (isDead && listDeadNodes) || (!isDead && listLiveNodes) ) {
           nodes.add(dn);
         }
-        //Remove any form of the this datanode in include/exclude lists.
+        // Remove any nodes we know about from the map
         try {
           InetAddress inet = InetAddress.getByName(dn.getIpAddr());
           // compare hostname(:port)
@@ -814,7 +845,7 @@ public class DatanodeManager {
           // compare ipaddress(:port)
           mustList.remove(inet.getHostAddress().toString());
           mustList.remove(inet.getHostAddress().toString()+ ":" +dn.getXferPort());
-        } catch ( UnknownHostException e ) {
+        } catch (UnknownHostException e) {
           mustList.remove(dn.getName());
           mustList.remove(dn.getIpAddr());
           LOG.warn(e);
@@ -825,9 +856,13 @@ public class DatanodeManager {
     if (listDeadNodes) {
       Iterator<String> it = mustList.keySet().iterator();
       while (it.hasNext()) {
-        DatanodeDescriptor dn = 
-            new DatanodeDescriptor(new DatanodeID(it.next()));
-        dn.setLastUpdate(0);
+        // The remaining nodes are ones that are referenced by the hosts
+        // files but that we do not know about, ie that we have never
+        // head from. Eg. a host that is no longer part of the cluster
+        // or a bogus entry was given in the hosts files
+        DatanodeID dnId = parseDNFromHostsEntry(it.next());
+        DatanodeDescriptor dn = new DatanodeDescriptor(dnId); 
+        dn.setLastUpdate(0); // Consider this node dead for reporting
         nodes.add(dn);
       }
     }

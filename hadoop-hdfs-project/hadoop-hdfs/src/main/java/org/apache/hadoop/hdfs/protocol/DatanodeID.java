@@ -24,6 +24,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -50,14 +51,21 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   protected int infoPort;      // info server port
   protected int ipcPort;       // IPC server port
 
-  /** Equivalent to DatanodeID(""). */
-  public DatanodeID() {this("");}
+  public DatanodeID() {
+    this("", DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT);
+  }
 
-  /** Equivalent to DatanodeID(ipAddr, "", -1, -1, -1). */
-  public DatanodeID(String ipAddr) {this(ipAddr, "", "", -1, -1, -1);}
+  public DatanodeID(String ipAddr, int xferPort) {
+    this(ipAddr, "", "", xferPort,
+        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
+  }
 
-  /** Equivalent to DatanodeID(ipAddr, "", xferPort, -1, -1). */
-  public DatanodeID(String ipAddr, int xferPort) {this(ipAddr, "", "", xferPort, -1, -1);}
+  public DatanodeID(String ipAddr, String hostName, int xferPort) {
+    this(ipAddr, hostName, "", xferPort,
+        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
+  }
 
   /**
    * DatanodeID copy constructor

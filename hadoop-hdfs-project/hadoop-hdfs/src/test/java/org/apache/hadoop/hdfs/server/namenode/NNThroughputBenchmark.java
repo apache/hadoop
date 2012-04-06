@@ -779,9 +779,9 @@ public class NNThroughputBenchmark {
     }
 
     TinyDatanode(int dnIdx, int blockCapacity) throws IOException {
+      String ipAddr = DNS.getDefaultIP("default");
       String hostName = DNS.getDefaultHost("default", "default");
-      dnRegistration = new DatanodeRegistration(hostName);
-      dnRegistration.setXferPort(getNodePort(dnIdx));
+      dnRegistration = new DatanodeRegistration(ipAddr, getNodePort(dnIdx));
       dnRegistration.setHostName(hostName);
       this.blocks = new ArrayList<Block>(blockCapacity);
       this.nrBlocks = 0;
@@ -894,10 +894,10 @@ public class NNThroughputBenchmark {
         for(int t = 0; t < blockTargets.length; t++) {
           DatanodeInfo dnInfo = blockTargets[t];
           DatanodeRegistration receivedDNReg;
-          receivedDNReg = new DatanodeRegistration(dnInfo.getIpAddr());
+          receivedDNReg =
+            new DatanodeRegistration(dnInfo.getIpAddr(), dnInfo.getXferPort());
           receivedDNReg.setStorageInfo(
-                          new DataStorage(nsInfo, dnInfo.getStorageID()));
-          receivedDNReg.setXferPort(dnInfo.getXferPort());
+            new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
           receivedDNReg.setIpcPort(dnInfo.getIpcPort());
           ReceivedDeletedBlockInfo[] rdBlocks = {
