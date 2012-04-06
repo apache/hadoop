@@ -111,6 +111,9 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4112. Fix tests org.apache.hadoop.mapred.TestClusterMapReduceTestCase
     (Devaraj K via bobby)
+
+    MAPREDUCE-4111. Fix tests in org.apache.hadoop.mapred.TestJobName (Devaraj
+    K via bobby)
  
 Release 0.23.3 - UNRELEASED
 
