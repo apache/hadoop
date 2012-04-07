@@ -333,6 +333,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3050. rework OEV to share more code with the NameNode.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3226. Allow GetConf tool to print arbitrary keys (todd)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
