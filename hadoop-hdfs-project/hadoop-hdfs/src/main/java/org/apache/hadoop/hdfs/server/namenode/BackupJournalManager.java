@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 
 /**
@@ -26,19 +27,20 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
  * to a BackupNode.
  */
 class BackupJournalManager implements JournalManager {
-
-  private final NamenodeRegistration nnReg;
   private final NamenodeRegistration bnReg;
+  private final JournalInfo journalInfo;
   
   BackupJournalManager(NamenodeRegistration bnReg,
       NamenodeRegistration nnReg) {
+    journalInfo = new JournalInfo(nnReg.getLayoutVersion(),
+        nnReg.getClusterID(), nnReg.getNamespaceID());
     this.bnReg = bnReg;
-    this.nnReg = nnReg;
   }
 
   @Override
   public EditLogOutputStream startLogSegment(long txId) throws IOException {
-    EditLogBackupOutputStream stm = new EditLogBackupOutputStream(bnReg, nnReg);
+    EditLogBackupOutputStream stm = new EditLogBackupOutputStream(bnReg,
+        journalInfo);
     stm.startLogSegment(txId);
     return stm;
   }

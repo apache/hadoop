@@ -21,10 +21,12 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -70,7 +72,8 @@ public class GetConf extends Configured implements Tool {
     EXCLUDE_FILE("-excludeFile",
         "gets the exclude file path that defines the datanodes " +
         "that need to decommissioned."),
-    NNRPCADDRESSES("-nnRpcAddresses", "gets the namenode rpc addresses");
+    NNRPCADDRESSES("-nnRpcAddresses", "gets the namenode rpc addresses"),
+    CONFKEY("-confKey [key]", "gets a specific key from the configuration");
 
     private static Map<String, CommandHandler> map;
     static  {
@@ -87,6 +90,8 @@ public class GetConf extends Configured implements Tool {
           new CommandHandler("DFSConfigKeys.DFS_HOSTS_EXCLUDE"));
       map.put(NNRPCADDRESSES.getName().toLowerCase(),
           new NNRpcAddressesCommandHandler());
+      map.put(CONFKEY.getName().toLowerCase(),
+          new PrintConfKeyCommandHandler());
     }
     
     private final String cmd;
@@ -98,6 +103,10 @@ public class GetConf extends Configured implements Tool {
     }
 
     public String getName() {
+      return cmd.split(" ")[0];
+    }
+    
+    public String getUsage() {
       return cmd;
     }
     
@@ -105,8 +114,8 @@ public class GetConf extends Configured implements Tool {
       return description;
     }
     
-    public static CommandHandler getHandler(String name) {
-      return map.get(name.toLowerCase());
+    public static CommandHandler getHandler(String cmd) {
+      return map.get(cmd.toLowerCase());
     }
   }
   
@@ -118,7 +127,7 @@ public class GetConf extends Configured implements Tool {
     StringBuilder usage = new StringBuilder(DESCRIPTION);
     usage.append("\nhadoop getconf \n");
     for (Command cmd : Command.values()) {
-      usage.append("\t[" + cmd.getName() + "]\t\t\t" + cmd.getDescription()
+      usage.append("\t[" + cmd.getUsage() + "]\t\t\t" + cmd.getDescription()
           + "\n");
     }
     USAGE = usage.toString();
@@ -128,7 +137,7 @@ public class GetConf extends Configured implements Tool {
    * Handler to return value for key corresponding to the {@link Command}
    */
   static class CommandHandler {
-    final String key; // Configuration key to lookup
+    String key; // Configuration key to lookup
     
     CommandHandler() {
       this(null);
@@ -138,18 +147,30 @@ public class GetConf extends Configured implements Tool {
       this.key = key;
     }
 
-    final int doWork(GetConf tool) {
+    final int doWork(GetConf tool, String[] args) {
       try {
-        return doWorkInternal(tool);
+        checkArgs(args);
+
+        return doWorkInternal(tool, args);
       } catch (Exception e) {
         tool.printError(e.getMessage());
       }
       return -1;
     }
+
+    protected void checkArgs(String args[]) {
+      if (args.length > 0) {
+        throw new HadoopIllegalArgumentException(
+            "Did not expect argument: " + args[0]);
+      }
+    }
+
     
-    /** Method to be overridden by sub classes for specific behavior */
-    int doWorkInternal(GetConf tool) throws Exception {
-      String value = tool.getConf().get(key);
+    /** Method to be overridden by sub classes for specific behavior 
+     * @param args */
+    int doWorkInternal(GetConf tool, String[] args) throws Exception {
+
+      String value = tool.getConf().getTrimmed(key);
       if (value != null) {
         tool.printOut(value);
         return 0;
@@ -164,7 +185,7 @@ public class GetConf extends Configured implements Tool {
    */
   static class NameNodesCommandHandler extends CommandHandler {
     @Override
-    int doWorkInternal(GetConf tool) throws IOException {
+    int doWorkInternal(GetConf tool, String []args) throws IOException {
       tool.printMap(DFSUtil.getNNServiceRpcAddresses(tool.getConf()));
       return 0;
     }
@@ -175,7 +196,7 @@ public class GetConf extends Configured implements Tool {
    */
   static class BackupNodesCommandHandler extends CommandHandler {
     @Override
-    public int doWorkInternal(GetConf tool) throws IOException {
+    public int doWorkInternal(GetConf tool, String []args) throws IOException {
       tool.printMap(DFSUtil.getBackupNodeAddresses(tool.getConf()));
       return 0;
     }
@@ -186,7 +207,7 @@ public class GetConf extends Configured implements Tool {
    */
   static class SecondaryNameNodesCommandHandler extends CommandHandler {
     @Override
-    public int doWorkInternal(GetConf tool) throws IOException {
+    public int doWorkInternal(GetConf tool, String []args) throws IOException {
       tool.printMap(DFSUtil.getSecondaryNameNodeAddresses(tool.getConf()));
       return 0;
     }
@@ -199,7 +220,7 @@ public class GetConf extends Configured implements Tool {
    */
   static class NNRpcAddressesCommandHandler extends CommandHandler {
     @Override
-    public int doWorkInternal(GetConf tool) throws IOException {
+    public int doWorkInternal(GetConf tool, String []args) throws IOException {
       Configuration config = tool.getConf();
       List<ConfiguredNNAddress> cnnlist = DFSUtil.flattenAddressMap(
           DFSUtil.getNNServiceRpcAddresses(config));
@@ -212,6 +233,23 @@ public class GetConf extends Configured implements Tool {
       }
       tool.printError("Did not get namenode service rpc addresses.");
       return -1;
+    }
+  }
+  
+  static class PrintConfKeyCommandHandler extends CommandHandler {
+    @Override
+    protected void checkArgs(String[] args) {
+      if (args.length != 1) {
+        throw new HadoopIllegalArgumentException(
+            "usage: " + Command.CONFKEY.getUsage());
+      }
+    }
+
+    @Override
+    int doWorkInternal(GetConf tool, String[] args) throws Exception {
+      this.key = args[0];
+      System.err.println("key: " + key);
+      return super.doWorkInternal(tool, args);
     }
   }
   
@@ -260,10 +298,11 @@ public class GetConf extends Configured implements Tool {
    * @return return status of the command
    */
   private int doWork(String[] args) {
-    if (args.length == 1) {
+    if (args.length >= 1) {
       CommandHandler handler = Command.getHandler(args[0]);
       if (handler != null) {
-        return handler.doWork(this);
+        return handler.doWork(this,
+            Arrays.copyOfRange(args, 1, args.length));
       }
     }
     printUsage();

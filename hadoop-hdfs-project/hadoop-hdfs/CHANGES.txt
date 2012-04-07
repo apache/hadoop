@@ -62,13 +62,13 @@ Trunk (unreleased changes)
     HDFS-3178. Add states and state handler for journal synchronization in
     JournalService.  (szetszwo)
 
-    HDFS-3204. Minor modification to JournalProtocol.proto to make
-    it generic. (suresh)
-
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
     (Henry Robinson via todd)
+
+    HDFS-3110. Use directRead API to reduce the number of buffer copies in
+    libhdfs (Henry Robinson via todd)
 
   BUG FIXES
 
@@ -114,6 +114,9 @@ Trunk (unreleased changes)
 
     HDFS-3126. Journal stream from Namenode to BackupNode needs to have 
     timeout. (Hari Mankude via suresh)
+
+    HDFS-3121. Add HDFS tests for HADOOP-8014 change. (John George via
+    suresh)
     
 Release 2.0.0 - UNRELEASED 
 
@@ -327,6 +330,17 @@ Release 2.0.0 - UNRELEASED
     HDFS-3050. rework OEV to share more code with the NameNode.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3226. Allow GetConf tool to print arbitrary keys (todd)
+
+    HDFS-3204. Minor modification to JournalProtocol.proto to make
+    it generic. (suresh)
+
+    HDFS-2505. Add a test to verify getFileChecksum(..) with ViewFS.  (Ravi
+    Prakash via szetszwo)
+
+    HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
+    and epoch in JournalProtocol. (suresh via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -435,6 +449,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3208. Bogus entries in hosts files are incorrectly displayed
     in the report. (eli)
+
+    HDFS-3136. Remove SLF4J dependency as HDFS does not need it to fix
+    unnecessary warnings. (Jason Lowe via suresh)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

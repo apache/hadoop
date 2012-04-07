@@ -24,6 +24,7 @@ import java.util.Arrays;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -42,18 +43,18 @@ import org.apache.hadoop.security.UserGroupInformation;
 class EditLogBackupOutputStream extends EditLogOutputStream {
   static int DEFAULT_BUFFER_SIZE = 256;
 
-  private JournalProtocol backupNode;  // RPC proxy to backup node
-  private NamenodeRegistration bnRegistration;  // backup node registration
-  private NamenodeRegistration nnRegistration;  // active node registration
+  private final JournalProtocol backupNode;  // RPC proxy to backup node
+  private final NamenodeRegistration bnRegistration;  // backup node registration
+  private final JournalInfo journalInfo;  // active node registration
+  private final DataOutputBuffer out;     // serialized output sent to backup node
   private EditsDoubleBuffer doubleBuf;
-  private DataOutputBuffer out;     // serialized output sent to backup node
 
   EditLogBackupOutputStream(NamenodeRegistration bnReg, // backup node
-                            NamenodeRegistration nnReg) // active name-node
+                            JournalInfo journalInfo) // active name-node
   throws IOException {
     super();
     this.bnRegistration = bnReg;
-    this.nnRegistration = nnReg;
+    this.journalInfo = journalInfo;
     InetSocketAddress bnAddress =
       NetUtils.createSocketAddr(bnRegistration.getAddress());
     try {
@@ -127,8 +128,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
       out.reset();
       assert out.getLength() == 0 : "Output buffer is not empty";
 
-      backupNode.journal(nnRegistration,
-          firstTxToFlush, numReadyTxns, data);
+      backupNode.journal(journalInfo, 0, firstTxToFlush, numReadyTxns, data);
     }
   }
 
@@ -140,6 +140,6 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   }
 
   void startLogSegment(long txId) throws IOException {
-    backupNode.startLogSegment(nnRegistration, txId);
+    backupNode.startLogSegment(journalInfo, 0, txId);
   }
 }

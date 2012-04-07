@@ -579,7 +579,8 @@ public abstract class FileSystem extends Configured implements Closeable {
    *
    * The FileSystem will simply return an elt containing 'localhost'.
    *
-   * @param p path of file to get locations for
+   * @param p path is used to identify an FS since an FS could have
+   *          another FS that it could be delegating the call to
    * @param start offset into the given file
    * @param len length for which to get locations for
    */
@@ -602,10 +603,21 @@ public abstract class FileSystem extends Configured implements Closeable {
     return new FsServerDefaults(getDefaultBlockSize(), 
         conf.getInt("io.bytes.per.checksum", 512), 
         64 * 1024, 
-        getDefaultReplication(), 
+        getDefaultReplication(),
         conf.getInt("io.file.buffer.size", 4096));
   }
-  
+
+  /**
+   * Return a set of server default configuration values
+   * @param p path is used to identify an FS since an FS could have
+   *          another FS that it could be delegating the call to
+   * @return server default configuration values
+   * @throws IOException
+   */
+  public FsServerDefaults getServerDefaults(Path p) throws IOException {
+    return getServerDefaults();
+  }
+
   /**
    * Return the fully-qualified path of path f resolving the path
    * through any symlinks or mount point
@@ -653,8 +665,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       throws IOException {
     return create(f, overwrite, 
                   getConf().getInt("io.file.buffer.size", 4096),
-                  getDefaultReplication(),
-                  getDefaultBlockSize());
+                  getDefaultReplication(f),
+                  getDefaultBlockSize(f));
   }
 
   /**
@@ -668,8 +680,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       throws IOException {
     return create(f, true, 
                   getConf().getInt("io.file.buffer.size", 4096),
-                  getDefaultReplication(),
-                  getDefaultBlockSize(), progress);
+                  getDefaultReplication(f),
+                  getDefaultBlockSize(f), progress);
   }
 
   /**
@@ -683,7 +695,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     return create(f, true, 
                   getConf().getInt("io.file.buffer.size", 4096),
                   replication,
-                  getDefaultBlockSize());
+                  getDefaultBlockSize(f));
   }
 
   /**
@@ -699,7 +711,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     return create(f, true, 
                   getConf().getInt("io.file.buffer.size", 4096),
                   replication,
-                  getDefaultBlockSize(), progress);
+                  getDefaultBlockSize(f), progress);
   }
 
     
@@ -715,8 +727,8 @@ public abstract class FileSystem extends Configured implements Closeable {
                                    int bufferSize
                                    ) throws IOException {
     return create(f, overwrite, bufferSize, 
-                  getDefaultReplication(),
-                  getDefaultBlockSize());
+                  getDefaultReplication(f),
+                  getDefaultBlockSize(f));
   }
     
   /**
@@ -733,8 +745,8 @@ public abstract class FileSystem extends Configured implements Closeable {
                                    Progressable progress
                                    ) throws IOException {
     return create(f, overwrite, bufferSize, 
-                  getDefaultReplication(),
-                  getDefaultBlockSize(), progress);
+                  getDefaultReplication(f),
+                  getDefaultBlockSize(f), progress);
   }
     
     
@@ -1916,11 +1928,31 @@ public abstract class FileSystem extends Configured implements Closeable {
     return getConf().getLong("fs.local.block.size", 32 * 1024 * 1024);
   }
     
+  /** Return the number of bytes that large input files should be optimally
+   * be split into to minimize i/o time.  The given path will be used to
+   * locate the actual filesystem.  The full path does not have to exist.
+   * @param f path of file
+   * @return the default block size for the path's filesystem
+   */
+  public long getDefaultBlockSize(Path f) {
+    return getDefaultBlockSize();
+  }
+
   /**
    * Get the default replication.
    */
   public short getDefaultReplication() { return 1; }
 
+  /**
+   * Get the default replication for a path.   The given path will be used to
+   * locate the actual filesystem.  The full path does not have to exist.
+   * @param path of the file
+   * @return default replication for the path's filesystem 
+   */
+  public short getDefaultReplication(Path path) {
+    return getDefaultReplication();
+  }
+  
   /**
    * Return a file status object that represents the path.
    * @param f The path we want information from

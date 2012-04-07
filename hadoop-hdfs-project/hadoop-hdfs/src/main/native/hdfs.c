@@ -123,6 +123,11 @@ static int errnoFromException(jthrowable exc, JNIEnv *env,
       goto done;
     }
 
+    if (!strcmp(excClass, "java.lang.UnsupportedOperationException")) {
+      errnum = ENOTSUP;
+      goto done;
+    }
+
     if (!strcmp(excClass, "org.apache.hadoop.security."
                 "AccessControlException")) {
         errnum = EACCES;
@@ -614,8 +619,29 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     } else {
         file->file = (*env)->NewGlobalRef(env, jVal.l);
         file->type = (((flags & O_WRONLY) == 0) ? INPUT : OUTPUT);
+        file->flags = 0;
 
         destroyLocalReference(env, jVal.l);
+
+        if ((flags & O_WRONLY) == 0) {
+          // Try a test read to see if we can do direct reads
+          errno = 0;
+          char buf;
+          if (readDirect(fs, file, &buf, 0) == 0) {
+            // Success - 0-byte read should return 0
+            file->flags |= HDFS_FILE_SUPPORTS_DIRECT_READ;
+          } else {
+            if (errno != ENOTSUP) {
+              // Unexpected error. Clear it, don't set the direct flag.
+              fprintf(stderr,
+                      "WARN: Unexpected error %d when testing "
+                      "for direct read compatibility\n", errno);
+              errno = 0;
+              goto done;
+            }
+          }
+          errno = 0;
+        }
     }
 
     done:
@@ -706,10 +732,57 @@ int hdfsExists(hdfsFS fs, const char *path)
     return jVal.z ? 0 : -1;
 }
 
+// Checks input file for readiness for reading.
+static int readPrepare(JNIEnv* env, hdfsFS fs, hdfsFile f,
+                       jobject* jInputStream)
+{
+    *jInputStream = (jobject)(f ? f->file : NULL);
 
+    //Sanity check
+    if (!f || f->type == UNINITIALIZED) {
+      errno = EBADF;
+      return -1;
+    }
+
+    //Error checking... make sure that this file is 'readable'
+    if (f->type != INPUT) {
+      fprintf(stderr, "Cannot read from a non-InputStream object!\n");
+      errno = EINVAL;
+      return -1;
+    }
+
+    return 0;
+}
+
+// Common error-handling code between read paths.
+static int handleReadResult(int success, jvalue jVal, jthrowable jExc,
+                            JNIEnv* env)
+{
+  int noReadBytes;
+  if (success != 0) {
+    if ((*env)->ExceptionCheck(env)) {
+      errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                 "FSDataInputStream::read");
+    }
+    noReadBytes = -1;
+  } else {
+    noReadBytes = jVal.i;
+    if (noReadBytes < 0) {
+      // -1 from Java is EOF, which is 0 here
+      noReadBytes = 0;
+    }
+    errno = 0;
+  }
+
+  return noReadBytes;
+}
 
 tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 {
+    if (f->flags & HDFS_FILE_SUPPORTS_DIRECT_READ) {
+      return readDirect(fs, f, buffer, length);
+    }
+
     // JAVA EQUIVALENT:
     //  byte [] bR = new byte[length];
     //  fis.read(bR);
@@ -722,49 +795,75 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
     }
 
     //Parameters
-    jobject jInputStream = (jobject)(f ? f->file : NULL);
+    jobject jInputStream;
+    if (readPrepare(env, fs, f, &jInputStream) == -1) {
+      return -1;
+    }
 
     jbyteArray jbRarray;
     jint noReadBytes = 0;
     jvalue jVal;
     jthrowable jExc = NULL;
 
-    //Sanity check
-    if (!f || f->type == UNINITIALIZED) {
-        errno = EBADF;
-        return -1;
-    }
-
-    //Error checking... make sure that this file is 'readable'
-    if (f->type != INPUT) {
-        fprintf(stderr, "Cannot read from a non-InputStream object!\n");
-        errno = EINVAL;
-        return -1;
-    }
-
     //Read the requisite bytes
     jbRarray = (*env)->NewByteArray(env, length);
-    if (invokeMethod(env, &jVal, &jExc, INSTANCE, jInputStream, HADOOP_ISTRM,
-                     "read", "([B)I", jbRarray) != 0) {
-        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                   "FSDataInputStream::read");
-        noReadBytes = -1;
-    }
-    else {
-        noReadBytes = jVal.i;
-        if (noReadBytes > 0) {
-            (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
-        }  else {
-            //This is a valid case: there aren't any bytes left to read!
-          if (noReadBytes == 0 || noReadBytes < -1) {
-            fprintf(stderr, "WARN: FSDataInputStream.read returned invalid return code - libhdfs returning EOF, i.e., 0: %d\n", noReadBytes);
-          }
-            noReadBytes = 0;
-        }
-        errno = 0;
+
+    int success = invokeMethod(env, &jVal, &jExc, INSTANCE, jInputStream, HADOOP_ISTRM,
+                               "read", "([B)I", jbRarray);
+
+    noReadBytes = handleReadResult(success, jVal, jExc, env);;
+
+    if (noReadBytes > 0) {
+      (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
     }
 
     destroyLocalReference(env, jbRarray);
+
+    return noReadBytes;
+}
+
+// Reads using the read(ByteBuffer) API, which does fewer copies
+tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
+{
+    // JAVA EQUIVALENT:
+    //  ByteBuffer bbuffer = ByteBuffer.allocateDirect(length) // wraps C buffer
+    //  fis.read(bbuffer);
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    jobject jInputStream;
+    if (readPrepare(env, fs, f, &jInputStream) == -1) {
+      return -1;
+    }
+
+    jint noReadBytes = 0;
+    jvalue jVal;
+    jthrowable jExc = NULL;
+
+    //Read the requisite bytes
+    jobject bb = (*env)->NewDirectByteBuffer(env, buffer, length);
+    if (bb == NULL) {
+      fprintf(stderr, "Could not allocate ByteBuffer");
+      if ((*env)->ExceptionCheck(env)) {
+        errno = errnoFromException(NULL, env, "JNIEnv::NewDirectByteBuffer");
+      } else {
+        errno = ENOMEM; // Best guess if there's no exception waiting
+      }
+      return -1;
+    }
+
+    int success = invokeMethod(env, &jVal, &jExc, INSTANCE, jInputStream,
+                               HADOOP_ISTRM, "read", "(Ljava/nio/ByteBuffer;)I",
+                               bb);
+
+    noReadBytes = handleReadResult(success, jVal, jExc, env);
+
+    destroyLocalReference(env, bb);
 
     return noReadBytes;
 }

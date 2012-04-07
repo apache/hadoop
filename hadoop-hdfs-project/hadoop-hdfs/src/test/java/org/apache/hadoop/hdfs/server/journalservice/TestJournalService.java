@@ -20,12 +20,18 @@ package org.apache.hadoop.hdfs.server.journalservice;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import junit.framework.Assert;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
+import org.apache.hadoop.hdfs.server.protocol.FencedException;
+import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -42,7 +48,7 @@ public class TestJournalService {
    * called.
    */
   @Test
-  public void testCallBacks() throws IOException {
+  public void testCallBacks() throws Exception {
     JournalListener listener = Mockito.mock(JournalListener.class);
     JournalService service = null;
     try {
@@ -51,6 +57,7 @@ public class TestJournalService {
       service = startJournalService(listener);
       verifyRollLogsCallback(service, listener);
       verifyJournalCallback(service, listener);
+      verifyFence(service, cluster.getNameNode(0));
     } finally {
       if (service != null) {
         service.stop();
@@ -92,5 +99,29 @@ public class TestJournalService {
     fs.delete(fileName, true);
     Mockito.verify(l, Mockito.atLeastOnce()).journal(Mockito.eq(s),
         Mockito.anyLong(), Mockito.anyInt(), (byte[]) Mockito.any());
+  }
+  
+  public void verifyFence(JournalService s, NameNode nn) throws Exception {
+    String cid = nn.getNamesystem().getClusterId();
+    int nsId = nn.getNamesystem().getFSImage().getNamespaceID();
+    int lv = nn.getNamesystem().getFSImage().getLayoutVersion();
+    
+    // Fence the journal service
+    JournalInfo info = new JournalInfo(lv, cid, nsId);
+    long currentEpoch = s.getEpoch();
+    
+    // New epoch lower than the current epoch is rejected
+    try {
+      s.fence(info, (currentEpoch - 1), "fencer");
+    } catch (FencedException ignore) { /* Ignored */ } 
+    
+    // New epoch equal to the current epoch is rejected
+    try {
+      s.fence(info, currentEpoch, "fencer");
+    } catch (FencedException ignore) { /* Ignored */ } 
+    
+    // New epoch higher than the current epoch is successful
+    FenceResponse resp = s.fence(info, currentEpoch+1, "fencer");
+    Assert.assertNotNull(resp);
   }
 }
