@@ -222,6 +222,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3204. Minor modification to JournalProtocol.proto to make
     it generic. (suresh)
 
+    HDFS-3226. Allow GetConf tool to print arbitrary keys (todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
