@@ -36,16 +36,18 @@ message JournalInfoProto {
 }
 
 /**
- * JournalInfo - the information about the journal
+ * journalInfo - the information about the journal
  * firstTxnId - the first txid in the journal records
  * numTxns - Number of transactions in editlog
  * records - bytes containing serialized journal records
+ * epoch - change to this represents change of journal writer
  */
 message JournalRequestProto {
   required JournalInfoProto journalInfo = 1;
   required uint64 firstTxnId = 2;
   required uint32 numTxns = 3;
   required bytes records = 4;
+  required uint64 epoch = 5;
 }
 
 /**
@@ -55,18 +57,40 @@ message JournalResponseProto {
 }
 
 /**
- * JournalInfo - the information about the journal
+ * journalInfo - the information about the journal
  * txid - first txid in the new log
  */
 message StartLogSegmentRequestProto {
-  required JournalInfoProto journalInfo = 1;
-  required uint64 txid = 2;
+  required JournalInfoProto journalInfo = 1; // Info about the journal
+  required uint64 txid = 2; // Transaction ID
+  required uint64 epoch = 3;
 }
 
 /**
  * void response
  */
 message StartLogSegmentResponseProto { 
+}
+
+/**
+ * journalInfo - the information about the journal
+ * txid - first txid in the new log
+ */
+message FenceRequestProto {
+  required JournalInfoProto journalInfo = 1; // Info about the journal
+  required uint64 epoch = 2; // Epoch - change indicates change in writer
+  optional string fencerInfo = 3; // Info about fencer for debugging
+}
+
+/**
+ * previousEpoch - previous epoch if any or zero
+ * lastTransactionId - last valid transaction Id in the journal
+ * inSync - if all journal segments are available and in sync
+ */
+message FenceResponseProto {
+  optional uint64 previousEpoch = 1;
+  optional uint64 lastTransactionId = 2;
+  optional bool inSync = 3;
 }
 
 /**
@@ -89,4 +113,10 @@ service JournalProtocolService {
    */
   rpc startLogSegment(StartLogSegmentRequestProto) 
       returns (StartLogSegmentResponseProto);
+  
+  /**
+   * Request to fence a journal receiver.
+   */
+  rpc fence(FenceRequestProto)
+      returns (FenceResponseProto);
 }

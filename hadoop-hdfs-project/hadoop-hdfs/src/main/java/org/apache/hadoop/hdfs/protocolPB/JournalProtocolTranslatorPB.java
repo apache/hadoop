@@ -22,10 +22,13 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.FenceRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.FenceResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegmentRequestProto;
+import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
+import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
@@ -58,10 +61,11 @@ public class JournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
 
   @Override
-  public void journal(NamenodeRegistration reg, long firstTxnId,
+  public void journal(JournalInfo journalInfo, long epoch, long firstTxnId,
       int numTxns, byte[] records) throws IOException {
     JournalRequestProto req = JournalRequestProto.newBuilder()
-        .setJournalInfo(PBHelper.convertToJournalInfo(reg))
+        .setJournalInfo(PBHelper.convert(journalInfo))
+        .setEpoch(epoch)
         .setFirstTxnId(firstTxnId)
         .setNumTxns(numTxns)
         .setRecords(PBHelper.getByteString(records))
@@ -74,14 +78,29 @@ public class JournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
 
   @Override
-  public void startLogSegment(NamenodeRegistration registration, long txid)
+  public void startLogSegment(JournalInfo journalInfo, long epoch, long txid)
       throws IOException {
     StartLogSegmentRequestProto req = StartLogSegmentRequestProto.newBuilder()
-        .setJournalInfo(PBHelper.convertToJournalInfo(registration))
+        .setJournalInfo(PBHelper.convert(journalInfo))
+        .setEpoch(epoch)
         .setTxid(txid)
         .build();
     try {
       rpcProxy.startLogSegment(NULL_CONTROLLER, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+  
+  @Override
+  public FenceResponse fence(JournalInfo journalInfo, long epoch,
+      String fencerInfo) throws IOException {
+    FenceRequestProto req = FenceRequestProto.newBuilder().setEpoch(epoch)
+        .setJournalInfo(PBHelper.convert(journalInfo)).build();
+    try {
+      FenceResponseProto resp = rpcProxy.fence(NULL_CONTROLLER, req);
+      return new FenceResponse(resp.getPreviousEpoch(),
+          resp.getLastTransactionId(), resp.getInSync());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
