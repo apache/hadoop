@@ -80,8 +80,6 @@ public abstract class ZKFailoverController implements Tool {
 
   private HAServiceTarget localTarget;
 
-  private String parentZnode;
-
   private State lastHealthState = State.INITIALIZING;
 
   /** Set if a fatal error occurs */
@@ -95,9 +93,17 @@ public abstract class ZKFailoverController implements Tool {
   
 
   protected abstract byte[] targetToData(HAServiceTarget target);
-  protected abstract HAServiceTarget getLocalTarget();  
+  protected abstract HAServiceTarget getLocalTarget();
   protected abstract HAServiceTarget dataToTarget(byte[] data);
   protected abstract void loginAsFCUser() throws IOException;
+
+  /**
+   * Return the name of a znode inside the configured parent znode in which
+   * the ZKFC will do all of its work. This is so that multiple federated
+   * nameservices can run on the same ZK quorum without having to manually
+   * configure them to separate subdirectories.
+   */
+  protected abstract String getScopeInsideParentNode();
 
   @Override
   public Configuration getConf() {
@@ -204,6 +210,7 @@ public abstract class ZKFailoverController implements Tool {
   }
 
   private boolean confirmFormat() {
+    String parentZnode = getParentZnode();
     System.err.println(
         "===============================================\n" +
         "The configured parent znode " + parentZnode + " already exists.\n" +
@@ -234,9 +241,6 @@ public abstract class ZKFailoverController implements Tool {
     String zkQuorum = conf.get(ZK_QUORUM_KEY);
     int zkTimeout = conf.getInt(ZK_SESSION_TIMEOUT_KEY,
         ZK_SESSION_TIMEOUT_DEFAULT);
-    parentZnode = conf.get(ZK_PARENT_ZNODE_KEY,
-        ZK_PARENT_ZNODE_DEFAULT);
-    
     // Parse ACLs from configuration.
     String zkAclConf = conf.get(ZK_ACL_KEY, ZK_ACL_DEFAULT);
     zkAclConf = HAZKUtil.resolveConfIndirection(zkAclConf);
@@ -264,10 +268,19 @@ public abstract class ZKFailoverController implements Tool {
     
 
     elector = new ActiveStandbyElector(zkQuorum,
-        zkTimeout, parentZnode, zkAcls, zkAuths,
+        zkTimeout, getParentZnode(), zkAcls, zkAuths,
         new ElectorCallbacks());
   }
   
+  private String getParentZnode() {
+    String znode = conf.get(ZK_PARENT_ZNODE_KEY,
+        ZK_PARENT_ZNODE_DEFAULT);
+    if (!znode.endsWith("/")) {
+      znode += "/";
+    }
+    return znode + getScopeInsideParentNode();
+  }
+
   private synchronized void mainLoop() throws InterruptedException {
     while (fatalError == null) {
       wait();

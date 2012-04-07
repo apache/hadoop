@@ -117,6 +117,11 @@ public class DFSZKFailoverController extends ZKFailoverController {
         DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
   }
   
+  @Override
+  protected String getScopeInsideParentNode() {
+    return localTarget.getNameServiceId();
+  }
+
   public static void main(String args[])
       throws Exception {
     System.exit(ToolRunner.run(

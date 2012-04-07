@@ -94,6 +94,40 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     assertEquals(0, runFC(svc, "-formatZK", "-force"));
   }
   
+  @Test
+  public void testFormatOneClusterLeavesOtherClustersAlone() throws Exception {
+    DummyHAService svc = cluster.getService(1);
+
+    DummyZKFC zkfcInOtherCluster = new DummyZKFC(cluster.getService(1)) {
+      @Override
+      protected String getScopeInsideParentNode() {
+        return "other-scope";
+      }
+    };
+    zkfcInOtherCluster.setConf(conf);
+    
+    // Run without formatting the base dir,
+    // should barf
+    assertEquals(ZKFailoverController.ERR_CODE_NO_PARENT_ZNODE,
+        runFC(svc));
+
+    // Format the base dir, should succeed
+    assertEquals(0, runFC(svc, "-formatZK"));
+    
+    // Run the other cluster without formatting, should barf because
+    // it uses a different parent znode
+    assertEquals(ZKFailoverController.ERR_CODE_NO_PARENT_ZNODE,
+        zkfcInOtherCluster.run(new String[]{}));
+    
+    // Should succeed in formatting the second cluster
+    assertEquals(0, zkfcInOtherCluster.run(new String[]{"-formatZK"}));
+
+    // But should not have deleted the original base node from the first
+    // cluster
+    assertEquals(ZKFailoverController.ERR_CODE_FORMAT_DENIED,
+        runFC(svc, "-formatZK", "-nonInteractive"));
+  }
+  
   /**
    * Test that, if ACLs are specified in the configuration, that
    * it sets the ACLs when formatting the parent node.

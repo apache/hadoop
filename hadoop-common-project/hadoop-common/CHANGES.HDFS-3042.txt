@@ -15,3 +15,5 @@ HADOOP-8245. Fix flakiness in TestZKFailoverController (todd)
 HADOOP-8257. TestZKFailoverControllerStress occasionally fails with Mockito error (todd)
 
 HADOOP-8260. Replace ClientBaseWithFixes with our own modified copy of the class (todd)
+
+HADOOP-8246. Auto-HA: automatically scope znode by nameservice ID (todd)

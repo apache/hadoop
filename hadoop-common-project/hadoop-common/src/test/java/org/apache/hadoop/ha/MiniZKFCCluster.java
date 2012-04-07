@@ -187,8 +187,7 @@ public class MiniZKFCCluster {
       throws NoNodeException {
     Stat stat = new Stat();
     byte[] data = zks.getZKDatabase().getData(
-        ZKFailoverController.ZK_PARENT_ZNODE_DEFAULT + "/" +
-        ActiveStandbyElector.LOCK_FILENAME, stat, null);
+        DummyZKFC.LOCK_ZNODE, stat, null);
     
     assertArrayEquals(Ints.toByteArray(svcs[idx].index), data);
     long session = stat.getEphemeralOwner();
@@ -206,7 +205,7 @@ public class MiniZKFCCluster {
       throws Exception {
     DummyHAService svc = idx == null ? null : svcs[idx];
     ActiveStandbyElectorTestUtil.waitForActiveLockData(ctx, zks,
-        ZKFailoverController.ZK_PARENT_ZNODE_DEFAULT,
+        DummyZKFC.SCOPED_PARENT_ZNODE,
         (idx == null) ? null : Ints.toByteArray(svc.index));
   }
   
@@ -255,6 +254,12 @@ public class MiniZKFCCluster {
   }
   
   static class DummyZKFC extends ZKFailoverController {
+    private static final String DUMMY_CLUSTER = "dummy-cluster";
+    public static final String SCOPED_PARENT_ZNODE =
+      ZKFailoverController.ZK_PARENT_ZNODE_DEFAULT + "/" +
+      DUMMY_CLUSTER;
+    private static final String LOCK_ZNODE = 
+      SCOPED_PARENT_ZNODE + "/" + ActiveStandbyElector.LOCK_FILENAME;
     private final DummyHAService localTarget;
     
     public DummyZKFC(DummyHAService localTarget) {
@@ -279,6 +284,11 @@ public class MiniZKFCCluster {
 
     @Override
     protected void loginAsFCUser() throws IOException {
+    }
+
+    @Override
+    protected String getScopeInsideParentNode() {
+      return DUMMY_CLUSTER;
     }
   }
 }
