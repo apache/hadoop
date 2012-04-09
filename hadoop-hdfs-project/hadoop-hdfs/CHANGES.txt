@@ -117,6 +117,10 @@ Trunk (unreleased changes)
 
     HDFS-3121. Add HDFS tests for HADOOP-8014 change. (John George via
     suresh)
+
+    HDFS-3119. Overreplicated block is not deleted even after the replication 
+    factor is reduced after sync follwed by closing that file. (Ashish Singhi 
+    via umamahesh)
     
 Release 2.0.0 - UNRELEASED 
 
