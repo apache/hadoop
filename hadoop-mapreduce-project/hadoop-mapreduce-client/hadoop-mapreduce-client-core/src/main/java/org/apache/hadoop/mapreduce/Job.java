@@ -509,6 +509,11 @@ public class Job extends JobContextImpl implements JobContext {
         lastEvent = event;
       }
     }
+    if (lastEvent == null) {
+      return "There are no failed tasks for the job. "
+          + "Job is failed due to some other reason and reason "
+          + "can be found in the logs.";
+    }
     String[] taskAttemptID = lastEvent.getTaskAttemptId().toString().split("_", 2);
     String taskID = taskAttemptID[1].substring(0, taskAttemptID[1].length()-2);
     return (" task " + taskID + " failed " +
