@@ -119,6 +119,9 @@ Release 2.0.0 - UNRELEASED
     org.apache.hadoop.mapred.TestMiniMRWithDFSWithDistinctUsers (Devaraj K via
     bobby)
 
+    MAPREDUCE-4105. Yarn RackResolver ignores rack configurations. 
+    (Ahmed Radwan via tomwhite)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -52,7 +52,7 @@ public class TestRackResolver {
       Assert.assertTrue(numHost1 <= 1);
       return returnList;
     }
-    
+
   }
 
   @Test
