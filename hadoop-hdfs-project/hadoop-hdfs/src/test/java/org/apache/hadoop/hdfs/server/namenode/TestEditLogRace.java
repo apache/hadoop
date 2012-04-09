@@ -236,9 +236,9 @@ public class TestEditLogRace {
       File editFile = new File(sd.getCurrentDir(), logFileName);
         
       System.out.println("Verifying file: " + editFile);
-      FSEditLogLoader loader = new FSEditLogLoader(namesystem);
+      FSEditLogLoader loader = new FSEditLogLoader(namesystem, startTxId);
       long numEditsThisLog = loader.loadFSEdits(new EditLogFileInputStream(editFile), 
-          startTxId);
+          startTxId, null);
       
       System.out.println("Number of edits: " + numEditsThisLog);
       assertTrue(numEdits == -1 || numEditsThisLog == numEdits);

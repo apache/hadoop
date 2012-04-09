@@ -264,4 +264,10 @@
        <Method name="doRefreshNamenodes" />
        <Bug category="PERFORMANCE" />
      </Match>
+     <!-- Don't complain about System.exit() being called from quit() -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.namenode.MetaRecoveryContext" />
+       <Method name="quit" />
+       <Bug pattern="DM_EXIT" />
+     </Match>
  </FindBugsFilter>

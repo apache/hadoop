@@ -581,6 +581,10 @@ public class MiniDFSCluster {
       }
     }
     
+    if (operation == StartupOption.RECOVER) {
+      return;
+    }
+
     // Start the DataNodes
     startDataNodes(conf, numDataNodes, manageDataDfsDirs, operation, racks,
         hosts, simulatedCapacities, setupHostsFile);
@@ -781,6 +785,9 @@ public class MiniDFSCluster {
                      operation == StartupOption.REGULAR) ?
       new String[] {} : new String[] {operation.getName()};
     NameNode nn =  NameNode.createNameNode(args, conf);
+    if (operation == StartupOption.RECOVER) {
+      return;
+    }
     
     // After the NN has started, set back the bound ports into
     // the conf
@@ -956,6 +963,9 @@ public class MiniDFSCluster {
                              long[] simulatedCapacities,
                              boolean setupHostsFile,
                              boolean checkDataNodeAddrConfig) throws IOException {
+    if (operation == StartupOption.RECOVER) {
+      return;
+    }
     conf.set(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
 
     int curDatanodesNum = dataNodes.size();

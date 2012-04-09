@@ -514,6 +514,8 @@ public class NameNode {
    * <li>{@link StartupOption#CHECKPOINT CHECKPOINT} - start checkpoint node</li>
    * <li>{@link StartupOption#UPGRADE UPGRADE} - start the cluster  
    * upgrade and create a snapshot of the current file system state</li> 
+   * <li>{@link StartupOption#RECOVERY RECOVERY} - recover name node
+   * metadata</li>
    * <li>{@link StartupOption#ROLLBACK ROLLBACK} - roll the  
    *            cluster back to the previous state</li>
    * <li>{@link StartupOption#FINALIZE FINALIZE} - finalize 
@@ -832,7 +834,10 @@ public class NameNode {
       StartupOption.FINALIZE.getName() + "] | [" +
       StartupOption.IMPORT.getName() + "] | [" +
       StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" +
-      StartupOption.INITIALIZESHAREDEDITS.getName() + "]");
+      StartupOption.INITIALIZESHAREDEDITS.getName() + "] | [" +
+      StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" + 
+      StartupOption.RECOVER.getName() + " [ " +
+        StartupOption.FORCE.getName() + " ] ]");
   }
 
   private static StartupOption parseArguments(String args[]) {
@@ -876,6 +881,21 @@ public class NameNode {
       } else if (StartupOption.INITIALIZESHAREDEDITS.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.INITIALIZESHAREDEDITS;
         return startOpt;
+      } else if (StartupOption.RECOVER.getName().equalsIgnoreCase(cmd)) {
+        if (startOpt != StartupOption.REGULAR) {
+          throw new RuntimeException("Can't combine -recover with " +
+              "other startup options.");
+        }
+        startOpt = StartupOption.RECOVER;
+        while (++i < argsLen) {
+          if (args[i].equalsIgnoreCase(
+                StartupOption.FORCE.getName())) {
+            startOpt.setForce(MetaRecoveryContext.FORCE_FIRST_CHOICE);
+          } else {
+            throw new RuntimeException("Error parsing recovery options: " + 
+              "can't understand option \"" + args[i] + "\"");
+          }
+        }
       } else {
         return null;
       }
@@ -890,6 +910,39 @@ public class NameNode {
   static StartupOption getStartupOption(Configuration conf) {
     return StartupOption.valueOf(conf.get(DFS_NAMENODE_STARTUP_KEY,
                                           StartupOption.REGULAR.toString()));
+  }
+
+  private static void doRecovery(StartupOption startOpt, Configuration conf)
+      throws IOException {
+    if (startOpt.getForce() < MetaRecoveryContext.FORCE_ALL) {
+      if (!confirmPrompt("You have selected Metadata Recovery mode.  " +
+          "This mode is intended to recover lost metadata on a corrupt " +
+          "filesystem.  Metadata recovery mode often permanently deletes " +
+          "data from your HDFS filesystem.  Please back up your edit log " +
+          "and fsimage before trying this!\n\n" +
+          "Are you ready to proceed? (Y/N)\n")) {
+        System.err.println("Recovery aborted at user request.\n");
+        return;
+      }
+    }
+    MetaRecoveryContext.LOG.info("starting recovery...");
+    UserGroupInformation.setConfiguration(conf);
+    NameNode.initMetrics(conf, startOpt.toNodeRole());
+    FSNamesystem fsn = null;
+    try {
+      fsn = FSNamesystem.loadFromDisk(conf);
+      fsn.saveNamespace();
+      MetaRecoveryContext.LOG.info("RECOVERY COMPLETE");
+    } catch (IOException e) {
+      MetaRecoveryContext.LOG.info("RECOVERY FAILED: caught exception", e);
+      throw e;
+    } catch (RuntimeException e) {
+      MetaRecoveryContext.LOG.info("RECOVERY FAILED: caught exception", e);
+      throw e;
+    } finally {
+      if (fsn != null)
+        fsn.close();
+    }
   }
 
   /**
@@ -972,6 +1025,10 @@ public class NameNode {
         NamenodeRole role = startOpt.toNodeRole();
         DefaultMetricsSystem.initialize(role.toString().replace(" ", ""));
         return new BackupNode(conf, role);
+      }
+      case RECOVER: {
+        NameNode.doRecovery(startOpt, conf);
+        return null;
       }
       default:
         DefaultMetricsSystem.initialize("NameNode");

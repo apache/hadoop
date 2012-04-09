@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.namenode.MetaRecoveryContext;
 
 /************************************
  * Some handy internal HDFS constants
@@ -54,13 +55,18 @@ public final class HdfsServerConstants {
     FINALIZE("-finalize"),
     IMPORT  ("-importCheckpoint"),
     BOOTSTRAPSTANDBY("-bootstrapStandby"),
-    INITIALIZESHAREDEDITS("-initializeSharedEdits");
+    INITIALIZESHAREDEDITS("-initializeSharedEdits"),
+    RECOVER  ("-recover"),
+    FORCE("-force");
     
     private String name = null;
     
     // Used only with format and upgrade options
     private String clusterId = null;
     
+    // Used only with recovery option
+    private int force = 0;
+
     private StartupOption(String arg) {this.name = arg;}
     public String getName() {return name;}
     public NamenodeRole toNodeRole() {
@@ -77,9 +83,23 @@ public final class HdfsServerConstants {
     public void setClusterId(String cid) {
       clusterId = cid;
     }
-    
+
     public String getClusterId() {
       return clusterId;
+    }
+
+    public MetaRecoveryContext createRecoveryContext() {
+      if (!name.equals(RECOVER.name))
+        return null;
+      return new MetaRecoveryContext(force);
+    }
+
+    public void setForce(int force) {
+      this.force = force;
+    }
+    
+    public int getForce() {
+      return this.force;
     }
   }
 

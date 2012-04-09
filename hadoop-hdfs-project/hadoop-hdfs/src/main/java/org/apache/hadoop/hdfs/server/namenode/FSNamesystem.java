@@ -380,9 +380,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     FSImage fsImage = new FSImage(conf, namespaceDirs, namespaceEditsDirs);
     FSNamesystem namesystem = new FSNamesystem(conf, fsImage);
+    StartupOption startOpt = NameNode.getStartupOption(conf);
+    if (startOpt == StartupOption.RECOVER) {
+      namesystem.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    }
 
     long loadStart = now();
-    StartupOption startOpt = NameNode.getStartupOption(conf);
     String nameserviceId = DFSUtil.getNamenodeNameServiceId(conf);
     namesystem.loadFSImage(startOpt, fsImage,
       HAUtil.isHAEnabled(conf, nameserviceId));
@@ -491,7 +494,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       // We shouldn't be calling saveNamespace if we've come up in standby state.
-      if (fsImage.recoverTransitionRead(startOpt, this) && !haEnabled) {
+      MetaRecoveryContext recovery = startOpt.createRecoveryContext();
+      if (fsImage.recoverTransitionRead(startOpt, this, recovery) && !haEnabled) {
         fsImage.saveNamespace(this);
       }
       // This will start a new log segment and write to the seen_txid file, so
