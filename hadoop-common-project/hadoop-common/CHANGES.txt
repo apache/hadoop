@@ -252,6 +252,12 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8007. Use substitution tokens for fencing argument (todd)
 
+    HADOOP-8077. HA: fencing method should be able to be configured on
+    a per-NN or per-NS basis (todd)
+
+    HADOOP-8086. KerberosName silently sets defaultRealm to "" if the 
+    Kerberos config is not found, it should log a WARN (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -323,6 +329,14 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8243. Security support broken in CLI (manual) failover controller
     (todd)
+
+    HADOOP-8251. Fix SecurityUtil.fetchServiceTicket after HADOOP-6941 (todd)
+
+    HADOOP-8249. invalid hadoop-auth cookies should trigger authentication 
+    if info is avail before returning HTTP 401 (tucu)
+
+    HADOOP-8261. Har file system doesn't deal with FS URIs with a host but no
+    port. (atm)
 
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
@@ -399,6 +413,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8180. Remove hsqldb since its not needed from pom.xml (Ravi Prakash
     via tgraves)
+
+    HADOOP-8014. ViewFileSystem does not correctly implement getDefaultBlockSize,
+    getDefaultReplication, getContentSummary (John George via bobby)
 
 Release 0.23.2 - UNRELEASED 
 

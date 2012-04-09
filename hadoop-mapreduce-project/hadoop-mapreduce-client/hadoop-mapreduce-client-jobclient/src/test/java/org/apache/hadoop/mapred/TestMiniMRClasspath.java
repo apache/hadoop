@@ -18,47 +18,43 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
 
 import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import org.junit.Ignore;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * A JUnit test to test Mini Map-Reduce Cluster with multiple directories
  * and check for correct classpath
  */
-@Ignore
-public class TestMiniMRClasspath extends TestCase {
+public class TestMiniMRClasspath {
   
   
-  static void configureWordCount(FileSystem fs,
-                                String jobTracker,
-                                JobConf conf,
-                                String input,
-                                int numMaps,
-                                int numReduces,
-                                Path inDir, Path outDir) throws IOException {
+  static void configureWordCount(FileSystem fs, JobConf conf, String input,
+      int numMaps, int numReduces, Path inDir, Path outDir) throws IOException {
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
     }
-    {
-      DataOutputStream file = fs.create(new Path(inDir, "part-0"));
-      file.writeBytes(input);
-      file.close();
-    }
+    DataOutputStream file = fs.create(new Path(inDir, "part-0"));
+    file.writeBytes(input);
+    file.close();
     FileSystem.setDefaultUri(conf, fs.getUri());
-    conf.set(JTConfig.FRAMEWORK_NAME, JTConfig.CLASSIC_FRAMEWORK_NAME);
-    conf.set(JTConfig.JT_IPC_ADDRESS, jobTracker);
+    conf.set(JTConfig.FRAMEWORK_NAME, JTConfig.YARN_FRAMEWORK_NAME);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);
     
@@ -74,18 +70,17 @@ public class TestMiniMRClasspath extends TestCase {
     FileOutputFormat.setOutputPath(conf, outDir);
     conf.setNumMapTasks(numMaps);
     conf.setNumReduceTasks(numReduces);
-    //pass a job.jar already included in the hadoop build
-    conf.setJar("build/test/mapred/testjar/testjob.jar");
+    //set the tests jar file
+    conf.setJarByClass(TestMiniMRClasspath.class);
   }
   
-  static String launchWordCount(URI fileSys, String jobTracker, JobConf conf,
-                                String input, int numMaps, int numReduces) 
+  static String launchWordCount(URI fileSys, JobConf conf, String input,
+                                int numMaps, int numReduces) 
   throws IOException {
     final Path inDir = new Path("/testing/wc/input");
     final Path outDir = new Path("/testing/wc/output");
     FileSystem fs = FileSystem.get(fileSys, conf);
-    configureWordCount(fs, jobTracker, conf, input, numMaps, numReduces, inDir, 
-                       outDir);
+    configureWordCount(fs, conf, input, numMaps, numReduces, inDir, outDir);
     JobClient.runJob(conf);
     StringBuffer result = new StringBuffer();
     {
@@ -107,8 +102,8 @@ public class TestMiniMRClasspath extends TestCase {
     return result.toString();
   }
 
-  static String launchExternal(URI uri, String jobTracker, JobConf conf,
-                               String input, int numMaps, int numReduces)
+  static String launchExternal(URI uri, JobConf conf, String input,
+                               int numMaps, int numReduces)
     throws IOException {
 
     final Path inDir = new Path("/testing/ext/input");
@@ -124,8 +119,7 @@ public class TestMiniMRClasspath extends TestCase {
       file.close();
     }
     FileSystem.setDefaultUri(conf, uri);
-    conf.set(JTConfig.FRAMEWORK_NAME, JTConfig.CLASSIC_FRAMEWORK_NAME);
-    conf.set(JTConfig.JT_IPC_ADDRESS, jobTracker);
+    conf.set(JTConfig.FRAMEWORK_NAME, JTConfig.YARN_FRAMEWORK_NAME);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);
 
@@ -142,8 +136,8 @@ public class TestMiniMRClasspath extends TestCase {
     conf.set("mapred.mapper.class", "testjar.ExternalMapperReducer"); 
     conf.set("mapred.reducer.class", "testjar.ExternalMapperReducer");
 
-    //pass a job.jar already included in the hadoop build
-    conf.setJar("build/test/mapred/testjar/testjob.jar");
+    // set the tests jar file
+    conf.setJarByClass(TestMiniMRClasspath.class);
     JobClient.runJob(conf);
     StringBuffer result = new StringBuffer();
     Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
@@ -164,6 +158,7 @@ public class TestMiniMRClasspath extends TestCase {
     return result.toString();
   }
    
+  @Test
   public void testClassPath() throws IOException {
     String namenode = null;
     MiniDFSCluster dfs = null;
@@ -180,13 +175,10 @@ public class TestMiniMRClasspath extends TestCase {
       mr = new MiniMRCluster(taskTrackers, namenode, 3);
       JobConf jobConf = new JobConf();
       String result;
-      final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
-      result = launchWordCount(fileSys.getUri(), jobTrackerName, jobConf, 
-                               "The quick brown fox\nhas many silly\n" + 
-                               "red fox sox\n",
-                               3, 1);
-      assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
-                   "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
+      result = launchWordCount(fileSys.getUri(), jobConf,
+          "The quick brown fox\nhas many silly\n" + "red fox sox\n", 3, 1);
+      Assert.assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n"
+          + "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result);
           
     } finally {
       if (dfs != null) { dfs.shutdown(); }
@@ -195,6 +187,7 @@ public class TestMiniMRClasspath extends TestCase {
     }
   }
   
+  @Test
   public void testExternalWritable()
     throws IOException {
  
@@ -214,12 +207,10 @@ public class TestMiniMRClasspath extends TestCase {
       mr = new MiniMRCluster(taskTrackers, namenode, 3);      
       JobConf jobConf = new JobConf();
       String result;
-      final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       
-      result = launchExternal(fileSys.getUri(), jobTrackerName, jobConf, 
-                              "Dennis was here!\nDennis again!",
-                              3, 1);
-      assertEquals("Dennis again!\t1\nDennis was here!\t1\n", result);
+      result = launchExternal(fileSys.getUri(), jobConf,
+          "Dennis was here!\nDennis again!", 3, 1);
+      Assert.assertEquals("Dennis again!\t1\nDennis was here!\t1\n", result);
       
     } 
     finally {

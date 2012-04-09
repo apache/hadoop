@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -172,6 +171,13 @@ public class TestInterDatanodeProtocol {
           b.getBlockId(), b.getNumBytes()/2, b.getGenerationStamp()+1);
       idp.updateReplicaUnderRecovery(b, recoveryId, newblock.getNumBytes());
       checkMetaInfo(newblock, datanode);
+      
+      // Verify correct null response trying to init recovery for a missing block
+      ExtendedBlock badBlock = new ExtendedBlock("fake-pool",
+          b.getBlockId(), 0, 0);
+      assertNull(idp.initReplicaRecovery(
+          new RecoveringBlock(badBlock,
+              locatedblock.getLocations(), recoveryId)));
     }
     finally {
       if (cluster != null) {cluster.shutdown();}

@@ -31,6 +31,9 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
+import org.apache.hadoop.hdfs.server.protocol.FencedException;
+import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -40,6 +43,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
 /**
@@ -66,6 +70,8 @@ public class JournalService implements JournalProtocol {
   private final NamenodeProtocol namenode;
   private final StateHandler stateHandler = new StateHandler();
   private final RPC.Server rpcServer;
+  private long epoch = 0;
+  private String fencerInfo;
   
   enum State {
     /** The service is initialized and ready to start. */
@@ -115,7 +121,7 @@ public class JournalService implements JournalProtocol {
       current = State.WAITING_FOR_ROLL;
     }
 
-    synchronized void startLogSegment() throws IOException {
+    synchronized void startLogSegment() {
       if (current == State.WAITING_FOR_ROLL) {
         current = State.SYNCING;
       }
@@ -232,26 +238,40 @@ public class JournalService implements JournalProtocol {
   }
 
   @Override
-  public void journal(NamenodeRegistration registration, long firstTxnId,
+  public void journal(JournalInfo journalInfo, long epoch, long firstTxnId,
       int numTxns, byte[] records) throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Received journal " + firstTxnId + " " + numTxns);
     }
     stateHandler.isJournalAllowed();
-    verify(registration);
+    verify(epoch, journalInfo);
     listener.journal(this, firstTxnId, numTxns, records);
   }
 
   @Override
-  public void startLogSegment(NamenodeRegistration registration, long txid)
+  public void startLogSegment(JournalInfo journalInfo, long epoch, long txid)
       throws IOException {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Received startLogSegment " + txid);
     }
     stateHandler.isStartLogSegmentAllowed();
-    verify(registration);
+    verify(epoch, journalInfo);
     listener.rollLogs(this, txid);
     stateHandler.startLogSegment();
+  }
+
+  @Override
+  public FenceResponse fence(JournalInfo journalInfo, long epoch,
+      String fencerInfo) throws IOException {
+    LOG.info("Fenced by " + fencerInfo + " with epoch " + epoch);
+    verifyFence(epoch, fencerInfo);
+    verify(journalInfo);
+    long previousEpoch = epoch;
+    this.epoch = epoch;
+    this.fencerInfo = fencerInfo;
+    
+    // TODO:HDFS-3092 set lastTransId and inSync
+    return new FenceResponse(previousEpoch, 0, false);
   }
 
   /** Create an RPC server. */
@@ -267,13 +287,52 @@ public class JournalService implements JournalProtocol {
         address.getHostName(), address.getPort(), 1, false, conf, null);
   }
   
-  private void verify(NamenodeRegistration reg) throws IOException {
-    if (!registration.getRegistrationID().equals(reg.getRegistrationID())) {
-      LOG.warn("Invalid registrationID - expected: "
-          + registration.getRegistrationID() + " received: "
-          + reg.getRegistrationID());
-      throw new UnregisteredNodeException(reg);
+  private void verifyEpoch(long e) throws FencedException {
+    if (epoch != e) {
+      String errorMsg = "Epoch " + e + " is not valid. "
+          + "Resource has already been fenced by " + fencerInfo
+          + " with epoch " + epoch;
+      LOG.warn(errorMsg);
+      throw new FencedException(errorMsg);
     }
+  }
+  
+  private void verifyFence(long e, String fencer) throws FencedException {
+    if (e <= epoch) {
+      String errorMsg = "Epoch " + e + " from fencer " + fencer
+          + " is not valid. " + "Resource has already been fenced by "
+          + fencerInfo + " with epoch " + epoch;
+      LOG.warn(errorMsg);
+      throw new FencedException(errorMsg);
+    }
+  }
+  
+  /** 
+   * Verifies a journal request
+   */
+  private void verify(JournalInfo journalInfo) throws IOException {
+    String errorMsg = null;
+    int expectedNamespaceID = registration.getNamespaceID();
+    if (journalInfo.getNamespaceId() != expectedNamespaceID) {
+      errorMsg = "Invalid namespaceID in journal request - expected " + expectedNamespaceID
+          + " actual " + journalInfo.getNamespaceId();
+      LOG.warn(errorMsg);
+      throw new UnregisteredNodeException(journalInfo);
+    } 
+    if (!journalInfo.getClusterId().equals(registration.getClusterID())) {
+      errorMsg = "Invalid clusterId in journal request - expected "
+          + journalInfo.getClusterId() + " actual " + registration.getClusterID();
+      LOG.warn(errorMsg);
+      throw new UnregisteredNodeException(journalInfo);
+    }
+  }
+  
+  /** 
+   * Verifies a journal request
+   */
+  private void verify(long e, JournalInfo journalInfo) throws IOException {
+    verifyEpoch(e);
+    verify(journalInfo);
   }
   
   /**
@@ -297,5 +356,10 @@ public class JournalService implements JournalProtocol {
     NamespaceInfo nsInfo = namenode.versionRequest();
     listener.verifyVersion(this, nsInfo);
     registration.setStorageInfo(nsInfo);
+  }
+
+  @VisibleForTesting
+  long getEpoch() {
+    return epoch;
   }
 }

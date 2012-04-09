@@ -17,126 +17,64 @@
 #
 
 #
-# Note: This script depends on 8 environment variables to function correctly:
-# a) CLASSPATH
-# b) HADOOP_PREFIX
-# c) HADOOP_CONF_DIR 
-# d) HADOOP_LOG_DIR 
-# e) LIBHDFS_BUILD_DIR
-# f) LIBHDFS_INSTALL_DIR
-# g) OS_NAME
-# h) CLOVER_JAR
-# i} HADOOP_VERSION
-# j) HADOOP_HDFS_HOME
-# All these are passed by build.xml.
+# Note: This script depends on 5 environment variables to function correctly:
+# a) HADOOP_HOME - must be set
+# b) HDFS_TEST_CONF_DIR - optional; the directory to read and write
+# core-site.xml to. Defaults to /tmp
+# c) LIBHDFS_BUILD_DIR - optional; the location of the hdfs_test
+# executable. Defaults to the parent directory.
+# d) OS_NAME - used to choose how to locate libjvm.so
+# e) CLOVER_JAR - optional; the location of the Clover code coverage tool's jar.
 #
 
+if [ "x$HADOOP_HOME" == "x" ]; then
+  echo "HADOOP_HOME is unset!"
+  exit 1
+fi
+
+if [ "x$LIBHDFS_BUILD_DIR" == "x" ]; then
+  LIBHDFS_BUILD_DIR=`pwd`/../
+fi
+
+if [ "x$HDFS_TEST_CONF_DIR" == "x" ]; then
+  HDFS_TEST_CONF_DIR=/tmp
+fi
+
+# LIBHDFS_INSTALL_DIR is the directory containing libhdfs.so
+LIBHDFS_INSTALL_DIR=$HADOOP_HOME/lib/native/
 HDFS_TEST=hdfs_test
-HADOOP_LIB_DIR=$HADOOP_PREFIX/lib
-HADOOP_BIN_DIR=$HADOOP_PREFIX/bin
 
-COMMON_BUILD_DIR=$HADOOP_PREFIX/build/ivy/lib/hadoop-hdfs/common
-COMMON_JAR=$COMMON_BUILD_DIR/hadoop-common-$HADOOP_VERSION.jar
+HDFS_TEST_JAR=`find $HADOOP_HOME/share/hadoop/hdfs/ \
+-name "hadoop-hdfs-*-tests.jar" | head -n 1`
 
-cat > $HADOOP_CONF_DIR/core-site.xml <<EOF
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-<property>
-  <name>hadoop.tmp.dir</name>
-  <value>file:///$LIBHDFS_TEST_DIR</value>
-</property>
-<property>
-  <name>fs.default.name</name>
-  <value>hdfs://localhost:23000/</value>
-</property>
-</configuration>
-EOF
-
-cat > $HADOOP_CONF_DIR/hdfs-site.xml <<EOF
-<?xml version="1.0"?>
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
-<configuration>
-<property>
-  <name>dfs.replication</name>
-  <value>1</value>
-</property>
-<property>
-  <name>dfs.support.append</name>
-  <value>true</value>
-</property>
-<property>
-  <name>dfs.namenode.logging.level</name>
-  <value>DEBUG</value>
-</property>
-</configuration>
-EOF
-
-cat > $HADOOP_CONF_DIR/slaves <<EOF
-localhost
-EOF
-
-# If we are running from the hdfs repo we need to make sure
-# HADOOP_BIN_DIR contains the common scripts.  
-# If the bin directory does not and we've got a common jar extract its
-# bin directory to HADOOP_PREFIX/bin. The bin scripts hdfs-config.sh and
-# hadoop-config.sh assume the bin directory is named "bin" and that it
-# is located in HADOOP_PREFIX.
-unpacked_common_bin_dir=0
-if [ ! -f $HADOOP_BIN_DIR/hadoop-config.sh ]; then
-  if [ -f $COMMON_JAR ]; then
-    jar xf $COMMON_JAR bin.tgz
-    tar xfz bin.tgz -C $HADOOP_BIN_DIR
-    unpacked_common_bin_dir=1
-  fi
+if [ "x$HDFS_TEST_JAR" == "x" ]; then
+  echo "HDFS test jar not found! Tried looking in all subdirectories \
+of $HADOOP_HOME/share/hadoop/hdfs/"
+  exit 1
 fi
 
-# Manipulate HADOOP_CONF_DIR too
-# which is necessary to circumvent bin/hadoop
-HADOOP_CONF_DIR=$HADOOP_CONF_DIR:$HADOOP_PREFIX/conf
+echo "Found HDFS test jar at $HDFS_TEST_JAR"
 
-# set pid file dir so they are not written to /tmp
-export HADOOP_PID_DIR=$HADOOP_LOG_DIR
-
-# CLASSPATH initially contains $HADOOP_CONF_DIR
-CLASSPATH="${HADOOP_CONF_DIR}"
+# CLASSPATH initially contains $HDFS_TEST_CONF_DIR
+CLASSPATH="${HDFS_TEST_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
-
-# for developers, add Hadoop classes to CLASSPATH
-if [ -d "$HADOOP_PREFIX/build/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/build/classes
-fi
-if [ -d "$HADOOP_PREFIX/build/web/webapps" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/build/web
-fi
-if [ -d "$HADOOP_PREFIX/build/test/classes" ]; then
-  CLASSPATH=${CLASSPATH}:$HADOOP_PREFIX/build/test/classes
-fi
 
 # add Clover jar file needed for code coverage runs
 CLASSPATH=${CLASSPATH}:${CLOVER_JAR};
 
 # so that filenames w/ spaces are handled correctly in loops below
-IFS=
+IFS=$'\n'
 
-# add libs to CLASSPATH
-for f in $HADOOP_PREFIX/lib/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
+JAR_DIRS="$HADOOP_HOME/share/hadoop/common/lib/
+$HADOOP_HOME/share/hadoop/common/
+$HADOOP_HOME/share/hadoop/hdfs
+$HADOOP_HOME/share/hadoop/hdfs/lib/"
 
-for f in $HADOOP_PREFIX/*.jar; do 
-  CLASSPATH=${CLASSPATH}:$f
-done
-for f in $HADOOP_PREFIX/lib/jsp-2.1/*.jar; do
-  CLASSPATH=${CLASSPATH}:$f;
-done
-
-if [ -d "$COMMON_BUILD_DIR" ]; then
-  CLASSPATH=$CLASSPATH:$COMMON_JAR
-  for f in $COMMON_BUILD_DIR/*.jar; do
-    CLASSPATH=${CLASSPATH}:$f;
-  done
-fi
+for d in $JAR_DIRS; do 
+  for j in $d/*.jar; do
+    CLASSPATH=${CLASSPATH}:$j
+  done;
+done;
 
 # restore ordinary behaviour
 unset IFS
@@ -178,21 +116,37 @@ echo  LIB_JVM_DIR = $LIB_JVM_DIR
 echo  "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 # Put delays to ensure hdfs is up and running and also shuts down 
 # after the tests are complete
-cd $HADOOP_PREFIX
-echo Y | $HADOOP_BIN_DIR/hdfs namenode -format &&
-$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start namenode && sleep 2
-$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs start datanode && sleep 2
-echo "Wait 30s for the datanode to start up..."
-sleep 30
-CLASSPATH=$CLASSPATH LD_PRELOAD="$LIB_JVM_DIR/libjvm.so:$LIBHDFS_INSTALL_DIR/libhdfs.so:" $LIBHDFS_BUILD_DIR/$HDFS_TEST
-BUILD_STATUS=$?
-sleep 3
-$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop datanode && sleep 2
-$HADOOP_BIN_DIR/hadoop-daemon.sh --script $HADOOP_BIN_DIR/hdfs stop namenode && sleep 2 
+rm $HDFS_TEST_CONF_DIR/core-site.xml
 
-if [ $unpacked_common_bin_dir -eq 1 ]; then
-  rm -rf bin.tgz
+$HADOOP_HOME/bin/hadoop jar $HDFS_TEST_JAR \
+    org.apache.hadoop.test.MiniDFSClusterManager \
+    -format -nnport 20300 -writeConfig $HDFS_TEST_CONF_DIR/core-site.xml \
+    > /tmp/libhdfs-test-cluster.out 2>&1 & 
+
+MINI_CLUSTER_PID=$!
+for i in {1..15}; do
+  echo "Waiting for DFS cluster, attempt $i of 15"
+  [ -f $HDFS_TEST_CONF_DIR/core-site.xml ] && break;
+  sleep 2
+done
+
+if [ ! -f $HDFS_TEST_CONF_DIR/core-site.xml ]; then
+  echo "Cluster did not come up in 30s"
+  kill -9 $MINI_CLUSTER_PID
+  exit 1
 fi
 
-echo exiting with $BUILD_STATUS
+echo "Cluster up, running tests"
+# Disable error checking to make sure we get to cluster cleanup
+set +e
+
+CLASSPATH=$CLASSPATH \
+LD_PRELOAD="$LIB_JVM_DIR/libjvm.so:$LIBHDFS_INSTALL_DIR/libhdfs.so:" \
+$LIBHDFS_BUILD_DIR/$HDFS_TEST
+
+BUILD_STATUS=$?
+
+echo "Tearing cluster down"
+kill -9 $MINI_CLUSTER_PID
+echo "Exiting with $BUILD_STATUS"
 exit $BUILD_STATUS

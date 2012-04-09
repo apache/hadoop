@@ -15,18 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.server.protocol;
 
-package org.apache.hadoop.mapred;
-
-import java.io.IOException;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * Tests Job end notification in cluster mode.
+ * Response to a journal fence request. See {@link JournalProtocol#fence}
  */
-public class TestClusterMRNotification extends NotificationTestCase {
-
-  public TestClusterMRNotification() throws IOException {
-    super(HadoopTestCase.CLUSTER_MR);
+@InterfaceAudience.Private
+public class FenceResponse {
+  private final long previousEpoch;
+  private final long lastTransactionId;
+  private final boolean isInSync;
+  
+  public FenceResponse(long previousEpoch, long lastTransId, boolean inSync) {
+    this.previousEpoch = previousEpoch;
+    this.lastTransactionId = lastTransId;
+    this.isInSync = inSync;
   }
 
+  public boolean isInSync() {
+    return isInSync;
+  }
+
+  public long getLastTransactionId() {
+    return lastTransactionId;
+  }
+
+  public long getPreviousEpoch() {
+    return previousEpoch;
+  }
 }

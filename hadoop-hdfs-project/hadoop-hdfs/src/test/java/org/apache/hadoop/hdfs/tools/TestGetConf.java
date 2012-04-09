@@ -42,6 +42,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 
+import com.google.common.base.Joiner;
+
 /**
  * Test for {@link GetConf}
  */
@@ -117,7 +119,12 @@ public class TestGetConf {
     PrintStream out = new PrintStream(o, true);
     try {
       int ret = ToolRunner.run(new GetConf(conf, out, out), args);
-      assertEquals(success, ret == 0);
+      out.flush();
+      System.err.println("Output: " + o.toString());
+      assertEquals("Expected " + (success?"success":"failure") +
+          " for args: " + Joiner.on(" ").join(args) + "\n" +
+          "Output: " + o.toString(),
+          success, ret == 0);
       return o.toString();
     } finally {
       o.close();
@@ -222,7 +229,9 @@ public class TestGetConf {
     getAddressListFromTool(TestType.SECONDARY, conf, false);
     getAddressListFromTool(TestType.NNRPCADDRESSES, conf, false);
     for (Command cmd : Command.values()) {
-      CommandHandler handler = Command.getHandler(cmd.getName());
+      String arg = cmd.getName();
+      CommandHandler handler = Command.getHandler(arg);
+      assertNotNull("missing handler: " + cmd, handler);
       if (handler.key != null) {
         // First test with configuration missing the required key
         String[] args = {handler.key};
@@ -319,18 +328,36 @@ public class TestGetConf {
     verifyAddresses(conf, TestType.SECONDARY, false, secondaryAddresses);
     verifyAddresses(conf, TestType.NNRPCADDRESSES, true, nnAddresses);
   }
+  
+  @Test
+  public void testGetSpecificKey() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.set("mykey", " myval ");
+    String[] args = {"-confKey", "mykey"};
+    assertTrue(runTool(conf, args, true).equals("myval\n"));
+  }
+  
+  @Test
+  public void testExtraArgsThrowsError() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.set("mykey", "myval");
+    String[] args = {"-namenodes", "unexpected-arg"};
+    assertTrue(runTool(conf, args, false).contains(
+        "Did not expect argument: unexpected-arg"));
+  }
 
   /**
    * Tests commands other than {@link Command#NAMENODE}, {@link Command#BACKUP},
    * {@link Command#SECONDARY} and {@link Command#NNRPCADDRESSES}
    */
+  @Test
   public void testTool() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration(false);
     for (Command cmd : Command.values()) {
       CommandHandler handler = Command.getHandler(cmd.getName());
-      if (handler.key != null) {
+      if (handler.key != null && !"-confKey".equals(cmd.getName())) {
         // Add the key to the conf and ensure tool returns the right value
-        String[] args = {handler.key};
+        String[] args = {cmd.getName()};
         conf.set(handler.key, "value");
         assertTrue(runTool(conf, args, true).contains("value"));
       }

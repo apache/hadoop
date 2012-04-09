@@ -15,18 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.server.protocol;
 
-package org.apache.hadoop.mapred;
-
-import java.io.IOException;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * Tests Job end notification in cluster mode.
+ * Information that describes a journal
  */
-public class TestClusterMRNotification extends NotificationTestCase {
+@InterfaceAudience.Private
+public class JournalInfo {
+  private final int layoutVersion;
+  private final String clusterId;
+  private final int namespaceId;
 
-  public TestClusterMRNotification() throws IOException {
-    super(HadoopTestCase.CLUSTER_MR);
+  public JournalInfo(int lv, String clusterId, int nsId) {
+    this.layoutVersion = lv;
+    this.clusterId = clusterId;
+    this.namespaceId = nsId;
   }
 
+  public int getLayoutVersion() {
+    return layoutVersion;
+  }
+
+  public String getClusterId() {
+    return clusterId;
+  }
+
+  public int getNamespaceId() {
+    return namespaceId;
+  }
 }

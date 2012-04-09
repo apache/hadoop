@@ -158,8 +158,8 @@ public class FSImage implements Closeable {
    * @throws IOException
    * @return true if the image needs to be saved or false otherwise
    */
-  boolean recoverTransitionRead(StartupOption startOpt, FSNamesystem target)
-      throws IOException {
+  boolean recoverTransitionRead(StartupOption startOpt, FSNamesystem target,
+      MetaRecoveryContext recovery) throws IOException {
     assert startOpt != StartupOption.FORMAT : 
       "NameNode formatting should be performed before reading the image";
     
@@ -244,7 +244,7 @@ public class FSImage implements Closeable {
       // just load the image
     }
     
-    return loadFSImage(target);
+    return loadFSImage(target, recovery);
   }
   
   /**
@@ -304,7 +304,7 @@ public class FSImage implements Closeable {
     if(storage.getDistributedUpgradeState()) {
       // only distributed upgrade need to continue
       // don't do version upgrade
-      this.loadFSImage(target);
+      this.loadFSImage(target, null);
       storage.initializeDistributedUpgrade();
       return;
     }
@@ -319,7 +319,7 @@ public class FSImage implements Closeable {
     }
 
     // load the latest image
-    this.loadFSImage(target);
+    this.loadFSImage(target, null);
 
     // Do upgrade for each directory
     long oldCTime = storage.getCTime();
@@ -505,7 +505,7 @@ public class FSImage implements Closeable {
     target.dir.fsImage = ckptImage;
     // load from the checkpoint dirs
     try {
-      ckptImage.recoverTransitionRead(StartupOption.REGULAR, target);
+      ckptImage.recoverTransitionRead(StartupOption.REGULAR, target, null);
     } finally {
       ckptImage.close();
     }
@@ -550,7 +550,7 @@ public class FSImage implements Closeable {
     target.dir.reset();
 
     LOG.debug("Reloading namespace from " + file);
-    loadFSImage(file, target);
+    loadFSImage(file, target, null);
   }
 
   /**
@@ -568,7 +568,8 @@ public class FSImage implements Closeable {
    * @return whether the image should be saved
    * @throws IOException
    */
-  boolean loadFSImage(FSNamesystem target) throws IOException {
+  boolean loadFSImage(FSNamesystem target, MetaRecoveryContext recovery)
+      throws IOException {
     FSImageStorageInspector inspector = storage.readAndInspectDirs();
     
     isUpgradeFinalized = inspector.isUpgradeFinalized();
@@ -583,7 +584,6 @@ public class FSImage implements Closeable {
       // We only want to recover streams if we're going into Active mode.
       editLog.recoverUnclosedStreams();
     }
-
     if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, 
                                getLayoutVersion())) {
       // If we're open for write, we're either non-HA or we're the active NN, so
@@ -610,7 +610,7 @@ public class FSImage implements Closeable {
                                  getLayoutVersion())) {
         // For txid-based layout, we should have a .md5 file
         // next to the image file
-        loadFSImage(imageFile.getFile(), target);
+        loadFSImage(imageFile.getFile(), target, recovery);
       } else if (LayoutVersion.supports(Feature.FSIMAGE_CHECKSUM,
                                         getLayoutVersion())) {
         // In 0.22, we have the checksum stored in the VERSION file.
@@ -622,22 +622,19 @@ public class FSImage implements Closeable {
               NNStorage.DEPRECATED_MESSAGE_DIGEST_PROPERTY +
               " not set for storage directory " + sdForProperties.getRoot());
         }
-        loadFSImage(imageFile.getFile(), new MD5Hash(md5), target);
+        loadFSImage(imageFile.getFile(), new MD5Hash(md5), target, recovery);
       } else {
         // We don't have any record of the md5sum
-        loadFSImage(imageFile.getFile(), null, target);
+        loadFSImage(imageFile.getFile(), null, target, recovery);
       }
     } catch (IOException ioe) {
       FSEditLog.closeAllStreams(editStreams);
       throw new IOException("Failed to load image from " + imageFile, ioe);
     }
-    
-    long numLoaded = loadEdits(editStreams, target);
+    long txnsAdvanced = loadEdits(editStreams, target, recovery);
     needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
-                                                    numLoaded);
-    
-    // update the txid for the edit log
-    editLog.setNextTxId(storage.getMostRecentCheckpointTxId() + numLoaded + 1);
+                                                    txnsAdvanced);
+    editLog.setNextTxId(lastAppliedTxId + 1);
     return needToSave;
   }
 
@@ -664,33 +661,29 @@ public class FSImage implements Closeable {
   
   /**
    * Load the specified list of edit files into the image.
-   * @return the number of transactions loaded
    */
   public long loadEdits(Iterable<EditLogInputStream> editStreams,
-      FSNamesystem target) throws IOException, EditLogInputException {
+      FSNamesystem target, MetaRecoveryContext recovery) throws IOException {
     LOG.debug("About to load edits:\n  " + Joiner.on("\n  ").join(editStreams));
-
-    long startingTxId = getLastAppliedTxId() + 1;
-    long numLoaded = 0;
-
+    
+    long prevLastAppliedTxId = lastAppliedTxId;  
     try {    
-      FSEditLogLoader loader = new FSEditLogLoader(target);
+      FSEditLogLoader loader = new FSEditLogLoader(target, lastAppliedTxId);
       
       // Load latest edits
       for (EditLogInputStream editIn : editStreams) {
-        LOG.info("Reading " + editIn + " expecting start txid #" + startingTxId);
-        long thisNumLoaded = 0;
+        LOG.info("Reading " + editIn + " expecting start txid #" +
+              (lastAppliedTxId + 1));
         try {
-          thisNumLoaded = loader.loadFSEdits(editIn, startingTxId);
-        } catch (EditLogInputException elie) {
-          thisNumLoaded = elie.getNumEditsLoaded();
-          throw elie;
+          loader.loadFSEdits(editIn, lastAppliedTxId + 1, recovery);
         } finally {
           // Update lastAppliedTxId even in case of error, since some ops may
           // have been successfully applied before the error.
-          lastAppliedTxId = startingTxId + thisNumLoaded - 1;
-          startingTxId += thisNumLoaded;
-          numLoaded += thisNumLoaded;
+          lastAppliedTxId = loader.getLastAppliedTxId();
+        }
+        // If we are in recovery mode, we may have skipped over some txids.
+        if (editIn.getLastTxId() != HdfsConstants.INVALID_TXID) {
+          lastAppliedTxId = editIn.getLastTxId();
         }
       }
     } finally {
@@ -698,8 +691,7 @@ public class FSImage implements Closeable {
       // update the counts
       target.dir.updateCountForINodeWithQuota();   
     }
-    
-    return numLoaded;
+    return lastAppliedTxId - prevLastAppliedTxId;
   }
 
 
@@ -707,14 +699,14 @@ public class FSImage implements Closeable {
    * Load the image namespace from the given image file, verifying
    * it against the MD5 sum stored in its associated .md5 file.
    */
-  private void loadFSImage(File imageFile, FSNamesystem target)
-      throws IOException {
+  private void loadFSImage(File imageFile, FSNamesystem target,
+      MetaRecoveryContext recovery) throws IOException {
     MD5Hash expectedMD5 = MD5FileUtils.readStoredMd5ForFile(imageFile);
     if (expectedMD5 == null) {
       throw new IOException("No MD5 file found corresponding to image file "
           + imageFile);
     }
-    loadFSImage(imageFile, expectedMD5, target);
+    loadFSImage(imageFile, expectedMD5, target, recovery);
   }
   
   /**
@@ -722,7 +714,7 @@ public class FSImage implements Closeable {
    * filenames and blocks.
    */
   private void loadFSImage(File curFile, MD5Hash expectedMd5,
-      FSNamesystem target) throws IOException {
+      FSNamesystem target, MetaRecoveryContext recovery) throws IOException {
     FSImageFormat.Loader loader = new FSImageFormat.Loader(
         conf, target);
     loader.load(curFile);

@@ -331,7 +331,14 @@ public class AuthenticationFilter implements Filter {
     HttpServletResponse httpResponse = (HttpServletResponse) response;
     try {
       boolean newToken = false;
-      AuthenticationToken token = getToken(httpRequest);
+      AuthenticationToken token;
+      try {
+        token = getToken(httpRequest);
+      }
+      catch (AuthenticationException ex) {
+        LOG.warn("AuthenticationToken ignored: " + ex.getMessage());
+        token = null;
+      }
       if (token == null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Request [{}] triggering authentication", getRequestURL(httpRequest));
@@ -370,6 +377,9 @@ public class AuthenticationFilter implements Filter {
           httpResponse.addCookie(cookie);
         }
         filterChain.doFilter(httpRequest, httpResponse);
+      }
+      else {
+        throw new AuthenticationException("Missing AuthenticationToken");
       }
     } catch (AuthenticationException ex) {
       if (!httpResponse.isCommitted()) {

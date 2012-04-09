@@ -15,18 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.IOException;
 
 /**
- * Tests Job end notification in cluster mode.
+ * If a previous user of a resource tries to use a shared resource, after
+ * fenced by another user, this exception is thrown.
  */
-public class TestClusterMRNotification extends NotificationTestCase {
-
-  public TestClusterMRNotification() throws IOException {
-    super(HadoopTestCase.CLUSTER_MR);
+public class FencedException extends IOException {
+  private static final long serialVersionUID = 1L;
+  
+  public FencedException(String errorMsg) {
+    super(errorMsg);
   }
-
 }

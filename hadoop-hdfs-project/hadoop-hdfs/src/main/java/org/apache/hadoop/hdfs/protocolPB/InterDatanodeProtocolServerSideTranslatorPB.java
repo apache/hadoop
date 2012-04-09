@@ -56,9 +56,17 @@ public class InterDatanodeProtocolServerSideTranslatorPB implements
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    return InitReplicaRecoveryResponseProto.newBuilder()
-        .setBlock(PBHelper.convert(r))
-        .setState(PBHelper.convert(r.getOriginalReplicaState())).build();
+    
+    if (r == null) {
+      return InitReplicaRecoveryResponseProto.newBuilder()
+          .setReplicaFound(false)
+          .build();
+    } else {
+      return InitReplicaRecoveryResponseProto.newBuilder()
+          .setReplicaFound(true)
+          .setBlock(PBHelper.convert(r))
+          .setState(PBHelper.convert(r.getOriginalReplicaState())).build();
+    }
   }
 
   @Override
