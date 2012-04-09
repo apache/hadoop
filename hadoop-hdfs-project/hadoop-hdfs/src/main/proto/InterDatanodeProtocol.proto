@@ -38,8 +38,11 @@ message InitReplicaRecoveryRequestProto {
  * Repica recovery information
  */
 message InitReplicaRecoveryResponseProto {
-  required ReplicaStateProto state = 1; // State of the replica
-  required BlockProto block = 2;   // block information
+  required bool replicaFound = 1;
+
+  // The following entries are not set if there was no replica found.
+  optional ReplicaStateProto state = 2; // State of the replica
+  optional BlockProto block = 3;   // block information
 }
 
 /**

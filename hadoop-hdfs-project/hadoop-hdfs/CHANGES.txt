@@ -336,6 +336,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3136. Remove SLF4J dependency as HDFS does not need it to fix
     unnecessary warnings. (Jason Lowe via suresh)
 
+    HDFS-3214. InterDatanodeProtocolServerSideTranslatorPB doesn't handle
+    null response from initReplicaRecovery (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

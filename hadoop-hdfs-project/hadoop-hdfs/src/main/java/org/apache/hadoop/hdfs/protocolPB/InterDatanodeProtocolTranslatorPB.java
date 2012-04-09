@@ -85,6 +85,17 @@ public class InterDatanodeProtocolTranslatorPB implements
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
+    if (!resp.getReplicaFound()) {
+      // No replica found on the remote node.
+      return null;
+    } else {
+      if (!resp.hasBlock() || !resp.hasState()) {
+        throw new IOException("Replica was found but missing fields. " +
+            "Req: " + req + "\n" +
+            "Resp: " + resp);
+      }
+    }
+    
     BlockProto b = resp.getBlock();
     return new ReplicaRecoveryInfo(b.getBlockId(), b.getNumBytes(),
         b.getGenStamp(), PBHelper.convert(resp.getState()));
