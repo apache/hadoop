@@ -73,9 +73,11 @@ public class FSEditLogLoader {
   static final Log LOG = LogFactory.getLog(FSEditLogLoader.class.getName());
   static long REPLAY_TRANSACTION_LOG_INTERVAL = 1000; // 1sec
   private final FSNamesystem fsNamesys;
-
-  public FSEditLogLoader(FSNamesystem fsNamesys) {
+  private long lastAppliedTxId;
+  
+  public FSEditLogLoader(FSNamesystem fsNamesys, long lastAppliedTxId) {
     this.fsNamesys = fsNamesys;
+    this.lastAppliedTxId = lastAppliedTxId;
   }
   
   /**
@@ -83,32 +85,29 @@ public class FSEditLogLoader {
    * This is where we apply edits that we've been writing to disk all
    * along.
    */
-  long loadFSEdits(EditLogInputStream edits, long expectedStartingTxId)
-      throws IOException {
-    long numEdits = 0;
+  long loadFSEdits(EditLogInputStream edits, long expectedStartingTxId,
+      MetaRecoveryContext recovery) throws IOException {
     int logVersion = edits.getVersion();
 
     fsNamesys.writeLock();
     try {
       long startTime = now();
-      numEdits = loadEditRecords(logVersion, edits, false, 
-                                 expectedStartingTxId);
+      long numEdits = loadEditRecords(logVersion, edits, false, 
+                                 expectedStartingTxId, recovery);
       FSImage.LOG.info("Edits file " + edits.getName() 
           + " of size " + edits.length() + " edits # " + numEdits 
           + " loaded in " + (now()-startTime)/1000 + " seconds.");
+      return numEdits;
     } finally {
       edits.close();
       fsNamesys.writeUnlock();
     }
-    
-    return numEdits;
   }
 
   long loadEditRecords(int logVersion, EditLogInputStream in, boolean closeOnExit,
-                      long expectedStartingTxId)
-      throws IOException, EditLogInputException {
+                      long expectedStartingTxId, MetaRecoveryContext recovery)
+      throws IOException {
     FSDirectory fsDir = fsNamesys.dir;
-    long numEdits = 0;
 
     EnumMap<FSEditLogOpCodes, Holder<Integer>> opCounts =
       new EnumMap<FSEditLogOpCodes, Holder<Integer>>(FSEditLogOpCodes.class);
@@ -122,72 +121,99 @@ public class FSEditLogLoader {
 
     long recentOpcodeOffsets[] = new long[4];
     Arrays.fill(recentOpcodeOffsets, -1);
-
-    long txId = expectedStartingTxId - 1;
+    
+    long expectedTxId = expectedStartingTxId;
+    long numEdits = 0;
     long lastTxId = in.getLastTxId();
     long numTxns = (lastTxId - expectedStartingTxId) + 1;
-
     long lastLogTime = now();
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("edit log length: " + in.length() + ", start txid: "
           + expectedStartingTxId + ", last txid: " + lastTxId);
     }
-
     try {
-      try {
-        while (true) {
+      while (true) {
+        try {
           FSEditLogOp op;
           try {
-            if ((op = in.readOp()) == null) {
+            op = in.readOp();
+            if (op == null) {
               break;
             }
-          } catch (IOException ioe) {
-            long badTxId = txId + 1; // because txId hasn't been incremented yet
-            String errorMessage = formatEditLogReplayError(in, recentOpcodeOffsets, badTxId);
+          } catch (Throwable e) {
+            // Handle a problem with our input
+            check203UpgradeFailure(logVersion, e);
+            String errorMessage =
+              formatEditLogReplayError(in, recentOpcodeOffsets, expectedTxId);
             FSImage.LOG.error(errorMessage);
-            throw new EditLogInputException(errorMessage,
-                ioe, numEdits);
+            if (recovery == null) {
+               // We will only try to skip over problematic opcodes when in
+               // recovery mode.
+              throw new EditLogInputException(errorMessage, e, numEdits);
+            }
+            MetaRecoveryContext.editLogLoaderPrompt(
+                "We failed to read txId " + expectedTxId,
+                recovery, "skipping the bad section in the log");
+            in.resync();
+            continue;
           }
           recentOpcodeOffsets[(int)(numEdits % recentOpcodeOffsets.length)] =
             in.getPosition();
           if (LayoutVersion.supports(Feature.STORED_TXIDS, logVersion)) {
-            long expectedTxId = txId + 1;
-            txId = op.txid;
-            if (txId != expectedTxId) {
-              throw new IOException("Expected transaction ID " +
-                  expectedTxId + " but got " + txId);
+            if (op.getTransactionId() > expectedTxId) { 
+              MetaRecoveryContext.editLogLoaderPrompt("There appears " +
+                  "to be a gap in the edit log.  We expected txid " +
+                  expectedTxId + ", but got txid " +
+                  op.getTransactionId() + ".", recovery, "ignoring missing " +
+                  " transaction IDs");
+            } else if (op.getTransactionId() < expectedTxId) { 
+              MetaRecoveryContext.editLogLoaderPrompt("There appears " +
+                  "to be an out-of-order edit in the edit log.  We " +
+                  "expected txid " + expectedTxId + ", but got txid " +
+                  op.getTransactionId() + ".", recovery,
+                  "skipping the out-of-order edit");
+              continue;
             }
           }
-
-          incrOpCount(op.opCode, opCounts);
           try {
             applyEditLogOp(op, fsDir, logVersion);
-          } catch (Throwable t) {
-            // Catch Throwable because in the case of a truly corrupt edits log, any
-            // sort of error might be thrown (NumberFormat, NullPointer, EOF, etc.)
-            String errorMessage = formatEditLogReplayError(in, recentOpcodeOffsets, txId);
-            FSImage.LOG.error(errorMessage);
-            throw new IOException(errorMessage, t);
+          } catch (Throwable e) {
+            LOG.error("Encountered exception on operation " + op, e);
+            MetaRecoveryContext.editLogLoaderPrompt("Failed to " +
+             "apply edit log operation " + op + ": error " +
+             e.getMessage(), recovery, "applying edits");
           }
-
+          // Now that the operation has been successfully decoded and
+          // applied, update our bookkeeping.
+          incrOpCount(op.opCode, opCounts);
+          if (op.hasTransactionId()) {
+            lastAppliedTxId = op.getTransactionId();
+            expectedTxId = lastAppliedTxId + 1;
+          } else {
+            expectedTxId = lastAppliedTxId = expectedStartingTxId;
+          }
           // log progress
-          if (now() - lastLogTime > REPLAY_TRANSACTION_LOG_INTERVAL) {
-            int percent = Math.round((float) txId / numTxns * 100);
-            LOG.info("replaying edit log: " + txId + "/" + numTxns
-                + " transactions completed. (" + percent + "%)");
-            lastLogTime = now();
+          if (LayoutVersion.supports(Feature.STORED_TXIDS, logVersion)) {
+            long now = now();
+            if (now - lastLogTime > REPLAY_TRANSACTION_LOG_INTERVAL) {
+              int percent = Math.round((float)lastAppliedTxId / numTxns * 100);
+              LOG.info("replaying edit log: " + lastAppliedTxId + "/" + numTxns
+                  + " transactions completed. (" + percent + "%)");
+              lastLogTime = now;
+            }
           }
-
           numEdits++;
+        } catch (MetaRecoveryContext.RequestStopException e) {
+          MetaRecoveryContext.LOG.warn("Stopped reading edit log at " +
+              in.getPosition() + "/"  + in.length());
+          break;
         }
-      } catch (IOException ex) {
-        check203UpgradeFailure(logVersion, ex);
-      } finally {
-        if(closeOnExit)
-          in.close();
       }
     } finally {
+      if(closeOnExit) {
+        in.close();
+      }
       fsDir.writeUnlock();
       fsNamesys.writeUnlock();
 
@@ -474,7 +500,7 @@ public class FSEditLogLoader {
       long recentOpcodeOffsets[], long txid) {
     StringBuilder sb = new StringBuilder();
     sb.append("Error replaying edit log at offset " + in.getPosition());
-    sb.append(" on transaction ID ").append(txid);
+    sb.append(".  Expected transaction ID was ").append(txid);
     if (recentOpcodeOffsets[0] != -1) {
       Arrays.sort(recentOpcodeOffsets);
       sb.append("\nRecent opcode offsets:");
@@ -521,7 +547,7 @@ public class FSEditLogLoader {
       if (oldBlock.getBlockId() != newBlock.getBlockId() ||
           (oldBlock.getGenerationStamp() != newBlock.getGenerationStamp() && 
               !(isGenStampUpdate && isLastBlock))) {
-        throw new IOException("Mismatched block IDs or generation stamps, " + 
+        throw new IOException("Mismatched block IDs or generation stamps, " +
             "attempting to replace block " + oldBlock + " with " + newBlock +
             " as block # " + i + "/" + newBlocks.length + " of " +
             path);
@@ -607,7 +633,7 @@ public class FSEditLogLoader {
    * Throw appropriate exception during upgrade from 203, when editlog loading
    * could fail due to opcode conflicts.
    */
-  private void check203UpgradeFailure(int logVersion, IOException ex)
+  private void check203UpgradeFailure(int logVersion, Throwable e)
       throws IOException {
     // 0.20.203 version version has conflicting opcodes with the later releases.
     // The editlog must be emptied by restarting the namenode, before proceeding
@@ -618,9 +644,7 @@ public class FSEditLogLoader {
           + logVersion + " from release 0.20.203. Please go back to the old "
           + " release and restart the namenode. This empties the editlog "
           + " and saves the namespace. Resume the upgrade after this step.";
-      throw new IOException(msg, ex);
-    } else {
-      throw ex;
+      throw new IOException(msg, e);
     }
   }
   
@@ -645,14 +669,14 @@ public class FSEditLogLoader {
           break;
         }
         if (firstTxId == HdfsConstants.INVALID_TXID) {
-          firstTxId = op.txid;
+          firstTxId = op.getTransactionId();
         }
         if (lastTxId == HdfsConstants.INVALID_TXID
-            || op.txid == lastTxId + 1) {
-          lastTxId = op.txid;
+            || op.getTransactionId() == lastTxId + 1) {
+          lastTxId = op.getTransactionId();
         } else {
-          FSImage.LOG.error("Out of order txid found. Found " + op.txid 
-                            + ", expected " + (lastTxId + 1));
+          FSImage.LOG.error("Out of order txid found. Found " +
+            op.getTransactionId() + ", expected " + (lastTxId + 1));
           break;
         }
         numValid++;
@@ -745,4 +769,7 @@ public class FSEditLogLoader {
     }
   }
 
+  public long getLastAppliedTxId() {
+    return lastAppliedTxId;
+  }
 }

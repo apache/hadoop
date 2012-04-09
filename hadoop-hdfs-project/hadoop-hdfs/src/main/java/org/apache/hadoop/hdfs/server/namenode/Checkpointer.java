@@ -292,6 +292,6 @@ class Checkpointer extends Daemon {
     }
     LOG.info("Checkpointer about to load edits from " +
         editsStreams.size() + " stream(s).");
-    dstImage.loadEdits(editsStreams, dstNamesystem);
+    dstImage.loadEdits(editsStreams, dstNamesystem, null);
   }
 }

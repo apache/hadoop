@@ -232,7 +232,10 @@ class FileJournalManager implements JournalManager {
           LOG.info(String.format("Log begins at txid %d, but requested start "
               + "txid is %d. Skipping %d edits.", elf.getFirstTxId(), fromTxId,
               transactionsToSkip));
-          elfis.skipTransactions(transactionsToSkip);
+        }
+        if (elfis.skipUntil(fromTxId) == false) {
+          throw new IOException("failed to advance input stream to txid " +
+              fromTxId);
         }
         return elfis;
       }

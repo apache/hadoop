@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.io.Closeable;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
@@ -30,7 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class EditLogOutputStream {
+public abstract class EditLogOutputStream implements Closeable {
   // these are statistics counters
   private long numSync;        // number of sync(s) to disk
   private long totalTimeSync;  // total time to sync

@@ -91,24 +91,6 @@ public class EditLogFileInputStream extends EditLogInputStream {
     this.isInProgress = isInProgress;
   }
 
-  /**
-   * Skip over a number of transactions. Subsequent calls to
-   * {@link EditLogFileInputStream#readOp()} will begin after these skipped
-   * transactions. If more transactions are requested to be skipped than remain
-   * in the edit log, all edit log ops in the log will be skipped and subsequent
-   * calls to {@link EditLogInputStream#readOp} will return null.
-   * 
-   * @param transactionsToSkip number of transactions to skip over.
-   * @throws IOException if there's an error while reading an operation
-   */
-  public void skipTransactions(long transactionsToSkip) throws IOException {
-    assert firstTxId != HdfsConstants.INVALID_TXID &&
-        lastTxId != HdfsConstants.INVALID_TXID;
-    for (long i = 0; i < transactionsToSkip; i++) {
-      reader.readOp();
-    }
-  }
-
   @Override
   public long getFirstTxId() throws IOException {
     return firstTxId;
@@ -119,19 +101,23 @@ public class EditLogFileInputStream extends EditLogInputStream {
     return lastTxId;
   }
 
-  @Override // JournalStream
+  @Override
   public String getName() {
     return file.getPath();
   }
 
-  @Override // JournalStream
-  public JournalType getType() {
-    return JournalType.FILE;
-  }
-
   @Override
-  public FSEditLogOp readOp() throws IOException {
-    return reader.readOp();
+  protected FSEditLogOp nextOp() throws IOException {
+    return reader.readOp(false);
+  }
+  
+  @Override
+  protected FSEditLogOp nextValidOp() {
+    try {
+      return reader.readOp(true);
+    } catch (IOException e) {
+      return null;
+    }
   }
 
   @Override

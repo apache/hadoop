@@ -70,21 +70,25 @@ class EditLogBackupInputStream extends EditLogInputStream {
     reader = null;
   }
 
-  @Override // JournalStream
+  @Override
   public String getName() {
     return address;
   }
 
-  @Override // JournalStream
-  public JournalType getType() {
-    return JournalType.BACKUP;
+  @Override
+  protected FSEditLogOp nextOp() throws IOException {
+    Preconditions.checkState(reader != null,
+        "Must call setBytes() before readOp()");
+    return reader.readOp(false);
   }
 
   @Override
-  public FSEditLogOp readOp() throws IOException {
-    Preconditions.checkState(reader != null,
-        "Must call setBytes() before readOp()");
-    return reader.readOp();
+  protected FSEditLogOp nextValidOp() {
+    try {
+      return reader.readOp(true);
+    } catch (IOException e) {
+      throw new RuntimeException("got unexpected IOException " + e, e);
+    }
   }
 
   @Override

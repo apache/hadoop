@@ -215,19 +215,21 @@ public class BackupImage extends FSImage {
         LOG.debug("data:" + StringUtils.byteToHexString(data));
       }
 
-      FSEditLogLoader logLoader = new FSEditLogLoader(namesystem);
+      FSEditLogLoader logLoader =
+          new FSEditLogLoader(namesystem, lastAppliedTxId);
       int logVersion = storage.getLayoutVersion();
       backupInputStream.setBytes(data, logVersion);
 
-      long numLoaded = logLoader.loadEditRecords(logVersion, backupInputStream, 
-                                                true, lastAppliedTxId + 1);
-      if (numLoaded != numTxns) {
+      long numTxnsAdvanced = logLoader.loadEditRecords(logVersion, 
+          backupInputStream, true, lastAppliedTxId + 1, null);
+      if (numTxnsAdvanced != numTxns) {
         throw new IOException("Batch of txns starting at txnid " +
             firstTxId + " was supposed to contain " + numTxns +
-            " transactions but only was able to apply " + numLoaded);
+            " transactions, but we were only able to advance by " +
+            numTxnsAdvanced);
       }
-      lastAppliedTxId += numTxns;
-      
+      lastAppliedTxId = logLoader.getLastAppliedTxId();
+
       namesystem.dir.updateCountForINodeWithQuota(); // inefficient!
     } finally {
       backupInputStream.clear();
@@ -277,7 +279,7 @@ public class BackupImage extends FSImage {
           editStreams.add(s);
         }
       }
-      loadEdits(editStreams, namesystem);
+      loadEdits(editStreams, namesystem, null);
     }
     
     // now, need to load the in-progress file
@@ -311,12 +313,11 @@ public class BackupImage extends FSImage {
         LOG.info("Going to finish converging with remaining " + remainingTxns
             + " txns from in-progress stream " + stream);
         
-        FSEditLogLoader loader = new FSEditLogLoader(namesystem);
-        long numLoaded = loader.loadFSEdits(stream, lastAppliedTxId + 1);
-        lastAppliedTxId += numLoaded;
-        assert numLoaded == remainingTxns :
-          "expected to load " + remainingTxns + " but loaded " +
-          numLoaded + " from " + stream;
+        FSEditLogLoader loader =
+            new FSEditLogLoader(namesystem, lastAppliedTxId);
+        loader.loadFSEdits(stream, lastAppliedTxId + 1, null);
+        lastAppliedTxId = loader.getLastAppliedTxId();
+        assert lastAppliedTxId == getEditLog().getLastWrittenTxId();
       } finally {
         FSEditLog.closeAllStreams(editStreams);
       }

@@ -180,8 +180,8 @@ public class TestEditLog extends TestCase {
   }
   
   private long testLoad(byte[] data, FSNamesystem namesys) throws IOException {
-    FSEditLogLoader loader = new FSEditLogLoader(namesys);
-    return loader.loadFSEdits(new EditLogByteInputStream(data), 1);
+    FSEditLogLoader loader = new FSEditLogLoader(namesys, 0);
+    return loader.loadFSEdits(new EditLogByteInputStream(data), 1, null);
   }
 
   /**
@@ -316,7 +316,7 @@ public class TestEditLog extends TestCase {
       //
       for (Iterator<StorageDirectory> it = 
               fsimage.getStorage().dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
-        FSEditLogLoader loader = new FSEditLogLoader(namesystem);
+        FSEditLogLoader loader = new FSEditLogLoader(namesystem, 0);
         
         File editFile = NNStorage.getFinalizedEditsFile(it.next(), 3,
             3 + expectedTxns - 1);
@@ -324,7 +324,7 @@ public class TestEditLog extends TestCase {
         
         System.out.println("Verifying file: " + editFile);
         long numEdits = loader.loadFSEdits(
-            new EditLogFileInputStream(editFile), 3);
+            new EditLogFileInputStream(editFile), 3, null);
         int numLeases = namesystem.leaseManager.countLease();
         System.out.println("Number of outstanding leases " + numLeases);
         assertEquals(0, numLeases);
@@ -775,8 +775,8 @@ public class TestEditLog extends TestCase {
     }
 
     @Override
-    public FSEditLogOp readOp() throws IOException {
-      return reader.readOp();
+    protected FSEditLogOp nextOp() throws IOException {
+      return reader.readOp(false);
     }
 
     @Override
@@ -789,14 +789,9 @@ public class TestEditLog extends TestCase {
       input.close();
     }
 
-    @Override // JournalStream
+    @Override
     public String getName() {
       return "AnonEditLogByteInputStream";
-    }
-
-    @Override // JournalStream
-    public JournalType getType() {
-      return JournalType.FILE;
     }
 
     @Override

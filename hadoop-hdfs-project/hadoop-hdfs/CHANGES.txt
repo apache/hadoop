@@ -77,6 +77,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3102. Add CLI tool to initialize the shared-edits dir. (atm)
 
+    HDFS-3004. Implement Recovery Mode. (Colin Patrick McCabe via eli)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
