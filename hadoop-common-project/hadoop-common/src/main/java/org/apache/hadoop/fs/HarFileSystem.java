@@ -202,7 +202,8 @@ public class HarFileSystem extends FilterFileSystem {
     final String underLyingHost = i == host.length()? null: host.substring(i);
     int underLyingPort = rawURI.getPort();
     String auth = (underLyingHost == null && underLyingPort == -1)?
-                  null:(underLyingHost+":"+underLyingPort);
+                  null:(underLyingHost+
+                      (underLyingPort == -1 ? "" : ":"+underLyingPort));
     URI tmp = null;
     if (rawURI.getQuery() != null) {
       // query component not allowed
