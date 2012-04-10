@@ -405,6 +405,14 @@ public class MRAppMaster extends CompositeService {
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
+
+      // Cleanup staging directory
+      try {
+        cleanupStagingDir();
+      } catch(IOException io) {
+        LOG.warn("Failed to delete staging dir", io);
+      }
+
       try {
         // Stop all services
         // This will also send the final report to the ResourceManager
@@ -413,13 +421,6 @@ public class MRAppMaster extends CompositeService {
 
       } catch (Throwable t) {
         LOG.warn("Graceful stop failed ", t);
-      }
-
-      // Cleanup staging directory
-      try {
-        cleanupStagingDir();
-      } catch(IOException io) {
-        LOG.warn("Failed to delete staging dir");
       }
 
       //Bring the process down by force.
