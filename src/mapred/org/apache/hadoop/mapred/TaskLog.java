@@ -23,9 +23,11 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -184,8 +186,22 @@ public class TaskLog {
         new HashMap<LogName, LogFileDetail>();
 
     File indexFile = getIndexFile(taskid, isCleanup);
-    BufferedReader fis = new BufferedReader(new InputStreamReader(
-      SecureIOUtils.openForRead(indexFile, obtainLogDirOwner(taskid))));
+    BufferedReader fis;
+    try {
+      fis = new BufferedReader(new InputStreamReader(
+        SecureIOUtils.openForRead(indexFile, obtainLogDirOwner(taskid))));
+    } catch (FileNotFoundException ex) {
+      LOG.warn("Index file for the log of " + taskid + " does not exist.");
+
+      //Assume no task reuse is used and files exist on attemptdir
+      StringBuffer input = new StringBuffer();
+      input.append(LogFileDetail.LOCATION
+                     + getAttemptDir(taskid, isCleanup) + "\n");
+      for (LogName logName : LOGS_TRACKED_BY_INDEX_FILES) {
+        input.append(logName + ":0 -1\n");
+      }
+      fis = new BufferedReader(new StringReader(input.toString()));
+    }
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
     //stdout:<start-offset in the stdout file> <length>
@@ -193,7 +209,7 @@ public class TaskLog {
     //syslog:<start-offset in the syslog file> <length>
     String str = fis.readLine();
     if (str == null) { //the file doesn't have anything
-      throw new IOException ("Index file for the log of " + taskid+" doesn't exist.");
+      throw new IOException ("Index file for the log of " + taskid+" is empty.");
     }
     String loc = str.substring(str.indexOf(LogFileDetail.LOCATION)+
         LogFileDetail.LOCATION.length());
