@@ -41,9 +41,12 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
+import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobsInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
@@ -90,7 +93,7 @@ public class TestHsWebServicesJobConf extends JerseyTest {
   private static File testConfDir = new File("target",
       TestHsWebServicesJobConf.class.getSimpleName() + "confDir");
 
-  static class TestAppContext implements AppContext {
+  static class TestAppContext implements HistoryContext {
     final ApplicationAttemptId appAttemptID;
     final ApplicationId appID;
     final String user = MockJobs.newUserName();
@@ -156,6 +159,20 @@ public class TestHsWebServicesJobConf extends JerseyTest {
     public ClusterInfo getClusterInfo() {
       return null;
     }
+
+    @Override
+    public Map<JobId, Job> getAllJobs(ApplicationId appID) {
+      // TODO Auto-generated method stub
+      return null;
+    }
+
+    @Override
+    public JobsInfo getPartialJobs(Long offset, Long count, String user,
+        String queue, Long sBegin, Long sEnd, Long fBegin, Long fEnd,
+        JobState jobState) {
+      // TODO Auto-generated method stub
+      return null;
+    }
   }
 
   private Injector injector = Guice.createInjector(new ServletModule() {
@@ -195,6 +212,7 @@ public class TestHsWebServicesJobConf extends JerseyTest {
       bind(GenericExceptionHandler.class);
       bind(WebApp.class).toInstance(webApp);
       bind(AppContext.class).toInstance(appContext);
+      bind(HistoryContext.class).toInstance(appContext);
       bind(Configuration.class).toInstance(conf);
 
       serve("/*").with(GuiceContainer.class);

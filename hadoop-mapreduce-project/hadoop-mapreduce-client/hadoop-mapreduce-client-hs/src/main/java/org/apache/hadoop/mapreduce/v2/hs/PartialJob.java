@@ -51,6 +51,7 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
     jobReport = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobReport.class);
     jobReport.setStartTime(jobIndexInfo.getSubmitTime());
     jobReport.setFinishTime(jobIndexInfo.getFinishTime());
+    jobReport.setJobState(getState());
   }
   
   @Override

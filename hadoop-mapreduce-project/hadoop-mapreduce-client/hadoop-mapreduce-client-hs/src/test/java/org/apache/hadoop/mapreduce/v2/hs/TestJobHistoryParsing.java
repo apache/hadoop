@@ -92,6 +92,14 @@ public class TestJobHistoryParsing {
     checkHistoryParsing(3, 0, 2);
   }
   
+  private static String getJobSummary(FileContext fc, Path path) throws IOException {
+    Path qPath = fc.makeQualified(path);
+    FSDataInputStream in = fc.open(qPath);
+    String jobSummaryString = in.readUTF();
+    in.close();
+    return jobSummaryString;
+  }
+  
   private void checkHistoryParsing(final int numMaps, final int numReduces,
       final int numSuccessfulMaps) 
   throws Exception {
@@ -244,7 +252,7 @@ public class TestJobHistoryParsing {
       String summaryFileName = JobHistoryUtils
           .getIntermediateSummaryFileName(jobId);
       Path summaryFile = new Path(jobhistoryDir, summaryFileName);
-      String jobSummaryString = jobHistory.getJobSummary(fc, summaryFile);
+      String jobSummaryString = getJobSummary(fc, summaryFile);
       Assert.assertTrue(jobSummaryString.contains("resourcesPerMap=100"));
       Assert.assertTrue(jobSummaryString.contains("resourcesPerReduce=100"));
       Assert.assertNotNull(jobSummaryString);
