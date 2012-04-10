@@ -205,6 +205,9 @@ Release 1.1.0 - unreleased
     HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
     Lee via szetszwo)
 
+    MAPREDUCE-1238. mapred metrics shows negative count of waiting maps and
+    reduces (tgraves via bobby)
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES
