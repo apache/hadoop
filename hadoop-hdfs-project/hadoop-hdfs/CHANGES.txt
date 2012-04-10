@@ -121,6 +121,9 @@ Trunk (unreleased changes)
     HDFS-3119. Overreplicated block is not deleted even after the replication 
     factor is reduced after sync follwed by closing that file. (Ashish Singhi 
     via umamahesh)
+
+    HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option.
+    (Henry Robinson via atm)
     
 Release 2.0.0 - UNRELEASED 
 

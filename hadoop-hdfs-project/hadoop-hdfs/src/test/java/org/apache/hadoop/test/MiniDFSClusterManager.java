@@ -68,6 +68,7 @@ public class MiniDFSClusterManager {
   private StartupOption dfsOpts;
   private String writeConfig;
   private Configuration conf;
+  private boolean format;
   
   private static final long SLEEP_INTERVAL_MS = 1000 * 60;
 
@@ -138,6 +139,7 @@ public class MiniDFSClusterManager {
     dfs = new MiniDFSCluster.Builder(conf).nameNodePort(nameNodePort)
                                           .numDataNodes(numDataNodes)
                                           .startupOption(dfsOpts)
+                                          .format(format)
                                           .build();
     dfs.waitActive();
     
@@ -196,8 +198,13 @@ public class MiniDFSClusterManager {
     // HDFS
     numDataNodes = intArgument(cli, "datanodes", 1);
     nameNodePort = intArgument(cli, "nnport", 0);
-    dfsOpts = cli.hasOption("format") ?
-        StartupOption.FORMAT : StartupOption.REGULAR;
+    if (cli.hasOption("format")) {
+      dfsOpts = StartupOption.FORMAT;
+      format = true;
+    } else {
+      dfsOpts = StartupOption.REGULAR;
+      format = false;
+    }
 
     // Runner
     writeDetails = cli.getOptionValue("writeDetails");
