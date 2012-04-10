@@ -760,6 +760,9 @@ public class NameNode {
    */
   private static boolean initializeSharedEdits(Configuration conf,
       boolean force, boolean interactive) {
+    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    initializeGenericKeys(conf, nsId, namenodeId);
     NNStorage existingStorage = null;
     try {
       FSNamesystem fsns = FSNamesystem.loadFromDisk(conf,

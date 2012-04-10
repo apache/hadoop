@@ -347,6 +347,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3234. Accidentally left log message in GetConf after HDFS-3226 (todd)
 
+    HDFS-3236. NameNode does not initialize generic conf keys when started
+    with -initializeSharedEditsDir (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
