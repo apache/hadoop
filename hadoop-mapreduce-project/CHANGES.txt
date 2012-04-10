@@ -130,6 +130,9 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4076. Stream job fails with ZipException when use yarn jar
     command (Devaraj K via bobby)
+ 
+    MAPREDUCE-4108. Fix tests in org.apache.hadoop.util.TestRunJar
+    (Devaraj K via tgraves)
 
 Release 0.23.3 - UNRELEASED
 
