@@ -358,6 +358,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3236. NameNode does not initialize generic conf keys when started
     with -initializeSharedEditsDir (atm)
 
+    HDFS-3248. bootstrapStandby repeated twice in hdfs namenode usage message
+    (Colin Patrick McCabe via todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
