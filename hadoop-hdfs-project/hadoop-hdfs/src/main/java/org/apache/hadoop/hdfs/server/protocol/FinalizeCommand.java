@@ -17,16 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * A BlockCommand is an instruction to a datanode to register with the namenode.
@@ -34,17 +26,6 @@ import org.apache.hadoop.io.WritableUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class FinalizeCommand extends DatanodeCommand {
-  // /////////////////////////////////////////
-  // Writable
-  // /////////////////////////////////////////
-  static { // register a ctor
-    WritableFactories.setFactory(FinalizeCommand.class, new WritableFactory() {
-      public Writable newInstance() {
-        return new FinalizeCommand();
-      }
-    });
-  }
-  
   String blockPoolId;
   private FinalizeCommand() {
     super(DatanodeProtocol.DNA_FINALIZE);
@@ -57,12 +38,5 @@ public class FinalizeCommand extends DatanodeCommand {
   
   public String getBlockPoolId() {
     return blockPoolId;
-  }
-  
-  public void readFields(DataInput in) throws IOException {
-    blockPoolId = WritableUtils.readString(in);
-  }
-  public void write(DataOutput out) throws IOException {
-    WritableUtils.writeString(out, blockPoolId);
   }
 }

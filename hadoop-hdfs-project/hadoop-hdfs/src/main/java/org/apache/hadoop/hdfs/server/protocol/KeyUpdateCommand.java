@@ -17,16 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -44,30 +37,5 @@ public class KeyUpdateCommand extends DatanodeCommand {
 
   public ExportedBlockKeys getExportedKeys() {
     return this.keys;
-  }
-
-  // ///////////////////////////////////////////////
-  // Writable
-  // ///////////////////////////////////////////////
-  static { // register a ctor
-    WritableFactories.setFactory(KeyUpdateCommand.class, new WritableFactory() {
-      public Writable newInstance() {
-        return new KeyUpdateCommand();
-      }
-    });
-  }
-
-  /**
-   */
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    keys.write(out);
-  }
-
-  /**
-   */
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    keys.readFields(in);
   }
 }

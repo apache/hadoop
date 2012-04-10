@@ -28,9 +28,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 import com.google.common.base.Joiner;
 
@@ -84,27 +81,6 @@ public class BlockRecoveryCommand extends DatanodeCommand {
     public long getNewGenerationStamp() {
       return newGenerationStamp;
     }
-
-    ///////////////////////////////////////////
-    // Writable
-    ///////////////////////////////////////////
-    static {                                      // register a ctor
-      WritableFactories.setFactory
-        (RecoveringBlock.class,
-         new WritableFactory() {
-           public Writable newInstance() { return new RecoveringBlock(); }
-         });
-    }
-
-    public void write(DataOutput out) throws IOException {
-      super.write(out);
-      out.writeLong(newGenerationStamp);
-    }
-
-    public void readFields(DataInput in) throws IOException {
-      super.readFields(in);
-      newGenerationStamp = in.readLong();
-    }
   }
 
   /**
@@ -148,35 +124,5 @@ public class BlockRecoveryCommand extends DatanodeCommand {
     Joiner.on("\n  ").appendTo(sb, recoveringBlocks);
     sb.append("\n)");
     return sb.toString();
-  }
-
-  ///////////////////////////////////////////
-  // Writable
-  ///////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (BlockRecoveryCommand.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new BlockRecoveryCommand(); }
-       });
-  }
-
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    out.writeInt(recoveringBlocks.size());
-    for(RecoveringBlock block : recoveringBlocks) {
-      block.write(out);
-    }
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    int numBlocks = in.readInt();
-    recoveringBlocks = new ArrayList<RecoveringBlock>(numBlocks);
-    for(int i = 0; i < numBlocks; i++) {
-      RecoveringBlock b = new RecoveringBlock();
-      b.readFields(in);
-      add(b);
-    }
   }
 }
