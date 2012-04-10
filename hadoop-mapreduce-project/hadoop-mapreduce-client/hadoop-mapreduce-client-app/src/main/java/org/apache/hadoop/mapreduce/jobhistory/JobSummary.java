@@ -45,6 +45,7 @@ public class JobSummary {
   private long mapSlotSeconds; // TODO Not generated yet in MRV2
   private long reduceSlotSeconds; // TODO Not generated yet MRV2
   // private int clusterSlotCapacity;
+  private String jobName;
 
   JobSummary() {
   }
@@ -185,6 +186,14 @@ public class JobSummary {
     this.reduceSlotSeconds = reduceSlotSeconds;
   }
 
+  public String getJobName() {
+    return jobName;
+  }
+
+  public void setJobName(String jobName) {
+    this.jobName = jobName;
+  }
+
   public String getJobSummaryString() {
     SummaryBuilder summary = new SummaryBuilder()
       .add("jobId", jobId)
@@ -201,7 +210,8 @@ public class JobSummary {
       .add("queue", queue)
       .add("status", jobStatus)
       .add("mapSlotSeconds", mapSlotSeconds)
-      .add("reduceSlotSeconds", reduceSlotSeconds);
+      .add("reduceSlotSeconds", reduceSlotSeconds)
+      .add("jobName", jobName);
     return summary.toString();
   }
 

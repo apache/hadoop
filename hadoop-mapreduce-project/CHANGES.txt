@@ -199,6 +199,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4099. ApplicationMaster may fail to remove staging directory
     (Jason Lowe via bobby)
 
+    MAPREDUCE-4017. Add jobname to jobsummary log (tgraves and Koji Noguchi
+    via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

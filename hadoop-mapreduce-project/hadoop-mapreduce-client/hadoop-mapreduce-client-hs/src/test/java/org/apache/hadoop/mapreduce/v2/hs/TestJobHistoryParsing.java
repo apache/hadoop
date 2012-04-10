@@ -267,6 +267,8 @@ public class TestJobHistoryParsing {
 
       Assert.assertEquals("JobId does not match", jobId.toString(),
           jobSummaryElements.get("jobId"));
+      Assert.assertEquals("JobName does not match", "test",
+          jobSummaryElements.get("jobName"));
       Assert.assertTrue("submitTime should not be 0",
           Long.parseLong(jobSummaryElements.get("submitTime")) != 0);
       Assert.assertTrue("launchTime should not be 0",
