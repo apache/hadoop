@@ -208,6 +208,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-1238. mapred metrics shows negative count of waiting maps and
     reduces (tgraves via bobby)
 
+    MAPREDUCE-4017. Add jobname to jobsummary log (tgraves and Koji Noguchi
+    via bobby)
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES
