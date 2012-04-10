@@ -22,6 +22,7 @@ import java.io.*;
 import org.apache.hadoop.classification.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
 
 /** Utilities used by RAID for accessing NameNode. */
@@ -35,10 +36,11 @@ public class NameNodeRaidUtil {
     return dir.getFileInfo(src, resolveLink);
   }
 
-  /** Accessing FSNamesystem.getFileInfo(..) */
+  /** Accessing FSNamesystem.getFileInfo(..) 
+ * @throws StandbyException */
   public static HdfsFileStatus getFileInfo(final FSNamesystem namesystem,
       final String src, final boolean resolveLink
-      ) throws AccessControlException, UnresolvedLinkException {
+      ) throws AccessControlException, UnresolvedLinkException, StandbyException {
     return namesystem.getFileInfo(src, resolveLink);
   }
 
