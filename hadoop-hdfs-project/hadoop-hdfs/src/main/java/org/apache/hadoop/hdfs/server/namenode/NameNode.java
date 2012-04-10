@@ -836,7 +836,6 @@ public class NameNode {
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
       StartupOption.IMPORT.getName() + "] | [" +
-      StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" +
       StartupOption.INITIALIZESHAREDEDITS.getName() + "] | [" +
       StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" + 
       StartupOption.RECOVER.getName() + " [ " +
