@@ -124,6 +124,8 @@ Trunk (unreleased changes)
 
     HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option.
     (Henry Robinson via atm)
+
+    HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
     
 Release 2.0.0 - UNRELEASED 
 
