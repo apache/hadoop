@@ -128,6 +128,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4057. Update RAID for the HA and fsdataset changes.  (Devaraj K
     via szetszwo)
 
+    MAPREDUCE-4076. Stream job fails with ZipException when use yarn jar
+    command (Devaraj K via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
