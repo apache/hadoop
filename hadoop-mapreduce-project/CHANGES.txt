@@ -122,6 +122,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4105. Yarn RackResolver ignores rack configurations. 
     (Ahmed Radwan via tomwhite)
 
+    MAPREDUCE-3869. Fix classpath for DistributedShell application. (Devaraj K
+    via sseth)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
