@@ -125,6 +125,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3869. Fix classpath for DistributedShell application. (Devaraj K
     via sseth)
 
+    MAPREDUCE-4057. Update RAID for the HA and fsdataset changes.  (Devaraj K
+    via szetszwo)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

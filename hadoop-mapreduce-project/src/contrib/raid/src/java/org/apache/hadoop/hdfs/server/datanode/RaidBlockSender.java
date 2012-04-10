@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.DataChecksum;
@@ -441,9 +442,9 @@ public class RaidBlockSender implements java.io.Closeable {
   
   private static class BlockInputStreamFactory implements InputStreamFactory {
     private final ExtendedBlock block;
-    private final FSDatasetInterface data;
+    private final FsDatasetSpi<?> data;
 
-    private BlockInputStreamFactory(ExtendedBlock block, FSDatasetInterface data) {
+    private BlockInputStreamFactory(ExtendedBlock block, FsDatasetSpi<?> data) {
       this.block = block;
       this.data = data;
     }
