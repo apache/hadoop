@@ -345,6 +345,8 @@ Release 2.0.0 - UNRELEASED
     factor is reduced after sync follwed by closing that file. (Ashish Singhi 
     via umamahesh)
 
+    HDFS-3234. Accidentally left log message in GetConf after HDFS-3226 (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
