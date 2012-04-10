@@ -27,10 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class DatanodeCommand extends ServerCommand {
-  public DatanodeCommand() {
-    super();
-  }
-  
+
   DatanodeCommand(int action) {
     super(action);
   }

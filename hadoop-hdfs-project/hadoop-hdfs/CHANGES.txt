@@ -229,6 +229,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3240. Drop log level of "heartbeat: ..." in BPServiceActor to DEBUG
     (todd)
 
+    HDFS-3238. ServerCommand and friends don't need to be writables. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

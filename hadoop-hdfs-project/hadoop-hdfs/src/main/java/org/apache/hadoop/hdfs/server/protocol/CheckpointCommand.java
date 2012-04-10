@@ -17,13 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
@@ -76,28 +69,5 @@ public class CheckpointCommand extends NamenodeCommand {
    */
   public boolean needToReturnImage() {
     return needToReturnImage;
-  }
-
-  ///////////////////////////////////////////
-  // Writable
-  ///////////////////////////////////////////
-  static {
-    WritableFactories.setFactory(CheckpointCommand.class,
-        new WritableFactory() {
-          public Writable newInstance() {return new CheckpointCommand();}
-        });
-  }
-
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    cSig.write(out);
-    out.writeBoolean(needToReturnImage);
-  }
-  
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    cSig = new CheckpointSignature();
-    cSig.readFields(in);
-    needToReturnImage = in.readBoolean();
   }
 }
