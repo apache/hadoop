@@ -57,12 +57,17 @@ public final class HdfsServerConstants {
     BOOTSTRAPSTANDBY("-bootstrapStandby"),
     INITIALIZESHAREDEDITS("-initializeSharedEdits"),
     RECOVER  ("-recover"),
-    FORCE("-force");
+    FORCE("-force"),
+    NONINTERACTIVE("-nonInteractive");
     
     private String name = null;
     
     // Used only with format and upgrade options
     private String clusterId = null;
+    
+    // Used only with format option
+    private boolean isForceFormat = false;
+    private boolean isInteractiveFormat = true;
     
     // Used only with recovery option
     private int force = 0;
@@ -100,6 +105,22 @@ public final class HdfsServerConstants {
     
     public int getForce() {
       return this.force;
+    }
+    
+    public boolean getForceFormat() {
+      return isForceFormat;
+    }
+    
+    public void setForceFormat(boolean force) {
+      isForceFormat = force;
+    }
+    
+    public boolean getInteractiveFormat() {
+      return isInteractiveFormat;
+    }
+    
+    public void setInteractiveFormat(boolean interactive) {
+      isInteractiveFormat = interactive;
     }
   }
 
