@@ -226,6 +226,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3226. Allow GetConf tool to print arbitrary keys (todd)
 
+    HDFS-3240. Drop log level of "heartbeat: ..." in BPServiceActor to DEBUG
+    (todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
