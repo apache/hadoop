@@ -193,6 +193,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4117. mapred job -status throws NullPointerException (Devaraj K
     via bobby)
 
+    MAPREDUCE-4099. ApplicationMaster may fail to remove staging directory
+    (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
