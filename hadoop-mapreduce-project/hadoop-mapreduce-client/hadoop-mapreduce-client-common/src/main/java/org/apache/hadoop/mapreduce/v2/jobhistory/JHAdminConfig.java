@@ -44,6 +44,9 @@ public class JHAdminConfig {
   /** Run the History Cleaner every X ms.*/
   public static final String MR_HISTORY_CLEANER_INTERVAL_MS = 
     MR_HISTORY_PREFIX + "cleaner.interval-ms";
+  public static final long DEFAULT_MR_HISTORY_CLEANER_INTERVAL_MS = 
+    1 * 24 * 60 * 60 * 1000l; //1 day
+  
   
   /** The number of threads to handle client API requests.*/
   public static final String MR_HISTORY_CLIENT_THREAD_COUNT = 
@@ -56,7 +59,9 @@ public class JHAdminConfig {
    */
   public static final String MR_HISTORY_DATESTRING_CACHE_SIZE = 
     MR_HISTORY_PREFIX + "datestring.cache.size";
+  public static final int DEFAULT_MR_HISTORY_DATESTRING_CACHE_SIZE = 200000;
   
+  //TODO REMOVE debug-mode
   /** Equivalent to 0.20 mapreduce.jobhistory.debug.mode */
   public static final String MR_HISTORY_DEBUG_MODE = 
     MR_HISTORY_PREFIX + "debug-mode";
@@ -75,6 +80,7 @@ public class JHAdminConfig {
   /** Size of the job list cache.*/
   public static final String MR_HISTORY_JOBLIST_CACHE_SIZE =
     MR_HISTORY_PREFIX + "joblist.cache.size";
+  public static final int DEFAULT_MR_HISTORY_JOBLIST_CACHE_SIZE = 20000;
   
   /** The location of the Kerberos keytab file.*/
   public static final String MR_HISTORY_KEYTAB = MR_HISTORY_PREFIX + "keytab";
@@ -82,6 +88,7 @@ public class JHAdminConfig {
   /** Size of the loaded job cache.*/
   public static final String MR_HISTORY_LOADED_JOB_CACHE_SIZE = 
     MR_HISTORY_PREFIX + "loadedjobs.cache.size";
+  public static final int DEFAULT_MR_HISTORY_LOADED_JOB_CACHE_SIZE = 5;
   
   /**
    * The maximum age of a job history file before it is deleted from the history
@@ -89,6 +96,8 @@ public class JHAdminConfig {
    */
   public static final String MR_HISTORY_MAX_AGE_MS =
     MR_HISTORY_PREFIX + "max-age-ms";
+  public static final long DEFAULT_MR_HISTORY_MAX_AGE = 
+    7 * 24 * 60 * 60 * 1000L; //1 week
   
   /**
    * Scan for history files to more from intermediate done dir to done dir
@@ -96,10 +105,13 @@ public class JHAdminConfig {
    */
   public static final String MR_HISTORY_MOVE_INTERVAL_MS = 
     MR_HISTORY_PREFIX + "move.interval-ms";
+  public static final long DEFAULT_MR_HISTORY_MOVE_INTERVAL_MS = 
+    3 * 60 * 1000l; //3 minutes
   
   /** The number of threads used to move files.*/
   public static final String MR_HISTORY_MOVE_THREAD_COUNT = 
     MR_HISTORY_PREFIX + "move.thread-count";
+  public static final int DEFAULT_MR_HISTORY_MOVE_THREAD_COUNT = 3;
   
   /** The Kerberos principal for the history server.*/
   public static final String MR_HISTORY_PRINCIPAL = 
@@ -116,4 +128,10 @@ public class JHAdminConfig {
    */
   public static final String MR_HS_SECURITY_SERVICE_AUTHORIZATION =
       "security.mrhs.client.protocol.acl";
+  
+  /**
+   * The HistoryStorage class to use to cache history data.
+   */
+  public static final String MR_HISTORY_STORAGE =
+    MR_HISTORY_PREFIX + ".store.class";
 }
