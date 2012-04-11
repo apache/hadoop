@@ -134,6 +134,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4108. Fix tests in org.apache.hadoop.util.TestRunJar
     (Devaraj K via tgraves)
 
+    MAPREDUCE-4107. Fix tests in org.apache.hadoop.ipc.TestSocketFactory
+    (Devaraj K via tgraves)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
