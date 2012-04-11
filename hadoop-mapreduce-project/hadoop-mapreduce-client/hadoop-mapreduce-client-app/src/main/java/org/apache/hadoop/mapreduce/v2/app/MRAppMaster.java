@@ -285,6 +285,11 @@ public class MRAppMaster extends CompositeService {
     addIfService(containerLauncher);
     dispatcher.register(ContainerLauncher.EventType.class, containerLauncher);
 
+    // Add the staging directory cleaner before the history server but after
+    // the container allocator so the staging directory is cleaned after
+    // the history has been flushed but before unregistering with the RM.
+    addService(createStagingDirCleaningService());
+
     // Add the JobHistoryEventHandler last so that it is properly stopped first.
     // This will guarantee that all history-events are flushed before AM goes
     // ahead with shutdown.
@@ -406,13 +411,6 @@ public class MRAppMaster extends CompositeService {
         e.printStackTrace();
       }
 
-      // Cleanup staging directory
-      try {
-        cleanupStagingDir();
-      } catch(IOException io) {
-        LOG.warn("Failed to delete staging dir", io);
-      }
-
       try {
         // Stop all services
         // This will also send the final report to the ResourceManager
@@ -510,6 +508,10 @@ public class MRAppMaster extends CompositeService {
     this.jobHistoryEventHandler = new JobHistoryEventHandler(context,
       getStartCount());
     return this.jobHistoryEventHandler;
+  }
+
+  protected AbstractService createStagingDirCleaningService() {
+    return new StagingDirCleaningService();
   }
 
   protected Speculator createSpeculator(Configuration conf, AppContext context) {
@@ -706,6 +708,22 @@ public class MRAppMaster extends CompositeService {
     @Override
     public synchronized void stop() {
       ((Service)this.containerLauncher).stop();
+      super.stop();
+    }
+  }
+
+  private final class StagingDirCleaningService extends AbstractService {
+    StagingDirCleaningService() {
+      super(StagingDirCleaningService.class.getName());
+    }
+
+    @Override
+    public synchronized void stop() {
+      try {
+        cleanupStagingDir();
+      } catch (IOException io) {
+        LOG.error("Failed to cleanup staging dir: ", io);
+      }
       super.stop();
     }
   }

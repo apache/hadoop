@@ -428,9 +428,13 @@ public class MRApp extends MRAppMaster {
   @Override
   protected ContainerAllocator createContainerAllocator(
       ClientService clientService, final AppContext context) {
-    return new ContainerAllocator(){
-      private int containerCount;
-      @Override
+    return new MRAppContainerAllocator();
+  }
+
+  protected class MRAppContainerAllocator implements ContainerAllocator {
+    private int containerCount;
+
+     @Override
       public void handle(ContainerAllocatorEvent event) {
         ContainerId cId = recordFactory.newRecordInstance(ContainerId.class);
         cId.setApplicationAttemptId(getContext().getApplicationAttemptId());
@@ -452,7 +456,6 @@ public class MRApp extends MRAppMaster {
             new TaskAttemptContainerAssignedEvent(event.getAttemptID(),
                 container, null));
       }
-    };
   }
 
   @Override
