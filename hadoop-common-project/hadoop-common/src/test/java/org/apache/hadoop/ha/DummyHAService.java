@@ -98,6 +98,11 @@ class DummyHAService extends HAServiceTarget {
   }
   
   @Override
+  public boolean isAutoFailoverEnabled() {
+    return true;
+  }
+
+  @Override
   public String toString() {
     return "DummyHAService #" + index;
   }
@@ -118,7 +123,7 @@ class DummyHAService extends HAServiceTarget {
     }
     
     @Override
-    public void transitionToActive() throws ServiceFailedException,
+    public void transitionToActive(StateChangeRequestInfo req) throws ServiceFailedException,
         AccessControlException, IOException {
       checkUnreachable();
       if (failToBecomeActive) {
@@ -131,7 +136,7 @@ class DummyHAService extends HAServiceTarget {
     }
     
     @Override
-    public void transitionToStandby() throws ServiceFailedException,
+    public void transitionToStandby(StateChangeRequestInfo req) throws ServiceFailedException,
         AccessControlException, IOException {
       checkUnreachable();
       if (sharedResource != null) {

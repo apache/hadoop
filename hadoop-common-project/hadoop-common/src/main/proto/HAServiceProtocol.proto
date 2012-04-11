@@ -27,6 +27,16 @@ enum HAServiceStateProto {
   STANDBY = 2;
 }
 
+enum HARequestSource {
+  REQUEST_BY_USER = 0;
+  REQUEST_BY_USER_FORCED = 1;
+  REQUEST_BY_ZKFC = 2;
+}
+
+message HAStateChangeRequestInfoProto {
+  required HARequestSource reqSource = 1;
+}
+
 /**
  * void request
  */
@@ -43,6 +53,7 @@ message MonitorHealthResponseProto {
  * void request
  */
 message TransitionToActiveRequestProto { 
+  required HAStateChangeRequestInfoProto reqInfo = 1;
 }
 
 /**
@@ -55,6 +66,7 @@ message TransitionToActiveResponseProto {
  * void request
  */
 message TransitionToStandbyRequestProto { 
+  required HAStateChangeRequestInfoProto reqInfo = 1;
 }
 
 /**

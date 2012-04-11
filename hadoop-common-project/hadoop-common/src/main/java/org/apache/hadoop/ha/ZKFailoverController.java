@@ -28,6 +28,8 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.security.SecurityUtil;
@@ -72,6 +74,8 @@ public abstract class ZKFailoverController implements Tool {
   static final int ERR_CODE_NO_PARENT_ZNODE = 3;
   /** Fencing is not properly configured */
   static final int ERR_CODE_NO_FENCER = 4;
+  /** Automatic failover is not enabled */
+  static final int ERR_CODE_AUTO_FAILOVER_NOT_ENABLED = 5;
   
   private Configuration conf;
 
@@ -112,6 +116,12 @@ public abstract class ZKFailoverController implements Tool {
 
   @Override
   public int run(final String[] args) throws Exception {
+    if (!localTarget.isAutoFailoverEnabled()) {
+      LOG.fatal("Automatic failover is not enabled for " + localTarget + "." +
+          " Please ensure that automatic failover is enabled in the " +
+          "configuration before running the ZK failover controller.");
+      return ERR_CODE_AUTO_FAILOVER_NOT_ENABLED;
+    }
     loginAsFCUser();
     try {
       return SecurityUtil.doAsLoginUserOrFatal(new PrivilegedAction<Integer>() {
@@ -300,7 +310,8 @@ public abstract class ZKFailoverController implements Tool {
     LOG.info("Trying to make " + localTarget + " active...");
     try {
       HAServiceProtocolHelper.transitionToActive(localTarget.getProxy(
-          conf, FailoverController.getRpcTimeoutToNewActive(conf)));
+          conf, FailoverController.getRpcTimeoutToNewActive(conf)),
+          createReqInfo());
       LOG.info("Successfully transitioned " + localTarget +
           " to active state");
     } catch (Throwable t) {
@@ -323,12 +334,16 @@ public abstract class ZKFailoverController implements Tool {
     }
   }
 
+  private StateChangeRequestInfo createReqInfo() {
+    return new StateChangeRequestInfo(RequestSource.REQUEST_BY_ZKFC);
+  }
+
   private synchronized void becomeStandby() {
     LOG.info("ZK Election indicated that " + localTarget +
         " should become standby");
     try {
       int timeout = FailoverController.getGracefulFenceTimeout(conf);
-      localTarget.getProxy(conf, timeout).transitionToStandby();
+      localTarget.getProxy(conf, timeout).transitionToStandby(createReqInfo());
       LOG.info("Successfully transitioned " + localTarget +
           " to standby state");
     } catch (Exception e) {
@@ -381,8 +396,8 @@ public abstract class ZKFailoverController implements Tool {
       HAServiceTarget target = dataToTarget(data);
       
       LOG.info("Should fence: " + target);
-      boolean gracefulWorked = new FailoverController(conf)
-          .tryGracefulFence(target);
+      boolean gracefulWorked = new FailoverController(conf,
+          RequestSource.REQUEST_BY_ZKFC).tryGracefulFence(target);
       if (gracefulWorked) {
         // It's possible that it's in standby but just about to go into active,
         // no? Is there some race here?

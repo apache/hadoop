@@ -17,3 +17,5 @@ HADOOP-8257. TestZKFailoverControllerStress occasionally fails with Mockito erro
 HADOOP-8260. Replace ClientBaseWithFixes with our own modified copy of the class (todd)
 
 HADOOP-8246. Auto-HA: automatically scope znode by nameservice ID (todd)
+
+HADOOP-8247. Add a config to enable auto-HA, which disables manual FailoverController (todd)

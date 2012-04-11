@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ipc.RPC;
 
 import com.google.common.base.Preconditions;
@@ -48,9 +50,12 @@ public class FailoverController {
   
   private final Configuration conf;
 
+  private final RequestSource requestSource;
   
-  public FailoverController(Configuration conf) {
+  public FailoverController(Configuration conf,
+      RequestSource source) {
     this.conf = conf;
+    this.requestSource = source;
     
     this.gracefulFenceTimeout = getGracefulFenceTimeout(conf);
     this.rpcTimeoutToNewActive = getRpcTimeoutToNewActive(conf);
@@ -100,7 +105,7 @@ public class FailoverController {
       toSvcStatus = toSvc.getServiceStatus();
     } catch (IOException e) {
       String msg = "Unable to get service state for " + target;
-      LOG.error(msg, e);
+      LOG.error(msg + ": " + e.getLocalizedMessage());
       throw new FailoverFailedException(msg, e);
     }
 
@@ -122,7 +127,7 @@ public class FailoverController {
     }
 
     try {
-      HAServiceProtocolHelper.monitorHealth(toSvc);
+      HAServiceProtocolHelper.monitorHealth(toSvc, createReqInfo());
     } catch (HealthCheckFailedException hce) {
       throw new FailoverFailedException(
           "Can't failover to an unhealthy service", hce);
@@ -132,7 +137,10 @@ public class FailoverController {
     }
   }
   
-  
+  private StateChangeRequestInfo createReqInfo() {
+    return new StateChangeRequestInfo(requestSource);
+  }
+
   /**
    * Try to get the HA state of the node at the given address. This
    * function is guaranteed to be "quick" -- ie it has a short timeout
@@ -143,7 +151,7 @@ public class FailoverController {
     HAServiceProtocol proxy = null;
     try {
       proxy = svc.getProxy(conf, gracefulFenceTimeout);
-      proxy.transitionToStandby();
+      proxy.transitionToStandby(createReqInfo());
       return true;
     } catch (ServiceFailedException sfe) {
       LOG.warn("Unable to gracefully make " + svc + " standby (" +
@@ -198,7 +206,8 @@ public class FailoverController {
     Throwable cause = null;
     try {
       HAServiceProtocolHelper.transitionToActive(
-          toSvc.getProxy(conf, rpcTimeoutToNewActive));
+          toSvc.getProxy(conf, rpcTimeoutToNewActive),
+          createReqInfo());
     } catch (ServiceFailedException sfe) {
       LOG.error("Unable to make " + toSvc + " active (" +
           sfe.getMessage() + "). Failing back.");

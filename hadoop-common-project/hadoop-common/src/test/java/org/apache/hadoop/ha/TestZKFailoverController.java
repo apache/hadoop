@@ -24,6 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.ha.MiniZKFCCluster.DummyZKFC;
 import org.apache.log4j.Level;
@@ -126,6 +127,22 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     // cluster
     assertEquals(ZKFailoverController.ERR_CODE_FORMAT_DENIED,
         runFC(svc, "-formatZK", "-nonInteractive"));
+  }
+  
+  /**
+   * Test that automatic failover won't run against a target that hasn't
+   * explicitly enabled the feature.
+   */
+  @Test(timeout=10000)
+  public void testWontRunWhenAutoFailoverDisabled() throws Exception {
+    DummyHAService svc = cluster.getService(1);
+    svc = Mockito.spy(svc);
+    Mockito.doReturn(false).when(svc).isAutoFailoverEnabled();
+    
+    assertEquals(ZKFailoverController.ERR_CODE_AUTO_FAILOVER_NOT_ENABLED,
+        runFC(svc, "-formatZK"));
+    assertEquals(ZKFailoverController.ERR_CODE_AUTO_FAILOVER_NOT_ENABLED,
+        runFC(svc));
   }
   
   /**
@@ -279,7 +296,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
 
       
       Mockito.verify(svc1.proxy, Mockito.timeout(2000).atLeastOnce())
-        .transitionToActive();
+        .transitionToActive(Mockito.<StateChangeRequestInfo>any());
 
       cluster.waitForHAState(0, HAServiceState.STANDBY);
       cluster.waitForHAState(1, HAServiceState.STANDBY);

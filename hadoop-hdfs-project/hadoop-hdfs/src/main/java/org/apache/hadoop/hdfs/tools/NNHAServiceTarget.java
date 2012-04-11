@@ -49,6 +49,7 @@ public class NNHAServiceTarget extends HAServiceTarget {
   private BadFencingConfigurationException fenceConfigError;
   private final String nnId;
   private final String nsId;
+  private final boolean autoFailoverEnabled;
 
   public NNHAServiceTarget(Configuration conf,
       String nsId, String nnId) {
@@ -84,6 +85,9 @@ public class NNHAServiceTarget extends HAServiceTarget {
     }
     this.nnId = nnId;
     this.nsId = nsId;
+    this.autoFailoverEnabled = targetConf.getBoolean(
+        DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY,
+        DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT);
   }
 
   /**
@@ -129,5 +133,10 @@ public class NNHAServiceTarget extends HAServiceTarget {
     
     ret.put(NAMESERVICE_ID_KEY, getNameServiceId());
     ret.put(NAMENODE_ID_KEY, getNameNodeId());
+  }
+
+  @Override
+  public boolean isAutoFailoverEnabled() {
+    return autoFailoverEnabled;
   }
 }

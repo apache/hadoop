@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.tools;
 
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -32,14 +33,17 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.HealthCheckFailedException;
-import org.apache.hadoop.ha.NodeFencer;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.MockitoUtil;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import com.google.common.base.Charsets;
@@ -58,6 +62,9 @@ public class TestDFSHAAdmin {
   private static final HAServiceStatus STANDBY_READY_RESULT =
     new HAServiceStatus(HAServiceState.STANDBY)
     .setReadyToBecomeActive();
+  
+  private ArgumentCaptor<StateChangeRequestInfo> reqInfoCaptor =
+    ArgumentCaptor.forClass(StateChangeRequestInfo.class);
   
   private static String HOST_A = "1.2.3.1";
   private static String HOST_B = "1.2.3.2";
@@ -139,13 +146,93 @@ public class TestDFSHAAdmin {
   @Test
   public void testTransitionToActive() throws Exception {
     assertEquals(0, runTool("-transitionToActive", "nn1"));
-    Mockito.verify(mockProtocol).transitionToActive();
+    Mockito.verify(mockProtocol).transitionToActive(
+        reqInfoCaptor.capture());
+    assertEquals(RequestSource.REQUEST_BY_USER,
+        reqInfoCaptor.getValue().getSource());
+  }
+  
+  /**
+   * Test that, if automatic HA is enabled, none of the mutative operations
+   * will succeed, unless the -forcemanual flag is specified.
+   * @throws Exception
+   */
+  @Test
+  public void testMutativeOperationsWithAutoHaEnabled() throws Exception {
+    Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
+    
+    // Turn on auto-HA in the config
+    HdfsConfiguration conf = getHAConf();
+    conf.setBoolean(DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY, true);
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    tool.setConf(conf);
+
+    // Should fail without the forcemanual flag
+    assertEquals(-1, runTool("-transitionToActive", "nn1"));
+    assertTrue(errOutput.contains("Refusing to manually manage"));
+    assertEquals(-1, runTool("-transitionToStandby", "nn1"));
+    assertTrue(errOutput.contains("Refusing to manually manage"));
+    assertEquals(-1, runTool("-failover", "nn1", "nn2"));
+    assertTrue(errOutput.contains("Refusing to manually manage"));
+
+    Mockito.verify(mockProtocol, Mockito.never())
+      .transitionToActive(anyReqInfo());
+    Mockito.verify(mockProtocol, Mockito.never())
+      .transitionToStandby(anyReqInfo());
+
+    // Force flag should bypass the check and change the request source
+    // for the RPC
+    setupConfirmationOnSystemIn();
+    assertEquals(0, runTool("-transitionToActive", "-forcemanual", "nn1"));
+    setupConfirmationOnSystemIn();
+    assertEquals(0, runTool("-transitionToStandby", "-forcemanual", "nn1"));
+    setupConfirmationOnSystemIn();
+    assertEquals(0, runTool("-failover", "-forcemanual", "nn1", "nn2"));
+
+    Mockito.verify(mockProtocol, Mockito.times(2)).transitionToActive(
+        reqInfoCaptor.capture());
+    Mockito.verify(mockProtocol, Mockito.times(2)).transitionToStandby(
+        reqInfoCaptor.capture());
+    
+    // All of the RPCs should have had the "force" source
+    for (StateChangeRequestInfo ri : reqInfoCaptor.getAllValues()) {
+      assertEquals(RequestSource.REQUEST_BY_USER_FORCED, ri.getSource());
+    }
+  }
+
+  /**
+   * Setup System.in with a stream that feeds a "yes" answer on the
+   * next prompt.
+   */
+  private static void setupConfirmationOnSystemIn() {
+   // Answer "yes" to the prompt about transition to active
+   System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+  }
+
+  /**
+   * Test that, even if automatic HA is enabled, the monitoring operations
+   * still function correctly.
+   */
+  @Test
+  public void testMonitoringOperationsWithAutoHaEnabled() throws Exception {
+    Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
+
+    // Turn on auto-HA
+    HdfsConfiguration conf = getHAConf();
+    conf.setBoolean(DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY, true);
+    tool.setConf(conf);
+
+    assertEquals(0, runTool("-checkHealth", "nn1"));
+    Mockito.verify(mockProtocol).monitorHealth();
+    
+    assertEquals(0, runTool("-getServiceState", "nn1"));
+    Mockito.verify(mockProtocol).getServiceStatus();
   }
 
   @Test
   public void testTransitionToStandby() throws Exception {
     assertEquals(0, runTool("-transitionToStandby", "nn1"));
-    Mockito.verify(mockProtocol).transitionToStandby();
+    Mockito.verify(mockProtocol).transitionToStandby(anyReqInfo());
   }
 
   @Test
@@ -282,5 +369,9 @@ public class TestDFSHAAdmin {
     errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
     LOG.info("Output:\n" + errOutput);
     return ret;
+  }
+  
+  private StateChangeRequestInfo anyReqInfo() {
+    return Mockito.<StateChangeRequestInfo>any();
   }
 }

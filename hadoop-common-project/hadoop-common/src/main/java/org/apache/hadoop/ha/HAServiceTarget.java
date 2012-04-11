@@ -99,4 +99,11 @@ public abstract class HAServiceTarget {
     ret.put(HOST_SUBST_KEY, getAddress().getHostName());
     ret.put(PORT_SUBST_KEY, String.valueOf(getAddress().getPort()));
   }
+
+  /**
+   * @return true if auto failover should be considered enabled
+   */
+  public boolean isAutoFailoverEnabled() {
+    return false;
+  }
 }

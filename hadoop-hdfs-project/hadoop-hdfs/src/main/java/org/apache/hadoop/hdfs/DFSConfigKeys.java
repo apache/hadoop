@@ -346,4 +346,6 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_HA_TAILEDITS_PERIOD_KEY = "dfs.ha.tail-edits.period";
   public static final int DFS_HA_TAILEDITS_PERIOD_DEFAULT = 60; // 1m
   public static final String DFS_HA_FENCE_METHODS_KEY = "dfs.ha.fencing.methods";
+  public static final String DFS_HA_AUTO_FAILOVER_ENABLED_KEY = "dfs.ha.automatic-failover.enabled";
+  public static final boolean DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT = false;
 }

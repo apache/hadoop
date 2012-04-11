@@ -129,7 +129,7 @@ public class TestHASafeMode {
     DFSTestUtil
       .createFile(fs, new Path("/test"), 3 * BLOCK_SIZE, (short) 3, 1L);
     restartActive();
-    nn0.getRpcServer().transitionToActive();
+    cluster.transitionToActive(0);
 
     FSNamesystem namesystem = nn0.getNamesystem();
     String status = namesystem.getSafemode();

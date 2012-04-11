@@ -25,7 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
-import org.apache.hadoop.ha.NodeFencer;
+import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.DFSZKFailoverController;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
@@ -59,6 +60,7 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     conf.set(ZKFailoverController.ZK_QUORUM_KEY + ".ns1", hostPort);
     conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
         AlwaysSucceedFencer.class.getName());
+    conf.setBoolean(DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY, true);
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
     .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
@@ -96,6 +98,18 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     if (ctx != null) {
       ctx.stop();
     }
+  }
+  
+  /**
+   * Test that, when automatic failover is enabled, the manual
+   * failover script refuses to run.
+   */
+  @Test(timeout=10000)
+  public void testManualFailoverIsDisabled() throws Exception {
+    DFSHAAdmin admin = new DFSHAAdmin();
+    admin.setConf(conf);
+    int rc = admin.run(new String[]{"-failover", "nn1", "nn2"});
+    assertEquals(-1, rc);
   }
   
   /**
