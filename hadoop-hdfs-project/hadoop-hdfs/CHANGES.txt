@@ -241,6 +241,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3249. Use ToolRunner.confirmPrompt in NameNode (todd)
 
+    HDFS-3179.  Improve the exception message thrown by DataStreamer when 
+    it failed to add a datanode.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
