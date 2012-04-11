@@ -36,6 +36,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -251,7 +253,8 @@ public class BootstrapStandby implements Tool, Configurable {
   private void transitionOtherNNActive()
       throws AccessControlException, ServiceFailedException, IOException {
     LOG.info("Transitioning the running namenode to active...");
-    createHAProtocolProxy().transitionToActive();    
+    createHAProtocolProxy().transitionToActive(
+        new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER));
     LOG.info("Successful");
   }
 
