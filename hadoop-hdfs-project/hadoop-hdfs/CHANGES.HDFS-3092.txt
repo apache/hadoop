@@ -5,8 +5,12 @@ HDFS-3092 branch changes
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
     HDFS-3185. Add configuration of Journal Service Daemons. 
     (Hari Mankude via suresh)
+
+    HDFS-3213 Persist the cluster id and nsid in JournalService storage
+    directory.  (Hari Mankude via szetszwo)
 
   IMPROVEMENTS
 

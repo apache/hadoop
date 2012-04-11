@@ -41,6 +41,10 @@ public class UnregisteredNodeException extends IOException {
   public UnregisteredNodeException(NodeRegistration nodeReg) {
     super("Unregistered server: " + nodeReg.toString());
   }
+  
+  public UnregisteredNodeException(String msg) {
+    super("Unregistered server: " + msg);
+  }
 
   /**
    * The exception is thrown if a different data-node claims the same

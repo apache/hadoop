@@ -22,12 +22,15 @@ import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
 import org.apache.hadoop.hdfs.server.protocol.FencedException;
@@ -41,6 +44,7 @@ import org.mockito.Mockito;
 public class TestJournalService {
   private MiniDFSCluster cluster;
   private Configuration conf = new HdfsConfiguration();
+  static final Log LOG = LogFactory.getLog(TestJournalService.class);
   
   /**
    * Test calls backs {@link JournalListener#rollLogs(JournalService, long)} and
@@ -60,7 +64,7 @@ public class TestJournalService {
       verifyFence(service, cluster.getNameNode(0));
     } finally {
       if (service != null) {
-        service.stop();
+        stopJournalService(service);
       }
       if (cluster != null) {
         cluster.shutdown();
@@ -76,6 +80,10 @@ public class TestJournalService {
         listener);
     service.start();
     return service;
+  }
+  
+  private void stopJournalService(JournalService service) throws IOException {
+    service.stop();
   }
   
   /**
@@ -109,19 +117,45 @@ public class TestJournalService {
     // Fence the journal service
     JournalInfo info = new JournalInfo(lv, cid, nsId);
     long currentEpoch = s.getEpoch();
-    
+   
     // New epoch lower than the current epoch is rejected
     try {
       s.fence(info, (currentEpoch - 1), "fencer");
-    } catch (FencedException ignore) { /* Ignored */ } 
+      Assert.fail();
+    } catch (FencedException ignore) { /* Ignored */ }
     
     // New epoch equal to the current epoch is rejected
     try {
       s.fence(info, currentEpoch, "fencer");
-    } catch (FencedException ignore) { /* Ignored */ } 
+      Assert.fail();
+    } catch (FencedException ignore) { /* Ignored */ }
     
     // New epoch higher than the current epoch is successful
     FenceResponse resp = s.fence(info, currentEpoch+1, "fencer");
     Assert.assertNotNull(resp);
+    
+    JournalInfo badInfo = new JournalInfo(lv, "fake", nsId);
+    currentEpoch = s.getEpoch();
+   
+    // Send in the wrong cluster id. fence should fail
+    try {
+      s.fence(badInfo, currentEpoch+1, "fencer");
+      Assert.fail();
+      
+    } catch (UnregisteredNodeException ignore) {
+      LOG.info(ignore.getMessage());
+    }
+  
+    badInfo = new JournalInfo(lv, cid, nsId+1);
+    currentEpoch = s.getEpoch();
+    
+    // Send in the wrong nsid. fence should fail
+    try {
+      s.fence(badInfo, currentEpoch+1, "fencer");
+      Assert.fail();
+    } catch (UnregisteredNodeException ignore) {
+      LOG.info(ignore.getMessage());
+    } 
+   
   }
 }
