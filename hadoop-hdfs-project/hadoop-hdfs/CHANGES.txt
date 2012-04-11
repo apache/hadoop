@@ -239,6 +239,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3247. Improve bootstrapStandby behavior when original NN is not active
     (todd)
 
+    HDFS-3249. Use ToolRunner.confirmPrompt in NameNode (todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

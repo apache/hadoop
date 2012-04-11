@@ -72,6 +72,7 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -968,34 +969,6 @@ public class NameNode {
     } finally {
       if (fsn != null)
         fsn.close();
-    }
-  }
-
-  /**
-   * Print out a prompt to the user, and return true if the user
-   * responds with "Y" or "yes".
-   */
-  static boolean confirmPrompt(String prompt) throws IOException {
-    while (true) {
-      System.err.print(prompt + " (Y or N) ");
-      StringBuilder responseBuilder = new StringBuilder();
-      while (true) {
-        int c = System.in.read();
-        if (c == -1 || c == '\r' || c == '\n') {
-          break;
-        }
-        responseBuilder.append((char)c);
-      }
-  
-      String response = responseBuilder.toString();
-      if (response.equalsIgnoreCase("y") ||
-          response.equalsIgnoreCase("yes")) {
-        return true;
-      } else if (response.equalsIgnoreCase("n") ||
-          response.equalsIgnoreCase("no")) {
-        return false;
-      }
-      // else ask them again
     }
   }
 
