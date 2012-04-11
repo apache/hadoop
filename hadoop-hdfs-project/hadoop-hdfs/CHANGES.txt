@@ -363,6 +363,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3248. bootstrapStandby repeated twice in hdfs namenode usage message
     (Colin Patrick McCabe via todd)
 
+    HDFS-2696. Fix the fuse-fds build. (Bruno Mahé via eli)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

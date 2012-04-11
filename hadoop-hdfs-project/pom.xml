@@ -30,6 +30,7 @@
   <modules>
     <module>hadoop-hdfs</module>
     <module>hadoop-hdfs-httpfs</module>
+    <module>hadoop-hdfs/src/contrib/fuse-dfs</module>
   </modules>
 
   <build>

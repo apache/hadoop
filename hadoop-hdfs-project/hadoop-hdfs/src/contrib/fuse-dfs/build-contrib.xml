@@ -70,7 +70,7 @@
   <property name="ivy.dir" location="ivy" />
   <property name="ivysettings.xml" location="${hadoop.root}/ivy/ivysettings.xml"/>
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
-  <loadproperties srcfile="${hadoop.root}/ivy/libraries.properties"/>
+  <loadproperties srcfile="ivy/libraries.properties"/>
   <property name="ivy.jar" location="${hadoop.root}/ivy/ivy-${ivy.version}.jar"/>
   <property name="ivy_repo_url" 
 	value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar" />
