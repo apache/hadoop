@@ -211,6 +211,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4040. History links should use hostname rather than IP address.
     (Bhallamudi Venkata Siva Kamesh via sseth)
 
+    MAPREDUCE-4099 amendment. ApplicationMaster will remove staging directory
+    after the history service is stopped. (Jason Lowe via sseth)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
