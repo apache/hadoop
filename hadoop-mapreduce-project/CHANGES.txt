@@ -214,6 +214,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4099 amendment. ApplicationMaster will remove staging directory
     after the history service is stopped. (Jason Lowe via sseth)
 
+    MAPREDUCE-3932. Fix the TaskAttempt state machine to handle
+    CONTIANER_LAUNCHED and CONTIANER_LAUNCH_FAILED events in additional
+    states. (Robert Joseph Evans via sseth)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
