@@ -28,6 +28,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 
 
@@ -80,8 +81,8 @@ public class TestCorruptReplicaInfo extends TestCase {
         block_ids.add((long)i);
       }
       
-      DatanodeDescriptor dn1 = new DatanodeDescriptor();
-      DatanodeDescriptor dn2 = new DatanodeDescriptor();
+      DatanodeDescriptor dn1 = DFSTestUtil.getLocalDatanodeDescriptor();
+      DatanodeDescriptor dn2 = DFSTestUtil.getLocalDatanodeDescriptor();
       
       crm.addToCorruptReplicasMap(getBlock(0), dn1, "TEST");
       assertEquals("Number of corrupt blocks not returning correctly",

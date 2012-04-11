@@ -17,14 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * Base upgrade upgradeStatus class.
@@ -33,16 +26,10 @@ import org.apache.hadoop.io.WritableFactory;
  * Describes status of current upgrade.
  */
 @InterfaceAudience.Private
-public class UpgradeStatusReport implements Writable {
+public class UpgradeStatusReport {
   protected int version;
   protected short upgradeStatus;
   protected boolean finalized;
-
-  public UpgradeStatusReport() {
-    this.version = 0;
-    this.upgradeStatus = 0;
-    this.finalized = false;
-  }
 
   public UpgradeStatusReport(int version, short status, boolean isFinalized) {
     this.version = version;
@@ -97,30 +84,5 @@ public class UpgradeStatusReport implements Writable {
    */
   public String toString() {
     return getStatusText(false);
-  }
-
-  /////////////////////////////////////////////////
-  // Writable
-  /////////////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (UpgradeStatusReport.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new UpgradeStatusReport(); }
-       });
-  }
-
-  /**
-   */
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(this.version);
-    out.writeShort(this.upgradeStatus);
-  }
-
-  /**
-   */
-  public void readFields(DataInput in) throws IOException {
-    this.version = in.readInt();
-    this.upgradeStatus = in.readShort();
   }
 }

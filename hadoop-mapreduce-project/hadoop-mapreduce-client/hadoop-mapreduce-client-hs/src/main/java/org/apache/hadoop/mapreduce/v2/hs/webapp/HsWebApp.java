@@ -44,6 +44,7 @@ public class HsWebApp extends WebApp implements AMParams {
     bind(JAXBContextResolver.class);
     bind(GenericExceptionHandler.class);
     bind(AppContext.class).toInstance(history);
+    bind(HistoryContext.class).toInstance(history);
     route("/", HsController.class);
     route("/app", HsController.class);
     route(pajoin("/job", JOB_ID), HsController.class, "job");

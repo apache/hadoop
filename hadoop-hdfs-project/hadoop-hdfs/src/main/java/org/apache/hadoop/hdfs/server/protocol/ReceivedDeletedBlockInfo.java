@@ -18,19 +18,12 @@
 
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * A data structure to store the blocks in an incremental block report. 
  */
-public class ReceivedDeletedBlockInfo implements Writable {
+public class ReceivedDeletedBlockInfo {
   Block block;
   BlockStatus status;
   String delHints;
@@ -111,25 +104,6 @@ public class ReceivedDeletedBlockInfo implements Writable {
 
   public boolean isDeletedBlock() {
     return status == BlockStatus.DELETED_BLOCK;
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    this.block.write(out);
-    WritableUtils.writeVInt(out, this.status.code);
-    if (this.status == BlockStatus.DELETED_BLOCK) {
-      Text.writeString(out, this.delHints);
-    }
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    this.block = new Block();
-    this.block.readFields(in);
-    this.status = BlockStatus.fromCode(WritableUtils.readVInt(in));
-    if (this.status == BlockStatus.DELETED_BLOCK) {
-      this.delHints = Text.readString(in);
-    }
   }
 
   public String toString() {

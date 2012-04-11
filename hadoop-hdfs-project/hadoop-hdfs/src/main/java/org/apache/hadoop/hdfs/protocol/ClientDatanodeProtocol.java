@@ -24,7 +24,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSelector;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
@@ -42,9 +41,6 @@ public interface ClientDatanodeProtocol {
    * the client interface to the DN AND the RPC protocol used to 
    * communicate with the NN.
    * 
-   * Post version 10 (release 23 of Hadoop), the protocol is implemented in
-   * {@literal ../protocolR23Compatible/ClientDatanodeWireProtocol}
-   * 
    * This class is used by both the DFSClient and the 
    * DN server side to insulate from the protocol serialization.
    * 
@@ -60,7 +56,6 @@ public interface ClientDatanodeProtocol {
    * 
    * 9 is the last version id when this class was used for protocols
    *  serialization. DO not update this version any further. 
-   *  Changes are recorded in R23 classes.
    */
   public static final long versionID = 9L;
 

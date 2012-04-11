@@ -627,22 +627,17 @@ runTests () {
   echo ""
   echo ""
 
-  echo "$MVN clean install -Pnative -D${PROJECT_NAME}PatchProcess"
-  $MVN clean install -Pnative -D${PROJECT_NAME}PatchProcess
-  if [[ $? != 0 ]] ; then
-    ### Find and format names of failed tests
-    failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
-
-    if [[ -n "$failed_tests" ]] ; then
-      JIRA_COMMENT="$JIRA_COMMENT
+  echo "$MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess"
+  $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess
+  failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
+  # With -fn mvn always exits with a 0 exit code.  Because of this we need to
+  # find the errors instead of using the exit code.  We assume that if the build
+  # failed a -1 is already given for that case
+  if [[ -n "$failed_tests" ]] ; then
+    JIRA_COMMENT="$JIRA_COMMENT
 
     -1 core tests.  The patch failed these unit tests:
 $failed_tests"
-    else
-      JIRA_COMMENT="$JIRA_COMMENT
-
-    -1 core tests.  The patch failed the unit tests build"
-    fi
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT

@@ -20,10 +20,7 @@ package org.apache.hadoop.hdfs.protocol;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.io.*;
 import org.apache.hadoop.security.token.Token;
-
-import java.io.*;
 
 /****************************************************
  * A LocatedBlock is a pair of Block, DatanodeInfo[]
@@ -32,15 +29,7 @@ import java.io.*;
  ****************************************************/
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class LocatedBlock implements Writable {
-
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (LocatedBlock.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new LocatedBlock(); }
-       });
-  }
+public class LocatedBlock {
 
   private ExtendedBlock b;
   private long offset;  // offset of the first byte of the block in the file
@@ -122,41 +111,6 @@ public class LocatedBlock implements Writable {
   
   public boolean isCorrupt() {
     return this.corrupt;
-  }
-
-  ///////////////////////////////////////////
-  // Writable
-  ///////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    blockToken.write(out);
-    out.writeBoolean(corrupt);
-    out.writeLong(offset);
-    b.write(out);
-    out.writeInt(locs.length);
-    for (int i = 0; i < locs.length; i++) {
-      locs[i].write(out);
-    }
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    blockToken.readFields(in);
-    this.corrupt = in.readBoolean();
-    offset = in.readLong();
-    this.b = new ExtendedBlock();
-    b.readFields(in);
-    int count = in.readInt();
-    this.locs = new DatanodeInfo[count];
-    for (int i = 0; i < locs.length; i++) {
-      locs[i] = new DatanodeInfo();
-      locs[i].readFields(in);
-    }
-  }
-
-  /** Read LocatedBlock from in. */
-  public static LocatedBlock read(DataInput in) throws IOException {
-    final LocatedBlock lb = new LocatedBlock();
-    lb.readFields(in);
-    return lb;
   }
 
   @Override

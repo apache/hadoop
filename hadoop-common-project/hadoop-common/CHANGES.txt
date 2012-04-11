@@ -58,6 +58,9 @@ Trunk (unreleased changes)
     HADOOP-7757. Test file reference count is at least 3x actual value (Jon
     Eagles via bobby)
 
+    HADOOP-8147. test-patch should run tests with -fn to avoid masking test
+    failures (Robert Evans via tgraves)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -337,6 +340,11 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8261. Har file system doesn't deal with FS URIs with a host but no
     port. (atm)
+
+    HADOOP-8263. Stringification of IPC calls not useful (todd)
+
+    HADOOP-8264. Remove irritating double double quotes in front of hostname
+    (Bernd Fondermann via bobby)
 
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 

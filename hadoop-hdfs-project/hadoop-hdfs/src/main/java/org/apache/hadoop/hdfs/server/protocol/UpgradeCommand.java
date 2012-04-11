@@ -17,15 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * This as a generic distributed upgrade command.
@@ -67,32 +60,5 @@ public class UpgradeCommand extends DatanodeCommand {
 
   public short getCurrentStatus() {
     return this.upgradeStatus;
-  }
-
-  /////////////////////////////////////////////////
-  // Writable
-  /////////////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (UpgradeCommand.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new UpgradeCommand(); }
-       });
-  }
-
-  /**
-   */
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    out.writeInt(this.version);
-    out.writeShort(this.upgradeStatus);
-  }
-
-  /**
-   */
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    this.version = in.readInt();
-    this.upgradeStatus = in.readShort();
   }
 }

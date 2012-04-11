@@ -128,7 +128,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   private volatile boolean appendChunk = false;   // appending to existing partial block
   private long initialFileSize = 0; // at time of file open
   private Progressable progress;
-  private short blockReplication; // replication factor of file
+  private final short blockReplication; // replication factor of file
   
   private class Packet {
     long    seqno;               // sequencenumber of buffer in block
@@ -775,9 +775,13 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     private int findNewDatanode(final DatanodeInfo[] original
         ) throws IOException {
       if (nodes.length != original.length + 1) {
-        throw new IOException("Failed to add a datanode:"
-            + " nodes.length != original.length + 1, nodes="
-            + Arrays.asList(nodes) + ", original=" + Arrays.asList(original));
+        throw new IOException("Failed to add a datanode.  "
+            + "User may turn off this feature by setting "
+            + DFSConfigKeys.DFS_CLIENT_WRITE_REPLACE_DATANODE_ON_FAILURE_POLICY_KEY
+            + " in configuration, where the current policy is "
+            + dfsClient.dtpReplaceDatanodeOnFailure
+            + ".  (Nodes: current=" + Arrays.asList(nodes)
+            + ", original=" + Arrays.asList(original) + ")");
       }
       for(int i = 0; i < nodes.length; i++) {
         int j = 0;

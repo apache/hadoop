@@ -179,7 +179,7 @@ public class TestParallelReadUtil {
    */
   static class ReadWorker extends Thread {
 
-    static public final int N_ITERATIONS = 1024 * 4;
+    static public final int N_ITERATIONS = 1024;
 
     private static final double PROPORTION_NON_POSITIONAL_READ = 0.10;
 

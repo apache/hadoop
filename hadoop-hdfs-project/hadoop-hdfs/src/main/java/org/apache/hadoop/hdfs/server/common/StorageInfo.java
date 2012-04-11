@@ -17,13 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Joiner;
 
@@ -33,16 +27,16 @@ import com.google.common.base.Joiner;
  * TODO namespaceID should be long and computed as hash(address + port)
  */
 @InterfaceAudience.Private
-public class StorageInfo implements Writable {
+public class StorageInfo {
   public int   layoutVersion;   // layout version of the storage data
   public int   namespaceID;     // id of the file system
   public String clusterID;      // id of the cluster
   public long  cTime;           // creation time of the file system state
-  
+ 
   public StorageInfo () {
     this(0, 0, "", 0L);
   }
-  
+
   public StorageInfo(int layoutV, int nsID, String cid, long cT) {
     layoutVersion = layoutV;
     clusterID = cid;
@@ -82,23 +76,6 @@ public class StorageInfo implements Writable {
     clusterID = from.clusterID;
     namespaceID = from.namespaceID;
     cTime = from.cTime;
-  }
-
-  /////////////////////////////////////////////////
-  // Writable
-  /////////////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(getLayoutVersion());
-    out.writeInt(getNamespaceID());
-    WritableUtils.writeString(out, clusterID);
-    out.writeLong(getCTime());
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    layoutVersion = in.readInt();
-    namespaceID = in.readInt();
-    clusterID = WritableUtils.readString(in);
-    cTime = in.readLong();
   }
   
   public String toString() {

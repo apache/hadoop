@@ -417,7 +417,9 @@ class BPServiceActor implements Runnable {
   
   
   HeartbeatResponse sendHeartBeat() throws IOException {
-    LOG.info("heartbeat: " + this);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Sending heartbeat from service actor: " + this);
+    }
     // reports number of failed volumes
     StorageReport[] report = { new StorageReport(bpRegistration.getStorageID(),
         false,

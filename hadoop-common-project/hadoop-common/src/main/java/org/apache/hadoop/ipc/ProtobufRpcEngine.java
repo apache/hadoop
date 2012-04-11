@@ -268,6 +268,12 @@ public class ProtobufRpcEngine implements RpcEngine {
       in.readFully(bytes);
       message = HadoopRpcRequestProto.parseFrom(bytes);
     }
+    
+    @Override
+    public String toString() {
+      return message.getDeclaringClassProtocolName() + "." +
+          message.getMethodName();
+    }
   }
 
   /**

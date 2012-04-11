@@ -121,7 +121,9 @@ public class TestGetBlocks extends TestCase {
       getBlocksWithException(namenode, dataNodes[0], -1);
 
       // get blocks of size BlockSize from a non-existent datanode
-      getBlocksWithException(namenode, new DatanodeInfo(), 2);
+      DatanodeInfo info = DFSTestUtil.getLocalDatanodeInfo();
+      info.setIpAddr("1.2.3.4");
+      getBlocksWithException(namenode, info, 2);
     } finally {
       cluster.shutdown();
     }
@@ -132,7 +134,7 @@ public class TestGetBlocks extends TestCase {
                                       long size) throws IOException {
     boolean getException = false;
     try {
-        namenode.getBlocks(new DatanodeInfo(), 2);
+        namenode.getBlocks(DFSTestUtil.getLocalDatanodeInfo(), 2);
     } catch(RemoteException e) {
       getException = true;
       assertTrue(e.getClassName().contains("HadoopIllegalArgumentException"));

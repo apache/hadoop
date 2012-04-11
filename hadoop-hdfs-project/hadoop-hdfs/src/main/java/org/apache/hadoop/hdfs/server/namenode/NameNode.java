@@ -72,6 +72,7 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -215,7 +216,7 @@ public class NameNode {
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
   public static void format(Configuration conf) throws IOException {
-    format(conf, true);
+    format(conf, true, true);
   }
 
   static NameNodeMetrics metrics;
@@ -658,9 +659,8 @@ public class NameNode {
    * @return true if formatting was aborted, false otherwise
    * @throws IOException
    */
-  private static boolean format(Configuration conf,
-                                boolean force)
-      throws IOException {
+  private static boolean format(Configuration conf, boolean force,
+      boolean isInteractive) throws IOException {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
@@ -669,7 +669,7 @@ public class NameNode {
     Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
-    if (!confirmFormat(dirsToFormat, force, true)) {
+    if (!confirmFormat(dirsToFormat, force, isInteractive)) {
       return true; // aborted
     }
 
@@ -760,6 +760,9 @@ public class NameNode {
    */
   private static boolean initializeSharedEdits(Configuration conf,
       boolean force, boolean interactive) {
+    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    initializeGenericKeys(conf, nsId, namenodeId);
     NNStorage existingStorage = null;
     try {
       FSNamesystem fsns = FSNamesystem.loadFromDisk(conf,
@@ -827,13 +830,13 @@ public class NameNode {
       "Usage: java NameNode [" +
       StartupOption.BACKUP.getName() + "] | [" +
       StartupOption.CHECKPOINT.getName() + "] | [" +
-      StartupOption.FORMAT.getName() + "[" + StartupOption.CLUSTERID.getName() +  
-      " cid ]] | [" +
+      StartupOption.FORMAT.getName() + " [" + StartupOption.CLUSTERID.getName() +  
+      " cid ] [" + StartupOption.FORCE.getName() + "] [" +
+      StartupOption.NONINTERACTIVE.getName() + "] ] | [" +
       StartupOption.UPGRADE.getName() + "] | [" +
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
       StartupOption.IMPORT.getName() + "] | [" +
-      StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" +
       StartupOption.INITIALIZESHAREDEDITS.getName() + "] | [" +
       StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" + 
       StartupOption.RECOVER.getName() + " [ " +
@@ -847,11 +850,35 @@ public class NameNode {
       String cmd = args[i];
       if (StartupOption.FORMAT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.FORMAT;
-        // might be followed by two args
-        if (i + 2 < argsLen
-            && args[i + 1].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
-          i += 2;
-          startOpt.setClusterId(args[i]);
+        for (i = i + 1; i < argsLen; i++) {
+          if (args[i].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
+            i++;
+            if (i >= argsLen) {
+              // if no cluster id specified, return null
+              LOG.fatal("Must specify a valid cluster ID after the "
+                  + StartupOption.CLUSTERID.getName() + " flag");
+              return null;
+            }
+            String clusterId = args[i];
+            // Make sure an id is specified and not another flag
+            if (clusterId.isEmpty() ||
+                clusterId.equalsIgnoreCase(StartupOption.FORCE.getName()) ||
+                clusterId.equalsIgnoreCase(
+                    StartupOption.NONINTERACTIVE.getName())) {
+              LOG.fatal("Must specify a valid cluster ID after the "
+                  + StartupOption.CLUSTERID.getName() + " flag");
+              return null;
+            }
+            startOpt.setClusterId(clusterId);
+          }
+
+          if (args[i].equalsIgnoreCase(StartupOption.FORCE.getName())) {
+            startOpt.setForceFormat(true);
+          }
+
+          if (args[i].equalsIgnoreCase(StartupOption.NONINTERACTIVE.getName())) {
+            startOpt.setInteractiveFormat(false);
+          }
         }
       } else if (StartupOption.GENCLUSTERID.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.GENCLUSTERID;
@@ -945,34 +972,6 @@ public class NameNode {
     }
   }
 
-  /**
-   * Print out a prompt to the user, and return true if the user
-   * responds with "Y" or "yes".
-   */
-  static boolean confirmPrompt(String prompt) throws IOException {
-    while (true) {
-      System.err.print(prompt + " (Y or N) ");
-      StringBuilder responseBuilder = new StringBuilder();
-      while (true) {
-        int c = System.in.read();
-        if (c == -1 || c == '\r' || c == '\n') {
-          break;
-        }
-        responseBuilder.append((char)c);
-      }
-  
-      String response = responseBuilder.toString();
-      if (response.equalsIgnoreCase("y") ||
-          response.equalsIgnoreCase("yes")) {
-        return true;
-      } else if (response.equalsIgnoreCase("n") ||
-          response.equalsIgnoreCase("no")) {
-        return false;
-      }
-      // else ask them again
-    }
-  }
-
   public static NameNode createNameNode(String argv[], Configuration conf)
       throws IOException {
     if (conf == null)
@@ -994,7 +993,8 @@ public class NameNode {
 
     switch (startOpt) {
       case FORMAT: {
-        boolean aborted = format(conf, false);
+        boolean aborted = format(conf, startOpt.getForceFormat(),
+            startOpt.getInteractiveFormat());
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
       }

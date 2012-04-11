@@ -316,7 +316,9 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_CONTAINER_COMPLETED,
              TaskAttemptEventType.TA_UPDATE,
              TaskAttemptEventType.TA_COMMIT_PENDING,
+             // Container launch events can arrive late
              TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
              TaskAttemptEventType.TA_DONE,
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_TIMED_OUT))
@@ -338,6 +340,7 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_UPDATE,
              TaskAttemptEventType.TA_COMMIT_PENDING,
              TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
              TaskAttemptEventType.TA_DONE,
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_TIMED_OUT))
@@ -359,7 +362,10 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_UPDATE,
              TaskAttemptEventType.TA_COMMIT_PENDING,
              TaskAttemptEventType.TA_DONE,
-             TaskAttemptEventType.TA_FAILMSG))
+             TaskAttemptEventType.TA_FAILMSG,
+             // Container launch events can arrive late
+             TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED))
 
      // Transitions from KILL_TASK_CLEANUP
      .addTransition(TaskAttemptState.KILL_TASK_CLEANUP,
@@ -377,7 +383,10 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_UPDATE,
              TaskAttemptEventType.TA_COMMIT_PENDING,
              TaskAttemptEventType.TA_DONE,
-             TaskAttemptEventType.TA_FAILMSG))
+             TaskAttemptEventType.TA_FAILMSG,
+             // Container launch events can arrive late
+             TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED))
 
       // Transitions from SUCCEEDED
      .addTransition(TaskAttemptState.SUCCEEDED, //only possible for map attempts
@@ -405,7 +414,9 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_ASSIGNED,
              TaskAttemptEventType.TA_CONTAINER_COMPLETED,
              TaskAttemptEventType.TA_UPDATE,
+             // Container launch events can arrive late
              TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
              TaskAttemptEventType.TA_COMMIT_PENDING,
              TaskAttemptEventType.TA_DONE,
              TaskAttemptEventType.TA_FAILMSG))
@@ -420,7 +431,9 @@ public abstract class TaskAttemptImpl implements
              TaskAttemptEventType.TA_ASSIGNED,
              TaskAttemptEventType.TA_CONTAINER_COMPLETED,
              TaskAttemptEventType.TA_UPDATE,
+             // Container launch events can arrive late
              TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+             TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
              TaskAttemptEventType.TA_COMMIT_PENDING,
              TaskAttemptEventType.TA_DONE,
              TaskAttemptEventType.TA_FAILMSG))

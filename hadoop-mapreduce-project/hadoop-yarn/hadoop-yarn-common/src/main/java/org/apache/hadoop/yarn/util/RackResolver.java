@@ -31,6 +31,9 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.util.ReflectionUtils;
+
+import com.google.common.annotations.VisibleForTesting;
 
 public class RackResolver {
   private static DNSToSwitchMapping dnsToSwitchMapping;
@@ -49,10 +52,8 @@ public class RackResolver {
         ScriptBasedMapping.class,
         DNSToSwitchMapping.class);
     try {
-      Constructor<? extends DNSToSwitchMapping> dnsToSwitchMappingConstructor
-                             = dnsToSwitchMappingClass.getConstructor();
-      DNSToSwitchMapping newInstance =
-          dnsToSwitchMappingConstructor.newInstance();
+      DNSToSwitchMapping newInstance = ReflectionUtils.newInstance(
+          dnsToSwitchMappingClass, conf);
       // Wrap around the configured class with the Cached implementation so as
       // to save on repetitive lookups.
       // Check if the impl is already caching, to avoid double caching.
@@ -98,5 +99,13 @@ public class RackResolver {
     String rName = rNameList.get(0);
     LOG.info("Resolved " + hostName + " to " + rName);
     return new NodeBase(hostName, rName);
+  }
+
+  /**
+   * Only used by tests
+   */
+  @VisibleForTesting
+  static DNSToSwitchMapping getDnsToSwitchMapping(){
+    return dnsToSwitchMapping;
   }
 }
