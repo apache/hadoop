@@ -362,6 +362,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3244. Remove dead writable code from hdfs/protocol. (eli)
 
+    HDFS-3247. Improve bootstrapStandby behavior when original NN is not active
+    (todd)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
