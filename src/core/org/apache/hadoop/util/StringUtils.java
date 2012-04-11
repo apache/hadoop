@@ -737,7 +737,7 @@ public class StringUtils {
    * Concatenates objects, using a separator.
    *
    * @param separator to join with
-   * @param object to join
+   * @param objects to join
    * @return the joined string
    */
   public static String join(CharSequence separator, Object[] objects) {

@@ -486,7 +486,7 @@ public class NetUtils {
    * also takes a local address and port to bind the socket to. 
    * 
    * @param socket
-   * @param address the remote address
+   * @param endpoint the remote address
    * @param localAddr the local address to bind the socket to
    * @param timeout timeout in milliseconds
    */

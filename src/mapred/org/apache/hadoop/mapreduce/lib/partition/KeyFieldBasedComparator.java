@@ -44,8 +44,8 @@ import org.apache.hadoop.mapreduce.lib.partition.KeyFieldHelper.KeyDescription;
  *  character. If '.c' is omitted from pos1, it defaults to 1 (the beginning
  *  of the field); if omitted from pos2, it defaults to 0 (the end of the
  *  field). opts are ordering options (any of 'nr' as described above). 
- * We assume that the fields in the key are separated by 
- * {@link JobContext#MAP_OUTPUT_KEY_FIELD_SEPERATOR}.
+ * We assume that the fields in the key are separated by
+ * mapreduce.map.output.key.field.separator.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
