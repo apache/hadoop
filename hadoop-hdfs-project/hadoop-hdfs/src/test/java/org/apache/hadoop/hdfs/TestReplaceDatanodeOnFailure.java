@@ -25,6 +25,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -233,5 +234,57 @@ public class TestReplaceDatanodeOnFailure {
       final DFSOutputStream dfsout = (DFSOutputStream)out.getWrappedStream();
       Assert.assertEquals(REPLICATION, dfsout.getNumCurrentReplicas());
     }        
+  }
+
+  @Test
+  public void testAppend() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    final short REPLICATION = (short)3;
+    
+    Assert.assertEquals(ReplaceDatanodeOnFailure.DEFAULT, ReplaceDatanodeOnFailure.get(conf));
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf
+        ).numDataNodes(1).build();
+
+    try {
+      final DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
+      final Path f = new Path(DIR, "testAppend");
+      
+      {
+        LOG.info("create an empty file " + f);
+        fs.create(f, REPLICATION).close();
+        final FileStatus status = fs.getFileStatus(f);
+        Assert.assertEquals(REPLICATION, status.getReplication());
+        Assert.assertEquals(0L, status.getLen());
+      }
+      
+      
+      final byte[] bytes = new byte[1000];
+      {
+        LOG.info("append " + bytes.length + " bytes to " + f);
+        final FSDataOutputStream out = fs.append(f);
+        out.write(bytes);
+        out.close();
+
+        final FileStatus status = fs.getFileStatus(f);
+        Assert.assertEquals(REPLICATION, status.getReplication());
+        Assert.assertEquals(bytes.length, status.getLen());
+      }
+
+      {
+        LOG.info("append another " + bytes.length + " bytes to " + f);
+        try {
+          final FSDataOutputStream out = fs.append(f);
+          out.write(bytes);
+          out.close();
+
+          Assert.fail();
+        } catch(IOException ioe) {
+          LOG.info("This exception is expected", ioe);
+        }
+      }
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
   }
 }
