@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.*;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Base class for a server command.
@@ -33,19 +30,8 @@ import org.apache.hadoop.io.Writable;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class ServerCommand implements Writable {
+public abstract class ServerCommand {
   private int action;
-
-  /**
-   * Unknown server command constructor.
-   * Creates a command with action 0.
-   * 
-   * @see NamenodeProtocol#ACT_UNKNOWN
-   * @see DatanodeProtocol#DNA_UNKNOWN
-   */
-  public ServerCommand() {
-    this(0);
-  }
 
   /**
    * Create a command for the specified action.
@@ -65,16 +51,5 @@ public abstract class ServerCommand implements Writable {
    */
   public int getAction() {
     return this.action;
-  }
-
-  ///////////////////////////////////////////
-  // Writable
-  ///////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(this.action);
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    this.action = in.readInt();
   }
 }

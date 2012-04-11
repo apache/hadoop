@@ -17,26 +17,19 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * Collection of blocks with their locations and the file length.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class LocatedBlocks implements Writable {
+public class LocatedBlocks {
   private long fileLength;
   private List<LocatedBlock> blocks; // array of blocks with prioritized locations
   private boolean underConstruction;
@@ -165,61 +158,6 @@ public class LocatedBlocks implements Writable {
   
   public static int getInsertIndex(int binSearchResult) {
     return binSearchResult >= 0 ? binSearchResult : -(binSearchResult+1);
-  }
-
-  //////////////////////////////////////////////////
-  // Writable
-  //////////////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (LocatedBlocks.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new LocatedBlocks(); }
-       });
-  }
-
-  public void write(DataOutput out) throws IOException {
-    out.writeLong(this.fileLength);
-    out.writeBoolean(underConstruction);
-
-    //write the last located block
-    final boolean isNull = lastLocatedBlock == null;
-    out.writeBoolean(isNull);
-    if (!isNull) {
-      lastLocatedBlock.write(out);
-    }
-    out.writeBoolean(isLastBlockComplete);
-
-    // write located blocks
-    int nrBlocks = locatedBlockCount();
-    out.writeInt(nrBlocks);
-    if (nrBlocks == 0) {
-      return;
-    }
-    for (LocatedBlock blk : this.blocks) {
-      blk.write(out);
-    }
-  }
-  
-  public void readFields(DataInput in) throws IOException {
-    this.fileLength = in.readLong();
-    underConstruction = in.readBoolean();
-
-    //read the last located block
-    final boolean isNull = in.readBoolean();
-    if (!isNull) {
-      lastLocatedBlock = LocatedBlock.read(in);
-    }
-    isLastBlockComplete = in.readBoolean();
-
-    // read located blocks
-    int nrBlocks = in.readInt();
-    this.blocks = new ArrayList<LocatedBlock>(nrBlocks);
-    for (int idx = 0; idx < nrBlocks; idx++) {
-      LocatedBlock blk = new LocatedBlock();
-      blk.readFields(in);
-      this.blocks.add(blk);
-    }
   }
 
   @Override

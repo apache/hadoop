@@ -94,8 +94,8 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
   }
 
   @Override
-  public FSEditLogOp readOp() throws IOException {
-    return reader.readOp();
+  protected FSEditLogOp nextOp() throws IOException {
+    return reader.readOp(false);
   }
 
   @Override
@@ -121,12 +121,6 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
   public String getName() {
     return String.format("BookKeeper[%s,first=%d,last=%d]", 
         lh.toString(), firstTxId, lastTxId);
-  }
-
-  @Override
-  public JournalType getType() {
-    assert (false);
-    return null;
   }
 
   // TODO(HA): Test this.

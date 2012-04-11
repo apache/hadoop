@@ -18,15 +18,9 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * This class represents the primary identifier for a Datanode.
@@ -41,8 +35,8 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DatanodeID implements WritableComparable<DatanodeID> {
-  public static final DatanodeID[] EMPTY_ARRAY = {}; 
+public class DatanodeID implements Comparable<DatanodeID> {
+  public static final DatanodeID[] EMPTY_ARRAY = {};
 
   protected String ipAddr;     // IP address
   protected String hostName;   // hostname
@@ -50,10 +44,6 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
   protected int xferPort;      // data streaming port
   protected int infoPort;      // info server port
   protected int ipcPort;       // IPC server port
-
-  public DatanodeID() {
-    this("", DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT);
-  }
 
   public DatanodeID(String ipAddr, int xferPort) {
     this(ipAddr, "", "", xferPort,
@@ -233,29 +223,5 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
    */
   public int compareTo(DatanodeID that) {
     return getXferAddr().compareTo(that.getXferAddr());
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    Text.writeString(out, ipAddr);
-    Text.writeString(out, hostName);
-    Text.writeString(out, storageID);
-    out.writeShort(xferPort);
-    out.writeShort(infoPort);
-    out.writeShort(ipcPort);
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    ipAddr = Text.readString(in);
-    hostName = Text.readString(in);
-    storageID = Text.readString(in);
-    // The port read could be negative, if the port is a large number (more
-    // than 15 bits in storage size (but less than 16 bits).
-    // So chop off the first two bytes (and hence the signed bits) before 
-    // setting the field.
-    xferPort = in.readShort() & 0x0000ffff;
-    infoPort = in.readShort() & 0x0000ffff;
-    ipcPort = in.readShort() & 0x0000ffff;
   }
 }

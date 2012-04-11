@@ -335,6 +335,14 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8249. invalid hadoop-auth cookies should trigger authentication 
     if info is avail before returning HTTP 401 (tucu)
 
+    HADOOP-8261. Har file system doesn't deal with FS URIs with a host but no
+    port. (atm)
+
+    HADOOP-8263. Stringification of IPC calls not useful (todd)
+
+    HADOOP-8264. Remove irritating double double quotes in front of hostname
+    (Bernd Fondermann via bobby)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)

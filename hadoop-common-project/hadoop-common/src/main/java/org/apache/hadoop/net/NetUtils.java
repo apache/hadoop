@@ -782,7 +782,7 @@ public class NetUtils {
     hostDetails.append("local host is: ")
         .append(quoteHost(localHost))
         .append("; ");
-    hostDetails.append("destination host is: \"").append(quoteHost(destHost))
+    hostDetails.append("destination host is: ").append(quoteHost(destHost))
         .append(":")
         .append(destPort).append("; ");
     return hostDetails.toString();

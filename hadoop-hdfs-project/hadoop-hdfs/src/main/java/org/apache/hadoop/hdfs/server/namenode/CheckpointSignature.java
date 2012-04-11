@@ -17,15 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.collect.ComparisonChain;
 
@@ -33,15 +29,14 @@ import com.google.common.collect.ComparisonChain;
  * A unique signature intended to identify checkpoint transactions.
  */
 @InterfaceAudience.Private
-public class CheckpointSignature extends StorageInfo 
-                      implements WritableComparable<CheckpointSignature> {
+public class CheckpointSignature extends StorageInfo
+    implements Comparable<CheckpointSignature> { 
+
   private static final String FIELD_SEPARATOR = ":";
   private static final int NUM_FIELDS = 7;
   String blockpoolID = "";
   long mostRecentCheckpointTxId;
   long curSegmentTxId;
-
-  public CheckpointSignature() {}
 
   CheckpointSignature(FSImage fsImage) {
     super(fsImage.getStorage());
@@ -161,22 +156,5 @@ public class CheckpointSignature extends StorageInfo
     return layoutVersion ^ namespaceID ^
             (int)(cTime ^ mostRecentCheckpointTxId ^ curSegmentTxId)
             ^ clusterID.hashCode() ^ blockpoolID.hashCode();
-  }
-
-  /////////////////////////////////////////////////
-  // Writable
-  /////////////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    WritableUtils.writeString(out, blockpoolID);
-    out.writeLong(mostRecentCheckpointTxId);
-    out.writeLong(curSegmentTxId);
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    blockpoolID = WritableUtils.readString(in);
-    mostRecentCheckpointTxId = in.readLong();
-    curSegmentTxId = in.readLong();
   }
 }

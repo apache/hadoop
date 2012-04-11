@@ -622,8 +622,8 @@ public abstract class BlockFixer extends Configured implements Runnable {
         int idx = rand.nextInt(live.length);
         chosen = live[idx];
         for (DatanodeInfo avoid: locationsToAvoid) {
-          if (chosen.name.equals(avoid.name)) {
-            LOG.info("Avoiding " + avoid.name);
+          if (chosen.getName().equals(avoid.getName())) {
+            LOG.info("Avoiding " + avoid.getName());
             chosen = null;
             break;
           }
@@ -632,7 +632,7 @@ public abstract class BlockFixer extends Configured implements Runnable {
       if (chosen == null) {
         throw new IOException("Could not choose datanode");
       }
-      LOG.info("Choosing datanode " + chosen.name);
+      LOG.info("Choosing datanode " + chosen.getName());
       return chosen;
     }
 
@@ -736,7 +736,7 @@ public abstract class BlockFixer extends Configured implements Runnable {
                                 DataInputStream metadataIn,
                                 LocatedBlock block, long blockSize)
       throws IOException {
-      InetSocketAddress target = NetUtils.createSocketAddr(datanode.name);
+      InetSocketAddress target = NetUtils.createSocketAddr(datanode.getName());
       Socket sock = SocketChannel.open().socket();
       
       int readTimeout =
@@ -785,7 +785,7 @@ public abstract class BlockFixer extends Configured implements Runnable {
             1, 0L, blockSize, 0L, DataChecksum.newDataChecksum(metadataIn));
         blockSender.sendBlock(out, baseStream);
         
-        LOG.info("Sent block " + block.getBlock() + " to " + datanode.name);
+        LOG.info("Sent block " + block.getBlock() + " to " + datanode.getName());
       } finally {
         out.close();
       }

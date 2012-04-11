@@ -17,11 +17,6 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.Text;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -29,7 +24,7 @@ import java.util.Arrays;
  * used for iterative calls to NameNode.listCorruptFileBlocks.
  *
  */
-public class CorruptFileBlocks implements Writable {
+public class CorruptFileBlocks {
   // used for hashCode
   private static final int PRIME = 16777619;
 
@@ -53,28 +48,6 @@ public class CorruptFileBlocks implements Writable {
     return cookie;
   }
 
-  
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    int fileCount = in.readInt();
-    files = new String[fileCount];
-    for (int i = 0; i < fileCount; i++) {
-      files[i] = Text.readString(in);
-    }
-    cookie = Text.readString(in);
-  }
-
-  
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(files.length);
-    for (int i = 0; i < files.length; i++) {
-      Text.writeString(out, files[i]);
-    }
-    Text.writeString(out, cookie);
-  }
-
- 
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {

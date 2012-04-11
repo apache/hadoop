@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -36,13 +37,15 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.junit.Test;
 
-public class TestOverReplicatedBlocks extends TestCase {
+public class TestOverReplicatedBlocks {
   /** Test processOverReplicatedBlock can handle corrupt replicas fine.
    * It make sure that it won't treat corrupt replicas as valid ones 
    * thus prevents NN deleting valid replicas but keeping
    * corrupt ones.
    */
+  @Test
   public void testProcesOverReplicateBlock() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
@@ -109,6 +112,32 @@ public class TestOverReplicatedBlocks extends TestCase {
         namesystem.writeUnlock();
       }
       
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  /**
+   * Test over replicated block should get invalidated when decreasing the
+   * replication for a partial block.
+   */
+  @Test
+  public void testInvalidateOverReplicatedBlock() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
+        .build();
+    try {
+      final FSNamesystem namesystem = cluster.getNamesystem();
+      final BlockManager bm = namesystem.getBlockManager();
+      FileSystem fs = cluster.getFileSystem();
+      Path p = new Path(MiniDFSCluster.getBaseDirectory(), "/foo1");
+      FSDataOutputStream out = fs.create(p, (short) 2);
+      out.writeBytes("HDFS-3119: " + p);
+      out.hsync();
+      fs.setReplication(p, (short) 1);
+      out.close();
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, p);
+      assertEquals("Expected only one live replica for the block", 1, bm
+          .countNodes(block.getLocalBlock()).liveReplicas());
     } finally {
       cluster.shutdown();
     }

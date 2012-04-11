@@ -25,14 +25,6 @@ package org.apache.hadoop.hdfs.server.protocol;
  * each datanode.
  */
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
-
 /**
  * Balancer bandwidth command instructs each datanode to change its value for
  * the max amount of network bandwidth it may use during the block balancing
@@ -70,36 +62,5 @@ public class BalancerBandwidthCommand extends DatanodeCommand {
    */
   public long getBalancerBandwidthValue() {
     return this.bandwidth;
-  }
-
-  // ///////////////////////////////////////////////
-  // Writable
-  // ///////////////////////////////////////////////
-  static { // register a ctor
-    WritableFactories.setFactory(BalancerBandwidthCommand.class, new WritableFactory() {
-      public Writable newInstance() {
-        return new BalancerBandwidthCommand();
-      }
-    });
-  }
-
-  /**
-   * Writes the bandwidth payload to the Balancer Bandwidth Command packet.
-   * @param out DataOutput stream used for writing commands to the datanode.
-   * @throws IOException
-   */
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    out.writeLong(this.bandwidth);
-  }
-
-  /**
-   * Reads the bandwidth payload from the Balancer Bandwidth Command packet.
-   * @param in DataInput stream used for reading commands to the datanode.
-   * @throws IOException
-   */
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    this.bandwidth = in.readLong();
   }
 }

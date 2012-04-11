@@ -73,6 +73,7 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
@@ -233,7 +234,7 @@ public class NameNode {
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
   public static void format(Configuration conf) throws IOException {
-    format(conf, true);
+    format(conf, true, true);
   }
 
   static NameNodeMetrics metrics;
@@ -532,6 +533,8 @@ public class NameNode {
    * <li>{@link StartupOption#CHECKPOINT CHECKPOINT} - start checkpoint node</li>
    * <li>{@link StartupOption#UPGRADE UPGRADE} - start the cluster  
    * upgrade and create a snapshot of the current file system state</li> 
+   * <li>{@link StartupOption#RECOVERY RECOVERY} - recover name node
+   * metadata</li>
    * <li>{@link StartupOption#ROLLBACK ROLLBACK} - roll the  
    *            cluster back to the previous state</li>
    * <li>{@link StartupOption#FINALIZE FINALIZE} - finalize 
@@ -674,9 +677,8 @@ public class NameNode {
    * @return true if formatting was aborted, false otherwise
    * @throws IOException
    */
-  private static boolean format(Configuration conf,
-                                boolean force)
-      throws IOException {
+  private static boolean format(Configuration conf, boolean force,
+      boolean isInteractive) throws IOException {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
@@ -685,7 +687,7 @@ public class NameNode {
     Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
-    if (!confirmFormat(dirsToFormat, force, true)) {
+    if (!confirmFormat(dirsToFormat, force, isInteractive)) {
       return true; // aborted
     }
 
@@ -776,6 +778,9 @@ public class NameNode {
    */
   private static boolean initializeSharedEdits(Configuration conf,
       boolean force, boolean interactive) {
+    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    initializeGenericKeys(conf, nsId, namenodeId);
     NNStorage existingStorage = null;
     try {
       FSNamesystem fsns = FSNamesystem.loadFromDisk(conf,
@@ -843,14 +848,17 @@ public class NameNode {
       "Usage: java NameNode [" +
       StartupOption.BACKUP.getName() + "] | [" +
       StartupOption.CHECKPOINT.getName() + "] | [" +
-      StartupOption.FORMAT.getName() + "[" + StartupOption.CLUSTERID.getName() +  
-      " cid ]] | [" +
+      StartupOption.FORMAT.getName() + " [" + StartupOption.CLUSTERID.getName() +  
+      " cid ] [" + StartupOption.FORCE.getName() + "] [" +
+      StartupOption.NONINTERACTIVE.getName() + "] ] | [" +
       StartupOption.UPGRADE.getName() + "] | [" +
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
       StartupOption.IMPORT.getName() + "] | [" +
-      StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" +
-      StartupOption.INITIALIZESHAREDEDITS.getName() + "]");
+      StartupOption.INITIALIZESHAREDEDITS.getName() + "] | [" +
+      StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" + 
+      StartupOption.RECOVER.getName() + " [ " +
+        StartupOption.FORCE.getName() + " ] ]");
   }
 
   private static StartupOption parseArguments(String args[]) {
@@ -860,11 +868,35 @@ public class NameNode {
       String cmd = args[i];
       if (StartupOption.FORMAT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.FORMAT;
-        // might be followed by two args
-        if (i + 2 < argsLen
-            && args[i + 1].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
-          i += 2;
-          startOpt.setClusterId(args[i]);
+        for (i = i + 1; i < argsLen; i++) {
+          if (args[i].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
+            i++;
+            if (i >= argsLen) {
+              // if no cluster id specified, return null
+              LOG.fatal("Must specify a valid cluster ID after the "
+                  + StartupOption.CLUSTERID.getName() + " flag");
+              return null;
+            }
+            String clusterId = args[i];
+            // Make sure an id is specified and not another flag
+            if (clusterId.isEmpty() ||
+                clusterId.equalsIgnoreCase(StartupOption.FORCE.getName()) ||
+                clusterId.equalsIgnoreCase(
+                    StartupOption.NONINTERACTIVE.getName())) {
+              LOG.fatal("Must specify a valid cluster ID after the "
+                  + StartupOption.CLUSTERID.getName() + " flag");
+              return null;
+            }
+            startOpt.setClusterId(clusterId);
+          }
+
+          if (args[i].equalsIgnoreCase(StartupOption.FORCE.getName())) {
+            startOpt.setForceFormat(true);
+          }
+
+          if (args[i].equalsIgnoreCase(StartupOption.NONINTERACTIVE.getName())) {
+            startOpt.setInteractiveFormat(false);
+          }
         }
       } else if (StartupOption.GENCLUSTERID.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.GENCLUSTERID;
@@ -894,6 +926,21 @@ public class NameNode {
       } else if (StartupOption.INITIALIZESHAREDEDITS.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.INITIALIZESHAREDEDITS;
         return startOpt;
+      } else if (StartupOption.RECOVER.getName().equalsIgnoreCase(cmd)) {
+        if (startOpt != StartupOption.REGULAR) {
+          throw new RuntimeException("Can't combine -recover with " +
+              "other startup options.");
+        }
+        startOpt = StartupOption.RECOVER;
+        while (++i < argsLen) {
+          if (args[i].equalsIgnoreCase(
+                StartupOption.FORCE.getName())) {
+            startOpt.setForce(MetaRecoveryContext.FORCE_FIRST_CHOICE);
+          } else {
+            throw new RuntimeException("Error parsing recovery options: " + 
+              "can't understand option \"" + args[i] + "\"");
+          }
+        }
       } else {
         return null;
       }
@@ -910,31 +957,36 @@ public class NameNode {
                                           StartupOption.REGULAR.toString()));
   }
 
-  /**
-   * Print out a prompt to the user, and return true if the user
-   * responds with "Y" or "yes".
-   */
-  static boolean confirmPrompt(String prompt) throws IOException {
-    while (true) {
-      System.err.print(prompt + " (Y or N) ");
-      StringBuilder responseBuilder = new StringBuilder();
-      while (true) {
-        int c = System.in.read();
-        if (c == -1 || c == '\r' || c == '\n') {
-          break;
-        }
-        responseBuilder.append((char)c);
+  private static void doRecovery(StartupOption startOpt, Configuration conf)
+      throws IOException {
+    if (startOpt.getForce() < MetaRecoveryContext.FORCE_ALL) {
+      if (!confirmPrompt("You have selected Metadata Recovery mode.  " +
+          "This mode is intended to recover lost metadata on a corrupt " +
+          "filesystem.  Metadata recovery mode often permanently deletes " +
+          "data from your HDFS filesystem.  Please back up your edit log " +
+          "and fsimage before trying this!\n\n" +
+          "Are you ready to proceed? (Y/N)\n")) {
+        System.err.println("Recovery aborted at user request.\n");
+        return;
       }
-  
-      String response = responseBuilder.toString();
-      if (response.equalsIgnoreCase("y") ||
-          response.equalsIgnoreCase("yes")) {
-        return true;
-      } else if (response.equalsIgnoreCase("n") ||
-          response.equalsIgnoreCase("no")) {
-        return false;
-      }
-      // else ask them again
+    }
+    MetaRecoveryContext.LOG.info("starting recovery...");
+    UserGroupInformation.setConfiguration(conf);
+    NameNode.initMetrics(conf, startOpt.toNodeRole());
+    FSNamesystem fsn = null;
+    try {
+      fsn = FSNamesystem.loadFromDisk(conf);
+      fsn.saveNamespace();
+      MetaRecoveryContext.LOG.info("RECOVERY COMPLETE");
+    } catch (IOException e) {
+      MetaRecoveryContext.LOG.info("RECOVERY FAILED: caught exception", e);
+      throw e;
+    } catch (RuntimeException e) {
+      MetaRecoveryContext.LOG.info("RECOVERY FAILED: caught exception", e);
+      throw e;
+    } finally {
+      if (fsn != null)
+        fsn.close();
     }
   }
 
@@ -959,7 +1011,8 @@ public class NameNode {
 
     switch (startOpt) {
       case FORMAT: {
-        boolean aborted = format(conf, false);
+        boolean aborted = format(conf, startOpt.getForceFormat(),
+            startOpt.getInteractiveFormat());
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
       }
@@ -990,6 +1043,10 @@ public class NameNode {
         NamenodeRole role = startOpt.toNodeRole();
         DefaultMetricsSystem.initialize(role.toString().replace(" ", ""));
         return new BackupNode(conf, role);
+      }
+      case RECOVER: {
+        NameNode.doRecovery(startOpt, conf);
+        return null;
       }
       default:
         DefaultMetricsSystem.initialize("NameNode");

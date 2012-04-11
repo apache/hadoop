@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 
@@ -36,7 +37,7 @@ public class TestDatanodeDescriptor extends TestCase {
     final int REMAINING_BLOCKS = 2;
     final int MAX_LIMIT = MAX_BLOCKS - REMAINING_BLOCKS;
     
-    DatanodeDescriptor dd = new DatanodeDescriptor();
+    DatanodeDescriptor dd = DFSTestUtil.getLocalDatanodeDescriptor();
     ArrayList<Block> blockList = new ArrayList<Block>(MAX_BLOCKS);
     for (int i=0; i<MAX_BLOCKS; i++) {
       blockList.add(new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP));
@@ -49,7 +50,7 @@ public class TestDatanodeDescriptor extends TestCase {
   }
   
   public void testBlocksCounter() throws Exception {
-    DatanodeDescriptor dd = new DatanodeDescriptor();
+    DatanodeDescriptor dd = DFSTestUtil.getLocalDatanodeDescriptor();
     assertEquals(0, dd.numBlocks());
     BlockInfo blk = new BlockInfo(new Block(1L), 1);
     BlockInfo blk1 = new BlockInfo(new Block(2L), 2);

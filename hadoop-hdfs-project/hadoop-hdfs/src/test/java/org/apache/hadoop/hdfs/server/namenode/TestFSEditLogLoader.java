@@ -92,8 +92,8 @@ public class TestFSEditLogLoader {
     rwf.close();
     
     StringBuilder bld = new StringBuilder();
-    bld.append("^Error replaying edit log at offset \\d+");
-    bld.append(" on transaction ID \\d+\n");
+    bld.append("^Error replaying edit log at offset \\d+.  ");
+    bld.append("Expected transaction ID was \\d+\n");
     bld.append("Recent opcode offsets: (\\d+\\s*){4}$");
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)

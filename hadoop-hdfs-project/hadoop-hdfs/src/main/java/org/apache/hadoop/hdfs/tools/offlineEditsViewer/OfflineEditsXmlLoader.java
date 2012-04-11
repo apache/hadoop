@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
 import org.xml.sax.Attributes;
@@ -54,6 +55,7 @@ class OfflineEditsXmlLoader
   private FSEditLogOpCodes opCode;
   private StringBuffer cbuf;
   private long nextTxId;
+  private final OpInstanceCache opCache = new OpInstanceCache();
   
   static enum ParseState {
     EXPECT_EDITS_TAG,
@@ -207,7 +209,7 @@ class OfflineEditsXmlLoader
           throw new InvalidXmlException("expected </DATA>");
         }
         state = ParseState.EXPECT_RECORD;
-        FSEditLogOp op = FSEditLogOp.getOpInstance(opCode);
+        FSEditLogOp op = opCache.get(opCode);
         opCode = null;
         try {
           op.decodeXml(stanza);

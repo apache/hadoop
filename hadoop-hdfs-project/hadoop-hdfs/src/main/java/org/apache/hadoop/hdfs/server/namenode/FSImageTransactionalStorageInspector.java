@@ -56,7 +56,14 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
       return;
     }
     
-    maxSeenTxId = Math.max(maxSeenTxId, NNStorage.readTransactionIdFile(sd));
+    // Check for a seen_txid file, which marks a minimum transaction ID that
+    // must be included in our load plan.
+    try {
+      maxSeenTxId = Math.max(maxSeenTxId, NNStorage.readTransactionIdFile(sd));
+    } catch (IOException ioe) {
+      LOG.warn("Unable to determine the max transaction ID seen by " + sd, ioe);
+      return;
+    }
 
     File currentDir = sd.getCurrentDir();
     File filesInStorage[];
@@ -89,15 +96,6 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
                    "not configured to contain images.");
         }
       }
-    }
-    
-
-    // Check for a seen_txid file, which marks a minimum transaction ID that
-    // must be included in our load plan.
-    try {
-      maxSeenTxId = Math.max(maxSeenTxId, NNStorage.readTransactionIdFile(sd));
-    } catch (IOException ioe) {
-      LOG.warn("Unable to determine the max transaction ID seen by " + sd, ioe);
     }
     
     // set finalized flag

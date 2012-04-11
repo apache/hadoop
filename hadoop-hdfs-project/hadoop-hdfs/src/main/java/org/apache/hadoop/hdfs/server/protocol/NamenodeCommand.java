@@ -19,9 +19,6 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * Base class for name-node command.
@@ -30,17 +27,6 @@ import org.apache.hadoop.io.WritableFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class NamenodeCommand extends ServerCommand {
-  static {
-    WritableFactories.setFactory(NamenodeCommand.class,
-        new WritableFactory() {
-          public Writable newInstance() {return new NamenodeCommand();}
-        });
-  }
-
-  public NamenodeCommand() {
-    super();
-  }
-
   public NamenodeCommand(int action) {
     super(action);
   }

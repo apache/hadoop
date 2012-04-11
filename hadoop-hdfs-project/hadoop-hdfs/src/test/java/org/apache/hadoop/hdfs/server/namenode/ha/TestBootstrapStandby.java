@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -40,6 +41,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -170,7 +172,7 @@ public class TestBootstrapStandby {
       int rc = BootstrapStandby.run(
           new String[]{"-force"},
           cluster.getConfiguration(1));
-      assertEquals(1, rc);
+      assertEquals(BootstrapStandby.ERR_CODE_LOGS_UNAVAILABLE, rc);
     } finally {
       logs.stopCapturing();
     }
@@ -184,13 +186,31 @@ public class TestBootstrapStandby {
     int rc = BootstrapStandby.run(
         new String[]{"-nonInteractive"},
         cluster.getConfiguration(1));
-    assertEquals(1, rc);
+    assertEquals(BootstrapStandby.ERR_CODE_ALREADY_FORMATTED, rc);
 
     // Should pass with -force
     rc = BootstrapStandby.run(
         new String[]{"-force"},
         cluster.getConfiguration(1));
     assertEquals(0, rc);
+  }
+  
+  @Test(timeout=30000)
+  public void testOtherNodeNotActive() throws Exception {
+    cluster.transitionToStandby(0);
+    int rc = BootstrapStandby.run(
+        new String[]{"-nonInteractive"},
+        cluster.getConfiguration(1));
+    assertEquals(BootstrapStandby.ERR_CODE_OTHER_NN_NOT_ACTIVE, rc);
+    
+    // Answer "yes" to the prompt about transition to active
+    System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
+    rc = BootstrapStandby.run(
+        new String[]{"-force"},
+        cluster.getConfiguration(1));
+    assertEquals(0, rc);
+    
+    assertFalse(nn0.getNamesystem().isInStandbyState());
   }
 
   private void assertNNFilesMatch() throws Exception {

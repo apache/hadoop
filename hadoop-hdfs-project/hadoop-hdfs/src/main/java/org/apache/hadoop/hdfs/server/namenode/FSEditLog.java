@@ -127,6 +127,14 @@ public class FSEditLog  {
   private Configuration conf;
   
   private List<URI> editsDirs;
+
+  private ThreadLocal<OpInstanceCache> cache =
+      new ThreadLocal<OpInstanceCache>() {
+    @Override
+    protected OpInstanceCache initialValue() {
+      return new OpInstanceCache();
+    }
+  };
   
   /**
    * The edit directories that are shared between primary and secondary.
@@ -596,7 +604,7 @@ public class FSEditLog  {
    * Records the block locations of the last block.
    */
   public void logOpenFile(String path, INodeFileUnderConstruction newNode) {
-    AddOp op = AddOp.getInstance()
+    AddOp op = AddOp.getInstance(cache.get())
       .setPath(path)
       .setReplication(newNode.getReplication())
       .setModificationTime(newNode.getModificationTime())
@@ -614,7 +622,7 @@ public class FSEditLog  {
    * Add close lease record to edit log.
    */
   public void logCloseFile(String path, INodeFile newNode) {
-    CloseOp op = CloseOp.getInstance()
+    CloseOp op = CloseOp.getInstance(cache.get())
       .setPath(path)
       .setReplication(newNode.getReplication())
       .setModificationTime(newNode.getModificationTime())
@@ -627,7 +635,7 @@ public class FSEditLog  {
   }
   
   public void logUpdateBlocks(String path, INodeFileUnderConstruction file) {
-    UpdateBlocksOp op = UpdateBlocksOp.getInstance()
+    UpdateBlocksOp op = UpdateBlocksOp.getInstance(cache.get())
       .setPath(path)
       .setBlocks(file.getBlocks());
     logEdit(op);
@@ -637,7 +645,7 @@ public class FSEditLog  {
    * Add create directory record to edit log
    */
   public void logMkDir(String path, INode newNode) {
-    MkdirOp op = MkdirOp.getInstance()
+    MkdirOp op = MkdirOp.getInstance(cache.get())
       .setPath(path)
       .setTimestamp(newNode.getModificationTime())
       .setPermissionStatus(newNode.getPermissionStatus());
@@ -649,7 +657,7 @@ public class FSEditLog  {
    * TODO: use String parameters until just before writing to disk
    */
   void logRename(String src, String dst, long timestamp) {
-    RenameOldOp op = RenameOldOp.getInstance()
+    RenameOldOp op = RenameOldOp.getInstance(cache.get())
       .setSource(src)
       .setDestination(dst)
       .setTimestamp(timestamp);
@@ -660,7 +668,7 @@ public class FSEditLog  {
    * Add rename record to edit log
    */
   void logRename(String src, String dst, long timestamp, Options.Rename... options) {
-    RenameOp op = RenameOp.getInstance()
+    RenameOp op = RenameOp.getInstance(cache.get())
       .setSource(src)
       .setDestination(dst)
       .setTimestamp(timestamp)
@@ -672,7 +680,7 @@ public class FSEditLog  {
    * Add set replication record to edit log
    */
   void logSetReplication(String src, short replication) {
-    SetReplicationOp op = SetReplicationOp.getInstance()
+    SetReplicationOp op = SetReplicationOp.getInstance(cache.get())
       .setPath(src)
       .setReplication(replication);
     logEdit(op);
@@ -684,7 +692,7 @@ public class FSEditLog  {
    * @param quota the directory size limit
    */
   void logSetQuota(String src, long nsQuota, long dsQuota) {
-    SetQuotaOp op = SetQuotaOp.getInstance()
+    SetQuotaOp op = SetQuotaOp.getInstance(cache.get())
       .setSource(src)
       .setNSQuota(nsQuota)
       .setDSQuota(dsQuota);
@@ -693,7 +701,7 @@ public class FSEditLog  {
 
   /**  Add set permissions record to edit log */
   void logSetPermissions(String src, FsPermission permissions) {
-    SetPermissionsOp op = SetPermissionsOp.getInstance()
+    SetPermissionsOp op = SetPermissionsOp.getInstance(cache.get())
       .setSource(src)
       .setPermissions(permissions);
     logEdit(op);
@@ -701,7 +709,7 @@ public class FSEditLog  {
 
   /**  Add set owner record to edit log */
   void logSetOwner(String src, String username, String groupname) {
-    SetOwnerOp op = SetOwnerOp.getInstance()
+    SetOwnerOp op = SetOwnerOp.getInstance(cache.get())
       .setSource(src)
       .setUser(username)
       .setGroup(groupname);
@@ -712,7 +720,7 @@ public class FSEditLog  {
    * concat(trg,src..) log
    */
   void logConcat(String trg, String [] srcs, long timestamp) {
-    ConcatDeleteOp op = ConcatDeleteOp.getInstance()
+    ConcatDeleteOp op = ConcatDeleteOp.getInstance(cache.get())
       .setTarget(trg)
       .setSources(srcs)
       .setTimestamp(timestamp);
@@ -723,7 +731,7 @@ public class FSEditLog  {
    * Add delete file record to edit log
    */
   void logDelete(String src, long timestamp) {
-    DeleteOp op = DeleteOp.getInstance()
+    DeleteOp op = DeleteOp.getInstance(cache.get())
       .setPath(src)
       .setTimestamp(timestamp);
     logEdit(op);
@@ -733,7 +741,7 @@ public class FSEditLog  {
    * Add generation stamp record to edit log
    */
   void logGenerationStamp(long genstamp) {
-    SetGenstampOp op = SetGenstampOp.getInstance()
+    SetGenstampOp op = SetGenstampOp.getInstance(cache.get())
       .setGenerationStamp(genstamp);
     logEdit(op);
   }
@@ -742,7 +750,7 @@ public class FSEditLog  {
    * Add access time record to edit log
    */
   void logTimes(String src, long mtime, long atime) {
-    TimesOp op = TimesOp.getInstance()
+    TimesOp op = TimesOp.getInstance(cache.get())
       .setPath(src)
       .setModificationTime(mtime)
       .setAccessTime(atime);
@@ -754,7 +762,7 @@ public class FSEditLog  {
    */
   void logSymlink(String path, String value, long mtime, 
                   long atime, INodeSymlink node) {
-    SymlinkOp op = SymlinkOp.getInstance()
+    SymlinkOp op = SymlinkOp.getInstance(cache.get())
       .setPath(path)
       .setValue(value)
       .setModificationTime(mtime)
@@ -770,7 +778,7 @@ public class FSEditLog  {
    */
   void logGetDelegationToken(DelegationTokenIdentifier id,
       long expiryTime) {
-    GetDelegationTokenOp op = GetDelegationTokenOp.getInstance()
+    GetDelegationTokenOp op = GetDelegationTokenOp.getInstance(cache.get())
       .setDelegationTokenIdentifier(id)
       .setExpiryTime(expiryTime);
     logEdit(op);
@@ -778,26 +786,26 @@ public class FSEditLog  {
   
   void logRenewDelegationToken(DelegationTokenIdentifier id,
       long expiryTime) {
-    RenewDelegationTokenOp op = RenewDelegationTokenOp.getInstance()
+    RenewDelegationTokenOp op = RenewDelegationTokenOp.getInstance(cache.get())
       .setDelegationTokenIdentifier(id)
       .setExpiryTime(expiryTime);
     logEdit(op);
   }
   
   void logCancelDelegationToken(DelegationTokenIdentifier id) {
-    CancelDelegationTokenOp op = CancelDelegationTokenOp.getInstance()
+    CancelDelegationTokenOp op = CancelDelegationTokenOp.getInstance(cache.get())
       .setDelegationTokenIdentifier(id);
     logEdit(op);
   }
   
   void logUpdateMasterKey(DelegationKey key) {
-    UpdateMasterKeyOp op = UpdateMasterKeyOp.getInstance()
+    UpdateMasterKeyOp op = UpdateMasterKeyOp.getInstance(cache.get())
       .setDelegationKey(key);
     logEdit(op);
   }
 
   void logReassignLease(String leaseHolder, String src, String newHolder) {
-    ReassignLeaseOp op = ReassignLeaseOp.getInstance()
+    ReassignLeaseOp op = ReassignLeaseOp.getInstance(cache.get())
       .setLeaseHolder(leaseHolder)
       .setPath(src)
       .setNewHolder(newHolder);
@@ -896,7 +904,7 @@ public class FSEditLog  {
     state = State.IN_SEGMENT;
 
     if (writeHeaderTxn) {
-      logEdit(LogSegmentOp.getInstance(
+      logEdit(LogSegmentOp.getInstance(cache.get(),
           FSEditLogOpCodes.OP_START_LOG_SEGMENT));
       logSync();
     }
@@ -912,7 +920,7 @@ public class FSEditLog  {
         "Bad state: %s", state);
     
     if (writeEndTxn) {
-      logEdit(LogSegmentOp.getInstance(
+      logEdit(LogSegmentOp.getInstance(cache.get(), 
           FSEditLogOpCodes.OP_END_LOG_SEGMENT));
       logSync();
     }

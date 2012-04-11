@@ -17,16 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 /** A class to implement an array of BlockLocations
  *  It provide efficient customized serialization/deserialization methods
@@ -34,22 +27,16 @@ import org.apache.hadoop.io.WritableUtils;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class BlocksWithLocations implements Writable {
+public class BlocksWithLocations {
 
   /**
    * A class to keep track of a block and its locations
    */
   @InterfaceAudience.Private
   @InterfaceStability.Evolving
-  public static class BlockWithLocations  implements Writable {
+  public static class BlockWithLocations {
     Block block;
     String datanodeIDs[];
-    
-    /** default constructor */
-    public BlockWithLocations() {
-      block = new Block();
-      datanodeIDs = null;
-    }
     
     /** constructor */
     public BlockWithLocations(Block b, String[] datanodes) {
@@ -66,32 +53,9 @@ public class BlocksWithLocations implements Writable {
     public String[] getDatanodes() {
       return datanodeIDs;
     }
-    
-    /** deserialization method */
-    public void readFields(DataInput in) throws IOException {
-      block.readFields(in);
-      int len = WritableUtils.readVInt(in); // variable length integer
-      datanodeIDs = new String[len];
-      for(int i=0; i<len; i++) {
-        datanodeIDs[i] = Text.readString(in);
-      }
-    }
-    
-    /** serialization method */
-    public void write(DataOutput out) throws IOException {
-      block.write(out);
-      WritableUtils.writeVInt(out, datanodeIDs.length); // variable length int
-      for(String id:datanodeIDs) {
-        Text.writeString(out, id);
-      }
-    }
   }
 
   private BlockWithLocations[] blocks;
-
-  /** default constructor */
-  BlocksWithLocations() {
-  }
 
   /** Constructor with one parameter */
   public BlocksWithLocations( BlockWithLocations[] blocks ) {
@@ -101,23 +65,5 @@ public class BlocksWithLocations implements Writable {
   /** getter */
   public BlockWithLocations[] getBlocks() {
     return blocks;
-  }
-
-  /** serialization method */
-  public void write( DataOutput out ) throws IOException {
-    WritableUtils.writeVInt(out, blocks.length);
-    for(int i=0; i<blocks.length; i++) {
-      blocks[i].write(out);
-    }
-  }
-
-  /** deserialization method */
-  public void readFields(DataInput in) throws IOException {
-    int len = WritableUtils.readVInt(in);
-    blocks = new BlockWithLocations[len];
-    for(int i=0; i<len; i++) {
-      blocks[i] = new BlockWithLocations();
-      blocks[i].readFields(in);
-    }
   }
 }

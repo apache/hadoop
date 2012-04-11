@@ -218,6 +218,21 @@ Release 2.0.0 - UNRELEASED
     org.apache.hadoop.mapred.TestMiniMRWithDFSWithDistinctUsers (Devaraj K via
     bobby)
 
+    MAPREDUCE-4105. Yarn RackResolver ignores rack configurations. 
+    (Ahmed Radwan via tomwhite)
+
+    MAPREDUCE-3869. Fix classpath for DistributedShell application. (Devaraj K
+    via sseth)
+
+    MAPREDUCE-4057. Update RAID for the HA and fsdataset changes.  (Devaraj K
+    via szetszwo)
+
+    MAPREDUCE-4076. Stream job fails with ZipException when use yarn jar
+    command (Devaraj K via bobby)
+ 
+    MAPREDUCE-4108. Fix tests in org.apache.hadoop.util.TestRunJar
+    (Devaraj K via tgraves)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -228,6 +243,9 @@ Release 0.23.3 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    MAPREDUCE-4059. The history server should have a separate pluggable 
+    storage/query interface. (Robert Evans via tgraves)
 
   OPTIMIZATIONS
 
@@ -279,6 +297,18 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4051. Remove the empty hadoop-mapreduce-project/assembly/all.xml
     file (Ravi Prakash via bobby)
+
+    MAPREDUCE-4117. mapred job -status throws NullPointerException (Devaraj K
+    via bobby)
+
+    MAPREDUCE-4099. ApplicationMaster may fail to remove staging directory
+    (Jason Lowe via bobby)
+
+    MAPREDUCE-4017. Add jobname to jobsummary log (tgraves and Koji Noguchi
+    via bobby)
+
+    MAPREDUCE-4040. History links should use hostname rather than IP address.
+    (Bhallamudi Venkata Siva Kamesh via sseth)
 
 Release 0.23.2 - UNRELEASED
 

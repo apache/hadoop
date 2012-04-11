@@ -248,7 +248,6 @@ public class GetConf extends Configured implements Tool {
     @Override
     int doWorkInternal(GetConf tool, String[] args) throws Exception {
       this.key = args[0];
-      System.err.println("key: " + key);
       return super.doWorkInternal(tool, args);
     }
   }

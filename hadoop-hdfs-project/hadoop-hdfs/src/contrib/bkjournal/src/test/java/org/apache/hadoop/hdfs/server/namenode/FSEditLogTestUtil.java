@@ -18,13 +18,17 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 
 /**
  * Utilities for testing edit logs
  */
 public class FSEditLogTestUtil {
+  private static OpInstanceCache cache = new OpInstanceCache();
+
   public static FSEditLogOp getNoOpInstance() {
-    return FSEditLogOp.LogSegmentOp.getInstance(FSEditLogOpCodes.OP_END_LOG_SEGMENT);
+    return FSEditLogOp.LogSegmentOp.getInstance(cache,
+        FSEditLogOpCodes.OP_END_LOG_SEGMENT);
   }
 
   public static long countTransactionsInStream(EditLogInputStream in) 

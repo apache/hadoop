@@ -551,6 +551,7 @@ public class JobHistoryEventHandler extends AbstractService
       summary.setUser(jse.getUserName());
       summary.setQueue(jse.getJobQueueName());
       summary.setJobSubmitTime(jse.getSubmitTime());
+      summary.setJobName(jse.getJobName());
       break;
     case NORMALIZED_RESOURCE:
       NormalizedResourceEvent normalizedResourceEvent = 

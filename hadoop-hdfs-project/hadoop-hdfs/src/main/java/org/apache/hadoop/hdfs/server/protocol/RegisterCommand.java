@@ -17,14 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * A BlockCommand is an instruction to a datanode to register with the namenode.
@@ -32,26 +26,10 @@ import org.apache.hadoop.io.WritableFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class RegisterCommand extends DatanodeCommand {
-  // /////////////////////////////////////////
-  // Writable
-  // /////////////////////////////////////////
-  static { // register a ctor
-    WritableFactories.setFactory(RegisterCommand.class, new WritableFactory() {
-      public Writable newInstance() {
-        return new RegisterCommand();
-      }
-    });
-  }
   
   public static final DatanodeCommand REGISTER = new RegisterCommand();
 
   public RegisterCommand() {
     super(DatanodeProtocol.DNA_REGISTER);
   }
-
-  @Override
-  public void readFields(DataInput in) { }
- 
-  @Override
-  public void write(DataOutput out) { }
 }
