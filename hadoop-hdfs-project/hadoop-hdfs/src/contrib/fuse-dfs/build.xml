@@ -17,19 +17,19 @@
    limitations under the License.
 -->
 
-<project name="fuse-dfs" default="jar" xmlns:ivy="antlib:org.apache.ivy.ant">
+<project name="fuse-dfs" default="compile" xmlns:ivy="antlib:org.apache.ivy.ant">
 
-  <import file="../build-contrib.xml"/>
+  <import file="build-contrib.xml"/>
 
-  <target name="check-libhdfs-exists" if="fusedfs">
+  <target name="check-libhdfs-exists">
     <property name="libhdfs.lib" value="${build.c++.libhdfs}/libhdfs.so"/>
     <available file="${libhdfs.lib}" property="libhdfs-exists"/>
-    <fail message="libhdfs.so does not exist: ${libhdfs.lib}. Please check flags -Dlibhdfs=1 -Dfusedfs=1 are set or first try ant compile -Dcompile.c++=true -Dlibhdfs=true">
+    <fail message="libhdfs.so does not exist: ${libhdfs.lib}.">
       <condition><not><isset property="libhdfs-exists"/></not></condition>
     </fail>
   </target>
 
-  <target name="compile" if="fusedfs">
+  <target name="compile">
     <exec executable="autoreconf" dir="${basedir}" 
           searchpath="yes" failonerror="yes">
        <arg value="-if"/>
@@ -46,24 +46,12 @@
       <env key="PACKAGE_VERSION" value="0.1.0"/>
       <env key="BUILD_PLATFORM" value="${build.platform}" />
     </exec>
-
-    <mkdir dir="${build.dir}"/>
-    <mkdir dir="${build.dir}/test"/>
-
-    <!-- Use exec since the copy task doesn't preserve attrs -->
-    <exec executable="cp" failonerror="true">
-      <arg line="${hadoop.root}/src/contrib/fuse-dfs/src/fuse_dfs ${build.dir}"/>
-    </exec>
-
-    <exec executable="cp" failonerror="true">
-      <arg line="${hadoop.root}/src/contrib/fuse-dfs/src/fuse_dfs_wrapper.sh ${build.dir}"/>
-    </exec>
   </target>
 
   <target name="jar" />
   <target name="package" />
 
-  <target name="compile-test" depends="ivy-retrieve-common, check-libhdfs-exists" if="fusedfs">
+  <target name="compile-test" depends="ivy-retrieve-common, check-libhdfs-exists">
     <javac encoding="${build.encoding}"
 	   srcdir="${src.test}"
 	   includes="**/*.java"
@@ -73,7 +61,7 @@
     </javac>
   </target>
 
-  <target name="test" depends="compile-test,check-libhdfs-exists" if="fusedfs">
+  <target name="test" depends="compile-test,check-libhdfs-exists">
     <junit showoutput="${test.output}" fork="yes" printsummary="yes"
            errorProperty="tests.failed" haltonfailure="no" failureProperty="tests.failed">
       <classpath refid="test.classpath"/>
