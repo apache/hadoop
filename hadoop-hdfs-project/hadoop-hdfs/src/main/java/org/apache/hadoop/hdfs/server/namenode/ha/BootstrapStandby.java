@@ -33,10 +33,14 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceStatus;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
-import org.apache.hadoop.hdfs.NameNodeProxies.ProxyAndInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
@@ -47,8 +51,10 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
@@ -65,7 +71,7 @@ import com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public class BootstrapStandby implements Tool, Configurable {
-  private static final Log LOG = LogFactory.getLog(BootstrapStandby.class); 
+  private static final Log LOG = LogFactory.getLog(BootstrapStandby.class);
   private String nsId;
   private String nnId;
   private String otherNNId;
@@ -79,7 +85,13 @@ public class BootstrapStandby implements Tool, Configurable {
   
   private boolean force = false;
   private boolean interactive = true;
-  
+
+  // Exit/return codes.
+  static final int ERR_CODE_FAILED_CONNECT = 2;
+  static final int ERR_CODE_INVALID_VERSION = 3;
+  static final int ERR_CODE_OTHER_NN_NOT_ACTIVE = 4;
+  static final int ERR_CODE_ALREADY_FORMATTED = 5;
+  static final int ERR_CODE_LOGS_UNAVAILABLE = 6; 
 
   public int run(String[] args) throws Exception {
     SecurityUtil.initKrb5CipherSuites();
@@ -121,24 +133,43 @@ public class BootstrapStandby implements Tool, Configurable {
     System.err.println("Usage: " + this.getClass().getSimpleName() +
         "[-force] [-nonInteractive]");
   }
+  
+  private NamenodeProtocol createNNProtocolProxy()
+      throws IOException {
+    return NameNodeProxies.createNonHAProxy(getConf(),
+        otherIpcAddr, NamenodeProtocol.class,
+        UserGroupInformation.getLoginUser(), true)
+        .getProxy();
+  }
+  
+  private HAServiceProtocol createHAProtocolProxy()
+      throws IOException {
+    return new NNHAServiceTarget(new HdfsConfiguration(conf),
+        nsId, otherNNId).getProxy(conf, 15000);
+  }
 
   private int doRun() throws IOException {
-    ProxyAndInfo<NamenodeProtocol> proxyAndInfo = NameNodeProxies.createNonHAProxy(getConf(),
-      otherIpcAddr, NamenodeProtocol.class,
-      UserGroupInformation.getLoginUser(), true);
-    NamenodeProtocol proxy = proxyAndInfo.getProxy();
+
+    NamenodeProtocol proxy = createNNProtocolProxy();
     NamespaceInfo nsInfo;
     try {
       nsInfo = proxy.versionRequest();
-      checkLayoutVersion(nsInfo);
     } catch (IOException ioe) {
       LOG.fatal("Unable to fetch namespace information from active NN at " +
           otherIpcAddr + ": " + ioe.getMessage());
       if (LOG.isDebugEnabled()) {
         LOG.debug("Full exception trace", ioe);
       }
-      return 1;
+      return ERR_CODE_FAILED_CONNECT;
     }
+
+    if (!checkLayoutVersion(nsInfo)) {
+      LOG.fatal("Layout version on remote node (" +
+          nsInfo.getLayoutVersion() + ") does not match " +
+          "this node's layout version (" + HdfsConstants.LAYOUT_VERSION + ")");
+      return ERR_CODE_INVALID_VERSION;
+    }
+
     
     System.out.println(
         "=====================================================\n" +
@@ -153,12 +184,35 @@ public class BootstrapStandby implements Tool, Configurable {
         "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
         "=====================================================");
 
+    // Ensure the other NN is active - we can't force it to roll edit logs
+    // below if it's not active.
+    if (!isOtherNNActive()) {
+      String err = "NameNode " + nsId + "." + nnId + " at " + otherIpcAddr +
+          " is not currently in ACTIVE state.";
+      if (!interactive) {
+        LOG.fatal(err + " Please transition it to " +
+            "active before attempting to bootstrap a standby node.");
+        return ERR_CODE_OTHER_NN_NOT_ACTIVE;
+      }
+      
+      System.err.println(err);
+      if (ToolRunner.confirmPrompt(
+            "Do you want to automatically transition it to active now?")) {
+        transitionOtherNNActive();
+      } else {
+        LOG.fatal("User aborted. Exiting without bootstrapping standby.");
+        return ERR_CODE_OTHER_NN_NOT_ACTIVE;
+      }
+    }
+    
+
+    
     // Check with the user before blowing away data.
     if (!NameNode.confirmFormat(
             Sets.union(Sets.newHashSet(dirsToFormat),
                 Sets.newHashSet(editUrisToFormat)),
             force, interactive)) {
-      return 1;
+      return ERR_CODE_ALREADY_FORMATTED;
     }
 
     // Force the active to roll its log
@@ -180,7 +234,7 @@ public class BootstrapStandby implements Tool, Configurable {
     // Ensure that we have enough edits already in the shared directory to
     // start up from the last checkpoint on the active.
     if (!checkLogsAvailableForRead(image, imageTxId, rollTxId)) {
-      return 1;
+      return ERR_CODE_LOGS_UNAVAILABLE;
     }
     
     image.getStorage().writeTransactionIdFileToStorage(rollTxId);
@@ -191,6 +245,14 @@ public class BootstrapStandby implements Tool, Configurable {
         storage, true);
     image.saveDigestAndRenameCheckpointImage(imageTxId, hash);
     return 0;
+  }
+
+  
+  private void transitionOtherNNActive()
+      throws AccessControlException, ServiceFailedException, IOException {
+    LOG.info("Transitioning the running namenode to active...");
+    createHAProtocolProxy().transitionToActive();    
+    LOG.info("Successful");
   }
 
   private boolean checkLogsAvailableForRead(FSImage image, long imageTxId,
@@ -225,12 +287,14 @@ public class BootstrapStandby implements Tool, Configurable {
     }
   }
 
-  private void checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
-    if (nsInfo.getLayoutVersion() != HdfsConstants.LAYOUT_VERSION) {
-      throw new IOException("Layout version on remote node (" +
-          nsInfo.getLayoutVersion() + ") does not match " +
-          "this node's layout version (" + HdfsConstants.LAYOUT_VERSION + ")");
-    }
+  private boolean checkLayoutVersion(NamespaceInfo nsInfo) throws IOException {
+    return (nsInfo.getLayoutVersion() == HdfsConstants.LAYOUT_VERSION);
+  }
+  
+  private boolean isOtherNNActive()
+      throws AccessControlException, IOException {
+    HAServiceStatus status = createHAProtocolProxy().getServiceStatus();
+    return status.getState() == HAServiceState.ACTIVE;
   }
 
   private void parseConfAndFindOtherNN() throws IOException {
