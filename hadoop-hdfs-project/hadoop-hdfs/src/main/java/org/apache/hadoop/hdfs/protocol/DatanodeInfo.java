@@ -17,19 +17,11 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Date;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
@@ -78,11 +70,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
 
   protected AdminStates adminState;
 
-  public DatanodeInfo() {
-    super();
-    adminState = null;
-  }
-  
   public DatanodeInfo(DatanodeInfo from) {
     super(from);
     this.capacity = from.getCapacity();
@@ -355,50 +342,6 @@ public class DatanodeInfo extends DatanodeID implements Node {
    */
   public int getLevel() { return level; }
   public void setLevel(int level) {this.level = level;}
-
-  /////////////////////////////////////////////////
-  // Writable
-  /////////////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (DatanodeInfo.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new DatanodeInfo(); }
-       });
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    out.writeLong(capacity);
-    out.writeLong(dfsUsed);
-    out.writeLong(remaining);
-    out.writeLong(blockPoolUsed);
-    out.writeLong(lastUpdate);
-    out.writeInt(xceiverCount);
-    Text.writeString(out, location);
-    WritableUtils.writeEnum(out, getAdminState());
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    this.capacity = in.readLong();
-    this.dfsUsed = in.readLong();
-    this.remaining = in.readLong();
-    this.blockPoolUsed = in.readLong();
-    this.lastUpdate = in.readLong();
-    this.xceiverCount = in.readInt();
-    this.location = Text.readString(in);
-    setAdminState(WritableUtils.readEnum(in, AdminStates.class));
-  }
-
-  /** Read a DatanodeInfo */
-  public static DatanodeInfo read(DataInput in) throws IOException {
-    final DatanodeInfo d = new DatanodeInfo();
-    d.readFields(in);
-    return d;
-  }
 
   @Override
   public int hashCode() {

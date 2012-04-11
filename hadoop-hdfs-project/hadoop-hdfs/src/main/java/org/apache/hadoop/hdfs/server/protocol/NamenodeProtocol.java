@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
 /*****************************************************************************
@@ -41,9 +40,6 @@ public interface NamenodeProtocol {
    * Until version 6L, this class served as both
    * the client interface to the NN AND the RPC protocol used to 
    * communicate with the NN.
-   * 
-   * Post version 70 (release 23 of Hadoop), the protocol is implemented in
-   * {@literal ../protocolR23Compatible/ClientNamenodeWireProtocol}
    * 
    * This class is used by both the DFSClient and the 
    * NN server side to insulate from the protocol serialization.

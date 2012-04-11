@@ -26,6 +26,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -47,7 +48,7 @@ public class TestBlockInfo {
 
     final int MAX_BLOCKS = 10;
 
-    DatanodeDescriptor dd = new DatanodeDescriptor();
+    DatanodeDescriptor dd = DFSTestUtil.getLocalDatanodeDescriptor();
     ArrayList<Block> blockList = new ArrayList<Block>(MAX_BLOCKS);
     ArrayList<BlockInfo> blockInfoList = new ArrayList<BlockInfo>();
     int headIndex;

@@ -17,16 +17,8 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * A block and the full path information to the block data file and
@@ -34,19 +26,10 @@ import org.apache.hadoop.io.WritableFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class BlockLocalPathInfo implements Writable {
-  static final WritableFactory FACTORY = new WritableFactory() {
-    public Writable newInstance() { return new BlockLocalPathInfo(); }
-  };
-  static {                                      // register a ctor
-    WritableFactories.setFactory(BlockLocalPathInfo.class, FACTORY);
-  }
-
+public class BlockLocalPathInfo {
   private ExtendedBlock block;
   private String localBlockPath = "";  // local file storing the data
   private String localMetaPath = "";   // local file storing the checksum
-
-  public BlockLocalPathInfo() {}
 
   /**
    * Constructs BlockLocalPathInfo.
@@ -77,21 +60,6 @@ public class BlockLocalPathInfo implements Writable {
    */
   public String getMetaPath() {return localMetaPath;}
 
-  @Override
-  public void write(DataOutput out) throws IOException {
-    block.write(out);
-    Text.writeString(out, localBlockPath);
-    Text.writeString(out, localMetaPath);
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    block = new ExtendedBlock();
-    block.readFields(in);
-    localBlockPath = Text.readString(in);
-    localMetaPath = Text.readString(in);
-  }
-  
   /**
    * Get number of bytes in the block.
    * @return Number of bytes in the block.

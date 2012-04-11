@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -441,9 +442,9 @@ public class TestPBHelper {
     Block[] blocks = new Block[] { new Block(21), new Block(22) };
     DatanodeInfo[][] dnInfos = new DatanodeInfo[][] { new DatanodeInfo[1],
         new DatanodeInfo[2] };
-    dnInfos[0][0] = new DatanodeInfo();
-    dnInfos[1][0] = new DatanodeInfo();
-    dnInfos[1][1] = new DatanodeInfo();
+    dnInfos[0][0] = DFSTestUtil.getLocalDatanodeInfo();
+    dnInfos[1][0] = DFSTestUtil.getLocalDatanodeInfo();
+    dnInfos[1][1] = DFSTestUtil.getLocalDatanodeInfo();
     BlockCommand bc = new BlockCommand(DatanodeProtocol.DNA_TRANSFER, "bp1",
         blocks, dnInfos);
     BlockCommandProto bcProto = PBHelper.convert(bc);

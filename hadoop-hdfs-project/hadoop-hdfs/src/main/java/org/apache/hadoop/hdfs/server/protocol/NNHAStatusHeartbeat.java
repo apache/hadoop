@@ -17,25 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class NNHAStatusHeartbeat implements Writable {
+public class NNHAStatusHeartbeat {
 
   private State state;
   private long txid = HdfsConstants.INVALID_TXID;
-  
-  public NNHAStatusHeartbeat() {
-  }
   
   public NNHAStatusHeartbeat(State state, long txid) {
     this.state = state;
@@ -50,21 +41,6 @@ public class NNHAStatusHeartbeat implements Writable {
     return txid;
   }
   
-  ///////////////////////////////////////////
-  // Writable
-  ///////////////////////////////////////////
-  @Override
-  public void write(DataOutput out) throws IOException {
-    WritableUtils.writeEnum(out, state);
-    out.writeLong(txid);
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    state = WritableUtils.readEnum(in, State.class);
-    txid = in.readLong();
-  }
-
   @InterfaceAudience.Private
   public enum State {
     ACTIVE,
