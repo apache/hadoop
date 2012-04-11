@@ -507,7 +507,7 @@ public class JobHistoryUtils {
     StringBuffer sb = new StringBuffer();
     if (address.getAddress().isAnyLocalAddress() || 
         address.getAddress().isLoopbackAddress()) {
-      sb.append(InetAddress.getLocalHost().getHostAddress());
+      sb.append(InetAddress.getLocalHost().getCanonicalHostName());
     } else {
       sb.append(address.getHostName());
     }

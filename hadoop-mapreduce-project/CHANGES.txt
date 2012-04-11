@@ -208,6 +208,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4017. Add jobname to jobsummary log (tgraves and Koji Noguchi
     via bobby)
 
+    MAPREDUCE-4040. History links should use hostname rather than IP address.
+    (Bhallamudi Venkata Siva Kamesh via sseth)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
