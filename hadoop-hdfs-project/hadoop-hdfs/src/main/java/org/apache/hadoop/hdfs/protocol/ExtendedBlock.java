@@ -17,33 +17,17 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DeprecatedUTF8;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * Identifies a Block uniquely across the block pools
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class ExtendedBlock implements Writable {
+public class ExtendedBlock {
   private String poolId;
   private Block block;
-
-  static { // register a ctor
-    WritableFactories.setFactory(ExtendedBlock.class, new WritableFactory() {
-      public Writable newInstance() {
-        return new ExtendedBlock();
-      }
-    });
-  }
 
   public ExtendedBlock() {
     this(null, 0, 0, 0);
@@ -68,28 +52,6 @@ public class ExtendedBlock implements Writable {
     block = new Block(blkid, len, genstamp);
   }
 
-  public void write(DataOutput out) throws IOException {
-    DeprecatedUTF8.writeString(out, poolId);
-    block.writeHelper(out);
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    this.poolId = DeprecatedUTF8.readString(in);
-    block.readHelper(in);
-  }
-
-  // Write only the identifier part of the block
-  public void writeId(DataOutput out) throws IOException {
-    DeprecatedUTF8.writeString(out, poolId);
-    block.writeId(out);
-  }
-
-  // Read only the identifier part of the block
-  public void readId(DataInput in) throws IOException {
-    this.poolId = DeprecatedUTF8.readString(in);
-    block.readId(in);
-  }
-  
   public String getBlockPoolId() {
     return poolId;
   }

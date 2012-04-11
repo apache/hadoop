@@ -17,32 +17,17 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /** Interface that represents the over the wire information for a file.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class HdfsFileStatus implements Writable {
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (HdfsFileStatus.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new HdfsFileStatus(); }
-       });
-  }
+public class HdfsFileStatus {
 
   private byte[] path;  // local name of the inode that's encoded in java UTF8
   private byte[] symlink; // symlink target encoded in java UTF8 or null
@@ -58,13 +43,6 @@ public class HdfsFileStatus implements Writable {
   
   public static final byte[] EMPTY_NAME = new byte[0];
 
-  /**
-   * default constructor
-   */
-  public HdfsFileStatus() { 
-    this(0, false, 0, 0, 0, 0, null, null, null, null, null); 
-  }
-  
   /**
    * Constructor
    * @param length the number of bytes the file has
@@ -241,51 +219,5 @@ public class HdfsFileStatus implements Writable {
   
   final public byte[] getSymlinkInBytes() {
     return symlink;
-  }
-
-  //////////////////////////////////////////////////
-  // Writable
-  //////////////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(path.length);
-    out.write(path);
-    out.writeLong(length);
-    out.writeBoolean(isdir);
-    out.writeShort(block_replication);
-    out.writeLong(blocksize);
-    out.writeLong(modification_time);
-    out.writeLong(access_time);
-    permission.write(out);
-    Text.writeString(out, owner);
-    Text.writeString(out, group);
-    out.writeBoolean(isSymlink());
-    if (isSymlink()) {
-      out.writeInt(symlink.length);
-      out.write(symlink);
-    }
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    int numOfBytes = in.readInt();
-    if (numOfBytes == 0) {
-      this.path = EMPTY_NAME;
-    } else {
-      this.path = new byte[numOfBytes];
-      in.readFully(path);
-    }
-    this.length = in.readLong();
-    this.isdir = in.readBoolean();
-    this.block_replication = in.readShort();
-    blocksize = in.readLong();
-    modification_time = in.readLong();
-    access_time = in.readLong();
-    permission.readFields(in);
-    owner = Text.readString(in);
-    group = Text.readString(in);
-    if (in.readBoolean()) {
-      numOfBytes = in.readInt();
-      this.symlink = new byte[numOfBytes];
-      in.readFully(symlink);
-    }
   }
 }

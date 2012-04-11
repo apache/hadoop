@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.ArrayList;
 
@@ -57,14 +54,6 @@ public class BlockRecoveryCommand extends DatanodeCommand {
   @InterfaceStability.Evolving
   public static class RecoveringBlock extends LocatedBlock {
     private long newGenerationStamp;
-
-    /**
-     * Create empty RecoveringBlock.
-     */
-    public RecoveringBlock() {
-      super();
-      newGenerationStamp = -1L;
-    }
 
     /**
      * Create RecoveringBlock.

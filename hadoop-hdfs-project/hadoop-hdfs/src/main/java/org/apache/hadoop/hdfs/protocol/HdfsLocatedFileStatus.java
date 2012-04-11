@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -33,12 +29,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 @InterfaceStability.Evolving
 public class HdfsLocatedFileStatus extends HdfsFileStatus {
   private LocatedBlocks locations;
-  
-  /**
-   * Default constructor
-   */
-  public HdfsLocatedFileStatus() {
-  }
   
   /**
    * Constructor
@@ -69,22 +59,4 @@ public class HdfsLocatedFileStatus extends HdfsFileStatus {
 	public LocatedBlocks getBlockLocations() {
 		return locations;
 	}
-	
-  //////////////////////////////////////////////////
-  // Writable
-  //////////////////////////////////////////////////
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    if (!isDir() && !isSymlink()) {
-      locations.write(out);
-    }
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    if (!isDir() && !isSymlink()) {
-      locations = new LocatedBlocks();
-      locations.readFields(in);
-    }
-  }
 }

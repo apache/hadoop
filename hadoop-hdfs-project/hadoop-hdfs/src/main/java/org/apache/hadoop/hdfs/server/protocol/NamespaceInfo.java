@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -28,11 +26,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
-import org.apache.hadoop.hdfs.DeprecatedUTF8;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * NamespaceInfo is returned by the name-node in reply 
@@ -76,31 +69,6 @@ public class NamespaceInfo extends StorageInfo {
     return blockPoolID;
   }
 
-  /////////////////////////////////////////////////
-  // Writable
-  /////////////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (NamespaceInfo.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new NamespaceInfo(); }
-       });
-  }
-
-  public void write(DataOutput out) throws IOException {
-    DeprecatedUTF8.writeString(out, getBuildVersion());
-    super.write(out);
-    out.writeInt(getDistributedUpgradeVersion());
-    WritableUtils.writeString(out, blockPoolID);
-  }
-
-  public void readFields(DataInput in) throws IOException {
-    buildVersion = DeprecatedUTF8.readString(in);
-    super.readFields(in);
-    distributedUpgradeVersion = in.readInt();
-    blockPoolID = WritableUtils.readString(in);
-  }
-  
   public String toString(){
     return super.toString() + ";bpid=" + blockPoolID;
   }

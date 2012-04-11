@@ -62,7 +62,7 @@ public class TestDFSUtil {
    */
   @Test
   public void testLocatedBlocks2Locations() {
-    DatanodeInfo d = new DatanodeInfo();
+    DatanodeInfo d = DFSTestUtil.getLocalDatanodeInfo();
     DatanodeInfo[] ds = new DatanodeInfo[1];
     ds[0] = d;
 

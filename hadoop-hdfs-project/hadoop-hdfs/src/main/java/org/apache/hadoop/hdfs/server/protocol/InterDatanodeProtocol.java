@@ -42,9 +42,6 @@ public interface InterDatanodeProtocol {
    * the interface to the DN AND the RPC protocol used to communicate with the 
    * DN.
    * 
-   * Post version 6L (release 23 of Hadoop), the protocol is implemented in
-   * {@literal ../protocolR23Compatible/InterDatanodeWireProtocol}
-   * 
    * This class is used by both the DN to insulate from the protocol 
    * serialization.
    * 

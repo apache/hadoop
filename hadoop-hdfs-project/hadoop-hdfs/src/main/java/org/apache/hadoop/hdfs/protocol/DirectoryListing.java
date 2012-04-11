@@ -16,15 +16,8 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * This class defines a partial listing of a directory to support
@@ -32,23 +25,9 @@ import org.apache.hadoop.io.WritableFactory;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DirectoryListing implements Writable {
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (DirectoryListing.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new DirectoryListing(); }
-       });
-  }
-
+public class DirectoryListing {
   private HdfsFileStatus[] partialListing;
   private int remainingEntries;
-  
-  /**
-   * default constructor
-   */
-  public DirectoryListing() {
-  }
   
   /**
    * constructor
@@ -102,40 +81,5 @@ public class DirectoryListing implements Writable {
       return null;
     }
     return partialListing[partialListing.length-1].getLocalNameInBytes();
-  }
-
-  // Writable interface
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    int numEntries = in.readInt();
-    partialListing = new HdfsFileStatus[numEntries];
-    if (numEntries !=0 ) {
-      boolean hasLocation = in.readBoolean();
-      for (int i=0; i<numEntries; i++) {
-        if (hasLocation) {
-          partialListing[i] = new HdfsLocatedFileStatus();
-        } else {
-          partialListing[i] = new HdfsFileStatus();
-        }
-        partialListing[i].readFields(in);
-      }
-    }
-    remainingEntries = in.readInt();
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(partialListing.length);
-    if (partialListing.length != 0) { 
-       if (partialListing[0] instanceof HdfsLocatedFileStatus) {
-         out.writeBoolean(true);
-       } else {
-         out.writeBoolean(false);
-       }
-       for (HdfsFileStatus fileStatus : partialListing) {
-         fileStatus.write(out);
-       }
-    }
-    out.writeInt(remainingEntries);
   }
 }

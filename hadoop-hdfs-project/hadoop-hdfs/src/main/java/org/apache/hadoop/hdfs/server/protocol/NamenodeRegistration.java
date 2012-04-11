@@ -18,14 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -43,10 +35,6 @@ implements NodeRegistration {
   String rpcAddress;          // RPC address of the node
   String httpAddress;         // HTTP address of the node
   NamenodeRole role;          // node role
-
-  public NamenodeRegistration() {
-    super();
-  }
 
   public NamenodeRegistration(String address,
                               String httpAddress,
@@ -94,32 +82,5 @@ implements NodeRegistration {
 
   public boolean isRole(NamenodeRole that) {
     return role.equals(that);
-  }
-
-  /////////////////////////////////////////////////
-  // Writable
-  /////////////////////////////////////////////////
-  static {
-    WritableFactories.setFactory
-      (NamenodeRegistration.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new NamenodeRegistration(); }
-       });
-  }
-
-  @Override // Writable
-  public void write(DataOutput out) throws IOException {
-    Text.writeString(out, rpcAddress);
-    Text.writeString(out, httpAddress);
-    Text.writeString(out, role.name());
-    super.write(out);
-  }
-
-  @Override // Writable
-  public void readFields(DataInput in) throws IOException {
-    rpcAddress = Text.readString(in);
-    httpAddress = Text.readString(in);
-    role = NamenodeRole.valueOf(Text.readString(in));
-    super.readFields(in);
   }
 }

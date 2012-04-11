@@ -234,6 +234,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3094. add -nonInteractive and -force option to namenode -format
     command (Arpit Gupta via todd)
 
+    HDFS-3244. Remove dead writable code from hdfs/protocol. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

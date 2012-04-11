@@ -18,17 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
 /**
  * Replica recovery information.
@@ -37,9 +30,6 @@ import org.apache.hadoop.io.WritableFactory;
 @InterfaceStability.Evolving
 public class ReplicaRecoveryInfo extends Block {
   private ReplicaState originalState;
-
-  public ReplicaRecoveryInfo() {
-  }
 
   public ReplicaRecoveryInfo(long blockId, long diskLen, long gs, ReplicaState rState) {
     set(blockId, diskLen, gs);
@@ -58,28 +48,5 @@ public class ReplicaRecoveryInfo extends Block {
   @Override
   public int hashCode() {
     return super.hashCode();
-  }
-
-  ///////////////////////////////////////////
-  // Writable
-  ///////////////////////////////////////////
-  static {                                      // register a ctor
-    WritableFactories.setFactory
-      (ReplicaRecoveryInfo.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new ReplicaRecoveryInfo(); }
-       });
-  }
-
- @Override
-  public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
-    originalState = ReplicaState.read(in); 
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    super.write(out);
-    originalState.write(out);
   }
 }

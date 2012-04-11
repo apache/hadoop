@@ -157,8 +157,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
    */
   private boolean disallowed = false;
 
-  public DatanodeDescriptor() {}
-  
   /**
    * DatanodeDescriptor constructor
    * @param nodeID id of the data node
