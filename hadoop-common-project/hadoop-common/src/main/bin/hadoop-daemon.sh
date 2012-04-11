@@ -167,11 +167,9 @@ case $startStop in
         kill `cat $pid`
       else
         echo no $command to stop
-        exit 1
       fi
     else
       echo no $command to stop
-      exit 1
     fi
     ;;
 

@@ -230,6 +230,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8264. Remove irritating double double quotes in front of hostname
     (Bernd Fondermann via bobby)
 
+    HADOOP-8270. hadoop-daemon.sh stop action should return 0 for an
+    already stopped service. (Roman Shaposhnik via eli)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
