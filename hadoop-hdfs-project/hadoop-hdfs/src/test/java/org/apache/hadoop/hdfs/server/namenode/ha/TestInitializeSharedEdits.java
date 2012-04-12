@@ -19,17 +19,22 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
@@ -48,7 +53,10 @@ public class TestInitializeSharedEdits {
   @Before
   public void setupCluster() throws IOException {
     conf = new Configuration();
-
+    conf.setInt(DFSConfigKeys.DFS_HA_LOGROLL_PERIOD_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    HAUtil.setAllowStandbyReads(conf, true);
+    
     MiniDFSNNTopology topology = MiniDFSNNTopology.simpleHATopology();
     
     cluster = new MiniDFSCluster.Builder(conf)
@@ -56,11 +64,8 @@ public class TestInitializeSharedEdits {
       .numDataNodes(0)
       .build();
     cluster.waitActive();
-  
-    cluster.shutdownNameNode(0);
-    cluster.shutdownNameNode(1);
-    File sharedEditsDir = new File(cluster.getSharedEditsDir(0, 1));
-    assertTrue(FileUtil.fullyDelete(sharedEditsDir));
+
+    shutdownClusterAndRemoveSharedEditsDir();
   }
   
   @After
@@ -70,8 +75,14 @@ public class TestInitializeSharedEdits {
     }
   }
   
-  @Test
-  public void testInitializeSharedEdits() throws Exception {
+  private void shutdownClusterAndRemoveSharedEditsDir() throws IOException {
+    cluster.shutdownNameNode(0);
+    cluster.shutdownNameNode(1);
+    File sharedEditsDir = new File(cluster.getSharedEditsDir(0, 1));
+    assertTrue(FileUtil.fullyDelete(sharedEditsDir));
+  }
+  
+  private void assertCannotStartNameNodes() {
     // Make sure we can't currently start either NN.
     try {
       cluster.restartNameNode(0, false);
@@ -89,29 +100,55 @@ public class TestInitializeSharedEdits {
       GenericTestUtils.assertExceptionContains(
           "Cannot start an HA namenode with name dirs that need recovery", ioe);
     }
-    
-    // Initialize the shared edits dir.
-    assertFalse(NameNode.initializeSharedEdits(conf));
-    
+  }
+  
+  private void assertCanStartHaNameNodes(String pathSuffix)
+      throws ServiceFailedException, IOException, URISyntaxException,
+      InterruptedException {
     // Now should be able to start both NNs. Pass "false" here so that we don't
     // try to waitActive on all NNs, since the second NN doesn't exist yet.
     cluster.restartNameNode(0, false);
     cluster.restartNameNode(1, true);
     
     // Make sure HA is working.
-    cluster.transitionToActive(0);
+    cluster.getNameNode(0).getRpcServer().transitionToActive();
     FileSystem fs = null;
     try {
+      Path newPath = new Path(TEST_PATH, pathSuffix);
       fs = HATestUtil.configureFailoverFs(cluster, conf);
-      assertTrue(fs.mkdirs(TEST_PATH));
-      cluster.transitionToStandby(0);
-      cluster.transitionToActive(1);
-      assertTrue(fs.isDirectory(TEST_PATH));
+      assertTrue(fs.mkdirs(newPath));
+      HATestUtil.waitForStandbyToCatchUp(cluster.getNameNode(0),
+          cluster.getNameNode(1));
+      assertTrue(NameNodeAdapter.getFileInfo(cluster.getNameNode(1),
+          newPath.toString(), false).isDir());
     } finally {
       if (fs != null) {
         fs.close();
       }
     }
+  }
+  
+  @Test
+  public void testInitializeSharedEdits() throws Exception {
+    assertCannotStartNameNodes();
+    
+    // Initialize the shared edits dir.
+    assertFalse(NameNode.initializeSharedEdits(cluster.getConfiguration(0)));
+    
+    assertCanStartHaNameNodes("1");
+    
+    // Now that we've done a metadata operation, make sure that deleting and
+    // re-initializing the shared edits dir will let the standby still start.
+    
+    shutdownClusterAndRemoveSharedEditsDir();
+    
+    assertCannotStartNameNodes();
+    
+    // Re-initialize the shared edits dir.
+    assertFalse(NameNode.initializeSharedEdits(cluster.getConfiguration(0)));
+    
+    // Should *still* be able to start both NNs
+    assertCanStartHaNameNodes("2");
   }
   
   @Test

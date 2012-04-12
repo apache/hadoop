@@ -52,6 +52,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk)
+
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
                     become slow in some cases (ravigummadi).
 
@@ -319,6 +321,13 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3932. Fix the TaskAttempt state machine to handle
     CONTIANER_LAUNCHED and CONTIANER_LAUNCH_FAILED events in additional
     states. (Robert Joseph Evans via sseth)
+
+    MAPREDUCE-4140. mapreduce classes incorrectly importing
+    "clover.org.apache.*" classes. (Patrick Hunt via tomwhite)
+
+    MAPREDUCE-4050. For tasks without assigned containers, changes the node
+    text on the UI to N/A instead of a link to null. (Bhallamudi Venkata Siva
+    Kamesh via sseth)
 
 Release 0.23.2 - UNRELEASED
 

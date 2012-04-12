@@ -311,10 +311,12 @@ public class FSEditLog  {
       endCurrentLogSegment(true);
     }
     
-    try {
-      journalSet.close();
-    } catch (IOException ioe) {
-      LOG.warn("Error closing journalSet", ioe);
+    if (!journalSet.isEmpty()) {
+      try {
+        journalSet.close();
+      } catch (IOException ioe) {
+        LOG.warn("Error closing journalSet", ioe);
+      }
     }
 
     state = State.CLOSED;
@@ -813,9 +815,8 @@ public class FSEditLog  {
   }
   
   /**
-   * Used only by unit tests.
+   * Get all the journals this edit log is currently operating on.
    */
-  @VisibleForTesting
   synchronized List<JournalAndStream> getJournals() {
     return journalSet.getAllJournalStreams();
   }

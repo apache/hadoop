@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -196,8 +197,7 @@ public class TestDelegationTokensWithHA {
     // check that the token selected for one of the physical IPC addresses
     // matches the one we received
     InetSocketAddress addr = nn0.getNameNodeAddress();
-    Text ipcDtService = new Text(
-        addr.getAddress().getHostAddress() + ":" + addr.getPort());
+    Text ipcDtService = SecurityUtil.buildTokenService(addr);
     Token<DelegationTokenIdentifier> token2 =
         DelegationTokenSelector.selectHdfsDelegationToken(ipcDtService, ugi);
     assertNotNull(token2);
@@ -212,8 +212,15 @@ public class TestDelegationTokensWithHA {
    */
   @Test
   public void testDFSGetCanonicalServiceName() throws Exception {
-    assertEquals(fs.getCanonicalServiceName(), 
-        HATestUtil.getLogicalUri(cluster).getHost());
+    URI hAUri = HATestUtil.getLogicalUri(cluster);
+    String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri).toString();
+    assertEquals(haService, dfs.getCanonicalServiceName());
+    Token<?> token = dfs.getDelegationToken(
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    assertEquals(haService, token.getService().toString());
+    // make sure the logical uri is handled correctly
+    token.renew(dfs.getConf());
+    token.cancel(dfs.getConf());
   }
   
   enum TokenTestAction {

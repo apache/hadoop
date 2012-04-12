@@ -18,14 +18,17 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -41,7 +44,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -49,6 +51,9 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
+import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -61,6 +66,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
@@ -749,9 +756,10 @@ public class NameNode {
       boolean force) {
     return initializeSharedEdits(conf, force, false);
   }
-  
+
   /**
-   * Format a new shared edits dir.
+   * Format a new shared edits dir and copy in enough edit log segments so that
+   * the standby NN can start up.
    * 
    * @param conf configuration
    * @param force format regardless of whether or not the shared edits dir exists
@@ -785,8 +793,19 @@ public class NameNode {
           existingStorage.getBlockPoolID(),
           existingStorage.getCTime(),
           existingStorage.getDistributedUpgradeVersion()));
-    } catch (Exception e) {
-      LOG.error("Could not format shared edits dir", e);
+      
+      // Need to make sure the edit log segments are in good shape to initialize
+      // the shared edits dir.
+      fsns.getFSImage().getEditLog().close();
+      fsns.getFSImage().getEditLog().initJournalsForWrite();
+      fsns.getFSImage().getEditLog().recoverUnclosedStreams();
+      
+      if (copyEditLogSegmentsToSharedDir(fsns, sharedEditsDirs,
+          newSharedStorage, conf)) {
+        return true; // aborted
+      }
+    } catch (IOException ioe) {
+      LOG.error("Could not initialize shared edits dir", ioe);
       return true; // aborted
     } finally {
       // Have to unlock storage explicitly for the case when we're running in a
@@ -797,6 +816,44 @@ public class NameNode {
         } catch (IOException ioe) {
           LOG.warn("Could not unlock storage directories", ioe);
           return true; // aborted
+        }
+      }
+    }
+    return false; // did not abort
+  }
+  
+  private static boolean copyEditLogSegmentsToSharedDir(FSNamesystem fsns,
+      Collection<URI> sharedEditsDirs, NNStorage newSharedStorage,
+      Configuration conf) throws FileNotFoundException, IOException {
+    // Copy edit log segments into the new shared edits dir.
+    for (JournalAndStream jas : fsns.getFSImage().getEditLog().getJournals()) {
+      FileJournalManager fjm = null;
+      if (!(jas.getManager() instanceof FileJournalManager)) {
+        LOG.error("Cannot populate shared edits dir from non-file " +
+            "journal manager: " + jas.getManager());
+        return true; // aborted
+      } else {
+        fjm = (FileJournalManager) jas.getManager();
+      }
+      for (EditLogFile elf : fjm.getLogFiles(fsns.getFSImage()
+          .getMostRecentCheckpointTxId())) {
+        File editLogSegment = elf.getFile();
+        for (URI sharedEditsUri : sharedEditsDirs) {
+          StorageDirectory sharedEditsDir = newSharedStorage
+              .getStorageDirectory(sharedEditsUri);
+          File targetFile = new File(sharedEditsDir.getCurrentDir(),
+              editLogSegment.getName());
+          if (!targetFile.exists()) {
+            InputStream in = null;
+            OutputStream out = null;
+            try {
+              in = new FileInputStream(editLogSegment);
+              out = new AtomicFileOutputStream(targetFile);
+              IOUtils.copyBytes(in, out, conf);
+            } finally {
+              IOUtils.cleanup(LOG, in, out);
+            }
+          }
         }
       }
     }

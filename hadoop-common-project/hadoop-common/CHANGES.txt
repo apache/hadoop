@@ -346,6 +346,13 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8264. Remove irritating double double quotes in front of hostname
     (Bernd Fondermann via bobby)
 
+    HADOOP-8270. hadoop-daemon.sh stop action should return 0 for an
+    already stopped service. (Roman Shaposhnik via eli)
+
+    HADOOP-8144. pseudoSortByDistance in NetworkTopology doesn't work
+    properly if no local node and first node is local rack node.
+    (Junping Du)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -424,6 +431,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8014. ViewFileSystem does not correctly implement getDefaultBlockSize,
     getDefaultReplication, getContentSummary (John George via bobby)
+
+    HADOOP-7510. Tokens should use original hostname provided instead of ip
+    (Daryn Sharp via bobby)
 
 Release 0.23.2 - UNRELEASED 
 

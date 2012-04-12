@@ -370,6 +370,12 @@ Release 2.0.0 - UNRELEASED
     HDFS-3179.  Improve the exception message thrown by DataStreamer when 
     it failed to add a datanode.  (szetszwo)
 
+    HDFS-2983. Relax the build version check to permit rolling upgrades within
+    a release. (atm)
+
+    HDFS-3259. NameNode#initializeSharedEdits should populate shared edits dir
+    with edit log segments. (atm)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -494,6 +500,14 @@ Release 2.0.0 - UNRELEASED
     (Colin Patrick McCabe via todd)
 
     HDFS-2696. Fix the fuse-fds build. (Bruno Mahé via eli)
+
+    HDFS-3260. TestDatanodeRegistration should set minimum DN version in
+    addition to minimum NN version. (atm)
+
+    HDFS-3255. HA DFS returns wrong token service (Daryn Sharp via todd)
+
+    HDFS-3256. HDFS considers blocks under-replicated if topology script is
+    configured with only 1 rack. (atm)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
