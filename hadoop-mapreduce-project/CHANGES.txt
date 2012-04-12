@@ -221,6 +221,9 @@ Release 0.23.3 - UNRELEASED
     CONTIANER_LAUNCHED and CONTIANER_LAUNCH_FAILED events in additional
     states. (Robert Joseph Evans via sseth)
 
+    MAPREDUCE-4140. mapreduce classes incorrectly importing
+    "clover.org.apache.*" classes. (Patrick Hunt via tomwhite)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
