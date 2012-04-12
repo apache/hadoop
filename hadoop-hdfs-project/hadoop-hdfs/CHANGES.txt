@@ -381,6 +381,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3260. TestDatanodeRegistration should set minimum DN version in
     addition to minimum NN version. (atm)
 
+    HDFS-3255. HA DFS returns wrong token service (Daryn Sharp via todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
