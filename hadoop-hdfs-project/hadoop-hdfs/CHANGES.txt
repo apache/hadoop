@@ -246,6 +246,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2983. Relax the build version check to permit rolling upgrades within a release. (atm)
 
+    HDFS-3259. NameNode#initializeSharedEdits should populate shared edits dir
+    with edit log segments. (atm)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
