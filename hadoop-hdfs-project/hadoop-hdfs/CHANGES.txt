@@ -386,6 +386,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3255. HA DFS returns wrong token service (Daryn Sharp via todd)
 
+    HDFS-3256. HDFS considers blocks under-replicated if topology script is
+    configured with only 1 rack. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
