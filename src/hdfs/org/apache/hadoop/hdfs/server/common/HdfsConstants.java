@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.common;
 
+import org.apache.hadoop.hdfs.server.namenode.MetaRecoveryContext;
+
 
 /************************************
  * Some handy internal HDFS constants
@@ -37,13 +39,32 @@ public interface HdfsConstants {
     FORMAT  ("-format"),
     REGULAR ("-regular"),
     UPGRADE ("-upgrade"),
+    RECOVER ("-recover"),
+    FORCE ("-force"),
     ROLLBACK("-rollback"),
     FINALIZE("-finalize"),
     IMPORT  ("-importCheckpoint");
     
+    // Used only with recovery option
+    private int force = MetaRecoveryContext.FORCE_NONE;
+
     private String name = null;
     private StartupOption(String arg) {this.name = arg;}
     public String getName() {return name;}
+
+    public MetaRecoveryContext createRecoveryContext() {
+      if (!name.equals(RECOVER.name))
+        return null;
+      return new MetaRecoveryContext(force);
+    }
+
+    public void setForce(int force) {
+      this.force = force;
+    }
+    
+    public int getForce() {
+      return this.force;
+    }
   }
 
   // Timeouts for communicating with DataNode for streaming writes/reads

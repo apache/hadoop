@@ -360,9 +360,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   FSNamesystem(NameNode nn, Configuration conf) throws IOException {
     try {
       initialize(nn, conf);
-    } catch(IOException e) {
+    } catch (IOException e) {
       LOG.error(getClass().getSimpleName() + " initialization failed.", e);
       close();
+      shutdown();
+      throw e;
+    } catch (RuntimeException e) {
+      LOG.error(getClass().getSimpleName() + " initialization failed.", e);
+      close();
+      shutdown();
       throw e;
     }
   }

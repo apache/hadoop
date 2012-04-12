@@ -488,7 +488,8 @@ public class FSEditLog {
    * This is where we apply edits that we've been writing to disk all
    * along.
    */
-  static int loadFSEdits(EditLogInputStream edits) throws IOException {
+  static int loadFSEdits(EditLogInputStream edits,
+      MetaRecoveryContext recovery) throws IOException {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
     int numEdits = 0;
@@ -546,7 +547,8 @@ public class FSEditLog {
           opcode = in.readByte();
           if (opcode == OP_INVALID) {
             FSNamesystem.LOG.info("Invalid opcode, reached end of edit log " +
-                                   "Number of transactions found " + numEdits);
+                       "Number of transactions found: " + numEdits + ".  " +
+                       "Bytes read: " + tracker.getPos());
             break; // no more transactions
           }
         } catch (EOFException e) {
@@ -888,8 +890,8 @@ public class FSEditLog {
         }
       }
       String errorMessage = sb.toString();
-      FSImage.LOG.error(errorMessage);
-      throw new IOException(errorMessage, t);
+      FSImage.LOG.error(errorMessage, t);
+      MetaRecoveryContext.editLogLoaderPrompt(errorMessage, recovery);
     } finally {
       in.close();
     }

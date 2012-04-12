@@ -276,6 +276,9 @@ public class MiniDFSCluster {
                    StaticMapping.class, DNSToSwitchMapping.class);
     nameNode = NameNode.createNameNode(args, conf);
     
+    if (operation == StartupOption.RECOVER) {
+      return;
+    }
     // Start the DataNodes
     startDataNodes(conf, numDataNodes, manageDataDfsDirs, 
                     operation, racks, hosts, simulatedCapacities);

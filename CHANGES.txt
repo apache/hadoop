@@ -19,6 +19,8 @@ Release 1.1.0 - unreleased
     HDFS-3148. The client should be able to use multiple local interfaces
     for data transfer. (eli)
 
+    HDFS-3055. Implement recovery mode (Colin Patrick McCabe via todd)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
