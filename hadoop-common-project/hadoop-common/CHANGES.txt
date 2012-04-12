@@ -316,6 +316,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8014. ViewFileSystem does not correctly implement getDefaultBlockSize,
     getDefaultReplication, getContentSummary (John George via bobby)
 
+    HADOOP-7510. Tokens should use original hostname provided instead of ip
+    (Daryn Sharp via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES

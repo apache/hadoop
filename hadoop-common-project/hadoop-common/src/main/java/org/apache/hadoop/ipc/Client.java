@@ -53,7 +53,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.RpcPayloadHeader.*;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -243,8 +242,8 @@ public class Client {
       this.remoteId = remoteId;
       this.server = remoteId.getAddress();
       if (server.isUnresolved()) {
-        throw NetUtils.wrapException(remoteId.getAddress().getHostName(),
-            remoteId.getAddress().getPort(),
+        throw NetUtils.wrapException(server.getHostName(),
+            server.getPort(),
             null,
             0,
             new UnknownHostException());
@@ -274,9 +273,8 @@ public class Client {
           } catch (IllegalAccessException e) {
             throw new IOException(e.toString());
           }
-          InetSocketAddress addr = remoteId.getAddress();
-          token = tokenSelector.selectToken(new Text(addr.getAddress()
-              .getHostAddress() + ":" + addr.getPort()), 
+          token = tokenSelector.selectToken(
+              SecurityUtil.buildTokenService(server),
               ticket.getTokens());
         }
         KerberosInfo krbInfo = SecurityUtil.getKerberosInfo(protocol, conf);
@@ -305,7 +303,7 @@ public class Client {
             + protocol.getSimpleName());
       
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
-          remoteId.getAddress().toString() +
+          server.toString() +
           " from " + ((ticket==null)?"an unknown user":ticket.getUserName()));
       this.setDaemon(true);
     }
@@ -751,7 +749,6 @@ public class Client {
       }
     }
 
-    @SuppressWarnings("unused")
     public InetSocketAddress getRemoteAddress() {
       return server;
     }
@@ -1159,7 +1156,7 @@ public class Client {
           call.error.fillInStackTrace();
           throw call.error;
         } else { // local exception
-          InetSocketAddress address = remoteId.getAddress();
+          InetSocketAddress address = connection.getRemoteAddress();
           throw NetUtils.wrapException(address.getHostName(),
                   address.getPort(),
                   NetUtils.getHostname(),
