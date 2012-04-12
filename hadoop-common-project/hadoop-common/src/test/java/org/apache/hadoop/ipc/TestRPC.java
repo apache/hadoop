@@ -20,6 +20,7 @@ package org.apache.hadoop.ipc;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
@@ -448,6 +449,18 @@ public class TestRPC extends TestCase {
       assertCounter("RpcAuthenticationFailures", 0, rb);
       assertCounter("RpcAuthenticationSuccesses", 0, rb);
     }
+  }
+  
+  public void testServerAddress() throws IOException {
+    Server server = RPC.getServer(TestProtocol.class,
+        new TestImpl(), ADDRESS, 0, 5, true, conf, null);
+    InetSocketAddress bindAddr = null;
+    try {
+      bindAddr = NetUtils.getConnectAddress(server);
+    } finally {
+      server.stop();
+    }
+    assertEquals(bindAddr.getAddress(), InetAddress.getLocalHost());
   }
   
   public void testAuthorization() throws Exception {
