@@ -33,6 +33,7 @@ message DatanodeRegistrationProto {
   required DatanodeIDProto datanodeID = 1;    // Datanode information
   required StorageInfoProto storageInfo = 2;  // Node information
   required ExportedBlockKeysProto keys = 3;   // Block keys
+  required string softwareVersion = 4;        // Software version of the DN, e.g. "2.0.0"
 }
 
 /**

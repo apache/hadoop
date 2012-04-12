@@ -58,6 +58,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
@@ -783,6 +784,7 @@ public class NNThroughputBenchmark {
       String hostName = DNS.getDefaultHost("default", "default");
       dnRegistration = new DatanodeRegistration(ipAddr, getNodePort(dnIdx));
       dnRegistration.setHostName(hostName);
+      dnRegistration.setSoftwareVersion(VersionInfo.getVersion());
       this.blocks = new ArrayList<Block>(blockCapacity);
       this.nrBlocks = 0;
     }

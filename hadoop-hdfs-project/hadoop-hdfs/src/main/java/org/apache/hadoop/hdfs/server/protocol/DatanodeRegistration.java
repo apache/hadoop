@@ -37,12 +37,14 @@ public class DatanodeRegistration extends DatanodeID
 
   private StorageInfo storageInfo;
   private ExportedBlockKeys exportedKeys;
+  private String softwareVersion;
 
   public DatanodeRegistration(DatanodeID dn, StorageInfo info,
-      ExportedBlockKeys keys) {
+      ExportedBlockKeys keys, String softwareVersion) {
     super(dn);
     this.storageInfo = info;
     this.exportedKeys = keys;
+    this.softwareVersion = softwareVersion;
   }
 
   public DatanodeRegistration(String ipAddr, int xferPort) {
@@ -70,6 +72,14 @@ public class DatanodeRegistration extends DatanodeID
 
   public ExportedBlockKeys getExportedKeys() {
     return exportedKeys;
+  }
+  
+  public void setSoftwareVersion(String softwareVersion) {
+    this.softwareVersion = softwareVersion;
+  }
+  
+  public String getSoftwareVersion() {
+    return softwareVersion;
   }
 
   @Override // NodeRegistration

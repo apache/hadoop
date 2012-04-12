@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
+import org.apache.hadoop.util.VersionInfo;
 
 /**
  * NamespaceInfo is returned by the name-node in reply 
@@ -38,6 +39,7 @@ public class NamespaceInfo extends StorageInfo {
   String  buildVersion;
   int distributedUpgradeVersion;
   String blockPoolID = "";    // id of the block pool
+  String softwareVersion;
 
   public NamespaceInfo() {
     super();
@@ -45,16 +47,18 @@ public class NamespaceInfo extends StorageInfo {
   }
 
   public NamespaceInfo(int nsID, String clusterID, String bpID,
-      long cT, int duVersion, String buildVersion) {
+      long cT, int duVersion, String buildVersion, String softwareVersion) {
     super(HdfsConstants.LAYOUT_VERSION, nsID, clusterID, cT);
     blockPoolID = bpID;
     this.buildVersion = buildVersion;
     this.distributedUpgradeVersion = duVersion;
+    this.softwareVersion = softwareVersion;
   }
 
   public NamespaceInfo(int nsID, String clusterID, String bpID, 
       long cT, int duVersion) {
-    this(nsID, clusterID, bpID, cT, duVersion, Storage.getBuildVersion());
+    this(nsID, clusterID, bpID, cT, duVersion, Storage.getBuildVersion(),
+        VersionInfo.getVersion());
   }
   
   public String getBuildVersion() {
@@ -67,6 +71,10 @@ public class NamespaceInfo extends StorageInfo {
   
   public String getBlockPoolID() {
     return blockPoolID;
+  }
+  
+  public String getSoftwareVersion() {
+    return softwareVersion;
   }
 
   public String toString(){

@@ -32,7 +32,19 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 @InterfaceStability.Evolving
 public class IncorrectVersionException extends IOException {
   private static final long serialVersionUID = 1L;
+  
+  public IncorrectVersionException(String message) {
+    super(message);
+  }
 
+  public IncorrectVersionException(String minimumVersion, String reportedVersion,
+      String remoteDaemon, String thisDaemon) {
+    this("The reported " + remoteDaemon + " version is too low to communicate" +
+        " with this " + thisDaemon + ". " + remoteDaemon + " version: '" +
+        reportedVersion + "' Minimum " + remoteDaemon + " version: '" +
+        minimumVersion + "'");
+  }
+  
   public IncorrectVersionException(int versionReported, String ofWhat) {
     this(versionReported, ofWhat, HdfsConstants.LAYOUT_VERSION);
   }
@@ -40,16 +52,9 @@ public class IncorrectVersionException extends IOException {
   public IncorrectVersionException(int versionReported,
                                    String ofWhat,
                                    int versionExpected) {
-    super("Unexpected version " 
-          + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
-          + versionReported + ". Expecting = " + versionExpected + ".");
+    this("Unexpected version " 
+        + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
+        + versionReported + ". Expecting = " + versionExpected + ".");
   }
 
-  public IncorrectVersionException(String versionReported,
-                                   String ofWhat,
-                                   String versionExpected) {
-    super("Unexpected version " 
-          + (ofWhat==null ? "" : "of " + ofWhat) + ". Reported: "
-          + versionReported + ". Expecting = " + versionExpected + ".");
-  }
 }
