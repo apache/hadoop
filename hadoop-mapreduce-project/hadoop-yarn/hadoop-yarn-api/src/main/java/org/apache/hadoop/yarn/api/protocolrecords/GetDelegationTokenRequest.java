@@ -21,11 +21,9 @@ package org.apache.hadoop.yarn.api.protocolrecords;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
-import clover.org.apache.velocity.runtime.resource.ResourceManager;
-
 /**
  * The request issued by the client to get a delegation token from
- * the {@link ResourceManager}. 
+ * the {@code ResourceManager}.
  * for more information.
  */
 @Public
