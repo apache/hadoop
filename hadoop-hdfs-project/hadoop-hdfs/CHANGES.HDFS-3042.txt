@@ -11,3 +11,5 @@ HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
 HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
 
 HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
+
+HDFS-3159. Document NN auto-failover setup and configuration (todd)
