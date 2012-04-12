@@ -378,6 +378,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3254. Branch-2 build broken due to wrong version number in
     fuse-dfs' pom.xml. (Anupam Seth via eli)
 
+    HDFS-3260. TestDatanodeRegistration should set minimum DN version in
+    addition to minimum NN version. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
