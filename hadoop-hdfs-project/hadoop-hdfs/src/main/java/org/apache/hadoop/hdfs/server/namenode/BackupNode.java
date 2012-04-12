@@ -230,7 +230,7 @@ public class BackupNode extends NameNode {
      * @throws UnregisteredNodeException if the registration is invalid
      */
     void verifyJournalRequest(NamenodeRegistration reg) throws IOException {
-      verifyVersion(reg.getLayoutVersion());
+      verifyLayoutVersion(reg.getLayoutVersion());
       String errorMsg = null;
       int expectedNamespaceID = namesystem.getNamespaceInfo().getNamespaceID();
       if (reg.getNamespaceID() != expectedNamespaceID) {

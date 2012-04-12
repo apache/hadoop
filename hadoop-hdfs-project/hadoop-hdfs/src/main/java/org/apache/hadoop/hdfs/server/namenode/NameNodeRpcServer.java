@@ -47,6 +47,7 @@ import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceProtocolService;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolPB;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -108,6 +109,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
+import org.apache.hadoop.hdfs.util.VersionUtil;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -122,6 +124,7 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.VersionInfo;
 
 import com.google.protobuf.BlockingService;
 
@@ -148,6 +151,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   /** The RPC server that listens to requests from clients */
   protected final RPC.Server clientRpcServer;
   protected final InetSocketAddress clientRpcAddress;
+  
+  private final String minimumDataNodeVersion;
 
   public NameNodeRpcServer(Configuration conf, NameNode nn)
       throws IOException {
@@ -262,6 +267,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.clientRpcAddress = this.clientRpcServer.getListenerAddress(); 
     nn.setRpcServerAddress(conf, clientRpcAddress);
+    
+    this.minimumDataNodeVersion = conf.get(
+        DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_DEFAULT);
   }
   
   /**
@@ -327,7 +336,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // NamenodeProtocol
   public NamenodeRegistration register(NamenodeRegistration registration)
   throws IOException {
-    verifyVersion(registration.getVersion());
+    verifyLayoutVersion(registration.getVersion());
     NamenodeRegistration myRegistration = nn.setRegistration();
     namesystem.registerBackupNode(registration, myRegistration);
     return myRegistration;
@@ -830,9 +839,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
 
   @Override // DatanodeProtocol
-  public DatanodeRegistration registerDatanode(DatanodeRegistration nodeReg
-      ) throws IOException {
-    verifyVersion(nodeReg.getVersion());
+  public DatanodeRegistration registerDatanode(DatanodeRegistration nodeReg)
+      throws IOException {
+    verifyLayoutVersion(nodeReg.getVersion());
+    verifySoftwareVersion(nodeReg);
     namesystem.registerDatanode(nodeReg);
     return nodeReg;
   }
@@ -917,7 +927,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
    * @throws UnregisteredNodeException if the registration is invalid
    */
   void verifyRequest(NodeRegistration nodeReg) throws IOException {
-    verifyVersion(nodeReg.getVersion());
+    verifyLayoutVersion(nodeReg.getVersion());
     if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID())) {
       LOG.warn("Invalid registrationID - expected: "
           + namesystem.getRegistrationID() + " received: "
@@ -991,9 +1001,38 @@ class NameNodeRpcServer implements NamenodeProtocols {
    * @param version
    * @throws IOException
    */
-  void verifyVersion(int version) throws IOException {
+  void verifyLayoutVersion(int version) throws IOException {
     if (version != HdfsConstants.LAYOUT_VERSION)
       throw new IncorrectVersionException(version, "data node");
+  }
+  
+  private void verifySoftwareVersion(DatanodeRegistration dnReg)
+      throws IncorrectVersionException {
+    String dnVersion = dnReg.getSoftwareVersion();
+    if (VersionUtil.compareVersions(dnVersion, minimumDataNodeVersion) < 0) {
+      IncorrectVersionException ive = new IncorrectVersionException(
+          minimumDataNodeVersion, dnVersion, "DataNode", "NameNode");
+      LOG.warn(ive.getMessage() + " DN: " + dnReg);
+      throw ive;
+    }
+    String nnVersion = VersionInfo.getVersion();
+    if (!dnVersion.equals(nnVersion)) {
+      String messagePrefix = "Reported DataNode version '" + dnVersion +
+          "' of DN " + dnReg + " does not match NameNode version '" +
+          nnVersion + "'";
+      long nnCTime = nn.getFSImage().getStorage().getCTime();
+      long dnCTime = dnReg.getStorageInfo().getCTime();
+      if (nnCTime != dnCTime) {
+        IncorrectVersionException ive = new IncorrectVersionException(
+            messagePrefix + " and CTime of DN ('" + dnCTime +
+            "') does not match CTime of NN ('" + nnCTime + "')");
+        LOG.warn(ive);
+        throw ive;
+      } else {
+        LOG.info(messagePrefix +
+            ". Note: This is normal during a rolling upgrade.");
+      }
+    }
   }
 
   private static String getClientMachine() {

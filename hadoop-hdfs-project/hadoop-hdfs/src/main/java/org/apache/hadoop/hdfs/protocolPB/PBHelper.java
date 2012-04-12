@@ -385,7 +385,7 @@ public class PBHelper {
     StorageInfoProto storage = info.getStorageInfo();
     return new NamespaceInfo(storage.getNamespceID(), storage.getClusterID(),
         info.getBlockPoolID(), storage.getCTime(), info.getDistUpgradeVersion(),
-        info.getBuildVersion());
+        info.getBuildVersion(), info.getSoftwareVersion());
   }
 
   public static NamenodeCommand convert(NamenodeCommandProto cmd) {
@@ -611,13 +611,14 @@ public class PBHelper {
         .newBuilder();
     return builder.setDatanodeID(PBHelper.convert((DatanodeID) registration))
         .setStorageInfo(PBHelper.convert(registration.getStorageInfo()))
-        .setKeys(PBHelper.convert(registration.getExportedKeys())).build();
+        .setKeys(PBHelper.convert(registration.getExportedKeys()))
+        .setSoftwareVersion(registration.getSoftwareVersion()).build();
   }
 
   public static DatanodeRegistration convert(DatanodeRegistrationProto proto) {
     return new DatanodeRegistration(PBHelper.convert(proto.getDatanodeID()),
         PBHelper.convert(proto.getStorageInfo()), PBHelper.convert(proto
-            .getKeys()));
+            .getKeys()), proto.getSoftwareVersion());
   }
 
   public static DatanodeCommand convert(DatanodeCommandProto proto) {
@@ -893,7 +894,8 @@ public class PBHelper {
         .setBlockPoolID(info.getBlockPoolID())
         .setBuildVersion(info.getBuildVersion())
         .setDistUpgradeVersion(info.getDistributedUpgradeVersion())
-        .setStorageInfo(PBHelper.convert((StorageInfo)info)).build();
+        .setStorageInfo(PBHelper.convert((StorageInfo)info))
+        .setSoftwareVersion(info.getSoftwareVersion()).build();
   }
   
   // Located Block Arrays and Lists

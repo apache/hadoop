@@ -677,6 +677,7 @@ public class DataNode extends Configured
     bpRegistration.setIpcPort(getIpcPort());
     bpRegistration.setHostName(hostName);
     bpRegistration.setStorageID(getStorageId());
+    bpRegistration.setSoftwareVersion(VersionInfo.getVersion());
 
     StorageInfo storageInfo = storage.getBPStorage(nsInfo.getBlockPoolID());
     if (storageInfo == null) {

@@ -244,6 +244,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3179.  Improve the exception message thrown by DataStreamer when 
     it failed to add a datanode.  (szetszwo)
 
+    HDFS-2983. Relax the build version check to permit rolling upgrades within a release. (atm)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
