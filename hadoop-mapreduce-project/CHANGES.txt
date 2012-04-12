@@ -224,6 +224,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4140. mapreduce classes incorrectly importing
     "clover.org.apache.*" classes. (Patrick Hunt via tomwhite)
 
+    MAPREDUCE-4050. For tasks without assigned containers, changes the node
+    text on the UI to N/A instead of a link to null. (Bhallamudi Venkata Siva
+    Kamesh via sseth)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
