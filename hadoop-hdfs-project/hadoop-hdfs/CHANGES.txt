@@ -498,6 +498,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2696. Fix the fuse-fds build. (Bruno Mahé via eli)
 
+    HDFS-3260. TestDatanodeRegistration should set minimum DN version in
+    addition to minimum NN version. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
