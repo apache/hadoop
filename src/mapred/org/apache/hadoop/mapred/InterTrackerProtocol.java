@@ -72,8 +72,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * Version 29: Adding available memory and CPU usage information on TT to
    *             TaskTrackerStatus for MAPREDUCE-1218
    * Version 30: Adding disk failure to TaskTrackerStatus for MAPREDUCE-3015
+   * Version 31: Adding version methods for HADOOP-8209
    */
-  public static final long versionID = 30L;
+  public static final long versionID = 31L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;
@@ -144,9 +145,13 @@ interface InterTrackerProtocol extends VersionedProtocol {
    */
   public String getSystemDir();
   
-  
   /**
-   * Returns the buildVersion of the JobTracker 
+   * Returns the VersionInfo build version of the JobTracker 
    */
   public String getBuildVersion() throws IOException;
+
+  /**
+   * Returns the VersionInfo version of the JobTracker
+   */
+  public String getVIVersion() throws IOException;
 }

@@ -64,5 +64,10 @@ public class CommonConfigurationKeys {
   /** Default value for IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_KEY */
   public static final int IO_COMPRESSION_CODEC_SNAPPY_BUFFERSIZE_DEFAULT =
       256 * 1024;
+
+  /** See src/core/core-default.xml */
+  public static final String HADOOP_RELAXED_VERSION_CHECK_KEY =
+      "hadoop.relaxed.worker.version.check";
+  public static final boolean HADOOP_RELAXED_VERSION_CHECK_DEFAULT = false;
 }
 

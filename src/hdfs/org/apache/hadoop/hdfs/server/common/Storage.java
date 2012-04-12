@@ -35,9 +35,6 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.util.VersionInfo;
-
-
 
 /**
  * Storage information file.
@@ -835,10 +832,6 @@ public abstract class Storage extends StorageInfo {
       }
     }
     return false;
-  }
-
-  public static String getBuildVersion() {
-    return VersionInfo.getRevision();
   }
 
   public static String getRegistrationID(StorageInfo storage) {

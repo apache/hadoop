@@ -21,6 +21,8 @@ Release 1.1.0 - unreleased
 
     HDFS-3055. Implement recovery mode (Colin Patrick McCabe via todd)
 
+    HADOOP-8209. Add option to relax build-version check for branch-1. (eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file

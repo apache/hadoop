@@ -89,8 +89,8 @@ public class VersionInfo {
   }
   
   /**
-   * Returns the buildVersion which includes version, 
-   * revision, user and date. 
+   * Returns the full version string containing version,
+   * revision, user and source checksum. 
    */
   public static String getBuildVersion(){
     return VersionInfo.getVersion() + 

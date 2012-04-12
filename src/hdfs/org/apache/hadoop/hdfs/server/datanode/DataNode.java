@@ -56,6 +56,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -233,6 +234,7 @@ public class DataNode extends Configured
   boolean isBlockTokenInitialized = false;
   final String userWithLocalPathAccess;
   private boolean connectToDnViaHostname;
+  private boolean relaxedVersionCheck;
 
   /**
    * Testing hook that allows tests to delay the sending of blockReceived RPCs
@@ -346,6 +348,10 @@ public class DataNode extends Configured
     this.transferToAllowed = conf.getBoolean("dfs.datanode.transferTo.allowed", 
                                              true);
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
+
+    this.relaxedVersionCheck = conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY,
+        CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_DEFAULT);
 
     InetSocketAddress socAddr = DataNode.getStreamingAddr(conf);
     int tmpPort = socAddr.getPort();
@@ -548,6 +554,34 @@ public class DataNode extends Configured
            SocketChannel.open().socket() : new Socket();                                   
   }
   
+  /**
+   * @return true if this datanode is permitted to connect to
+   *    the given namenode version
+   */
+  boolean isPermittedVersion(NamespaceInfo nsInfo) {
+    boolean versionMatch =
+      nsInfo.getVersion().equals(VersionInfo.getVersion());
+    boolean revisionMatch =
+      nsInfo.getRevision().equals(VersionInfo.getRevision());
+
+    if (revisionMatch && !versionMatch) {
+      throw new AssertionError("Invalid build. The revisions match" +
+          " but the NN version is " + nsInfo.getVersion() +
+          " and the DN version is " + VersionInfo.getVersion());
+    }
+    if (relaxedVersionCheck) {
+      if (versionMatch && !revisionMatch) {
+        LOG.info("Permitting datanode revision " + VersionInfo.getRevision() +
+            " to connect to namenode revision " + nsInfo.getRevision() +
+            " because " + CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
+            " is enabled");
+      }
+      return versionMatch;
+    } else {
+      return revisionMatch;
+    }
+  }
+
   private NamespaceInfo handshake() throws IOException {
     NamespaceInfo nsInfo = new NamespaceInfo();
     while (shouldRun) {
@@ -561,13 +595,14 @@ public class DataNode extends Configured
         } catch (InterruptedException ie) {}
       }
     }
-    String errorMsg = null;
-    // verify build version
-    if( ! nsInfo.getBuildVersion().equals( Storage.getBuildVersion() )) {
-      errorMsg = "Incompatible build versions: namenode BV = " 
-        + nsInfo.getBuildVersion() + "; datanode BV = "
-        + Storage.getBuildVersion();
-      LOG.fatal( errorMsg );
+    if (!isPermittedVersion(nsInfo)) {
+      String errorMsg = "Incompatible versions: namenode version " +
+        nsInfo.getVersion() + " revision " + nsInfo.getRevision() +
+        " datanode version " + VersionInfo.getVersion() + " revision " +
+        VersionInfo.getRevision() + " and " +
+        CommonConfigurationKeys.HADOOP_RELAXED_VERSION_CHECK_KEY +
+        " is " + (relaxedVersionCheck ? "enabled" : "not enabled");
+      LOG.fatal(errorMsg);
       notifyNamenode(DatanodeProtocol.NOTIFY, errorMsg);  
       throw new IOException( errorMsg );
     }

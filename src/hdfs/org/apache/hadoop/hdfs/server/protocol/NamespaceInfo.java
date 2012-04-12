@@ -23,12 +23,12 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.util.VersionInfo;
 
 /**
  * NamespaceInfo is returned by the name-node in reply 
@@ -36,22 +36,27 @@ import org.apache.hadoop.io.WritableFactory;
  * 
  */
 public class NamespaceInfo extends StorageInfo implements Writable {
-  String  buildVersion;
+  String revision;
+  String version;
   int distributedUpgradeVersion;
 
   public NamespaceInfo() {
     super();
-    buildVersion = null;
   }
   
   public NamespaceInfo(int nsID, long cT, int duVersion) {
-    super(FSConstants.LAYOUT_VERSION, nsID, cT);
-    buildVersion = Storage.getBuildVersion();
+    super(FSConstants.LAYOUT_VERSION, nsID, cT); 
+    version = VersionInfo.getVersion();
+    revision = VersionInfo.getRevision();
     this.distributedUpgradeVersion = duVersion;
   }
   
-  public String getBuildVersion() {
-    return buildVersion;
+  public String getVersion() {
+    return version;
+  }
+
+  public String getRevision() {
+    return revision;
   }
 
   public int getDistributedUpgradeVersion() {
@@ -70,7 +75,8 @@ public class NamespaceInfo extends StorageInfo implements Writable {
   }
 
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, getBuildVersion());
+    UTF8.writeString(out, getVersion());
+    UTF8.writeString(out, getRevision());
     out.writeInt(getLayoutVersion());
     out.writeInt(getNamespaceID());
     out.writeLong(getCTime());
@@ -78,7 +84,8 @@ public class NamespaceInfo extends StorageInfo implements Writable {
   }
 
   public void readFields(DataInput in) throws IOException {
-    buildVersion = UTF8.readString(in);
+    version = UTF8.readString(in);
+    revision = UTF8.readString(in);
     layoutVersion = in.readInt();
     namespaceID = in.readInt();
     cTime = in.readLong();
