@@ -32,7 +32,6 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.mapreduce.task.MapContextImpl;
 import org.apache.hadoop.mapreduce.util.ResourceCalculatorPlugin;
-import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin.ProcResourceValues;
 import org.apache.hadoop.tools.rumen.ResourceUsageMetrics;
 import org.apache.hadoop.mapred.DummyResourceCalculatorPlugin;
 import org.apache.hadoop.mapred.gridmix.LoadJob.ResourceUsageMatcherRunner;
@@ -483,6 +482,11 @@ public class TestResourceUsageEmulators {
     //  test if no calls are made cpu usage emulator core
     assertEquals("Disabled cumulative CPU usage emulation plugin works!", 
                  cpuUsagePre, cpuUsagePost);
+    
+    // test with get progress
+    float progress = cpuPlugin.getProgress();
+    assertEquals("Invalid progress of disabled cumulative CPU usage emulation " 
+                 + "plugin!", 1.0f, progress, 0f);
     
     // test with valid resource usage value
     ResourceUsageMetrics metrics = createMetrics(targetCpuUsage);
