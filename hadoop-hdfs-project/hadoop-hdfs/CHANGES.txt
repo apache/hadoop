@@ -391,6 +391,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2799. Trim fs.checkpoint.dir values. (Amith D K via eli)
 
+    HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
