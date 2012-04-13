@@ -91,8 +91,6 @@ Trunk (unreleased changes)
     HDFS-2373. Commands using WebHDFS and hftp print unnecessary debug 
     info on the console with security enabled. (Arpit Gupta via suresh)
 
-    HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
-
     HDFS-2776. Missing interface annotation on JournalSet. 
     (Brandon Li via jitendra)
 
@@ -510,6 +508,8 @@ Release 2.0.0 - UNRELEASED
     configured with only 1 rack. (atm)
 
     HDFS-2799. Trim fs.checkpoint.dir values. (Amith D K via eli)
+
+    HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
