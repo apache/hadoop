@@ -137,6 +137,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4107. Fix tests in org.apache.hadoop.ipc.TestSocketFactory
     (Devaraj K via tgraves)
 
+    MAPREDUCE-4147. YARN should not have a compile-time dependency on HDFS.
+    (tomwhite)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
