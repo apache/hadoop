@@ -656,6 +656,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   private static TaskFinishedEvent createTaskFinishedEvent(TaskImpl task, TaskState taskState) {
     TaskFinishedEvent tfe =
       new TaskFinishedEvent(TypeConverter.fromYarn(task.taskId),
+        TypeConverter.fromYarn(task.successfulAttempt),
         task.getFinishTime(task.successfulAttempt),
         TypeConverter.fromYarn(task.taskId.getTaskType()),
         taskState.toString(),
