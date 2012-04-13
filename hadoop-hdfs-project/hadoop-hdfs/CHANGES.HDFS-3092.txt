@@ -9,8 +9,11 @@ HDFS-3092 branch changes
     HDFS-3185. Add configuration of Journal Service Daemons. 
     (Hari Mankude via suresh)
 
-    HDFS-3213 Persist the cluster id and nsid in JournalService storage
+    HDFS-3213. Persist the cluster id and nsid in JournalService storage
     directory.  (Hari Mankude via szetszwo)
+
+    HDFS-3274. Add a new conf key dfs.journal.edits.dir and use it for
+    edit log initialization.  (Hari Mankude via szetszwo)
 
   IMPROVEMENTS
 

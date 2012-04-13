@@ -203,6 +203,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   
   // This is a comma separated host:port list of addresses hosting the journal service
   public static final String  DFS_JOURNALNODE_ADDRESS_KEY = "dfs.journalnode.addresses";
+  public static final String  DFS_JOURNAL_EDITS_DIR_KEY = "dfs.journal.edits.dir";
 
   // Much code in hdfs is not yet updated to use these keys.
   public static final String  DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY = "dfs.client.block.write.locateFollowingBlock.retries";

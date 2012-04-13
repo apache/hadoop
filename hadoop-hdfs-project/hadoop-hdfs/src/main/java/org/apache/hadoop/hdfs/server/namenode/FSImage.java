@@ -114,7 +114,7 @@ public class FSImage implements Closeable {
    * @param editsDirs Directories the editlog can be stored in.
    * @throws IOException if directories are invalid.
    */
-  protected FSImage(Configuration conf,
+  public FSImage(Configuration conf,
                     Collection<URI> imageDirs,
                     List<URI> editsDirs)
       throws IOException {
@@ -254,7 +254,7 @@ public class FSImage implements Closeable {
    * @param dataDirStates output of storage directory states
    * @return true if there is at least one valid formatted storage directory
    */
-  private boolean recoverStorageDirs(StartupOption startOpt,
+  public boolean recoverStorageDirs(StartupOption startOpt,
       Map<StorageDirectory, StorageState> dataDirStates) throws IOException {
     boolean isFormatted = false;
     for (Iterator<StorageDirectory> it = 

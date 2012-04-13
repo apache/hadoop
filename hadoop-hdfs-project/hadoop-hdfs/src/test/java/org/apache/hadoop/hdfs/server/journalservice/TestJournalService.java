@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.journalservice;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 
 import junit.framework.Assert;
 
@@ -32,9 +34,11 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
 import org.apache.hadoop.hdfs.server.protocol.FencedException;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -58,10 +62,14 @@ public class TestJournalService {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive(0);
+      FileSystem fs = FileSystem.getLocal(conf);
+      File journalEditsDir = cluster.getJournalEditsDir();
+      boolean result = fs.mkdirs(new Path(journalEditsDir.toString()));
+      conf.set(DFS_JOURNAL_EDITS_DIR_KEY, journalEditsDir.toString());
       service = startJournalService(listener);
       verifyRollLogsCallback(service, listener);
       verifyJournalCallback(service, listener);
-      verifyFence(service, cluster.getNameNode(0));
+      verifyFence(service, listener, cluster.getNameNode(0));
     } finally {
       if (service != null) {
         stopJournalService(service);
@@ -70,6 +78,12 @@ public class TestJournalService {
         cluster.shutdown();
       }
     }
+  }
+  
+  private JournalService restartJournalService(JournalService service,
+      JournalListener listener) throws IOException {
+    stopJournalService(service);
+    return (startJournalService(listener));
   }
 
   private JournalService startJournalService(JournalListener listener)
@@ -109,7 +123,7 @@ public class TestJournalService {
         Mockito.anyLong(), Mockito.anyInt(), (byte[]) Mockito.any());
   }
   
-  public void verifyFence(JournalService s, NameNode nn) throws Exception {
+  public void verifyFence(JournalService s, JournalListener listener, NameNode nn) throws Exception {
     String cid = nn.getNamesystem().getClusterId();
     int nsId = nn.getNamesystem().getFSImage().getNamespaceID();
     int lv = nn.getNamesystem().getFSImage().getLayoutVersion();
@@ -156,6 +170,11 @@ public class TestJournalService {
     } catch (UnregisteredNodeException ignore) {
       LOG.info(ignore.getMessage());
     } 
+    
+    s = restartJournalService(s, listener);
+    // New epoch higher than the current epoch is successful
+    resp = s.fence(info, currentEpoch+1, "fencer");
+    Assert.assertNotNull(resp);
    
   }
 }

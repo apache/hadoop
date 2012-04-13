@@ -93,7 +93,7 @@ public class NNStorage extends Storage implements Closeable {
    * or of type EDITS which stores edits or of type IMAGE_AND_EDITS which
    * stores both fsimage and edits.
    */
-  static enum NameNodeDirType implements StorageDirType {
+  public static enum NameNodeDirType implements StorageDirType {
     UNDEFINED,
     IMAGE,
     EDITS,

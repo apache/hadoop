@@ -702,6 +702,15 @@ public class MiniDFSCluster {
         minNN + "-through-" + maxNN));
   }
   
+  public File getJournalEditsDir() throws IOException {
+    return formatJournalEditsDir(base_dir);
+  }
+  
+  public static File formatJournalEditsDir(File baseDir)
+      throws IOException {
+    return (new File(baseDir, "journal-edits"));
+  }
+  
   public NameNodeInfo[] getNameNodeInfos() {
     return this.nameNodes;
   }
