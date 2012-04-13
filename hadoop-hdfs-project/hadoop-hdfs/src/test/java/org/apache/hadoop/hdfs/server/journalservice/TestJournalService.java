@@ -51,7 +51,7 @@ public class TestJournalService {
   static final Log LOG = LogFactory.getLog(TestJournalService.class);
   
   /**
-   * Test calls backs {@link JournalListener#rollLogs(JournalService, long)} and
+   * Test calls backs {@link JournalListener#startLogSegment(JournalService, long)} and
    * {@link JournalListener#journal(JournalService, long, int, byte[])} are
    * called.
    */
@@ -107,7 +107,7 @@ public class TestJournalService {
    */
   private void verifyRollLogsCallback(JournalService s, JournalListener l)
       throws IOException {
-    Mockito.verify(l, Mockito.times(1)).rollLogs(Mockito.eq(s), Mockito.anyLong());
+    Mockito.verify(l, Mockito.times(1)).startLogSegment(Mockito.eq(s), Mockito.anyLong());
   }
 
   /**

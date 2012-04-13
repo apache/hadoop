@@ -329,7 +329,7 @@ public class JournalService implements JournalProtocol {
     }
     stateHandler.isStartLogSegmentAllowed();
     verify(epoch, journalInfo);
-    listener.rollLogs(this, txid);
+    listener.startLogSegment(this, txid);
     stateHandler.startLogSegment();
   }
   
