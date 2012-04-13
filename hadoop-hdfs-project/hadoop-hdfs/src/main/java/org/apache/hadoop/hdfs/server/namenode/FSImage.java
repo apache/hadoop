@@ -1076,7 +1076,8 @@ public class FSImage implements Closeable {
    */
   static Collection<URI> getCheckpointDirs(Configuration conf,
       String defaultValue) {
-    Collection<String> dirNames = conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
+    Collection<String> dirNames = conf.getTrimmedStringCollection(
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
     if (dirNames.size() == 0 && defaultValue != null) {
       dirNames.add(defaultValue);
     }
@@ -1085,8 +1086,8 @@ public class FSImage implements Closeable {
 
   static List<URI> getCheckpointEditsDirs(Configuration conf,
       String defaultName) {
-    Collection<String> dirNames = 
-      conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);
+    Collection<String> dirNames = conf.getTrimmedStringCollection(
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);
     if (dirNames.size() == 0 && defaultName != null) {
       dirNames.add(defaultName);
     }
