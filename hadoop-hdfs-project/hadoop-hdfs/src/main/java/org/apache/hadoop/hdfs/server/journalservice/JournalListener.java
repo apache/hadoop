@@ -60,5 +60,5 @@ public interface JournalListener {
    * Any IOException thrown from the listener is thrown back in 
    * {@link JournalProtocol#startLogSegment}
    */
-  public void rollLogs(JournalService service, long txid) throws IOException;
+  public void startLogSegment(JournalService service, long txid) throws IOException;
 }
