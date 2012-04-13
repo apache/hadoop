@@ -17,6 +17,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
     Lee via szetszwo)
 
+    HDFS-3136. Remove SLF4J dependency as HDFS does not need it to fix
+    unnecessary warnings. (Jason Lowe via suresh)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
