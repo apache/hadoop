@@ -238,6 +238,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4107. Fix tests in org.apache.hadoop.ipc.TestSocketFactory
     (Devaraj K via tgraves)
 
+    MAPREDUCE-4147. YARN should not have a compile-time dependency on HDFS.
+    (tomwhite)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -328,6 +331,12 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4050. For tasks without assigned containers, changes the node
     text on the UI to N/A instead of a link to null. (Bhallamudi Venkata Siva
     Kamesh via sseth)
+
+    MAPREDUCE-4128. AM Recovery expects all attempts of a completed task to
+    also be completed. (Bikas Saha via bobby)
+
+    MAPREDUCE-4144. Fix a NPE in the ResourceManager when handling node
+    updates. (Jason Lowe via sseth)
 
 Release 0.23.2 - UNRELEASED
 

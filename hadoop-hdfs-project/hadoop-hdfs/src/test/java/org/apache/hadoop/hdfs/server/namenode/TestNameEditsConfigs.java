@@ -490,4 +490,46 @@ public class TestNameEditsConfigs {
       cluster.shutdown();
     }
   }
+
+  /**
+   * Test dfs.namenode.checkpoint.dir and dfs.namenode.checkpoint.edits.dir
+   * should tolerate white space between values.
+   */
+  @Test
+  public void testCheckPointDirsAreTrimmed() throws Exception {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    File checkpointNameDir1 = new File(base_dir, "chkptName1");
+    File checkpointEditsDir1 = new File(base_dir, "chkptEdits1");
+    File checkpointNameDir2 = new File(base_dir, "chkptName2");
+    File checkpointEditsDir2 = new File(base_dir, "chkptEdits2");
+    File nameDir = new File(base_dir, "name1");
+    String whiteSpace = "  \n   \n  ";
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, nameDir.getPath());
+    conf.setStrings(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, whiteSpace
+        + checkpointNameDir1.getPath() + whiteSpace, whiteSpace
+        + checkpointNameDir2.getPath() + whiteSpace);
+    conf.setStrings(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
+        whiteSpace + checkpointEditsDir1.getPath() + whiteSpace, whiteSpace
+            + checkpointEditsDir2.getPath() + whiteSpace);
+    cluster = new MiniDFSCluster.Builder(conf).manageNameDfsDirs(false)
+        .numDataNodes(3).build();
+    try {
+      cluster.waitActive();
+      secondary = startSecondaryNameNode(conf);
+      secondary.doCheckpoint();
+      assertTrue(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + " must be trimmed ",
+          checkpointNameDir1.exists());
+      assertTrue(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY + " must be trimmed ",
+          checkpointNameDir2.exists());
+      assertTrue(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY
+          + " must be trimmed ", checkpointEditsDir1.exists());
+      assertTrue(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY
+          + " must be trimmed ", checkpointEditsDir2.exists());
+    } finally {
+      secondary.shutdown();
+      cluster.shutdown();
+    }
+  }
 }
