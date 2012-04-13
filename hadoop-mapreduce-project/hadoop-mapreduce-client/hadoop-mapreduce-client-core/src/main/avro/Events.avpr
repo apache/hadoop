@@ -230,7 +230,8 @@
           {"name": "taskType", "type": "string"},
           {"name": "finishTime", "type": "long"},
           {"name": "status", "type": "string"},
-          {"name": "counters", "type": "JhCounters"}
+          {"name": "counters", "type": "JhCounters"},
+          {"name": "successfulAttemptId", "type": "string"}
       ]
      },
      	

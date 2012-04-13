@@ -128,7 +128,7 @@ public class Task20LineHistoryEventEmitter extends HistoryEventEmitter {
           return null;
         }
 
-        return new TaskFinishedEvent(taskID, Long.parseLong(finishTime),
+        return new TaskFinishedEvent(taskID, null, Long.parseLong(finishTime),
             that.originalTaskType, status, eventCounters);
       }
 

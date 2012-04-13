@@ -276,6 +276,17 @@ public class JobHistoryParser {
     attemptInfo.shuffleFinishTime = event.getFinishTime();
     attemptInfo.sortFinishTime = event.getFinishTime();
     attemptInfo.mapFinishTime = event.getFinishTime();
+    if(TaskStatus.State.SUCCEEDED.toString().equals(taskInfo.status))
+    {
+      //this is a successful task
+      if(attemptInfo.getAttemptId().equals(taskInfo.getSuccessfulAttemptId()))
+      {
+        // the failed attempt is the one that made this task successful
+        // so its no longer successful
+        taskInfo.status = null;
+        // not resetting the other fields set in handleTaskFinishedEvent()
+      }
+    }
   }
 
   private void handleTaskAttemptStartedEvent(TaskAttemptStartedEvent event) {
@@ -299,6 +310,7 @@ public class JobHistoryParser {
     taskInfo.counters = event.getCounters();
     taskInfo.finishTime = event.getFinishTime();
     taskInfo.status = TaskStatus.State.SUCCEEDED.toString();
+    taskInfo.successfulAttemptId = event.getSuccessfulTaskAttemptId();
   }
 
   private void handleTaskUpdatedEvent(TaskUpdatedEvent event) {
@@ -514,6 +526,7 @@ public class JobHistoryParser {
     String status;
     String error;
     TaskAttemptID failedDueToAttemptId;
+    TaskAttemptID successfulAttemptId;
     Map<TaskAttemptID, TaskAttemptInfo> attemptsMap;
 
     public TaskInfo() {
@@ -553,6 +566,10 @@ public class JobHistoryParser {
     /** @return the attempt Id that caused this task to fail */
     public TaskAttemptID getFailedDueToAttemptId() {
       return failedDueToAttemptId;
+    }
+    /** @return the attempt Id that caused this task to succeed */
+    public TaskAttemptID getSuccessfulAttemptId() {
+      return successfulAttemptId;
     }
     /** @return the error */
     public String getError() { return error; }
