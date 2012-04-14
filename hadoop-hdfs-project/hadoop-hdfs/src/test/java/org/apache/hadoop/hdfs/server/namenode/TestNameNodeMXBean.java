@@ -101,6 +101,8 @@ public class TestNameNodeMXBean {
         assertTrue(((Long)liveNode.get("nonDfsUsedSpace")) > 0);
         assertTrue(liveNode.containsKey("capacity"));
         assertTrue(((Long)liveNode.get("capacity")) > 0);
+        assertTrue(liveNode.containsKey("numBlocks"));
+        assertTrue(((Long)liveNode.get("numBlocks")) == 0);
       }
       Assert.assertEquals(fsn.getLiveNodes(), alivenodeinfo);
       // get attribute deadnodeinfo
