@@ -1418,7 +1418,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
   @Override
   @Deprecated
-  public synchronized void sync() throws IOException {
+  public void sync() throws IOException {
     hflush();
   }
   
