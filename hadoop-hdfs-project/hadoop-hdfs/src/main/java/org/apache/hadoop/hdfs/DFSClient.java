@@ -642,6 +642,16 @@ public class DFSClient implements java.io.Closeable {
   }
   
   /**
+   * Get a canonical token service name for this client's tokens.  Null should
+   * be returned if the client is not using tokens.
+   * @return the token service for the client
+   */
+  @InterfaceAudience.LimitedPrivate( { "HDFS" }) 
+  public String getCanonicalServiceName() {
+    return (dtService != null) ? dtService.toString() : null;
+  }
+  
+  /**
    * @see ClientProtocol#getDelegationToken(Text)
    */
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
