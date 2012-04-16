@@ -319,6 +319,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-7510. Tokens should use original hostname provided instead of ip
     (Daryn Sharp via bobby)
 
+    HADOOP-8283. Allow tests to control token service value (Daryn Sharp via
+    bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
