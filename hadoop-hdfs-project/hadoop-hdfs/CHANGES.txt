@@ -400,6 +400,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3268. FileContext API mishandles token service and incompatible with
     HA (Daryn Sharp via todd)
 
+    HDFS-3284. bootstrapStandby fails in secure cluster (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
