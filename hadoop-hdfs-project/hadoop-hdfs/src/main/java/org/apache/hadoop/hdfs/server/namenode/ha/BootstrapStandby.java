@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
 import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
@@ -144,8 +145,8 @@ public class BootstrapStandby implements Tool, Configurable {
   
   private HAServiceProtocol createHAProtocolProxy()
       throws IOException {
-    return new NNHAServiceTarget(new HdfsConfiguration(conf),
-        nsId, otherNNId).getProxy(conf, 15000);
+    return new NNHAServiceTarget(new HdfsConfiguration(conf), nsId, otherNNId)
+        .getProxy(conf, 15000);
   }
 
   private int doRun() throws IOException {
@@ -334,7 +335,7 @@ public class BootstrapStandby implements Tool, Configurable {
 
   @Override
   public void setConf(Configuration conf) {
-    this.conf = conf;
+    this.conf = DFSHAAdmin.addSecurityConfiguration(conf);
   }
 
   @Override
