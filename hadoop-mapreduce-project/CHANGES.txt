@@ -240,6 +240,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4144. Fix a NPE in the ResourceManager when handling node
     updates. (Jason Lowe via sseth)
 
+    MAPREDUCE-4156. ant build fails compiling JobInProgress (tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
