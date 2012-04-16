@@ -2710,7 +2710,7 @@ public class JobInProgress {
     }
 
     TaskFinishedEvent tfe = new TaskFinishedEvent(tip.getTIPId(),
-        tip.getExecFinishTime(), taskType, 
+        null, tip.getExecFinishTime(), taskType, 
         TaskStatus.State.SUCCEEDED.toString(),
         new org.apache.hadoop.mapreduce.Counters(status.getCounters()));
     
