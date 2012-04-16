@@ -251,6 +251,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2708. Stats for the # of blocks per DN. (atm)
 
+    HDFS-3279. Move the FSEditLog constructor with @VisibleForTesting to
+    TestEditLog.  (Arpit Gupta via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
