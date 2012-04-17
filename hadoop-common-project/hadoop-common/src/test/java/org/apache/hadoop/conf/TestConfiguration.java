@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -35,6 +36,7 @@ import static org.junit.Assert.assertArrayEquals;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.net.NetUtils;
 import org.codehaus.jackson.map.ObjectMapper; 
 
 public class TestConfiguration extends TestCase {
@@ -602,6 +604,38 @@ public class TestConfiguration extends TestCase {
     // Works for correct patterns
     assertEquals("a+b",
                  conf.getPattern("test.pattern3", defaultPattern).pattern());
+  }
+
+  public void testSocketAddress() throws IOException {
+    Configuration conf = new Configuration();
+    final String defaultAddr = "host:1";
+    final int defaultPort = 2;
+    InetSocketAddress addr = null;
+    
+    addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
+    assertEquals(defaultAddr, NetUtils.getHostPortString(addr));
+    
+    conf.set("myAddress", "host2");
+    addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
+    assertEquals("host2:"+defaultPort, NetUtils.getHostPortString(addr));
+    
+    conf.set("myAddress", "host2:3");
+    addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
+    assertEquals("host2:3", NetUtils.getHostPortString(addr));
+    
+    boolean threwException = false;
+    conf.set("myAddress", "bad:-port");
+    try {
+      addr = conf.getSocketAddr("myAddress", defaultAddr, defaultPort);
+    } catch (IllegalArgumentException iae) {
+      threwException = true;
+      assertEquals("Does not contain a valid host:port authority: " +
+                   "bad:-port (configuration property 'myAddress')",
+                   iae.getMessage());
+      
+    } finally {
+      assertTrue(threwException);
+    }
   }
 
   public void testReload() throws IOException {
