@@ -77,6 +77,7 @@ import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class RMAppAttemptImpl implements RMAppAttempt {
 
   private static final Log LOG = LogFactory.getLog(RMAppAttemptImpl.class);
@@ -95,7 +96,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
                              RMAppAttemptEvent> stateMachine;
 
   private final RMContext rmContext;
-  @SuppressWarnings("rawtypes")
   private final EventHandler eventHandler;
   private final YarnScheduler scheduler;
   private final ApplicationMasterService masterService;
@@ -539,7 +539,6 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   }
 
   private static final class AttemptStartedTransition extends BaseTransition {
-    @SuppressWarnings("unchecked")
 	@Override
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
@@ -638,12 +637,13 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
 
+      ApplicationAttemptId appAttemptId = appAttempt.getAppAttemptId();
+
       // Tell the AMS. Unregister from the ApplicationMasterService
-      appAttempt.masterService
-          .unregisterAttempt(appAttempt.applicationAttemptId);
+      appAttempt.masterService.unregisterAttempt(appAttemptId);
 
       // Tell the application and the scheduler
-      ApplicationId applicationId = appAttempt.getAppAttemptId().getApplicationId();
+      ApplicationId applicationId = appAttemptId.getApplicationId();
       RMAppEvent appEvent = null;
       switch (finalAttemptState) {
         case FINISHED:
@@ -676,8 +676,12 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       }
 
       appAttempt.eventHandler.handle(appEvent);
-      appAttempt.eventHandler.handle(new AppRemovedSchedulerEvent(appAttempt
-          .getAppAttemptId(), finalAttemptState));
+      appAttempt.eventHandler.handle(new AppRemovedSchedulerEvent(appAttemptId,
+        finalAttemptState));
+
+      // Remove the AppAttempt from the ApplicationTokenSecretManager
+      appAttempt.rmContext.getApplicationTokenSecretManager()
+        .applicationMasterFinished(appAttemptId);
     }
   }
 

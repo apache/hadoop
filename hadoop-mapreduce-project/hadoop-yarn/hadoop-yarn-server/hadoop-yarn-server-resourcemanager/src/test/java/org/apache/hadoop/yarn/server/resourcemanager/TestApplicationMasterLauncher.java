@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import java.io.IOException;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -33,7 +32,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.StartContainerResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StopContainerResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncher;
@@ -123,14 +121,13 @@ public class TestApplicationMasterLauncher {
 
     @Override
     protected ApplicationMasterLauncher createAMLauncher() {
-      return new ApplicationMasterLauncher(super.appTokenSecretManager,
-          super.clientToAMSecretManager, getRMContext()) {
+      return new ApplicationMasterLauncher(super.clientToAMSecretManager,
+        getRMContext()) {
         @Override
         protected Runnable createRunnableLauncher(RMAppAttempt application,
             AMLauncherEventType event) {
           return new AMLauncher(context, application, event,
-              applicationTokenSecretManager, clientToAMSecretManager,
-              getConfig()) {
+            clientToAMSecretManager, getConfig()) {
             @Override
             protected ContainerManager getContainerMgrProxy(
                 ContainerId containerId) {

@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -42,20 +41,16 @@ public class ApplicationMasterLauncher extends AbstractService implements
   private final BlockingQueue<Runnable> masterEvents
     = new LinkedBlockingQueue<Runnable>();
   
-  protected ApplicationTokenSecretManager applicationTokenSecretManager;
   private ClientToAMSecretManager clientToAMSecretManager;
   protected final RMContext context;
   
   public ApplicationMasterLauncher(
-      ApplicationTokenSecretManager applicationTokenSecretManager, 
-      ClientToAMSecretManager clientToAMSecretManager,
-      RMContext context) {
+      ClientToAMSecretManager clientToAMSecretManager, RMContext context) {
     super(ApplicationMasterLauncher.class.getName());
     this.context = context;
     this.launcherPool = new ThreadPoolExecutor(10, 10, 1, 
         TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
     this.launcherHandlingThread = new LauncherThread();
-    this.applicationTokenSecretManager = applicationTokenSecretManager;
     this.clientToAMSecretManager = clientToAMSecretManager;
   }
   
@@ -66,8 +61,9 @@ public class ApplicationMasterLauncher extends AbstractService implements
   
   protected Runnable createRunnableLauncher(RMAppAttempt application, 
       AMLauncherEventType event) {
-    Runnable launcher = new AMLauncher(context, application, event,
-        applicationTokenSecretManager, clientToAMSecretManager, getConfig());
+    Runnable launcher =
+        new AMLauncher(context, application, event, clientToAMSecretManager,
+          getConfig());
     return launcher;
   }
   

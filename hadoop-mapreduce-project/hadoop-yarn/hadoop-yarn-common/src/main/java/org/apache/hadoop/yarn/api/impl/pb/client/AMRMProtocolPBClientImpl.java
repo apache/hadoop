@@ -56,7 +56,12 @@ public class AMRMProtocolPBClientImpl implements AMRMProtocol {
         AMRMProtocolPB.class, clientVersion, addr, conf);
   }
   
-  
+  public void close() {
+    if (this.proxy != null) {
+      RPC.stopProxy(this.proxy);
+    }
+  }
+
   @Override
   public AllocateResponse allocate(AllocateRequest request)
       throws YarnRemoteException {

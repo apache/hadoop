@@ -157,6 +157,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4059. The history server should have a separate pluggable 
     storage/query interface. (Robert Evans via tgraves)
 
+    MAPREDUCE-3942. Randomize master key generation for
+    ApplicationTokenSecretManager and roll it every so often. (Vinod Kumar
+    Vavilapalli via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES

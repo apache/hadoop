@@ -27,8 +27,8 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.MockApps;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
@@ -93,7 +92,7 @@ public class TestAppManager{
     AMLivelinessMonitor amLivelinessMonitor = new AMLivelinessMonitor(
         rmDispatcher);
     return new RMContextImpl(new MemStore(), rmDispatcher,
-        containerAllocationExpirer, amLivelinessMonitor, null) {
+        containerAllocationExpirer, amLivelinessMonitor, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;
@@ -336,9 +335,9 @@ public class TestAppManager{
 
     RMContext rmContext = mockRMContext(0, now - 10);
     ResourceScheduler scheduler = new CapacityScheduler();
-    ApplicationMasterService masterService =  new ApplicationMasterService(rmContext,
-        new ApplicationTokenSecretManager(), scheduler);
     Configuration conf = new Configuration();
+    ApplicationMasterService masterService =
+        new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
         new ClientToAMSecretManager(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);
@@ -384,9 +383,9 @@ public class TestAppManager{
 
     RMContext rmContext = mockRMContext(1, now - 10);
     ResourceScheduler scheduler = new CapacityScheduler();
-    ApplicationMasterService masterService =  new ApplicationMasterService(rmContext,
-        new ApplicationTokenSecretManager(), scheduler);
     Configuration conf = new Configuration();
+    ApplicationMasterService masterService =
+        new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
         new ClientToAMSecretManager(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);
@@ -432,9 +431,9 @@ public class TestAppManager{
     // specify 1 here and use same appId below so it gets duplicate entry
     RMContext rmContext = mockRMContext(1, now - 10);
     ResourceScheduler scheduler = new CapacityScheduler();
-    ApplicationMasterService masterService =  new ApplicationMasterService(rmContext,
-        new ApplicationTokenSecretManager(), scheduler);
     Configuration conf = new Configuration();
+    ApplicationMasterService masterService =
+        new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
         new ClientToAMSecretManager(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);

@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
 
 /**
@@ -53,4 +54,6 @@ public interface RMContext {
   ContainerAllocationExpirer getContainerAllocationExpirer();
   
   DelegationTokenRenewer getDelegationTokenRenewer();
+
+  ApplicationTokenSecretManager getApplicationTokenSecretManager();
 }
