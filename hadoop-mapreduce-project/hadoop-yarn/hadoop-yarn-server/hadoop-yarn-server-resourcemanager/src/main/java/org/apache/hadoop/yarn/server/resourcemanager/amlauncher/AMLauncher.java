@@ -53,7 +53,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
@@ -76,7 +75,6 @@ public class AMLauncher implements Runnable {
   private final Configuration conf;
   private final RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
-  private final ApplicationTokenSecretManager applicationTokenSecretManager;
   private final ClientToAMSecretManager clientToAMSecretManager;
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
@@ -86,11 +84,9 @@ public class AMLauncher implements Runnable {
   
   public AMLauncher(RMContext rmContext, RMAppAttempt application,
       AMLauncherEventType eventType,
-      ApplicationTokenSecretManager applicationTokenSecretManager,
       ClientToAMSecretManager clientToAMSecretManager, Configuration conf) {
     this.application = application;
     this.conf = conf;
-    this.applicationTokenSecretManager = applicationTokenSecretManager;
     this.clientToAMSecretManager = clientToAMSecretManager;
     this.eventType = eventType;
     this.rmContext = rmContext;
@@ -129,6 +125,7 @@ public class AMLauncher implements Runnable {
     containerMgrProxy.stopContainer(stopRequest);
   }
 
+  // Protected. For tests.
   protected ContainerManager getContainerMgrProxy(
       final ContainerId containerId) {
 
@@ -220,7 +217,7 @@ public class AMLauncher implements Runnable {
           application.getAppAttemptId());
       Token<ApplicationTokenIdentifier> token =
           new Token<ApplicationTokenIdentifier>(id,
-              this.applicationTokenSecretManager);
+              this.rmContext.getApplicationTokenSecretManager());
       String schedulerAddressStr =
           this.conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
               YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);

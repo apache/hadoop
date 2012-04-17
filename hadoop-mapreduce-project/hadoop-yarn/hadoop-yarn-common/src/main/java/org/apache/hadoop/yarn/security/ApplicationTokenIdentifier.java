@@ -23,34 +23,55 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 
+/**
+ * ApplicationTokenIdentifier is the TokenIdentifier to be used by
+ * ApplicationMasters to authenticate to the ResourceManager.
+ */
 public class ApplicationTokenIdentifier extends TokenIdentifier {
 
   public static final Text KIND_NAME = new Text("YARN_APPLICATION_TOKEN");
 
-  private String applicationAttemptId;
+  private ApplicationAttemptId applicationAttemptId;
 
   public ApplicationTokenIdentifier() {
   }
 
   public ApplicationTokenIdentifier(ApplicationAttemptId appAttemptId) {
     this();
-    this.applicationAttemptId = appAttemptId.toString();
+    this.applicationAttemptId = appAttemptId;
+  }
+
+  @Private
+  public ApplicationAttemptId getApplicationAttemptId() {
+    return this.applicationAttemptId;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    Text.writeString(out, this.applicationAttemptId);
+    ApplicationId appId = this.applicationAttemptId.getApplicationId();
+    out.writeLong(appId.getClusterTimestamp());
+    out.writeInt(appId.getId());
+    out.writeInt(this.applicationAttemptId.getAttemptId());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    this.applicationAttemptId = Text.readString(in);
+    long clusterTimeStamp = in.readLong();
+    int appId = in.readInt();
+    int attemptId = in.readInt();
+    ApplicationId applicationId =
+        BuilderUtils.newApplicationId(clusterTimeStamp, appId);
+    this.applicationAttemptId =
+        BuilderUtils.newApplicationAttemptId(applicationId, attemptId);
   }
 
   @Override
@@ -68,6 +89,7 @@ public class ApplicationTokenIdentifier extends TokenIdentifier {
         .toString());
   }
 
+  // TODO: Needed?
   @InterfaceAudience.Private
   public static class Renewer extends Token.TrivialRenewer {
     @Override

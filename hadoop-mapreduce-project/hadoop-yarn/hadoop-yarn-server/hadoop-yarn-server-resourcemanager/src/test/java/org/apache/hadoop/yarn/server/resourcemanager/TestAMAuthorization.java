@@ -60,9 +60,9 @@ public class TestAMAuthorization {
 
   private static final Log LOG = LogFactory.getLog(TestAMAuthorization.class);
 
-  private static final class MyContainerManager implements ContainerManager {
+  public static final class MyContainerManager implements ContainerManager {
 
-    Map<String, String> containerEnv;
+    public Map<String, String> amContainerEnv;
 
     public MyContainerManager() {
     }
@@ -71,7 +71,7 @@ public class TestAMAuthorization {
     public StartContainerResponse
         startContainer(StartContainerRequest request)
             throws YarnRemoteException {
-      containerEnv = request.getContainerLaunchContext().getEnvironment();
+      amContainerEnv = request.getContainerLaunchContext().getEnvironment();
       return null;
     }
 
@@ -90,17 +90,13 @@ public class TestAMAuthorization {
     }
   }
 
-  private static class MockRMWithAMS extends MockRMWithCustomAMLauncher {
+  public static class MockRMWithAMS extends MockRMWithCustomAMLauncher {
 
-    private static final Configuration conf = new Configuration();
-    static {
+    public MockRMWithAMS(Configuration conf, ContainerManager containerManager) {
+      super(conf, containerManager);
       conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
           "kerberos");
       UserGroupInformation.setConfiguration(conf);
-    }
-
-    public MockRMWithAMS(ContainerManager containerManager) {
-      super(conf, containerManager);
     }
 
     @Override
@@ -111,15 +107,14 @@ public class TestAMAuthorization {
     @Override
     protected ApplicationMasterService createApplicationMasterService() {
 
-      return new ApplicationMasterService(getRMContext(),
-          this.appTokenSecretManager, this.scheduler);
+      return new ApplicationMasterService(getRMContext(), this.scheduler);
     }
   }
 
   @Test
   public void testAuthorizedAccess() throws Exception {
     MyContainerManager containerManager = new MyContainerManager();
-    MockRM rm = new MockRMWithAMS(containerManager);
+    final MockRM rm = new MockRMWithAMS(new Configuration(), containerManager);
     rm.start();
 
     MockNM nm1 = rm.registerNode("localhost:1234", 5120);
@@ -132,11 +127,11 @@ public class TestAMAuthorization {
     nm1.nodeHeartbeat(true);
 
     int waitCount = 0;
-    while (containerManager.containerEnv == null && waitCount++ < 20) {
+    while (containerManager.amContainerEnv == null && waitCount++ < 20) {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
-    Assert.assertNotNull(containerManager.containerEnv);
+    Assert.assertNotNull(containerManager.amContainerEnv);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -145,13 +140,10 @@ public class TestAMAuthorization {
     // Create a client to the RM.
     final Configuration conf = rm.getConfig();
     final YarnRPC rpc = YarnRPC.create(conf);
-    final String serviceAddr = conf.get(
-        YarnConfiguration.RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
 
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(applicationAttemptId.toString());
-    String tokenURLEncodedStr = containerManager.containerEnv
+    String tokenURLEncodedStr = containerManager.amContainerEnv
         .get(ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
     LOG.info("AppMasterToken is " + tokenURLEncodedStr);
     Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
@@ -162,8 +154,8 @@ public class TestAMAuthorization {
         .doAs(new PrivilegedAction<AMRMProtocol>() {
           @Override
           public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, NetUtils
-                .createSocketAddr(serviceAddr), conf);
+            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rm
+              .getApplicationMasterService().getBindAddress(), conf);
           }
         });
 
@@ -181,7 +173,7 @@ public class TestAMAuthorization {
   @Test
   public void testUnauthorizedAccess() throws Exception {
     MyContainerManager containerManager = new MyContainerManager();
-    MockRM rm = new MockRMWithAMS(containerManager);
+    MockRM rm = new MockRMWithAMS(new Configuration(), containerManager);
     rm.start();
 
     MockNM nm1 = rm.registerNode("localhost:1234", 5120);
@@ -191,11 +183,11 @@ public class TestAMAuthorization {
     nm1.nodeHeartbeat(true);
 
     int waitCount = 0;
-    while (containerManager.containerEnv == null && waitCount++ < 20) {
+    while (containerManager.amContainerEnv == null && waitCount++ < 20) {
       LOG.info("Waiting for AM Launch to happen..");
       Thread.sleep(1000);
     }
-    Assert.assertNotNull(containerManager.containerEnv);
+    Assert.assertNotNull(containerManager.amContainerEnv);
 
     RMAppAttempt attempt = app.getCurrentAppAttempt();
     ApplicationAttemptId applicationAttemptId = attempt.getAppAttemptId();
@@ -210,7 +202,7 @@ public class TestAMAuthorization {
 
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(applicationAttemptId.toString());
-    String tokenURLEncodedStr = containerManager.containerEnv
+    String tokenURLEncodedStr = containerManager.amContainerEnv
         .get(ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
     LOG.info("AppMasterToken is " + tokenURLEncodedStr);
     Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
