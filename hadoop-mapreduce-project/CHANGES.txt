@@ -161,6 +161,9 @@ Release 0.23.3 - UNRELEASED
     ApplicationTokenSecretManager and roll it every so often. (Vinod Kumar
     Vavilapalli via sseth)
 
+    MAPREDUCE-4151. RM scheduler web page should filter apps to those that 
+    are relevant to scheduling (Jason Lowe via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
