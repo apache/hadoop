@@ -26,6 +26,7 @@ import static org.apache.hadoop.yarn.webapp.view.Jsons.appendProgressBar;
 import static org.apache.hadoop.yarn.webapp.view.Jsons.appendSortable;
 
 import java.io.PrintWriter;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -53,12 +54,12 @@ class AppsList implements ToJSON {
     apps = rmContext.getRMApps();
   }
 
-  void toDataTableArrays(String requiredAppState, PrintWriter out) {
+  void toDataTableArrays(Collection<RMAppState> requiredAppStates, PrintWriter out) {
     out.append('[');
     boolean first = true;
     for (RMApp app : apps.values()) {
-      if (requiredAppState != null && !requiredAppState.isEmpty()
-          && app.getState() != RMAppState.valueOf(requiredAppState)) {
+      if (requiredAppStates != null &&
+          !requiredAppStates.contains(app.getState())) {
         continue;
       }
       AppInfo appInfo = new AppInfo(app, true);

@@ -23,6 +23,9 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 
+import java.util.Collection;
+import java.util.HashSet;
+
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
@@ -60,10 +63,17 @@ class AppsBlock extends HtmlBlock {
             th(".ui", "Tracking UI")._()._().
         tbody();
     int i = 0;
-    String reqState = $(APP_STATE);
-    reqState = (reqState == null ? "" : reqState);
+    Collection<RMAppState> reqAppStates = null;
+    String reqStateString = $(APP_STATE);
+    if (reqStateString != null && !reqStateString.isEmpty()) {
+      String[] appStateStrings = reqStateString.split(",");
+      reqAppStates = new HashSet<RMAppState>(appStateStrings.length);
+      for(String stateString : appStateStrings) {
+        reqAppStates.add(RMAppState.valueOf(stateString));
+      }
+    }
     for (RMApp app : list.apps.values()) {
-      if (!reqState.isEmpty() && app.getState() != RMAppState.valueOf(reqState)) {
+      if (reqAppStates != null && !reqAppStates.contains(app.getState())) {
         continue;
       }
       AppInfo appInfo = new AppInfo(app, true);
@@ -100,7 +110,7 @@ class AppsBlock extends HtmlBlock {
     if (list.rendering == Render.JS_ARRAY) {
       echo("<script type='text/javascript'>\n",
            "var appsData=");
-      list.toDataTableArrays(reqState, writer());
+      list.toDataTableArrays(reqAppStates, writer());
       echo("\n</script>\n");
     }
   }
