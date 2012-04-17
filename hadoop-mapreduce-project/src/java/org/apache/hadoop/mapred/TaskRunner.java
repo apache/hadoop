@@ -110,20 +110,7 @@ abstract class TaskRunner extends Thread {
   public String getChildJavaOpts(JobConf jobConf, String defaultValue) {
     return jobConf.get(JobConf.MAPRED_TASK_JAVA_OPTS, defaultValue);
   }
-  
-  /**
-   * Get the maximum virtual memory of the child map/reduce tasks.
-   * @param jobConf job configuration
-   * @return the maximum virtual memory of the child task or <code>-1</code> if
-   *         none is specified
-   * @deprecated Use limits specific to the map or reduce tasks set via
-   *             {@link JobConf#MAPRED_MAP_TASK_ULIMIT} or
-   *             {@link JobConf#MAPRED_REDUCE_TASK_ULIMIT} 
-   */
-  @Deprecated
-  public int getChildUlimit(JobConf jobConf) {
-    return jobConf.getInt(JobConf.MAPRED_TASK_ULIMIT, -1);
-  }
+
   
   /**
    * Get the environment variables for the child map/reduce tasks.
@@ -188,8 +175,7 @@ abstract class TaskRunner extends Thread {
 
       tracker.addToMemoryManager(t.getTaskID(), t.isMapTask(), conf);
 
-      // set memory limit using ulimit if feasible and necessary ...
-      List<String> setup = getVMSetupCmd();
+      List<String> setup = new ArrayList<String>();
 
       // Set up the redirection of the task's stdout and stderr streams
       File[] logFiles = prepareLogFiles(taskid, t.isTaskCleanupTask());
@@ -308,26 +294,6 @@ abstract class TaskRunner extends Thread {
     // Set the final job file in the task. The child needs to know the correct
     // path to job.xml. So set this path accordingly.
     t.setJobFile(localTaskFile.toString());
-  }
-
-  /**
-   * @return
-   */
-  private List<String> getVMSetupCmd() {
-
-    int ulimit = getChildUlimit(conf);
-    if (ulimit <= 0) {
-      return null;
-    }
-    List<String> setup = null;
-    String[] ulimitCmd = Shell.getUlimitMemoryCommand(ulimit);
-    if (ulimitCmd != null) {
-      setup = new ArrayList<String>();
-      for (String arg : ulimitCmd) {
-        setup.add(arg);
-      }
-    }
-    return setup;
   }
 
   /**
