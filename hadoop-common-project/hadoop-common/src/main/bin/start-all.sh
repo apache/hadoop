@@ -33,6 +33,6 @@ if [ -f "${HADOOP_HDFS_HOME}"/sbin/start-dfs.sh ]; then
 fi
 
 # start yarn daemons if yarn is present
-if [ -f "${YARN_HOME}"/sbin/start-dfs.sh ]; then
+if [ -f "${YARN_HOME}"/sbin/start-yarn.sh ]; then
   "${YARN_HOME}"/sbin/start-yarn.sh --config $HADOOP_CONF_DIR
 fi

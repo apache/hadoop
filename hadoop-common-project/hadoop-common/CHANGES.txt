@@ -240,6 +240,9 @@ Release 2.0.0 - UNRELEASED
     properly if no local node and first node is local rack node.
     (Junping Du)
 
+    HADOOP-8282. start-all.sh refers incorrectly start-dfs.sh
+    existence for starting start-yarn.sh. (Devaraj K via eli)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
