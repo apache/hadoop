@@ -68,6 +68,7 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
@@ -902,16 +903,14 @@ public class MiniDFSCluster {
       if(dn == null)
         throw new IOException("Cannot start DataNode in "
             + dnConf.get(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
-      //NOTE: the following is true if and only if:
-      //      hadoop.security.token.service.use_ip=true
-      //since the HDFS does things based on IP:port, we need to add the mapping
-      //for IP:port to rackId
-      String ipAddr = dn.getSelfAddr().getAddress().getHostAddress();
+      //since the HDFS does things based on host|ip:port, we need to add the
+      //mapping for the service to rackId
+      String service =
+          SecurityUtil.buildTokenService(dn.getSelfAddr()).toString();
       if (racks != null) {
-        int port = dn.getSelfAddr().getPort();
-        LOG.info("Adding node with IP:port : " + ipAddr + ":" + port +
+        LOG.info("Adding node with service : " + service +
                             " to rack " + racks[i-curDatanodesNum]);
-        StaticMapping.addNodeToRack(ipAddr + ":" + port,
+        StaticMapping.addNodeToRack(service,
                                   racks[i-curDatanodesNum]);
       }
       dn.runDatanodeDaemon();

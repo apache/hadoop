@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.log4j.Level;
@@ -105,10 +106,8 @@ public class TestClientProtocolWithDelegationToken {
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(owner, owner, null);
     Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>(
         dtId, sm);
-    Text host = new Text(addr.getAddress().getHostAddress() + ":"
-        + addr.getPort());
-    token.setService(host);
-    LOG.info("Service IP address for token is " + host);
+    SecurityUtil.setTokenService(token, addr);
+    LOG.info("Service for token is " + token.getService());
     current.addToken(token);
     current.doAs(new PrivilegedExceptionAction<Object>() {
       @Override

@@ -20,6 +20,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3136. Remove SLF4J dependency as HDFS does not need it to fix
     unnecessary warnings. (Jason Lowe via suresh)
 
+    HDFS-2652. Add support for host-based delegation tokens.  (Daryn Sharp via
+    szetszwo)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
