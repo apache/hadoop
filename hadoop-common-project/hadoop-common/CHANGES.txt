@@ -331,6 +331,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8286. Simplify getting a socket address from conf (Daryn Sharp via
     bobby)
 
+    HADOOP-8227. Allow RPC to limit ephemeral port range. (bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
