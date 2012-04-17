@@ -8,6 +8,9 @@ Release 0.23.3 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
+    (Brandon Li via jitendra and bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
