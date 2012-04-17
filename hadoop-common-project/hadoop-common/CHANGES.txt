@@ -92,9 +92,6 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8141. Add method to SecurityUtil to init krb5 cipher suites.
     (todd)
 
-    HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
-    (Brandon Li via jitendra)
-
     HADOOP-7557 Make IPC header be extensible (sanjay radia)
 
     HADOOP-7806. Support binding to sub-interfaces (eli)
@@ -302,6 +299,9 @@ Release 0.23.3 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
+    (Brandon Li via jitendra)
 
   OPTIMIZATIONS
 
