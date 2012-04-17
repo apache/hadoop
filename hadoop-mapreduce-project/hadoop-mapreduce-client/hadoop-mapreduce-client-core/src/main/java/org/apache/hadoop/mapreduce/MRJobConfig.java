@@ -183,8 +183,6 @@ public interface MRJobConfig {
 
   public static final String MAP_JAVA_OPTS = "mapreduce.map.java.opts";
 
-  public static final String MAP_ULIMIT = "mapreduce.map.ulimit";
-
   public static final String MAP_MAX_ATTEMPTS = "mapreduce.map.maxattempts";
 
   public static final String MAP_DEBUG_SCRIPT = "mapreduce.map.debug.script";
@@ -243,8 +241,6 @@ public interface MRJobConfig {
 
   public static final String REDUCE_JAVA_OPTS = "mapreduce.reduce.java.opts";
 
-  public static final String REDUCE_ULIMIT = "mapreduce.reduce.ulimit";
-  
   public static final String MAPREDUCE_JOB_DIR = "mapreduce.job.dir";
 
   public static final String REDUCE_MAX_ATTEMPTS = "mapreduce.reduce.maxattempts";

@@ -164,6 +164,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4151. RM scheduler web page should filter apps to those that 
     are relevant to scheduling (Jason Lowe via tgraves)
 
+    MAPREDUCE-4134. Remove references of mapred.child.ulimit etc. since they
+    are not being used any more (Ravi Prakash via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
