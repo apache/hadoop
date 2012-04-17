@@ -314,8 +314,6 @@ public class ConfigUtil {
       new String[] {MRJobConfig.MAP_ENV});
     Configuration.addDeprecation("mapred.map.child.java.opts", 
       new String[] {MRJobConfig.MAP_JAVA_OPTS});
-    Configuration.addDeprecation("mapred.map.child.ulimit", 
-      new String[] {MRJobConfig.MAP_ULIMIT});
     Configuration.addDeprecation("mapred.map.max.attempts", 
       new String[] {MRJobConfig.MAP_MAX_ATTEMPTS});
     Configuration.addDeprecation("mapred.map.task.debug.script", 
@@ -362,8 +360,6 @@ public class ConfigUtil {
       new String[] {MRJobConfig.REDUCE_ENV});
     Configuration.addDeprecation("mapred.reduce.child.java.opts", 
       new String[] {MRJobConfig.REDUCE_JAVA_OPTS});
-    Configuration.addDeprecation("mapred.reduce.child.ulimit", 
-      new String[] {MRJobConfig.REDUCE_ULIMIT});
     Configuration.addDeprecation("mapred.reduce.max.attempts", 
       new String[] {MRJobConfig.REDUCE_MAX_ATTEMPTS});
     Configuration.addDeprecation("mapred.reduce.parallel.copies", 
