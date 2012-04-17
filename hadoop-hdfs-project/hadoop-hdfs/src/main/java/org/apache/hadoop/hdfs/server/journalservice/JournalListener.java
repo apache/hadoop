@@ -35,8 +35,10 @@ public interface JournalListener {
    * 
    * The application using {@link JournalService} can stop the service if
    * {@code info} validation fails.
+   * @throws IOException 
    */
-  public void verifyVersion(JournalService service, NamespaceInfo info);
+  public void verifyVersion(JournalService service, NamespaceInfo info
+      ) throws IOException;
   
   /**
    * Process the received Journal record

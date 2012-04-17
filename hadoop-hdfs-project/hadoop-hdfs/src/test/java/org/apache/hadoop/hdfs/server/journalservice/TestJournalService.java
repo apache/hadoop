@@ -17,12 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.journalservice;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,15 +26,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
 import org.apache.hadoop.hdfs.server.protocol.FencedException;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -46,10 +41,9 @@ import org.mockito.Mockito;
  * Tests for {@link JournalService}
  */
 public class TestJournalService {
-  private MiniDFSCluster cluster;
-  private Configuration conf = new HdfsConfiguration();
   static final Log LOG = LogFactory.getLog(TestJournalService.class);
-  
+  static final InetSocketAddress RPC_ADDR = new InetSocketAddress(0);
+
   /**
    * Test calls backs {@link JournalListener#startLogSegment(JournalService, long)} and
    * {@link JournalListener#journal(JournalService, long, int, byte[])} are
@@ -57,47 +51,65 @@ public class TestJournalService {
    */
   @Test
   public void testCallBacks() throws Exception {
+    Configuration conf = TestJournal.newConf("testCallBacks");
     JournalListener listener = Mockito.mock(JournalListener.class);
     JournalService service = null;
+    MiniDFSCluster cluster = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive(0);
-      FileSystem fs = FileSystem.getLocal(conf);
-      File journalEditsDir = cluster.getJournalEditsDir();
-      boolean result = fs.mkdirs(new Path(journalEditsDir.toString()));
-      conf.set(DFS_JOURNAL_EDITS_DIR_KEY, journalEditsDir.toString());
-      service = startJournalService(listener);
+      InetSocketAddress nnAddr = cluster.getNameNode(0).getNameNodeAddress();
+      service = newJournalService(nnAddr, listener, conf);
+      service.start();
       verifyRollLogsCallback(service, listener);
-      verifyJournalCallback(service, listener);
-      verifyFence(service, listener, cluster.getNameNode(0));
+      verifyJournalCallback(cluster.getFileSystem(), service, listener);
     } finally {
-      if (service != null) {
-        stopJournalService(service);
-      }
       if (cluster != null) {
         cluster.shutdown();
       }
+      if (service != null) {
+        service.stop();
+      }
     }
   }
-  
-  private JournalService restartJournalService(JournalService service,
-      JournalListener listener) throws IOException {
-    stopJournalService(service);
-    return (startJournalService(listener));
+
+  @Test
+  public void testFence() throws Exception {
+    final Configuration conf = TestJournal.newConf("testFence");
+    final JournalListener listener = Mockito.mock(JournalListener.class);
+    final InetSocketAddress nnAddress;
+
+    JournalService service = null;
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      cluster.waitActive(0);
+      NameNode nn = cluster.getNameNode(0);
+      nnAddress = nn.getNameNodeAddress();
+      service = newJournalService(nnAddress, listener, conf);
+      service.start();
+      String cid = nn.getNamesystem().getClusterId();
+      int nsId = nn.getNamesystem().getFSImage().getNamespaceID();
+      int lv = nn.getNamesystem().getFSImage().getLayoutVersion();
+
+      verifyFence(service, listener, cid, nsId, lv);
+    } finally {
+      cluster.shutdown();
+    }
+
+    //test restart journal service
+    StorageInfo before = service.getJournal().getStorageInfo();
+    LOG.info("before: " + before);
+    service.stop();
+    service = newJournalService(nnAddress, listener, conf);
+    StorageInfo after = service.getJournal().getStorageInfo();
+    LOG.info("after : " + after);
+    Assert.assertEquals(before.toString(), after.toString());
   }
 
-  private JournalService startJournalService(JournalListener listener)
-      throws IOException {
-    InetSocketAddress nnAddr = cluster.getNameNode(0).getNameNodeAddress();
-    InetSocketAddress serverAddr = new InetSocketAddress(0);
-    JournalService service = new JournalService(conf, nnAddr, serverAddr,
-        listener);
-    service.start();
-    return service;
-  }
-  
-  private void stopJournalService(JournalService service) throws IOException {
-    service.stop();
+  private JournalService newJournalService(InetSocketAddress nnAddr,
+      JournalListener listener, Configuration conf) throws IOException {
+    return new JournalService(conf, nnAddr, RPC_ADDR, listener);
   }
   
   /**
@@ -114,19 +126,17 @@ public class TestJournalService {
    * File system write operations should result in JournalListener call
    * backs.
    */
-  private void verifyJournalCallback(JournalService s, JournalListener l) throws IOException {
+  private void verifyJournalCallback(FileSystem fs, JournalService s,
+      JournalListener l) throws IOException {
     Path fileName = new Path("/tmp/verifyJournalCallback");
-    FileSystem fs = cluster.getFileSystem();
     FileSystemTestHelper.createFile(fs, fileName);
     fs.delete(fileName, true);
     Mockito.verify(l, Mockito.atLeastOnce()).journal(Mockito.eq(s),
         Mockito.anyLong(), Mockito.anyInt(), (byte[]) Mockito.any());
   }
   
-  public void verifyFence(JournalService s, JournalListener listener, NameNode nn) throws Exception {
-    String cid = nn.getNamesystem().getClusterId();
-    int nsId = nn.getNamesystem().getFSImage().getNamespaceID();
-    int lv = nn.getNamesystem().getFSImage().getLayoutVersion();
+  void verifyFence(JournalService s, JournalListener listener,
+      String cid, int nsId, int lv) throws Exception {
     
     // Fence the journal service
     JournalInfo info = new JournalInfo(lv, cid, nsId);
@@ -171,7 +181,6 @@ public class TestJournalService {
       LOG.info(ignore.getMessage());
     } 
     
-    s = restartJournalService(s, listener);
     // New epoch higher than the current epoch is successful
     resp = s.fence(info, currentEpoch+1, "fencer");
     Assert.assertNotNull(resp);

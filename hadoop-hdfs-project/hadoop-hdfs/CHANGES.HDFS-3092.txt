@@ -17,6 +17,9 @@ HDFS-3092 branch changes
 
     HDFS-3283. Add http server to journal service.  (Brandon Li via szetszwo)
 
+    HDFS-3196. Add Journal and JournalDiskWriter for journal service.
+    (szetszwo)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
