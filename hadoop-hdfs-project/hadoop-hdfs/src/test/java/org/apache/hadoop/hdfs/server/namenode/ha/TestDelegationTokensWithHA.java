@@ -30,6 +30,7 @@ import java.util.Collection;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -221,6 +222,21 @@ public class TestDelegationTokensWithHA {
     // make sure the logical uri is handled correctly
     token.renew(dfs.getConf());
     token.cancel(dfs.getConf());
+  }
+  
+  @Test
+  public void testHdfsGetCanonicalServiceName() throws Exception {
+    Configuration conf = dfs.getConf();
+    URI haUri = HATestUtil.getLogicalUri(cluster);
+    AbstractFileSystem afs =  AbstractFileSystem.createFileSystem(haUri, conf);    
+    String haService = HAUtil.buildTokenServiceForLogicalUri(haUri).toString();
+    assertEquals(haService, afs.getCanonicalServiceName());
+    Token<?> token = afs.getDelegationTokens(
+        UserGroupInformation.getCurrentUser().getShortUserName()).get(0);
+    assertEquals(haService, token.getService().toString());
+    // make sure the logical uri is handled correctly
+    token.renew(conf);
+    token.cancel(conf);
   }
   
   enum TokenTestAction {

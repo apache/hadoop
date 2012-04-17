@@ -377,6 +377,11 @@ Release 2.0.0 - UNRELEASED
     HDFS-3259. NameNode#initializeSharedEdits should populate shared edits dir
     with edit log segments. (atm)
 
+    HDFS-2708. Stats for the # of blocks per DN. (atm)
+
+    HDFS-3279. Move the FSEditLog constructor with @VisibleForTesting to
+    TestEditLog.  (Arpit Gupta via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -513,6 +518,14 @@ Release 2.0.0 - UNRELEASED
     HDFS-2799. Trim fs.checkpoint.dir values. (Amith D K via eli)
 
     HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
+
+    HDFS-3268. FileContext API mishandles token service and incompatible with
+    HA (Daryn Sharp via todd)
+
+    HDFS-3284. bootstrapStandby fails in secure cluster (todd)
+
+    HDFS-3165. HDFS Balancer scripts are refering to wrong path of
+    hadoop-daemon.sh (Amith D K via eli)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

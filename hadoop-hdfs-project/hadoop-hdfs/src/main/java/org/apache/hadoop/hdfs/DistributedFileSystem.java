@@ -848,12 +848,7 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public String getCanonicalServiceName() {
-    URI uri = getUri();
-    if (HAUtil.isLogicalUri(getConf(), uri)) {
-      return HAUtil.buildTokenServiceForLogicalUri(uri).toString();
-    } else {
-      return super.getCanonicalServiceName();
-    }
+    return dfs.getCanonicalServiceName();
   }
 
   /**

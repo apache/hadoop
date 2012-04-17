@@ -61,6 +61,8 @@ Trunk (unreleased changes)
     HADOOP-8147. test-patch should run tests with -fn to avoid masking test
     failures (Robert Evans via tgraves)
 
+    HADOOP-8117. Upgrade test build to Surefire 2.12 (todd)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -208,9 +210,6 @@ Release 2.0.0 - UNRELEASED
     HADOOP-7358. Improve log levels when exceptions caught in RPC handler
     (Todd Lipcon via shv)
 
-    HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
-    (Brandon Li via jitendra)
-
     HADOOP-7557 Make IPC header be extensible (sanjay radia)
 
     HADOOP-7806. Support binding to sub-interfaces (eli)
@@ -260,6 +259,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8086. KerberosName silently sets defaultRealm to "" if the 
     Kerberos config is not found, it should log a WARN (tucu)
+
+    HADOOP-8280. Move VersionUtil/TestVersionUtil and GenericTestUtils from
+    HDFS into Common. (Ahmed Radwan via atm)
 
   OPTIMIZATIONS
 
@@ -353,6 +355,9 @@ Release 2.0.0 - UNRELEASED
     properly if no local node and first node is local rack node.
     (Junping Du)
 
+    HADOOP-8282. start-all.sh refers incorrectly start-dfs.sh
+    existence for starting start-yarn.sh. (Devaraj K via eli)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -413,6 +418,9 @@ Release 0.23.3 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
+    (Brandon Li via jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -434,6 +442,14 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-7510. Tokens should use original hostname provided instead of ip
     (Daryn Sharp via bobby)
+
+    HADOOP-8283. Allow tests to control token service value (Daryn Sharp via
+    bobby)
+
+    HADOOP-8286. Simplify getting a socket address from conf (Daryn Sharp via
+    bobby)
+
+    HADOOP-8227. Allow RPC to limit ephemeral port range. (bobby)
 
 Release 0.23.2 - UNRELEASED 
 

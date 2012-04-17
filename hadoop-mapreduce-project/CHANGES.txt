@@ -241,6 +241,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4147. YARN should not have a compile-time dependency on HDFS.
     (tomwhite)
 
+    MAPREDUCE-4008. ResourceManager throws MetricsException on start up 
+    saying QueueMetrics MBean already exists (Devaraj K via tgraves)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -254,6 +257,10 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4059. The history server should have a separate pluggable 
     storage/query interface. (Robert Evans via tgraves)
+
+    MAPREDUCE-3942. Randomize master key generation for
+    ApplicationTokenSecretManager and roll it every so often. (Vinod Kumar
+    Vavilapalli via sseth)
 
   OPTIMIZATIONS
 
@@ -337,6 +344,11 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4144. Fix a NPE in the ResourceManager when handling node
     updates. (Jason Lowe via sseth)
+
+    MAPREDUCE-4156. ant build fails compiling JobInProgress (tgraves)
+
+    MAPREDUCE-4160. some mrv1 ant tests fail with timeout - due to 4156 
+    (tgraves)
 
 Release 0.23.2 - UNRELEASED
 

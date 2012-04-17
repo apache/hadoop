@@ -246,6 +246,12 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_METRICS_RUNTIME_BUCKETS = 
     "60,300,1440";
 
+  public static final String RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS = RM_PREFIX
+      + "application-tokens.master-key-rolling-interval-secs";
+
+  public static final long DEFAULT_RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
+      24 * 60 * 60;
+
   ////////////////////////////////
   // Node Manager Configs
   ////////////////////////////////

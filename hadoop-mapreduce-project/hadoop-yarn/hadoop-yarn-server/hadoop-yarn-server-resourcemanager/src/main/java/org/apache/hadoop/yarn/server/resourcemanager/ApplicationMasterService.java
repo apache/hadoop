@@ -55,7 +55,6 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
@@ -72,14 +71,14 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicy
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
+@SuppressWarnings("unchecked")
 @Private
 public class ApplicationMasterService extends AbstractService implements
     AMRMProtocol {
   private static final Log LOG = LogFactory.getLog(ApplicationMasterService.class);
   private final AMLivelinessMonitor amLivelinessMonitor;
   private YarnScheduler rScheduler;
-  private ApplicationTokenSecretManager appTokenManager;
-  private InetSocketAddress masterServiceAddress;
+  private InetSocketAddress bindAddress;
   private Server server;
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private final ConcurrentMap<ApplicationAttemptId, AMResponse> responseMap =
@@ -87,11 +86,9 @@ public class ApplicationMasterService extends AbstractService implements
   private final AMResponse reboot = recordFactory.newRecordInstance(AMResponse.class);
   private final RMContext rmContext;
 
-  public ApplicationMasterService(RMContext rmContext,
-      ApplicationTokenSecretManager appTokenManager, YarnScheduler scheduler) {
+  public ApplicationMasterService(RMContext rmContext, YarnScheduler scheduler) {
     super(ApplicationMasterService.class.getName());
     this.amLivelinessMonitor = rmContext.getAMLivelinessMonitor();
-    this.appTokenManager = appTokenManager;
     this.rScheduler = scheduler;
     this.reboot.setReboot(true);
 //    this.reboot.containers = new ArrayList<Container>();
@@ -99,23 +96,21 @@ public class ApplicationMasterService extends AbstractService implements
   }
 
   @Override
-  public void init(Configuration conf) {
-    String bindAddress =
-      conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
-    masterServiceAddress =  NetUtils.createSocketAddr(bindAddress,
-      YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT,
-      YarnConfiguration.RM_SCHEDULER_ADDRESS);
-    super.init(conf);
-  }
-
-  @Override
   public void start() {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
+
+    String bindAddressStr =
+        conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
+    InetSocketAddress masterServiceAddress =
+        NetUtils.createSocketAddr(bindAddressStr,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT,
+          YarnConfiguration.RM_SCHEDULER_ADDRESS);
+
     this.server =
       rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,
-          conf, this.appTokenManager,
+          conf, this.rmContext.getApplicationTokenSecretManager(),
           conf.getInt(YarnConfiguration.RM_SCHEDULER_CLIENT_THREAD_COUNT, 
               YarnConfiguration.DEFAULT_RM_SCHEDULER_CLIENT_THREAD_COUNT));
     
@@ -127,7 +122,17 @@ public class ApplicationMasterService extends AbstractService implements
     }
     
     this.server.start();
+
+    this.bindAddress =
+        NetUtils.createSocketAddr(masterServiceAddress.getHostName(),
+          this.server.getPort());
+
     super.start();
+  }
+
+  @Private
+  public InetSocketAddress getBindAddress() {
+    return this.bindAddress;
   }
 
   private void authorizeRequest(ApplicationAttemptId appAttemptID)
