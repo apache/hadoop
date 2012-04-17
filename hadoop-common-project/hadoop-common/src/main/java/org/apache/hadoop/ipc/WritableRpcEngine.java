@@ -299,16 +299,19 @@ public class WritableRpcEngine implements RpcEngine {
     }
   }
 
-  /** Construct a server for a protocol implementation instance listening on a
+  /* Construct a server for a protocol implementation instance listening on a
    * port and address. */
+  @Override
   public RPC.Server getServer(Class<?> protocolClass,
                       Object protocolImpl, String bindAddress, int port,
                       int numHandlers, int numReaders, int queueSizePerHandler,
                       boolean verbose, Configuration conf,
-                      SecretManager<? extends TokenIdentifier> secretManager) 
+                      SecretManager<? extends TokenIdentifier> secretManager,
+                      String portRangeConfig) 
     throws IOException {
     return new Server(protocolClass, protocolImpl, conf, bindAddress, port,
-        numHandlers, numReaders, queueSizePerHandler, verbose, secretManager);
+        numHandlers, numReaders, queueSizePerHandler, verbose, secretManager,
+        portRangeConfig);
   }
 
 
@@ -341,7 +344,7 @@ public class WritableRpcEngine implements RpcEngine {
         Configuration conf, String bindAddress, int port) 
       throws IOException {
       this(protocolClass, protocolImpl, conf,  bindAddress, port, 1, -1, -1,
-          false, null);
+          false, null, null);
     }
     
     /** 
@@ -363,7 +366,7 @@ public class WritableRpcEngine implements RpcEngine {
             throws IOException {
        this(null, protocolImpl,  conf,  bindAddress,   port,
                    numHandlers,  numReaders,  queueSizePerHandler,  verbose, 
-                   secretManager);
+                   secretManager, null);
    
     }
     
@@ -381,11 +384,13 @@ public class WritableRpcEngine implements RpcEngine {
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress,  int port,
         int numHandlers, int numReaders, int queueSizePerHandler, 
-        boolean verbose, SecretManager<? extends TokenIdentifier> secretManager) 
+        boolean verbose, SecretManager<? extends TokenIdentifier> secretManager,
+        String portRangeConfig) 
         throws IOException {
       super(bindAddress, port, null, numHandlers, numReaders,
           queueSizePerHandler, conf,
-          classNameBase(protocolImpl.getClass().getName()), secretManager);
+          classNameBase(protocolImpl.getClass().getName()), secretManager,
+          portRangeConfig);
 
       this.verbose = verbose;
       
