@@ -30,6 +30,7 @@ import java.security.PrivilegedExceptionAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.TimeZone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenRenewer;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.hdfs.web.URLUtils;
 import org.apache.hadoop.io.Text;
@@ -168,10 +168,7 @@ public class HftpFileSystem extends FileSystem
 
   protected void initDelegationToken() throws IOException {
     // look for hftp token, then try hdfs
-    Token<?> token = selectHftpDelegationToken();
-    if (token == null) {
-      token = selectHdfsDelegationToken();
-    }  
+    Token<?> token = selectDelegationToken();
 
     // if we don't already have a token, go get one over https
     boolean createdToken = false;
@@ -192,14 +189,8 @@ public class HftpFileSystem extends FileSystem
     }
   }
 
-  protected Token<DelegationTokenIdentifier> selectHftpDelegationToken() {
-    Text serviceName = SecurityUtil.buildTokenService(nnSecureAddr);
-    return hftpTokenSelector.selectToken(serviceName, ugi.getTokens());
-  }
-
-  protected Token<DelegationTokenIdentifier> selectHdfsDelegationToken() {
-    return  DelegationTokenSelector.selectHdfsDelegationToken(
-        nnAddr, ugi, getConf());
+  protected Token<DelegationTokenIdentifier> selectDelegationToken() {
+  	return hftpTokenSelector.selectToken(getUri(), ugi.getTokens(), getConf());
   }
   
 
@@ -699,9 +690,22 @@ public class HftpFileSystem extends FileSystem
   
   private static class HftpDelegationTokenSelector
   extends AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
+    private static final DelegationTokenSelector hdfsTokenSelector =
+        new DelegationTokenSelector();
 
     public HftpDelegationTokenSelector() {
       super(TOKEN_KIND);
+    }
+    
+    Token<DelegationTokenIdentifier> selectToken(URI nnUri,
+        Collection<Token<?>> tokens, Configuration conf) {
+      Token<DelegationTokenIdentifier> token =
+          selectToken(SecurityUtil.buildTokenService(nnUri), tokens);
+      if (token == null) {
+        // try to get a HDFS token
+        token = hdfsTokenSelector.selectToken(nnUri, tokens, conf); 
+      }
+      return token;
     }
   }
 }

@@ -29,6 +29,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -117,8 +118,8 @@ public class WebHdfsFileSystem extends FileSystem
   /** Delegation token kind */
   public static final Text TOKEN_KIND = new Text("WEBHDFS delegation");
   /** Token selector */
-  public static final AbstractDelegationTokenSelector<DelegationTokenIdentifier> DT_SELECTOR
-      = new AbstractDelegationTokenSelector<DelegationTokenIdentifier>(TOKEN_KIND) {};
+  public static final WebHdfsDelegationTokenSelector DT_SELECTOR
+      = new WebHdfsDelegationTokenSelector();
 
   private static DelegationTokenRenewer<WebHdfsFileSystem> DT_RENEWER = null;
 
@@ -164,7 +165,7 @@ public class WebHdfsFileSystem extends FileSystem
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
     }
-    this.nnAddr = NetUtils.createSocketAddr(uri.toString());
+    this.nnAddr = NetUtils.createSocketAddrForHost(uri.getHost(), uri.getPort());
     this.workingDir = getHomeDirectory();
 
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -174,12 +175,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   protected void initDelegationToken() throws IOException {
     // look for webhdfs token, then try hdfs
-    final Text serviceName = SecurityUtil.buildTokenService(nnAddr);
-    Token<?> token = DT_SELECTOR.selectToken(serviceName, ugi.getTokens());      
-    if (token == null) {
-      token = DelegationTokenSelector.selectHdfsDelegationToken(
-          nnAddr, ugi, getConf());
-    }
+    Token<?> token = selectDelegationToken();
 
     //since we don't already have a token, go get one
     boolean createdToken = false;
@@ -198,6 +194,10 @@ public class WebHdfsFileSystem extends FileSystem
         LOG.debug("Found existing DT for " + token.getService());        
       }
     }
+  }
+
+  protected Token<DelegationTokenIdentifier> selectDelegationToken() {
+    return DT_SELECTOR.selectToken(getUri(), ugi.getTokens(), getConf());
   }
 
   @Override
@@ -843,6 +843,26 @@ public class WebHdfsFileSystem extends FileSystem
       } catch (URISyntaxException e) {
         throw new IOException(e);
       }
+    }
+  }
+  
+  private static class WebHdfsDelegationTokenSelector
+  extends AbstractDelegationTokenSelector<DelegationTokenIdentifier> {
+    private static final DelegationTokenSelector hdfsTokenSelector =
+        new DelegationTokenSelector();
+    
+    public WebHdfsDelegationTokenSelector() {
+      super(TOKEN_KIND);
+    }
+    
+    Token<DelegationTokenIdentifier> selectToken(URI nnUri,
+        Collection<Token<?>> tokens, Configuration conf) {
+      Token<DelegationTokenIdentifier> token =
+          selectToken(SecurityUtil.buildTokenService(nnUri), tokens);
+      if (token == null) {
+        token = hdfsTokenSelector.selectToken(nnUri, tokens, conf); 
+      }
+      return token;
     }
   }
 }

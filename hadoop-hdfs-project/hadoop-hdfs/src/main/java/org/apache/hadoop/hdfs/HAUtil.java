@@ -52,6 +52,9 @@ public class HAUtil {
   private static final Log LOG = 
     LogFactory.getLog(HAUtil.class);
   
+  private static final DelegationTokenSelector tokenSelector =
+      new DelegationTokenSelector();
+
   private HAUtil() { /* Hidden constructor */ }
 
   /**
@@ -241,25 +244,28 @@ public class HAUtil {
    * one is found, clone it to also represent the underlying namenode address.
    * @param ugi the UGI to modify
    * @param haUri the logical URI for the cluster
-   * @param singleNNAddr one of the NNs in the cluster to which the token
+   * @param nnAddrs collection of NNs in the cluster to which the token
    * applies
    */
   public static void cloneDelegationTokenForLogicalUri(
       UserGroupInformation ugi, URI haUri,
-      InetSocketAddress singleNNAddr) {
-    Text haService = buildTokenServiceForLogicalUri(haUri);
+      Collection<InetSocketAddress> nnAddrs) {
+    Text haService = HAUtil.buildTokenServiceForLogicalUri(haUri);
     Token<DelegationTokenIdentifier> haToken =
-        DelegationTokenSelector.selectHdfsDelegationToken(haService, ugi);
-    if (haToken == null) {
-      // no token
-      return;
+        tokenSelector.selectToken(haService, ugi.getTokens());
+    if (haToken != null) {
+      for (InetSocketAddress singleNNAddr : nnAddrs) {
+        Token<DelegationTokenIdentifier> specificToken =
+            new Token<DelegationTokenIdentifier>(haToken);
+        SecurityUtil.setTokenService(specificToken, singleNNAddr);
+        ugi.addToken(specificToken);
+        LOG.debug("Mapped HA service delegation token for logical URI " +
+            haUri + " to namenode " + singleNNAddr);
+      }
+    } else {
+      LOG.debug("No HA service delegation token found for logical URI " +
+          haUri);
     }
-    Token<DelegationTokenIdentifier> specificToken =
-        new Token<DelegationTokenIdentifier>(haToken);
-    specificToken.setService(SecurityUtil.buildTokenService(singleNNAddr));
-    ugi.addToken(specificToken);
-    LOG.debug("Mapped HA service delegation token for logical URI " +
-        haUri + " to namenode " + singleNNAddr);
   }
 
   /**
