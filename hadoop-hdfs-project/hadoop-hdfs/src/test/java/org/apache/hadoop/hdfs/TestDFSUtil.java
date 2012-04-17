@@ -553,7 +553,7 @@ public class TestDFSUtil {
     assertEquals(ret.size(), 0);
     
     // Setup single journal node
-    conf.set(DFS_JOURNALNODE_ADDRESS_KEY, str1);  
+    conf.set(DFS_JOURNAL_ADDRESS_KEY, str1);  
     ret = DFSUtil.getJournalNodeAddresses(conf);
     assertEquals(ret.size(), 1);
     for (InetSocketAddress addr : ret) {
@@ -561,7 +561,7 @@ public class TestDFSUtil {
     }
     
     // Add two entries now.
-    conf.set(DFS_JOURNALNODE_ADDRESS_KEY, "localhost:50200, localhost:50210");
+    conf.set(DFS_JOURNAL_ADDRESS_KEY, "localhost:50200, localhost:50210");
     ret = DFSUtil.getJournalNodeAddresses(conf);
     assertEquals(ret.size(), 2);
     

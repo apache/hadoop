@@ -1068,7 +1068,7 @@ public class DFSUtil {
   public static Collection<InetSocketAddress> getJournalNodeAddresses(
       Configuration conf) {
     Collection<String> jnames = conf
-        .getTrimmedStringCollection(DFS_JOURNALNODE_ADDRESS_KEY);
+        .getTrimmedStringCollection(DFS_JOURNAL_ADDRESS_KEY);
     Collection<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
     for (String jname : emptyAsSingletonNull(jnames)) {
       if (jname == null) {

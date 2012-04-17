@@ -15,6 +15,8 @@ HDFS-3092 branch changes
     HDFS-3274. Add a new conf key dfs.journal.edits.dir and use it for
     edit log initialization.  (Hari Mankude via szetszwo)
 
+    HDFS-3283. Add http server to journal service.  (Brandon Li via szetszwo)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
