@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.sec
 
 import java.lang.annotation.Annotation;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SecurityInfo;
@@ -29,6 +31,8 @@ import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.yarn.server.nodemanager.api.LocalizationProtocolPB;
 
 public class LocalizerSecurityInfo extends SecurityInfo {
+
+  private static final Log LOG = LogFactory.getLog(LocalizerSecurityInfo.class);
 
   @Override
   public KerberosInfo getKerberosInfo(Class<?> protocol, Configuration conf) {
@@ -51,7 +55,7 @@ public class LocalizerSecurityInfo extends SecurityInfo {
       @Override
       public Class<? extends TokenSelector<? extends TokenIdentifier>>
           value() {
-        System.err.print("=========== Using localizerTokenSecurityInfo");
+        LOG.debug("Using localizerTokenSecurityInfo");
         return LocalizerTokenSelector.class;
       }
     };

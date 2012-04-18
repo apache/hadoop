@@ -153,29 +153,6 @@
     </description>
   </property>
 
-  <!-- FileSystemAccess Namenode Configuration -->
-
-  <property>
-    <name>namenode.hostname</name>
-    <value>localhost</value>
-    <description>
-      The HDFS Namenode host the httpfs server connects to perform file
-      system operations.
-
-      This property is only used to resolve other properties within this
-      configuration file.
-    </description>
-  </property>
-
-  <property>
-    <name>httpfs.hadoop.conf:fs.default.name</name>
-    <value>hdfs://${namenode.hostname}:8020</value>
-    <description>
-      The HDFS Namenode URI the httpfs server connects to perform file
-      system operations.
-    </description>
-  </property>
-
   <!-- FileSystemAccess Namenode Security Configuration -->
 
   <property>
@@ -203,14 +180,6 @@
     <value>${user.name}/${httpfs.hostname}@${kerberos.realm}</value>
     <description>
       The Kerberos principal used by httpfs to connect to the HDFS Namenode.
-    </description>
-  </property>
-
-  <property>
-    <name>httpfs.hadoop.conf:dfs.namenode.kerberos.principal</name>
-    <value>hdfs/${namenode.hostname}@${kerberos.realm}</value>
-    <description>
-      The HDFS Namenode Kerberos principal.
     </description>
   </property>
 

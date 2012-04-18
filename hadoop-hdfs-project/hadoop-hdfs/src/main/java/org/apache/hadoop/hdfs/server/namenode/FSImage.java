@@ -823,7 +823,7 @@ public class FSImage implements Closeable {
       storage.writeAll();
     } finally {
       if (editLogWasOpen) {
-        editLog.startLogSegment(imageTxId + 1, true);
+        editLog.startLogSegmentAndWriteHeaderTxn(imageTxId + 1);
         // Take this opportunity to note the current transaction.
         // Even if the namespace save was cancelled, this marker
         // is only used to determine what transaction ID is required
@@ -1076,7 +1076,8 @@ public class FSImage implements Closeable {
    */
   static Collection<URI> getCheckpointDirs(Configuration conf,
       String defaultValue) {
-    Collection<String> dirNames = conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
+    Collection<String> dirNames = conf.getTrimmedStringCollection(
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY);
     if (dirNames.size() == 0 && defaultValue != null) {
       dirNames.add(defaultValue);
     }
@@ -1085,8 +1086,8 @@ public class FSImage implements Closeable {
 
   static List<URI> getCheckpointEditsDirs(Configuration conf,
       String defaultName) {
-    Collection<String> dirNames = 
-      conf.getStringCollection(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);
+    Collection<String> dirNames = conf.getTrimmedStringCollection(
+        DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY);
     if (dirNames.size() == 0 && defaultName != null) {
       dirNames.add(defaultName);
     }

@@ -37,13 +37,13 @@ Hadoop HDFS over HTTP ${project.version} - Server Setup
 
 * Configure HttpFS
 
-  Edit the <<<httpfs-${project.version}/conf/httpfs-site.xml>>> file and
-  set the <<<httpfs.fsAccess.conf:fs.default.name>>> property to the HDFS
-  Namenode URI. For example:
+  By default, HttpFS assumes that Hadoop configuration files
+  (<<<core-site.xml & hdfs-site.xml>>>) are in the HttpFS
+  configuration directory.
 
-+---+
-httpfs.fsAccess.conf:fs.default.name=hdfs://localhost:8021
-+---+
+  If this is not the case, add to the <<<httpfs-site.xml>>> file the
+  <<<httpfs.hadoop.config.dir>>> property set to the location
+  of the Hadoop configuration directory.
 
 * Configure Hadoop
 
@@ -53,11 +53,11 @@ httpfs.fsAccess.conf:fs.default.name=hdfs://localhost:8021
 +---+
   ...
   <property>
-    <name>fsAccess.proxyuser.#HTTPFSUSER#.hosts</name>
+    <name>hadoop.proxyuser.#HTTPFSUSER#.hosts</name>
     <value>httpfs-host.foo.com</value>
   </property>
   <property>
-    <name>fsAccess.proxyuser.#HTTPFSUSER#.groups</name>
+    <name>hadoop.proxyuser.#HTTPFSUSER#.groups</name>
     <value>*</value>
   </property>
   ...

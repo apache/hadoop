@@ -34,10 +34,16 @@ import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.SecurityUtilTestHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.mock;
 
 public class TestWebHdfsUrl {
@@ -90,4 +96,60 @@ public class TestWebHdfsUrl {
   private String generateUrlQueryPrefix(HttpOpParam.Op op, String username) {
     return "op=" + op.toString() + "&user.name=" + username;
   }
+  
+  @Test
+  public void testSelectDelegationToken() throws Exception {
+    SecurityUtilTestHelper.setTokenServiceUseIp(true);
+
+    Configuration conf = new Configuration();
+    URI webHdfsUri = URI.create("webhdfs://localhost:0");
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    Token<?> token = null;
+    
+    // test fallback to hdfs token
+    Token<?> hdfsToken = new Token<TokenIdentifier>(
+        new byte[0], new byte[0],
+        DelegationTokenIdentifier.HDFS_DELEGATION_KIND,
+        new Text("127.0.0.1:8020"));
+    ugi.addToken(hdfsToken);
+    
+    WebHdfsFileSystem fs = (WebHdfsFileSystem) FileSystem.get(webHdfsUri, conf);
+    token = fs.selectDelegationToken();
+    assertNotNull(token);
+    assertEquals(hdfsToken, token);
+    
+    // test webhdfs is favored over hdfs
+    Token<?> webHdfsToken = new Token<TokenIdentifier>(
+        new byte[0], new byte[0],
+        WebHdfsFileSystem.TOKEN_KIND, new Text("127.0.0.1:0"));
+    ugi.addToken(webHdfsToken);
+    token = fs.selectDelegationToken();
+    assertNotNull(token);
+    assertEquals(webHdfsToken, token);
+    
+    // switch to using host-based tokens, no token should match
+    SecurityUtilTestHelper.setTokenServiceUseIp(false);
+    token = fs.selectDelegationToken();
+    assertNull(token);
+    
+    // test fallback to hdfs token
+    hdfsToken = new Token<TokenIdentifier>(
+        new byte[0], new byte[0],
+        DelegationTokenIdentifier.HDFS_DELEGATION_KIND,
+        new Text("localhost:8020"));
+    ugi.addToken(hdfsToken);
+    token = fs.selectDelegationToken();
+    assertNotNull(token);
+    assertEquals(hdfsToken, token);
+
+    // test webhdfs is favored over hdfs
+    webHdfsToken = new Token<TokenIdentifier>(
+        new byte[0], new byte[0],
+        WebHdfsFileSystem.TOKEN_KIND, new Text("localhost:0"));
+    ugi.addToken(webHdfsToken);
+    token = fs.selectDelegationToken();
+    assertNotNull(token);
+    assertEquals(webHdfsToken, token);
+  }
+
 }

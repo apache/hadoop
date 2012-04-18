@@ -33,12 +33,6 @@ class MapTaskRunner extends TaskRunner {
                        super.getChildJavaOpts(jobConf, 
                            JobConf.DEFAULT_MAPRED_TASK_JAVA_OPTS));
   }
-  
-  @Override
-  public int getChildUlimit(JobConf jobConf) {
-    return jobConf.getInt(JobConf.MAPRED_MAP_TASK_ULIMIT, 
-                          super.getChildUlimit(jobConf));
-  }
 
   @Override
   public String getChildEnv(JobConf jobConf) {

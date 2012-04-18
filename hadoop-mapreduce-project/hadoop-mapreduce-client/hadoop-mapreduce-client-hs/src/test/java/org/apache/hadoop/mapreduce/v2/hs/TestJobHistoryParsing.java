@@ -56,6 +56,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEvents.MRAppWithHistory;
 import org.apache.hadoop.mapreduce.v2.jobhistory.FileNameIndexUtils;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
@@ -84,12 +85,22 @@ public class TestJobHistoryParsing {
 
   @Test
   public void testHistoryParsing() throws Exception {
-    checkHistoryParsing(2, 1, 2);
+    LOG.info("STARTING testHistoryParsing()");
+    try {
+      checkHistoryParsing(2, 1, 2);
+    } finally {
+      LOG.info("FINISHED testHistoryParsing()");
+    }
   }
   
   @Test
   public void testHistoryParsingWithParseErrors() throws Exception {
-    checkHistoryParsing(3, 0, 2);
+    LOG.info("STARTING testHistoryParsingWithParseErrors()");
+    try {
+      checkHistoryParsing(3, 0, 2);
+    } finally {
+      LOG.info("FINISHED testHistoryParsingWithParseErrors()");
+    }
   }
   
   private static String getJobSummary(FileContext fc, Path path) throws IOException {
@@ -124,61 +135,112 @@ public class TestJobHistoryParsing {
 
     String jobhistoryDir = JobHistoryUtils
         .getHistoryIntermediateDoneDirForUser(conf);
-    JobHistory jobHistory = new JobHistory();
-    jobHistory.init(conf);
-
-    JobIndexInfo jobIndexInfo = jobHistory.getJobMetaInfo(jobId)
-        .getJobIndexInfo();
-    String jobhistoryFileName = FileNameIndexUtils
-        .getDoneFileName(jobIndexInfo);
-
-    Path historyFilePath = new Path(jobhistoryDir, jobhistoryFileName);
-    FSDataInputStream in = null;
-    LOG.info("JobHistoryFile is: " + historyFilePath);
+    
     FileContext fc = null;
     try {
       fc = FileContext.getFileContext(conf);
-      in = fc.open(fc.makeQualified(historyFilePath));
     } catch (IOException ioe) {
-      LOG.info("Can not open history file: " + historyFilePath, ioe);
-      throw (new Exception("Can not open History File"));
+      LOG.info("Can not get FileContext", ioe);
+      throw (new Exception("Can not get File Context"));
+    }
+    
+    if (numMaps == numSuccessfulMaps) {
+      String summaryFileName = JobHistoryUtils
+          .getIntermediateSummaryFileName(jobId);
+      Path summaryFile = new Path(jobhistoryDir, summaryFileName);
+      String jobSummaryString = getJobSummary(fc, summaryFile);
+      Assert.assertNotNull(jobSummaryString);
+      Assert.assertTrue(jobSummaryString.contains("resourcesPerMap=100"));
+      Assert.assertTrue(jobSummaryString.contains("resourcesPerReduce=100"));
+
+      Map<String, String> jobSummaryElements = new HashMap<String, String>();
+      StringTokenizer strToken = new StringTokenizer(jobSummaryString, ",");
+      while (strToken.hasMoreTokens()) {
+        String keypair = strToken.nextToken();
+        jobSummaryElements.put(keypair.split("=")[0], keypair.split("=")[1]);
+      }
+
+      Assert.assertEquals("JobId does not match", jobId.toString(),
+          jobSummaryElements.get("jobId"));
+      Assert.assertEquals("JobName does not match", "test",
+          jobSummaryElements.get("jobName"));
+      Assert.assertTrue("submitTime should not be 0",
+          Long.parseLong(jobSummaryElements.get("submitTime")) != 0);
+      Assert.assertTrue("launchTime should not be 0",
+          Long.parseLong(jobSummaryElements.get("launchTime")) != 0);
+      Assert.assertTrue("firstMapTaskLaunchTime should not be 0",
+          Long.parseLong(jobSummaryElements.get("firstMapTaskLaunchTime")) != 0);
+      Assert
+      .assertTrue(
+          "firstReduceTaskLaunchTime should not be 0",
+          Long.parseLong(jobSummaryElements.get("firstReduceTaskLaunchTime")) != 0);
+      Assert.assertTrue("finishTime should not be 0",
+          Long.parseLong(jobSummaryElements.get("finishTime")) != 0);
+      Assert.assertEquals("Mismatch in num map slots", numSuccessfulMaps,
+          Integer.parseInt(jobSummaryElements.get("numMaps")));
+      Assert.assertEquals("Mismatch in num reduce slots", numReduces,
+          Integer.parseInt(jobSummaryElements.get("numReduces")));
+      Assert.assertEquals("User does not match", System.getProperty("user.name"),
+          jobSummaryElements.get("user"));
+      Assert.assertEquals("Queue does not match", "default",
+          jobSummaryElements.get("queue"));
+      Assert.assertEquals("Status does not match", "SUCCEEDED",
+          jobSummaryElements.get("status"));
     }
 
-    JobHistoryParser parser = new JobHistoryParser(in);
-    final EventReader realReader = new EventReader(in);
-    EventReader reader = Mockito.mock(EventReader.class);
-    if (numMaps == numSuccessfulMaps) {
-      reader = realReader;
-    } else {
-      final AtomicInteger numFinishedEvents = new AtomicInteger(0);  // Hack!
-      Mockito.when(reader.getNextEvent()).thenAnswer(
-          new Answer<HistoryEvent>() {
-            public HistoryEvent answer(InvocationOnMock invocation) 
-                throws IOException {
-              HistoryEvent event = realReader.getNextEvent();
-              if (event instanceof TaskFinishedEvent) {
-                numFinishedEvents.incrementAndGet();
-              }
-              
-              if (numFinishedEvents.get() <= numSuccessfulMaps) {
-                return event;
-              } else {
-                throw new IOException("test");
+    JobHistory jobHistory = new JobHistory();
+    jobHistory.init(conf);
+    HistoryFileInfo fileInfo = jobHistory.getJobFileInfo(jobId);
+    JobInfo jobInfo;
+    long numFinishedMaps;
+    
+    synchronized(fileInfo) {
+      Path historyFilePath = fileInfo.getHistoryFile();
+      FSDataInputStream in = null;
+      LOG.info("JobHistoryFile is: " + historyFilePath);
+      try {
+        in = fc.open(fc.makeQualified(historyFilePath));
+      } catch (IOException ioe) {
+        LOG.info("Can not open history file: " + historyFilePath, ioe);
+        throw (new Exception("Can not open History File"));
+      }
+
+      JobHistoryParser parser = new JobHistoryParser(in);
+      final EventReader realReader = new EventReader(in);
+      EventReader reader = Mockito.mock(EventReader.class);
+      if (numMaps == numSuccessfulMaps) {
+        reader = realReader;
+      } else {
+        final AtomicInteger numFinishedEvents = new AtomicInteger(0);  // Hack!
+        Mockito.when(reader.getNextEvent()).thenAnswer(
+            new Answer<HistoryEvent>() {
+              public HistoryEvent answer(InvocationOnMock invocation) 
+              throws IOException {
+                HistoryEvent event = realReader.getNextEvent();
+                if (event instanceof TaskFinishedEvent) {
+                  numFinishedEvents.incrementAndGet();
+                }
+
+                if (numFinishedEvents.get() <= numSuccessfulMaps) {
+                  return event;
+                } else {
+                  throw new IOException("test");
+                }
               }
             }
-          }
         );
-    }
-    
-    JobInfo jobInfo = parser.parse(reader);
-    
-    long numFinishedMaps = 
+      }
+
+      jobInfo = parser.parse(reader);
+
+      numFinishedMaps = 
         computeFinishedMaps(jobInfo, numMaps, numSuccessfulMaps);
-    
-    if (numFinishedMaps != numMaps) {
-      Exception parseException = parser.getParseException();
-      Assert.assertNotNull("Didn't get expected parse exception", 
-          parseException);
+
+      if (numFinishedMaps != numMaps) {
+        Exception parseException = parser.getParseException();
+        Assert.assertNotNull("Didn't get expected parse exception", 
+            parseException);
+      }
     }
     
     Assert.assertEquals("Incorrect username ", System.getProperty("user.name"),
@@ -246,52 +308,6 @@ public class TestJobHistoryParsing {
         }
       }
     }
-
-    if (numMaps == numSuccessfulMaps) {
-
-      String summaryFileName = JobHistoryUtils
-          .getIntermediateSummaryFileName(jobId);
-      Path summaryFile = new Path(jobhistoryDir, summaryFileName);
-      String jobSummaryString = getJobSummary(fc, summaryFile);
-      Assert.assertTrue(jobSummaryString.contains("resourcesPerMap=100"));
-      Assert.assertTrue(jobSummaryString.contains("resourcesPerReduce=100"));
-      Assert.assertNotNull(jobSummaryString);
-
-      Map<String, String> jobSummaryElements = new HashMap<String, String>();
-      StringTokenizer strToken = new StringTokenizer(jobSummaryString, ",");
-      while (strToken.hasMoreTokens()) {
-        String keypair = strToken.nextToken();
-        jobSummaryElements.put(keypair.split("=")[0], keypair.split("=")[1]);
-
-      }
-
-      Assert.assertEquals("JobId does not match", jobId.toString(),
-          jobSummaryElements.get("jobId"));
-      Assert.assertEquals("JobName does not match", "test",
-          jobSummaryElements.get("jobName"));
-      Assert.assertTrue("submitTime should not be 0",
-          Long.parseLong(jobSummaryElements.get("submitTime")) != 0);
-      Assert.assertTrue("launchTime should not be 0",
-          Long.parseLong(jobSummaryElements.get("launchTime")) != 0);
-      Assert.assertTrue("firstMapTaskLaunchTime should not be 0",
-          Long.parseLong(jobSummaryElements.get("firstMapTaskLaunchTime")) != 0);
-      Assert
-      .assertTrue(
-          "firstReduceTaskLaunchTime should not be 0",
-          Long.parseLong(jobSummaryElements.get("firstReduceTaskLaunchTime")) != 0);
-      Assert.assertTrue("finishTime should not be 0",
-          Long.parseLong(jobSummaryElements.get("finishTime")) != 0);
-      Assert.assertEquals("Mismatch in num map slots", numSuccessfulMaps,
-          Integer.parseInt(jobSummaryElements.get("numMaps")));
-      Assert.assertEquals("Mismatch in num reduce slots", numReduces,
-          Integer.parseInt(jobSummaryElements.get("numReduces")));
-      Assert.assertEquals("User does not match", System.getProperty("user.name"),
-          jobSummaryElements.get("user"));
-      Assert.assertEquals("Queue does not match", "default",
-          jobSummaryElements.get("queue"));
-      Assert.assertEquals("Status does not match", "SUCCEEDED",
-          jobSummaryElements.get("status"));
-    }
   }
   
   // Computes finished maps similar to RecoveryService...
@@ -314,6 +330,8 @@ public class TestJobHistoryParsing {
   
   @Test
   public void testHistoryParsingForFailedAttempts() throws Exception {
+    LOG.info("STARTING testHistoryParsingForFailedAttempts");
+    try {
     Configuration conf = new Configuration();
     conf
         .setClass(
@@ -335,7 +353,7 @@ public class TestJobHistoryParsing {
     JobHistory jobHistory = new JobHistory();
     jobHistory.init(conf);
 
-    JobIndexInfo jobIndexInfo = jobHistory.getJobMetaInfo(jobId)
+    JobIndexInfo jobIndexInfo = jobHistory.getJobFileInfo(jobId)
         .getJobIndexInfo();
     String jobhistoryFileName = FileNameIndexUtils
         .getDoneFileName(jobIndexInfo);
@@ -372,6 +390,9 @@ public class TestJobHistoryParsing {
       }
     }
     Assert.assertEquals("No of Failed tasks doesn't match.", 2, noOffailedAttempts);
+    } finally {
+      LOG.info("FINISHED testHistoryParsingForFailedAttempts");
+    }
   }
   
   static class MRAppWithHistoryWithFailedAttempt extends MRAppWithHistory {

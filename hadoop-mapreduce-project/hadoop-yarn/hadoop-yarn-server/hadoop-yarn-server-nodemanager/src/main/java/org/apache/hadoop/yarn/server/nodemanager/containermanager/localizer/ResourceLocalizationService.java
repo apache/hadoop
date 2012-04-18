@@ -207,10 +207,10 @@ public class ResourceLocalizationService extends CompositeService
       conf.getLong(YarnConfiguration.NM_LOCALIZER_CACHE_TARGET_SIZE_MB, YarnConfiguration.DEFAULT_NM_LOCALIZER_CACHE_TARGET_SIZE_MB) << 20;
     cacheCleanupPeriod =
       conf.getLong(YarnConfiguration.NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS, YarnConfiguration.DEFAULT_NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS);
-    localizationServerAddress = NetUtils.createSocketAddr(
-      conf.get(YarnConfiguration.NM_LOCALIZER_ADDRESS, YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS),
-      YarnConfiguration.DEFAULT_NM_LOCALIZER_PORT,
-      YarnConfiguration.NM_LOCALIZER_ADDRESS);
+    localizationServerAddress = conf.getSocketAddr(
+        YarnConfiguration.NM_LOCALIZER_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_LOCALIZER_PORT);
     localizerTracker = createLocalizerTracker(conf);
     addService(localizerTracker);
     dispatcher.register(LocalizerEventType.class, localizerTracker);
@@ -232,9 +232,10 @@ public class ResourceLocalizationService extends CompositeService
         .split(":")[0];
     getConfig().set(YarnConfiguration.NM_LOCALIZER_ADDRESS, host + ":" 
         + server.getPort());
-    localizationServerAddress = NetUtils.createSocketAddr(
-        getConfig().get(YarnConfiguration.NM_LOCALIZER_ADDRESS, 
-            YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS));
+    localizationServerAddress = getConfig().getSocketAddr(
+        YarnConfiguration.NM_LOCALIZER_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_LOCALIZER_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_LOCALIZER_PORT);
     LOG.info("Localizer started on port " + server.getPort());
     super.start();
   }

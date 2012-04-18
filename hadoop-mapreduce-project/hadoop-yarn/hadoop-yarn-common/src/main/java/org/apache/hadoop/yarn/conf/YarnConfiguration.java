@@ -246,6 +246,12 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_RM_METRICS_RUNTIME_BUCKETS = 
     "60,300,1440";
 
+  public static final String RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS = RM_PREFIX
+      + "application-tokens.master-key-rolling-interval-secs";
+
+  public static final long DEFAULT_RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
+      24 * 60 * 60;
+
   ////////////////////////////////
   // Node Manager Configs
   ////////////////////////////////
@@ -552,17 +558,16 @@ public class YarnConfiguration extends Configuration {
   }
   
   public static String getRMWebAppHostAndPort(Configuration conf) {
-    String addr = conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS);
-    Iterator<String> it = ADDR_SPLITTER.split(addr).iterator();
-    it.next(); // ignore the bind host
-    String port = it.next();
+    int port = conf.getSocketAddr(
+        YarnConfiguration.RM_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_PORT).getPort();
     // Use apps manager address to figure out the host for webapp
-    addr = conf.get(YarnConfiguration.RM_ADDRESS, YarnConfiguration.DEFAULT_RM_ADDRESS);
-    String host = ADDR_SPLITTER.split(addr).iterator().next();
-    String rmAddress = JOINER.join(host, ":", port);
-    InetSocketAddress address = NetUtils.createSocketAddr(
-        rmAddress, DEFAULT_RM_WEBAPP_PORT, RM_WEBAPP_ADDRESS);
+    String host = conf.getSocketAddr(
+        YarnConfiguration.RM_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_PORT).getHostName();
+    InetSocketAddress address = NetUtils.createSocketAddrForHost(host, port);
     StringBuffer sb = new StringBuffer();
     InetAddress resolved = address.getAddress();
     if (resolved == null || resolved.isAnyLocalAddress() || 

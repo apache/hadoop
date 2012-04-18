@@ -185,8 +185,6 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   @Override
   public synchronized void setConf(Configuration conf) {
     this.conf = conf;
-    metrics = QueueMetrics.forQueue(DEFAULT_QUEUE_NAME, null, false, conf);
-    activeUsersManager = new ActiveUsersManager(metrics);
   }
   
   @Override
@@ -223,6 +221,9 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         Resources.createResource(conf.getInt(MINIMUM_ALLOCATION, MINIMUM_MEMORY));
       this.maximumAllocation = 
         Resources.createResource(conf.getInt(MAXIMUM_ALLOCATION, MAXIMUM_MEMORY));
+      this.metrics = QueueMetrics.forQueue(DEFAULT_QUEUE_NAME, null, false,
+          conf);
+      this.activeUsersManager = new ActiveUsersManager(metrics);
       this.initialized = true;
     }
   }

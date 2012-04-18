@@ -26,10 +26,12 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.HashSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -42,11 +44,14 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.SecurityUtilTestHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -98,6 +103,11 @@ public class TestDelegationTokensWithHA {
   }
 
 
+  @Before
+  public void prepTest() {
+    SecurityUtilTestHelper.setTokenServiceUseIp(true);
+  }
+  
   @Test
   public void testDelegationTokenDFSApi() throws Exception {
     Token<DelegationTokenIdentifier> token = dfs.getDelegationToken("JobTracker");
@@ -185,24 +195,48 @@ public class TestDelegationTokensWithHA {
     URI haUri = new URI("hdfs://my-ha-uri/");
     token.setService(HAUtil.buildTokenServiceForLogicalUri(haUri));
     ugi.addToken(token);
-    HAUtil.cloneDelegationTokenForLogicalUri(ugi, haUri, nn0.getNameNodeAddress());
-    HAUtil.cloneDelegationTokenForLogicalUri(ugi, haUri, nn1.getNameNodeAddress());
+
+    Collection<InetSocketAddress> nnAddrs = new HashSet<InetSocketAddress>();
+    nnAddrs.add(nn0.getNameNodeAddress());
+    nnAddrs.add(nn1.getNameNodeAddress());
+    HAUtil.cloneDelegationTokenForLogicalUri(ugi, haUri, nnAddrs);
     
     Collection<Token<? extends TokenIdentifier>> tokens = ugi.getTokens();
     assertEquals(3, tokens.size());
     
     LOG.info("Tokens:\n" + Joiner.on("\n").join(tokens));
+    DelegationTokenSelector dts = new DelegationTokenSelector();
     
     // check that the token selected for one of the physical IPC addresses
     // matches the one we received
-    InetSocketAddress addr = nn0.getNameNodeAddress();
-    Text ipcDtService = new Text(
-        addr.getAddress().getHostAddress() + ":" + addr.getPort());
-    Token<DelegationTokenIdentifier> token2 =
-        DelegationTokenSelector.selectHdfsDelegationToken(ipcDtService, ugi);
-    assertNotNull(token2);
-    assertArrayEquals(token.getIdentifier(), token2.getIdentifier());
-    assertArrayEquals(token.getPassword(), token2.getPassword());
+    for (InetSocketAddress addr : nnAddrs) {
+      Text ipcDtService = SecurityUtil.buildTokenService(addr);
+      Token<DelegationTokenIdentifier> token2 =
+          dts.selectToken(ipcDtService, ugi.getTokens());
+      assertNotNull(token2);
+      assertArrayEquals(token.getIdentifier(), token2.getIdentifier());
+      assertArrayEquals(token.getPassword(), token2.getPassword());
+    }
+    
+    // switch to host-based tokens, shouldn't match existing tokens 
+    SecurityUtilTestHelper.setTokenServiceUseIp(false);
+    for (InetSocketAddress addr : nnAddrs) {
+      Text ipcDtService = SecurityUtil.buildTokenService(addr);
+      Token<DelegationTokenIdentifier> token2 =
+          dts.selectToken(ipcDtService, ugi.getTokens());
+      assertNull(token2);
+    }
+    
+    // reclone the tokens, and see if they match now
+    HAUtil.cloneDelegationTokenForLogicalUri(ugi, haUri, nnAddrs);
+    for (InetSocketAddress addr : nnAddrs) {
+      Text ipcDtService = SecurityUtil.buildTokenService(addr);
+      Token<DelegationTokenIdentifier> token2 =
+          dts.selectToken(ipcDtService, ugi.getTokens());
+      assertNotNull(token2);
+      assertArrayEquals(token.getIdentifier(), token2.getIdentifier());
+      assertArrayEquals(token.getPassword(), token2.getPassword());
+    }    
   }
 
   /**
@@ -212,8 +246,30 @@ public class TestDelegationTokensWithHA {
    */
   @Test
   public void testDFSGetCanonicalServiceName() throws Exception {
-    assertEquals(fs.getCanonicalServiceName(), 
-        HATestUtil.getLogicalUri(cluster).getHost());
+    URI hAUri = HATestUtil.getLogicalUri(cluster);
+    String haService = HAUtil.buildTokenServiceForLogicalUri(hAUri).toString();
+    assertEquals(haService, dfs.getCanonicalServiceName());
+    Token<?> token = dfs.getDelegationToken(
+        UserGroupInformation.getCurrentUser().getShortUserName());
+    assertEquals(haService, token.getService().toString());
+    // make sure the logical uri is handled correctly
+    token.renew(dfs.getConf());
+    token.cancel(dfs.getConf());
+  }
+  
+  @Test
+  public void testHdfsGetCanonicalServiceName() throws Exception {
+    Configuration conf = dfs.getConf();
+    URI haUri = HATestUtil.getLogicalUri(cluster);
+    AbstractFileSystem afs =  AbstractFileSystem.createFileSystem(haUri, conf);    
+    String haService = HAUtil.buildTokenServiceForLogicalUri(haUri).toString();
+    assertEquals(haService, afs.getCanonicalServiceName());
+    Token<?> token = afs.getDelegationTokens(
+        UserGroupInformation.getCurrentUser().getShortUserName()).get(0);
+    assertEquals(haService, token.getService().toString());
+    // make sure the logical uri is handled correctly
+    token.renew(conf);
+    token.cancel(conf);
   }
   
   enum TokenTestAction {

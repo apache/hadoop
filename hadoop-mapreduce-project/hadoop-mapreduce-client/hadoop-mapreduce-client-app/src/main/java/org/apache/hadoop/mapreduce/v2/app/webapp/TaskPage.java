@@ -87,9 +87,13 @@ public class TaskPage extends AppView {
           tr().
             td(".id", taid).
             td(".progress", progress).
-            td(".state", ta.getState()).
-            td().
-              a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
+            td(".state", ta.getState()).td();
+        if (nodeHttpAddr == null) {
+          nodeTd._("N/A");
+        } else {
+          nodeTd.
+            a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
+        }
         if (containerId != null) {
           String containerIdStr = ta.getAssignedContainerIdStr();
           nodeTd._(" ").

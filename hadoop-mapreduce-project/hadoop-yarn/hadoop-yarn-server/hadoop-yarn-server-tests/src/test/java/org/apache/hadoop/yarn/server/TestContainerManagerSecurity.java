@@ -78,12 +78,12 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ApplicationTokenIdentifier;
-import org.apache.hadoop.yarn.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -387,20 +387,19 @@ public class TestContainerManagerSecurity {
                                        appAttempt.getAppAttemptId().toString());
 
     // Ask for a container from the RM
-    String schedulerAddressString = conf.get(
-        YarnConfiguration.RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
-    final InetSocketAddress schedulerAddr = NetUtils
-        .createSocketAddr(schedulerAddressString);
+    final InetSocketAddress schedulerAddr =
+        resourceManager.getApplicationMasterService().getBindAddress();
     ApplicationTokenIdentifier appTokenIdentifier = new ApplicationTokenIdentifier(
         appAttempt.getAppAttemptId());
-    ApplicationTokenSecretManager appTokenSecretManager = new ApplicationTokenSecretManager();
-    appTokenSecretManager.setMasterKey(ApplicationTokenSecretManager
-        .createSecretKey("Dummy".getBytes())); // TODO: FIX. Be in Sync with
-                                               // ResourceManager.java
-    Token<ApplicationTokenIdentifier> appToken = new Token<ApplicationTokenIdentifier>(
-        appTokenIdentifier, appTokenSecretManager);
-    appToken.setService(new Text(schedulerAddressString));
+    ApplicationTokenSecretManager appTokenSecretManager =
+        new ApplicationTokenSecretManager(conf);
+    appTokenSecretManager.setMasterKey(resourceManager
+      .getApplicationTokenSecretManager().getMasterKey());
+    Token<ApplicationTokenIdentifier> appToken =
+        new Token<ApplicationTokenIdentifier>(appTokenIdentifier,
+          appTokenSecretManager);
+    appToken.setService(new Text(schedulerAddr.getHostName() + ":"
+        + schedulerAddr.getPort()));
     currentUser.addToken(appToken);
 
     AMRMProtocol scheduler = currentUser

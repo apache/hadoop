@@ -97,7 +97,7 @@ public class TestJobHistoryParsing  extends TestCase {
     // Try to write one more event now, should not fail
     TaskID tid = TaskID.forName("task_200809171136_0001_m_000002");
     TaskFinishedEvent tfe =
-      new TaskFinishedEvent(tid, 0, TaskType.MAP, "", null);
+      new TaskFinishedEvent(tid, null, 0, TaskType.MAP, "", null);
     boolean caughtException = false;
 
     try {

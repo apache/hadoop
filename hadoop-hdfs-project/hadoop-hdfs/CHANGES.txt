@@ -62,6 +62,12 @@ Trunk (unreleased changes)
     HDFS-3178. Add states and state handler for journal synchronization in
     JournalService.  (szetszwo)
 
+    HDFS-3273. Refactor BackupImage and FSEditLog, and rename
+    JournalListener.rollLogs(..) to startLogSegment(..).  (szetszwo)
+
+    HDFS-3292. Remove the deprecated DiskStatus, getDiskStatus(), getRawCapacity() and
+    getRawUsed() from DistributedFileSystem.  (Arpit Gupta via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
@@ -90,8 +96,6 @@ Trunk (unreleased changes)
 
     HDFS-2373. Commands using WebHDFS and hftp print unnecessary debug 
     info on the console with security enabled. (Arpit Gupta via suresh)
-
-    HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
 
     HDFS-2776. Missing interface annotation on JournalSet. 
     (Brandon Li via jitendra)
@@ -367,6 +371,25 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3249. Use ToolRunner.confirmPrompt in NameNode (todd)
 
+    HDFS-3179.  Improve the exception message thrown by DataStreamer when 
+    it failed to add a datanode.  (szetszwo)
+
+    HDFS-2983. Relax the build version check to permit rolling upgrades within
+    a release. (atm)
+
+    HDFS-3259. NameNode#initializeSharedEdits should populate shared edits dir
+    with edit log segments. (atm)
+
+    HDFS-2708. Stats for the # of blocks per DN. (atm)
+
+    HDFS-3279. Move the FSEditLog constructor with @VisibleForTesting to
+    TestEditLog.  (Arpit Gupta via szetszwo)
+
+    HDFS-3294. Fix code indentation in NamenodeWebHdfsMethods and
+    DatanodeWebHdfsMethods.  (szetszwo)
+
+    HDFS-3263. HttpFS should read HDFS config from Hadoop site.xml files (tucu)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -491,6 +514,26 @@ Release 2.0.0 - UNRELEASED
     (Colin Patrick McCabe via todd)
 
     HDFS-2696. Fix the fuse-fds build. (Bruno Mahé via eli)
+
+    HDFS-3260. TestDatanodeRegistration should set minimum DN version in
+    addition to minimum NN version. (atm)
+
+    HDFS-3255. HA DFS returns wrong token service (Daryn Sharp via todd)
+
+    HDFS-3256. HDFS considers blocks under-replicated if topology script is
+    configured with only 1 rack. (atm)
+
+    HDFS-2799. Trim fs.checkpoint.dir values. (Amith D K via eli)
+
+    HDFS-2765. TestNameEditsConfigs is incorrectly swallowing IOE. (atm)
+
+    HDFS-3268. FileContext API mishandles token service and incompatible with
+    HA (Daryn Sharp via todd)
+
+    HDFS-3284. bootstrapStandby fails in secure cluster (todd)
+
+    HDFS-3165. HDFS Balancer scripts are refering to wrong path of
+    hadoop-daemon.sh (Amith D K via eli)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
@@ -824,6 +867,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
     Lee via szetszwo)
+
+    HDFS-2652. Add support for host-based delegation tokens.  (Daryn Sharp via
+    szetszwo)
 
 Release 0.23.2 - UNRELEASED
 

@@ -242,7 +242,7 @@ public class BackupNode extends NameNode {
      */
     private void verifyJournalRequest(JournalInfo journalInfo)
         throws IOException {
-      verifyVersion(journalInfo.getLayoutVersion());
+      verifyLayoutVersion(journalInfo.getLayoutVersion());
       String errorMsg = null;
       int expectedNamespaceID = namesystem.getNamespaceInfo().getNamespaceID();
       if (journalInfo.getNamespaceId() != expectedNamespaceID) {
@@ -260,7 +260,7 @@ public class BackupNode extends NameNode {
     }
 
     /////////////////////////////////////////////////////
-    // BackupNodeProtocol implementation for backup node.
+    // JournalProtocol implementation for backup node.
     /////////////////////////////////////////////////////
     @Override
     public void startLogSegment(JournalInfo journalInfo, long epoch,

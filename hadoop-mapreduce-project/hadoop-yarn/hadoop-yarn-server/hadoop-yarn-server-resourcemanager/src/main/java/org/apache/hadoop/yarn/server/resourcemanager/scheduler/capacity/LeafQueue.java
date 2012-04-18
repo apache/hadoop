@@ -1118,13 +1118,12 @@ public class LeafQueue implements CSQueue {
   boolean canAssign(SchedulerApp application, Priority priority, 
       SchedulerNode node, NodeType type, RMContainer reservedContainer) {
 
-    // Reserved... 
-    if (reservedContainer != null) {
-      return true;
-    }
-    
     // Clearly we need containers for this application...
     if (type == NodeType.OFF_SWITCH) {
+      if (reservedContainer != null) {
+        return true;
+      }
+
       // 'Delay' off-switch
       ResourceRequest offSwitchRequest = 
           application.getResourceRequest(priority, RMNode.ANY);

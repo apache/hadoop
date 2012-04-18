@@ -22,11 +22,14 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import static org.mockito.Mockito.*;
 
 @RunWith(value = Parameterized.class)
 public class TestJobHistoryEntities {
@@ -61,10 +64,12 @@ public class TestJobHistoryEntities {
   /* Verify some expected values based on the history file */
   @Test
   public void testCompletedJob() throws Exception {
+    HistoryFileInfo info = mock(HistoryFileInfo.class);
+    when(info.getConfFile()).thenReturn(fullConfPath);
     //Re-initialize to verify the delayed load.
     completedJob =
       new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
-          fullConfPath, jobAclsManager);
+          info, jobAclsManager);
     //Verify tasks loaded based on loadTask parameter.
     assertEquals(loadTasks, completedJob.tasksLoaded.get());
     assertEquals(1, completedJob.getAMInfos().size());
@@ -84,9 +89,11 @@ public class TestJobHistoryEntities {
   
   @Test
   public void testCompletedTask() throws Exception {
+    HistoryFileInfo info = mock(HistoryFileInfo.class);
+    when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
       new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
-          fullConfPath, jobAclsManager);
+          info, jobAclsManager);
     TaskId mt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.MAP);
     TaskId rt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.REDUCE);
     
@@ -111,9 +118,11 @@ public class TestJobHistoryEntities {
   
   @Test
   public void testCompletedTaskAttempt() throws Exception {
+    HistoryFileInfo info = mock(HistoryFileInfo.class);
+    when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
       new CompletedJob(conf, jobId, fulleHistoryPath, loadTasks, "user",
-          fullConfPath, jobAclsManager);
+          info, jobAclsManager);
     TaskId mt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.MAP);
     TaskId rt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.REDUCE);
     TaskAttemptId mta1Id = MRBuilderUtils.newTaskAttemptId(mt1Id, 0);

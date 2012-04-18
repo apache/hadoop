@@ -19,7 +19,9 @@
 package org.apache.hadoop.lib.service.hadoop;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.FileSystemAccess;
@@ -32,6 +34,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -54,9 +57,11 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
 
   public static final String NAME_NODE_WHITELIST = "name.node.whitelist";
 
-  private static final String HADOOP_CONF_PREFIX = "conf:";
+  public static final String HADOOP_CONF_DIR = "config.dir";
 
-  private static final String NAME_NODE_PROPERTY = "fs.default.name";
+  private static final String[] HADOOP_CONF_FILES = {"core-site.xml", "hdfs-site.xml"};
+
+  private static final String FILE_SYSTEM_SERVICE_CREATED = "FileSystemAccessService.created";
 
   public FileSystemAccessService() {
     super(PREFIX);
@@ -102,24 +107,38 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
       throw new ServiceException(FileSystemAccessException.ERROR.H09, security);
     }
 
-    serviceHadoopConf = new Configuration(false);
-    for (Map.Entry entry : getServiceConfig()) {
-      String name = (String) entry.getKey();
-      if (name.startsWith(HADOOP_CONF_PREFIX)) {
-        name = name.substring(HADOOP_CONF_PREFIX.length());
-        String value = (String) entry.getValue();
-        serviceHadoopConf.set(name, value);
-
-      }
+    String hadoopConfDirProp = getServiceConfig().get(HADOOP_CONF_DIR, getServer().getConfigDir());
+    File hadoopConfDir = new File(hadoopConfDirProp).getAbsoluteFile();
+    if (hadoopConfDir == null) {
+      hadoopConfDir = new File(getServer().getConfigDir()).getAbsoluteFile();
     }
-    setRequiredServiceHadoopConf(serviceHadoopConf);
+    if (!hadoopConfDir.exists()) {
+      throw new ServiceException(FileSystemAccessException.ERROR.H10, hadoopConfDir);
+    }
+    try {
+      serviceHadoopConf = loadHadoopConf(hadoopConfDir);
+    } catch (IOException ex) {
+      throw new ServiceException(FileSystemAccessException.ERROR.H11, ex.toString(), ex);
+    }
 
-    LOG.debug("FileSystemAccess default configuration:");
+    LOG.debug("FileSystemAccess FileSystem configuration:");
     for (Map.Entry entry : serviceHadoopConf) {
       LOG.debug("  {} = {}", entry.getKey(), entry.getValue());
     }
+    setRequiredServiceHadoopConf(serviceHadoopConf);
 
     nameNodeWhitelist = toLowerCase(getServiceConfig().getTrimmedStringCollection(NAME_NODE_WHITELIST));
+  }
+
+  private Configuration loadHadoopConf(File dir) throws IOException {
+    Configuration hadoopConf = new Configuration(false);
+    for (String file : HADOOP_CONF_FILES) {
+      File f = new File(dir, file);
+      if (f.exists()) {
+        hadoopConf.addResource(new Path(f.getAbsolutePath()));
+      }
+    }
+    return hadoopConf;
   }
 
   @Override
@@ -166,17 +185,6 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     conf.set("fs.hdfs.impl.disable.cache", "true");
   }
 
-  protected Configuration createHadoopConf(Configuration conf) {
-    Configuration hadoopConf = new Configuration();
-    ConfigurationUtils.copy(serviceHadoopConf, hadoopConf);
-    ConfigurationUtils.copy(conf, hadoopConf);
-    return hadoopConf;
-  }
-
-  protected Configuration createNameNodeConf(Configuration conf) {
-    return createHadoopConf(conf);
-  }
-
   protected FileSystem createFileSystem(Configuration namenodeConf) throws IOException {
     return FileSystem.get(namenodeConf);
   }
@@ -202,16 +210,22 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     Check.notEmpty(user, "user");
     Check.notNull(conf, "conf");
     Check.notNull(executor, "executor");
-    if (conf.get(NAME_NODE_PROPERTY) == null || conf.getTrimmed(NAME_NODE_PROPERTY).length() == 0) {
-      throw new FileSystemAccessException(FileSystemAccessException.ERROR.H06, NAME_NODE_PROPERTY);
+    if (!conf.getBoolean(FILE_SYSTEM_SERVICE_CREATED, false)) {
+      throw new FileSystemAccessException(FileSystemAccessException.ERROR.H04);
+    }
+    if (conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY) == null ||
+        conf.getTrimmed(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY).length() == 0) {
+      throw new FileSystemAccessException(FileSystemAccessException.ERROR.H06,
+                                          CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY);
     }
     try {
-      validateNamenode(new URI(conf.get(NAME_NODE_PROPERTY)).getAuthority());
+      validateNamenode(
+        new URI(conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).
+          getAuthority());
       UserGroupInformation ugi = getUGI(user);
       return ugi.doAs(new PrivilegedExceptionAction<T>() {
         public T run() throws Exception {
-          Configuration namenodeConf = createNameNodeConf(conf);
-          FileSystem fs = createFileSystem(namenodeConf);
+          FileSystem fs = createFileSystem(conf);
           Instrumentation instrumentation = getServer().get(Instrumentation.class);
           Instrumentation.Cron cron = instrumentation.createCron();
           try {
@@ -236,13 +250,16 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     throws IOException, FileSystemAccessException {
     Check.notEmpty(user, "user");
     Check.notNull(conf, "conf");
+    if (!conf.getBoolean(FILE_SYSTEM_SERVICE_CREATED, false)) {
+      throw new FileSystemAccessException(FileSystemAccessException.ERROR.H04);
+    }
     try {
-      validateNamenode(new URI(conf.get(NAME_NODE_PROPERTY)).getAuthority());
+      validateNamenode(
+        new URI(conf.get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY)).getAuthority());
       UserGroupInformation ugi = getUGI(user);
       return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
         public FileSystem run() throws Exception {
-          Configuration namenodeConf = createNameNodeConf(conf);
-          return createFileSystem(namenodeConf);
+          return createFileSystem(conf);
         }
       });
     } catch (IOException ex) {
@@ -267,11 +284,11 @@ public class FileSystemAccessService extends BaseService implements FileSystemAc
     closeFileSystem(fs);
   }
 
-
   @Override
-  public Configuration getDefaultConfiguration() {
-    Configuration conf = new Configuration(false);
+  public Configuration getFileSystemConfiguration() {
+    Configuration conf = new Configuration(true);
     ConfigurationUtils.copy(serviceHadoopConf, conf);
+    conf.setBoolean(FILE_SYSTEM_SERVICE_CREATED, true);
     return conf;
   }
 

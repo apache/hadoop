@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -93,14 +94,15 @@ public class ConfiguredFailoverProxyProvider<T> implements
             "for URI " + uri);
       }
       
-      for (InetSocketAddress address : addressesInNN.values()) {
+      Collection<InetSocketAddress> addressesOfNns = addressesInNN.values();
+      for (InetSocketAddress address : addressesOfNns) {
         proxies.add(new AddressRpcProxyPair<T>(address));
-        
-        // The client may have a delegation token set for the logical
-        // URI of the cluster. Clone this token to apply to each of the
-        // underlying IPC addresses so that the IPC code can find it.
-        HAUtil.cloneDelegationTokenForLogicalUri(ugi, uri, address);
       }
+
+      // The client may have a delegation token set for the logical
+      // URI of the cluster. Clone this token to apply to each of the
+      // underlying IPC addresses so that the IPC code can find it.
+      HAUtil.cloneDelegationTokenForLogicalUri(ugi, uri, addressesOfNns);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
