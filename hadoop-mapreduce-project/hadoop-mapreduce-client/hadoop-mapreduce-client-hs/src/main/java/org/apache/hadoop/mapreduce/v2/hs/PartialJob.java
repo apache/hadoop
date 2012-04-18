@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -164,6 +165,11 @@ public class PartialJob implements org.apache.hadoop.mapreduce.v2.app.job.Job {
 
   @Override
   public Path getConfFile() {
+    throw new IllegalStateException("Not implemented yet");
+  }
+  
+  @Override
+  public Configuration loadConfFile() {
     throw new IllegalStateException("Not implemented yet");
   }
 

@@ -167,6 +167,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4134. Remove references of mapred.child.ulimit etc. since they
     are not being used any more (Ravi Prakash via bobby)
 
+    MAPREDUCE-3972. Fix locking and exception issues in JobHistory server.
+    (Robert Joseph Evans via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES

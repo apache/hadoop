@@ -53,6 +53,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -71,7 +72,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   private final Configuration conf;
   private final JobId jobId; //Can be picked from JobInfo with a conversion.
   private final String user; //Can be picked up from JobInfo
-  private final Path confFile;
+  private final HistoryFileInfo info;
   private JobInfo jobInfo;
   private JobReport report;
   AtomicBoolean tasksLoaded = new AtomicBoolean(false);
@@ -84,13 +85,14 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
   
   
   public CompletedJob(Configuration conf, JobId jobId, Path historyFile, 
-      boolean loadTasks, String userName, Path confFile, JobACLsManager aclsMgr) 
+      boolean loadTasks, String userName, HistoryFileInfo info,
+      JobACLsManager aclsMgr) 
           throws IOException {
     LOG.info("Loading job: " + jobId + " from file: " + historyFile);
     this.conf = conf;
     this.jobId = jobId;
     this.user = userName;
-    this.confFile = confFile;
+    this.info = info;
     this.aclsMgr = aclsMgr;
     loadFullHistoryData(loadTasks, historyFile);
   }
@@ -134,7 +136,7 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
     report.setUser(jobInfo.getUsername());
     report.setMapProgress((float) getCompletedMaps() / getTotalMaps());
     report.setReduceProgress((float) getCompletedReduces() / getTotalReduces());
-    report.setJobFile(confFile.toString());
+    report.setJobFile(getConfFile().toString());
     String historyUrl = "N/A";
     try {
       historyUrl = JobHistoryUtils.getHistoryUrl(conf, jobId.getAppId());
@@ -392,7 +394,16 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
    */
   @Override
   public Path getConfFile() {
-    return confFile;
+    return info.getConfFile();
+  }
+  
+  /*
+   * (non-Javadoc)
+   * @see org.apache.hadoop.mapreduce.v2.app.job.Job#loadConfFile()
+   */
+  @Override
+  public Configuration loadConfFile() throws IOException {
+    return info.loadConfFile();
   }
 
   @Override
