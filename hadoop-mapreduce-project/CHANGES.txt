@@ -52,6 +52,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-4149. [Rumen] Rumen fails to parse certain counter
+                    strings. (ravigummadi)
+
     MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk)
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
