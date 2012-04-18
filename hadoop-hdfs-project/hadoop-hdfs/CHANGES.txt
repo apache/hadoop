@@ -257,6 +257,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3294. Fix code indentation in NamenodeWebHdfsMethods and
     DatanodeWebHdfsMethods.  (szetszwo)
 
+    HDFS-3263. HttpFS should read HDFS config from Hadoop site.xml files (tucu)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
