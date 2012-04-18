@@ -65,6 +65,9 @@ Trunk (unreleased changes)
     HDFS-3273. Refactor BackupImage and FSEditLog, and rename
     JournalListener.rollLogs(..) to startLogSegment(..).  (szetszwo)
 
+    HDFS-3292. Remove the deprecated DiskStatus, getDiskStatus(), getRawCapacity() and
+    getRawUsed() from DistributedFileSystem.  (Arpit Gupta via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
