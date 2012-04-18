@@ -142,6 +142,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8280. Move VersionUtil/TestVersionUtil and GenericTestUtils from
     HDFS into Common. (Ahmed Radwan via atm)
 
+    HADOOP-8117. Upgrade test build to Surefire 2.12 (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
