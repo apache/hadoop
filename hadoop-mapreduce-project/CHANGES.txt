@@ -170,6 +170,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3972. Fix locking and exception issues in JobHistory server.
     (Robert Joseph Evans via sseth)
 
+    MAPREDUCE-4161. create sockets consistently (Daryn Sharp via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -33,7 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -104,7 +103,6 @@ public class ClientRMService extends AbstractService implements
   final private RMContext rmContext;
   private final RMAppManager rmAppManager;
 
-  private String clientServiceBindAddress;
   private Server server;
   private RMDelegationTokenSecretManager rmDTSecretManager;
 
@@ -126,13 +124,10 @@ public class ClientRMService extends AbstractService implements
   
   @Override
   public void init(Configuration conf) {
-    clientServiceBindAddress =
-      conf.get(YarnConfiguration.RM_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_ADDRESS);
-    clientBindAddress =
-      NetUtils.createSocketAddr(clientServiceBindAddress,
-          YarnConfiguration.DEFAULT_RM_PORT,
-          YarnConfiguration.RM_ADDRESS);
+    clientBindAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_PORT);
     super.init(conf);
   }
   

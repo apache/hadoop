@@ -25,7 +25,6 @@ import java.security.PrivilegedAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -158,13 +157,10 @@ public class RMAdmin extends Configured implements Tool {
     final YarnConfiguration conf = new YarnConfiguration(getConf());
 
     // Create the client
-    final String adminAddress =
-      conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS);
-    final InetSocketAddress addr =
-      NetUtils.createSocketAddr(adminAddress,
-        YarnConfiguration.DEFAULT_RM_ADMIN_PORT,
-        YarnConfiguration.RM_ADMIN_ADDRESS);
+    final InetSocketAddress addr = conf.getSocketAddr(
+        YarnConfiguration.RM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
     final YarnRPC rpc = YarnRPC.create(conf);
     
     RMAdminProtocol adminProtocol =

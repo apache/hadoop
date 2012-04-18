@@ -33,7 +33,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -226,10 +225,10 @@ public class ContainerManagerImpl extends CompositeService implements
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
 
-    InetSocketAddress initialAddress = NetUtils.createSocketAddr(conf.get(
-        YarnConfiguration.NM_ADDRESS, YarnConfiguration.DEFAULT_NM_ADDRESS),
-        YarnConfiguration.DEFAULT_NM_PORT,
-        YarnConfiguration.NM_ADDRESS);
+    InetSocketAddress initialAddress = conf.getSocketAddr(
+        YarnConfiguration.NM_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_ADDRESS,
+        YarnConfiguration.DEFAULT_NM_PORT);
 
     server =
         rpc.getServer(ContainerManager.class, this, initialAddress, conf,
