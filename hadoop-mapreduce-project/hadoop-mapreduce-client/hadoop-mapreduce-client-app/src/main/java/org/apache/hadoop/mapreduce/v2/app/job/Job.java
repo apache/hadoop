@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobACL;
@@ -70,6 +72,13 @@ public interface Job {
    * @return a path to where the config file for this job is located.
    */
   Path getConfFile();
+  
+  /**
+   * @return a parsed version of the config files pointed to by 
+   * {@link #getConfFile()}.
+   * @throws IOException on any error trying to load the conf file. 
+   */
+  Configuration loadConfFile() throws IOException;
   
   /**
    * @return the ACLs for this job for each type of JobACL given. 

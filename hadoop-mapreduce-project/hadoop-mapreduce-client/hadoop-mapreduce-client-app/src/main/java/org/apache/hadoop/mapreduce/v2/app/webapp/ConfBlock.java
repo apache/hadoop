@@ -23,7 +23,6 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -44,11 +43,9 @@ import com.google.inject.Inject;
  */
 public class ConfBlock extends HtmlBlock {
   final AppContext appContext;
-  final Configuration conf;
 
-  @Inject ConfBlock(AppContext appctx, Configuration conf) {
+  @Inject ConfBlock(AppContext appctx) {
     appContext = appctx;
-    this.conf = conf;
   }
 
   /*
@@ -71,7 +68,7 @@ public class ConfBlock extends HtmlBlock {
     }
     Path confPath = job.getConfFile();
     try {
-      ConfInfo info = new ConfInfo(job, this.conf);
+      ConfInfo info = new ConfInfo(job);
 
       html.div().h3(confPath.toString())._();
       TBODY<TABLE<Hamlet>> tbody = html.

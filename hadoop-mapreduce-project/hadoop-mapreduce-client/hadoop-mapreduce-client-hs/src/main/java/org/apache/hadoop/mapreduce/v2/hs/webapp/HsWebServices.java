@@ -65,7 +65,6 @@ import com.google.inject.Inject;
 public class HsWebServices {
   private final HistoryContext ctx;
   private WebApp webapp;
-  private final Configuration conf;
 
   @Context
   UriInfo uriInfo;
@@ -74,7 +73,6 @@ public class HsWebServices {
   public HsWebServices(final HistoryContext ctx, final Configuration conf,
       final WebApp webapp) {
     this.ctx = ctx;
-    this.conf = conf;
     this.webapp = webapp;
   }
 
@@ -222,7 +220,7 @@ public class HsWebServices {
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     ConfInfo info;
     try {
-      info = new ConfInfo(job, this.conf);
+      info = new ConfInfo(job);
     } catch (IOException e) {
       throw new NotFoundException("unable to load configuration for job: "
           + jid);
