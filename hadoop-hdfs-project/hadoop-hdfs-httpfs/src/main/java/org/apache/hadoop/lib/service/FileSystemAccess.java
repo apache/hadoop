@@ -37,6 +37,6 @@ public interface FileSystemAccess {
 
   public void releaseFileSystem(FileSystem fs) throws IOException;
 
-  public Configuration getDefaultConfiguration();
+  public Configuration getFileSystemConfiguration();
 
 }
