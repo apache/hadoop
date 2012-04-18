@@ -314,8 +314,40 @@ public class NamenodeWebHdfsMethods {
       public Response run() throws IOException, URISyntaxException {
         REMOTE_ADDRESS.set(request.getRemoteAddr());
         try {
+          return put(ugi, delegation, username, doAsUser,
+              path.getAbsolutePath(), op, destination, owner, group,
+              permission, overwrite, bufferSize, replication, blockSize,
+              modificationTime, accessTime, renameOptions, createParent,
+              delegationTokenArgument);
+        } finally {
+          REMOTE_ADDRESS.set(null);
+        }
+      }
+    });
+  }
 
-    final String fullpath = path.getAbsolutePath();
+  private Response put(
+      final UserGroupInformation ugi,
+      final DelegationParam delegation,
+      final UserParam username,
+      final DoAsParam doAsUser,
+      final String fullpath,
+      final PutOpParam op,
+      final DestinationParam destination,
+      final OwnerParam owner,
+      final GroupParam group,
+      final PermissionParam permission,
+      final OverwriteParam overwrite,
+      final BufferSizeParam bufferSize,
+      final ReplicationParam replication,
+      final BlockSizeParam blockSize,
+      final ModificationTimeParam modificationTime,
+      final AccessTimeParam accessTime,
+      final RenameOptionSetParam renameOptions,
+      final CreateParentParam createParent,
+      final TokenArgumentParam delegationTokenArgument
+      ) throws IOException, URISyntaxException {
+
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
     final NamenodeProtocols np = namenode.getRpcServer();
@@ -396,12 +428,6 @@ public class NamenodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
-
-        } finally {
-          REMOTE_ADDRESS.set(null);
-        }
-      }
-    });
   }
 
   /** Handle HTTP POST request for the root. */
@@ -452,8 +478,24 @@ public class NamenodeWebHdfsMethods {
       public Response run() throws IOException, URISyntaxException {
         REMOTE_ADDRESS.set(request.getRemoteAddr());
         try {
+          return post(ugi, delegation, username, doAsUser,
+              path.getAbsolutePath(), op, bufferSize);
+        } finally {
+          REMOTE_ADDRESS.set(null);
+        }
+      }
+    });
+  }
 
-    final String fullpath = path.getAbsolutePath();
+  private Response post(
+      final UserGroupInformation ugi,
+      final DelegationParam delegation,
+      final UserParam username,
+      final DoAsParam doAsUser,
+      final String fullpath,
+      final PostOpParam op,
+      final BufferSizeParam bufferSize
+      ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
 
     switch(op.getValue()) {
@@ -466,12 +508,6 @@ public class NamenodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
-
-        } finally {
-          REMOTE_ADDRESS.set(null);
-        }
-      }
-    });
   }
 
   /** Handle HTTP GET request for the root. */
@@ -534,9 +570,28 @@ public class NamenodeWebHdfsMethods {
       public Response run() throws IOException, URISyntaxException {
         REMOTE_ADDRESS.set(request.getRemoteAddr());
         try {
+          return get(ugi, delegation, username, doAsUser,
+              path.getAbsolutePath(), op, offset, length, renewer, bufferSize);
+        } finally {
+          REMOTE_ADDRESS.set(null);
+        }
+      }
+    });
+  }
 
+  private Response get(
+      final UserGroupInformation ugi,
+      final DelegationParam delegation,
+      final UserParam username,
+      final DoAsParam doAsUser,
+      final String fullpath,
+      final GetOpParam op,
+      final OffsetParam offset,
+      final LengthParam length,
+      final RenewerParam renewer,
+      final BufferSizeParam bufferSize
+      ) throws IOException, URISyntaxException {
     final NameNode namenode = (NameNode)context.getAttribute("name.node");
-    final String fullpath = path.getAbsolutePath();
     final NamenodeProtocols np = namenode.getRpcServer();
 
     switch(op.getValue()) {
@@ -613,13 +668,7 @@ public class NamenodeWebHdfsMethods {
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
-    }    
-
-        } finally {
-          REMOTE_ADDRESS.set(null);
-        }
-      }
-    });
+    }
   }
 
   private static DirectoryListing getDirectoryListing(final NamenodeProtocols np,
@@ -712,25 +761,35 @@ public class NamenodeWebHdfsMethods {
       public Response run() throws IOException {
         REMOTE_ADDRESS.set(request.getRemoteAddr());
         try {
-
-        final NameNode namenode = (NameNode)context.getAttribute("name.node");
-        final String fullpath = path.getAbsolutePath();
-
-        switch(op.getValue()) {
-        case DELETE:
-        {
-          final boolean b = namenode.getRpcServer().delete(fullpath, recursive.getValue());
-          final String js = JsonUtil.toJsonString("boolean", b);
-          return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-        }
-        default:
-          throw new UnsupportedOperationException(op + " is not supported");
-        }
-
+          return delete(ugi, delegation, username, doAsUser,
+              path.getAbsolutePath(), op, recursive);
         } finally {
           REMOTE_ADDRESS.set(null);
         }
       }
     });
+  }
+
+  private Response delete(
+      final UserGroupInformation ugi,
+      final DelegationParam delegation,
+      final UserParam username,
+      final DoAsParam doAsUser,
+      final String fullpath,
+      final DeleteOpParam op,
+      final RecursiveParam recursive
+      ) throws IOException {
+    final NameNode namenode = (NameNode)context.getAttribute("name.node");
+
+    switch(op.getValue()) {
+    case DELETE:
+    {
+      final boolean b = namenode.getRpcServer().delete(fullpath, recursive.getValue());
+      final String js = JsonUtil.toJsonString("boolean", b);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    default:
+      throw new UnsupportedOperationException(op + " is not supported");
+    }
   }
 }

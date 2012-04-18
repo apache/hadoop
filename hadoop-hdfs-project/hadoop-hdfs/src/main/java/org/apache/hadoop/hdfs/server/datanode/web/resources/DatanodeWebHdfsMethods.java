@@ -178,8 +178,25 @@ public class DatanodeWebHdfsMethods {
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException, URISyntaxException {
+        return put(in, ugi, delegation, nnRpcAddr, path.getAbsolutePath(), op,
+            permission, overwrite, bufferSize, replication, blockSize);
+      }
+    });
+  }
 
-    final String fullpath = path.getAbsolutePath();
+  private Response put(
+      final InputStream in,
+      final UserGroupInformation ugi,
+      final DelegationParam delegation,
+      final InetSocketAddress nnRpcAddr,
+      final String fullpath,
+      final PutOpParam op,
+      final PermissionParam permission,
+      final OverwriteParam overwrite,
+      final BufferSizeParam bufferSize,
+      final ReplicationParam replication,
+      final BlockSizeParam blockSize
+      ) throws IOException, URISyntaxException {
     final DataNode datanode = (DataNode)context.getAttribute("datanode");
 
     switch(op.getValue()) {
@@ -214,8 +231,6 @@ public class DatanodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
-      }
-    });
   }
 
   /** Handle HTTP POST request for the root for the root. */
@@ -265,8 +280,21 @@ public class DatanodeWebHdfsMethods {
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException {
+        return post(in, ugi, delegation, nnRpcAddr, path.getAbsolutePath(), op,
+            bufferSize);
+      }
+    });
+  }
 
-    final String fullpath = path.getAbsolutePath();
+  private Response post(
+      final InputStream in,
+      final UserGroupInformation ugi,
+      final DelegationParam delegation,
+      final InetSocketAddress nnRpcAddr,
+      final String fullpath,
+      final PostOpParam op,
+      final BufferSizeParam bufferSize
+      ) throws IOException {
     final DataNode datanode = (DataNode)context.getAttribute("datanode");
 
     switch(op.getValue()) {
@@ -292,8 +320,6 @@ public class DatanodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
-      }
-    });
   }
 
   /** Handle HTTP GET request for the root. */
@@ -348,8 +374,22 @@ public class DatanodeWebHdfsMethods {
     return ugi.doAs(new PrivilegedExceptionAction<Response>() {
       @Override
       public Response run() throws IOException {
+        return get(ugi, delegation, nnRpcAddr, path.getAbsolutePath(), op,
+            offset, length, bufferSize);
+      }
+    });
+  }
 
-    final String fullpath = path.getAbsolutePath();
+  private Response get(
+      final UserGroupInformation ugi,
+      final DelegationParam delegation,
+      final InetSocketAddress nnRpcAddr,
+      final String fullpath,
+      final GetOpParam op,
+      final OffsetParam offset,
+      final LengthParam length,
+      final BufferSizeParam bufferSize
+      ) throws IOException {
     final DataNode datanode = (DataNode)context.getAttribute("datanode");
     final Configuration conf = new Configuration(datanode.getConf());
 
@@ -412,7 +452,5 @@ public class DatanodeWebHdfsMethods {
     default:
       throw new UnsupportedOperationException(op + " is not supported");
     }
-      }
-    });
   }
 }
