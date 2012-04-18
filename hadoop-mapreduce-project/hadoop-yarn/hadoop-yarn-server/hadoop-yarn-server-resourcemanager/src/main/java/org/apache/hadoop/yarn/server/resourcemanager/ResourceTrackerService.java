@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -104,13 +103,10 @@ public class ResourceTrackerService extends AbstractService implements
 
   @Override
   public synchronized void init(Configuration conf) {
-    String resourceTrackerBindAddress =
-      conf.get(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS);
-    resourceTrackerAddress = NetUtils.createSocketAddr(
-      resourceTrackerBindAddress,
-      YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT,
-      YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS);
+    resourceTrackerAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_PORT);
 
     RackResolver.init(conf);
     super.init(conf);

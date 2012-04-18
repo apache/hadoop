@@ -30,7 +30,6 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
@@ -75,9 +74,10 @@ public class TestApplicationACLs {
   static MockRM resourceManager;
   static Configuration conf = new YarnConfiguration();
   final static YarnRPC rpc = YarnRPC.create(conf);
-  final static InetSocketAddress rmAddress = NetUtils
-      .createSocketAddr(conf.get(YarnConfiguration.RM_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_ADDRESS));
+  final static InetSocketAddress rmAddress = conf.getSocketAddr(
+      YarnConfiguration.RM_ADDRESS,
+      YarnConfiguration.DEFAULT_RM_ADDRESS,
+      YarnConfiguration.DEFAULT_RM_PORT);
   private static ClientRMProtocol rmClient;
 
   private static RecordFactory recordFactory = RecordFactoryProvider
