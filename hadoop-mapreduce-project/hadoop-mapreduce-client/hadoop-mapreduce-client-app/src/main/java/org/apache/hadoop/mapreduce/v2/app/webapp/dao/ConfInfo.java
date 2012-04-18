@@ -40,15 +40,11 @@ public class ConfInfo {
   public ConfInfo() {
   }
 
-  public ConfInfo(Job job, Configuration conf) throws IOException {
+  public ConfInfo(Job job) throws IOException {
 
-    Path confPath = job.getConfFile();
     this.property = new ArrayList<ConfEntryInfo>();
-    // Read in the configuration file and put it in a key/value table.
-    FileContext fc = FileContext.getFileContext(confPath.toUri(), conf);
-    Configuration jobConf = new Configuration(false);
-    jobConf.addResource(fc.open(confPath));
-    this.path = confPath.toString();
+    Configuration jobConf = job.loadConfFile();
+    this.path = job.getConfFile().toString();
     for (Map.Entry<String, String> entry : jobConf) {
       this.property.add(new ConfEntryInfo(entry.getKey(), entry.getValue()));
     }

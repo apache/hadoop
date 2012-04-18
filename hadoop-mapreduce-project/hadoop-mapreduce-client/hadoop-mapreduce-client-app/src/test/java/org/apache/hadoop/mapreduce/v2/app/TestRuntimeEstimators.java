@@ -489,6 +489,11 @@ public class TestRuntimeEstimators {
     public List<AMInfo> getAMInfos() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
+    
+    @Override
+    public Configuration loadConfFile() {
+      throw new UnsupportedOperationException();
+    }
   }
 
   /*

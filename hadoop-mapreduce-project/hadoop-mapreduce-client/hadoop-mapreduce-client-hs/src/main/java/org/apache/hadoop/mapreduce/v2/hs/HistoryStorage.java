@@ -28,7 +28,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Provides an API to query jobs that have finished. 
+ * Provides an API to query jobs that have finished.
+ * 
+ * For those implementing this API be aware that there is no feedback when
+ * files are removed from HDFS.  You may rely on HistoryFileManager to help
+ * you know when that has happened if you have not made a complete backup of
+ * the data stored on HDFS.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -71,10 +76,4 @@ public interface HistoryStorage {
    * @return the job, or null if it is not found.
    */
   Job getFullJob(JobId jobId);
-
-  /**
-   * Informs the Storage that a job has been removed from HDFS
-   * @param jobId the ID of the job that was removed.
-   */
-  void jobRemovedFromHDFS(JobId jobId);
 }

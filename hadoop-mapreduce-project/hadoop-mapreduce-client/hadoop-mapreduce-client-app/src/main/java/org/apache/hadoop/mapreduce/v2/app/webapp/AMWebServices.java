@@ -31,7 +31,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -68,14 +67,11 @@ import com.google.inject.Inject;
 public class AMWebServices {
   private final AppContext appCtx;
   private final App app;
-  private final Configuration conf;
-
+  
   @Inject
-  public AMWebServices(final App app, final AppContext context,
-      final Configuration conf) {
+  public AMWebServices(final App app, final AppContext context) {
     this.appCtx = context;
     this.app = app;
-    this.conf = conf;
   }
 
   Boolean hasAccess(Job job, HttpServletRequest request) {
@@ -272,7 +268,7 @@ public class AMWebServices {
     checkAccess(job, hsr);
     ConfInfo info;
     try {
-      info = new ConfInfo(job, this.conf);
+      info = new ConfInfo(job);
     } catch (IOException e) {
       throw new NotFoundException("unable to load configuration for job: "
           + jid);
