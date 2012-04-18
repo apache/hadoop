@@ -40,7 +40,6 @@ import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIden
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
@@ -88,12 +87,10 @@ public class ResourceMgrDelegate {
   public ResourceMgrDelegate(YarnConfiguration conf) {
     this.conf = conf;
     YarnRPC rpc = YarnRPC.create(this.conf);
-    InetSocketAddress rmAddress =
-        NetUtils.createSocketAddr(this.conf.get(
+    InetSocketAddress rmAddress = conf.getSocketAddr(
             YarnConfiguration.RM_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_ADDRESS),
-            YarnConfiguration.DEFAULT_RM_PORT,
-            YarnConfiguration.RM_ADDRESS);
+            YarnConfiguration.DEFAULT_RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_PORT);
     this.rmAddress = rmAddress.toString();
     LOG.debug("Connecting to ResourceManager at " + rmAddress);
     applicationsManager =

@@ -100,13 +100,10 @@ public class ApplicationMasterService extends AbstractService implements
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
 
-    String bindAddressStr =
-        conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
-    InetSocketAddress masterServiceAddress =
-        NetUtils.createSocketAddr(bindAddressStr,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT,
-          YarnConfiguration.RM_SCHEDULER_ADDRESS);
+    InetSocketAddress masterServiceAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_SCHEDULER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
 
     this.server =
       rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,
