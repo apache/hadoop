@@ -1126,6 +1126,15 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.shuffle.port</name>
+  <value>8080</value>
+  <description>Default port that the ShuffleHandler will run on. ShuffleHandler 
+   is a service run at the NodeManager to facilitate transfers of intermediate 
+   Map outputs to requesting Reducers.
+  </description>
+</property>
+
 <!--  Node health script variables -->
 
 <property>
