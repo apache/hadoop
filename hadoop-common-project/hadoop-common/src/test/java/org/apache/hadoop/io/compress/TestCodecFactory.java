@@ -101,6 +101,12 @@ public class TestCodecFactory extends TestCase {
     }
   }
   
+  private static class NewGzipCodec extends BaseCodec {
+    public String getDefaultExtension() {
+      return ".gz";
+    }
+  }
+  
   /**
    * Returns a factory for a given set of codecs
    * @param classes the codec classes to include
@@ -167,32 +173,43 @@ public class TestCodecFactory extends TestCase {
     checkCodec("default factory for deflate codec", DeflateCodec.class, codec);
 
     factory = setClasses(new Class[0]);
+    // gz, bz2, snappy, lz4 are picked up by service loader, but bar isn't
     codec = factory.getCodec(new Path("/tmp/foo.bar"));
-    assertEquals("empty codec bar codec", null, codec);
+    assertEquals("empty factory bar codec", null, codec);
     codec = factory.getCodecByClassName(BarCodec.class.getCanonicalName());
-    assertEquals("empty codec bar codec", null, codec);
+    assertEquals("empty factory bar codec", null, codec);
     
     codec = factory.getCodec(new Path("/tmp/foo.gz"));
-    assertEquals("empty codec gz codec", null, codec);
+    checkCodec("empty factory gz codec", GzipCodec.class, codec);
     codec = factory.getCodecByClassName(GzipCodec.class.getCanonicalName());
-    assertEquals("empty codec gz codec", null, codec);
+    checkCodec("empty factory gz codec", GzipCodec.class, codec);
     
     codec = factory.getCodec(new Path("/tmp/foo.bz2"));
-    assertEquals("empty factory for .bz2", null, codec);
+    checkCodec("empty factory for .bz2", BZip2Codec.class, codec);
     codec = factory.getCodecByClassName(BZip2Codec.class.getCanonicalName());
-    assertEquals("empty factory for bzip2 codec", null, codec);
+    checkCodec("empty factory for bzip2 codec", BZip2Codec.class, codec);
+    
+    codec = factory.getCodec(new Path("/tmp/foo.snappy"));
+    checkCodec("empty factory snappy codec", SnappyCodec.class, codec);
+    codec = factory.getCodecByClassName(SnappyCodec.class.getCanonicalName());
+    checkCodec("empty factory snappy codec", SnappyCodec.class, codec);
+    
+    codec = factory.getCodec(new Path("/tmp/foo.lz4"));
+    checkCodec("empty factory lz4 codec", Lz4Codec.class, codec);
+    codec = factory.getCodecByClassName(Lz4Codec.class.getCanonicalName());
+    checkCodec("empty factory lz4 codec", Lz4Codec.class, codec);
     
     factory = setClasses(new Class[]{BarCodec.class, FooCodec.class, 
                                      FooBarCodec.class});
     codec = factory.getCodec(new Path("/tmp/.foo.bar.gz"));
-    assertEquals("full factory gz codec", null, codec);
+    checkCodec("full factory gz codec", GzipCodec.class, codec);
     codec = factory.getCodecByClassName(GzipCodec.class.getCanonicalName());
-    assertEquals("full codec gz codec", null, codec);
+    checkCodec("full codec gz codec", GzipCodec.class, codec);
      
     codec = factory.getCodec(new Path("/tmp/foo.bz2"));
-    assertEquals("full factory for .bz2", null, codec);
+    checkCodec("full factory for .bz2", BZip2Codec.class, codec);
     codec = factory.getCodecByClassName(BZip2Codec.class.getCanonicalName());
-    assertEquals("full codec bzip2 codec", null, codec);
+    checkCodec("full codec bzip2 codec", BZip2Codec.class, codec);
 
     codec = factory.getCodec(new Path("/tmp/foo.bar"));
     checkCodec("full factory bar codec", BarCodec.class, codec);
@@ -220,5 +237,11 @@ public class TestCodecFactory extends TestCase {
     checkCodec("full factory foo codec", FooCodec.class, codec);
     codec = factory.getCodecByName("FOO");
     checkCodec("full factory foo codec", FooCodec.class, codec);
+    
+    factory = setClasses(new Class[]{NewGzipCodec.class});
+    codec = factory.getCodec(new Path("/tmp/foo.gz"));
+    checkCodec("overridden factory for .gz", NewGzipCodec.class, codec);
+    codec = factory.getCodecByClassName(NewGzipCodec.class.getCanonicalName());
+    checkCodec("overridden factory for gzip codec", NewGzipCodec.class, codec);
   }
 }
