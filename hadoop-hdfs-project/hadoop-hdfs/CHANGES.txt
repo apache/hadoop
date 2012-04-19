@@ -422,6 +422,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-891. DataNode no longer needs to check for dfs.network.script.
     (harsh via eli)
 
+    HDFS-3305. GetImageServlet should consider SBN a valid requestor in a
+    secure HA setup. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

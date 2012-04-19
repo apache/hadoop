@@ -35,6 +35,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
@@ -44,6 +46,7 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -218,26 +221,44 @@ public class GetImageServlet extends HttpServlet {
     return throttler;
   }
   
-  protected boolean isValidRequestor(String remoteUser, Configuration conf)
+  @VisibleForTesting
+  static boolean isValidRequestor(String remoteUser, Configuration conf)
       throws IOException {
     if(remoteUser == null) { // This really shouldn't happen...
       LOG.warn("Received null remoteUser while authorizing access to getImage servlet");
       return false;
     }
+    
+    Set<String> validRequestors = new HashSet<String>();
 
-    String[] validRequestors = {
+    validRequestors.add(
         SecurityUtil.getServerPrincipal(conf
             .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), NameNode
-            .getAddress(conf).getHostName()),
+            .getAddress(conf).getHostName()));
+    validRequestors.add(
         SecurityUtil.getServerPrincipal(conf
             .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY), NameNode
-            .getAddress(conf).getHostName()),
+            .getAddress(conf).getHostName()));
+    validRequestors.add(
         SecurityUtil.getServerPrincipal(conf
             .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-            SecondaryNameNode.getHttpAddress(conf).getHostName()),
+            SecondaryNameNode.getHttpAddress(conf).getHostName()));
+    validRequestors.add(
         SecurityUtil.getServerPrincipal(conf
             .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY),
-            SecondaryNameNode.getHttpAddress(conf).getHostName()) };
+            SecondaryNameNode.getHttpAddress(conf).getHostName()));
+
+    if (HAUtil.isHAEnabled(conf, DFSUtil.getNamenodeNameServiceId(conf))) {
+      Configuration otherNnConf = HAUtil.getConfForOtherNode(conf);
+      validRequestors.add(
+          SecurityUtil.getServerPrincipal(otherNnConf
+              .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
+              NameNode.getAddress(otherNnConf).getHostName()));
+      validRequestors.add(
+          SecurityUtil.getServerPrincipal(otherNnConf
+              .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
+              NameNode.getAddress(otherNnConf).getHostName()));
+    }
 
     for(String v : validRequestors) {
       if(v != null && v.equals(remoteUser)) {
