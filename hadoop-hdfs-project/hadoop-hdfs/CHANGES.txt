@@ -262,6 +262,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3206. Miscellaneous xml cleanups for OEV.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3169. TestFsck should test multiple -move operations in a row.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
