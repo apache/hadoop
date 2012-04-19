@@ -305,6 +305,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8108. Move method getHostPortString() from NameNode to NetUtils.
     (Brandon Li via jitendra)
 
+    HADOOP-8288. Remove references of mapred.child.ulimit etc. since they are
+    not being used any more (Ravi Prakash via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES

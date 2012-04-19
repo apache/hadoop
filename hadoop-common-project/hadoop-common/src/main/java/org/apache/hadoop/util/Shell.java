@@ -81,64 +81,6 @@ abstract public class Shell {
   /** If or not script timed out*/
   private AtomicBoolean timedOut;
 
-  /** a Unix command to get ulimit of a process. */
-  public static final String ULIMIT_COMMAND = "ulimit";
-  
-  /** 
-   * Get the Unix command for setting the maximum virtual memory available
-   * to a given child process. This is only relevant when we are forking a
-   * process from within the Mapper or the Reducer implementations.
-   * Also see Hadoop Pipes and Hadoop Streaming.
-   * 
-   * It also checks to ensure that we are running on a *nix platform else 
-   * (e.g. in Cygwin/Windows) it returns <code>null</code>.
-   * @param memoryLimit virtual memory limit
-   * @return a <code>String[]</code> with the ulimit command arguments or 
-   *         <code>null</code> if we are running on a non *nix platform or
-   *         if the limit is unspecified.
-   */
-  public static String[] getUlimitMemoryCommand(int memoryLimit) {
-    // ulimit isn't supported on Windows
-    if (WINDOWS) {
-      return null;
-    }
-    
-    return new String[] {ULIMIT_COMMAND, "-v", String.valueOf(memoryLimit)};
-  }
-  
-  /** 
-   * Get the Unix command for setting the maximum virtual memory available
-   * to a given child process. This is only relevant when we are forking a
-   * process from within the Mapper or the Reducer implementations.
-   * see also Hadoop Pipes and Streaming.
-   * 
-   * It also checks to ensure that we are running on a *nix platform else 
-   * (e.g. in Cygwin/Windows) it returns <code>null</code>.
-   * @param conf configuration
-   * @return a <code>String[]</code> with the ulimit command arguments or 
-   *         <code>null</code> if we are running on a non *nix platform or
-   *         if the limit is unspecified.
-   * @deprecated Use {@link #getUlimitMemoryCommand(int)}
-   */
-  @Deprecated
-  public static String[] getUlimitMemoryCommand(Configuration conf) {
-    // ulimit isn't supported on Windows
-    if (WINDOWS) {
-      return null;
-    }
-    
-    // get the memory limit from the configuration
-    String ulimit = conf.get("mapred.child.ulimit");
-    if (ulimit == null) {
-      return null;
-    }
-    
-    // Parse it to ensure it is legal/sane
-    int memoryLimit = Integer.valueOf(ulimit);
-    
-    return getUlimitMemoryCommand(memoryLimit);
-  }
-  
   /** Set to true on Windows platforms */
   public static final boolean WINDOWS /* borrowed from Path.WINDOWS */
                 = System.getProperty("os.name").startsWith("Windows");
