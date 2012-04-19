@@ -277,6 +277,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4129. Lots of unneeded counters log messages (Ahmed Radwan via
     bobby)
 
+    MAPREDUCE-3947. yarn.app.mapreduce.am.resource.mb not documented 
+    (Devaraj K via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
