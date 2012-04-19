@@ -98,11 +98,11 @@ public class TestJournalService {
     }
 
     //test restart journal service
-    StorageInfo before = service.getJournal().getStorageInfo();
+    StorageInfo before = service.getJournal().getStorage();
     LOG.info("before: " + before);
     service.stop();
     service = newJournalService(nnAddress, listener, conf);
-    StorageInfo after = service.getJournal().getStorageInfo();
+    StorageInfo after = service.getJournal().getStorage();
     LOG.info("after : " + after);
     Assert.assertEquals(before.toString(), after.toString());
   }

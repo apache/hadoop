@@ -187,7 +187,7 @@ public class JournalService implements JournalProtocol {
     if (registration == null) {
       registration = new NamenodeRegistration(
           NetUtils.getHostPortString(rpcServer.getListenerAddress()), "",
-          journal.getStorageInfo(), NamenodeRole.BACKUP);
+          journal.getStorage(), NamenodeRole.BACKUP);
     }
     return registration;
   }

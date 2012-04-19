@@ -202,12 +202,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_CLIENT_LOCAL_INTERFACES = "dfs.client.local.interfaces";
   
   // This is a comma separated host:port list of addresses hosting the journal service
-  public static final String  DFS_JOURNAL_ADDRESS_KEY = "dfs.journalnode.addresses";
+  public static final String  DFS_JOURNAL_ADDRESS_KEY = "dfs.journal.addresses";
   public static final String  DFS_JOURNAL_EDITS_DIR_KEY = "dfs.journal.edits.dir";
   public static final String  DFS_JOURNAL_HTTPS_PORT_KEY = "dfs.journal.https-port";
   public static final int     DFS_JOURNAL_HTTPS_PORT_DEFAULT = 50510;
   public static final String  DFS_JOURNAL_KRB_HTTPS_USER_NAME_KEY = "dfs.journal.kerberos.https.principal";
   public static final String  DFS_JOURNAL_KEYTAB_FILE_KEY = "dfs.journal.keytab.file";
+  public static final String  DFS_JOURNAL_USER_NAME_KEY = "dfs.journal.kerberos.principal";
 
   // Much code in hdfs is not yet updated to use these keys.
   public static final String  DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY = "dfs.client.block.write.locateFollowingBlock.retries";

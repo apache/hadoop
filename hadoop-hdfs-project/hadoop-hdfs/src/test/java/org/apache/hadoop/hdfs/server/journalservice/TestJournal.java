@@ -44,7 +44,7 @@ public class TestJournal {
   public void testFormat() throws Exception {
     final Configuration conf = newConf("testFormat");
     final Journal j = new Journal(conf);
-    LOG.info("Initial  : " + j.getStorageInfo());
+    LOG.info("Initial  : " + j.getStorage());
     Assert.assertFalse(j.isFormatted());
 
     //format
@@ -53,7 +53,7 @@ public class TestJournal {
     j.format(namespaceId, clusterId);
     Assert.assertTrue(j.isFormatted());
 
-    final StorageInfo info = j.getStorageInfo();
+    final StorageInfo info = j.getStorage();
     LOG.info("Formatted: " + info);
     
     Assert.assertEquals(namespaceId, info.getNamespaceID());
@@ -61,7 +61,7 @@ public class TestJournal {
     j.close();
     
     //create another Journal object
-    final StorageInfo another = new Journal(conf).getStorageInfo();
+    final StorageInfo another = new Journal(conf).getStorage();
     Assert.assertEquals(info.toString(), another.toString());
   }
 }

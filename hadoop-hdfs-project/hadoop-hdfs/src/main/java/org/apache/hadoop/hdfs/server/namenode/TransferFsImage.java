@@ -79,7 +79,7 @@ public class TransferFsImage {
     return hash;
   }
   
-  static void downloadEditsToStorage(String fsName, RemoteEditLog log,
+  public static void downloadEditsToStorage(String fsName, RemoteEditLog log,
       NNStorage dstStorage) throws IOException {
     assert log.getStartTxId() > 0 && log.getEndTxId() > 0 :
       "bad log: " + log;
@@ -146,7 +146,7 @@ public class TransferFsImage {
    * A server-side method to respond to a getfile http request
    * Copies the contents of the local file into the output stream.
    */
-  static void getFileServer(OutputStream outstream, File localfile,
+  public static void getFileServer(OutputStream outstream, File localfile,
       DataTransferThrottler throttler) 
     throws IOException {
     byte buf[] = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];

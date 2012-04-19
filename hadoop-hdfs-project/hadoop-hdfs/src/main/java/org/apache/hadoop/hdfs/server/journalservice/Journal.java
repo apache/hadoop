@@ -79,10 +79,10 @@ class Journal {
     return isFormatted;
   }
   
-  StorageInfo getStorageInfo() {
+  NNStorage getStorage() {
     return image.getStorage();
   }
-
+  
   synchronized void verifyVersion(JournalService service, NamespaceInfo info
       ) throws IOException {
     if (!isFormatted) {

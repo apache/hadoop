@@ -734,7 +734,7 @@ public class NNStorage extends Storage implements Closeable {
   /**
    * Return the first readable finalized edits file for the given txid.
    */
-  File findFinalizedEditsFile(long startTxId, long endTxId)
+  public File findFinalizedEditsFile(long startTxId, long endTxId)
   throws IOException {
     File ret = findFile(NameNodeDirType.EDITS,
         getFinalizedEditsFileName(startTxId, endTxId));

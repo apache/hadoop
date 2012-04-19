@@ -20,6 +20,9 @@ HDFS-3092 branch changes
     HDFS-3196. Add Journal and JournalDiskWriter for journal service.
     (szetszwo)
 
+    HDFS-3201. Add GetJournalEditServlet for downloading edit logs from journal
+    service.  (Brandon Li via szetszwo)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

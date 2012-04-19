@@ -36,9 +36,6 @@
 <h1>JournalNode</h1>
 <%= JspHelper.getVersionTable() %>
 <hr />
-<pre>
-<%= application.getAttribute("journal.node").toString() %>
-</pre>
 
 <br />
 <b><a href="/logs/">Logs</a></b>
