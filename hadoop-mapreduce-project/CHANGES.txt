@@ -266,6 +266,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4159. Job is running in Uber mode after setting 
     "mapreduce.job.ubertask.maxreduces" to zero (Devaraj K via bobby)
 
+    MAPREDUCE-4165. Committing is misspelled as commiting in task logs
+    (John Eagles via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
