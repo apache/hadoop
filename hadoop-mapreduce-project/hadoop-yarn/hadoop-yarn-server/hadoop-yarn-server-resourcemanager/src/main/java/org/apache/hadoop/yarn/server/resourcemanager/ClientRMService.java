@@ -150,6 +150,11 @@ public class ClientRMService extends AbstractService implements
     }
     
     this.server.start();
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String resolvedAddress =
+        this.server.getListenerAddress().getHostName() + ":" + this.server.getListenerAddress().getPort();
+      conf.set(YarnConfiguration.RM_ADDRESS, resolvedAddress);
+    }
     super.start();
   }
 
