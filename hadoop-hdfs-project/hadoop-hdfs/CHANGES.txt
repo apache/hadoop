@@ -413,6 +413,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3165. HDFS Balancer scripts are refering to wrong path of
     hadoop-daemon.sh (Amith D K via eli)
 
+    HDFS-891. DataNode no longer needs to check for dfs.network.script.
+    (harsh via eli)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

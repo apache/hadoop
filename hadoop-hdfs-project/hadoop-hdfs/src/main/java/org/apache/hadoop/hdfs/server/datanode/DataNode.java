@@ -1517,11 +1517,6 @@ public class DataNode extends Configured
       printUsage();
       return null;
     }
-    if (conf.get("dfs.network.script") != null) {
-      LOG.error("This configuration for rack identification is not supported" +
-          " anymore. RackID resolution is handled by the NameNode.");
-      System.exit(-1);
-    }
     Collection<URI> dataDirs = getStorageDirs(conf);
     UserGroupInformation.setConfiguration(conf);
     SecurityUtil.login(conf, DFS_DATANODE_KEYTAB_FILE_KEY,
