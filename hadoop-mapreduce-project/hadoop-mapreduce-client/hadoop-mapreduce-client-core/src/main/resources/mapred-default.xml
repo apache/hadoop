@@ -1250,6 +1250,13 @@
     to the RM to fetch Application Status.</description>
 </property>
 
+<property>
+  <name>yarn.app.mapreduce.client.max-retries</name>
+  <value>3</value>
+  <description>The number of client retries to the RM/HS/AM before
+    throwing exception. This is a layer above the ipc.</description>
+</property>
+
 <!-- jobhistory properties -->
 
 <property>

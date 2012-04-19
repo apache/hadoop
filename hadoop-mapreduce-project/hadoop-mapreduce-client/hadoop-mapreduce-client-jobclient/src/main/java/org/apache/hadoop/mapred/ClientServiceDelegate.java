@@ -282,7 +282,7 @@ public class ClientServiceDelegate {
   }
 
   private synchronized Object invoke(String method, Class argClass,
-      Object args) throws YarnRemoteException {
+      Object args) throws IOException {
     Method methodOb = null;
     try {
       methodOb = MRClientProtocol.class.getMethod(method, argClass);
@@ -291,7 +291,11 @@ public class ClientServiceDelegate {
     } catch (NoSuchMethodException e) {
       throw new YarnException("Method name mismatch", e);
     }
-    while (true) {
+    int maxRetries = this.conf.getInt(
+        MRJobConfig.MR_CLIENT_MAX_RETRIES,
+        MRJobConfig.DEFAULT_MR_CLIENT_MAX_RETRIES);
+    IOException lastException = null;
+    while (maxRetries > 0) {
       try {
         return methodOb.invoke(getProxy(), args);
       } catch (YarnRemoteException yre) {
@@ -308,13 +312,21 @@ public class ClientServiceDelegate {
             " retrying..", e.getTargetException());
         // Force reconnection by setting the proxy to null.
         realProxy = null;
+        // HS/AMS shut down
+        maxRetries--;
+        lastException = new IOException(e.getMessage());
+        
       } catch (Exception e) {
         LOG.debug("Failed to contact AM/History for job " + jobId
             + "  Will retry..", e);
         // Force reconnection by setting the proxy to null.
         realProxy = null;
+        // RM shutdown
+        maxRetries--;
+        lastException = new IOException(e.getMessage());     
       }
     }
+    throw lastException;
   }
 
   public org.apache.hadoop.mapreduce.Counters getJobCounters(JobID arg0) throws IOException,
@@ -364,7 +376,7 @@ public class ClientServiceDelegate {
     return result;
   }
   
-  public JobStatus getJobStatus(JobID oldJobID) throws YarnRemoteException {
+  public JobStatus getJobStatus(JobID oldJobID) throws IOException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId =
       TypeConverter.toYarn(oldJobID);
     GetJobReportRequest request =
@@ -390,7 +402,7 @@ public class ClientServiceDelegate {
   }
 
   public org.apache.hadoop.mapreduce.TaskReport[] getTaskReports(JobID oldJobID, TaskType taskType)
-       throws YarnRemoteException, YarnRemoteException {
+       throws IOException{
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId =
       TypeConverter.toYarn(oldJobID);
     GetTaskReportsRequest request =
@@ -407,7 +419,7 @@ public class ClientServiceDelegate {
   }
 
   public boolean killTask(TaskAttemptID taskAttemptID, boolean fail)
-       throws YarnRemoteException {
+       throws IOException {
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID
       = TypeConverter.toYarn(taskAttemptID);
     if (fail) {
@@ -423,7 +435,7 @@ public class ClientServiceDelegate {
   }
 
   public boolean killJob(JobID oldJobID)
-       throws YarnRemoteException {
+       throws IOException {
     org.apache.hadoop.mapreduce.v2.api.records.JobId jobId
     = TypeConverter.toYarn(oldJobID);
     KillJobRequest killRequest = recordFactory.newRecordInstance(KillJobRequest.class);

@@ -260,6 +260,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4160. some mrv1 ant tests fail with timeout - due to 4156 
     (tgraves)
 
+    MAPREDUCE-4074. Client continuously retries to RM When RM goes down 
+    before launching Application Master (xieguiming via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
