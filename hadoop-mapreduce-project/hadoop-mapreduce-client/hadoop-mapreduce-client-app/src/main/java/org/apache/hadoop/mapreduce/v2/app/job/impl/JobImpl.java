@@ -822,9 +822,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
     //FIXME: handling multiple reduces within a single AM does not seem to
     //work.
-    // int sysMaxReduces =
-    //     job.conf.getInt(MRJobConfig.JOB_UBERTASK_MAXREDUCES, 1);
-    int sysMaxReduces = 1;
+    int sysMaxReduces = conf.getInt(MRJobConfig.JOB_UBERTASK_MAXREDUCES, 1);
+    boolean isValidUberMaxReduces = (sysMaxReduces == 0)
+        || (sysMaxReduces == 1);
 
     long sysMaxBytes = conf.getLong(MRJobConfig.JOB_UBERTASK_MAXBYTES,
         fs.getDefaultBlockSize()); // FIXME: this is wrong; get FS from
@@ -856,7 +856,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     // while "uber-AM" (MR AM + LocalContainerLauncher) loops over tasks
     // and thus requires sequential execution.
     isUber = uberEnabled && smallNumMapTasks && smallNumReduceTasks
-        && smallInput && smallMemory && notChainJob;
+        && smallInput && smallMemory && notChainJob && isValidUberMaxReduces;
 
     if (isUber) {
       LOG.info("Uberizing job " + jobId + ": " + numMapTasks + "m+"
@@ -889,7 +889,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       if (!smallMemory)
         msg.append(" too much RAM;");
       if (!notChainJob)
-        msg.append(" chainjob");
+        msg.append(" chainjob;");
+      if (!isValidUberMaxReduces)
+        msg.append(" not supported uber max reduces");
       LOG.info(msg.toString());
     }
   }
