@@ -1257,6 +1257,12 @@
     throwing exception. This is a layer above the ipc.</description>
 </property>
 
+<property>
+  <name>yarn.app.mapreduce.am.resource.mb</name>
+  <value>2048</value>
+  <description>The amount of memory the MR AppMaster needs.</description>
+</property>
+
 <!-- jobhistory properties -->
 
 <property>
