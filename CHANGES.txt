@@ -222,6 +222,9 @@ Release 1.1.0 - unreleased
 
     HDFS-119. Fix a bug in logSync(), which causes NameNode block forever. (shv)
 
+    MAPREDUCE-4154. streaming MR job succeeds even if the streaming command 
+    fails. (Devaraj Das via tgraves)
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES

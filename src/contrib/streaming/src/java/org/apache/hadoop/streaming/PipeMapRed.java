@@ -569,6 +569,10 @@ public abstract class PipeMapRed {
           clientOut_.flush();
           clientOut_.close();
         }
+      } catch (IOException io) {
+        LOG.warn(StringUtils.stringifyException(io));
+      }
+      try {
         waitOutputThreads();
       } catch (IOException io) {
         LOG.warn(StringUtils.stringifyException(io));
