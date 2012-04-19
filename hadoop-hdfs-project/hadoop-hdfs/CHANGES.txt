@@ -68,6 +68,8 @@ Trunk (unreleased changes)
     HDFS-3292. Remove the deprecated DiskStatus, getDiskStatus(), getRawCapacity() and
     getRawUsed() from DistributedFileSystem.  (Arpit Gupta via szetszwo)
 
+    HDFS-3282. Expose getFileLength API. (umamahesh)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
