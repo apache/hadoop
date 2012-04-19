@@ -538,6 +538,8 @@ public class YarnConfiguration extends Configuration {
   /** Container temp directory */
   public static final String DEFAULT_CONTAINER_TEMP_DIR = "./tmp";
 
+  public static final String IS_MINI_YARN_CLUSTER = YARN_PREFIX + ".is.minicluster";
+
   public YarnConfiguration() {
     super();
   }

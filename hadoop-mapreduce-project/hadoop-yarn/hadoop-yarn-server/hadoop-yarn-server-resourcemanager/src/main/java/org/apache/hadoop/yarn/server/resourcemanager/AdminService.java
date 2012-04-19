@@ -120,6 +120,11 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     }
 
     this.server.start();
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String resolvedAddress =
+        this.server.getListenerAddress().getHostName() + ":" + this.server.getListenerAddress().getPort();
+      conf.set(YarnConfiguration.RM_ADMIN_ADDRESS, resolvedAddress);
+    }
     super.start();
   }
 

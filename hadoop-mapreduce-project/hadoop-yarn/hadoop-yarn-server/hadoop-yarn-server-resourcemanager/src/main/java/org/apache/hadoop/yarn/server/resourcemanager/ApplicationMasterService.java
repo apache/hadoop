@@ -119,11 +119,14 @@ public class ApplicationMasterService extends AbstractService implements
     }
     
     this.server.start();
-
     this.bindAddress =
         NetUtils.createSocketAddr(masterServiceAddress.getHostName(),
           this.server.getPort());
-
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String resolvedAddress =
+        this.server.getListenerAddress().getHostName() + ":" + this.server.getListenerAddress().getPort();
+      conf.set(YarnConfiguration.RM_SCHEDULER_ADDRESS, resolvedAddress);
+    }
     super.start();
   }
 

@@ -197,10 +197,16 @@ public class Client {
 
   /**
    */
-  public Client() throws Exception  {
+  public Client(Configuration conf) throws Exception  {
     // Set up the configuration and RPC
-    conf = new Configuration();
+    this.conf = conf;
     rpc = YarnRPC.create(conf);
+  }
+
+  /**
+   */
+  public Client() throws Exception  {
+    this(new Configuration());
   }
 
   /**

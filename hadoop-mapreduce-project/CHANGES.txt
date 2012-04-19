@@ -146,6 +146,8 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4008. ResourceManager throws MetricsException on start up 
     saying QueueMetrics MBean already exists (Devaraj K via tgraves)
 
+    MAPREDUCE-3867. MiniMRYarn/MiniYarn uses fixed ports (tucu)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

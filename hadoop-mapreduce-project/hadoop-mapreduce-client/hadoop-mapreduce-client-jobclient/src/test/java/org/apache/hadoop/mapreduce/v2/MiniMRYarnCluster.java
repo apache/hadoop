@@ -20,6 +20,8 @@ package org.apache.hadoop.mapreduce.v2;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -126,6 +128,10 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
     @Override
     public synchronized void start() {
       try {
+        getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
+                        MiniYARNCluster.getHostname() + ":0");
+        getConfig().set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+                        MiniYARNCluster.getHostname() + ":0");
         historyServer = new JobHistoryServer();
         historyServer.init(getConfig());
         new Thread() {
@@ -145,6 +151,20 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
       } catch (Throwable t) {
         throw new YarnException(t);
       }
+      //need to do this because historyServer.init creates a new Configuration
+      getConfig().set(JHAdminConfig.MR_HISTORY_ADDRESS,
+                      historyServer.getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
+      getConfig().set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+                      historyServer.getConfig().get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS));
+
+      LOG.info("MiniMRYARN ResourceManager address: " +
+               getConfig().get(YarnConfiguration.RM_ADDRESS));
+      LOG.info("MiniMRYARN ResourceManager web address: " +
+               getConfig().get(YarnConfiguration.RM_WEBAPP_ADDRESS));
+      LOG.info("MiniMRYARN HistoryServer address: " +
+               getConfig().get(JHAdminConfig.MR_HISTORY_ADDRESS));
+      LOG.info("MiniMRYARN HistoryServer web address: " +
+               getConfig().get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS));
     }
 
     @Override
