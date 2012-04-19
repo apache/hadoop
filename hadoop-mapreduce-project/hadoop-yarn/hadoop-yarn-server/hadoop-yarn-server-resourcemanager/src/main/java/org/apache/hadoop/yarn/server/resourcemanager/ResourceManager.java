@@ -443,14 +443,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
       WebApps.$for("cluster", ApplicationMasterService.class, masterService, "ws").at(
           this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
           YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
+    String proxyHostAndPort = YarnConfiguration.getProxyHostAndPort(conf);
     if(YarnConfiguration.getRMWebAppHostAndPort(conf).
-        equals(YarnConfiguration.getProxyHostAndPort(conf))) {
+        equals(proxyHostAndPort)) {
       AppReportFetcher fetcher = new AppReportFetcher(conf, getClientRMService());
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
-      String proxy = YarnConfiguration.getProxyHostAndPort(conf);
-      String[] proxyParts = proxy.split(":");
+      String[] proxyParts = proxyHostAndPort.split(":");
       builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
 
     }

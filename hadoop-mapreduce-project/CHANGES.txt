@@ -45,6 +45,9 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4103. Fix HA docs for changes to shell command fencer args (todd)
 
+    MAPREDUCE-4093. Improve RM WebApp start up when proxy address is not set
+    (Devaraj K vai bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
