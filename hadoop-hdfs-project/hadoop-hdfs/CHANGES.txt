@@ -259,6 +259,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3263. HttpFS should read HDFS config from Hadoop site.xml files (tucu)
 
+    HDFS-3206. Miscellaneous xml cleanups for OEV.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
