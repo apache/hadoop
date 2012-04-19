@@ -263,6 +263,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4074. Client continuously retries to RM When RM goes down 
     before launching Application Master (xieguiming via tgraves)
 
+    MAPREDUCE-4159. Job is running in Uber mode after setting 
+    "mapreduce.job.ubertask.maxreduces" to zero (Devaraj K via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
