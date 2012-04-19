@@ -325,6 +325,13 @@ public interface MRJobConfig {
     MR_PREFIX + "client-am.ipc.max-retries";
   public static final int DEFAULT_MR_CLIENT_TO_AM_IPC_MAX_RETRIES = 3;
   
+  /**
+   * The number of client retries to the RM/HS/AM before throwing exception.
+   */
+  public static final String MR_CLIENT_MAX_RETRIES = 
+    MR_PREFIX + "client.max-retries";
+  public static final int DEFAULT_MR_CLIENT_MAX_RETRIES = 3;
+  
   /** The staging directory for map reduce.*/
   public static final String MR_AM_STAGING_DIR = 
     MR_AM_PREFIX+"staging-dir";
