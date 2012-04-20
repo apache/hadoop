@@ -168,7 +168,7 @@ public class HftpFileSystem extends FileSystem
 
   protected void initDelegationToken() throws IOException {
     // look for hftp token, then try hdfs
-    Token<?> token = selectDelegationToken(ugi);
+    Token<?> token = selectDelegationToken();
 
     // if we don't already have a token, go get one over https
     boolean createdToken = false;
@@ -189,9 +189,8 @@ public class HftpFileSystem extends FileSystem
     }
   }
 
-  protected Token<DelegationTokenIdentifier> selectDelegationToken(
-      UserGroupInformation ugi) {
-  	return hftpTokenSelector.selectToken(getCanonicalUri(), ugi.getTokens(), getConf());
+  protected Token<DelegationTokenIdentifier> selectDelegationToken() {
+  	return hftpTokenSelector.selectToken(getUri(), ugi.getTokens(), getConf());
   }
   
 

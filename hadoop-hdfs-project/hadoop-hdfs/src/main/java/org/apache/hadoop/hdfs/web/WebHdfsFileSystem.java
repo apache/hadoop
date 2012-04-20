@@ -165,7 +165,7 @@ public class WebHdfsFileSystem extends FileSystem
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
     }
-    this.nnAddr = NetUtils.createSocketAddr(uri.getAuthority(), getDefaultPort());
+    this.nnAddr = NetUtils.createSocketAddrForHost(uri.getHost(), uri.getPort());
     this.workingDir = getHomeDirectory();
 
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -175,7 +175,7 @@ public class WebHdfsFileSystem extends FileSystem
 
   protected void initDelegationToken() throws IOException {
     // look for webhdfs token, then try hdfs
-    Token<?> token = selectDelegationToken(ugi);
+    Token<?> token = selectDelegationToken();
 
     //since we don't already have a token, go get one
     boolean createdToken = false;
@@ -196,9 +196,8 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
-  protected Token<DelegationTokenIdentifier> selectDelegationToken(
-      UserGroupInformation ugi) {
-    return DT_SELECTOR.selectToken(getCanonicalUri(), ugi.getTokens(), getConf());
+  protected Token<DelegationTokenIdentifier> selectDelegationToken() {
+    return DT_SELECTOR.selectToken(getUri(), ugi.getTokens(), getConf());
   }
 
   @Override
