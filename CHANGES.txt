@@ -8,10 +8,10 @@ Release 1.0.3 - unreleased
 
   BUG FIXES
 
-    HADOOP-6924. Adds a directory to the list of directories to search for the libjvm.so file. 
-    The new directory is found by running a 'find' command and the first output is taken. 
-    This was done to handle the build of Hadoop with IBM's JDK. (Stephen Watt, 
-    Guillermo Cabrera and ddas) 
+    HADOOP-6924. Adds a directory to the list of directories to search for 
+    the libjvm.so file. The new directory is found by running a 'find' command
+    and the first output is taken. This was done to handle the build of Hadoop
+    with IBM's JDK. (Stephen Watt, Guillermo Cabrera and ddas) 
 
     HADOOP-6941. Adds support for building Hadoop with IBM's JDK
     (Stephen Watt, Eli and ddas)
@@ -19,8 +19,8 @@ Release 1.0.3 - unreleased
     HADOOP-8188. Fixes the build process to do with jsvc, with IBM's JDK 
     as the underlying jdk. (ddas)
 
-    HDFS-3127. Do not throw exceptions when FSImage.restoreStorageDirs() failes.
-    (Brandon Li via szetszwo)
+    HDFS-3127. Do not throw exceptions when FSImage.restoreStorageDirs() 
+    fails. (Brandon Li via szetszwo)
 
     MAPREDUCE-3377. Ensure OutputCommitter.checkOutputSpecs is called prior to
     copying job.xml. (Jane Chen via acmurthy)
@@ -32,6 +32,9 @@ Release 1.0.3 - unreleased
     nor follow symbolic links.  (Ravi Prakash via szetszwo)
 
     HADOOP-8251. Fix SecurityUtil.fetchServiceTicket after HADOOP-6941. (todd)
+
+    HADOOP-8293. Fix the Makefile.am for the native library to include the
+    JNI path. (omalley)
 
 Release 1.0.2 - 2012.03.24
 
@@ -102,12 +105,13 @@ Release 1.0.1 - 2012.02.14
 
   IMPROVEMENTS
 
-    MAPREDUCE-3607. Port missing new API mapreduce lib classes to 1.x. (tomwhite)
+    MAPREDUCE-3607. Port missing new API mapreduce lib classes to
+    1.x. (tomwhite)
 
     HADOOP-7987. Support setting the run-as user in unsecure mode. (jitendra)
 
-    HADOOP-7988. Upper case in hostname part of the principals doesn't work with 
-    kerberos. (jitendra)
+    HADOOP-7988. Upper case in hostname part of the principals doesn't
+    work with kerberos. (jitendra)
 
     HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
     information. (Hitesh Shah via jitendra)
@@ -142,8 +146,9 @@ Release 1.0.1 - 2012.02.14
     MAPREDUCE-3343. TaskTracker Out of Memory because of distributed cache.
     (Zhao Yunjiong).
 
-    HADOOP-8037. Binary tarball does not preserve platform info for native builds,
-    and RPMs fail to provide needed symlinks for libhadoop.so.  (Matt Foley)
+    HADOOP-8037. Binary tarball does not preserve platform info for
+    native builds, and RPMs fail to provide needed symlinks for
+    libhadoop.so.  (Matt Foley)
 
 Release 1.0.0 - 2011.12.15
 
@@ -223,8 +228,9 @@ Release 1.0.0 - 2011.12.15
     HADOOP-7815. Fixed configuring map memory mb in hadoop-setup-conf.sh.
     (Ramya Sunil)
 
-    HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending upon
-    execution order of test methods. (Laxman and Uma Maheswara Rao via Matt Foley)
+    HDFS-2346. TestHost2NodesMap & TestReplicasMap will fail depending
+    upon execution order of test methods. (Laxman and Uma Maheswara
+    Rao via Matt Foley)
 
     MAPREDUCE-3374. src/c++/task-controller/configure is not set executable in
     the tarball and that prevents task-controller from rebuilding.
@@ -298,7 +304,8 @@ Release 1.0.0 - 2011.12.15
 
     HDFS-2590. Fix the missing links in the WebHDFS forrest doc.  (szetszwo)
 
-    HADOOP-7854. UGI getCurrentUser is not synchronized. (Daryn Sharp via jitendra)
+    HADOOP-7854. UGI getCurrentUser is not synchronized. (Daryn Sharp
+    via jitendra)
 
     HADOOP-7865. Test Failures in 1.0 hdfs/common. (jitendra)
 
@@ -360,8 +367,8 @@ Release 0.20.205.0 - 2011.10.06
     HDFS-2385. Support renew and cancel delegation tokens in WebHDFS.
     (szetszwo)
 
-    MAPREDUCE-2777. Backport of MAPREDUCE-220 and MAPREDUCE-2469. Includes adding
-    cumulative CPU usage and total heap usage to task conters. (amarrk)
+    MAPREDUCE-2777. Backport of MAPREDUCE-220 and MAPREDUCE-2469. Includes 
+    adding cumulative CPU usage and total heap usage to task conters. (amarrk)
 
   BUG FIXES
 
@@ -379,8 +386,8 @@ Release 0.20.205.0 - 2011.10.06
     HADOOP-7685. Resolve issues with hadoop-common file hadoop-setup-conf.sh.
     (Eric Yang and Devaraj K, via mattf)
 
-    HADOOP-7684. jobhistory server and secondarynamenode should have init.d script
-    for rpm and deb. (Eric Yang via mattf)
+    HADOOP-7684. jobhistory server and secondarynamenode should have
+    init.d script for rpm and deb. (Eric Yang via mattf)
 
     HADOOP-7683. remove hdfs-site.xml template has properties that are not used
     in 0.20-security. (Arpit Gupta via mattf)
@@ -391,8 +398,8 @@ Release 0.20.205.0 - 2011.10.06
     HADOOP-7681. log4j.properties is missing properties for security audit and
     hdfs audit should be changed to info. (Arpit Gupta via mattf)
 
-    HADOOP-7679. log4j.properties templates must define mapred.jobsummary.logger
-    (Ramya Sunil via mattf)
+    HADOOP-7679. log4j.properties templates must define
+    mapred.jobsummary.logger (Ramya Sunil via mattf)
 
     HDFS-2325. Fuse-DFS fails to build on Hadoop 20.203.0
     (Kihwal Lee via mattf)
@@ -599,8 +606,8 @@ Release 0.20.205.0 - 2011.10.06
 
     MAPREDUCE-2928. MR-2413 improvements (Eli Collins via mattf)
 
-    HADOOP-7655. provide a small validation script that smoke tests the installed
-    cluster. (Arpit Gupta via mattf)
+    HADOOP-7655. provide a small validation script that smoke tests
+    the installed cluster. (Arpit Gupta via mattf)
 
     MAPREDUCE-2187. Reporter sends progress during sort/merge. (Anupam Seth via
     acmurthy)
