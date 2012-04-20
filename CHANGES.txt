@@ -225,6 +225,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-4154. streaming MR job succeeds even if the streaming command 
     fails. (Devaraj Das via tgraves)
 
+    MAPREDUCE-3674. Invoked with no queueName request param, the
+    jobqueue_details.jsp injects a null queue name into schedulers. (harsh)
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES

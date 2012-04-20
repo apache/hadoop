@@ -1020,6 +1020,9 @@ public class FairScheduler extends TaskScheduler {
 
   @Override
   public synchronized Collection<JobInProgress> getJobs(String queueName) {
+    if (queueName == null) {
+      return null;
+    }
     Pool myJobPool = poolMgr.getPool(queueName);
     return myJobPool.getJobs();
   }

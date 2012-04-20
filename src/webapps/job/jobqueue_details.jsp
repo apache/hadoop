@@ -25,7 +25,7 @@ private static final long serialVersionUID = 526456771152222127L;
 <html>
 <head>
 <title>Queue details for
-<%=queueName!=null?queueName:""%> </title>
+<%=queueName!=null?queueName:"(Given queue name was 'null')"%> </title>
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 <script type="text/javascript" src="/static/jobtracker.js"></script>
 </head>
