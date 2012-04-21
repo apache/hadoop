@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs;
 import static 
   org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -73,34 +74,58 @@ public class TestHftpDelegationToken {
     SecurityUtilTestHelper.setTokenServiceUseIp(true);
 
     Configuration conf = new Configuration();
-    URI hftpUri = URI.create("hftp://localhost:0");
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    Token<?> token = null;
+    conf.setClass("fs.hftp.impl", MyHftpFileSystem.class, FileSystem.class);
     
+    // test with implicit default port 
+    URI fsUri = URI.create("hftp://localhost");
+    MyHftpFileSystem fs = (MyHftpFileSystem) FileSystem.get(fsUri, conf);
+    checkTokenSelection(fs, conf);
+
+    // test with explicit default port
+    fsUri = URI.create("hftp://localhost:"+fs.getDefaultPort());
+    fs = (MyHftpFileSystem) FileSystem.get(fsUri, conf);
+    checkTokenSelection(fs, conf);
+    
+    // test with non-default port
+    fsUri = URI.create("hftp://localhost:"+(fs.getDefaultPort()-1));
+    fs = (MyHftpFileSystem) FileSystem.get(fsUri, conf);
+    checkTokenSelection(fs, conf);
+
+  }
+  
+  private void checkTokenSelection(MyHftpFileSystem fs,
+                                   Configuration conf) throws IOException {
+    int port = fs.getCanonicalUri().getPort();
+    UserGroupInformation ugi =
+        UserGroupInformation.createUserForTesting(fs.getUri().getAuthority(), new String[]{});
+
+    // use ip-based tokens
+    SecurityUtilTestHelper.setTokenServiceUseIp(true);
+
     // test fallback to hdfs token
     Token<?> hdfsToken = new Token<TokenIdentifier>(
         new byte[0], new byte[0],
         DelegationTokenIdentifier.HDFS_DELEGATION_KIND,
         new Text("127.0.0.1:8020"));
     ugi.addToken(hdfsToken);
-    
-    HftpFileSystem fs = (HftpFileSystem) FileSystem.get(hftpUri, conf);
-    token = fs.selectDelegationToken();
+
+    // test fallback to hdfs token
+    Token<?> token = fs.selectDelegationToken(ugi);
     assertNotNull(token);
     assertEquals(hdfsToken, token);
-    
+
     // test hftp is favored over hdfs
     Token<?> hftpToken = new Token<TokenIdentifier>(
         new byte[0], new byte[0],
-        HftpFileSystem.TOKEN_KIND, new Text("127.0.0.1:0"));
+        HftpFileSystem.TOKEN_KIND, new Text("127.0.0.1:"+port));
     ugi.addToken(hftpToken);
-    token = fs.selectDelegationToken();
+    token = fs.selectDelegationToken(ugi);
     assertNotNull(token);
     assertEquals(hftpToken, token);
     
     // switch to using host-based tokens, no token should match
     SecurityUtilTestHelper.setTokenServiceUseIp(false);
-    token = fs.selectDelegationToken();
+    token = fs.selectDelegationToken(ugi);
     assertNull(token);
     
     // test fallback to hdfs token
@@ -109,17 +134,31 @@ public class TestHftpDelegationToken {
         DelegationTokenIdentifier.HDFS_DELEGATION_KIND,
         new Text("localhost:8020"));
     ugi.addToken(hdfsToken);
-    token = fs.selectDelegationToken();
+    token = fs.selectDelegationToken(ugi);
     assertNotNull(token);
     assertEquals(hdfsToken, token);
 
     // test hftp is favored over hdfs
     hftpToken = new Token<TokenIdentifier>(
         new byte[0], new byte[0],
-        HftpFileSystem.TOKEN_KIND, new Text("localhost:0"));
+        HftpFileSystem.TOKEN_KIND, new Text("localhost:"+port));
     ugi.addToken(hftpToken);
-    token = fs.selectDelegationToken();
+    token = fs.selectDelegationToken(ugi);
     assertNotNull(token);
     assertEquals(hftpToken, token);
+  }
+  
+  static class MyHftpFileSystem extends HftpFileSystem {
+    @Override
+    public URI getCanonicalUri() {
+      return super.getCanonicalUri();
+    }
+    @Override
+    public int getDefaultPort() {
+      return super.getDefaultPort();
+    }
+    // don't automatically get a token
+    @Override
+    protected void initDelegationToken() throws IOException {}
   }
 }
