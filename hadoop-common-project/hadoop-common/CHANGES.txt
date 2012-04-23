@@ -245,6 +245,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-7350. Use ServiceLoader to discover compression codec classes.
     (tomwhite)
 
+    HADOOP-8284. clover integration broken, also mapreduce poms are pulling
+    in clover as a dependency. (phunt via tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
