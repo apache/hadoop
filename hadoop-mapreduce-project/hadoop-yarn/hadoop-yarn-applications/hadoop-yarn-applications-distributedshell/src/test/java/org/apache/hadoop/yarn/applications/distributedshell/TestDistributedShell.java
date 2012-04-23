@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.JarFinder;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.MiniYARNCluster;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +43,7 @@ public class TestDistributedShell {
   @BeforeClass
   public static void setup() throws InterruptedException, IOException {
     LOG.info("Starting up YARN cluster");
-    conf.setInt("yarn.scheduler.fifo.minimum-allocation-mb", 128);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     if (yarnCluster == null) {
       yarnCluster = new MiniYARNCluster(TestDistributedShell.class.getName(),
           1, 1, 1);

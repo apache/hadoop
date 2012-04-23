@@ -30,6 +30,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 
 public class CapacitySchedulerConfiguration extends Configuration {
@@ -70,18 +71,6 @@ public class CapacitySchedulerConfiguration extends Configuration {
 
   @Private
   public static final String STATE = "state";
-
-  private static final int MINIMUM_MEMORY = 1024;
-
-  @Private
-  public static final String MINIMUM_ALLOCATION = 
-    PREFIX + "minimum-allocation-mb";
-
-  private static final int MAXIMUM_MEMORY = 10240;
-
-  @Private
-  public static final String MAXIMUM_ALLOCATION = 
-    PREFIX + "maximum-allocation-mb";
 
   @Private
   public static final int DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS = 10000;
@@ -253,12 +242,16 @@ public class CapacitySchedulerConfiguration extends Configuration {
   }
   
   public Resource getMinimumAllocation() {
-    int minimumMemory = getInt(MINIMUM_ALLOCATION, MINIMUM_MEMORY);
+    int minimumMemory = getInt(
+        YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
     return Resources.createResource(minimumMemory);
   }
 
   public Resource getMaximumAllocation() {
-    int maximumMemory = getInt(MAXIMUM_ALLOCATION, MAXIMUM_MEMORY);
+    int maximumMemory = getInt(
+        YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
     return Resources.createResource(maximumMemory);
   }
 

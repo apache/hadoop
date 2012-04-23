@@ -1259,7 +1259,7 @@
 
 <property>
   <name>yarn.app.mapreduce.am.resource.mb</name>
-  <value>2048</value>
+  <value>1536</value>
   <description>The amount of memory the MR AppMaster needs.</description>
 </property>
 
