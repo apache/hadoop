@@ -286,6 +286,7 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4190. Improve web UI for task attempts userlog link (Tom Graves
     via bobby)
 
+    MAPREDUCE-4133. MR over viewfs is broken (John George via bobby)
 
 Release 0.23.2 - UNRELEASED
 

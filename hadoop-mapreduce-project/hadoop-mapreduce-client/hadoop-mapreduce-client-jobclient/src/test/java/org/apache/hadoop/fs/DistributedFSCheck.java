@@ -128,7 +128,7 @@ public class DistributedFSCheck extends TestCase {
     if (rootStatus.isFile()) {
       nrFiles++;
       // For a regular file generate <fName,offset> pairs
-      long blockSize = fs.getDefaultBlockSize();
+      long blockSize = fs.getDefaultBlockSize(rootFile);
       long fileLength = rootStatus.getLen();
       for(long offset = 0; offset < fileLength; offset += blockSize)
         writer.append(new Text(rootFile.toString()), new LongWritable(offset));
@@ -160,15 +160,16 @@ public class DistributedFSCheck extends TestCase {
                        ) throws IOException {
       // open file
       FSDataInputStream in = null;
+      Path p = new Path(name);
       try {
-        in = fs.open(new Path(name));
+        in = fs.open(p);
       } catch(IOException e) {
         return name + "@(missing)";
       }
       in.seek(offset);
       long actualSize = 0;
       try {
-        long blockSize = fs.getDefaultBlockSize();
+        long blockSize = fs.getDefaultBlockSize(p);
         reporter.setStatus("reading " + name + "@" + 
                            offset + "/" + blockSize);
         for( int curSize = bufferSize; 
