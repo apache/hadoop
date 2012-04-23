@@ -148,6 +148,9 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-3867. MiniMRYarn/MiniYarn uses fixed ports (tucu)
 
+    MAPREDUCE-4141. clover integration broken, also mapreduce poms are 
+    pulling in clover as a dependency. (phunt via tucu)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -159,10 +159,6 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.cenqua.clover</groupId>
-      <artifactId>clover</artifactId>
-    </dependency>
 
   </dependencies>
 
@@ -197,18 +193,6 @@
                 </exec>
               </target>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>com.atlassian.maven.plugins</groupId>
-        <artifactId>maven-clover2-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>instrument</goal>
-              <goal>aggregate</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
@@ -300,12 +284,6 @@
           <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>com.atlassian.maven.plugins</groupId>
-        <artifactId>maven-clover2-plugin</artifactId>
-        <!-- until we have reporting management cf. MSITE-443 -->
-        <version>3.0.2</version>
       </plugin>
     </plugins>
   </reporting>
