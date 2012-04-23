@@ -66,7 +66,8 @@ public class TaskPage extends AppView {
             th(".id", "Attempt").
             th(".progress", "Progress").
             th(".state", "State").
-            th(".node", "node").
+            th(".node", "Node").
+            th(".logs", "Logs").
             th(".tsh", "Started").
             th(".tsh", "Finished").
             th(".tsh", "Elapsed").
@@ -83,24 +84,28 @@ public class TaskPage extends AppView {
         long finishTime = ta.getFinishTime();
         long elapsed = ta.getElapsedTime();
         String diag = ta.getNote() == null ? "" : ta.getNote();
-        TD<TR<TBODY<TABLE<Hamlet>>>> nodeTd = tbody.
-          tr().
-            td(".id", taid).
-            td(".progress", progress).
-            td(".state", ta.getState()).td();
+        TR<TBODY<TABLE<Hamlet>>> row = tbody.tr();
+        TD<TR<TBODY<TABLE<Hamlet>>>> nodeTd = row.
+          td(".id", taid).
+          td(".progress", progress).
+          td(".state", ta.getState()).td();
         if (nodeHttpAddr == null) {
           nodeTd._("N/A");
         } else {
           nodeTd.
             a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
         }
+        nodeTd._();
         if (containerId != null) {
           String containerIdStr = ta.getAssignedContainerIdStr();
-          nodeTd._(" ").
+          row.td().
             a(".logslink", url("http://", nodeHttpAddr, "node", "containerlogs",
-              containerIdStr, app.getJob().getUserName()), "logs");
+              containerIdStr, app.getJob().getUserName()), "logs")._();
+        } else {
+          row.td()._("N/A")._();
         }
-        nodeTd._().
+
+        row.
           td(".ts", Times.format(startTime)).
           td(".ts", Times.format(finishTime)).
           td(".dt", StringUtils.formatTime(elapsed)).

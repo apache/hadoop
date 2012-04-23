@@ -89,7 +89,8 @@ public class HsTaskPage extends HsView {
       headRow.
             th(".id", "Attempt").
             th(".state", "State").
-            th(".node", "node").
+            th(".node", "Node").
+            th(".logs", "Logs").
             th(".tsh", "Start Time");
       
       if(type == TaskType.REDUCE) {
@@ -144,10 +145,11 @@ public class HsTaskPage extends HsView {
             _(taid)._().td(ta.getState().toString()).td().a(".nodelink",
                 "http://"+ nodeHttpAddr,
                 nodeRackName + "/" + nodeHttpAddr);
-        td._(" ").a(".logslink",
-            url("logs", nodeIdString, containerIdString, taid, app.getJob()
-                .getUserName()), "logs");
         td._();
+        row.td().
+          a(".logslink",
+            url("logs", nodeIdString, containerIdString, taid, app.getJob()
+                .getUserName()), "logs")._();
         
         row.td().
           br().$title(String.valueOf(attemptStartTime))._().
@@ -195,6 +197,8 @@ public class HsTaskPage extends HsView {
               $name("attempt_state").$value("State")._()._().
           th().input("search_init").$type(InputType.text).
               $name("attempt_node").$value("Node")._()._().
+          th().input("search_init").$type(InputType.text).
+              $name("attempt_node").$value("Logs")._()._().
           th().input("search_init").$type(InputType.text).
               $name("attempt_start_time").$value("Start Time")._()._();
       
