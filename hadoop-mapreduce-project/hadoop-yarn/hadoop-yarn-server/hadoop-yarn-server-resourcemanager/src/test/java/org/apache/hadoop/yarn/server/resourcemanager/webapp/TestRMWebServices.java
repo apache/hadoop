@@ -31,6 +31,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -540,8 +541,12 @@ public class TestRMWebServices extends JerseyTest {
     assertEquals("qstate doesn't match", QueueState.RUNNING.toString(), state);
     assertEquals("capacity doesn't match", 1.0, capacity, 0.0);
     assertEquals("usedCapacity doesn't match", 0.0, usedCapacity, 0.0);
-    assertEquals("minQueueMemoryCapacity doesn't match", 1024, minQueueCapacity);
-    assertEquals("maxQueueMemoryCapacity doesn't match", 10240,
+    assertEquals(
+        "minQueueMemoryCapacity doesn't match",
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+        minQueueCapacity);
+    assertEquals("maxQueueMemoryCapacity doesn't match",
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
         maxQueueCapacity);
     assertEquals("numNodes doesn't match", 0, numNodes);
     assertEquals("usedNodeCapacity doesn't match", 0, usedNodeCapacity);

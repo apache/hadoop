@@ -341,12 +341,12 @@ public interface MRJobConfig {
   /** The amount of memory the MR app master needs.*/
   public static final String MR_AM_VMEM_MB =
     MR_AM_PREFIX+"resource.mb";
-  public static final int DEFAULT_MR_AM_VMEM_MB = 2048;
+  public static final int DEFAULT_MR_AM_VMEM_MB = 1536;
 
   /** Command line arguments passed to the MR app master.*/
   public static final String MR_AM_COMMAND_OPTS =
     MR_AM_PREFIX+"command-opts";
-  public static final String DEFAULT_MR_AM_COMMAND_OPTS = "-Xmx1536m";
+  public static final String DEFAULT_MR_AM_COMMAND_OPTS = "-Xmx1024m";
 
   /** Root Logging level passed to the MR app master.*/
   public static final String MR_AM_LOG_LEVEL = 
