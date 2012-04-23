@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.TestProtoBufRpc.PBServerImpl;
 import org.apache.hadoop.ipc.TestProtoBufRpc.TestRpcService;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos.TestProtobufRpcProto;
@@ -178,9 +177,9 @@ public class TestMultipleProtocolServer {
     // create a server with two handlers
     server = RPC.getServer(Foo0.class,
                               new Foo0Impl(), ADDRESS, 0, 2, false, conf, null);
-    server.addProtocol(RpcKind.RPC_WRITABLE, Foo1.class, new Foo1Impl());
-    server.addProtocol(RpcKind.RPC_WRITABLE, Bar.class, new BarImpl());
-    server.addProtocol(RpcKind.RPC_WRITABLE, Mixin.class, new BarImpl());
+    server.addProtocol(RPC.RpcKind.RPC_WRITABLE, Foo1.class, new Foo1Impl());
+    server.addProtocol(RPC.RpcKind.RPC_WRITABLE, Bar.class, new BarImpl());
+    server.addProtocol(RPC.RpcKind.RPC_WRITABLE, Mixin.class, new BarImpl());
     
     
     // Add Protobuf server
@@ -189,7 +188,7 @@ public class TestMultipleProtocolServer {
         new PBServerImpl();
     BlockingService service = TestProtobufRpcProto
         .newReflectiveBlockingService(pbServerImpl);
-    server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, TestRpcService.class,
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, TestRpcService.class,
         service);
     server.start();
     addr = NetUtils.getConnectAddress(server);

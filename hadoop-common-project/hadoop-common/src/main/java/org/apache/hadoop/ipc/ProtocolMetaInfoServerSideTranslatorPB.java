@@ -18,7 +18,6 @@
 package org.apache.hadoop.ipc;
 
 import org.apache.hadoop.ipc.RPC.Server.VerProtocolImpl;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureRequestProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureResponseProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolVersionsRequestProto;
@@ -49,7 +48,7 @@ public class ProtocolMetaInfoServerSideTranslatorPB implements
     String protocol = request.getProtocol();
     GetProtocolVersionsResponseProto.Builder builder = 
         GetProtocolVersionsResponseProto.newBuilder();
-    for (RpcKind r : RpcKind.values()) {
+    for (RPC.RpcKind r : RPC.RpcKind.values()) {
       long[] versions;
       try {
         versions = getProtocolVersionForRpcKind(r, protocol);
@@ -78,7 +77,7 @@ public class ProtocolMetaInfoServerSideTranslatorPB implements
     String rpcKind = request.getRpcKind();
     long[] versions;
     try {
-      versions = getProtocolVersionForRpcKind(RpcKind.valueOf(rpcKind),
+      versions = getProtocolVersionForRpcKind(RPC.RpcKind.valueOf(rpcKind),
           protocol);
     } catch (ClassNotFoundException e1) {
       throw new ServiceException(e1);
@@ -104,7 +103,7 @@ public class ProtocolMetaInfoServerSideTranslatorPB implements
     return builder.build();
   }
   
-  private long[] getProtocolVersionForRpcKind(RpcKind rpcKind,
+  private long[] getProtocolVersionForRpcKind(RPC.RpcKind rpcKind,
       String protocol) throws ClassNotFoundException {
     Class<?> protocolClass = Class.forName(protocol);
     String protocolName = RPC.getProtocolName(protocolClass);

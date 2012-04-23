@@ -72,11 +72,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcPayloadOperation;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
+import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -170,8 +169,8 @@ public abstract class Server {
       this.rpcRequestWrapperClass = rpcRequestWrapperClass;
     }   
   }
-  static Map<RpcKind, RpcKindMapValue> rpcKindMap = new
-      HashMap<RpcKind, RpcKindMapValue>(4);
+  static Map<RPC.RpcKind, RpcKindMapValue> rpcKindMap = new
+      HashMap<RPC.RpcKind, RpcKindMapValue>(4);
   
   
 
@@ -185,7 +184,7 @@ public abstract class Server {
    *  @param rpcInvoker - use to process the calls on SS.
    */
   
-  public static void registerProtocolEngine(RpcKind rpcKind, 
+  public static void registerProtocolEngine(RPC.RpcKind rpcKind, 
           Class<? extends Writable> rpcRequestWrapperClass,
           RpcInvoker rpcInvoker) {
     RpcKindMapValue  old = 
@@ -201,14 +200,14 @@ public abstract class Server {
   }
   
   public Class<? extends Writable> getRpcRequestWrapper(
-      RpcKind rpcKind) {
+      RpcKindProto rpcKind) {
     if (rpcRequestClass != null)
        return rpcRequestClass;
-    RpcKindMapValue val = rpcKindMap.get(rpcKind);
+    RpcKindMapValue val = rpcKindMap.get(ProtoUtil.convert(rpcKind));
     return (val == null) ? null : val.rpcRequestWrapperClass; 
   }
   
-  public static RpcInvoker  getRpcInvoker(RpcKind rpcKind) {
+  public static RpcInvoker  getRpcInvoker(RPC.RpcKind rpcKind) {
     RpcKindMapValue val = rpcKindMap.get(rpcKind);
     return (val == null) ? null : val.rpcInvoker; 
   }
@@ -403,12 +402,12 @@ public abstract class Server {
     private long timestamp;               // time received when response is null
                                           // time served when response is not null
     private ByteBuffer rpcResponse;       // the response for this call
-    private final RpcKind rpcKind;
+    private final RPC.RpcKind rpcKind;
 
     public Call(int id, Writable param, Connection connection) {
-      this( id,  param,  connection, RpcKind.RPC_BUILTIN );    
+      this( id,  param,  connection, RPC.RpcKind.RPC_BUILTIN );    
     }
-    public Call(int id, Writable param, Connection connection, RpcKind kind) { 
+    public Call(int id, Writable param, Connection connection, RPC.RpcKind kind) { 
       this.callId = id;
       this.rpcRequest = param;
       this.connection = connection;
@@ -1366,7 +1365,6 @@ public abstract class Server {
         if (data == null) {
           dataLengthBuffer.flip();
           dataLength = dataLengthBuffer.getInt();
-       
           if ((dataLength == Client.PING_CALL_ID) && (!useWrap)) {
             // covers the !useSasl too
             dataLengthBuffer.clear();
@@ -1555,22 +1553,27 @@ public abstract class Server {
     private void processData(byte[] buf) throws  IOException, InterruptedException {
       DataInputStream dis =
         new DataInputStream(new ByteArrayInputStream(buf));
-      RpcPayloadHeader header = new RpcPayloadHeader();
-      header.readFields(dis);           // Read the RpcPayload header
+      RpcPayloadHeaderProto header = RpcPayloadHeaderProto.parseDelimitedFrom(dis);
         
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + header.getCallId());
-      if (header.getOperation() != RpcPayloadOperation.RPC_FINAL_PAYLOAD) {
+      if (!header.hasRpcOp()) {
+        throw new IOException(" IPC Server: No rpc op in rpcPayloadHeader");
+      }
+      if (header.getRpcOp() != RpcPayloadOperationProto.RPC_FINAL_PAYLOAD) {
         throw new IOException("IPC Server does not implement operation" + 
-              header.getOperation());
+              header.getRpcOp());
       }
       // If we know the rpc kind, get its class so that we can deserialize
       // (Note it would make more sense to have the handler deserialize but 
       // we continue with this original design.
+      if (!header.hasRpcKind()) {
+        throw new IOException(" IPC Server: No rpc kind in rpcPayloadHeader");
+      }
       Class<? extends Writable> rpcRequestClass = 
-          getRpcRequestWrapper(header.getkind());
+          getRpcRequestWrapper(header.getRpcKind());
       if (rpcRequestClass == null) {
-        LOG.warn("Unknown rpc kind "  + header.getkind() + 
+        LOG.warn("Unknown rpc kind "  + header.getRpcKind() + 
             " from client " + getHostAddress());
         final Call readParamsFailedCall = 
             new Call(header.getCallId(), null, this);
@@ -1578,7 +1581,7 @@ public abstract class Server {
 
         setupResponse(responseBuffer, readParamsFailedCall, Status.FATAL, null,
             IOException.class.getName(),
-            "Unknown rpc kind "  + header.getkind());
+            "Unknown rpc kind "  + header.getRpcKind());
         responder.doRespond(readParamsFailedCall);
         return;   
       }
@@ -1589,7 +1592,7 @@ public abstract class Server {
       } catch (Throwable t) {
         LOG.warn("Unable to read call parameters for client " +
                  getHostAddress() + "on connection protocol " +
-            this.protocolName + " for rpcKind " + header.getkind(),  t);
+            this.protocolName + " for rpcKind " + header.getRpcKind(),  t);
         final Call readParamsFailedCall = 
             new Call(header.getCallId(), null, this);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
@@ -1601,7 +1604,8 @@ public abstract class Server {
         return;
       }
         
-      Call call = new Call(header.getCallId(), rpcRequest, this, header.getkind());
+      Call call = new Call(header.getCallId(), rpcRequest, this, 
+          ProtoUtil.convert(header.getRpcKind()));
       callQueue.put(call);              // queue the call; maybe blocked here
       incRpcCount();  // Increment the rpc count
     }
@@ -1991,11 +1995,11 @@ public abstract class Server {
    */
   @Deprecated
   public Writable call(Writable param, long receiveTime) throws Exception {
-    return call(RpcKind.RPC_BUILTIN, null, param, receiveTime);
+    return call(RPC.RpcKind.RPC_BUILTIN, null, param, receiveTime);
   }
   
   /** Called for each call. */
-  public abstract Writable call(RpcKind rpcKind, String protocol,
+  public abstract Writable call(RPC.RpcKind rpcKind, String protocol,
       Writable param, long receiveTime) throws Exception;
   
   /**

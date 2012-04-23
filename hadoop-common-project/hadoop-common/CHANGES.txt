@@ -63,6 +63,8 @@ Trunk (unreleased changes)
 
     HADOOP-8290. Remove remaining references to hadoop.native.lib (harsh)
 
+    HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.

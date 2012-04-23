@@ -30,7 +30,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.SecretManager;
@@ -162,7 +161,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
         addr.getHostName(), addr.getPort(), numHandlers, false, conf, 
         secretManager);
     LOG.info("Adding protocol "+pbProtocol.getCanonicalName()+" to the server");
-    server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, pbProtocol, blockingService);
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, pbProtocol, blockingService);
     return server;
   }
 }

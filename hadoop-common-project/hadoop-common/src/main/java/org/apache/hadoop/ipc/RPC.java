@@ -42,7 +42,6 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.Client.ConnectionId;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolInfoService;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -73,6 +72,18 @@ import com.google.protobuf.BlockingService;
  * the protocol instance is transmitted.
  */
 public class RPC {
+  public enum RpcKind {
+    RPC_BUILTIN ((short) 1),         // Used for built in calls by tests
+    RPC_WRITABLE ((short) 2),        // Use WritableRpcEngine 
+    RPC_PROTOCOL_BUFFER ((short) 3); // Use ProtobufRpcEngine
+    final static short MAX_INDEX = RPC_PROTOCOL_BUFFER.value; // used for array size
+    private static final short FIRST_INDEX = RPC_BUILTIN.value;    
+    public final short value; //TODO make it private
+
+    RpcKind(short val) {
+      this.value = val;
+    } 
+  }
   
   interface RpcInvoker {   
     /**
@@ -777,7 +788,7 @@ public class RPC {
    ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>> protocolImplMapArray = 
        new ArrayList<Map<ProtoNameVer, ProtoClassProtoImpl>>(RpcKind.MAX_INDEX);
    
-   Map<ProtoNameVer, ProtoClassProtoImpl> getProtocolImplMap(RpcKind rpcKind) {
+   Map<ProtoNameVer, ProtoClassProtoImpl> getProtocolImplMap(RPC.RpcKind rpcKind) {
      if (protocolImplMapArray.size() == 0) {// initialize for all rpc kinds
        for (int i=0; i <= RpcKind.MAX_INDEX; ++i) {
          protocolImplMapArray.add(
@@ -821,7 +832,7 @@ public class RPC {
    
    
    @SuppressWarnings("unused") // will be useful later.
-   VerProtocolImpl[] getSupportedProtocolVersions(RpcKind rpcKind,
+   VerProtocolImpl[] getSupportedProtocolVersions(RPC.RpcKind rpcKind,
        String protocolName) {
      VerProtocolImpl[] resultk = 
          new  VerProtocolImpl[getProtocolImplMap(rpcKind).size()];
@@ -900,7 +911,7 @@ public class RPC {
     }
     
     @Override
-    public Writable call(RpcKind rpcKind, String protocol,
+    public Writable call(RPC.RpcKind rpcKind, String protocol,
         Writable rpcRequest, long receiveTime) throws Exception {
       return getRpcInvoker(rpcKind).call(this, protocol, rpcRequest,
           receiveTime);

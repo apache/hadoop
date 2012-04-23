@@ -47,7 +47,6 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -209,7 +208,7 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy, NamenodeProtocolPB.class,
-        RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER,
         RPC.getProtocolVersion(NamenodeProtocolPB.class), methodName);
   }
 }

@@ -70,6 +70,8 @@ Trunk (unreleased changes)
 
     HDFS-3282. Expose getFileLength API. (umamahesh)
 
+    HADOOP-8285 HDFS changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.

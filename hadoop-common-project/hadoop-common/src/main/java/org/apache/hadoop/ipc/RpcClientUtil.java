@@ -27,7 +27,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureRequestProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureResponseProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolSignatureProto;
@@ -107,7 +106,7 @@ public class RpcClientUtil {
    * @throws IOException
    */
   public static boolean isMethodSupported(Object rpcProxy, Class<?> protocol,
-      RpcKind rpcKind, long version, String methodName) throws IOException {
+      RPC.RpcKind rpcKind, long version, String methodName) throws IOException {
     InetSocketAddress serverAddress = RPC.getServerAddress(rpcProxy);
     Map<Long, ProtocolSignature> versionMap = getVersionSignatureMap(
         serverAddress, protocol.getName(), rpcKind.toString());

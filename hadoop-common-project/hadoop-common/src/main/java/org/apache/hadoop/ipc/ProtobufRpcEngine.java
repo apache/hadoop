@@ -38,7 +38,6 @@ import org.apache.hadoop.io.DataOutputOutputStream;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 
 import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcRequestProto;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -61,7 +60,7 @@ public class ProtobufRpcEngine implements RpcEngine {
   
   static { // Register the rpcRequest deserializer for WritableRpcEngine 
     org.apache.hadoop.ipc.Server.registerProtocolEngine(
-        RpcKind.RPC_PROTOCOL_BUFFER, RpcRequestWritable.class,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER, RpcRequestWritable.class,
         new Server.ProtoBufRpcInvoker());
   }
 
@@ -182,7 +181,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       HadoopRpcRequestProto rpcRequest = constructRpcRequest(method, args);
       RpcResponseWritable val = null;
       try {
-        val = (RpcResponseWritable) client.call(RpcKind.RPC_PROTOCOL_BUFFER,
+        val = (RpcResponseWritable) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
             new RpcRequestWritable(rpcRequest), remoteId);
       } catch (Throwable e) {
         throw new ServiceException(e);
@@ -351,7 +350,7 @@ public class ProtobufRpcEngine implements RpcEngine {
           numReaders, queueSizePerHandler, conf, classNameBase(protocolImpl
               .getClass().getName()), secretManager, portRangeConfig);
       this.verbose = verbose;  
-      registerProtocolAndImpl(RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
+      registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
           protocolImpl);
     }
     
@@ -363,10 +362,10 @@ public class ProtobufRpcEngine implements RpcEngine {
           String protoName, long version) throws IOException {
         ProtoNameVer pv = new ProtoNameVer(protoName, version);
         ProtoClassProtoImpl impl = 
-            server.getProtocolImplMap(RpcKind.RPC_PROTOCOL_BUFFER).get(pv);
+            server.getProtocolImplMap(RPC.RpcKind.RPC_PROTOCOL_BUFFER).get(pv);
         if (impl == null) { // no match for Protocol AND Version
           VerProtocolImpl highest = 
-              server.getHighestSupportedProtocol(RpcKind.RPC_PROTOCOL_BUFFER, 
+              server.getHighestSupportedProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, 
                   protoName);
           if (highest == null) {
             throw new IOException("Unknown protocol: " + protoName);
