@@ -137,7 +137,7 @@ public class TestFifoScheduler {
     rm.stop();
   }
 
-  private void testMinimumAllocation(YarnConfiguration conf)
+  private void testMinimumAllocation(YarnConfiguration conf, int testAlloc)
       throws Exception {
     MockRM rm = new MockRM(conf);
     rm.start();
@@ -146,7 +146,7 @@ public class TestFifoScheduler {
     MockNM nm1 = rm.registerNode("h1:1234", 6 * GB);
 
     // Submit an application
-    RMApp app1 = rm.submitApp(256);
+    RMApp app1 = rm.submitApp(testAlloc);
 
     // kick the scheduling
     nm1.nodeHeartbeat(true);
@@ -157,7 +157,8 @@ public class TestFifoScheduler {
         nm1.getNodeId());
 
     int checkAlloc =
-        conf.getInt("yarn.scheduler.fifo.minimum-allocation-mb", GB);
+        conf.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
     Assert.assertEquals(checkAlloc, report_nm1.getUsedResource().getMemory());
 
     rm.stop();
@@ -165,14 +166,20 @@ public class TestFifoScheduler {
 
   @Test
   public void testDefaultMinimumAllocation() throws Exception {
-    testMinimumAllocation(new YarnConfiguration());
+    // Test with something lesser than default
+    testMinimumAllocation(
+        new YarnConfiguration(),
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB / 2);
   }
 
   @Test
   public void testNonDefaultMinimumAllocation() throws Exception {
+    // Set custom min-alloc to test tweaking it
+    int allocMB = 512;
     YarnConfiguration conf = new YarnConfiguration();
-    conf.setInt("yarn.scheduler.fifo.minimum-allocation-mb", 512);
-    testMinimumAllocation(conf);
+    conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, allocMB);
+    // Test for something lesser than this.
+    testMinimumAllocation(conf, allocMB / 2);
   }
 
   @Test

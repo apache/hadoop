@@ -155,6 +155,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4072. User set java.library.path seems to overwrite default
     creating problems native lib loading (Anupam Seth via bobby)
 
+    MAPREDUCE-3812. Lower default allocation sizes, fix allocation 
+    configurations and document them (Harsh J via bobby)
+
   NEW FEATURES
 
   IMPROVEMENTS

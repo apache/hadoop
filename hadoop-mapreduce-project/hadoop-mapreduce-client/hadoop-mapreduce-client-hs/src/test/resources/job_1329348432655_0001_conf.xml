@@ -292,7 +292,7 @@
 <property><!--Loaded from job.xml--><name>yarn.resourcemanager.scheduler.address</name><value>0.0.0.0:8030</value></property>
 <property><!--Loaded from job.xml--><name>fs.trash.checkpoint.interval</name><value>0</value></property>
 <property><!--Loaded from job.xml--><name>s3native.stream-buffer-size</name><value>4096</value></property>
-<property><!--Loaded from job.xml--><name>yarn.scheduler.fifo.minimum-allocation-mb</name><value>1024</value></property>
+<property><!--Loaded from job.xml--><name>yarn.scheduler.minimum-allocation-mb</name><value>128</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.reduce.shuffle.read.timeout</name><value>180000</value></property>
 <property><!--Loaded from job.xml--><name>yarn.app.mapreduce.am.command-opts</name><value>-Xmx500m</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.admin.user.env</name><value>LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native</value></property>
