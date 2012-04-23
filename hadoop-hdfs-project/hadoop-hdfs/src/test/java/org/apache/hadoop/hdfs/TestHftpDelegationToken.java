@@ -70,32 +70,74 @@ public class TestHftpDelegationToken {
   }
 
   @Test
-  public void testSelectHdfsDelegationToken() throws Exception {
+  public void testSelectHftpDelegationToken() throws Exception {
     SecurityUtilTestHelper.setTokenServiceUseIp(true);
 
     Configuration conf = new Configuration();
     conf.setClass("fs.hftp.impl", MyHftpFileSystem.class, FileSystem.class);
     
+    int httpPort = 80;
+    int httpsPort = 443;
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, httpPort);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, httpsPort);
+    
     // test with implicit default port 
     URI fsUri = URI.create("hftp://localhost");
-    MyHftpFileSystem fs = (MyHftpFileSystem) FileSystem.get(fsUri, conf);
-    checkTokenSelection(fs, conf);
+    MyHftpFileSystem fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
+    assertEquals(httpPort, fs.getCanonicalUri().getPort());
+    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
 
     // test with explicit default port
-    fsUri = URI.create("hftp://localhost:"+fs.getDefaultPort());
-    fs = (MyHftpFileSystem) FileSystem.get(fsUri, conf);
-    checkTokenSelection(fs, conf);
+    fsUri = URI.create("hftp://localhost:"+httpPort);
+    fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
+    assertEquals(httpPort, fs.getCanonicalUri().getPort());
+    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
     
     // test with non-default port
-    fsUri = URI.create("hftp://localhost:"+(fs.getDefaultPort()-1));
-    fs = (MyHftpFileSystem) FileSystem.get(fsUri, conf);
-    checkTokenSelection(fs, conf);
+    fsUri = URI.create("hftp://localhost:"+(httpPort+1));
+    fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
+    assertEquals(httpPort+1, fs.getCanonicalUri().getPort());
+    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
+    
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 5);
+  }
 
+  @Test
+  public void testSelectHsftpDelegationToken() throws Exception {
+    SecurityUtilTestHelper.setTokenServiceUseIp(true);
+
+    Configuration conf = new Configuration();
+    conf.setClass("fs.hsftp.impl", MyHsftpFileSystem.class, FileSystem.class);
+
+    int httpPort = 80;
+    int httpsPort = 443;
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_KEY, httpPort);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, httpsPort);
+
+    // test with implicit default port 
+    URI fsUri = URI.create("hsftp://localhost");
+    MyHsftpFileSystem fs = (MyHsftpFileSystem) FileSystem.newInstance(fsUri, conf);
+    assertEquals(httpsPort, fs.getCanonicalUri().getPort());
+    checkTokenSelection(fs, httpsPort, conf); 
+
+    // test with explicit default port
+    fsUri = URI.create("hsftp://localhost:"+httpsPort);
+    fs = (MyHsftpFileSystem) FileSystem.newInstance(fsUri, conf);
+    assertEquals(httpsPort, fs.getCanonicalUri().getPort());
+    checkTokenSelection(fs, httpsPort, conf);
+    
+    // test with non-default port
+    fsUri = URI.create("hsftp://localhost:"+(httpsPort+1));
+    fs = (MyHsftpFileSystem) FileSystem.newInstance(fsUri, conf);
+    assertEquals(httpsPort+1, fs.getCanonicalUri().getPort());
+    checkTokenSelection(fs, httpsPort+1, conf);
+    
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 5);
   }
   
-  private void checkTokenSelection(MyHftpFileSystem fs,
+  private void checkTokenSelection(HftpFileSystem fs,
+                                   int port,
                                    Configuration conf) throws IOException {
-    int port = fs.getCanonicalUri().getPort();
     UserGroupInformation ugi =
         UserGroupInformation.createUserForTesting(fs.getUri().getAuthority(), new String[]{});
 
@@ -149,6 +191,20 @@ public class TestHftpDelegationToken {
   }
   
   static class MyHftpFileSystem extends HftpFileSystem {
+    @Override
+    public URI getCanonicalUri() {
+      return super.getCanonicalUri();
+    }
+    @Override
+    public int getDefaultPort() {
+      return super.getDefaultPort();
+    }
+    // don't automatically get a token
+    @Override
+    protected void initDelegationToken() throws IOException {}
+  }
+  
+  static class MyHsftpFileSystem extends HsftpFileSystem {
     @Override
     public URI getCanonicalUri() {
       return super.getCanonicalUri();
