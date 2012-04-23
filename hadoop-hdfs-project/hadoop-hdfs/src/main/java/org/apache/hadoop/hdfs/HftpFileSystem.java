@@ -94,8 +94,8 @@ public class HftpFileSystem extends FileSystem
   protected UserGroupInformation ugi;
   private URI hftpURI;
 
-  protected InetSocketAddress nnAddr;
-  protected InetSocketAddress nnSecureAddr;
+  protected URI nnUri;
+  protected URI nnSecureUri;
 
   public static final String HFTP_TIMEZONE = "UTC";
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
@@ -139,11 +139,19 @@ public class HftpFileSystem extends FileSystem
     return NetUtils.createSocketAddrForHost(uri.getHost(), getDefaultSecurePort());
   }
 
+  protected URI getNamenodeUri(URI uri) {
+    return DFSUtil.createUri("http", getNamenodeAddr(uri));
+  }
+
+  protected URI getNamenodeSecureUri(URI uri) {
+    return DFSUtil.createUri("https", getNamenodeSecureAddr(uri));
+  }
+
   @Override
   public String getCanonicalServiceName() {
     // unlike other filesystems, hftp's service is the secure port, not the
     // actual port in the uri
-    return SecurityUtil.buildTokenService(nnSecureAddr).toString();
+    return SecurityUtil.buildTokenService(nnSecureUri).toString();
   }
 
   @Override
@@ -152,8 +160,8 @@ public class HftpFileSystem extends FileSystem
     super.initialize(name, conf);
     setConf(conf);
     this.ugi = UserGroupInformation.getCurrentUser(); 
-    this.nnAddr = getNamenodeAddr(name);
-    this.nnSecureAddr = getNamenodeSecureAddr(name);
+    this.nnUri = getNamenodeUri(name);
+    this.nnSecureUri = getNamenodeSecureUri(name);
     try {
       this.hftpURI = new URI(name.getScheme(), name.getAuthority(),
                              null, null, null);
@@ -191,7 +199,7 @@ public class HftpFileSystem extends FileSystem
 
   protected Token<DelegationTokenIdentifier> selectDelegationToken(
       UserGroupInformation ugi) {
-  	return hftpTokenSelector.selectToken(getCanonicalUri(), ugi.getTokens(), getConf());
+  	return hftpTokenSelector.selectToken(nnSecureUri, ugi.getTokens(), getConf());
   }
   
 
@@ -222,7 +230,7 @@ public class HftpFileSystem extends FileSystem
       ugi.reloginFromKeytab();
       return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
         public Token<?> run() throws IOException {
-          final String nnHttpUrl = DFSUtil.createUri("https", nnSecureAddr).toString();
+          final String nnHttpUrl = nnSecureUri.toString();
           Credentials c;
           try {
             c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
@@ -264,8 +272,8 @@ public class HftpFileSystem extends FileSystem
    * @throws IOException on error constructing the URL
    */
   protected URL getNamenodeURL(String path, String query) throws IOException {
-    final URL url = new URL("http", nnAddr.getHostName(),
-          nnAddr.getPort(), path + '?' + query);
+    final URL url = new URL("http", nnUri.getHost(),
+          nnUri.getPort(), path + '?' + query);
     if (LOG.isTraceEnabled()) {
       LOG.trace("url=" + url);
     }

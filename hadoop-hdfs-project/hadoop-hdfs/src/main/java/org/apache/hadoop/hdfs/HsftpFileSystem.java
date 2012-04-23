@@ -133,11 +133,16 @@ public class HsftpFileSystem extends HftpFileSystem {
   }
 
   @Override
+  protected URI getNamenodeUri(URI uri) {
+    return getNamenodeSecureUri(uri);
+  }
+  
+  @Override
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     query = addDelegationTokenParam(query);
-    final URL url = new URL("https", nnAddr.getHostName(), 
-        nnAddr.getPort(), path + '?' + query);
+    final URL url = new URL("https", nnUri.getHost(), 
+        nnUri.getPort(), path + '?' + query);
     HttpsURLConnection conn = (HttpsURLConnection)URLUtils.openConnection(url);
     // bypass hostname verification
     conn.setHostnameVerifier(new DummyHostnameVerifier());
