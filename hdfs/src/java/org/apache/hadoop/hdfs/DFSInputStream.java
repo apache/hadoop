@@ -35,12 +35,14 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 
@@ -383,9 +385,33 @@ public class DFSInputStream extends FSInputStream {
       chosenNode = retval.info;
       InetSocketAddress targetAddr = retval.addr;
 
-      try {
+      // try getting a local blockReader. if this fails, then go via
+      // the datanode
         Block blk = targetBlock.getBlock();
         Token<BlockTokenIdentifier> accessToken = targetBlock.getBlockToken();
+      if (dfsClient.shouldTryShortCircuitRead(targetAddr)) {
+        try {
+          blockReader = dfsClient.getLocalBlockReader( src, blk, accessToken,
+              chosenNode,  offsetIntoBlock);
+          return chosenNode;
+        } catch (AccessControlException ex) {
+          DFSClient.LOG.warn("Short circuit access failed ", ex);
+          //Disable short circuit reads
+          dfsClient.shortCircuitLocalReads = false;
+        } catch (IOException ex) {
+          if (refetchToken > 0 && tokenRefetchNeeded(ex, targetAddr)) {
+            /* Get a new access token and retry. */
+            refetchToken--;
+            fetchBlockAt(target);
+            continue;
+          } else {
+            DFSClient.LOG.info("Failed to read block " + targetBlock.getBlock()
+                + " on local machine" + StringUtils.stringifyException(ex));
+            DFSClient.LOG.info("Try reading via the datanode on " + targetAddr);
+          }
+        }
+      }
+      try {
         
         blockReader = getBlockReader(
             targetAddr, src, blk,
@@ -394,20 +420,7 @@ public class DFSInputStream extends FSInputStream {
             buffersize, verifyChecksum, dfsClient.clientName);
         return chosenNode;
       } catch (IOException ex) {
-        if (ex instanceof InvalidBlockTokenException && refetchToken > 0) {
-          DFSClient.LOG.info("Will fetch a new access token and retry, " 
-              + "access token was invalid when connecting to " + targetAddr
-              + " : " + ex);
-          /*
-           * Get a new access token and retry. Retry is needed in 2 cases. 1)
-           * When both NN and DN re-started while DFSClient holding a cached
-           * access token. 2) In the case that NN fails to update its
-           * access key at pre-set interval (by a wide margin) and
-           * subsequently restarts. In this case, DN re-registers itself with
-           * NN and receives a new access key, but DN will delete the old
-           * access key from its memory since it's considered expired based on
-           * the estimated expiration date.
-           */
+        if (refetchToken > 0 && tokenRefetchNeeded(ex, targetAddr)) {
           refetchToken--;
           fetchBlockAt(target);
         } else {
@@ -610,14 +623,27 @@ public class DFSInputStream extends FSInputStream {
           
       try {
         Token<BlockTokenIdentifier> blockToken = block.getBlockToken();
-            
         int len = (int) (end - start + 1);
 
+        if (dfsClient.shouldTryShortCircuitRead(targetAddr)) {
+          try {
+            reader = dfsClient.getLocalBlockReader( src, block.getBlock(),
+                blockToken, chosenNode, start);
+          } catch (AccessControlException ex) {
+            DFSClient.LOG.warn("Short circuit access failed ", ex);
+            //Disable short circuit reads
+            dfsClient.shortCircuitLocalReads = false;
+            continue;
+          }
+        } else {
+          // go to the datanode
         reader = getBlockReader(targetAddr, src,
                                 block.getBlock(),
                                 blockToken,
                                 start, len, buffersize,
                                 verifyChecksum, dfsClient.clientName);
+        }
+
         int nread = reader.readAll(buf, offset, len);
         if (nread != len) {
           throw new IOException("truncated return from reader.read(): " +
@@ -630,10 +656,7 @@ public class DFSInputStream extends FSInputStream {
                  e.getPos() + " from " + chosenNode.getName());
         dfsClient.reportChecksumFailure(src, block.getBlock(), chosenNode);
       } catch (IOException e) {
-        if (e instanceof InvalidBlockTokenException && refetchToken > 0) {
-          DFSClient.LOG.info("Will get a new access token and retry, "
-              + "access token was invalid when connecting to " + targetAddr
-              + " : " + e);
+        if (refetchToken > 0 && tokenRefetchNeeded(e, targetAddr)) {
           refetchToken--;
           fetchBlockAt(block.getStartOffset());
           continue;
@@ -723,7 +746,7 @@ public class DFSInputStream extends FSInputStream {
       try {
         // The OP_READ_BLOCK request is sent as we make the BlockReader
         BlockReader reader =
-            BlockReader.newBlockReader(sock, file, block,
+          RemoteBlockReader.newBlockReader(sock, file, block,
                                        blockToken,
                                        startOffset, len,
                                        bufferSize, verifyChecksum,
@@ -739,7 +762,6 @@ public class DFSInputStream extends FSInputStream {
 
     throw err;
   }
-
 
   /**
    * Read bytes starting from the specified position.
@@ -911,6 +933,33 @@ public class DFSInputStream extends FSInputStream {
   @Override
   public void reset() throws IOException {
     throw new IOException("Mark/reset not supported");
+  }
+
+  /**
+   * Should the block access token be refetched on an exception
+   * 
+   * @param ex Exception received
+   * @param targetAddr Target datanode address from where exception was received
+   * @return true if block access token has expired or invalid and it should be
+   *         refetched
+   */
+  private static boolean tokenRefetchNeeded(IOException ex,
+      InetSocketAddress targetAddr) {
+    /*
+     * Get a new access token and retry. Retry is needed in 2 cases. 1) When
+     * both NN and DN re-started while DFSClient holding a cached access token.
+     * 2) In the case that NN fails to update its access key at pre-set interval
+     * (by a wide margin) and subsequently restarts. In this case, DN
+     * re-registers itself with NN and receives a new access key, but DN will
+     * delete the old access key from its memory since it's considered expired
+     * based on the estimated expiration date.
+     */
+    if (ex instanceof InvalidBlockTokenException || ex instanceof InvalidToken) {
+      DFSClient.LOG.info("Access token was invalid when connecting to " + targetAddr
+          + " : " + ex);
+      return true;
+    }
+    return false;
   }
 
   /**

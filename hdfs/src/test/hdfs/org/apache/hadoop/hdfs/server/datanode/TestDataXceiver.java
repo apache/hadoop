@@ -21,7 +21,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.RemoteBlockReader;
 import org.apache.hadoop.hdfs.BlockReaderTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -58,7 +58,7 @@ public class TestDataXceiver {
   @Test
   public void testCompletePartialRead() throws Exception {
     // Ask for half the file
-    BlockReader reader = util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024 / 2);
+    RemoteBlockReader reader = util.getBlockReader(testBlock, 0, FILE_SIZE_K * 1024 / 2);
     DataNode dn = util.getDataNode(testBlock);
     DataBlockScanner scanner = spy(dn.blockScanner);
     dn.blockScanner = scanner;

@@ -71,13 +71,13 @@ public class TestConnCache {
    * It verifies that all invocation to DFSInputStream.getBlockReader()
    * use the same socket.
    */
-  private class MockGetBlockReader implements Answer<BlockReader> {
-    public BlockReader reader = null;
+  private class MockGetBlockReader implements Answer<RemoteBlockReader> {
+    public RemoteBlockReader reader = null;
     private Socket sock = null;
 
-    public BlockReader answer(InvocationOnMock invocation) throws Throwable {
-      BlockReader prevReader = reader;
-      reader = (BlockReader) invocation.callRealMethod();
+    public RemoteBlockReader answer(InvocationOnMock invocation) throws Throwable {
+      RemoteBlockReader prevReader = reader;
+      reader = (RemoteBlockReader) invocation.callRealMethod();
       if (sock == null) {
         sock = reader.dnSock;
       } else if (prevReader != null && prevReader.hasSentStatusCode()) {

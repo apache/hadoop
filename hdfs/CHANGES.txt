@@ -16,6 +16,10 @@ Release 0.22.1 - Unreleased
 
     HDFS-1601. Pipeline ACKs are sent as lots of tiny TCP packets (todd)
 
+    HDFS-2246. Enable reading a block directly from local file system
+    for a client on the same node as the block file.  (Andrew Purtell,
+    Suresh Srinivas, Jitendra Nath Pandey and Benoy Antony via shv)
+
   BUG FIXES
 
     HDFS-1910. NameNode should not save fsimage twice. (shv)

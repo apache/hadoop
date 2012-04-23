@@ -11,6 +11,7 @@
 **/TestDatanodeDescriptor.java
 **/TestEditLog.java
 **/TestFileLimit.java
+**/TestShortCircuitLocalRead.java
 **/TestHeartbeatHandling.java
 **/TestHost2NodesMap.java
 **/TestNamenodeCapacityReport.java

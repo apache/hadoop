@@ -132,7 +132,7 @@ public class BlockReaderTestUtil {
   /**
    * Get a BlockReader for the given block.
    */
-  public BlockReader getBlockReader(LocatedBlock testBlock, int offset, int lenToRead)
+  public RemoteBlockReader getBlockReader(LocatedBlock testBlock, int offset, int lenToRead)
       throws IOException {
     InetSocketAddress targetAddr = null;
     Socket sock = null;
@@ -143,7 +143,7 @@ public class BlockReaderTestUtil {
     sock.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
     sock.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
-    return BlockReader.newBlockReader(
+    return RemoteBlockReader.newBlockReader(
       sock, targetAddr.toString()+ ":" + block.getBlockId(), block,
       testBlock.getBlockToken(), 
       offset, lenToRead,
