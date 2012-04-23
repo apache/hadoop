@@ -827,7 +827,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         || (sysMaxReduces == 1);
 
     long sysMaxBytes = conf.getLong(MRJobConfig.JOB_UBERTASK_MAXBYTES,
-        fs.getDefaultBlockSize()); // FIXME: this is wrong; get FS from
+        fs.getDefaultBlockSize(this.remoteJobSubmitDir)); // FIXME: this is wrong; get FS from
                                    // [File?]InputFormat and default block size
                                    // from that
 

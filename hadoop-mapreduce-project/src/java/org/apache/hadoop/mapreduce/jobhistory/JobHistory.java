@@ -287,7 +287,7 @@ public class JobHistory {
     FSDataOutputStream out = logDirFs.create(logFile, 
         new FsPermission(JobHistory.HISTORY_FILE_PERMISSION),
         true, defaultBufferSize, 
-        logDirFs.getDefaultReplication(), 
+        logDirFs.getDefaultReplication(logFile), 
         jobHistoryBlockSize, null);
   
     EventWriter writer = new EventWriter(out);
@@ -306,8 +306,8 @@ public class JobHistory {
           jobFileOut = logDirFs.create(logDirConfPath,
               new FsPermission(JobHistory.HISTORY_FILE_PERMISSION),
               true, defaultBufferSize,
-              logDirFs.getDefaultReplication(),
-              logDirFs.getDefaultBlockSize(), null);
+              logDirFs.getDefaultReplication(logDirConfPath),
+              logDirFs.getDefaultBlockSize(logDirConfPath), null);
           jobConf.writeXml(jobFileOut);
           jobFileOut.close();
         }
