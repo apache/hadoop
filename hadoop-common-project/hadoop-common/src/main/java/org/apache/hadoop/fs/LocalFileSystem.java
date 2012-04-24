@@ -39,7 +39,18 @@ public class LocalFileSystem extends ChecksumFileSystem {
   public LocalFileSystem() {
     this(new RawLocalFileSystem());
   }
-  
+
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>file</code>
+   */
+  @Override
+  public String getScheme() {
+    return "file";
+  }
+
   public FileSystem getRaw() {
     return getRawFileSystem();
   }

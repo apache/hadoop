@@ -71,7 +71,18 @@ public class HarFileSystem extends FilterFileSystem {
    */
   public HarFileSystem() {
   }
-  
+
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>har</code>
+   */
+  @Override
+  public String getScheme() {
+    return "har";
+  }
+
   /**
    * Constructor to create a HarFileSystem with an
    * underlying filesystem.

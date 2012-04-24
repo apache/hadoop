@@ -57,6 +57,17 @@ public class KosmosFileSystem extends FileSystem {
         this.kfsImpl = fsimpl;
     }
 
+    /**
+     * Return the protocol scheme for the FileSystem.
+     * <p/>
+     *
+     * @return <code>kfs</code>
+     */
+    @Override
+    public String getScheme() {
+      return "kfs";
+    }
+
     @Override
     public URI getUri() {
 	return uri;

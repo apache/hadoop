@@ -154,6 +154,17 @@ public class HftpFileSystem extends FileSystem
     return SecurityUtil.buildTokenService(nnSecureUri).toString();
   }
 
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>hftp</code>
+   */
+  @Override
+  public String getScheme() {
+    return "hftp";
+  }
+
   @Override
   public void initialize(final URI name, final Configuration conf)
   throws IOException {
