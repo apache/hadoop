@@ -291,7 +291,7 @@ public class HttpFSServer {
           response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
           break;
         }
-        case GETHOMEDIR: {
+        case GETHOMEDIRECTORY: {
           FSOperations.FSHomeDir command = new FSOperations.FSHomeDir();
           JSONObject json = fsExecute(user, doAs.value(), command);
           AUDIT_LOG.info("");

@@ -53,7 +53,7 @@ public class TestCheckUploadContentTypeFilter {
 
   @Test
   public void getOther() throws Exception {
-    test("GET", HttpFSFileSystem.GetOpValues.GETHOMEDIR.toString(), "plain/text", false, false);
+    test("GET", HttpFSFileSystem.GetOpValues.GETHOMEDIRECTORY.toString(), "plain/text", false, false);
   }
 
   @Test
