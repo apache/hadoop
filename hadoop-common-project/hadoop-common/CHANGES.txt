@@ -250,6 +250,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8284. clover integration broken, also mapreduce poms are pulling
     in clover as a dependency. (phunt via tucu)
 
+    HADOOP-8309. Pseudo & Kerberos AuthenticationHandler should use 
+    getType() to create token (tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
