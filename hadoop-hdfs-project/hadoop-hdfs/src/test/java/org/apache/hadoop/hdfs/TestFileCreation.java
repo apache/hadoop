@@ -31,6 +31,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -53,6 +54,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -67,8 +69,6 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
-
-import static org.junit.Assume.assumeTrue;
 
 /**
  * This class tests various cases during file creation.
@@ -97,6 +97,11 @@ public class TestFileCreation extends junit.framework.TestCase {
         .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
         (short) repl, blockSize);
     return stm;
+  }
+
+  public static HdfsDataOutputStream create(DistributedFileSystem dfs,
+      Path name, int repl) throws IOException {
+    return (HdfsDataOutputStream)createFile(dfs, name, repl);
   }
 
   //
@@ -494,7 +499,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 
     // create cluster
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
-    FileSystem fs = null;
+    DistributedFileSystem fs = null;
     try {
       cluster.waitActive();
       fs = cluster.getFileSystem();
@@ -502,21 +507,17 @@ public class TestFileCreation extends junit.framework.TestCase {
 
       // create a new file.
       Path file1 = new Path("/filestatus.dat");
-      FSDataOutputStream stm = createFile(fs, file1, 1);
+      HdfsDataOutputStream stm = create(fs, file1, 1);
       System.out.println("testFileCreationNamenodeRestart: "
                          + "Created file " + file1);
-      int actualRepl = ((DFSOutputStream)(stm.getWrappedStream())).
-                        getNumCurrentReplicas();
-      assertTrue(file1 + " should be replicated to 1 datanodes.",
-                 actualRepl == 1);
+      assertEquals(file1 + " should be replicated to 1 datanode.", 1,
+          stm.getCurrentBlockReplication());
 
       // write two full blocks.
       writeFile(stm, numBlocks * blockSize);
       stm.hflush();
-      actualRepl = ((DFSOutputStream)(stm.getWrappedStream())).
-                        getNumCurrentReplicas();
-      assertTrue(file1 + " should still be replicated to 1 datanodes.",
-                 actualRepl == 1);
+      assertEquals(file1 + " should still be replicated to 1 datanode.", 1,
+          stm.getCurrentBlockReplication());
 
       // rename file wile keeping it open.
       Path fileRenamed = new Path("/filestatusRenamed.dat");
@@ -849,11 +850,10 @@ public class TestFileCreation extends junit.framework.TestCase {
       // create a new file.
       final String f = DIR + "foo";
       final Path fpath = new Path(f);
-      FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
+      HdfsDataOutputStream out = create(dfs, fpath, DATANODE_NUM);
       out.write("something".getBytes());
       out.hflush();
-      int actualRepl = ((DFSOutputStream)(out.getWrappedStream())).
-                        getNumCurrentReplicas();
+      int actualRepl = out.getCurrentBlockReplication();
       assertTrue(f + " should be replicated to " + DATANODE_NUM + " datanodes.",
                  actualRepl == DATANODE_NUM);
 

@@ -87,7 +87,6 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -103,7 +102,6 @@ import org.apache.hadoop.util.ToolRunner;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.io.Files;
 
 /**
  * This class creates a single-process DFS cluster for junit testing.
@@ -1579,7 +1577,7 @@ public class MiniDFSCluster {
   /**
    * Get a client handle to the DFS cluster with a single namenode.
    */
-  public FileSystem getFileSystem() throws IOException {
+  public DistributedFileSystem getFileSystem() throws IOException {
     checkSingleNameNode();
     return getFileSystem(0);
   }
@@ -1587,8 +1585,9 @@ public class MiniDFSCluster {
   /**
    * Get a client handle to the DFS cluster for the namenode at given index.
    */
-  public FileSystem getFileSystem(int nnIndex) throws IOException {
-    return FileSystem.get(getURI(nnIndex), nameNodes[nnIndex].conf);
+  public DistributedFileSystem getFileSystem(int nnIndex) throws IOException {
+    return (DistributedFileSystem)FileSystem.get(getURI(nnIndex),
+        nameNodes[nnIndex].conf);
   }
 
   /**
