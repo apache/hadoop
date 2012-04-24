@@ -69,7 +69,7 @@ import org.apache.hadoop.util.Shell;
  * user's username and groups. It supports both the Windows, Unix and Kerberos 
  * login modules.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce", "HBase", "Hive", "Oozie"})
 @InterfaceStability.Evolving
 public class UserGroupInformation {
   private static final Log LOG =  LogFactory.getLog(UserGroupInformation.class);
@@ -258,6 +258,8 @@ public class UserGroupInformation {
    * group look up service.
    * @param conf the configuration to use
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static void setConfiguration(Configuration conf) {
     initialize(conf, false);
   }
@@ -500,6 +502,8 @@ public class UserGroupInformation {
    * @return the current user
    * @throws IOException if login fails
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public synchronized
   static UserGroupInformation getCurrentUser() throws IOException {
     AccessControlContext context = AccessController.getContext();
@@ -516,6 +520,8 @@ public class UserGroupInformation {
    * @return the logged in user
    * @throws IOException if login fails
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public synchronized 
   static UserGroupInformation getLoginUser() throws IOException {
     if (loginUser == null) {
@@ -652,6 +658,8 @@ public class UserGroupInformation {
    * @param path the path to the keytab file
    * @throws IOException if the keytab file can't be read
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public synchronized
   static void loginUserFromKeytab(String user,
                                   String path
@@ -710,6 +718,8 @@ public class UserGroupInformation {
    * the new credentials.
    * @throws IOException on a failure
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public synchronized void reloginFromKeytab()
   throws IOException {
     if (!isSecurityEnabled() ||
@@ -769,6 +779,8 @@ public class UserGroupInformation {
    * the new credentials.
    * @throws IOException on a failure
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public synchronized void reloginFromTicketCache()
   throws IOException {
     if (!isSecurityEnabled() || 
@@ -867,6 +879,8 @@ public class UserGroupInformation {
    * Did the login happen via keytab
    * @return true or false
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public synchronized static boolean isLoginKeytabBased() throws IOException {
     return getLoginUser().isKeytab;
   }
@@ -877,6 +891,8 @@ public class UserGroupInformation {
    * @param user the full user principal name, must not be empty or null
    * @return the UserGroupInformation for the remote user.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static UserGroupInformation createRemoteUser(String user) {
     if (user == null || "".equals(user)) {
       throw new IllegalArgumentException("Null user");
@@ -891,6 +907,7 @@ public class UserGroupInformation {
   /**
    * existing types of authentications' methods
    */
+  @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static enum AuthenticationMethod {
     SIMPLE,
@@ -908,6 +925,8 @@ public class UserGroupInformation {
    * @param realUser
    * @return proxyUser ugi
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static UserGroupInformation createProxyUser(String user,
       UserGroupInformation realUser) {
     if (user == null || "".equals(user)) {
@@ -929,6 +948,8 @@ public class UserGroupInformation {
    * get RealUser (vs. EffectiveUser)
    * @return realUser running over proxy user
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public UserGroupInformation getRealUser() {
     for (RealUser p: subject.getPrincipals(RealUser.class)) {
       return p.getRealUser();
@@ -974,7 +995,8 @@ public class UserGroupInformation {
    * @param userGroups the names of the groups that the user belongs to
    * @return a fake user for running unit tests
    */
-  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static UserGroupInformation createUserForTesting(String user, 
                                                           String[] userGroups) {
     ensureInitialized();
@@ -1000,7 +1022,6 @@ public class UserGroupInformation {
    *          the names of the groups that the user belongs to
    * @return a fake user for running unit tests
    */
-  @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
   public static UserGroupInformation createProxyUserForTesting(String user,
       UserGroupInformation realUser, String[] userGroups) {
     ensureInitialized();
@@ -1029,6 +1050,8 @@ public class UserGroupInformation {
    * Get the user's full principal name.
    * @return the user's full principal name.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public String getUserName() {
     return user.getName();
   }
@@ -1182,6 +1205,8 @@ public class UserGroupInformation {
    * @param action the method to execute
    * @return the value from the run method
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public <T> T doAs(PrivilegedAction<T> action) {
     logPrivilegedAction(subject, action);
     return Subject.doAs(subject, action);
@@ -1198,6 +1223,8 @@ public class UserGroupInformation {
    * @throws InterruptedException if the action throws an InterruptedException
    * @throws UndeclaredThrowableException if the action throws something else
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public <T> T doAs(PrivilegedExceptionAction<T> action
                     ) throws IOException, InterruptedException {
     try {

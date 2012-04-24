@@ -220,6 +220,8 @@ public class SecurityUtil {
    * @return converted Kerberos principal name
    * @throws IOException if the client address cannot be determined
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static String getServerPrincipal(String principalConfig,
       String hostname) throws IOException {
     String[] components = getComponents(principalConfig);
@@ -245,6 +247,8 @@ public class SecurityUtil {
    * @return converted Kerberos principal name
    * @throws IOException if the client address cannot be determined
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static String getServerPrincipal(String principalConfig,
       InetAddress addr) throws IOException {
     String[] components = getComponents(principalConfig);
@@ -292,6 +296,8 @@ public class SecurityUtil {
    *          the key to look for user's Kerberos principal name in conf
    * @throws IOException if login fails
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static void login(final Configuration conf,
       final String keytabFileKey, final String userNameKey) throws IOException {
     login(conf, keytabFileKey, userNameKey, getLocalHostName());
@@ -312,6 +318,8 @@ public class SecurityUtil {
    *          hostname to use for substitution
    * @throws IOException if the config doesn't specify a keytab
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static void login(final Configuration conf,
       final String keytabFileKey, final String userNameKey, String hostname)
       throws IOException {
