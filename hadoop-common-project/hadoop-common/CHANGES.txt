@@ -144,6 +144,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8117. Upgrade test build to Surefire 2.12 (todd)
 
+    HADOOP-8152. Expand public APIs for security library classes. (atm via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
