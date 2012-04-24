@@ -183,6 +183,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4161. create sockets consistently (Daryn Sharp via bobby)
 
+    MAPREDUCE-4079. Allow MR AppMaster to limit ephemeral port range.
+    (bobby via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
