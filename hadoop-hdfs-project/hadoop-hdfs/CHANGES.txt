@@ -425,6 +425,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3305. GetImageServlet should consider SBN a valid requestor in a
     secure HA setup. (atm)
 
+    HDFS-3314. HttpFS operation for getHomeDirectory is incorrect. (tucu)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
