@@ -304,14 +304,18 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
      *          the number of method handler threads to run
      * @param verbose
      *          whether each call should be logged
+     * @param portRangeConfig
+     *          an optional config value used to limit ephemeral port ranges.
      */
     public Server(Object instance, Configuration conf, String bindAddress,
         int port, int numHandlers, int numReaders, 
         int queueSizePerHandler, boolean verbose,
-        SecretManager<? extends TokenIdentifier> secretManager)
+        SecretManager<? extends TokenIdentifier> secretManager,
+        String portRangeConfig)
         throws IOException {
       super(bindAddress, port, ProtoSpecificRequestWritable.class, numHandlers,
-          numReaders, queueSizePerHandler, conf, classNameBase(instance.getClass().getName()), secretManager);
+          numReaders, queueSizePerHandler, conf, classNameBase(instance.getClass().getName()), secretManager,
+          portRangeConfig);
       this.service = (BlockingService) instance;
       this.verbose = verbose;
     }
@@ -383,9 +387,10 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
   public RPC.Server getServer(Class<?> protocol, Object instance,
       String bindAddress, int port, int numHandlers,int numReaders, 
       int queueSizePerHandler, boolean verbose,
-      Configuration conf, SecretManager<? extends TokenIdentifier> secretManager)
+      Configuration conf, SecretManager<? extends TokenIdentifier> secretManager,
+      String portRangeConfig)
       throws IOException {
     return new Server(instance, conf, bindAddress, port, numHandlers, numReaders, queueSizePerHandler,
-        verbose, secretManager);
+        verbose, secretManager, portRangeConfig);
   }
 }

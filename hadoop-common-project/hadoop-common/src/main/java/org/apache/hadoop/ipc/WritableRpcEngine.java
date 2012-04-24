@@ -282,6 +282,18 @@ public class WritableRpcEngine implements RpcEngine {
     return new Server(instance, conf, bindAddress, port, numHandlers, 
         numReaders, queueSizePerHandler, verbose, secretManager);
   }
+  
+  @Override
+  public org.apache.hadoop.ipc.RPC.Server getServer(Class<?> protocol,
+      Object instance, String bindAddress, int port, int numHandlers,
+      int numReaders, int queueSizePerHandler, boolean verbose,
+      Configuration conf,
+      SecretManager<? extends TokenIdentifier> secretManager,
+      String portRangeConfig) throws IOException {
+    return new Server(instance, conf, bindAddress, port, numHandlers, 
+        numReaders, queueSizePerHandler, verbose, secretManager,
+        portRangeConfig);
+  }
 
   /** An RPC Server. */
   public static class Server extends RPC.Server {
@@ -316,12 +328,22 @@ public class WritableRpcEngine implements RpcEngine {
      * @param verbose whether each call should be logged
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
+        int numHandlers, int numReaders, int queueSizePerHandler, boolean verbose, 
+        SecretManager<? extends TokenIdentifier> secretManager) 
+    throws IOException {
+      this(instance, conf, bindAddress, port, numHandlers, numReaders,
+          queueSizePerHandler, verbose, secretManager, null);
+    }
+    
+    public Server(Object instance, Configuration conf, String bindAddress,  int port,
                   int numHandlers, int numReaders, int queueSizePerHandler, boolean verbose, 
-                  SecretManager<? extends TokenIdentifier> secretManager) 
+                  SecretManager<? extends TokenIdentifier> secretManager, 
+                  String portRangeConfig) 
         throws IOException {
       super(bindAddress, port, Invocation.class, numHandlers, numReaders,
           queueSizePerHandler, conf,
-          classNameBase(instance.getClass().getName()), secretManager);
+          classNameBase(instance.getClass().getName()), secretManager, 
+          portRangeConfig);
       this.instance = instance;
       this.verbose = verbose;
     }

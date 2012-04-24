@@ -43,8 +43,16 @@ public abstract class YarnRPC {
   public abstract Server getServer(Class protocol, Object instance,
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
-      int numHandlers);
+      int numHandlers, String portRangeConfig);
 
+  public Server getServer(Class protocol, Object instance,
+      InetSocketAddress addr, Configuration conf,
+      SecretManager<? extends TokenIdentifier> secretManager,
+      int numHandlers) {
+    return getServer(protocol, instance, addr, conf, secretManager, numHandlers,
+        null);
+  }
+  
   public static YarnRPC create(Configuration conf) {
     LOG.debug("Creating YarnRPC for " + 
         conf.get(YarnConfiguration.IPC_RPC_IMPL));
