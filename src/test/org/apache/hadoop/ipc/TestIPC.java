@@ -29,11 +29,19 @@ import java.util.Random;
 import java.io.DataInput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.SocketTimeoutException;
+
+import javax.net.SocketFactory;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+
+import static org.mockito.Mockito.*;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /** Unit tests for IPC. */
 public class TestIPC extends TestCase {
@@ -232,6 +240,52 @@ public class TestIPC extends TestCase {
       String causeText=cause.getMessage();
       assertTrue("Did not find " + causeText + " in " + message,
               message.contains(causeText));
+    }
+  }
+
+  /**
+  * Test that, if a RuntimeException is thrown after creating a socket
+  * but before successfully connecting to the IPC server, that the
+  * failure is handled properly. This is a regression test for
+  * HADOOP-7428 (HADOOP-8294).
+  */
+  public void testRTEDuringConnectionSetup() throws Exception {
+    // Set up a socket factory which returns sockets which
+    // throw an RTE when setSoTimeout is called.
+    SocketFactory spyFactory = spy(NetUtils.getDefaultSocketFactory(conf));
+    Mockito.doAnswer(new Answer<Socket>() {
+      @Override
+      public Socket answer(InvocationOnMock invocation) throws Throwable {
+        Socket s = spy((Socket)invocation.callRealMethod());
+        doThrow(new RuntimeException("Injected fault")).when(s)
+          .setSoTimeout(anyInt());
+        return s;
+      }
+    }).when(spyFactory).createSocket();
+ 
+    Server server = new TestServer(1, true);
+    server.start();
+    try {
+      // Call should fail due to injected exception.
+      InetSocketAddress address = NetUtils.getConnectAddress(server);
+      Client client = new Client(LongWritable.class, conf, spyFactory);
+      try {
+        client.call(new LongWritable(RANDOM.nextLong()),
+                address, null, null, 0, conf);
+        fail("Expected an exception to have been thrown");
+      } catch (Exception e) {
+        LOG.info("caught expected exception", e);
+        assertTrue(StringUtils.stringifyException(e).contains(
+            "Injected fault"));
+      }
+      // Resetting to the normal socket behavior should succeed
+      // (i.e. it should not have cached a half-constructed connection)
+  
+      Mockito.reset(spyFactory);
+      client.call(new LongWritable(RANDOM.nextLong()),
+          address, null, null, 0, conf);
+    } finally {
+      server.stop();
     }
   }
 

@@ -41,6 +41,9 @@ Release 1.0.3 - unreleased
 
     HDFS-119. Fix a bug in logSync(), which causes NameNode block forever. (shv)
 
+    HADOOP-8294. IPC Connection becomes unusable even if server address was temporarilly
+    unresolvable. Backport of HADOOP-7428. (Kihwal Lee via mattf)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
