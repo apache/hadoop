@@ -126,7 +126,7 @@ public class PseudoAuthenticationHandler implements AuthenticationHandler {
         throw new AuthenticationException("Anonymous requests are disallowed");
       }
     } else {
-      token = new AuthenticationToken(userName, userName, TYPE);
+      token = new AuthenticationToken(userName, userName, getType());
     }
     return token;
   }

@@ -288,7 +288,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
                 String clientPrincipal = gssContext.getSrcName().toString();
                 KerberosName kerberosName = new KerberosName(clientPrincipal);
                 String userName = kerberosName.getShortName();
-                token = new AuthenticationToken(userName, clientPrincipal, TYPE);
+                token = new AuthenticationToken(userName, clientPrincipal, getType());
                 response.setStatus(HttpServletResponse.SC_OK);
                 LOG.trace("SPNEGO completed for principal [{}]", clientPrincipal);
               }
