@@ -43,7 +43,7 @@ public class TestFileSystemCaching {
   @Test
   public void testCacheEnabled() throws Exception {
     Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
     FileSystem fs1 = FileSystem.get(new URI("cachedfile://a"), conf);
     FileSystem fs2 = FileSystem.get(new URI("cachedfile://a"), conf);
     assertSame(fs1, fs2);
@@ -84,7 +84,7 @@ public class TestFileSystemCaching {
     // wait for InitializeForeverFileSystem to start initialization
     InitializeForeverFileSystem.sem.acquire();
     
-    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
     FileSystem.get(new URI("cachedfile://a"), conf);
     t.interrupt();
     t.join();
@@ -93,7 +93,7 @@ public class TestFileSystemCaching {
   @Test
   public void testCacheDisabled() throws Exception {
     Configuration conf = new Configuration();
-    conf.set("fs.uncachedfile.impl", conf.get("fs.file.impl"));
+    conf.set("fs.uncachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
     conf.setBoolean("fs.uncachedfile.impl.disable.cache", true);
     FileSystem fs1 = FileSystem.get(new URI("uncachedfile://a"), conf);
     FileSystem fs2 = FileSystem.get(new URI("uncachedfile://a"), conf);
@@ -104,7 +104,7 @@ public class TestFileSystemCaching {
   @Test
   public <T extends TokenIdentifier> void testCacheForUgi() throws Exception {
     final Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
     UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
     UserGroupInformation ugiB = UserGroupInformation.createRemoteUser("bar");
     FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
@@ -156,7 +156,7 @@ public class TestFileSystemCaching {
   @Test
   public void testUserFS() throws Exception {
     final Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
     FileSystem fsU1 = FileSystem.get(new URI("cachedfile://a"), conf, "bar");
     FileSystem fsU2 = FileSystem.get(new URI("cachedfile://a"), conf, "foo");
     
@@ -166,7 +166,7 @@ public class TestFileSystemCaching {
   @Test
   public void testFsUniqueness() throws Exception {
     final Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
     // multiple invocations of FileSystem.get return the same object.
     FileSystem fs1 = FileSystem.get(conf);
     FileSystem fs2 = FileSystem.get(conf);
@@ -183,7 +183,7 @@ public class TestFileSystemCaching {
   @Test
   public void testCloseAllForUGI() throws Exception {
     final Configuration conf = new Configuration();
-    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
     UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
     FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
       public FileSystem run() throws Exception {

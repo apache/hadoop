@@ -353,25 +353,6 @@
 </property>
 
 <property>
-  <name>fs.file.impl</name>
-  <value>org.apache.hadoop.fs.LocalFileSystem</value>
-  <description>The FileSystem for file: uris.</description>
-</property>
-
-<property>
-  <name>fs.hdfs.impl</name>
-  <value>org.apache.hadoop.hdfs.DistributedFileSystem</value>
-  <description>The FileSystem for hdfs: uris.</description>
-</property>
-
-<property>
-  <name>fs.viewfs.impl</name>
-  <value>org.apache.hadoop.fs.viewfs.ViewFileSystem</value>
-  <description>The FileSystem for view file system for viewfs: uris
-  (ie client side mount table:).</description>
-</property>
-
-<property>
   <name>fs.AbstractFileSystem.file.impl</name>
   <value>org.apache.hadoop.fs.local.LocalFs</value>
   <description>The AbstractFileSystem for file: uris.</description>
@@ -392,45 +373,6 @@
 </property>
 
 <property>
-  <name>fs.s3.impl</name>
-  <value>org.apache.hadoop.fs.s3.S3FileSystem</value>
-  <description>The FileSystem for s3: uris.</description>
-</property>
-
-<property>
-  <name>fs.s3n.impl</name>
-  <value>org.apache.hadoop.fs.s3native.NativeS3FileSystem</value>
-  <description>The FileSystem for s3n: (Native S3) uris.</description>
-</property>
-
-<property>
-  <name>fs.kfs.impl</name>
-  <value>org.apache.hadoop.fs.kfs.KosmosFileSystem</value>
-  <description>The FileSystem for kfs: uris.</description>
-</property>
-
-<property>
-  <name>fs.hftp.impl</name>
-  <value>org.apache.hadoop.hdfs.HftpFileSystem</value>
-</property>
-
-<property>
-  <name>fs.hsftp.impl</name>
-  <value>org.apache.hadoop.hdfs.HsftpFileSystem</value>
-</property>
-
-<property>
-  <name>fs.webhdfs.impl</name>
-  <value>org.apache.hadoop.hdfs.web.WebHdfsFileSystem</value>
-</property>
-
-<property>
-  <name>fs.ftp.impl</name>
-  <value>org.apache.hadoop.fs.ftp.FTPFileSystem</value>
-  <description>The FileSystem for ftp: uris.</description>
-</property>
-
-<property>
   <name>fs.ftp.host</name>
   <value>0.0.0.0</value>
   <description>FTP filesystem connects to this server</description>
@@ -442,18 +384,6 @@
   <description>
     FTP filesystem connects to fs.ftp.host on this port
   </description>
-</property>
-
-<property>
-  <name>fs.har.impl</name>
-  <value>org.apache.hadoop.fs.HarFileSystem</value>
-  <description>The filesystem for Hadoop archives. </description>
-</property>
-
-<property>
-  <name>fs.har.impl.disable.cache</name>
-  <value>true</value>
-  <description>Don't cache 'har' filesystem instances.</description>
 </property>
 
 <property>

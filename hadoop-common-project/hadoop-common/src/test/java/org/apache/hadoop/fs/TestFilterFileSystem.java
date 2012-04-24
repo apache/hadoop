@@ -165,7 +165,10 @@ public class TestFilterFileSystem {
     public Token<?> getDelegationToken(String renewer) throws IOException {
       return null;
     }
-    
+
+    public String getScheme() {
+      return "dontcheck";
+    }
   }
   
   @Test

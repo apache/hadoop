@@ -88,6 +88,17 @@ public class DistributedFileSystem extends FileSystem {
   public DistributedFileSystem() {
   }
 
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>hdfs</code>
+   */
+  @Override
+  public String getScheme() {
+    return "hdfs";
+  }
+
   @Deprecated
   public DistributedFileSystem(InetSocketAddress namenode,
     Configuration conf) throws IOException {

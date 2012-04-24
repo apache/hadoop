@@ -146,6 +146,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8152. Expand public APIs for security library classes. (atm via eli)
 
+    HADOOP-7549. Use JDK ServiceLoader mechanism to find FileSystem implementations. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES

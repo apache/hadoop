@@ -155,6 +155,17 @@ public class WebHdfsFileSystem extends FileSystem
     }
   }
 
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>webhdfs</code>
+   */
+  @Override
+  public String getScheme() {
+    return "webhdfs";
+  }
+
   @Override
   public synchronized void initialize(URI uri, Configuration conf
       ) throws IOException {
