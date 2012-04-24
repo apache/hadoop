@@ -100,13 +100,10 @@ public class ApplicationMasterService extends AbstractService implements
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
 
-    String bindAddressStr =
-        conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
-    InetSocketAddress masterServiceAddress =
-        NetUtils.createSocketAddr(bindAddressStr,
-          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT,
-          YarnConfiguration.RM_SCHEDULER_ADDRESS);
+    InetSocketAddress masterServiceAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_SCHEDULER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
 
     this.server =
       rpc.getServer(AMRMProtocol.class, this, masterServiceAddress,
@@ -122,11 +119,14 @@ public class ApplicationMasterService extends AbstractService implements
     }
     
     this.server.start();
-
     this.bindAddress =
         NetUtils.createSocketAddr(masterServiceAddress.getHostName(),
           this.server.getPort());
-
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String resolvedAddress =
+        this.server.getListenerAddress().getHostName() + ":" + this.server.getListenerAddress().getPort();
+      conf.set(YarnConfiguration.RM_SCHEDULER_ADDRESS, resolvedAddress);
+    }
     super.start();
   }
 

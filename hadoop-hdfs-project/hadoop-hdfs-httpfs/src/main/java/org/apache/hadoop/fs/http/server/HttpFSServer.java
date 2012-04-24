@@ -170,7 +170,7 @@ public class HttpFSServer {
     throws IOException, FileSystemAccessException {
     String hadoopUser = getEffectiveUser(user, doAs);
     FileSystemAccess fsAccess = HttpFSServerWebApp.get().get(FileSystemAccess.class);
-    Configuration conf = HttpFSServerWebApp.get().get(FileSystemAccess.class).getDefaultConfiguration();
+    Configuration conf = HttpFSServerWebApp.get().get(FileSystemAccess.class).getFileSystemConfiguration();
     return fsAccess.execute(hadoopUser, conf, executor);
   }
 
@@ -194,7 +194,7 @@ public class HttpFSServer {
   private FileSystem createFileSystem(Principal user, String doAs) throws IOException, FileSystemAccessException {
     String hadoopUser = getEffectiveUser(user, doAs);
     FileSystemAccess fsAccess = HttpFSServerWebApp.get().get(FileSystemAccess.class);
-    Configuration conf = HttpFSServerWebApp.get().get(FileSystemAccess.class).getDefaultConfiguration();
+    Configuration conf = HttpFSServerWebApp.get().get(FileSystemAccess.class).getFileSystemConfiguration();
     FileSystem fs = fsAccess.createFileSystem(hadoopUser, conf);
     FileSystemReleaseFilter.setFileSystem(fs);
     return fs;
@@ -291,7 +291,7 @@ public class HttpFSServer {
           response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
           break;
         }
-        case GETHOMEDIR: {
+        case GETHOMEDIRECTORY: {
           FSOperations.FSHomeDir command = new FSOperations.FSHomeDir();
           JSONObject json = fsExecute(user, doAs.value(), command);
           AUDIT_LOG.info("");

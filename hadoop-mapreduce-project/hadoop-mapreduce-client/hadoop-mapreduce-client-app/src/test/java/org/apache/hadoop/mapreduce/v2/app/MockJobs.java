@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapred.ShuffleHandler;
@@ -442,7 +444,7 @@ public class MockJobs extends MockApps {
     final Path configFile = confFile;
 
     Map<JobACL, AccessControlList> tmpJobACLs = new HashMap<JobACL, AccessControlList>();
-    Configuration conf = new Configuration();
+    final Configuration conf = new Configuration();
     conf.set(JobACL.VIEW_JOB.getAclName(), "testuser");
     conf.setBoolean(MRConfig.MR_ACLS_ENABLED, true);
 
@@ -563,6 +565,14 @@ public class MockJobs extends MockApps {
         amInfoList.add(createAMInfo(1));
         amInfoList.add(createAMInfo(2));
         return amInfoList;
+      }
+
+      @Override
+      public Configuration loadConfFile() throws IOException {
+        FileContext fc = FileContext.getFileContext(configFile.toUri(), conf);
+        Configuration jobConf = new Configuration(false);
+        jobConf.addResource(fc.open(configFile));
+        return jobConf;
       }
     };
   }

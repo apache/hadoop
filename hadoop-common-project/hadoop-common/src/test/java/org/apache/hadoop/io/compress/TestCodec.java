@@ -756,7 +756,8 @@ public class TestCodec {
 
     // Don't use native libs for this test.
     Configuration conf = new Configuration();
-    conf.setBoolean("hadoop.native.lib", false);
+    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY,
+                    false);
     assertFalse("ZlibFactory is using native libs against request",
                 ZlibFactory.isNativeZlibLoaded(conf));
 

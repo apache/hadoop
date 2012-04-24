@@ -65,6 +65,13 @@ Trunk (unreleased changes)
     HDFS-3273. Refactor BackupImage and FSEditLog, and rename
     JournalListener.rollLogs(..) to startLogSegment(..).  (szetszwo)
 
+    HDFS-3292. Remove the deprecated DiskStatus, getDiskStatus(), getRawCapacity() and
+    getRawUsed() from DistributedFileSystem.  (Arpit Gupta via szetszwo)
+
+    HDFS-3282. Expose getFileLength API. (umamahesh)
+
+    HADOOP-8285 HDFS changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
@@ -382,6 +389,17 @@ Release 2.0.0 - UNRELEASED
     HDFS-3279. Move the FSEditLog constructor with @VisibleForTesting to
     TestEditLog.  (Arpit Gupta via szetszwo)
 
+    HDFS-3294. Fix code indentation in NamenodeWebHdfsMethods and
+    DatanodeWebHdfsMethods.  (szetszwo)
+
+    HDFS-3263. HttpFS should read HDFS config from Hadoop site.xml files (tucu)
+
+    HDFS-3206. Miscellaneous xml cleanups for OEV.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3169. TestFsck should test multiple -move operations in a row.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -526,6 +544,14 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3165. HDFS Balancer scripts are refering to wrong path of
     hadoop-daemon.sh (Amith D K via eli)
+
+    HDFS-891. DataNode no longer needs to check for dfs.network.script.
+    (harsh via eli)
+
+    HDFS-3305. GetImageServlet should consider SBN a valid requestor in a
+    secure HA setup. (atm)
+
+    HDFS-3314. HttpFS operation for getHomeDirectory is incorrect. (tucu)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
@@ -859,6 +885,15 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
     Lee via szetszwo)
+
+    HDFS-2652. Add support for host-based delegation tokens.  (Daryn Sharp via
+    szetszwo)
+
+    HDFS-3308. Uses canonical URI to select delegation tokens in HftpFileSystem
+    and WebHdfsFileSystem.  (Daryn Sharp via szetszwo)
+
+    HDFS-3312. In HftpFileSystem, the namenode URI is non-secure but the
+    delegation tokens have to use secure URI.  (Daryn Sharp via szetszwo)
 
 Release 0.23.2 - UNRELEASED
 

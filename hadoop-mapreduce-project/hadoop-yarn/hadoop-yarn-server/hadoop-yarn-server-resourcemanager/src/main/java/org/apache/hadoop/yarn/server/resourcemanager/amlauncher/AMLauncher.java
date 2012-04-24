@@ -218,11 +218,10 @@ public class AMLauncher implements Runnable {
       Token<ApplicationTokenIdentifier> token =
           new Token<ApplicationTokenIdentifier>(id,
               this.rmContext.getApplicationTokenSecretManager());
-      String schedulerAddressStr =
-          this.conf.get(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-              YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
-      InetSocketAddress unresolvedAddr =
-          NetUtils.createSocketAddr(schedulerAddressStr);
+      InetSocketAddress unresolvedAddr = conf.getSocketAddr(
+          YarnConfiguration.RM_SCHEDULER_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+          YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
       String resolvedAddr =
           unresolvedAddr.getAddress().getHostAddress() + ":"
               + unresolvedAddr.getPort();

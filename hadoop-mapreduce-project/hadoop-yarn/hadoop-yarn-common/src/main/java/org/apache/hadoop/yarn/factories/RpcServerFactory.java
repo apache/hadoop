@@ -31,6 +31,6 @@ public interface RpcServerFactory {
   public Server getServer(Class<?> protocol, Object instance,
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
-      int numHandlers)
+      int numHandlers, String portRangeConfig)
       throws YarnException;
 }

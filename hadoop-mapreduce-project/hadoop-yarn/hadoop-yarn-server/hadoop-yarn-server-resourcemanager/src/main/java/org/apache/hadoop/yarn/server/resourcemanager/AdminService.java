@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -95,12 +94,10 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
   @Override
   public void init(Configuration conf) {
     super.init(conf);
-    String bindAddress =
-      conf.get(YarnConfiguration.RM_ADMIN_ADDRESS,
-          YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS);
-    masterServiceAddress =  NetUtils.createSocketAddr(bindAddress,
-      YarnConfiguration.DEFAULT_RM_ADMIN_PORT,
-      YarnConfiguration.RM_ADMIN_ADDRESS);
+    masterServiceAddress = conf.getSocketAddr(
+        YarnConfiguration.RM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADMIN_PORT);
     adminAcl = new AccessControlList(conf.get(
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
@@ -123,6 +120,11 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     }
 
     this.server.start();
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String resolvedAddress =
+        this.server.getListenerAddress().getHostName() + ":" + this.server.getListenerAddress().getPort();
+      conf.set(YarnConfiguration.RM_ADMIN_ADDRESS, resolvedAddress);
+    }
     super.start();
   }
 

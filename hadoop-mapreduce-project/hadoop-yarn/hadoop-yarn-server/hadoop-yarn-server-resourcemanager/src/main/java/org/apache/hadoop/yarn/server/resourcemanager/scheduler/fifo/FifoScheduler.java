@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.QueueState;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
@@ -106,19 +107,6 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private RMContext rmContext;
 
   private Map<NodeId, SchedulerNode> nodes = new ConcurrentHashMap<NodeId, SchedulerNode>();
-
-  private static final int MINIMUM_MEMORY = 1024;
-
-  private static final String FIFO_PREFIX =  "yarn.scheduler.fifo.";
-  @Private
-  public static final String MINIMUM_ALLOCATION = 
-    FIFO_PREFIX + "minimum-allocation-mb";
-
-  private static final int MAXIMUM_MEMORY = 10240;
-
-  @Private
-  public static final String MAXIMUM_ALLOCATION = 
-    FIFO_PREFIX + "maximum-allocation-mb";
 
   private boolean initialized;
   private Resource minimumAllocation;
@@ -218,9 +206,13 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       this.containerTokenSecretManager = containerTokenSecretManager;
       this.rmContext = rmContext;
       this.minimumAllocation = 
-        Resources.createResource(conf.getInt(MINIMUM_ALLOCATION, MINIMUM_MEMORY));
+        Resources.createResource(conf.getInt(
+            YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB));
       this.maximumAllocation = 
-        Resources.createResource(conf.getInt(MAXIMUM_ALLOCATION, MAXIMUM_MEMORY));
+        Resources.createResource(conf.getInt(
+            YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB));
       this.metrics = QueueMetrics.forQueue(DEFAULT_QUEUE_NAME, null, false,
           conf);
       this.activeUsersManager = new ActiveUsersManager(metrics);

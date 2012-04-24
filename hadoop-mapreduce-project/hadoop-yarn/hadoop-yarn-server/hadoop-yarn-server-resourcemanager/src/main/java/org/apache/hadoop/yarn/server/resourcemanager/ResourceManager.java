@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -443,14 +444,14 @@ public class ResourceManager extends CompositeService implements Recoverable {
       WebApps.$for("cluster", ApplicationMasterService.class, masterService, "ws").at(
           this.conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
           YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS)); 
+    String proxyHostAndPort = YarnConfiguration.getProxyHostAndPort(conf);
     if(YarnConfiguration.getRMWebAppHostAndPort(conf).
-        equals(YarnConfiguration.getProxyHostAndPort(conf))) {
+        equals(proxyHostAndPort)) {
       AppReportFetcher fetcher = new AppReportFetcher(conf, getClientRMService());
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME, 
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
       builder.withAttribute(WebAppProxy.FETCHER_ATTRIBUTE, fetcher);
-      String proxy = YarnConfiguration.getProxyHostAndPort(conf);
-      String[] proxyParts = proxy.split(":");
+      String[] proxyParts = proxyHostAndPort.split(":");
       builder.withAttribute(WebAppProxy.PROXY_HOST_ATTRIBUTE, proxyParts[0]);
 
     }
@@ -474,6 +475,15 @@ public class ResourceManager extends CompositeService implements Recoverable {
       rmDTSecretManager.startThreads();
     } catch(IOException ie) {
       throw new YarnException("Failed to start secret manager threads", ie);
+    }
+
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String hostname = getConfig().get(YarnConfiguration.RM_WEBAPP_ADDRESS,
+                                        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS);
+      hostname = (hostname.contains(":")) ? hostname.substring(0, hostname.indexOf(":")) : hostname;
+      int port = webApp.port();
+      String resolvedAddress = hostname + ":" + port;
+      conf.set(YarnConfiguration.RM_WEBAPP_ADDRESS, resolvedAddress);
     }
     
     super.start();

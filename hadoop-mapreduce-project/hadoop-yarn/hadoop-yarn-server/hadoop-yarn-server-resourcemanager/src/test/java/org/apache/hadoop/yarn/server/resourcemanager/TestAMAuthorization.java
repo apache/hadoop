@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -196,9 +196,10 @@ public class TestAMAuthorization {
     // Create a client to the RM.
     final Configuration conf = rm.getConfig();
     final YarnRPC rpc = YarnRPC.create(conf);
-    final String serviceAddr = conf.get(
+    final InetSocketAddress serviceAddr = conf.getSocketAddr(
         YarnConfiguration.RM_SCHEDULER_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS);
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
 
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(applicationAttemptId.toString());
@@ -213,8 +214,8 @@ public class TestAMAuthorization {
         .doAs(new PrivilegedAction<AMRMProtocol>() {
           @Override
           public AMRMProtocol run() {
-            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class, NetUtils
-                .createSocketAddr(serviceAddr), conf);
+            return (AMRMProtocol) rpc.getProxy(AMRMProtocol.class,
+                serviceAddr, conf);
           }
         });
 

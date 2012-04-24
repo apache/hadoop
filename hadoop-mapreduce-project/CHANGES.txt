@@ -50,7 +50,15 @@ Trunk (unreleased changes)
     MAPREDUCE-3935. Annotate Counters.Counter and Counters.Group as @Public.
     (tomwhite)
 
+    HADOOP-8285 MR changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
   BUG FIXES
+
+    MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
+                    map only jobs. (amarrk)
+
+    MAPREDUCE-4149. [Rumen] Rumen fails to parse certain counter
+                    strings. (ravigummadi)
 
     MAPREDUCE-4083. [Gridmix] NPE in cpu emulation. (amarrk)
 
@@ -142,6 +150,9 @@ Release 2.0.0 - UNRELEASED
     instead of ProtoOverHadoopRpcEngine. (Jitendra Nath Pandey via sseth)
 
     MAPREDUCE-4103. Fix HA docs for changes to shell command fencer args (todd)
+
+    MAPREDUCE-4093. Improve RM WebApp start up when proxy address is not set
+    (Devaraj K vai bobby)
 
   OPTIMIZATIONS
 
@@ -244,12 +255,20 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4008. ResourceManager throws MetricsException on start up 
     saying QueueMetrics MBean already exists (Devaraj K via tgraves)
 
+    MAPREDUCE-3867. MiniMRYarn/MiniYarn uses fixed ports (tucu)
+
+    MAPREDUCE-4141. clover integration broken, also mapreduce poms are 
+    pulling in clover as a dependency. (phunt via tucu)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
     MAPREDUCE-4072. User set java.library.path seems to overwrite default
     creating problems native lib loading (Anupam Seth via bobby)
+
+    MAPREDUCE-3812. Lower default allocation sizes, fix allocation 
+    configurations and document them (Harsh J via bobby)
 
   NEW FEATURES
 
@@ -261,6 +280,20 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3942. Randomize master key generation for
     ApplicationTokenSecretManager and roll it every so often. (Vinod Kumar
     Vavilapalli via sseth)
+
+    MAPREDUCE-4151. RM scheduler web page should filter apps to those that 
+    are relevant to scheduling (Jason Lowe via tgraves)
+
+    MAPREDUCE-4134. Remove references of mapred.child.ulimit etc. since they
+    are not being used any more (Ravi Prakash via bobby)
+
+    MAPREDUCE-3972. Fix locking and exception issues in JobHistory server.
+    (Robert Joseph Evans via sseth)
+
+    MAPREDUCE-4161. create sockets consistently (Daryn Sharp via bobby)
+
+    MAPREDUCE-4079. Allow MR AppMaster to limit ephemeral port range.
+    (bobby via tgraves)
 
   OPTIMIZATIONS
 
@@ -349,6 +382,26 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4160. some mrv1 ant tests fail with timeout - due to 4156 
     (tgraves)
+
+    MAPREDUCE-4074. Client continuously retries to RM When RM goes down 
+    before launching Application Master (xieguiming via tgraves)
+
+    MAPREDUCE-4159. Job is running in Uber mode after setting 
+    "mapreduce.job.ubertask.maxreduces" to zero (Devaraj K via bobby)
+
+    MAPREDUCE-4165. Committing is misspelled as commiting in task logs
+    (John Eagles via bobby)
+
+    MAPREDUCE-4129. Lots of unneeded counters log messages (Ahmed Radwan via
+    bobby)
+
+    MAPREDUCE-3947. yarn.app.mapreduce.am.resource.mb not documented 
+    (Devaraj K via bobby)
+
+    MAPREDUCE-4190. Improve web UI for task attempts userlog link (Tom Graves
+    via bobby)
+
+    MAPREDUCE-4133. MR over viewfs is broken (John George via bobby)
 
 Release 0.23.2 - UNRELEASED
 

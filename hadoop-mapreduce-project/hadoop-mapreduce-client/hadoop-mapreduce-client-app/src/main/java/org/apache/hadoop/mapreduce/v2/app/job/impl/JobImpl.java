@@ -37,6 +37,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -821,12 +822,12 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
 
     //FIXME: handling multiple reduces within a single AM does not seem to
     //work.
-    // int sysMaxReduces =
-    //     job.conf.getInt(MRJobConfig.JOB_UBERTASK_MAXREDUCES, 1);
-    int sysMaxReduces = 1;
+    int sysMaxReduces = conf.getInt(MRJobConfig.JOB_UBERTASK_MAXREDUCES, 1);
+    boolean isValidUberMaxReduces = (sysMaxReduces == 0)
+        || (sysMaxReduces == 1);
 
     long sysMaxBytes = conf.getLong(MRJobConfig.JOB_UBERTASK_MAXBYTES,
-        fs.getDefaultBlockSize()); // FIXME: this is wrong; get FS from
+        fs.getDefaultBlockSize(this.remoteJobSubmitDir)); // FIXME: this is wrong; get FS from
                                    // [File?]InputFormat and default block size
                                    // from that
 
@@ -855,7 +856,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     // while "uber-AM" (MR AM + LocalContainerLauncher) loops over tasks
     // and thus requires sequential execution.
     isUber = uberEnabled && smallNumMapTasks && smallNumReduceTasks
-        && smallInput && smallMemory && notChainJob;
+        && smallInput && smallMemory && notChainJob && isValidUberMaxReduces;
 
     if (isUber) {
       LOG.info("Uberizing job " + jobId + ": " + numMapTasks + "m+"
@@ -888,7 +889,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       if (!smallMemory)
         msg.append(" too much RAM;");
       if (!notChainJob)
-        msg.append(" chainjob");
+        msg.append(" chainjob;");
+      if (!isValidUberMaxReduces)
+        msg.append(" not supported uber max reduces");
       LOG.info(msg.toString());
     }
   }
@@ -1471,5 +1474,14 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
       job.finished(JobState.ERROR);
     }
+  }
+
+  @Override
+  public Configuration loadConfFile() throws IOException {
+    Path confPath = getConfFile();
+    FileContext fc = FileContext.getFileContext(confPath.toUri(), conf);
+    Configuration jobConf = new Configuration(false);
+    jobConf.addResource(fc.open(confPath));
+    return jobConf;
   }
 }

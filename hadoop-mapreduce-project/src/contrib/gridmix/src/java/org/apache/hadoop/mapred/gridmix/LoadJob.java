@@ -288,23 +288,23 @@ class LoadJob extends GridmixJob {
       final long[] reduceBytes = split.getOutputBytes();
       final long[] reduceRecords = split.getOutputRecords();
 
-      // enable gridmix map output record for compression
-      final boolean emulateMapOutputCompression = 
-        CompressionEmulationUtil.isCompressionEmulationEnabled(conf)
-        && conf.getBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, false);
-      float compressionRatio = 1.0f;
-      if (emulateMapOutputCompression) {
-        compressionRatio = 
-          CompressionEmulationUtil.getMapOutputCompressionEmulationRatio(conf);
-        LOG.info("GridMix is configured to use a compression ratio of " 
-                 + compressionRatio + " for the map output data.");
-        key.setCompressibility(true, compressionRatio);
-        val.setCompressibility(true, compressionRatio);
-      }
-      
       long totalRecords = 0L;
       final int nReduces = ctxt.getNumReduceTasks();
       if (nReduces > 0) {
+        // enable gridmix map output record for compression
+        boolean emulateMapOutputCompression = 
+          CompressionEmulationUtil.isCompressionEmulationEnabled(conf)
+          && conf.getBoolean(MRJobConfig.MAP_OUTPUT_COMPRESS, false);
+        float compressionRatio = 1.0f;
+        if (emulateMapOutputCompression) {
+          compressionRatio = 
+            CompressionEmulationUtil.getMapOutputCompressionEmulationRatio(conf);
+          LOG.info("GridMix is configured to use a compression ratio of " 
+                   + compressionRatio + " for the map output data.");
+          key.setCompressibility(true, compressionRatio);
+          val.setCompressibility(true, compressionRatio);
+        }
+        
         int idx = 0;
         int id = split.getId();
         for (int i = 0; i < nReduces; ++i) {
@@ -332,7 +332,21 @@ class LoadJob extends GridmixJob {
         }
       } else {
         long mapOutputBytes = reduceBytes[0];
-        if (emulateMapOutputCompression) {
+        
+        // enable gridmix job output compression
+        boolean emulateJobOutputCompression = 
+          CompressionEmulationUtil.isCompressionEmulationEnabled(conf)
+          && conf.getBoolean(FileOutputFormat.COMPRESS, false);
+
+        if (emulateJobOutputCompression) {
+          float compressionRatio = 
+            CompressionEmulationUtil.getJobOutputCompressionEmulationRatio(conf);
+          LOG.info("GridMix is configured to use a compression ratio of " 
+                   + compressionRatio + " for the job output data.");
+          key.setCompressibility(true, compressionRatio);
+          val.setCompressibility(true, compressionRatio);
+
+          // set the output size accordingly
           mapOutputBytes /= compressionRatio;
         }
         reduces.add(new AvgRecordFactory(mapOutputBytes, reduceRecords[0],
@@ -387,9 +401,13 @@ class LoadJob extends GridmixJob {
     @Override
     public void cleanup(Context context) 
     throws IOException, InterruptedException {
+      LOG.info("Starting the cleanup phase.");
       for (RecordFactory factory : reduces) {
         key.setSeed(r.nextLong());
         while (factory.next(key, val)) {
+          // send the progress update (maybe make this a thread)
+          context.progress();
+          
           context.write(key, val);
           key.setSeed(r.nextLong());
           
@@ -462,7 +480,7 @@ class LoadJob extends GridmixJob {
           && FileOutputFormat.getCompressOutput(context)) {
         float compressionRatio = 
           CompressionEmulationUtil
-            .getReduceOutputCompressionEmulationRatio(conf);
+            .getJobOutputCompressionEmulationRatio(conf);
         LOG.info("GridMix is configured to use a compression ratio of " 
                  + compressionRatio + " for the reduce output data.");
         val.setCompressibility(true, compressionRatio);

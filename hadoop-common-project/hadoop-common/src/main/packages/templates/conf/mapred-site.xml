@@ -109,11 +109,6 @@
   </property>
 
   <property>
-    <name>mapred.child.ulimit</name>
-    <value>8388608</value>
-  </property>
-
-  <property>
     <name>mapred.job.tracker.persist.jobstatus.active</name>
     <value>true</value>
     <description>Indicates if persistency of job status information is

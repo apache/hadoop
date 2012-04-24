@@ -21,6 +21,9 @@ package org.apache.hadoop.streaming;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -62,17 +65,20 @@ public class TestSymLink
       FileSystem fileSys = dfs.getFileSystem();
       String namenode = fileSys.getUri().toString();
       mr  = new MiniMRCluster(1, namenode, 3);
+
+      List<String> args = new ArrayList<String>();
+      for (Map.Entry<String, String> entry : mr.createJobConf()) {
+        args.add("-jobconf");
+        args.add(entry.getKey() + "=" + entry.getValue());
+      }
+
       // During tests, the default Configuration will use a local mapred
       // So don't specify -config or -cluster
-      String strJobtracker = JTConfig.JT_IPC_ADDRESS + "=localhost:" + mr.createJobConf().get(JTConfig.JT_IPC_ADDRESS);
-      String strNamenode = "fs.default.name=" + mr.createJobConf().get("fs.default.name");
       String argv[] = new String[] {
         "-input", INPUT_FILE,
         "-output", OUTPUT_DIR,
         "-mapper", map,
         "-reducer", reduce,
-        "-jobconf", strNamenode,
-        "-jobconf", strJobtracker,
         "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
         "-jobconf", 
           JobConf.MAPRED_MAP_TASK_JAVA_OPTS+ "=" +
@@ -88,9 +94,13 @@ public class TestSymLink
                      conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
         "-cacheFile", fileSys.getUri() + CACHE_FILE + "#testlink",
         "-jobconf", "mapred.jar=" + TestStreaming.STREAMING_JAR,
-        "-jobconf", "mapreduce.framework.name=yarn"
       };
 
+      for (String arg : argv) {
+        args.add(arg);
+      }
+      argv = args.toArray(new String[args.size()]);
+  
       fileSys.delete(new Path(OUTPUT_DIR), true);
       
       DataOutputStream file = fileSys.create(new Path(INPUT_FILE));

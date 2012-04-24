@@ -172,10 +172,6 @@
           <artifactId>junit</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>com.cenqua.clover</groupId>
-          <artifactId>clover</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>org.apache.avro</groupId>
           <artifactId>avro</artifactId>
         </exclusion>
@@ -210,10 +206,6 @@
         <exclusion>
           <groupId>com.sun.jersey.contribs</groupId>
           <artifactId>jersey-guice</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.cenqua.clover</groupId>
-          <artifactId>clover</artifactId>
         </exclusion>
         <exclusion>
           <groupId>com.google.inject.extensions</groupId>
@@ -263,10 +255,6 @@
           <groupId>com.google.inject.extensions</groupId>
           <artifactId>guice-servlet</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>com.cenqua.clover</groupId>
-          <artifactId>clover</artifactId>
-        </exclusion>
       </exclusions>
     </dependency>
 
@@ -290,10 +278,6 @@
         <exclusion>
           <groupId>com.google.inject.extensions</groupId>
           <artifactId>guice-servlet</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.cenqua.clover</groupId>
-          <artifactId>clover</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

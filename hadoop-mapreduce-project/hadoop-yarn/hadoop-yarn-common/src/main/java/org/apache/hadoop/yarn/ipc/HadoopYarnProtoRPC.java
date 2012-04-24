@@ -56,12 +56,12 @@ public class HadoopYarnProtoRPC extends YarnRPC {
   public Server getServer(Class protocol, Object instance,
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
-      int numHandlers) {
+      int numHandlers, String portRangeConfig) {
     LOG.debug("Creating a HadoopYarnProtoRpc server for protocol " + protocol + 
         " with " + numHandlers + " handlers");
     
     return RpcFactoryProvider.getServerFactory(conf).getServer(protocol, 
-        instance, addr, conf, secretManager, numHandlers);
+        instance, addr, conf, secretManager, numHandlers, portRangeConfig);
 
   }
 

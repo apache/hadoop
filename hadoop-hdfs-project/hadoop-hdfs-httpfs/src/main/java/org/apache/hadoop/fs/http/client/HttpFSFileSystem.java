@@ -159,7 +159,7 @@ public class HttpFSFileSystem extends FileSystem {
    * Get operations.
    */
   public enum GetOpValues {
-    OPEN, GETFILESTATUS, LISTSTATUS, GETHOMEDIR, GETCONTENTSUMMARY, GETFILECHECKSUM,
+    OPEN, GETFILESTATUS, LISTSTATUS, GETHOMEDIRECTORY, GETCONTENTSUMMARY, GETFILECHECKSUM,
     GETDELEGATIONTOKEN, GETFILEBLOCKLOCATIONS, INSTRUMENTATION
   }
 
@@ -684,7 +684,7 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public Path getHomeDirectory() {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, GetOpValues.GETHOMEDIR.toString());
+    params.put(OP_PARAM, GetOpValues.GETHOMEDIRECTORY.toString());
     try {
       HttpURLConnection conn = getConnection(HTTP_GET, params, new Path(getUri().toString(), "/"), false);
       validateResponse(conn, HttpURLConnection.HTTP_OK);

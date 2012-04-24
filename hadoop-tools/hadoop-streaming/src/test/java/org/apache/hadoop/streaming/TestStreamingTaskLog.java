@@ -19,6 +19,9 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -47,20 +50,30 @@ public class TestStreamingTaskLog {
   final long USERLOG_LIMIT_KB = 5;//consider 5kb as logSize
 
   String[] genArgs() {
-    return new String[] {
+
+    List<String> args = new ArrayList<String>();
+    for (Map.Entry<String, String> entry : mr.createJobConf()) {
+      args.add("-jobconf");
+      args.add(entry.getKey() + "=" + entry.getValue());
+    }
+
+    String[] argv = new String[] {
       "-input", inputPath.toString(),
       "-output", outputPath.toString(),
       "-mapper", map,
       "-reducer", StreamJob.REDUCE_NONE,
-      "-jobconf", "mapred.job.tracker=" + mr.createJobConf().get(JTConfig.JT_IPC_ADDRESS),
-      "-jobconf", "fs.default.name=" + fs.getUri().toString(),
       "-jobconf", "mapred.map.tasks=1",
       "-jobconf", "keep.failed.task.files=true",
       "-jobconf", "mapreduce.task.userlog.limit.kb=" + USERLOG_LIMIT_KB,
       "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
       "-jobconf", "mapred.jar=" + TestStreaming.STREAMING_JAR,
-      "-jobconf", "mapreduce.framework.name=yarn"
     };
+
+    for (String arg : argv) {
+      args.add(arg);
+    }
+    argv = args.toArray(new String[args.size()]);
+    return argv;
   }
 
   /**

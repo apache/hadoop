@@ -107,7 +107,17 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_SCHEDULER_PORT = 8030;
   public static final String DEFAULT_RM_SCHEDULER_ADDRESS = "0.0.0.0:" +
     DEFAULT_RM_SCHEDULER_PORT;
-  
+
+  /** Miniumum memory request grant-able by the RM scheduler. */
+  public static final String RM_SCHEDULER_MINIMUM_ALLOCATION_MB =
+    YARN_PREFIX + "scheduler.minimum-allocation-mb";
+  public static final int DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB = 128;
+
+  /** Maximum memory request grant-able by the RM scheduler. */
+  public static final String RM_SCHEDULER_MAXIMUM_ALLOCATION_MB =
+    YARN_PREFIX + "scheduler.maximum-allocation-mb";
+  public static final int DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB = 10240;
+
   /** Number of threads to handle scheduler interface.*/
   public static final String RM_SCHEDULER_CLIENT_THREAD_COUNT =
     RM_PREFIX + "scheduler.client.thread-count";
@@ -538,6 +548,8 @@ public class YarnConfiguration extends Configuration {
   /** Container temp directory */
   public static final String DEFAULT_CONTAINER_TEMP_DIR = "./tmp";
 
+  public static final String IS_MINI_YARN_CLUSTER = YARN_PREFIX + ".is.minicluster";
+
   public YarnConfiguration() {
     super();
   }
@@ -558,17 +570,16 @@ public class YarnConfiguration extends Configuration {
   }
   
   public static String getRMWebAppHostAndPort(Configuration conf) {
-    String addr = conf.get(YarnConfiguration.RM_WEBAPP_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS);
-    Iterator<String> it = ADDR_SPLITTER.split(addr).iterator();
-    it.next(); // ignore the bind host
-    String port = it.next();
+    int port = conf.getSocketAddr(
+        YarnConfiguration.RM_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_WEBAPP_PORT).getPort();
     // Use apps manager address to figure out the host for webapp
-    addr = conf.get(YarnConfiguration.RM_ADDRESS, YarnConfiguration.DEFAULT_RM_ADDRESS);
-    String host = ADDR_SPLITTER.split(addr).iterator().next();
-    String rmAddress = JOINER.join(host, ":", port);
-    InetSocketAddress address = NetUtils.createSocketAddr(
-        rmAddress, DEFAULT_RM_WEBAPP_PORT, RM_WEBAPP_ADDRESS);
+    String host = conf.getSocketAddr(
+        YarnConfiguration.RM_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_ADDRESS,
+        YarnConfiguration.DEFAULT_RM_PORT).getHostName();
+    InetSocketAddress address = NetUtils.createSocketAddrForHost(host, port);
     StringBuffer sb = new StringBuffer();
     InetAddress resolved = address.getAddress();
     if (resolved == null || resolved.isAnyLocalAddress() || 

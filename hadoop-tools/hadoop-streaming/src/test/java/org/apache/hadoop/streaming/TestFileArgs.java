@@ -20,12 +20,13 @@ package org.apache.hadoop.streaming;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Map;
+
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.junit.After;
 import org.junit.Before;
 
@@ -38,8 +39,6 @@ public class TestFileArgs extends TestStreaming
   private MiniDFSCluster dfs = null;
   private MiniMRCluster mr = null;
   private FileSystem fileSys = null;
-  private String strJobTracker = null;
-  private String strNamenode = null;
   private String namenode = null;
   private Configuration conf = null;
 
@@ -56,8 +55,6 @@ public class TestFileArgs extends TestStreaming
     fileSys = dfs.getFileSystem();
     namenode = fileSys.getUri().getAuthority();
     mr  = new MiniMRCluster(1, namenode, 1);
-    strJobTracker = JTConfig.JT_IPC_ADDRESS + "=localhost:" + mr.createJobConf().get(JTConfig.JT_IPC_ADDRESS);
-    strNamenode = "fs.default.name=" + mr.createJobConf().get("fs.default.name");
 
     map = LS_PATH;
     FileSystem.setDefaultUri(conf, "hdfs://" + namenode);
@@ -100,18 +97,16 @@ public class TestFileArgs extends TestStreaming
 
   @Override
   protected String[] genArgs() {
+    for (Map.Entry<String, String> entry : mr.createJobConf()) {
+      args.add("-jobconf");
+      args.add(entry.getKey() + "=" + entry.getValue());
+    }
     args.add("-file");
     args.add(new java.io.File("target/sidefile").getAbsolutePath());
     args.add("-numReduceTasks");
     args.add("0");
     args.add("-jobconf");
-    args.add(strNamenode);
-    args.add("-jobconf");
-    args.add(strJobTracker);
-    args.add("-jobconf");
     args.add("mapred.jar=" + STREAMING_JAR);
-    args.add("-jobconf");
-    args.add("mapreduce.framework.name=yarn");
     args.add("-verbose");
     return super.genArgs();
   }

@@ -36,6 +36,9 @@ public class CompressionCodecFactory {
 
   public static final Log LOG =
     LogFactory.getLog(CompressionCodecFactory.class.getName());
+  
+  private static final ServiceLoader<CompressionCodec> CODEC_PROVIDERS =
+    ServiceLoader.load(CompressionCodec.class);
 
   /**
    * A map from the reversed filename suffixes to the codecs.
@@ -95,16 +98,23 @@ public class CompressionCodecFactory {
   }
 
   /**
-   * Get the list of codecs listed in the configuration
+   * Get the list of codecs discovered via a Java ServiceLoader, or
+   * listed in the configuration. Codecs specified in configuration come
+   * later in the returned list, and are considered to override those
+   * from the ServiceLoader.
    * @param conf the configuration to look in
-   * @return a list of the Configuration classes or null if the attribute
-   *         was not set
+   * @return a list of the {@link CompressionCodec} classes
    */
   public static List<Class<? extends CompressionCodec>> getCodecClasses(Configuration conf) {
+    List<Class<? extends CompressionCodec>> result
+      = new ArrayList<Class<? extends CompressionCodec>>();
+    // Add codec classes discovered via service loading
+    for (CompressionCodec codec : CODEC_PROVIDERS) {
+      result.add(codec.getClass());
+    }
+    // Add codec classes from configuration
     String codecsString = conf.get("io.compression.codecs");
     if (codecsString != null) {
-      List<Class<? extends CompressionCodec>> result
-        = new ArrayList<Class<? extends CompressionCodec>>();
       StringTokenizer codecSplit = new StringTokenizer(codecsString, ",");
       while (codecSplit.hasMoreElements()) {
         String codecSubstring = codecSplit.nextToken();
@@ -123,14 +133,14 @@ public class CompressionCodecFactory {
           }
         }
       }
-      return result;
-    } else {
-      return null;
     }
+    return result;
   }
   
   /**
-   * Sets a list of codec classes in the configuration.
+   * Sets a list of codec classes in the configuration. In addition to any
+   * classes specified using this method, {@link CompressionCodec} classes on
+   * the classpath are discovered using a Java ServiceLoader.
    * @param conf the configuration to modify
    * @param classes the list of classes to set
    */
@@ -151,21 +161,19 @@ public class CompressionCodecFactory {
   
   /**
    * Find the codecs specified in the config value io.compression.codecs 
-   * and register them. Defaults to gzip and zip.
+   * and register them. Defaults to gzip and deflate.
    */
   public CompressionCodecFactory(Configuration conf) {
     codecs = new TreeMap<String, CompressionCodec>();
     codecsByClassName = new HashMap<String, CompressionCodec>();
     codecsByName = new HashMap<String, CompressionCodec>();
     List<Class<? extends CompressionCodec>> codecClasses = getCodecClasses(conf);
-    if (codecClasses == null) {
+    if (codecClasses == null || codecClasses.isEmpty()) {
       addCodec(new GzipCodec());
       addCodec(new DefaultCodec());      
     } else {
-      Iterator<Class<? extends CompressionCodec>> itr = codecClasses.iterator();
-      while (itr.hasNext()) {
-        CompressionCodec codec = ReflectionUtils.newInstance(itr.next(), conf);
-        addCodec(codec);     
+      for (Class<? extends CompressionCodec> codecClass : codecClasses) {
+        addCodec(ReflectionUtils.newInstance(codecClass, conf));
       }
     }
   }

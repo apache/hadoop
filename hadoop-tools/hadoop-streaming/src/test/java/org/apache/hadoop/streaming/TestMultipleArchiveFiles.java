@@ -19,14 +19,10 @@
 package org.apache.hadoop.streaming;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.DataOutputStream;
-import java.io.InputStreamReader;
-import java.io.BufferedReader;
-import java.util.Arrays;
+import java.util.Map;
 import java.util.zip.ZipEntry;
-import java.util.jar.JarOutputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.logging.Log;
@@ -37,12 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.util.StringUtils;
-
-import org.junit.Test;
-import static org.junit.Assert.*;
 
 /**
  * This class tests cacheArchive option of streaming
@@ -66,8 +57,6 @@ public class TestMultipleArchiveFiles extends TestStreaming
   private MiniDFSCluster dfs = null;
   private MiniMRCluster mr = null;
   private FileSystem fileSys = null;
-  private String strJobTracker = null;
-  private String strNamenode = null;
   private String namenode = null;
 
   public TestMultipleArchiveFiles() throws Exception {
@@ -80,8 +69,6 @@ public class TestMultipleArchiveFiles extends TestStreaming
     fileSys = dfs.getFileSystem();
     namenode = fileSys.getUri().getAuthority();
     mr  = new MiniMRCluster(1, namenode, 1);
-    strJobTracker = JTConfig.JT_IPC_ADDRESS + "=localhost:" + mr.createJobConf().get(JTConfig.JT_IPC_ADDRESS);
-    strNamenode = "fs.default.name=" + mr.createJobConf().get("fs.default.name");
 
     map = "xargs cat";
     reduce = "cat";
@@ -123,6 +110,10 @@ public class TestMultipleArchiveFiles extends TestStreaming
     String cache1 = workDir + CACHE_ARCHIVE_1 + "#symlink1";
     String cache2 = workDir + CACHE_ARCHIVE_2 + "#symlink2";
 
+    for (Map.Entry<String, String> entry : mr.createJobConf()) {
+      args.add("-jobconf");
+      args.add(entry.getKey() + "=" + entry.getValue());
+    }
     args.add("-jobconf");
     args.add("mapreduce.job.reduces=1");
     args.add("-cacheArchive");
@@ -130,13 +121,7 @@ public class TestMultipleArchiveFiles extends TestStreaming
     args.add("-cacheArchive");
     args.add(cache2);
     args.add("-jobconf");
-    args.add(strNamenode);
-    args.add("-jobconf");
-    args.add(strJobTracker);
-    args.add("-jobconf");
     args.add("mapred.jar=" + STREAMING_JAR);
-    args.add("-jobconf");
-    args.add("mapreduce.framework.name=yarn");
     return super.genArgs();
   }
 
