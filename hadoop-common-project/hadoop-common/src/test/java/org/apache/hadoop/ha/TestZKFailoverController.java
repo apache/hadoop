@@ -95,6 +95,18 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
     assertEquals(0, runFC(svc, "-formatZK", "-force"));
   }
   
+  /**
+   * Test that if ZooKeeper is not running, the correct error
+   * code is returned.
+   */
+  @Test(timeout=15000)
+  public void testNoZK() throws Exception {
+    stopServer();
+    DummyHAService svc = cluster.getService(1);
+    assertEquals(ZKFailoverController.ERR_CODE_NO_ZK,
+        runFC(svc));
+  }
+  
   @Test
   public void testFormatOneClusterLeavesOtherClustersAlone() throws Exception {
     DummyHAService svc = cluster.getService(1);

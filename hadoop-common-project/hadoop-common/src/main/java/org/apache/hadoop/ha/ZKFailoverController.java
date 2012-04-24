@@ -34,6 +34,7 @@ import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Tool;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.data.ACL;
@@ -76,8 +77,11 @@ public abstract class ZKFailoverController implements Tool {
   static final int ERR_CODE_NO_FENCER = 4;
   /** Automatic failover is not enabled */
   static final int ERR_CODE_AUTO_FAILOVER_NOT_ENABLED = 5;
+  /** Cannot connect to ZooKeeper */
+  static final int ERR_CODE_NO_ZK = 6;
   
   private Configuration conf;
+  private String zkQuorum;
 
   private HealthMonitor healthMonitor;
   private ActiveStandbyElector elector;
@@ -162,11 +166,23 @@ public abstract class ZKFailoverController implements Tool {
       }
     }
     
-    if (!elector.parentZNodeExists()) {
-      LOG.fatal("Unable to start failover controller. " +
-          "Parent znode does not exist.\n" +
-          "Run with -formatZK flag to initialize ZooKeeper.");
-      return ERR_CODE_NO_PARENT_ZNODE;
+    try {
+      if (!elector.parentZNodeExists()) {
+        LOG.fatal("Unable to start failover controller. " +
+            "Parent znode does not exist.\n" +
+            "Run with -formatZK flag to initialize ZooKeeper.");
+        return ERR_CODE_NO_PARENT_ZNODE;
+      }
+    } catch (IOException ioe) {
+      if (ioe.getCause() instanceof KeeperException.ConnectionLossException) {
+        LOG.fatal("Unable to start failover controller. Unable to connect " +
+            "to ZooKeeper quorum at " + zkQuorum + ". Please check the " +
+            "configured value for " + ZK_QUORUM_KEY + " and ensure that " +
+            "ZooKeeper is running.");
+        return ERR_CODE_NO_ZK;
+      } else {
+        throw ioe;
+      }
     }
 
     try {
@@ -248,7 +264,7 @@ public abstract class ZKFailoverController implements Tool {
   }
 
   private void initZK() throws HadoopIllegalArgumentException, IOException {
-    String zkQuorum = conf.get(ZK_QUORUM_KEY);
+    zkQuorum = conf.get(ZK_QUORUM_KEY);
     int zkTimeout = conf.getInt(ZK_SESSION_TIMEOUT_KEY,
         ZK_SESSION_TIMEOUT_DEFAULT);
     // Parse ACLs from configuration.
