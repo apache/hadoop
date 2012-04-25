@@ -151,6 +151,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4141. clover integration broken, also mapreduce poms are 
     pulling in clover as a dependency. (phunt via tucu)
 
+    MAPREDUCE-4193. broken doc link for yarn-default.xml in site.xml.
+    (phunt via tomwhite)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
