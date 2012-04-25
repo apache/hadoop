@@ -100,7 +100,7 @@ import org.apache.hadoop.util.Progressable;
  * starts sending packets from the dataQueue.
 ****************************************************************/
 @InterfaceAudience.Private
-public final class DFSOutputStream extends FSOutputSummer implements Syncable {
+public class DFSOutputStream extends FSOutputSummer implements Syncable {
   private final DFSClient dfsClient;
   private static final int MAX_PACKETS = 80; // each packet 64K, total 5MB
   private Socket s;
@@ -1234,14 +1234,11 @@ public final class DFSOutputStream extends FSOutputSummer implements Syncable {
     this.checksum = checksum;
   }
 
-  /**
-   * Create a new output stream to the given DataNode.
-   * @see ClientProtocol#create(String, FsPermission, String, EnumSetWritable, boolean, short, long)
-   */
-  DFSOutputStream(DFSClient dfsClient, String src, FsPermission masked, EnumSet<CreateFlag> flag,
-      boolean createParent, short replication, long blockSize, Progressable progress,
-      int buffersize, DataChecksum checksum) 
-      throws IOException {
+  /** Construct a new output stream for creating a file. */
+  private DFSOutputStream(DFSClient dfsClient, String src, FsPermission masked,
+      EnumSet<CreateFlag> flag, boolean createParent, short replication,
+      long blockSize, Progressable progress, int buffersize,
+      DataChecksum checksum) throws IOException {
     this(dfsClient, src, blockSize, progress, checksum, replication);
 
     computePacketChunkSize(dfsClient.getConf().writePacketSize,
@@ -1261,14 +1258,21 @@ public final class DFSOutputStream extends FSOutputSummer implements Syncable {
                                      UnresolvedPathException.class);
     }
     streamer = new DataStreamer();
-    streamer.start();
   }
 
-  /**
-   * Create a new output stream to the given DataNode.
-   * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
-   */
-  DFSOutputStream(DFSClient dfsClient, String src, int buffersize, Progressable progress,
+  static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
+      FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
+      short replication, long blockSize, Progressable progress, int buffersize,
+      DataChecksum checksum) throws IOException {
+    final DFSOutputStream out = new DFSOutputStream(dfsClient, src, masked,
+        flag, createParent, replication, blockSize, progress, buffersize,
+        checksum);
+    out.streamer.start();
+    return out;
+  }
+
+  /** Construct a new output stream for append. */
+  private DFSOutputStream(DFSClient dfsClient, String src, int buffersize, Progressable progress,
       LocatedBlock lastBlock, HdfsFileStatus stat,
       DataChecksum checksum) throws IOException {
     this(dfsClient, src, stat.getBlockSize(), progress, checksum, stat.getReplication());
@@ -1286,7 +1290,15 @@ public final class DFSOutputStream extends FSOutputSummer implements Syncable {
           checksum.getBytesPerChecksum());
       streamer = new DataStreamer();
     }
-    streamer.start();
+  }
+
+  static DFSOutputStream newStreamForAppend(DFSClient dfsClient, String src,
+      int buffersize, Progressable progress, LocatedBlock lastBlock,
+      HdfsFileStatus stat, DataChecksum checksum) throws IOException {
+    final DFSOutputStream out = new DFSOutputStream(dfsClient, src, buffersize,
+        progress, lastBlock, stat, checksum);
+    out.streamer.start();
+    return out;
   }
 
   private void computePacketChunkSize(int psize, int csize) {

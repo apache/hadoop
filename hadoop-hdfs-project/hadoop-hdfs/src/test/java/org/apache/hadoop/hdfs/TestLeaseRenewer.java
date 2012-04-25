@@ -99,7 +99,7 @@ public class TestLeaseRenewer {
         clientName.startsWith("DFSClient_NONMAPREDUCE_"));
   }
   
-//  @Test
+  @Test
   public void testRenewal() throws Exception {
     // Keep track of how many times the lease gets renewed
     final AtomicInteger leaseRenewalCount = new AtomicInteger();
@@ -135,7 +135,7 @@ public class TestLeaseRenewer {
    * to several DFSClients with the same name, the first of which has no files
    * open. Previously, this was causing the lease to not get renewed.
    */
-//  @Test
+  @Test
   public void testManyDfsClientsWhereSomeNotOpen() throws Exception {
     // First DFSClient has no files open so doesn't renew leases.
     final DFSClient mockClient1 = createMockClient();
@@ -181,7 +181,7 @@ public class TestLeaseRenewer {
     renewer.closeFile(filePath, mockClient2);
   }
   
-//  @Test
+  @Test
   public void testThreadName() throws Exception {
     DFSOutputStream mockStream = Mockito.mock(DFSOutputStream.class);
     String filePath = "/foo";
