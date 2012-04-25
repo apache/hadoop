@@ -1085,9 +1085,9 @@ public class DFSClient implements java.io.Closeable {
     if(LOG.isDebugEnabled()) {
       LOG.debug(src + ": masked=" + masked);
     }
-    final DFSOutputStream result = new DFSOutputStream(this, src, masked, flag,
-        createParent, replication, blockSize, progress, buffersize,
-        dfsClientConf.createChecksum());
+    final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
+        src, masked, flag, createParent, replication, blockSize, progress,
+        buffersize, dfsClientConf.createChecksum());
     leaserenewer.put(src, result, this);
     return result;
   }
@@ -1134,7 +1134,7 @@ public class DFSClient implements java.io.Closeable {
       DataChecksum checksum = DataChecksum.newDataChecksum(
           dfsClientConf.checksumType,
           bytesPerChecksum);
-      result = new DFSOutputStream(this, src, absPermission,
+      result = DFSOutputStream.newStreamForCreate(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, buffersize,
           checksum);
     }
@@ -1193,7 +1193,7 @@ public class DFSClient implements java.io.Closeable {
                                      UnsupportedOperationException.class,
                                      UnresolvedPathException.class);
     }
-    return new DFSOutputStream(this, src, buffersize, progress,
+    return DFSOutputStream.newStreamForAppend(this, src, buffersize, progress,
         lastBlock, stat, dfsClientConf.createChecksum());
   }
   

@@ -431,6 +431,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3314. HttpFS operation for getHomeDirectory is incorrect. (tucu)
 
+    HDFS-3319. Change DFSOutputStream to not to start a thread in constructors.
+    (szetszwo)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
