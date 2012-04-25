@@ -776,6 +776,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3312. In HftpFileSystem, the namenode URI is non-secure but the
     delegation tokens have to use secure URI.  (Daryn Sharp via szetszwo)
 
+    HDFS-3318. Use BoundedInputStream in ByteRangeInputStream, otherwise, it
+    hangs on transfers >2 GB.  (Daryn Sharp via szetszwo)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
