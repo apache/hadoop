@@ -23,6 +23,9 @@ HDFS-3092 branch changes
     HDFS-3201. Add GetJournalEditServlet for downloading edit logs from journal
     service.  (Brandon Li via szetszwo)
 
+    HDFS-3313. Create a protocol for journal service synchronziation.  (Brandon
+    Li via szetszwo)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

@@ -23,19 +23,26 @@ import java.net.InetSocketAddress;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalProtocolService;
+import org.apache.hadoop.hdfs.protocol.proto.JournalSyncProtocolProtos.JournalSyncProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.JournalSyncProtocolPB;
+import org.apache.hadoop.hdfs.protocolPB.JournalSyncProtocolServerSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.JournalSyncProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
 import org.apache.hadoop.hdfs.server.protocol.FencedException;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
-import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
+import org.apache.hadoop.hdfs.server.protocol.JournalServiceProtocols;
+import org.apache.hadoop.hdfs.server.protocol.JournalSyncProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -59,7 +66,7 @@ import com.google.protobuf.BlockingService;
  * listener implementation can handle the callbacks based on the application
  * requirement.
  */
-public class JournalService implements JournalProtocol {
+public class JournalService implements JournalServiceProtocols {
   public static final Log LOG = LogFactory.getLog(JournalService.class.getName());
 
   private final InetSocketAddress nnAddress;
@@ -292,17 +299,43 @@ public class JournalService implements JournalProtocol {
     return new FenceResponse(previousEpoch, 0, false);
   }
 
+  @Override
+  public RemoteEditLogManifest getEditLogManifest(JournalInfo journalInfo,
+      long sinceTxId) throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Received getEditLogManifest " + sinceTxId);
+    }
+    if (!journal.isFormatted()) {
+      throw new IOException("This journal service is not formatted.");
+    }
+    verify(journalInfo.getNamespaceId(), journalInfo.getClusterId());
+
+    //journal has only one storage directory
+    return journal.getRemoteEditLogs(sinceTxId);
+  }
+
   /** Create an RPC server. */
   private static RPC.Server createRpcServer(Configuration conf,
-      InetSocketAddress address, JournalProtocol impl) throws IOException {
+      InetSocketAddress address, JournalServiceProtocols impl) throws IOException {
+    
     RPC.setProtocolEngine(conf, JournalProtocolPB.class,
         ProtobufRpcEngine.class);
     JournalProtocolServerSideTranslatorPB xlator = 
         new JournalProtocolServerSideTranslatorPB(impl);
     BlockingService service = 
         JournalProtocolService.newReflectiveBlockingService(xlator);
-    return RPC.getServer(JournalProtocolPB.class, service,
+    
+    JournalSyncProtocolServerSideTranslatorPB syncXlator = 
+        new JournalSyncProtocolServerSideTranslatorPB(impl);   
+    BlockingService syncService = 
+        JournalSyncProtocolService.newReflectiveBlockingService(syncXlator);
+    
+    RPC.Server rpcServer = RPC.getServer(JournalProtocolPB.class, service,
         address.getHostName(), address.getPort(), 1, false, conf, null);
+    DFSUtil.addPBProtocol(conf, JournalSyncProtocolPB.class, syncService,
+        rpcServer);
+    
+    return rpcServer;
   }
   
   private void verifyEpoch(long e) throws FencedException {
@@ -389,5 +422,17 @@ public class JournalService implements JournalProtocol {
   @VisibleForTesting
   long getEpoch() {
     return epoch;
+  }
+  
+  public static JournalSyncProtocol createProxyWithJournalSyncProtocol(
+      InetSocketAddress address, Configuration conf, UserGroupInformation ugi)
+      throws IOException {
+    RPC.setProtocolEngine(conf, JournalSyncProtocolPB.class,
+        ProtobufRpcEngine.class);
+    Object proxy = RPC.getProxy(JournalSyncProtocolPB.class,
+        RPC.getProtocolVersion(JournalSyncProtocolPB.class), address, ugi,
+        conf, NetUtils.getDefaultSocketFactory(conf), 30000);
+
+    return new JournalSyncProtocolTranslatorPB((JournalSyncProtocolPB) proxy);
   }
 }

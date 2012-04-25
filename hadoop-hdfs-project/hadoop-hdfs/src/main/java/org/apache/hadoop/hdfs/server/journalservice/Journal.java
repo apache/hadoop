@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
 /** The journal stored in local directories. */
 class Journal {
@@ -115,7 +116,11 @@ class Journal {
   FSEditLog getEditLog() {
     return image.getEditLog();
   }
-
+  
+  RemoteEditLogManifest getRemoteEditLogs(long sinceTxId) throws IOException {
+    return image.getEditLog().getEditLogManifest(sinceTxId);
+  }
+  
   static List<URI> getEditDirs(Configuration conf) throws IOException {
     final Collection<String> dirs = conf.getTrimmedStringCollection(
         DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_KEY);
