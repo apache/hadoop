@@ -68,12 +68,8 @@ Trunk (unreleased changes)
     HDFS-3292. Remove the deprecated DiskStatus, getDiskStatus(), getRawUsed()
     and getRawCapacity() from DistributedFileSystem.  (Arpit Gupta via szetszwo)
 
-    HDFS-3282. Expose getFileLength API. (umamahesh)
-
     HADOOP-8285. HDFS changes for Use ProtoBuf for RpcPayLoadHeader. (sanjay
     radia)
-
-    HDFS-3298. Add HdfsDataOutputStream as a public API.  (szetszwo)
 
   OPTIMIZATIONS
 
@@ -216,6 +212,10 @@ Release 2.0.0 - UNRELEASED
     HDFS-3102. Add CLI tool to initialize the shared-edits dir. (atm)
 
     HDFS-3004. Implement Recovery Mode. (Colin Patrick McCabe via eli)
+
+    HDFS-3282. Add HdfsDataInputStream as a public API. (umamahesh)
+
+    HDFS-3298. Add HdfsDataOutputStream as a public API.  (szetszwo)
 
   IMPROVEMENTS
 
