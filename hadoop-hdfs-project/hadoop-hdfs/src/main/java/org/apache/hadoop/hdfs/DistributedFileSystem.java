@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -205,8 +206,9 @@ public class DistributedFileSystem extends FileSystem {
     return dfs.recoverLease(getPathName(f));
   }
 
+  @SuppressWarnings("deprecation")
   @Override
-  public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+  public HdfsDataInputStream open(Path f, int bufferSize) throws IOException {
     statistics.incrementReadOps(1);
     return new DFSClient.DFSDataInputStream(
           dfs.open(getPathName(f), bufferSize, verifyChecksum));
@@ -678,6 +680,7 @@ public class DistributedFileSystem extends FileSystem {
   // We do not see a need for user to report block checksum errors and do not  
   // want to rely on user to report block corruptions.
   @Deprecated
+  @SuppressWarnings("deprecation")
   public boolean reportChecksumFailure(Path f, 
     FSDataInputStream in, long inPos, 
     FSDataInputStream sums, long sumsPos) {

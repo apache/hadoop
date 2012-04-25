@@ -222,7 +222,7 @@ public class DFSInputStream extends FSInputStream {
   /**
    * Return collection of blocks that has already been located.
    */
-  synchronized List<LocatedBlock> getAllBlocks() throws IOException {
+  public synchronized List<LocatedBlock> getAllBlocks() throws IOException {
     return getBlockRange(0, getFileLength());
   }
 
