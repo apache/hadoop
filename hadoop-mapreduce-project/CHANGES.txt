@@ -297,6 +297,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4133. MR over viewfs is broken (John George via bobby)
 
+    MAPREDUCE-4194. ConcurrentModificationError in DirectoryCollection
+    (Jonathan Eagles via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
