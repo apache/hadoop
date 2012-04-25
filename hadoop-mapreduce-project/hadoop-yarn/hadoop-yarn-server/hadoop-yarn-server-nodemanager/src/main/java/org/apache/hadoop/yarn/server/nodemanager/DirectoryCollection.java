@@ -19,10 +19,9 @@
 package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.ListIterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,23 +40,22 @@ class DirectoryCollection {
   private int numFailures;
 
   public DirectoryCollection(String[] dirs) {
-    localDirs = new ArrayList<String>();
-    localDirs.addAll(Arrays.asList(dirs));
-    failedDirs = new ArrayList<String>();
+    localDirs = new CopyOnWriteArrayList<String>(dirs);
+    failedDirs = new CopyOnWriteArrayList<String>();
   }
 
   /**
    * @return the current valid directories 
    */
   synchronized List<String> getGoodDirs() {
-    return localDirs;
+    return Collections.unmodifiableList(localDirs);
   }
 
   /**
    * @return the failed directories
    */
   synchronized List<String> getFailedDirs() {
-    return failedDirs;
+    return Collections.unmodifiableList(failedDirs);
   }
 
   /**
@@ -75,22 +73,17 @@ class DirectoryCollection {
    */
   synchronized boolean checkDirs() {
     int oldNumFailures = numFailures;
-    ListIterator<String> it = localDirs.listIterator();
-    while (it.hasNext()) {
-      final String dir = it.next();
+    for (final String dir : localDirs) {
       try {
         DiskChecker.checkDir(new File(dir));
       } catch (DiskErrorException de) {
         LOG.warn("Directory " + dir + " error " +
             de.getMessage() + ", removing from the list of valid directories.");
-        it.remove();
+        localDirs.remove(dir);
         failedDirs.add(dir);
         numFailures++;
       }
     }
-    if (numFailures > oldNumFailures) {
-      return true;
-    }
-    return false;
+    return numFailures > oldNumFailures;
   }
 }
