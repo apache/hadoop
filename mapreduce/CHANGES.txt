@@ -26,6 +26,9 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-4164. Fix Communication exception thrown after task completion.
     (Mayank Bansal via shv) 
 
+    MAPREDUCE-3863. 0.22 branch mvn deploy is not publishing hadoop-streaming JAR
+    (Benoy Antony via cos)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

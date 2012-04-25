@@ -36,6 +36,7 @@
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="examples.final.name" value="${name}-examples-${version}"/>
   <property name="tools.final.name" value="${name}-tools-${version}"/>
+  <property name="streaming.final.name" value="hadoop-streaming-${version}"/>
   <property name="year" value="2009"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
@@ -189,7 +190,7 @@
   <property name="hadoop-mapred-test.pom" location="${ivy.dir}/hadoop-mapred-test.xml"/>
   <property name="hadoop-mapred-examples.pom" location="${ivy.dir}/hadoop-mapred-examples.xml"/>
   <property name="hadoop-mapred-tools.pom" location="${ivy.dir}/hadoop-mapred-tools.xml"/>
-
+  <property name="hadoop-streaming.pom"  location="${ivy.dir}/hadoop-streaming.xml"/>
   <!--this is the naming policy for artifacts we want pulled down-->
   <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
@@ -204,6 +205,7 @@
   <property name="hadoop-mapred-test-sources.jar" location="${build.dir}/${test.final.name}-sources.jar" />
   <property name="hadoop-mapred-examples-sources.jar" location="${build.dir}/${examples.final.name}-sources.jar" />
   <property name="hadoop-mapred-tools-sources.jar" location="${build.dir}/${tools.final.name}-sources.jar" />
+  <property name="hadoop-streaming.jar" location="${build.dir}/contrib/streaming/${streaming.final.name}.jar"/>
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
@@ -920,7 +922,7 @@
       <class location="${basedir}/build/${examples.final.name}.jar" />
       <class location="${basedir}/build/${tools.final.name}.jar" />
       <class location="${basedir}/build/contrib/capacity-scheduler/hadoop-${version}-capacity-scheduler.jar" />
-      <class location="${basedir}/build/contrib/streaming/hadoop-${version}-streaming.jar" />
+      <class location="${basedir}/build/contrib/streaming/${streaming.final.name}.jar" />
       <class location="${basedir}/build/contrib/gridmix/hadoop-${version}-gridmix.jar" />
       <class location="${basedir}/build/contrib/mumak/hadoop-${version}-mumak.jar" />
     </findbugs>
@@ -1434,10 +1436,11 @@
     <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-test"/>
   </target>
 
-  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"
+  <target name="mvn-install" depends="mvn-taskdef,all-jars,set-version,-mvn-system-install"
       description="To install hadoop mapreduce and test jars to local filesystem's m2 cache">
     <artifact:pom file="${hadoop-mapred.pom}" id="hadoop.mapred"/>
     <artifact:pom file="${hadoop-mapred-test.pom}" id="hadoop.mapred.test"/>
+    <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
     <artifact:install file="${hadoop-mapred.jar}">
       <pom refid="hadoop.mapred"/>
       <attach file="${hadoop-mapred-sources.jar}" classifier="sources" />
@@ -1446,9 +1449,12 @@
       <pom refid="hadoop.mapred.test"/>
       <attach file="${hadoop-mapred-test-sources.jar}" classifier="sources" />
     </artifact:install>
+    <artifact:install file="${hadoop-streaming.jar}">
+        <pom refid="hadoop.streaming"/>
+    </artifact:install>
   </target>
 
-  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test,
+  <target name="mvn-deploy" depends="mvn-taskdef, all-jars,
     jar-system, jar-test-system, set-version, signanddeploy, simpledeploy"
     description="To deploy hadoop mapredice and test jar's to apache
     snapshot's repository"/>
@@ -1460,6 +1466,7 @@
        id="hadoop.mapred.${herriot.suffix}"/>
      <artifact:pom file="${hadoop-mapred-instrumented-test.pom}" 
        id="hadoop.mapred.${herriot.suffix}.test"/>
+     <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
      <artifact:install-provider artifactId="wagon-http"
      version="${wagon-http.version}"/>
 
@@ -1503,6 +1510,13 @@
          type="jar.asc" classifier="sources"/>
        <attach file="${hadoop-mapred-instrumented-test-sources.jar}"
          classifier="sources"/>
+     </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-streaming.jar}">
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.streaming"/>
+       <attach file="${hadoop-streaming.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-streaming.pom}.asc" type="pom.asc"/>
      </artifact:deploy>
    </target>
 
@@ -1551,6 +1565,8 @@
      output.file="${hadoop-mapred-instrumented-test.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
     <sign-artifact input.file="${hadoop-mapred-instrumented-test-sources.jar}" 
      output.file="${hadoop-mapred-instrumented-test-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-streaming.jar}"
+     output.file="${hadoop-streaming.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
   </target>
 
   <target name="simpledeploy" unless="staging">
@@ -1558,6 +1574,7 @@
      <artifact:pom file="${hadoop-mapred-test.pom}" id="hadoop.mapred.test"/>
      <artifact:pom file="${hadoop-mapred-instrumented.pom}" 
        id="hadoop.mapred.${herriot.suffix}"/>
+     <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
 
      <artifact:install-provider artifactId="wagon-http" version="${wagon-http.version}"/>
      <artifact:deploy file="${hadoop-mapred.jar}">
@@ -1577,11 +1594,18 @@
          <pom refid="hadoop.mapred.${herriot.suffix}"/>
          <attach file="${hadoop-mapred-instrumented-sources.jar}" classifier="sources" />
      </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-streaming.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.streaming"/>
+     </artifact:deploy>
+
   </target>
 
   <target name="set-version">
     <delete file="${basedir}/ivy/hadoop-mapred.xml"/>
     <delete file="${basedir}/ivy/hadoop-mapred-test.xml"/>
+    <delete file="${basedir}/ivy/hadoop-streaming.xml"/>
     <delete file="${basedir}/ivy/hadoop-mapred-${herriot.suffix}.xml"/>
     <delete file="${basedir}/ivy/hadoop-mapred-${herriot.suffix}-test.xml"/>
     <copy file="${basedir}/ivy/hadoop-mapred-template.xml" tofile="${basedir}/ivy/hadoop-mapred.xml"/>
@@ -1590,6 +1614,7 @@
       tofile="${basedir}/ivy/hadoop-mapred-${herriot.suffix}.xml"/>
     <copy file="${basedir}/ivy/hadoop-mapred-${herriot.suffix}-test-template.xml"
       tofile="${basedir}/ivy/hadoop-mapred-${herriot.suffix}-test.xml"/>
+    <copy file="${basedir}/ivy/hadoop-streaming-template.xml" tofile="${basedir}/ivy/hadoop-streaming.xml"/>
     <replaceregexp byline="true">
       <regexp pattern="@version"/>
       <substitution expression="${version}"/>
@@ -1598,6 +1623,7 @@
         <include name="hadoop-mapred-test.xml"/>
         <include name="hadoop-mapred-${herriot.suffix}.xml"/>
         <include name="hadoop-mapred-${herriot.suffix}-test.xml"/>
+        <include name="hadoop-streaming.xml"/>
       </fileset>
     </replaceregexp>
  	<replaceregexp byline="true">
