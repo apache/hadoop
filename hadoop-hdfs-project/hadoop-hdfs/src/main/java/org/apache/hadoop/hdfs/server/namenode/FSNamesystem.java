@@ -3723,7 +3723,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           msg += String.format(
             "The number of live datanodes %d needs an additional %d live "
             + "datanodes to reach the minimum number %d.",
-            numLive, (datanodeThreshold - numLive) + 1 , datanodeThreshold);
+            numLive, (datanodeThreshold - numLive), datanodeThreshold);
         }
         msg += " " + leaveMsg;
       } else {

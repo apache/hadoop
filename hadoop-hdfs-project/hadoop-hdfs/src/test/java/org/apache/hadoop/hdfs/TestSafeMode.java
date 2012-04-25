@@ -342,7 +342,7 @@ public class TestSafeMode {
     String tipMsg = cluster.getNamesystem().getSafemode();
     assertTrue("Safemode tip message looks right: " + tipMsg,
                tipMsg.contains("The number of live datanodes 0 needs an additional " +
-                               "2 live datanodes to reach the minimum number 1. " +
+                               "1 live datanodes to reach the minimum number 1. " +
                                "Safe mode will be turned off automatically."));
 
     // Start a datanode
