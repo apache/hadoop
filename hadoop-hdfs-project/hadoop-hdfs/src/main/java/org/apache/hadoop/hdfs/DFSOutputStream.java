@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -99,7 +100,7 @@ import org.apache.hadoop.util.Progressable;
  * starts sending packets from the dataQueue.
 ****************************************************************/
 @InterfaceAudience.Private
-class DFSOutputStream extends FSOutputSummer implements Syncable {
+public final class DFSOutputStream extends FSOutputSummer implements Syncable {
   private final DFSClient dfsClient;
   private static final int MAX_PACKETS = 80; // each packet 64K, total 5MB
   private Socket s;
@@ -1536,14 +1537,20 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   }
 
   /**
-   * Returns the number of replicas of current block. This can be different
-   * from the designated replication factor of the file because the NameNode
-   * does not replicate the block to which a client is currently writing to.
-   * The client continues to write to a block even if a few datanodes in the
-   * write pipeline have failed. 
+   * @deprecated use {@link HdfsDataOutputStream#getCurrentBlockReplication()}.
+   */
+  @Deprecated
+  public synchronized int getNumCurrentReplicas() throws IOException {
+    return getCurrentBlockReplication();
+  }
+
+  /**
+   * Note that this is not a public API;
+   * use {@link HdfsDataOutputStream#getCurrentBlockReplication()} instead.
+   * 
    * @return the number of valid replicas of the current block
    */
-  public synchronized int getNumCurrentReplicas() throws IOException {
+  public synchronized int getCurrentBlockReplication() throws IOException {
     dfsClient.checkOpen();
     isClosed();
     if (streamer == null) {

@@ -81,6 +81,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3282. Add HdfsDataInputStream as a public API. (umamahesh)
 
+    HDFS-3298. Add HdfsDataOutputStream as a public API.  (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.

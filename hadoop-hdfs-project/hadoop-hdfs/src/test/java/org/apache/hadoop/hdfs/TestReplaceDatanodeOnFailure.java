@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
@@ -187,7 +188,7 @@ public class TestReplaceDatanodeOnFailure {
 
   static class SlowWriter extends Thread {
     final Path filepath;
-    private FSDataOutputStream out = null;
+    final HdfsDataOutputStream out;
     final long sleepms;
     private volatile boolean running = true;
     
@@ -195,7 +196,7 @@ public class TestReplaceDatanodeOnFailure {
         ) throws IOException {
       super(SlowWriter.class.getSimpleName() + ":" + filepath);
       this.filepath = filepath;
-      this.out = fs.create(filepath, REPLICATION);
+      this.out = (HdfsDataOutputStream)fs.create(filepath, REPLICATION);
       this.sleepms = sleepms;
     }
 
@@ -231,8 +232,7 @@ public class TestReplaceDatanodeOnFailure {
     }
 
     void checkReplication() throws IOException {
-      final DFSOutputStream dfsout = (DFSOutputStream)out.getWrappedStream();
-      Assert.assertEquals(REPLICATION, dfsout.getNumCurrentReplicas());
+      Assert.assertEquals(REPLICATION, out.getCurrentBlockReplication());
     }        
   }
 
