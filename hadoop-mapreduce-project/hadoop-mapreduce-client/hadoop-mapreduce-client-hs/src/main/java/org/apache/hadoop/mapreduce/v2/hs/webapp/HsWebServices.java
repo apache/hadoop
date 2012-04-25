@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import java.io.IOException;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -66,6 +67,7 @@ public class HsWebServices {
   private final HistoryContext ctx;
   private WebApp webapp;
 
+  private @Context HttpServletResponse response;
   @Context
   UriInfo uriInfo;
 
@@ -74,6 +76,11 @@ public class HsWebServices {
       final WebApp webapp) {
     this.ctx = ctx;
     this.webapp = webapp;
+  }
+
+  private void init() {
+    //clear content type
+    response.setContentType(null);
   }
 
   @GET
@@ -86,6 +93,7 @@ public class HsWebServices {
   @Path("/info")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public HistoryInfo getHistoryInfo() {
+    init();
     return new HistoryInfo();
   }
 
@@ -102,6 +110,7 @@ public class HsWebServices {
       @QueryParam("finishedTimeEnd") String finishEnd) {
 
     Long countParam = null;
+    init();
     
     if (count != null && !count.isEmpty()) {
       try {
@@ -183,6 +192,7 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobInfo getJob(@PathParam("jobid") String jid) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     return new JobInfo(job);
   }
@@ -192,6 +202,7 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AMAttemptsInfo getJobAttempts(@PathParam("jobid") String jid) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     AMAttemptsInfo amAttempts = new AMAttemptsInfo();
     for (AMInfo amInfo : job.getAMInfos()) {
@@ -208,6 +219,7 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobCounterInfo getJobCounters(@PathParam("jobid") String jid) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     return new JobCounterInfo(this.ctx, job);
   }
@@ -217,6 +229,7 @@ public class HsWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ConfInfo getJobConf(@PathParam("jobid") String jid) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     ConfInfo info;
     try {
@@ -234,6 +247,7 @@ public class HsWebServices {
   public TasksInfo getJobTasks(@PathParam("jobid") String jid,
       @QueryParam("type") String type) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     TasksInfo allTasks = new TasksInfo();
     for (Task task : job.getTasks().values()) {
@@ -259,6 +273,7 @@ public class HsWebServices {
   public TaskInfo getJobTask(@PathParam("jobid") String jid,
       @PathParam("taskid") String tid) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     Task task = AMWebServices.getTaskFromTaskIdString(tid, job);
     return new TaskInfo(task);
@@ -271,6 +286,7 @@ public class HsWebServices {
   public JobTaskCounterInfo getSingleTaskCounters(
       @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     TaskId taskID = MRApps.toTaskID(tid);
     if (taskID == null) {
@@ -289,6 +305,7 @@ public class HsWebServices {
   public TaskAttemptsInfo getJobTaskAttempts(@PathParam("jobid") String jid,
       @PathParam("taskid") String tid) {
 
+    init();
     TaskAttemptsInfo attempts = new TaskAttemptsInfo();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     Task task = AMWebServices.getTaskFromTaskIdString(tid, job);
@@ -310,6 +327,7 @@ public class HsWebServices {
   public TaskAttemptInfo getJobTaskAttemptId(@PathParam("jobid") String jid,
       @PathParam("taskid") String tid, @PathParam("attemptid") String attId) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     Task task = AMWebServices.getTaskFromTaskIdString(tid, job);
     TaskAttempt ta = AMWebServices.getTaskAttemptFromTaskAttemptString(attId,
@@ -328,6 +346,7 @@ public class HsWebServices {
       @PathParam("jobid") String jid, @PathParam("taskid") String tid,
       @PathParam("attemptid") String attId) {
 
+    init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
     Task task = AMWebServices.getTaskFromTaskIdString(tid, job);
     TaskAttempt ta = AMWebServices.getTaskAttemptFromTaskAttemptString(attId,

@@ -300,6 +300,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4194. ConcurrentModificationError in DirectoryCollection
     (Jonathan Eagles via bobby)
 
+    MAPREDUCE-3613. web service calls header contains 2 content types
+    (tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
