@@ -255,6 +255,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8309. Pseudo & Kerberos AuthenticationHandler should use 
     getType() to create token (tucu)
 
+    HADOOP-8314. HttpServer#hasAdminAccess should return false if 
+    authorization is enabled but user is not authenticated. (tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)

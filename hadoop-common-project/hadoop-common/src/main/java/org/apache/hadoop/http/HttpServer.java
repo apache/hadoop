@@ -773,7 +773,10 @@ public class HttpServer implements FilterContainer {
 
     String remoteUser = request.getRemoteUser();
     if (remoteUser == null) {
-      return true;
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                         "Unauthenticated users are not " +
+                         "authorized to access this page.");
+      return false;
     }
     AccessControlList adminsAcl = (AccessControlList) servletContext
         .getAttribute(ADMINS_ACL);
@@ -782,9 +785,7 @@ public class HttpServer implements FilterContainer {
     if (adminsAcl != null) {
       if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
-            + remoteUser + " is unauthorized to access this page. "
-            + "AccessControlList for accessing this page : "
-            + adminsAcl.toString());
+            + remoteUser + " is unauthorized to access this page.");
         return false;
       }
     }
