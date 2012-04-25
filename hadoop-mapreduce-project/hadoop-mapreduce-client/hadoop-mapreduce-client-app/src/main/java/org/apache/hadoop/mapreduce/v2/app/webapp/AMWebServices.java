@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 import java.io.IOException;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -67,6 +68,8 @@ import com.google.inject.Inject;
 public class AMWebServices {
   private final AppContext appCtx;
   private final App app;
+
+  private @Context HttpServletResponse response;
   
   @Inject
   public AMWebServices(final App app, final AppContext context) {
@@ -84,6 +87,11 @@ public class AMWebServices {
       return false;
     }
     return true;
+  }
+
+  private void init() {
+    //clear content type
+    response.setContentType(null);
   }
 
   /**
@@ -205,6 +213,7 @@ public class AMWebServices {
   @Path("/info")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppInfo getAppInfo() {
+    init();
     return new AppInfo(this.app, this.app.context);
   }
 
@@ -212,6 +221,7 @@ public class AMWebServices {
   @Path("/jobs")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobsInfo getJobs(@Context HttpServletRequest hsr) {
+    init();
     JobsInfo allJobs = new JobsInfo();
     for (Job job : appCtx.getAllJobs().values()) {
       // getAllJobs only gives you a partial we want a full
@@ -229,6 +239,7 @@ public class AMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobInfo getJob(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     return new JobInfo(job, hasAccess(job, hsr));
   }
@@ -237,7 +248,7 @@ public class AMWebServices {
   @Path("/jobs/{jobid}/jobattempts")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AMAttemptsInfo getJobAttempts(@PathParam("jobid") String jid) {
-
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     AMAttemptsInfo amAttempts = new AMAttemptsInfo();
     for (AMInfo amInfo : job.getAMInfos()) {
@@ -253,6 +264,7 @@ public class AMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public JobCounterInfo getJobCounters(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     return new JobCounterInfo(this.appCtx, job);
@@ -264,6 +276,7 @@ public class AMWebServices {
   public ConfInfo getJobConf(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid) {
 
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     ConfInfo info;
@@ -282,6 +295,7 @@ public class AMWebServices {
   public TasksInfo getJobTasks(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @QueryParam("type") String type) {
 
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     TasksInfo allTasks = new TasksInfo();
@@ -308,6 +322,7 @@ public class AMWebServices {
   public TaskInfo getJobTask(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
 
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     Task task = getTaskFromTaskIdString(tid, job);
@@ -321,6 +336,7 @@ public class AMWebServices {
       @Context HttpServletRequest hsr, @PathParam("jobid") String jid,
       @PathParam("taskid") String tid) {
 
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     Task task = getTaskFromTaskIdString(tid, job);
@@ -332,8 +348,9 @@ public class AMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public TaskAttemptsInfo getJobTaskAttempts(@Context HttpServletRequest hsr,
       @PathParam("jobid") String jid, @PathParam("taskid") String tid) {
-    TaskAttemptsInfo attempts = new TaskAttemptsInfo();
 
+    init();
+    TaskAttemptsInfo attempts = new TaskAttemptsInfo();
     Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     Task task = getTaskFromTaskIdString(tid, job);
@@ -357,6 +374,7 @@ public class AMWebServices {
       @PathParam("jobid") String jid, @PathParam("taskid") String tid,
       @PathParam("attemptid") String attId) {
 
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     Task task = getTaskFromTaskIdString(tid, job);
@@ -375,6 +393,7 @@ public class AMWebServices {
       @Context HttpServletRequest hsr, @PathParam("jobid") String jid,
       @PathParam("taskid") String tid, @PathParam("attemptid") String attId) {
 
+    init();
     Job job = getJobFromJobIdString(jid, appCtx);
     checkAccess(job, hsr);
     Task task = getTaskFromTaskIdString(tid, job);

@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -77,6 +78,8 @@ public class RMWebServices {
       .getRecordFactory(null);
   private final ApplicationACLsManager aclsManager;
 
+  private @Context HttpServletResponse response;
+
   @Inject
   public RMWebServices(final ResourceManager rm,
       final ApplicationACLsManager aclsManager) {
@@ -100,6 +103,11 @@ public class RMWebServices {
     return true;
   }
 
+  private void init() {
+    //clear content type
+    response.setContentType(null);
+  }
+
   @GET
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ClusterInfo get() {
@@ -110,6 +118,7 @@ public class RMWebServices {
   @Path("/info")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ClusterInfo getClusterInfo() {
+    init();
     return new ClusterInfo(this.rm);
   }
 
@@ -117,6 +126,7 @@ public class RMWebServices {
   @Path("/metrics")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ClusterMetricsInfo getClusterMetricsInfo() {
+    init();
     return new ClusterMetricsInfo(this.rm, this.rm.getRMContext());
   }
 
@@ -124,6 +134,7 @@ public class RMWebServices {
   @Path("/scheduler")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public SchedulerTypeInfo getSchedulerInfo() {
+    init();
     ResourceScheduler rs = rm.getResourceScheduler();
     SchedulerInfo sinfo;
     if (rs instanceof CapacityScheduler) {
@@ -143,6 +154,7 @@ public class RMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public NodesInfo getNodes(@QueryParam("state") String filterState,
       @QueryParam("healthy") String healthState) {
+    init();
     ResourceScheduler sched = this.rm.getResourceScheduler();
     if (sched == null) {
       throw new NotFoundException("Null ResourceScheduler instance");
@@ -197,6 +209,7 @@ public class RMWebServices {
   @Path("/nodes/{nodeId}")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public NodeInfo getNode(@PathParam("nodeId") String nodeId) {
+    init();
     if (nodeId == null || nodeId.isEmpty()) {
       throw new NotFoundException("nodeId, " + nodeId + ", is empty or null");
     }
@@ -246,6 +259,7 @@ public class RMWebServices {
     long fBegin = 0;
     long fEnd = Long.MAX_VALUE;
 
+    init();
     if (count != null && !count.isEmpty()) {
       checkCount = true;
       countNum = Long.parseLong(count);
@@ -355,6 +369,7 @@ public class RMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppInfo getApp(@Context HttpServletRequest hsr,
       @PathParam("appid") String appId) {
+    init();
     if (appId == null || appId.isEmpty()) {
       throw new NotFoundException("appId, " + appId + ", is empty or null");
     }
