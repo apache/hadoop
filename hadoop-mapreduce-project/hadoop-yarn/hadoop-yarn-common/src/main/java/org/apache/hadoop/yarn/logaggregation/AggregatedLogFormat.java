@@ -29,6 +29,9 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.Writer;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -112,8 +115,11 @@ public class AggregatedLogFormat {
     // the entire k-v format
 
     public LogValue(List<String> rootLogDirs, ContainerId containerId) {
-      this.rootLogDirs = rootLogDirs;
+      this.rootLogDirs = new ArrayList<String>(rootLogDirs);
       this.containerId = containerId;
+
+      // Ensure logs are processed in lexical order
+      Collections.sort(this.rootLogDirs);
     }
 
     public void write(DataOutputStream out) throws IOException {
@@ -131,7 +137,10 @@ public class AggregatedLogFormat {
           continue; // ContainerDir may have been deleted by the user.
         }
 
-        for (File logFile : containerLogDir.listFiles()) {
+        // Write out log files in lexical order
+        File[] logFiles = containerLogDir.listFiles();
+        Arrays.sort(logFiles);
+        for (File logFile : logFiles) {
 
           // Write the logFile Type
           out.writeUTF(logFile.getName());
