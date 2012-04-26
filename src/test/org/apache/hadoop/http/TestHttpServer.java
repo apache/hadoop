@@ -36,6 +36,7 @@ import java.util.TreeSet;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -51,11 +52,15 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.resource.JerseyResource;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.mortbay.util.ajax.JSON;
+
 
 public class TestHttpServer {
   static final Log LOG = LogFactory.getLog(TestHttpServer.class);
@@ -324,4 +329,46 @@ public class TestHttpServer {
     assertEquals("bar", m.get(JerseyResource.OP));
     LOG.info("END testJersey()");
   }
+
+  @Test
+  public void testHasAdministratorAccess() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+    ServletContext context = Mockito.mock(ServletContext.class);
+    Mockito.when(context.getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE)).thenReturn(conf);
+    Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(null);
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    Mockito.when(request.getRemoteUser()).thenReturn(null);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+
+    //authorization OFF
+    Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
+
+    //authorization ON & user NULL
+    response = Mockito.mock(HttpServletResponse.class);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
+    Assert.assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
+    Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED), Mockito.anyString());
+
+    //authorization ON & user NOT NULL & ACLs NULL
+    response = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(request.getRemoteUser()).thenReturn("foo");
+    Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
+
+    //authorization ON & user NOT NULL & ACLs NOT NULL & user not in ACLs
+    response = Mockito.mock(HttpServletResponse.class);
+    AccessControlList acls = Mockito.mock(AccessControlList.class);
+    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
+    Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
+    Assert.assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
+    Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED), Mockito.anyString());
+
+    //authorization ON & user NOT NULL & ACLs NOT NULL & user in in ACLs
+    response = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(true);
+    Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
+    Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
+
+  }
+
 }

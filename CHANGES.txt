@@ -235,6 +235,9 @@ Release 1.1.0 - unreleased
     HDFS-3310. Make sure that we abort when no edit log directories are left.
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8314. HttpServer#hasAdminAccess should return false if authorization 
+    is enabled but user is not authenticated. (tucu)
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES
