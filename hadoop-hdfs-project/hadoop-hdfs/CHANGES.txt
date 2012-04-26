@@ -443,6 +443,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3222. DFSInputStream#openInfo should not silently get the length as 0 
     when locations length is zero for last partial block. (umamahesh)
 
+    HDFS-3181. Fix a test case in TestLeaseRecovery2.  (szetszwo)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
