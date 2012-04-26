@@ -303,6 +303,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3613. web service calls header contains 2 content types
     (tgraves)
 
+    MAPREDUCE-4169. Container Logs appear in unsorted order (Jonathan Eagles
+    via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
