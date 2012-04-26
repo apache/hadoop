@@ -61,7 +61,7 @@ public abstract class FileSystemCounterGroup<C extends Counter>
   private static final Joiner DISP_JOINER = Joiner.on(": ");
 
   @InterfaceAudience.Private
-  public class FSCounter extends AbstractCounter {
+  public static class FSCounter extends AbstractCounter {
     final String scheme;
     final FileSystemCounter key;
     private long value;
@@ -139,8 +139,7 @@ public abstract class FileSystemCounterGroup<C extends Counter>
   @Override
   public void addCounter(C counter) {
     C ours;
-    if (counter instanceof FileSystemCounterGroup<?>.FSCounter) {
-      @SuppressWarnings("unchecked")
+    if (counter instanceof FileSystemCounterGroup.FSCounter) {
       FSCounter c = (FSCounter) counter;
       ours = findCounter(c.scheme, c.key);
     }
