@@ -232,6 +232,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-3674. Invoked with no queueName request param, the
     jobqueue_details.jsp injects a null queue name into schedulers. (harsh)
 
+    HDFS-3310. Make sure that we abort when no edit log directories are left.
+    (Colin Patrick McCabe via eli)
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES
