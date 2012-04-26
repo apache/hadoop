@@ -43,11 +43,16 @@ public interface HdfsConstants {
     FORCE ("-force"),
     ROLLBACK("-rollback"),
     FINALIZE("-finalize"),
-    IMPORT  ("-importCheckpoint");
+    IMPORT  ("-importCheckpoint"),
+    NONINTERACTIVE  ("-nonInteractive");
     
     // Used only with recovery option
     private int force = MetaRecoveryContext.FORCE_NONE;
-
+    
+    // used only with format option
+    private boolean isConfirmationNeeded = true;
+    private boolean isInteractive = true;
+    
     private String name = null;
     private StartupOption(String arg) {this.name = arg;}
     public String getName() {return name;}
@@ -64,6 +69,22 @@ public interface HdfsConstants {
     
     public int getForce() {
       return this.force;
+    }
+    
+    public void setConfirmationNeeded(boolean confirmationNeeded) {
+      this.isConfirmationNeeded = confirmationNeeded;
+    }
+
+    public boolean getConfirmationNeeded() {
+      return isConfirmationNeeded;
+    }
+
+    public void setInteractive(boolean interactive) {
+      this.isInteractive = interactive;
+    }
+
+    public boolean getInteractive() {
+      return isInteractive;
     }
   }
 

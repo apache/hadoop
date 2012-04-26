@@ -181,7 +181,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
   public static void format(Configuration conf) throws IOException {
-    format(conf, false);
+    format(conf, false, true);
   }
 
   static NameNodeInstrumentation myMetrics;
@@ -1142,8 +1142,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    * @throws IOException
    */
   private static boolean format(Configuration conf,
-                                boolean isConfirmationNeeded
-                                ) throws IOException {
+      boolean isConfirmationNeeded, boolean isInteractive) throws IOException {
     Collection<File> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     Collection<File> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
@@ -1152,6 +1151,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       if (!curDir.exists())
         continue;
       if (isConfirmationNeeded) {
+        if (!isInteractive) {
+          System.err.println("Format aborted: " + curDir + " exists.");
+          return true;
+        }
         System.err.print("Re-format filesystem in " + curDir +" ? (Y or N) ");
         if (!(System.in.read() == 'Y')) {
           System.err.println("Format aborted in "+ curDir);
@@ -1218,7 +1221,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   private static void printUsage() {
     System.err.println(
       "Usage: java NameNode [" +
-      StartupOption.FORMAT.getName() + "] | [" +
+      StartupOption.FORMAT.getName()  + " [" + StartupOption.FORCE.getName() +  
+      " ] ["+StartupOption.NONINTERACTIVE.getName()+"]] | [" +
       StartupOption.UPGRADE.getName() + "] | [" +
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
@@ -1234,6 +1238,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       String cmd = args[i];
       if (StartupOption.FORMAT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.FORMAT;
+        // check if there are other options
+        for (i = i + 1; i < argsLen; i++) {
+          if (args[i].equalsIgnoreCase(StartupOption.FORCE.getName())) {
+            startOpt.setConfirmationNeeded(false);
+          }
+          if (args[i].equalsIgnoreCase(StartupOption.NONINTERACTIVE.getName())) {
+            startOpt.setInteractive(false);
+          }
+        }
       } else if (StartupOption.REGULAR.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.REGULAR;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
@@ -1344,7 +1357,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
     switch (startOpt) {
       case FORMAT:
-        boolean aborted = format(conf, true);
+        boolean aborted = format(conf, startOpt.getConfirmationNeeded(),
+            startOpt.getInteractive());
         System.exit(aborted ? 1 : 0);
       case FINALIZE:
         aborted = finalize(conf, true);
