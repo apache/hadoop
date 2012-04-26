@@ -130,7 +130,7 @@ public class TestStorageRestore extends TestCase {
       
       if (sd.getRoot().equals(path2) || sd.getRoot().equals(path3)) {
         fi.getEditLog().removeEditsForStorageDir(sd);
-        fi.updateRemovedDirs(sd, null);
+        fi.updateRemovedDirs(sd);
         it.remove();
       }
     }

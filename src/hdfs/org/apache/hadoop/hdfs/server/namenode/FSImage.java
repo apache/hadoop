@@ -220,6 +220,11 @@ public class FSImage extends Storage {
     removedStorageDirs.add(sd);
   }
 
+  void updateRemovedDirs(StorageDirectory sd) {
+    LOG.warn("Removing storage dir " + sd.getRoot().getPath());
+    removedStorageDirs.add(sd);
+  }
+
   File getEditFile(StorageDirectory sd) {
     return getImageFile(sd, NameNodeFile.EDITS);
   }
@@ -644,8 +649,9 @@ public class FSImage extends Storage {
     while (it.hasNext()) {
       StorageDirectory sd = it.next();
       if (sd.getRoot().getPath().equals(dir.getPath())) {
-        updateRemovedDirs(sd, null);
+        updateRemovedDirs(sd);
         it.remove();
+        editLog.removeEditsForStorageDir(sd);
       }
     }
   }
@@ -1554,7 +1560,7 @@ public class FSImage extends Storage {
         curFile.delete();
         if (!ckpt.renameTo(curFile)) {
           editLog.removeEditsForStorageDir(sd);
-          updateRemovedDirs(sd, null);
+          updateRemovedDirs(sd);
           it.remove();
         }
       }

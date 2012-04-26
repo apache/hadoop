@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.lang.Math;
 import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
@@ -428,6 +429,7 @@ public class FSEditLog {
     
     File dir = getStorageDirForStream(idx);
     editStreams.remove(idx);
+    exitIfNoStreams();
     fsimage.removeStorageDir(dir);
   }
 
@@ -446,6 +448,7 @@ public class FSEditLog {
         editStreams.remove(idx);
       }
     }
+    exitIfNoStreams();
   }
   
   /**
@@ -987,7 +990,7 @@ public class FSEditLog {
         sync = true;
 
         // swap buffers
-        assert editStreams.size() > 0 : "no editlog streams";
+        exitIfNoStreams();
         for(EditLogOutputStream eStream : editStreams) {
           try {
             eStream.setReadyToFlush();
@@ -1263,7 +1266,6 @@ public class FSEditLog {
           " edits.new files already exists in all healthy directories:" + b);
       return;
     }
-
     close(); // close existing edit log
 
     // After edit streams are closed, healthy edits files should be identical,
@@ -1274,6 +1276,7 @@ public class FSEditLog {
     // Open edits.new
     //
     Iterator<StorageDirectory> it = fsimage.dirIterator(NameNodeDirType.EDITS);
+    LinkedList<StorageDirectory> toRemove = new LinkedList<StorageDirectory>();
     while (it.hasNext()) {
       StorageDirectory sd = it.next();
       try {
@@ -1282,10 +1285,18 @@ public class FSEditLog {
         eStream.create();
         editStreams.add(eStream);
       } catch (IOException ioe) {
-        removeEditsForStorageDir(sd);
-        fsimage.updateRemovedDirs(sd, ioe);
+        FSImage.LOG.error("error retrying to reopen storage directory '" +
+            sd.getRoot().getAbsolutePath() + "'", ioe);
+        toRemove.add(sd);
         it.remove();
       }
+    }
+
+    // updateRemovedDirs will abort the NameNode if it removes the last
+    // valid edit log directory.
+    for (StorageDirectory sd : toRemove) {
+      removeEditsForStorageDir(sd);
+      fsimage.updateRemovedDirs(sd);
     }
     exitIfNoStreams();
   }
@@ -1319,7 +1330,7 @@ public class FSEditLog {
         if (!getEditNewFile(sd).renameTo(getEditFile(sd))) {
           sd.unlock();
           removeEditsForStorageDir(sd);
-          fsimage.updateRemovedDirs(sd, null);
+          fsimage.updateRemovedDirs(sd);
           it.remove();
         }
       }
