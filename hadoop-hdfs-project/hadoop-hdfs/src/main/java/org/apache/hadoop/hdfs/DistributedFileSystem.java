@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -682,19 +681,18 @@ public class DistributedFileSystem extends FileSystem {
   // We do not see a need for user to report block checksum errors and do not  
   // want to rely on user to report block corruptions.
   @Deprecated
-  @SuppressWarnings("deprecation")
   public boolean reportChecksumFailure(Path f, 
     FSDataInputStream in, long inPos, 
     FSDataInputStream sums, long sumsPos) {
     
-    if(!(in instanceof DFSDataInputStream && sums instanceof DFSDataInputStream))
-      throw new IllegalArgumentException("Input streams must be types " +
-                                         "of DFSDataInputStream");
+    if(!(in instanceof HdfsDataInputStream && sums instanceof HdfsDataInputStream))
+      throw new IllegalArgumentException(
+          "Input streams must be types of HdfsDataInputStream");
     
     LocatedBlock lblocks[] = new LocatedBlock[2];
 
     // Find block in data stream.
-    DFSClient.DFSDataInputStream dfsIn = (DFSClient.DFSDataInputStream) in;
+    HdfsDataInputStream dfsIn = (HdfsDataInputStream) in;
     ExtendedBlock dataBlock = dfsIn.getCurrentBlock();
     if (dataBlock == null) {
       LOG.error("Error: Current block in data stream is null! ");
@@ -707,7 +705,7 @@ public class DistributedFileSystem extends FileSystem {
         + dataNode[0]);
 
     // Find block in checksum stream
-    DFSClient.DFSDataInputStream dfsSums = (DFSClient.DFSDataInputStream) sums;
+    HdfsDataInputStream dfsSums = (HdfsDataInputStream) sums;
     ExtendedBlock sumsBlock = dfsSums.getCurrentBlock();
     if (sumsBlock == null) {
       LOG.error("Error: Current block in checksum stream is null! ");

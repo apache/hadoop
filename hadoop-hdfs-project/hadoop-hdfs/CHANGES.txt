@@ -272,6 +272,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3258. Test for HADOOP-8144 (pseudoSortByDistance in
     NetworkTopology for first rack local node). (Junping Du via eli)
 
+    HDFS-3322. Use HdfsDataInputStream and HdfsDataOutputStream in Hdfs.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

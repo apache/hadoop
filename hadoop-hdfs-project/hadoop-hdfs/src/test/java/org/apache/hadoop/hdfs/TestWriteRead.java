@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -155,7 +156,7 @@ public class TestWriteRead {
     try {
       in = openInputStream(path);
 
-      long visibleLenFromReadStream = getVisibleFileLength(in);
+      long visibleLenFromReadStream = ((HdfsDataInputStream)in).getVisibleLength();
 
       if (visibleLenFromReadStream < byteExpected)
       {
@@ -416,11 +417,6 @@ public class TestWriteRead {
     FileStatus fileStatus = useFCOption ? mfc.getFileStatus(path) : 
         mfs.getFileStatus(path);
     return fileStatus.getLen();
-  }
-
-  private long getVisibleFileLength(FSDataInputStream in) throws IOException {
-    DFSClient.DFSDataInputStream din = (DFSClient.DFSDataInputStream) in;
-    return din.getVisibleLength();
   }
 
   private boolean ifExists(Path path) throws IOException {
