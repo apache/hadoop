@@ -57,12 +57,14 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
    * Use old (which extends new) interface to make compatibility easier.
    */
   @InterfaceAudience.Private
-  public class FrameworkCounter extends AbstractCounter {
+  public static class FrameworkCounter<T extends Enum<T>> extends AbstractCounter {
     final T key;
+    final String groupName;
     private long value;
 
-    public FrameworkCounter(T ref) {
+    public FrameworkCounter(T ref, String groupName) {
       key = ref;
+      this.groupName = groupName;
     }
 
     @Override
@@ -72,7 +74,7 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
 
     @Override
     public String getDisplayName() {
-      return localizeCounterName(getName());
+      return ResourceBundles.getCounterName(groupName, getName(), getName());
     }
 
     @Override
@@ -130,10 +132,6 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
   public void setDisplayName(String displayName) {
     this.displayName = displayName;
   }
-
-    private String localizeCounterName(String counterName) {
-      return ResourceBundles.getCounterName(getName(), counterName, counterName);
-    }
 
   private T valueOf(String name) {
     return Enum.valueOf(enumClass, name);
@@ -204,7 +202,7 @@ public abstract class FrameworkCounterGroup<T extends Enum<T>,
     if (checkNotNull(other, "other counter group")
         instanceof FrameworkCounterGroup<?, ?>) {
       for (Counter counter : other) {
-        findCounter(((FrameworkCounter) counter).key)
+        findCounter(((FrameworkCounter) counter).key.name())
             .increment(counter.getValue());
       }
     }

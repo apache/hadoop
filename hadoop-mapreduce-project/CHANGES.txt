@@ -48,6 +48,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4093. Improve RM WebApp start up when proxy address is not set
     (Devaraj K vai bobby)
 
+    MAPREDUCE-4138. Reduce memory usage of counters due to non-static nested
+    classes. (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
