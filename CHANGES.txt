@@ -232,9 +232,6 @@ Release 1.1.0 - unreleased
     MAPREDUCE-3674. Invoked with no queueName request param, the
     jobqueue_details.jsp injects a null queue name into schedulers. (harsh)
 
-    HDFS-3310. Make sure that we abort when no edit log directories are left.
-    (Colin Patrick McCabe via eli)
-
     HADOOP-8314. HttpServer#hasAdminAccess should return false if authorization 
     is enabled but user is not authenticated. (tucu)
 
@@ -282,6 +279,9 @@ Release 1.0.3 - unreleased
 
     HADOOP-8294. IPC Connection becomes unusable even if server address was temporarilly
     unresolvable. Backport of HADOOP-7428. (Kihwal Lee via mattf)
+
+    HDFS-3310. Make sure that we abort when no edit log directories are left.
+    (Colin Patrick McCabe via eli)
 
 Release 1.0.2 - 2012.03.24
 
