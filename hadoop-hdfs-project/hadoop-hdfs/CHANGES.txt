@@ -437,6 +437,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3319. Change DFSOutputStream to not to start a thread in constructors.
     (szetszwo)
 
+    HDFS-3222. DFSInputStream#openInfo should not silently get the length as 0 
+    when locations length is zero for last partial block. (umamahesh)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
