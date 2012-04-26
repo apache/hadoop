@@ -262,6 +262,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8310. FileContext#checkPath should handle URIs with no port. (atm)
 
+    HADOOP-8321. TestUrlStreamHandler fails. (tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
