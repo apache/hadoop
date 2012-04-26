@@ -269,6 +269,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3169. TestFsck should test multiple -move operations in a row.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3258. Test for HADOOP-8144 (pseudoSortByDistance in
+    NetworkTopology for first rack local node). (Junping Du via eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
