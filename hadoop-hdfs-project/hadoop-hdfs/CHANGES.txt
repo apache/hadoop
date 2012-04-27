@@ -798,6 +798,8 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3321. Fix safe mode turn off tip message.  (Ravi Prakash via szetszwo)
 
+    HDFS-3334. Fix ByteRangeInputStream stream leakage.  (Daryn Sharp via szetszwo)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
