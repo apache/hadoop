@@ -314,8 +314,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private long replicationRecheckInterval;
   // default block size of a file
   private long defaultBlockSize = 0;
-  // allow appending to hdfs files
-  private boolean supportAppends = true;
+  // allow file appending (for test coverage)
+  private boolean allowBrokenAppend = false;
 
   /**
    * Last block index used for replication work.
@@ -532,7 +532,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     LOG.info(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY + "=" + this.blockInvalidateLimit);
 
     this.accessTimePrecision = conf.getLong("dfs.access.time.precision", 0);
-    this.supportAppends = conf.getBoolean("dfs.support.append", false);
+    this.allowBrokenAppend = conf.getBoolean("dfs.support.broken.append", false);
+    if (conf.getBoolean("dfs.support.append", false)) {
+      LOG.warn("The dfs.support.append option is in your configuration, " +
+               "however append is not supported. This configuration option " +
+               "is no longer required to enable sync.");
+    }
     this.isAccessTokenEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, false);
     if (isAccessTokenEnabled) {
@@ -1425,9 +1430,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   LocatedBlock appendFile(String src, String holder, String clientMachine
       ) throws IOException {
-    if (supportAppends == false) {
-      throw new IOException("Append to hdfs not supported." +
-                            " Please refer to dfs.support.append configuration parameter.");
+    if (!allowBrokenAppend) {
+      throw new IOException("Append is not supported. " +
+          "Please see the dfs.support.append configuration parameter.");
     }
     startFileInternal(src, null, holder, clientMachine, false, true, 
                       false, (short)maxReplication, (long)0);
@@ -2296,13 +2301,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
 
     // If this commit does not want to close the file, persist
-    // blocks only if append is supported and return
+    // blocks and return
     src = leaseManager.findPath(pendingFile);
     if (!closeFile) {
-      if (supportAppends) {
-        dir.persistBlocks(src, pendingFile);
-        getEditLog().logSync();
-      }
+      dir.persistBlocks(src, pendingFile);
+      getEditLog().logSync();
       LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
       return;
     }

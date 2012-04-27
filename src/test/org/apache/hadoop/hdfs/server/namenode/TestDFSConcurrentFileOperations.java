@@ -74,7 +74,7 @@ public class TestDFSConcurrentFileOperations extends TestCase {
     Configuration conf = new Configuration();
     
     conf.setLong("dfs.block.size", blockSize);
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean("dfs.support.broken.append", true);
     
     init(conf);
     

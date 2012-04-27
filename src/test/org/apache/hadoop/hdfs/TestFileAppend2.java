@@ -108,7 +108,7 @@ public class TestFileAppend2 extends TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     conf.setInt("dfs.datanode.handler.count", 50);
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean("dfs.support.broken.append", true);
     initBuffer(fileSize);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
@@ -359,7 +359,7 @@ public class TestFileAppend2 extends TestCase {
     conf.setInt("dfs.datanode.handler.count", 50);
     conf.setInt("dfs.datanode.artificialBlockReceivedDelay",
                 artificialBlockReceivedDelay);
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean("dfs.support.broken.append", true);
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, 
                                                 true, null);

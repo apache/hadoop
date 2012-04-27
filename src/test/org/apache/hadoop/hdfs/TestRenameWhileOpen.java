@@ -48,7 +48,6 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.safemode.threshold.pct", 1);
-    conf.setBoolean("dfs.support.append", true);
 
     // create cluster
     System.out.println("Test 1*****************************");
@@ -132,7 +131,6 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.safemode.threshold.pct", 1);
-    conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 2************************************");
 
     // create cluster
@@ -205,7 +203,6 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.safemode.threshold.pct", 1);
-    conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 3************************************");
 
     // create cluster
@@ -268,7 +265,6 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     conf.setInt("heartbeat.recheck.interval", 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.safemode.threshold.pct", 1);
-    conf.setBoolean("dfs.support.append", true);
     System.out.println("Test 4************************************");
 
     // create cluster

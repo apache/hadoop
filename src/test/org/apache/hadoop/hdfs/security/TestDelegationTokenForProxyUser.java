@@ -106,7 +106,7 @@ public class TestDelegationTokenForProxyUser {
   public void setUp() throws Exception {
     config = new Configuration();
     config.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
-    config.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);
+    config.setBoolean("dfs.support.broken.append", true);
     config.setLong(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
     config.setLong(

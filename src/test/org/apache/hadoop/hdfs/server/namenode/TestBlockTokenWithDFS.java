@@ -170,7 +170,7 @@ public class TestBlockTokenWithDFS extends TestCase {
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.replication", numDataNodes);
     conf.setInt("ipc.client.connect.max.retries", 0);
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean("dfs.support.broken.append", true);
     return conf;
   }
 

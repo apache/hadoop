@@ -387,10 +387,10 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.support.append</name>
-  <value>false</value>
-  <description>Does HDFS allow appends to files?
-               This is currently set to false because there are bugs in the
-               "append code" and is not supported in any prodction cluster.
+  <description>
+    This option is no longer supported. HBase no longer requires that
+    this option be enabled as sync is now enabled by default. See
+    HADOOP-8230 for additional information.
   </description>
 </property>
 

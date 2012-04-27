@@ -97,7 +97,7 @@ public class TestFileAppend4 extends TestCase {
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean("dfs.support.broken.append", true);
 
     // lower heartbeat interval for fast recognition of DN death
     conf.setInt("heartbeat.recheck.interval", 1000);

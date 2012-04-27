@@ -143,7 +143,7 @@ public interface ClientProtocol extends VersionedProtocol {
    * denied by the system. As usually on the client side the exception will 
    * be wrapped into {@link org.apache.hadoop.ipc.RemoteException}.
    * Allows appending to an existing file if the server is
-   * configured with the parameter dfs.support.append set to true, otherwise
+   * configured with the parameter dfs.support.broken.append set to true, otherwise
    * throws an IOException.
    * @throws IOException if other errors occur.
    */

@@ -62,7 +62,7 @@ public class TestQuota extends TestCase {
     // Space quotas
     final int DEFAULT_BLOCK_SIZE = 512;
     conf.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean("dfs.support.broken.append", true);
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
@@ -509,7 +509,7 @@ public class TestQuota extends TestCase {
     // set a smaller block size so that we can test with smaller 
     // diskspace quotas
     conf.set("dfs.block.size", "512");
-    conf.setBoolean("dfs.support.append", true);
+    conf.setBoolean("dfs.support.broken.append", true);
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     final FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
