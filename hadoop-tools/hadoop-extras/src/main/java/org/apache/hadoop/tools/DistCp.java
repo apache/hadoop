@@ -374,9 +374,9 @@ public class DistCp implements Tool {
       FsPermission permission = preseved.contains(FileAttribute.PERMISSION)?
           srcstat.getPermission(): null;
       short replication = preseved.contains(FileAttribute.REPLICATION)?
-          srcstat.getReplication(): destFileSys.getDefaultReplication();
+          srcstat.getReplication(): destFileSys.getDefaultReplication(f);
       long blockSize = preseved.contains(FileAttribute.BLOCK_SIZE)?
-          srcstat.getBlockSize(): destFileSys.getDefaultBlockSize();
+          srcstat.getBlockSize(): destFileSys.getDefaultBlockSize(f);
       return destFileSys.create(f, permission, true, sizeBuf, replication,
           blockSize, reporter);
     }
