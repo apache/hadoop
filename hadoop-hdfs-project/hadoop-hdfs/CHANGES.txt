@@ -445,6 +445,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3181. Fix a test case in TestLeaseRecovery2.  (szetszwo)
 
+    HDFS-3309. HttpFS (Hoop) chmod not supporting octal and sticky bit 
+    permissions. (tucu)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
