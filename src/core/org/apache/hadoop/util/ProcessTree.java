@@ -107,7 +107,19 @@ public class ProcessTree {
     if(!ProcessTree.isAlive(pid)) {
       return;
     }
-    String[] args = { "kill", "-" + signal.getValue(), pid };
+    String[] args = null;
+    if(Shell.WINDOWS){
+      if (signal == Signal.KILL) {
+        String[] wargs = { "taskkill", "/F", "/PID", pid };
+        args = wargs;
+      } else {
+        String[] wargs = { "taskkill", "/PID", pid };
+        args = wargs;
+      }
+    } else {
+     String[] uargs = { "kill", "-" + signal.getValue(), pid };
+     args = uargs;
+    }
     ShellCommandExecutor shexec = new ShellCommandExecutor(args);
     try {
       shexec.execute();
@@ -157,19 +169,29 @@ public class ProcessTree {
    * @return true if process is alive.
    */
   public static boolean isAlive(String pid) {
-    ShellCommandExecutor shexec = null;
-    try {
-      String[] args = { "kill", "-0", pid };
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (ExitCodeException ee) {
-      return false;
-    } catch (IOException ioe) {
-      LOG.warn("Error executing shell command "
-          + Arrays.toString(shexec.getExecString()) + ioe);
-      return false;
+    if (Shell.WINDOWS) {
+      try {
+        String result = Shell.execCommand("cmd", "/c", "tasklist /FI \"PID eq "+pid+" \" /NH");
+        return (result.contains(pid));
+      } catch (IOException ioe) {
+        LOG.warn("Error executing shell command", ioe);
+        return false;
+      }
+    } else {
+      ShellCommandExecutor shexec = null;
+      try {
+        String[] args = { "kill", "-0", pid };
+        shexec = new ShellCommandExecutor(args);
+        shexec.execute();
+      } catch (ExitCodeException ee) {
+        return false;
+      } catch (IOException ioe) {
+        LOG.warn("Error executing shell command "
+            + Arrays.toString(shexec.getExecString()) + ioe);
+        return false;
+      }
+      return (shexec.getExitCode() == 0 ? true : false);
     }
-    return (shexec.getExitCode() == 0 ? true : false);
   }
   
   /**

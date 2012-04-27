@@ -47,6 +47,8 @@ import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.LogManager;
 
+import java.lang.management.ManagementFactory;
+
 /** 
  * The main() for child processes. 
  */
@@ -85,7 +87,6 @@ class Child {
       throw new IOException("Environment variable " + 
                              TaskRunner.HADOOP_WORK_DIR + " is not set");
     }
-
     // file name is passed thru env
     String jobTokenFile = 
       System.getenv().get(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
@@ -162,6 +163,15 @@ class Child {
     String pid = "";
     if (!Shell.WINDOWS) {
       pid = System.getenv().get("JVM_PID");
+    }
+    else {
+      final String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+      String[] parts = jvmName.split("@");
+      try {
+        pid = Long.toString(Long.parseLong(parts[0]));
+      } catch (NumberFormatException nfe) {
+        LOG.equals("Failed to get pid for jvmId:" + jvmId);
+      }
     }
     JvmContext context = new JvmContext(jvmId, pid);
     int idleLoopCount = 0;

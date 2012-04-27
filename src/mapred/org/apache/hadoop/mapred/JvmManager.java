@@ -506,8 +506,7 @@ class JvmManager {
         } finally { // handle the exit code
           // although the process has exited before we get here,
           // make sure the entire process group has also been killed.
-          if (!Shell.WINDOWS)
-            kill();
+          kill();
           updateOnJvmExit(jvmId, exitCode);
           LOG.info("JVM : " + jvmId + " exited with exit code " + exitCode
               + ". Number of tasks it ran: " + numTasksRan);

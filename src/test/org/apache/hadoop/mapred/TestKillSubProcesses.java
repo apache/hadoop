@@ -301,11 +301,12 @@ public class TestKillSubProcesses extends TestCase {
 
     return UtilsForTests.runJob(conf, inDir, outDir);
   }
-
+  
   public void testJobKillFailAndSucceed() throws IOException {
-    if (Shell.WINDOWS) {
-      System.out.println(
-             "setsid doesn't work on WINDOWS as expected. Not testing");
+    if (Shell.DISABLEWINDOWS_TEMPORARILY) {
+      System.out
+          .println("setsid doesn't work on WINDOWS as expected. Not testing."
+              + "There also seem to be issues related to file permissions");
       return;
     }
     
