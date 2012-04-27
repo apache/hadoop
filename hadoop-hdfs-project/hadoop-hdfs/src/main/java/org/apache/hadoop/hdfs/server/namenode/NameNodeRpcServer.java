@@ -708,9 +708,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // ClientProtocol
   public void refreshNodes() throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
-    namesystem.getBlockManager().getDatanodeManager().refreshNodes(
-        new HdfsConfiguration());
+    namesystem.refreshNodes();
   }
 
   @Override // NamenodeProtocol
@@ -733,7 +731,6 @@ class NameNodeRpcServer implements NamenodeProtocols {
     
   @Override // ClientProtocol
   public void finalizeUpgrade() throws IOException {
-    namesystem.checkOperation(OperationCategory.WRITE);
     namesystem.finalizeUpgrade();
   }
 
@@ -773,8 +770,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
    */
   @Override // ClientProtocol
   public void setBalancerBandwidth(long bandwidth) throws IOException {
-    namesystem.checkOperation(OperationCategory.UNCHECKED);
-    namesystem.getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
+    namesystem.setBalancerBandwidth(bandwidth);
   }
   
   @Override // ClientProtocol
