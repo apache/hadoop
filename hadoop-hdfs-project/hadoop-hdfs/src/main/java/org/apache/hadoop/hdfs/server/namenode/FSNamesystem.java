@@ -3332,8 +3332,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
     
   void finalizeUpgrade() throws IOException {
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkSuperuserPrivilege();
+      getFSImage().finalizeUpgrade();
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  void refreshNodes() throws IOException {
+    checkOperation(OperationCategory.UNCHECKED);
     checkSuperuserPrivilege();
-    getFSImage().finalizeUpgrade();
+    getBlockManager().getDatanodeManager().refreshNodes(new HdfsConfiguration());
+  }
+
+  void setBalancerBandwidth(long bandwidth) throws IOException {
+    checkOperation(OperationCategory.UNCHECKED);
+    checkSuperuserPrivilege();
+    getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
   }
 
   /**

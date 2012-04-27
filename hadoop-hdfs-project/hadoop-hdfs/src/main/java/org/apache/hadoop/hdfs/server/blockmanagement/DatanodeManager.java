@@ -651,7 +651,6 @@ public class DatanodeManager {
    * checks if any of the hosts have changed states:
    */
   public void refreshNodes(final Configuration conf) throws IOException {
-    namesystem.checkSuperuserPrivilege();
     refreshHostsReader(conf);
     namesystem.writeLock();
     try {
