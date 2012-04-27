@@ -360,6 +360,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8227. Allow RPC to limit ephemeral port range. (bobby)
 
+    HADOOP-8305. distcp over viewfs is broken (John George via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
