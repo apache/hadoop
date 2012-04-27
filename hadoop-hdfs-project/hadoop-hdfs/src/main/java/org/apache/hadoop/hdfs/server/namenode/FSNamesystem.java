@@ -457,7 +457,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       this.accessTimePrecision = conf.getLong(DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 0);
       this.supportAppends = conf.getBoolean(DFS_SUPPORT_APPEND_KEY, DFS_SUPPORT_APPEND_DEFAULT);
-      LOG.info("Append Enabled: " + haEnabled);
+      LOG.info("Append Enabled: " + supportAppends);
 
       this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
       
