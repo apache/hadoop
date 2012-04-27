@@ -127,9 +127,9 @@ public class TestCopyMapper {
       fs = cluster.getFileSystem();
       final Path qualifiedPath = new Path(path).makeQualified(fs.getUri(),
                                                       fs.getWorkingDirectory());
-      final long blockSize = fs.getDefaultBlockSize() * 2;
+      final long blockSize = fs.getDefaultBlockSize(qualifiedPath) * 2;
       outputStream = fs.create(qualifiedPath, true, 0,
-              (short)(fs.getDefaultReplication()*2),
+              (short)(fs.getDefaultReplication(qualifiedPath)*2),
               blockSize);
       outputStream.write(new byte[FILE_SIZE]);
       pathList.add(qualifiedPath);

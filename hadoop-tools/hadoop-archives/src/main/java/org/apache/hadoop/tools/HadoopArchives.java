@@ -613,7 +613,7 @@ public class HadoopArchives implements Tool {
           destFs.delete(tmpOutput, false);
         } 
         partStream = destFs.create(tmpOutput, false, conf.getInt("io.file.buffer.size", 4096), 
-            destFs.getDefaultReplication(), blockSize);
+            destFs.getDefaultReplication(tmpOutput), blockSize);
       } catch(IOException ie) {
         throw new RuntimeException("Unable to open output file " + tmpOutput, ie);
       }

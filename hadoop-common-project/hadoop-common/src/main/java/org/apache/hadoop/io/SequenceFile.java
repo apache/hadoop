@@ -1050,9 +1050,9 @@ public class SequenceFile {
         int bufferSize = bufferSizeOption == null ? getBufferSize(conf) :
           bufferSizeOption.getValue();
         short replication = replicationOption == null ? 
-          fs.getDefaultReplication() :
+          fs.getDefaultReplication(p) :
           (short) replicationOption.getValue();
-        long blockSize = blockSizeOption == null ? fs.getDefaultBlockSize() :
+        long blockSize = blockSizeOption == null ? fs.getDefaultBlockSize(p) :
           blockSizeOption.getValue();
         Progressable progress = progressOption == null ? null :
           progressOption.getValue();
