@@ -43,8 +43,8 @@ import java.util.Map;
 public class FSOperations {
 
   /**
-   * Converts a Unix permission octal & symbolic representation
-   * (i.e. 655 or -rwxr--r--) into a FileSystemAccess permission.
+   * Converts a Unix permission octal
+   * (i.e. 655 or 1777) into a FileSystemAccess permission.
    *
    * @param str Unix permission symbolic representation.
    *
@@ -55,10 +55,8 @@ public class FSOperations {
     FsPermission permission;
     if (str.equals(HttpFSFileSystem.DEFAULT_PERMISSION)) {
       permission = FsPermission.getDefault();
-    } else if (str.length() == 3) {
-      permission = new FsPermission(Short.parseShort(str, 8));
     } else {
-      permission = FsPermission.valueOf(str);
+      permission = new FsPermission(Short.parseShort(str, 8));
     }
     return permission;
   }
