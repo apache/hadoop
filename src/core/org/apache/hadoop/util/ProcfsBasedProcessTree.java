@@ -39,7 +39,7 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 /**
  * A Proc file-system based ProcessTree. Works only on Linux.
  */
-public class ProcfsBasedProcessTree extends ProcessTree {
+public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   static final Log LOG = LogFactory
       .getLog(ProcfsBasedProcessTree.class);
@@ -92,15 +92,12 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   private Long cpuTime = 0L;
 
   private Map<String, ProcessInfo> processTree = new HashMap<String, ProcessInfo>();
-
-  public ProcfsBasedProcessTree(String pid) {
-    this(pid, false);
-  }
   
-  public ProcfsBasedProcessTree(String pid, boolean setsidUsed) {
+  public ProcfsBasedProcessTree(String pid) {
     this(pid,PROCFS);
   }
 
+  // exposing procfs dir for testing overrides
   public ProcfsBasedProcessTree(String pid, String procfsDir) {
     this.pid = getValidPID(pid);
     this.procfsDir = procfsDir;
@@ -132,7 +129,8 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    * 
    * @return the process-tree with latest state.
    */
-  public ProcfsBasedProcessTree getProcessTree() {
+  @Override
+  public ResourceCalculatorProcessTree getProcessTree() {
     if (!pid.equals(deadPid)) {
       // Get the list of processes
       List<String> processList = getProcessList();
@@ -204,27 +202,27 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   }
 
   /**
-   * Is the root-process alive?
+   * Is the root-process alive? Used in testing
    * 
    * @return true if the root-process is alive, false otherwise.
    */
-  public boolean isAlive() {
+  boolean isAlive() {
     if (pid.equals(deadPid)) {
       return false;
     } else {
-      return isAlive(pid);
+      return ProcessTree.isAlive(pid);
     }
   }
 
   /**
    * Is any of the subprocesses in the process-tree alive?
-   * 
+   * Used in testing
    * @return true if any of the processes in the process-tree is
    *           alive, false otherwise.
    */
-  public boolean isAnyProcessInTreeAlive() {
+  boolean isAnyProcessInTreeAlive() {
     for (String pId : processTree.keySet()) {
-      if (isAlive(pId)) {
+      if (ProcessTree.isAlive(pId)) {
         return true;
       }
     }
@@ -240,6 +238,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    * @return a string concatenating the dump of information of all the processes
    *         in the process-tree
    */
+  @Override
   public String getProcessTreeDump() {
     StringBuilder ret = new StringBuilder();
     // The header.
@@ -259,29 +258,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
 
   /**
    * Get the cumulative virtual memory used by all the processes in the
-   * process-tree.
-   * 
-   * @return cumulative virtual memory used by the process-tree in bytes.
-   */
-  public long getCumulativeVmem() {
-    // include all processes.. all processes will be older than 0.
-    return getCumulativeVmem(0);
-  }
-
-  /**
-   * Get the cumulative resident set size (rss) memory used by all the processes
-   * in the process-tree.
-   *
-   * @return cumulative rss memory used by the process-tree in bytes. return 0
-   *         if it cannot be calculated
-   */
-  public long getCumulativeRssmem() {
-    // include all processes.. all processes will be older than 0.
-    return getCumulativeRssmem(0);
-  }
-
-  /**
-   * Get the cumulative virtual memory used by all the processes in the
    * process-tree that are older than the passed in age.
    * 
    * @param olderThanAge processes above this age are included in the
@@ -289,6 +265,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    * @return cumulative virtual memory used by the process-tree in bytes,
    *          for processes older than this age.
    */
+  @Override
   public long getCumulativeVmem(int olderThanAge) {
     long total = 0;
     for (ProcessInfo p : processTree.values()) {
@@ -309,6 +286,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    *          for processes older than this age. return 0 if it cannot be
    *          calculated
    */
+  @Override
   public long getCumulativeRssmem(int olderThanAge) {
     if (PAGE_SIZE < 0) {
       return 0;
@@ -329,6 +307,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
    * @return cumulative CPU time in millisecond since the process-tree created
    *         return 0 if it cannot be calculated
    */
+  @Override
   public long getCumulativeCpuTime() {
     if (JIFFY_LENGTH_IN_MILLIS < 0) {
       return 0;
@@ -336,7 +315,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     long incJiffies = 0;
     for (ProcessInfo p : processTree.values()) {
       if (p != null) {
-        incJiffies += p.dtime;
+        incJiffies += p.getDtime();
       }
     }
     cpuTime += incJiffies * JIFFY_LENGTH_IN_MILLIS;

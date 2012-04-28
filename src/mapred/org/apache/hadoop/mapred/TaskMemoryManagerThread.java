@@ -30,6 +30,7 @@ import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -44,6 +45,7 @@ class TaskMemoryManagerThread extends Thread {
   private long monitoringInterval;
 
   private long maxMemoryAllowedForAllTasks;
+  private JobConf conf;
 
   private Map<TaskAttemptID, ProcessTreeInfo> processTreeInfoMap;
   private Map<TaskAttemptID, ProcessTreeInfo> tasksToBeAdded;
@@ -53,7 +55,7 @@ class TaskMemoryManagerThread extends Thread {
     "Memory usage of ProcessTree %s for task-id %s : %d bytes, " +
       "limit : %d bytes";
   
-  public TaskMemoryManagerThread(TaskTracker taskTracker) {
+  public TaskMemoryManagerThread(TaskTracker taskTracker, JobConf conf) {
     
     this(taskTracker.getTotalMemoryAllottedForTasksOnTT() * 1024 * 1024L,
       taskTracker.getJobConf().getLong(
@@ -61,6 +63,7 @@ class TaskMemoryManagerThread extends Thread {
         5000L));
 
     this.taskTracker = taskTracker;
+    this.conf = conf;
   }
 
   // mainly for test purposes. note that the tasktracker variable is
@@ -95,7 +98,7 @@ class TaskMemoryManagerThread extends Thread {
   private static class ProcessTreeInfo {
     private TaskAttemptID tid;
     private String pid;
-    private ProcfsBasedProcessTree pTree;
+    private ResourceCalculatorProcessTree pTree;
     private long memLimit;
     private String pidFile;
 
@@ -119,11 +122,11 @@ class TaskMemoryManagerThread extends Thread {
       this.pid = pid;
     }
 
-    public ProcfsBasedProcessTree getProcessTree() {
+    public ResourceCalculatorProcessTree getProcessTree() {
       return pTree;
     }
 
-    public void setProcessTree(ProcfsBasedProcessTree pTree) {
+    public void setProcessTree(ResourceCalculatorProcessTree pTree) {
       this.pTree = pTree;
     }
 
@@ -183,8 +186,10 @@ class TaskMemoryManagerThread extends Thread {
               // itself is still retained in runningTasks till successful
               // transmission to JT
 
-              ProcfsBasedProcessTree pt = 
-                new ProcfsBasedProcessTree(pId, ProcessTree.isSetsidAvailable);
+              ResourceCalculatorProcessTree pt = ResourceCalculatorProcessTree
+                  .getResourceCalculatorProcessTree(pId, conf);
+              // we would not be running unless a valid calculator is available
+              assert pt != null;
               LOG.debug("Tracking ProcessTree " + pId + " for the first time");
 
               ptInfo.setPid(pId);
@@ -199,7 +204,7 @@ class TaskMemoryManagerThread extends Thread {
 
           LOG.debug("Constructing ProcessTree for : PID = " + pId + " TID = "
               + tid);
-          ProcfsBasedProcessTree pTree = ptInfo.getProcessTree();
+          ResourceCalculatorProcessTree pTree = ptInfo.getProcessTree();
           pTree = pTree.getProcessTree(); // get the updated process-tree
           ptInfo.setProcessTree(pTree); // update ptInfo with proces-tree of
           // updated state
@@ -315,7 +320,7 @@ class TaskMemoryManagerThread extends Thread {
   }
 
   // method provided just for easy testing purposes
-  boolean isProcessTreeOverLimit(ProcfsBasedProcessTree pTree, 
+  boolean isProcessTreeOverLimit(ResourceCalculatorProcessTree pTree, 
                                     String tId, long limit) {
     long currentMemUsage = pTree.getCumulativeVmem();
     // as processes begin with an age 1, we want to see if there are processes
@@ -341,7 +346,7 @@ class TaskMemoryManagerThread extends Thread {
       TaskAttemptID tid = task.getTask().getTaskID();
       if (processTreeInfoMap.containsKey(tid)) {
         ProcessTreeInfo ptInfo = processTreeInfoMap.get(tid);
-        ProcfsBasedProcessTree pTree = ptInfo.getProcessTree();
+        ResourceCalculatorProcessTree pTree = ptInfo.getProcessTree();
         memoryStillInUsage -= pTree.getCumulativeVmem();
         tasksToKill.add(tid);
       }

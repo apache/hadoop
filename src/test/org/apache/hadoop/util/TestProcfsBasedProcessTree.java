@@ -22,7 +22,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Random;
 import java.util.Vector;
 import java.util.regex.Matcher;
@@ -148,9 +147,8 @@ public class TestProcfsBasedProcessTree extends TestCase {
     t.start();
     String pid = getRogueTaskPID();
     LOG.info("Root process pid: " + pid);
-    ProcfsBasedProcessTree p = new ProcfsBasedProcessTree(pid,
-        ProcessTree.isSetsidAvailable);
-    p = p.getProcessTree(); // initialize
+    ProcfsBasedProcessTree p = new ProcfsBasedProcessTree(pid);
+    p.getProcessTree(); // initialize
     LOG.info("ProcessTree: " + p.toString());
     File leaf = new File(lowestDescendant);
     //wait till lowest descendant process of Rougue Task starts execution
@@ -162,7 +160,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
       }
     }
     
-    p = p.getProcessTree(); // reconstruct
+    p.getProcessTree(); // reconstruct
     LOG.info("ProcessTree: " + p.toString());
 
     // Get the process-tree dump
@@ -204,7 +202,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
     }
 
     // ProcessTree is gone now. Any further calls should be sane.
-    p = p.getProcessTree();
+    p.getProcessTree();
     assertFalse("ProcessTree must have been gone", p.isAlive());
     assertTrue("Cumulative vmem for the gone-process is "
         + p.getCumulativeVmem() + " . It should be zero.", p

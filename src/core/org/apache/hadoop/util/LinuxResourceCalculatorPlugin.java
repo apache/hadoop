@@ -86,7 +86,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private float cpuUsage = UNAVAILABLE;
   private long sampleTime = UNAVAILABLE;
   private long lastSampleTime = UNAVAILABLE;
-  private ProcfsBasedProcessTree pTree = null;
+  private ResourceCalculatorProcessTree pTree = null;
 
   boolean readMemInfoFile = false;
   boolean readCpuInfoFile = false;

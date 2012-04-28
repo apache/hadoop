@@ -99,6 +99,7 @@ import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -4201,15 +4202,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     // start the taskMemoryManager thread only if enabled
     setTaskMemoryManagerEnabledFlag();
     if (isTaskMemoryManagerEnabled()) {
-      taskMemoryManager = new TaskMemoryManagerThread(this);
+      taskMemoryManager = new TaskMemoryManagerThread(this, fConf);
       taskMemoryManager.setDaemon(true);
       taskMemoryManager.start();
     }
   }
 
   void setTaskMemoryManagerEnabledFlag() {
-    if (!ProcfsBasedProcessTree.isAvailable()) {
-      LOG.info("ProcessTree implementation is missing on this system. "
+    if (!ResourceCalculatorProcessTree.isAvailable()) {
+      LOG.info("ResourceCalculatorProcessTree implementation is missing on this system. "
           + "TaskMemoryManager is disabled.");
       taskMemoryManagerEnabled = false;
       return;

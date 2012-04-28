@@ -7,11 +7,13 @@ Hadoop Change Log
 branch-hadoop-1-win - unreleased
   IMPROVEMENTS
 
-    HADOOP-8223 - Initial patch for branch-1-win (David Lao via Sanjay)
+    HADOOP-8223 Initial patch for branch-1-win (David Lao via Sanjay)
 
-    HADOOP-8234 - Enable user group mappings on Windows (Bikas Saha via Sanjay)
+    HADOOP-8234 Enable user group mappings on Windows (Bikas Saha via Sanjay)
 
-    MAPREDUCE-4201 - Getting PID not working on Windows. Termination of Task/TaskJVM's not working (Bikas Saha via Sanjay)
+    MAPREDUCE-4201 Getting PID not working on Windows. Termination of Task/TaskJVM's not working (Bikas Saha via Sanjay)
+
+    MAPREDUCE-4204 Refactor ProcfsBasedProcessTree to make the resource collection object pluggable (Bikas Saha via Sanjay)
 
 Release 1.1.0 - unreleased
 
