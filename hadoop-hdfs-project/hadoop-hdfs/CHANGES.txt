@@ -71,6 +71,9 @@ Trunk (unreleased changes)
     HADOOP-8285. HDFS changes for Use ProtoBuf for RpcPayLoadHeader. (sanjay
     radia)
 
+    HDFS-2743. Streamline usage of bookkeeper journal manager. 
+    (Ivan Kelly via umamahesh)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.

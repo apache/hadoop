@@ -12,19 +12,25 @@ How do I build?
  To generate the distribution packages for BK journal, do the
  following.
 
-   $ mvn clean install -Pdist -Dtar
+   $ mvn clean package -Pdist
 
- This will generate a tarball, 
- target/hadoop-hdfs-bkjournal-<VERSION>.tar.gz 
+ This will generate a jar with all the dependencies needed by the journal
+ manager, 
+
+ target/hadoop-hdfs-bkjournal-<VERSION>.jar
+
+ Note that the -Pdist part of the build command is important, as otherwise
+ the dependencies would not be packaged in the jar. 
 
 -------------------------------------------------------------------------------
 How do I use the BookKeeper Journal?
 
- To run a HDFS namenode using BookKeeper as a backend, extract the
- distribution package on top of hdfs
+ To run a HDFS namenode using BookKeeper as a backend, copy the bkjournal
+ jar, generated above, into the lib directory of hdfs. In the standard 
+ distribution of HDFS, this is at $HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/
 
-   cd hadoop-hdfs-<VERSION>/
-   tar --strip-components 1 -zxvf path/to/hadoop-hdfs-bkjournal-<VERSION>.tar.gz
+  cp target/hadoop-hdfs-bkjournal-<VERSION>.jar \
+    $HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/
 
  Then, in hdfs-site.xml, set the following properties.
 
