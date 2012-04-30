@@ -51,6 +51,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4138. Reduce memory usage of counters due to non-static nested
     classes. (tomwhite)
 
+    MAPREDUCE-3883. Document yarn.nodemanager.delete.debug-delay-sec 
+    configuration property (Eugene Koontz via tgraves)
+
   OPTIMIZATIONS
 
   BUG FIXES
