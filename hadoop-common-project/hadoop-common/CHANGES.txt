@@ -368,6 +368,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8334. HttpServer sometimes returns incorrect port (Daryn Sharp via
     bobby)
 
+    HADOOP-8330. Update TestSequenceFile.testCreateUsesFsArg() for HADOOP-8305.
+    (John George via szetszwo)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
