@@ -635,80 +635,16 @@ public class HttpServer implements FilterContainer {
    */
   public void start() throws IOException {
     try {
-      if(listenerStartedExternally) { // Expect that listener was started securely
-        if(listener.getLocalPort() == -1) // ... and verify
-          throw new Exception("Exepected webserver's listener to be started " +
-             "previously but wasn't");
-        // And skip all the port rolling issues.
+      try {
+        openListener();
+        LOG.info("Jetty bound to port " + listener.getLocalPort());
         webServer.start();
-      } else {
-        int port = 0;
-        int oriPort = listener.getPort(); // The original requested port
-        while (true) {
-          try {
-            port = webServer.getConnectors()[0].getLocalPort();
-            LOG.debug("Port returned by webServer.getConnectors()[0]." +
-            		"getLocalPort() before open() is "+ port + 
-            		". Opening the listener on " + oriPort);
-            listener.open();
-            port = listener.getLocalPort();
-            LOG.debug("listener.getLocalPort() returned " + listener.getLocalPort() + 
-                  " webServer.getConnectors()[0].getLocalPort() returned " +
-                  webServer.getConnectors()[0].getLocalPort());
-            //Workaround to handle the problem reported in HADOOP-4744
-            if (port < 0) {
-              Thread.sleep(100);
-              int numRetries = 1;
-              while (port < 0) {
-                LOG.warn("listener.getLocalPort returned " + port);
-                if (numRetries++ > MAX_RETRIES) {
-                  throw new Exception(" listener.getLocalPort is returning " +
-                  		"less than 0 even after " +numRetries+" resets");
-                }
-                for (int i = 0; i < 2; i++) {
-                  LOG.info("Retrying listener.getLocalPort()");
-                  port = listener.getLocalPort();
-                  if (port > 0) {
-                    break;
-                  }
-                  Thread.sleep(200);
-                }
-                if (port > 0) {
-                  break;
-                }
-                LOG.info("Bouncing the listener");
-                listener.close();
-                Thread.sleep(1000);
-                listener.setPort(oriPort == 0 ? 0 : (oriPort += 1));
-                listener.open();
-                Thread.sleep(100);
-                port = listener.getLocalPort();
-              }
-            } //Workaround end
-            LOG.info("Jetty bound to port " + port);
-            webServer.start();
-            break;
-          } catch (IOException ex) {
-            // if this is a bind exception,
-            // then try the next port number.
-            if (ex instanceof BindException) {
-              if (!findPort) {
-                BindException be = new BindException(
-                        "Port in use: " + listener.getHost()
-                                + ":" + listener.getPort());
-                be.initCause(ex);
-                throw be;
-              }
-            } else {
-              LOG.info("HttpServer.start() threw a non Bind IOException"); 
-              throw ex;
-            }
-          } catch (MultiException ex) {
-            LOG.info("HttpServer.start() threw a MultiException"); 
-            throw ex;
-          }
-          listener.setPort((oriPort += 1));
-        }
+      } catch (IOException ex) {
+        LOG.info("HttpServer.start() threw a non Bind IOException", ex);
+        throw ex;
+      } catch (MultiException ex) {
+        LOG.info("HttpServer.start() threw a MultiException", ex);
+        throw ex;
       }
     } catch (IOException e) {
       throw e;
@@ -717,6 +653,52 @@ public class HttpServer implements FilterContainer {
     }
   }
 
+  /**
+   * Open the main listener for the server
+   * @throws Exception
+   */
+  void openListener() throws Exception {
+    if (listener.getLocalPort() != -1) { // it's already bound
+      return;
+    }
+    if (listenerStartedExternally) { // Expect that listener was started securely
+      throw new Exception("Expected webserver's listener to be started " +
+          "previously but wasn't");
+    }
+    int port = listener.getPort();
+    while (true) {
+      // jetty has a bug where you can't reopen a listener that previously
+      // failed to open w/o issuing a close first, even if the port is changed
+      try {
+        listener.close();
+        listener.open();
+        break;
+      } catch (BindException ex) {
+        if (port == 0 || !findPort) {
+          BindException be = new BindException(
+              "Port in use: " + listener.getHost() + ":" + listener.getPort());
+          be.initCause(ex);
+          throw be;
+        }
+      }
+      // try the next port number
+      listener.setPort(++port);
+      Thread.sleep(100);
+    }
+  }
+  
+  /**
+   * Return the bind address of the listener.
+   * @return InetSocketAddress of the listener
+   */
+  public InetSocketAddress getListenerAddress() {
+    int port = listener.getLocalPort();
+    if (port == -1) { // not bound, return requested port
+      port = listener.getPort();
+    }
+    return new InetSocketAddress(listener.getHost(), port);
+  }
+  
   /**
    * stop the server
    */

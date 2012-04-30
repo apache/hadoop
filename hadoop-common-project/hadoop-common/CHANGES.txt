@@ -362,6 +362,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8305. distcp over viewfs is broken (John George via bobby)
 
+    HADOOP-8334. HttpServer sometimes returns incorrect port (Daryn Sharp via
+    bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
