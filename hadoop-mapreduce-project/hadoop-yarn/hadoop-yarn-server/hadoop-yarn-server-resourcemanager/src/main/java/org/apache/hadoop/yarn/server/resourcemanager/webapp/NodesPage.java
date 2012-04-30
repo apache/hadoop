@@ -121,7 +121,8 @@ class NodesPage extends RmView {
           row.td().a("http://" + httpAddress, httpAddress)._();
         }
         row.td(info.getHealthStatus()).
-            td(Times.format(info.getLastHealthUpdate())).
+            td().br().$title(String.valueOf(info.getLastHealthUpdate()))._().
+              _(Times.format(info.getLastHealthUpdate()))._().
             td(info.getHealthReport()).
             td(String.valueOf(info.getNumContainers())).
             td().br().$title(String.valueOf(usedMemory))._().
@@ -153,10 +154,12 @@ class NodesPage extends RmView {
   }
 
   private String nodesTableInit() {
-    StringBuilder b = tableInit().append(",aoColumnDefs:[");
-    b.append("{'bSearchable':false, 'aTargets': [7]} ,");
-    b.append("{'sType':'title-numeric', 'bSearchable':false, " +
-    		"'aTargets': [ 8, 9] }]}");
+    StringBuilder b = tableInit().append(", aoColumnDefs: [");
+    b.append("{'bSearchable': false, 'aTargets': [ 7 ]}");
+    b.append(", {'sType': 'title-numeric', 'bSearchable': false, " +
+    		"'aTargets': [ 8, 9 ] }");
+    b.append(", {'sType': 'title-numeric', 'aTargets': [ 5 ]}");
+    b.append("]}");
     return b.toString();
   }
 }

@@ -318,6 +318,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4209. junit dependency in hadoop-mapreduce-client is missing
     scope test (Radim Kolar via bobby)
 
+    MAPREDUCE-4206. Sorting by Last Health-Update on the RM nodes page sorts
+    does not work correctly (Jonathon Eagles via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
