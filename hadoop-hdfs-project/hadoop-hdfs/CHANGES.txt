@@ -136,6 +136,8 @@ Trunk (unreleased changes)
     (Henry Robinson via atm)
 
     HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
+
+    HDFS-3265. PowerPc Build error. (Kumar Ravi via mattf)
     
 Release 2.0.0 - UNRELEASED 
 
