@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Set;
 
 import junit.framework.Assert;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class TestFileContextDeleteOnExit {
     checkDeleteOnExitData(1, fc, file1);
     
     // Ensure shutdown hook is added
-    Assert.assertTrue(Runtime.getRuntime().removeShutdownHook(FileContext.FINALIZER));
+    Assert.assertTrue(ShutdownHookManager.get().hasShutdownHook(FileContext.FINALIZER));
     
     Path file2 = getTestRootPath(fc, "dir1/file2");
     createFile(fc, file2, numBlocks, blockSize);
@@ -79,8 +80,7 @@ public class TestFileContextDeleteOnExit {
     
     // trigger deleteOnExit and ensure the registered
     // paths are cleaned up
-    FileContext.FINALIZER.start();
-    FileContext.FINALIZER.join();
+    FileContext.FINALIZER.run();
     checkDeleteOnExitData(0, fc, new Path[0]);
     Assert.assertFalse(exists(fc, file1));
     Assert.assertFalse(exists(fc, file2));

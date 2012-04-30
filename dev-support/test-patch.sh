@@ -39,6 +39,7 @@ WGET=${WGET:-wget}
 SVN=${SVN:-svn}
 GREP=${GREP:-grep}
 PATCH=${PATCH:-patch}
+DIFF=${DIFF:-diff}
 JIRACLI=${JIRA:-jira}
 FINDBUGS_HOME=${FINDBUGS_HOME}
 FORREST_HOME=${FORREST_HOME}
@@ -61,6 +62,7 @@ printUsage() {
   echo "--svn-cmd=<cmd>        The 'svn' command to use (default 'svn')"
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
   echo "--patch-cmd=<cmd>      The 'patch' command to use (default 'patch')"
+  echo "--diff-cmd=<cmd>       The 'diff' command to use (default 'diff')"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
   echo "--forrest-home=<path>  Forrest home directory (default FORREST_HOME environment variable)"
   echo "--dirty-workspace      Allow the local SVN workspace to have uncommitted changes"
@@ -112,6 +114,9 @@ parseArgs() {
       ;;
     --patch-cmd=*)
       PATCH=${i#*=}
+      ;;
+    --diff-cmd=*)
+      DIFF=${i#*=}
       ;;
     --jira-cmd=*)
       JIRACLI=${i#*=}
@@ -430,14 +435,21 @@ checkJavacWarnings () {
   fi
   ### Compare trunk and patch javac warning numbers
   if [[ -f $PATCH_DIR/patchJavacWarnings.txt ]] ; then
-    trunkJavacWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/trunkJavacWarnings.txt | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
-    patchJavacWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/patchJavacWarnings.txt | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
+    $GREP '\[WARNING\]' $PATCH_DIR/trunkJavacWarnings.txt > $PATCH_DIR/filteredTrunkJavacWarnings.txt
+    $GREP '\[WARNING\]' $PATCH_DIR/patchJavacWarnings.txt > $PATCH_DIR/filteredPatchJavacWarnings.txt
+    trunkJavacWarnings=`cat $PATCH_DIR/filteredTrunkJavacWarnings.txt | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
+    patchJavacWarnings=`cat $PATCH_DIR/filteredPatchJavacWarnings.txt | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
     echo "There appear to be $trunkJavacWarnings javac compiler warnings before the patch and $patchJavacWarnings javac compiler warnings after applying the patch."
     if [[ $patchJavacWarnings != "" && $trunkJavacWarnings != "" ]] ; then
       if [[ $patchJavacWarnings -gt $trunkJavacWarnings ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
     -1 javac.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
+
+    $DIFF $PATCH_DIR/filteredTrunkJavacWarnings.txt $PATCH_DIR/filteredPatchJavacWarnings.txt > $PATCH_DIR/diffJavacWarnings.txt 
+        JIRA_COMMENT_FOOTER="Javac warnings: $BUILD_URL/artifact/trunk/$(basename $BASEDIR)/patchprocess/diffJavacWarnings.txt
+$JIRA_COMMENT_FOOTER"
+
         return 1
       fi
     fi

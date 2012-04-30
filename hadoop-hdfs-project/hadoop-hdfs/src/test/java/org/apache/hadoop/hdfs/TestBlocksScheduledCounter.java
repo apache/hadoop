@@ -48,7 +48,7 @@ public class TestBlocksScheduledCounter extends TestCase {
       out.write(i);
     }
     // flush to make sure a block is allocated.
-    ((DFSOutputStream)(out.getWrappedStream())).hflush();
+    out.hflush();
     
     ArrayList<DatanodeDescriptor> dnList = new ArrayList<DatanodeDescriptor>();
     final DatanodeManager dm = cluster.getNamesystem().getBlockManager(

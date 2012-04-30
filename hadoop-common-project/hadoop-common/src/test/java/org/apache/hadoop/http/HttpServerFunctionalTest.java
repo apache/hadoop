@@ -100,6 +100,19 @@ public class HttpServerFunctionalTest extends Assert {
   }
 
   /**
+   * Create an HttpServer instance on the given address for the given webapp
+   * @param host to bind
+   * @param port to bind
+   * @return the server
+   * @throws IOException if it could not be created
+   */
+  public static HttpServer createServer(String host, int port)
+      throws IOException {
+    prepareTestWebapp();
+    return new HttpServer(TEST, host, port, true);
+  }
+
+  /**
    * Create an HttpServer instance for the given webapp
    * @param webapp the webapp to work with
    * @return the server

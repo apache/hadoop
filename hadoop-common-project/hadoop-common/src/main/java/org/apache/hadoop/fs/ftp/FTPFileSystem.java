@@ -59,6 +59,17 @@ public class FTPFileSystem extends FileSystem {
 
   private URI uri;
 
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>ftp</code>
+   */
+  @Override
+  public String getScheme() {
+    return "ftp";
+  }
+
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException { // get
     super.initialize(uri, conf);

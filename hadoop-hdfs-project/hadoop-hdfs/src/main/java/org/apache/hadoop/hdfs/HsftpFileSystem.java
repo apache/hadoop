@@ -58,6 +58,17 @@ public class HsftpFileSystem extends HftpFileSystem {
   private static final long MM_SECONDS_PER_DAY = 1000 * 60 * 60 * 24;
   private volatile int ExpWarnDays = 0;
 
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>hsftp</code>
+   */
+  @Override
+  public String getScheme() {
+    return "hsftp";
+  }
+
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);

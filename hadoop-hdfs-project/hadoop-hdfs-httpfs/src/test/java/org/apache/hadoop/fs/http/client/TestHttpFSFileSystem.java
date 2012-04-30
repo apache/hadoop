@@ -310,11 +310,8 @@ public class TestHttpFSFileSystem extends HFSTestCase {
 
   private void testSetPermission() throws Exception {
     FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
-    OutputStream os = fs.create(path);
-    os.write(1);
-    os.close();
-    fs.close();
+    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foodir");
+    fs.mkdirs(path);
 
     fs = getHttpFileSystem();
     FsPermission permission1 = new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE);
@@ -325,6 +322,19 @@ public class TestHttpFSFileSystem extends HFSTestCase {
     FileStatus status1 = fs.getFileStatus(path);
     fs.close();
     FsPermission permission2 = status1.getPermission();
+    Assert.assertEquals(permission2, permission1);
+
+    //sticky bit 
+    fs = getHttpFileSystem();
+    permission1 = new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE, true);
+    fs.setPermission(path, permission1);
+    fs.close();
+
+    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    status1 = fs.getFileStatus(path);
+    fs.close();
+    permission2 = status1.getPermission();
+    Assert.assertTrue(permission2.getStickyBit());
     Assert.assertEquals(permission2, permission1);
   }
 

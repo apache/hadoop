@@ -446,7 +446,7 @@ public class HttpFSParams {
      * Symbolic Unix permissions regular expression pattern.
      */
     private static final Pattern PERMISSION_PATTERN =
-      Pattern.compile(DEFAULT + "|(-[-r][-w][-x][-r][-w][-x][-r][-w][-x])" + "|[0-7][0-7][0-7]");
+      Pattern.compile(DEFAULT + "|[0-1]?[0-7][0-7][0-7]");
 
     /**
      * Constructor.

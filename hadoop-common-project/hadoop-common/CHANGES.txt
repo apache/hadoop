@@ -121,6 +121,9 @@ Trunk (unreleased changes)
 
     HADOOP-7788. Add simple HealthMonitor class to watch an HAService (todd)
 
+    HADOOP-8312. testpatch.sh should provide a simpler way to see which
+    warnings changed (bobby)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -269,6 +272,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8152. Expand public APIs for security library classes. (atm via eli)
 
+    HADOOP-7549. Use JDK ServiceLoader mechanism to find FileSystem implementations. (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -373,6 +378,18 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8309. Pseudo & Kerberos AuthenticationHandler should use 
     getType() to create token (tucu)
 
+    HADOOP-8314. HttpServer#hasAdminAccess should return false if 
+    authorization is enabled but user is not authenticated. (tucu)
+
+    HADOOP-8296. hadoop/yarn daemonlog usage wrong (Devaraj K via tgraves)
+
+    HADOOP-8310. FileContext#checkPath should handle URIs with no port. (atm)
+
+    HADOOP-8321. TestUrlStreamHandler fails. (tucu)
+
+    HADOOP-8325. Add a ShutdownHookManager to be used by different
+    components instead of the JVM shutdownhook (tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -468,6 +485,17 @@ Release 0.23.3 - UNRELEASED
     bobby)
 
     HADOOP-8227. Allow RPC to limit ephemeral port range. (bobby)
+
+    HADOOP-8305. distcp over viewfs is broken (John George via bobby)
+
+    HADOOP-8334. HttpServer sometimes returns incorrect port (Daryn Sharp via
+    bobby)
+
+    HADOOP-8330. Update TestSequenceFile.testCreateUsesFsArg() for HADOOP-8305.
+    (John George via szetszwo)
+
+    HADOOP-8335. Improve Configuration's address handling (Daryn Sharp via
+    bobby)
 
 Release 0.23.2 - UNRELEASED 
 

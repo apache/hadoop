@@ -45,4 +45,29 @@ public class JournalInfo {
   public int getNamespaceId() {
     return namespaceId;
   }
+  
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("lv=").append(layoutVersion).append(";cid=").append(clusterId)
+    .append(";nsid=").append(namespaceId);
+    return sb.toString();
+  }
+  
+  @Override
+  public boolean equals(Object o) {
+    JournalInfo jInfo;
+    if (!(o instanceof JournalInfo)) {
+      return false;
+    }
+    jInfo = (JournalInfo) o;
+    return ((jInfo.clusterId.equals(this.clusterId))
+        && (jInfo.namespaceId == this.namespaceId)
+        && (jInfo.layoutVersion == this.layoutVersion));
+  }
+  
+  @Override
+  public int hashCode() {
+    return (namespaceId ^ layoutVersion ^ clusterId.hashCode());
+  }
 }

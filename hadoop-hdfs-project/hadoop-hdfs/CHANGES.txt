@@ -65,12 +65,17 @@ Trunk (unreleased changes)
     HDFS-3273. Refactor BackupImage and FSEditLog, and rename
     JournalListener.rollLogs(..) to startLogSegment(..).  (szetszwo)
 
-    HDFS-3292. Remove the deprecated DiskStatus, getDiskStatus(), getRawCapacity() and
-    getRawUsed() from DistributedFileSystem.  (Arpit Gupta via szetszwo)
+    HDFS-3292. Remove the deprecated DiskStatus, getDiskStatus(), getRawUsed()
+    and getRawCapacity() from DistributedFileSystem.  (Arpit Gupta via szetszwo)
 
-    HDFS-3282. Expose getFileLength API. (umamahesh)
+    HADOOP-8285. HDFS changes for Use ProtoBuf for RpcPayLoadHeader. (sanjay
+    radia)
 
-    HADOOP-8285 HDFS changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+    HDFS-2743. Streamline usage of bookkeeper journal manager. 
+    (Ivan Kelly via umamahesh)
+
+    HDFS-3293. Add toString(), equals(..) and hashCode() to JournalInfo.
+    (Hari Mankude via szetszwo)
 
   OPTIMIZATIONS
 
@@ -134,6 +139,8 @@ Trunk (unreleased changes)
     (Henry Robinson via atm)
 
     HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
+
+    HDFS-3265. PowerPc Build error. (Kumar Ravi via mattf)
     
 Release 2.0.0 - UNRELEASED 
 
@@ -213,6 +220,10 @@ Release 2.0.0 - UNRELEASED
     HDFS-3102. Add CLI tool to initialize the shared-edits dir. (atm)
 
     HDFS-3004. Implement Recovery Mode. (Colin Patrick McCabe via eli)
+
+    HDFS-3282. Add HdfsDataInputStream as a public API. (umamahesh)
+
+    HDFS-3298. Add HdfsDataOutputStream as a public API.  (szetszwo)
 
   IMPROVEMENTS
 
@@ -400,6 +411,12 @@ Release 2.0.0 - UNRELEASED
     HDFS-3169. TestFsck should test multiple -move operations in a row.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3258. Test for HADOOP-8144 (pseudoSortByDistance in
+    NetworkTopology for first rack local node). (Junping Du via eli)
+
+    HDFS-3322. Use HdfsDataInputStream and HdfsDataOutputStream in Hdfs.
+    (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -552,6 +569,17 @@ Release 2.0.0 - UNRELEASED
     secure HA setup. (atm)
 
     HDFS-3314. HttpFS operation for getHomeDirectory is incorrect. (tucu)
+
+    HDFS-3319. Change DFSOutputStream to not to start a thread in constructors.
+    (szetszwo)
+
+    HDFS-3181. Fix a test case in TestLeaseRecovery2.  (szetszwo)
+
+    HDFS-3309. HttpFS (Hoop) chmod not supporting octal and sticky bit 
+    permissions. (tucu)
+
+    HDFS-3326. Append enabled log message uses the wrong variable.
+    (Matthew Jacobs via eli)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
@@ -894,6 +922,17 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3312. In HftpFileSystem, the namenode URI is non-secure but the
     delegation tokens have to use secure URI.  (Daryn Sharp via szetszwo)
+
+    HDFS-3318. Use BoundedInputStream in ByteRangeInputStream, otherwise, it
+    hangs on transfers >2 GB.  (Daryn Sharp via szetszwo)
+
+    HDFS-3321. Fix safe mode turn off tip message.  (Ravi Prakash via szetszwo)
+
+    HDFS-3334. Fix ByteRangeInputStream stream leakage.  (Daryn Sharp via
+    szetszwo)
+
+    HDFS-3331. In namenode, check superuser privilege for setBalancerBandwidth
+    and acquire the write lock for finalizeUpgrade.  (szetszwo)
 
 Release 0.23.2 - UNRELEASED
 

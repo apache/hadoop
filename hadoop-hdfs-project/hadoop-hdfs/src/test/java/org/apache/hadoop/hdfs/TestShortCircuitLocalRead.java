@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -119,7 +119,7 @@ public class TestShortCircuitLocalRead {
    */
   static void checkFileContentDirect(FileSystem fs, Path name, byte[] expected,
       int readOffset) throws IOException {
-    DFSDataInputStream stm = (DFSDataInputStream)fs.open(name);
+    HdfsDataInputStream stm = (HdfsDataInputStream)fs.open(name);
 
     ByteBuffer actual = ByteBuffer.allocate(expected.length - readOffset);
 

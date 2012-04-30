@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
@@ -54,6 +55,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.ShutdownHookManager;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -82,6 +84,11 @@ public abstract class FileSystem extends Configured implements Closeable {
                    CommonConfigurationKeys.FS_DEFAULT_NAME_DEFAULT;
 
   public static final Log LOG = LogFactory.getLog(FileSystem.class);
+
+  /**
+   * Priority of the FileSystem shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 10;
 
   /** FileSystem cache */
   static final Cache CACHE = new Cache();
@@ -182,6 +189,17 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public void initialize(URI name, Configuration conf) throws IOException {
     statistics = getStatistics(name.getScheme(), getClass());    
+  }
+
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   * This implementation throws an <code>UnsupportedOperationException</code>.
+   *
+   * @return the protocol scheme for the FileSystem.
+   */
+  public String getScheme() {
+    throw new UnsupportedOperationException("Not implemented by  the FileSystem implementation");
   }
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/
@@ -2078,9 +2096,45 @@ public abstract class FileSystem extends Configured implements Closeable {
       ) throws IOException {
   }
 
+  // making it volatile to be able to do a double checked locking
+  private volatile static boolean FILE_SYSTEMS_LOADED = false;
+
+  private static final Map<String, Class<? extends FileSystem>>
+    SERVICE_FILE_SYSTEMS = new HashMap<String, Class<? extends FileSystem>>();
+
+  private static void loadFileSystems() {
+    synchronized (FileSystem.class) {
+      if (!FILE_SYSTEMS_LOADED) {
+        ServiceLoader<FileSystem> serviceLoader = ServiceLoader.load(FileSystem.class);
+        for (FileSystem fs : serviceLoader) {
+          SERVICE_FILE_SYSTEMS.put(fs.getScheme(), fs.getClass());
+        }
+        FILE_SYSTEMS_LOADED = true;
+      }
+    }
+  }
+
+  public static Class<? extends FileSystem> getFileSystemClass(String scheme,
+      Configuration conf) throws IOException {
+    if (!FILE_SYSTEMS_LOADED) {
+      loadFileSystems();
+    }
+    Class<? extends FileSystem> clazz = null;
+    if (conf != null) {
+      clazz = (Class<? extends FileSystem>) conf.getClass("fs." + scheme + ".impl", null);
+    }
+    if (clazz == null) {
+      clazz = SERVICE_FILE_SYSTEMS.get(scheme);
+    }
+    if (clazz == null) {
+      throw new IOException("No FileSystem for scheme: " + scheme);
+    }
+    return clazz;
+  }
+
   private static FileSystem createFileSystem(URI uri, Configuration conf
       ) throws IOException {
-    Class<?> clazz = conf.getClass("fs." + uri.getScheme() + ".impl", null);
+    Class<?> clazz = getFileSystemClass(uri.getScheme(), conf);
     if (clazz == null) {
       throw new IOException("No FileSystem for scheme: " + uri.getScheme());
     }
@@ -2128,8 +2182,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         }
         
         // now insert the new file system into the map
-        if (map.isEmpty() && !clientFinalizer.isAlive()) {
-          Runtime.getRuntime().addShutdownHook(clientFinalizer);
+        if (map.isEmpty() ) {
+          ShutdownHookManager.get().addShutdownHook(clientFinalizer, SHUTDOWN_HOOK_PRIORITY);
         }
         fs.key = key;
         map.put(key, fs);
@@ -2144,11 +2198,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       if (map.containsKey(key) && fs == map.get(key)) {
         map.remove(key);
         toAutoClose.remove(key);
-        if (map.isEmpty() && !clientFinalizer.isAlive()) {
-          if (!Runtime.getRuntime().removeShutdownHook(clientFinalizer)) {
-            LOG.info("Could not cancel cleanup thread, though no " +
-                     "FileSystems are open");
-          }
+        if (map.isEmpty()) {
+          ShutdownHookManager.get().removeShutdownHook(clientFinalizer);
         }
       }
     }
@@ -2194,7 +2245,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       }
     }
 
-    private class ClientFinalizer extends Thread {
+    private class ClientFinalizer implements Runnable {
       public synchronized void run() {
         try {
           closeAll(true);

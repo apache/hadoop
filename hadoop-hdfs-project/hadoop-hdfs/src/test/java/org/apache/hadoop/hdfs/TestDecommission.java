@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
@@ -143,10 +144,10 @@ public class TestDecommission {
     String downnode, int numDatanodes) throws IOException {
     boolean isNodeDown = (downnode != null);
     // need a raw stream
-    assertTrue("Not HDFS:"+fileSys.getUri(), 
-    fileSys instanceof DistributedFileSystem);
-    DFSClient.DFSDataInputStream dis = (DFSClient.DFSDataInputStream)
-      ((DistributedFileSystem)fileSys).open(name);
+    assertTrue("Not HDFS:"+fileSys.getUri(),
+        fileSys instanceof DistributedFileSystem);
+    HdfsDataInputStream dis = (HdfsDataInputStream)
+        ((DistributedFileSystem)fileSys).open(name);
     Collection<LocatedBlock> dinfo = dis.getAllBlocks();
     for (LocatedBlock blk : dinfo) { // for each block
       int hasdown = 0;

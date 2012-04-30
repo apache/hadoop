@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import java.util.Map.Entry;
 
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -58,8 +59,11 @@ public class NMWebServices {
   private static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
+  private @javax.ws.rs.core.Context 
+    HttpServletResponse response;
+
   @javax.ws.rs.core.Context
-  UriInfo uriInfo;
+    UriInfo uriInfo;
 
   @Inject
   public NMWebServices(final Context nm, final ResourceView view,
@@ -67,6 +71,11 @@ public class NMWebServices {
     this.nmContext = nm;
     this.rview = view;
     this.webapp = webapp;
+  }
+
+  private void init() {
+    //clear content type
+    response.setContentType(null);
   }
 
   @GET
@@ -79,6 +88,7 @@ public class NMWebServices {
   @Path("/info")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public NodeInfo getNodeInfo() {
+    init();
     return new NodeInfo(this.nmContext, this.rview);
   }
 
@@ -87,6 +97,7 @@ public class NMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppsInfo getNodeApps(@QueryParam("state") String stateQuery,
       @QueryParam("user") String userQuery) {
+    init();
     AppsInfo allApps = new AppsInfo();
     for (Entry<ApplicationId, Application> entry : this.nmContext
         .getApplications().entrySet()) {
@@ -116,6 +127,7 @@ public class NMWebServices {
   @Path("/apps/{appid}")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppInfo getNodeApp(@PathParam("appid") String appId) {
+    init();
     ApplicationId id = ConverterUtils.toApplicationId(recordFactory, appId);
     if (id == null) {
       throw new NotFoundException("app with id " + appId + " not found");
@@ -132,6 +144,7 @@ public class NMWebServices {
   @Path("/containers")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ContainersInfo getNodeContainers() {
+    init();
     ContainersInfo allContainers = new ContainersInfo();
     for (Entry<ContainerId, Container> entry : this.nmContext.getContainers()
         .entrySet()) {
@@ -151,6 +164,7 @@ public class NMWebServices {
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public ContainerInfo getNodeContainer(@PathParam("containerid") String id) {
     ContainerId containerId = null;
+    init();
     try {
       containerId = ConverterUtils.toContainerId(id);
     } catch (Exception e) {

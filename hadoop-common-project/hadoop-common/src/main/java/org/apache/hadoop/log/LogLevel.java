@@ -36,11 +36,9 @@ import org.apache.hadoop.util.ServletUtil;
  */
 @InterfaceStability.Evolving
 public class LogLevel {
-  public static final String USAGES = "\nUSAGES:\n"
-    + "java " + LogLevel.class.getName()
-    + " -getlevel <host:port> <name>\n"
-    + "java " + LogLevel.class.getName()
-    + " -setlevel <host:port> <name> <level>\n";
+  public static final String USAGES = "\nUsage: General options are:\n"
+      + "\t[-getlevel <host:httpPort> <name>]\n"
+      + "\t[-setlevel <host:httpPort> <name> <level>]\n";
 
   /**
    * A command line implementation

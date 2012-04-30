@@ -251,7 +251,18 @@ public class NativeS3FileSystem extends FileSystem {
   public NativeS3FileSystem(NativeFileSystemStore store) {
     this.store = store;
   }
-  
+
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>s3n</code>
+   */
+  @Override
+  public String getScheme() {
+    return "s3n";
+  }
+
   @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
     super.initialize(uri, conf);

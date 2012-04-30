@@ -46,6 +46,11 @@ import org.apache.hadoop.net.NetUtils;
 @InterfaceStability.Unstable
 public class StringUtils {
 
+  /**
+   * Priority of the StringUtils shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 0;
+
   private static final DecimalFormat decimalFormat;
   static {
           NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
@@ -600,12 +605,15 @@ public class StringUtils {
         )
       );
 
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      public void run() {
-        LOG.info(toStartupShutdownString("SHUTDOWN_MSG: ", new String[]{
-          "Shutting down " + classname + " at " + hostname}));
-      }
-    });
+    ShutdownHookManager.get().addShutdownHook(
+      new Runnable() {
+        @Override
+        public void run() {
+          LOG.info(toStartupShutdownString("SHUTDOWN_MSG: ", new String[]{
+            "Shutting down " + classname + " at " + hostname}));
+        }
+      }, SHUTDOWN_HOOK_PRIORITY);
+
   }
 
   /**

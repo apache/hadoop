@@ -19,8 +19,10 @@ package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -31,6 +33,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.junit.Test;
 
 public class TestByteRangeInputStream {
@@ -83,6 +86,11 @@ public static class MockHttpURLConnection extends HttpURLConnection {
 
   public void setResponseCode(int resCode) {
     responseCode = resCode;
+  }
+  
+  @Override
+  public String getHeaderField(String field) {
+    return (field.equalsIgnoreCase(StreamFile.CONTENT_LENGTH)) ? "65535" : null;
   }
 }
   
@@ -162,5 +170,75 @@ public static class MockHttpURLConnection extends HttpURLConnection {
       assertEquals("Should fail because incorrect response code was sent",
                    "HTTP_OK expected, received 206", e.getMessage());
     }
+  }
+  
+  @Test
+  public void testPropagatedClose() throws IOException {
+    ByteRangeInputStream brs = spy(
+        new HftpFileSystem.RangeHeaderInputStream(new URL("http://test/")));
+    
+    InputStream mockStream = mock(InputStream.class);
+    doReturn(mockStream).when(brs).openInputStream();
+
+    int brisOpens = 0;
+    int brisCloses = 0;
+    int isCloses = 0;
+    
+    // first open, shouldn't close underlying stream
+    brs.getInputStream();
+    verify(brs, times(++brisOpens)).openInputStream();
+    verify(brs, times(brisCloses)).close();
+    verify(mockStream, times(isCloses)).close();
+    
+    // stream is open, shouldn't close underlying stream
+    brs.getInputStream();
+    verify(brs, times(brisOpens)).openInputStream();
+    verify(brs, times(brisCloses)).close();
+    verify(mockStream, times(isCloses)).close();
+    
+    // seek forces a reopen, should close underlying stream
+    brs.seek(1);
+    brs.getInputStream();
+    verify(brs, times(++brisOpens)).openInputStream();
+    verify(brs, times(brisCloses)).close();
+    verify(mockStream, times(++isCloses)).close();
+
+    // verify that the underlying stream isn't closed after a seek
+    // ie. the state was correctly updated
+    brs.getInputStream();
+    verify(brs, times(brisOpens)).openInputStream();
+    verify(brs, times(brisCloses)).close();
+    verify(mockStream, times(isCloses)).close();
+
+    // seeking to same location should be a no-op
+    brs.seek(1);
+    brs.getInputStream();
+    verify(brs, times(brisOpens)).openInputStream();
+    verify(brs, times(brisCloses)).close();
+    verify(mockStream, times(isCloses)).close();
+
+    // close should of course close
+    brs.close();
+    verify(brs, times(++brisCloses)).close();
+    verify(mockStream, times(++isCloses)).close();
+    
+    // it's already closed, underlying stream should not close
+    brs.close();
+    verify(brs, times(++brisCloses)).close();
+    verify(mockStream, times(isCloses)).close();
+    
+    // it's closed, don't reopen it
+    boolean errored = false;
+    try {
+      brs.getInputStream();
+    } catch (IOException e) {
+      errored = true;
+      assertEquals("Stream closed", e.getMessage());
+    } finally {
+      assertTrue("Read a closed steam", errored);
+    }
+    verify(brs, times(brisOpens)).openInputStream();
+    verify(brs, times(brisCloses)).close();
+    verify(mockStream, times(isCloses)).close();
   }
 }
