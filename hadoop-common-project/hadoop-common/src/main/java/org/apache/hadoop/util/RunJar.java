@@ -51,6 +51,11 @@ public class RunJar {
   public static final Pattern MATCH_ANY = Pattern.compile(".*");
 
   /**
+   * Priority of the RunJar shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 10;
+
+  /**
    * Unpack a jar file into a directory.
    *
    * This version unpacks all files inside the jar regardless of filename.
@@ -167,11 +172,14 @@ public class RunJar {
     }
     ensureDirectory(workDir);
 
-    Runtime.getRuntime().addShutdownHook(new Thread() {
+    ShutdownHookManager.get().addShutdownHook(
+      new Runnable() {
+        @Override
         public void run() {
           FileUtil.fullyDelete(workDir);
         }
-      });
+      }, SHUTDOWN_HOOK_PRIORITY);
+
 
     unJar(file, workDir);
 
