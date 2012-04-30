@@ -470,7 +470,7 @@ public class TestSequenceFile extends TestCase {
     SequenceFile.Writer writer = SequenceFile.createWriter(
         spyFs, conf, p, NullWritable.class, NullWritable.class);
     writer.close();
-    Mockito.verify(spyFs).getDefaultReplication();
+    Mockito.verify(spyFs).getDefaultReplication(p);
   }
 
   private static class TestFSDataInputStream extends FSDataInputStream {
