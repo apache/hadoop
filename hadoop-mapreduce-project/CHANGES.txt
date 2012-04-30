@@ -315,6 +315,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4189. TestContainerManagerSecurity is failing (Devaraj K via
     bobby)
 
+    MAPREDUCE-4209. junit dependency in hadoop-mapreduce-client is missing
+    scope test (Radim Kolar via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
