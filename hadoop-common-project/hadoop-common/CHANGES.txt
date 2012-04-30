@@ -121,6 +121,9 @@ Trunk (unreleased changes)
 
     HADOOP-7788. Add simple HealthMonitor class to watch an HAService (todd)
 
+    HADOOP-8312. testpatch.sh should provide a simpler way to see which
+    warnings changed (bobby)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
