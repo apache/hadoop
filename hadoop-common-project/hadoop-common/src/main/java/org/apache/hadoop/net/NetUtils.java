@@ -351,8 +351,19 @@ public class NetUtils {
    * @return socket address that a client can use to connect to the server.
    */
   public static InetSocketAddress getConnectAddress(Server server) {
-    InetSocketAddress addr = server.getListenerAddress();
-    if (addr.getAddress().isAnyLocalAddress()) {
+    return getConnectAddress(server.getListenerAddress());
+  }
+  
+  /**
+   * Returns the InetSocketAddress that a client can use to connect to the
+   * given listening address.  This returns "hostname:port" of the server,
+   * or "127.0.0.1:port" when given a wildcard address of "0.0.0.0:port".
+   * 
+   * @param addr of a listener
+   * @return socket address that a client can use to connect to the server.
+   */
+  public static InetSocketAddress getConnectAddress(InetSocketAddress addr) {
+    if (!addr.isUnresolved() && addr.getAddress().isAnyLocalAddress()) {
       try {
         addr = new InetSocketAddress(InetAddress.getLocalHost(), addr.getPort());
       } catch (UnknownHostException uhe) {

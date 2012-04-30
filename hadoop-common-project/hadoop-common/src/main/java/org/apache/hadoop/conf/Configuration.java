@@ -1236,6 +1236,29 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     final String address = get(name, defaultAddress);
     return NetUtils.createSocketAddr(address, defaultPort, name);
   }
+
+  /**
+   * Set the socket address for the <code>name</code> property as
+   * a <code>host:port</code>.
+   */
+  public void setSocketAddr(String name, InetSocketAddress addr) {
+    set(name, NetUtils.getHostPortString(addr));
+  }
+  
+  /**
+   * Set the socket address a client can use to connect for the
+   * <code>name</code> property as a <code>host:port</code>.  The wildcard
+   * address is replaced with the local host's address.
+   * @param name property name.
+   * @param addr InetSocketAddress of a listener to store in the given property
+   * @return InetSocketAddress for clients to connect
+   */
+  public InetSocketAddress updateConnectAddr(String name,
+                                             InetSocketAddress addr) {
+    final InetSocketAddress connectAddr = NetUtils.getConnectAddress(addr);
+    setSocketAddr(name, connectAddr);
+    return connectAddr;
+  }
   
   /**
    * Load a class by name.
