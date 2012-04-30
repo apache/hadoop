@@ -20,6 +20,7 @@ package org.apache.hadoop.http;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -467,4 +468,54 @@ public class TestHttpServer extends HttpServerFunctionalTest {
 
   }
 
+  @Test public void testBindAddress() throws Exception {
+    checkBindAddress("0.0.0.0", 0, false).stop();
+    // hang onto this one for a bit more testing
+    HttpServer myServer = checkBindAddress("localhost", 0, false);
+    HttpServer myServer2 = null;
+    try { 
+      int port = myServer.getListenerAddress().getPort();
+      // it's already in use, true = expect a higher port
+      myServer2 = checkBindAddress("localhost", port, true);
+      // try to reuse the port
+      port = myServer2.getListenerAddress().getPort();
+      myServer2.stop();
+      assertEquals(-1, myServer2.getPort()); // not bound
+      myServer2.openListener();
+      assertEquals(port, myServer2.getPort()); // expect same port
+    } finally {
+      myServer.stop();
+      if (myServer2 != null) {
+        myServer2.stop();
+      }
+    }
+  }
+  
+  private HttpServer checkBindAddress(String host, int port, boolean findPort)
+      throws Exception {
+    HttpServer server = createServer(host, port);
+    try {
+      // not bound, ephemeral should return requested port (0 for ephemeral)
+      InetSocketAddress addr = server.getListenerAddress();
+      assertEquals(port, addr.getPort());
+      // verify hostname is what was given
+      server.openListener();
+      addr = server.getListenerAddress();
+      assertEquals(host, addr.getHostName());
+
+      int boundPort = addr.getPort();
+      if (port == 0) {
+        assertTrue(boundPort != 0); // ephemeral should now return bound port
+      } else if (findPort) {
+        assertTrue(boundPort > port);
+        // allow a little wiggle room to prevent random test failures if
+        // some consecutive ports are already in use
+        assertTrue(addr.getPort() - port < 8);
+      }
+    } catch (Exception e) {
+      server.stop();
+      throw e;
+    }
+    return server;
+  }
 }
