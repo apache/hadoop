@@ -74,6 +74,9 @@ Trunk (unreleased changes)
     HDFS-2743. Streamline usage of bookkeeper journal manager. 
     (Ivan Kelly via umamahesh)
 
+    HDFS-3293. Add toString(), equals(..) and hashCode() to JournalInfo.
+    (Hari Mankude via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
