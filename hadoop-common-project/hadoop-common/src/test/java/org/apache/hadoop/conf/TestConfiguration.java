@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -669,6 +670,27 @@ public class TestConfiguration extends TestCase {
     } finally {
       assertTrue(threwException);
     }
+  }
+
+  public void testSetSocketAddress() throws IOException {
+    Configuration conf = new Configuration();
+    NetUtils.addStaticResolution("host", "127.0.0.1");
+    final String defaultAddr = "host:1";
+    
+    InetSocketAddress addr = NetUtils.createSocketAddr(defaultAddr);    
+    conf.setSocketAddr("myAddress", addr);
+    assertEquals(defaultAddr, NetUtils.getHostPortString(addr));
+  }
+  
+  public void testUpdateSocketAddress() throws IOException {
+    InetSocketAddress addr = NetUtils.createSocketAddrForHost("host", 1);
+    InetSocketAddress connectAddr = conf.updateConnectAddr("myAddress", addr);
+    assertEquals(connectAddr.getHostName(), addr.getHostName());
+    
+    addr = new InetSocketAddress(1);
+    connectAddr = conf.updateConnectAddr("myAddress", addr);
+    assertEquals(connectAddr.getHostName(),
+                 InetAddress.getLocalHost().getHostName());
   }
 
   public void testReload() throws IOException {
