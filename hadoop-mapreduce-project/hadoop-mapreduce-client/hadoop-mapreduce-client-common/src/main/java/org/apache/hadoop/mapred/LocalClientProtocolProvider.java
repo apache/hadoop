@@ -33,8 +33,9 @@ public class LocalClientProtocolProvider extends ClientProtocolProvider {
 
   @Override
   public ClientProtocol create(Configuration conf) throws IOException {
-    String framework = conf.get(MRConfig.FRAMEWORK_NAME);
-    if (framework != null && !framework.equals(MRConfig.LOCAL_FRAMEWORK_NAME)) {
+    String framework =
+        conf.get(MRConfig.FRAMEWORK_NAME, MRConfig.LOCAL_FRAMEWORK_NAME);
+    if (!MRConfig.LOCAL_FRAMEWORK_NAME.equals(framework)) {
       return null;
     }
     String tracker = conf.get(JTConfig.JT_IPC_ADDRESS, "local");
