@@ -333,7 +333,8 @@ public class MiniMRCluster {
   private void waitTaskTrackers() {
     for(Iterator<TaskTrackerRunner> itr= taskTrackerList.iterator(); itr.hasNext();) {
       TaskTrackerRunner runner = itr.next();
-      while (!runner.isDead && (!runner.isInitialized || !runner.tt.isIdle())) {
+      while (!runner.isDead && (!runner.isInitialized
+        ||  !runner.tt.isIdleAndClean())) {
         if (!runner.isInitialized) {
           LOG.info("Waiting for task tracker to start.");
         } else {

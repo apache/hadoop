@@ -240,6 +240,11 @@ Release 1.1.0 - unreleased
     HADOOP-8314. HttpServer#hasAdminAccess should return false if authorization 
     is enabled but user is not authenticated. (tucu)
 
+    MAPREDUCE-4088. Task stuck in JobLocalizer prevented other tasks on the
+    same node from (Ravi Prakash via bobby)
+
+committing
+
 Release 1.0.3 - unreleased
 
   NEW FEATURES

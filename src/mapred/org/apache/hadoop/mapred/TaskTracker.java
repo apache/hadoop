@@ -443,7 +443,21 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           while (true) {
             try {
               TaskTrackerAction action = tasksToCleanup.take();
-              checkJobStatusAndWait(action);
+              if( !checkJobStatusAndWait(action) ) {
+                //If job is still localizing, put it back into the queue and
+                //pick another one in the next iteration
+                StringBuffer sb = new StringBuffer("Cleanup for job ");
+                if (action instanceof KillJobAction) {
+                  sb.append(((KillJobAction)action).getJobID());
+                } else if (action instanceof KillTaskAction) {
+                  sb.append(((KillTaskAction)action).getTaskID().getJobID() +
+                    ", task " + ((KillTaskAction)action).getTaskID());
+                }
+                sb.append(" was postponed after waiting for 5 seconds.");
+                LOG.info(sb);
+                tasksToCleanup.put(action);
+                continue;
+              }
               if (action instanceof KillJobAction) {
                 purgeJob((KillJobAction) action);
               } else if (action instanceof KillTaskAction) {
@@ -467,8 +481,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     LOG.info("Received KillTaskAction for task: " + killAction.getTaskID());
     purgeTask(tip, false);
   }
-  
-  private void checkJobStatusAndWait(TaskTrackerAction action) 
+
+  /**
+   * Wait until the job has completed localizing if it was doing so.
+   * @param action The command received from the JobTracker
+   * @return true if the wait was successful and the task is not localizing
+   * anymore. false if after 5 seconds, the job was still localizing
+   * @throws InterruptedException
+   */
+  private boolean checkJobStatusAndWait(TaskTrackerAction action)
   throws InterruptedException {
     JobID jobId = null;
     if (action instanceof KillJobAction) {
@@ -476,7 +497,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     } else if (action instanceof KillTaskAction) {
       jobId = ((KillTaskAction)action).getTaskID().getJobID();
     } else {
-      return;
+      return true;
     }
     RunningJob rjob = null;
     synchronized (runningJobs) {
@@ -484,11 +505,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     }
     if (rjob != null) {
       synchronized (rjob) {
-        while (rjob.localizing) {
-          rjob.wait();
-        }
+        rjob.wait(5000);
+        return !rjob.localizing;
       }
     }
+    return true;
   }
 
   public TaskController getTaskController() {
@@ -3763,15 +3784,23 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   JobConf getJobConf() {
     return fConf;
   }
-    
+
   /**
    * Is this task tracker idle?
-   * @return has this task tracker finished and cleaned up all of its tasks?
+   * @return has this task tracker finished all its assigned tasks?
    */
   public synchronized boolean isIdle() {
+    return tasks.isEmpty();
+  }
+
+  /**
+   * Is this task tracker idle and clean?
+   * @return has this task tracker finished and cleaned up all of its tasks?
+   */
+  public synchronized boolean isIdleAndClean() {
     return tasks.isEmpty() && tasksToCleanup.isEmpty();
   }
-    
+
   /**
    * Start the TaskTracker, point toward the indicated JobTracker
    */
