@@ -53,6 +53,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8335. Improve Configuration's address handling (Daryn Sharp via
     bobby)
 
+    HADOOP-8104. Inconsistent Jackson versions (tucu)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
