@@ -559,7 +559,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return hints;
   }
 
-  private static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
+  static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
       String src, long start, long length) throws IOException {
     try {
       return namenode.getBlockLocations(src, start, length);
@@ -1016,27 +1016,29 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      
       boolean done = false;
       for(int j = 0; !done && j < datanodes.length; j++) {
-        //connect to a datanode
-        final Socket sock = socketFactory.createSocket();
         final String dnName = datanodes[j].getName(connectToDnViaHostname);
-        LOG.debug("Connecting to " + dnName);
-        NetUtils.connect(sock, 
-                         NetUtils.createSocketAddr(dnName),
-                         timeout);
-        sock.setSoTimeout(timeout);
-
-        DataOutputStream out = new DataOutputStream(
-            new BufferedOutputStream(NetUtils.getOutputStream(sock), 
-                                     DataNode.SMALL_BUFFER_SIZE));
-        DataInputStream in = new DataInputStream(NetUtils.getInputStream(sock));
-
-        // get block MD5
+        Socket sock = null;
+        DataOutputStream out = null;
+        DataInputStream in = null;
+        
         try {
+          //connect to a datanode
+          sock = socketFactory.createSocket();
+          LOG.debug("Connecting to " + dnName);
+          NetUtils.connect(sock, NetUtils.createSocketAddr(dnName), timeout);
+          sock.setSoTimeout(timeout);
+
+          out = new DataOutputStream(
+              new BufferedOutputStream(NetUtils.getOutputStream(sock),
+                                       DataNode.SMALL_BUFFER_SIZE));
+          in = new DataInputStream(NetUtils.getInputStream(sock));
+
           if (LOG.isDebugEnabled()) {
             LOG.debug("write to " + dnName + ": "
-                + DataTransferProtocol.OP_BLOCK_CHECKSUM +
-                ", block=" + block);
+                + DataTransferProtocol.OP_BLOCK_CHECKSUM + ", block=" + block);
           }
+
+          // get block MD5
           out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
           out.write(DataTransferProtocol.OP_BLOCK_CHECKSUM);
           out.writeLong(block.getBlockId());
