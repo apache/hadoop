@@ -319,6 +319,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8116. RetriableCommand is using RetryPolicy incorrectly after
     HADOOP-7896. (atm)
 
+    HADOOP-8317. Update maven-assembly-plugin to 2.3 - fix build on FreeBSD
+    (Radim Kolar via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
