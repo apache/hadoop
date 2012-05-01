@@ -451,6 +451,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3326. Append enabled log message uses the wrong variable.
     (Matthew Jacobs via eli)
 
+    HDFS-3275. Skip format for non-file based directories. 
+    (Amith D K via umamahesh)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

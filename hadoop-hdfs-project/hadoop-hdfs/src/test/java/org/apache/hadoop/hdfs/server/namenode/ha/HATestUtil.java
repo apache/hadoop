@@ -167,6 +167,15 @@ public abstract class HATestUtil {
       Configuration conf, String logicalName, int nsIndex) {
     InetSocketAddress nnAddr1 = cluster.getNameNode(2 * nsIndex).getNameNodeAddress();
     InetSocketAddress nnAddr2 = cluster.getNameNode(2 * nsIndex + 1).getNameNodeAddress();
+    setFailoverConfigurations(conf, logicalName, nnAddr1, nnAddr2);
+  }
+
+  /**
+   * Sets the required configurations for performing failover
+   */
+  public static void setFailoverConfigurations(Configuration conf,
+      String logicalName, InetSocketAddress nnAddr1,
+      InetSocketAddress nnAddr2) {
     String nameNodeId1 = "nn1";
     String nameNodeId2 = "nn2";
     String address1 = "hdfs://" + nnAddr1.getHostName() + ":" + nnAddr1.getPort();
