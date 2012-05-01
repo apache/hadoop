@@ -454,6 +454,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3275. Skip format for non-file based directories. 
     (Amith D K via umamahesh)
 
+    HDFS-3286. When the threshold value for balancer is zero, unexpected output is displayed.
+    (Ashish Singhi via umamahesh)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

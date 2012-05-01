@@ -94,7 +94,7 @@ import org.apache.hadoop.util.ToolRunner;
  * </pre>
  * 
  * <p>DESCRIPTION
- * <p>The threshold parameter is a fraction in the range of (0%, 100%) with a 
+ * <p>The threshold parameter is a fraction in the range of (1%, 100%) with a 
  * default value of 10%. The threshold sets a target for whether the cluster 
  * is balanced. A cluster is balanced if for each datanode, the utilization 
  * of the node (ratio of used space at the node to total capacity of the node) 
@@ -1503,14 +1503,14 @@ public class Balancer {
               i++;
               try {
                 threshold = Double.parseDouble(args[i]);
-                if (threshold < 0 || threshold > 100) {
-                  throw new NumberFormatException(
+                if (threshold < 1 || threshold > 100) {
+                  throw new IllegalArgumentException(
                       "Number out of range: threshold = " + threshold);
                 }
                 LOG.info( "Using a threshold of " + threshold );
-              } catch(NumberFormatException e) {
+              } catch(IllegalArgumentException e) {
                 System.err.println(
-                    "Expecting a number in the range of [0.0, 100.0]: "
+                    "Expecting a number in the range of [1.0, 100.0]: "
                     + args[i]);
                 throw e;
               }
