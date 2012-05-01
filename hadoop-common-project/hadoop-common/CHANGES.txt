@@ -126,6 +126,9 @@ Trunk (unreleased changes)
     HADOOP-8312. testpatch.sh should provide a simpler way to see which
     warnings changed (bobby)
 
+    HADOOP-8339. jenkins complaining about 16 javadoc warnings 
+    (Tom White and Robert Evans via tgraves)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

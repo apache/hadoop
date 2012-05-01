@@ -1776,7 +1776,7 @@ public abstract class Server {
    * from configuration. Otherwise the configuration will be picked up.
    * 
    * If rpcRequestClass is null then the rpcRequestClass must have been 
-   * registered via {@link #registerProtocolEngine(RpcPayloadHeader.RpcKind,
+   * registered via {@link #registerProtocolEngine(RPC.RpcKind,
    *  Class, RPC.RpcInvoker)}
    * This parameter has been retained for compatibility with existing tests
    * and usage.
@@ -1990,7 +1990,7 @@ public abstract class Server {
   
   /** 
    * Called for each call. 
-   * @deprecated Use  {@link #call(RpcPayloadHeader.RpcKind, String,
+   * @deprecated Use  {@link #call(RPC.RpcKind, String,
    *  Writable, long)} instead
    */
   @Deprecated
