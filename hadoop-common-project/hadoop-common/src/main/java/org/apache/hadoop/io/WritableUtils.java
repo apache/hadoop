@@ -326,9 +326,41 @@ public final class WritableUtils  {
    * @return deserialized integer from stream.
    */
   public static int readVInt(DataInput stream) throws IOException {
-    return (int) readVLong(stream);
+    long n = readVLong(stream);
+    if ((n > Integer.MAX_VALUE) || (n < Integer.MIN_VALUE)) {
+      throw new IOException("value too long to fit in integer");
+    }
+    return (int)n;
   }
- 
+
+  /**
+   * Reads an integer from the input stream and returns it.
+   *
+   * This function validates that the integer is between [lower, upper],
+   * inclusive.
+   *
+   * @param stream Binary input stream
+   * @throws java.io.IOException
+   * @return deserialized integer from stream
+   */
+  public static int readVIntInRange(DataInput stream, int lower, int upper)
+      throws IOException {
+    long n = readVLong(stream);
+    if (n < lower) {
+      if (lower == 0) {
+        throw new IOException("expected non-negative integer, got " + n);
+      } else {
+        throw new IOException("expected integer greater than or equal to " +
+            lower + ", got " + n);
+      }
+    }
+    if (n > upper) {
+      throw new IOException("expected integer less or equal to " + upper +
+          ", got " + n);
+    }
+    return (int)n;
+  }
+
   /**
    * Given the first byte of a vint/vlong, determine the sign
    * @param value the first byte
