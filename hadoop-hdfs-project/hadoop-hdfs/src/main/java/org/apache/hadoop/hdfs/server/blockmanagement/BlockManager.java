@@ -57,7 +57,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
-import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -2382,7 +2381,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       // necessary. In that case, put block on a possibly-will-
       // be-replicated list.
       //
-      INode fileINode = blocksMap.getINode(block);
+      INodeFile fileINode = blocksMap.getINode(block);
       if (fileINode != null) {
         namesystem.decrementSafeBlockCount(block);
         updateNeededReplications(block, -1, 0);
@@ -2614,7 +2613,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       NumberReplicas num) {
     int curReplicas = num.liveReplicas();
     int curExpectedReplicas = getReplication(block);
-    INode fileINode = blocksMap.getINode(block);
+    INodeFile fileINode = blocksMap.getINode(block);
     Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(block);
     StringBuilder nodeList = new StringBuilder();
     while (nodeIter.hasNext()) {
@@ -2665,7 +2664,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
     while(it.hasNext()) {
       final Block block = it.next();
-      INode fileINode = blocksMap.getINode(block);
+      INodeFile fileINode = blocksMap.getINode(block);
 
       if (fileINode != null) {
         NumberReplicas num = countNodes(block);

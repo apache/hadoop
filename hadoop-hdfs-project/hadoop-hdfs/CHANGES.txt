@@ -275,6 +275,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3322. Use HdfsDataInputStream and HdfsDataOutputStream in Hdfs.
     (szetszwo)
 
+    HDFS-3339. Change INode to package private.  (John George via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
