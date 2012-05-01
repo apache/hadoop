@@ -55,6 +55,9 @@ Release 1.0.3 - unreleased
     HDFS-3316. The tar ball doesn't include jsvc any more.
     (Owen O'Malley via mattf)
 
+    HDFS-1041. DFSClient.getFileChecksum(..) should retry if connection to
+    the first datanode fails.  (szetszwo)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
