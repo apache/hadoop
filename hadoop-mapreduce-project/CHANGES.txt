@@ -324,6 +324,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4212. TestJobClientGetJob sometimes fails 
     (Daryn Sharp via tgraves)
 
+    MAPREDUCE-4211. Error conditions (missing appid, appid not found) are 
+    masked in the RM app page (Jonathan Eagles via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
