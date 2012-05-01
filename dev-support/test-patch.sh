@@ -389,10 +389,10 @@ checkJavadocWarnings () {
   echo ""
   echo "$MVN clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1"
   if [ -d hadoop-project ]; then
-    (cd hadoop-project; $MVN install)
+    (cd hadoop-project; $MVN install > /dev/null 2>&1)
   fi
   if [ -d hadoop-common-project/hadoop-annotations ]; then  
-    (cd hadoop-common-project/hadoop-annotations; $MVN install)
+    (cd hadoop-common-project/hadoop-annotations; $MVN install > /dev/null 2>&1)
   fi
   $MVN clean test javadoc:javadoc -DskipTests -Pdocs -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchJavadocWarnings.txt 2>&1
   javadocWarnings=`$GREP '\[WARNING\]' $PATCH_DIR/patchJavadocWarnings.txt | $AWK '/Javadoc Warnings/,EOF' | $GREP warning | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
@@ -472,8 +472,8 @@ checkReleaseAuditWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN apache-rat:check -D${PROJECT_NAME}PatchProcess 2>&1"
-  $MVN apache-rat:check -D${PROJECT_NAME}PatchProcess 2>&1
+  echo "$MVN apache-rat:check -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchReleaseAuditOutput.txt 2>&1"
+  $MVN apache-rat:check -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchReleaseAuditOutput.txt 2>&1
   find $BASEDIR -name rat.txt | xargs cat > $PATCH_DIR/patchReleaseAuditWarnings.txt
 
   ### Compare trunk and patch release audit warning numbers
@@ -548,10 +548,21 @@ checkFindbugsWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean test findbugs:findbugs -DskipTests -D${PROJECT_NAME}PatchProcess" 
-  $MVN clean test findbugs:findbugs -DskipTests -D${PROJECT_NAME}PatchProcess < /dev/null
+  
+  modules=$(findModules)
+  rc=0
+  for module in $modules;
+  do
+    cd $module
+    echo "  Running findbugs in $module"
+    module_suffix=`basename ${module}`
+    echo "$MVN clean test findbugs:findbugs -DskipTests -D${PROJECT_NAME}PatchProcess < /dev/null > $PATCH_DIR/patchFindBugsOutput${module_suffix}.txt 2>&1" 
+    $MVN clean test findbugs:findbugs -DskipTests -D${PROJECT_NAME}PatchProcess < /dev/null > $PATCH_DIR/patchFindBugsOutput${module_suffix}.txt 2>&1
+    (( rc = rc + $? ))
+    cd -
+  done
 
-  if [ $? != 0 ] ; then
+  if [ $rc != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
     -1 findbugs.  The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
@@ -610,8 +621,8 @@ checkEclipseGeneration () {
   echo ""
   echo ""
 
-  echo "$MVN eclipse:eclipse -D${PROJECT_NAME}PatchProcess"
-  $MVN eclipse:eclipse -D${PROJECT_NAME}PatchProcess
+  echo "$MVN eclipse:eclipse -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchEclipseOutput.txt 2>&1"
+  $MVN eclipse:eclipse -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchEclipseOutput.txt 2>&1
   if [[ $? != 0 ]] ; then
       JIRA_COMMENT="$JIRA_COMMENT
 
@@ -639,16 +650,28 @@ runTests () {
   echo ""
   echo ""
 
-  echo "$MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess"
-  $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess
-  failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
-  # With -fn mvn always exits with a 0 exit code.  Because of this we need to
-  # find the errors instead of using the exit code.  We assume that if the build
-  # failed a -1 is already given for that case
+  failed_tests=""
+  modules=$(findModules)
+  for module in $modules;
+  do
+    cd $module
+    echo "  Running tests in $module"
+    echo "  $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess"
+    $MVN clean install -fn -Pnative -D${PROJECT_NAME}PatchProcess
+    module_failed_tests=`find . -name 'TEST*.xml' | xargs $GREP  -l -E "<failure|<error" | sed -e "s|.*target/surefire-reports/TEST-|                  |g" | sed -e "s|\.xml||g"`
+    # With -fn mvn always exits with a 0 exit code.  Because of this we need to
+    # find the errors instead of using the exit code.  We assume that if the build
+    # failed a -1 is already given for that case
+    if [[ -n "$module_failed_tests" ]] ; then
+      failed_tests="${failed_tests}
+${module_failed_tests}"
+    fi
+    cd -
+  done
   if [[ -n "$failed_tests" ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 core tests.  The patch failed these unit tests:
+    -1 core tests.  The patch failed these unit tests in $modules:
 $failed_tests"
     return 1
   fi
@@ -658,6 +681,51 @@ $failed_tests"
   return 0
 }
 
+###############################################################################
+# Find the maven module containing the given file.
+findModule (){
+ dir=`dirname $1`
+ while [ 1 ]
+ do
+  if [ -f "$dir/pom.xml" ]
+  then
+    echo $dir
+    return
+  else
+    dir=`dirname $dir`
+  fi
+ done
+}
+
+findModules () {
+  # Come up with a list of changed files into $TMP
+  TMP=/tmp/tmp.paths.$$
+  $GREP '^+++\|^---' $PATCH_DIR/patch | cut -c '5-' | $GREP -v /dev/null | sort | uniq > $TMP
+  
+  # if all of the lines start with a/ or b/, then this is a git patch that
+  # was generated without --no-prefix
+  if ! $GREP -qv '^a/\|^b/' $TMP ; then
+    sed -i -e 's,^[ab]/,,' $TMP
+  fi
+  
+  # Now find all the modules that were changed
+  TMP_MODULES=/tmp/tmp.modules.$$
+  for file in $(cut -f 1 $TMP | sort | uniq); do
+    echo $(findModule $file) >> $TMP_MODULES
+  done
+  rm $TMP
+  
+  # Filter out modules without code 
+  CHANGED_MODULES=""
+  for module in $(cat $TMP_MODULES | sort | uniq); do
+    $GREP "<packaging>pom</packaging>" $module/pom.xml > /dev/null
+    if [ "$?" != 0 ]; then
+      CHANGED_MODULES="$CHANGED_MODULES $module"
+    fi
+  done
+  rm $TMP_MODULES
+  echo $CHANGED_MODULES
+}
 ###############################################################################
 ### Run the test-contrib target
 runContribTests () {
