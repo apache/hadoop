@@ -321,6 +321,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4206. Sorting by Last Health-Update on the RM nodes page sorts
     does not work correctly (Jonathon Eagles via tgraves)
 
+    MAPREDUCE-4212. TestJobClientGetJob sometimes fails 
+    (Daryn Sharp via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

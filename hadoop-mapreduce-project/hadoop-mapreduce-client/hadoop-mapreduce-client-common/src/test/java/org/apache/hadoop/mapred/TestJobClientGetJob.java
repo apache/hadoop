@@ -49,8 +49,9 @@ public class TestJobClientGetJob {
     JobConf conf = new JobConf();
     conf.set("mapreduce.framework.name", "local");
     FileInputFormat.addInputPath(conf, createTempFile("in", "hello"));
-    FileOutputFormat.setOutputPath(conf,
-        new Path(TEST_ROOT_DIR, getClass().getSimpleName()));
+    Path outputDir = new Path(TEST_ROOT_DIR, getClass().getSimpleName());
+    outputDir.getFileSystem(conf).delete(outputDir, true);
+    FileOutputFormat.setOutputPath(conf, outputDir);
     JobClient jc = new JobClient(conf);
     RunningJob runningJob = jc.submitJob(conf);
     assertNotNull("Running job", runningJob);
