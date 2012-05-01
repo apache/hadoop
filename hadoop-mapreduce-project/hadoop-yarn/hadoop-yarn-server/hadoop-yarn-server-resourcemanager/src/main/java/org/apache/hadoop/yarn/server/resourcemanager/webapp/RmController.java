@@ -20,27 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp.QUEUE_NAME;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
-
-import javax.servlet.http.HttpServletResponse;
-
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.StringHelper;
-import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.Controller;
-import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 import com.google.inject.Inject;
@@ -49,12 +34,9 @@ import com.google.inject.Inject;
 // on Mac OS HFS as its case-insensitive!
 public class RmController extends Controller {
 
-  private ApplicationACLsManager aclsManager;
-
   @Inject
-  RmController(RequestContext ctx, ApplicationACLsManager aclsManager) {
+  RmController(RequestContext ctx) {
     super(ctx);
-    this.aclsManager = aclsManager;
   }
 
   @Override public void index() {
@@ -67,57 +49,6 @@ public class RmController extends Controller {
   }
 
   public void app() {
-    String aid = $(APPLICATION_ID);
-    if (aid.isEmpty()) {
-      setStatus(HttpServletResponse.SC_BAD_REQUEST);
-      setTitle("Bad request: requires application ID");
-      return;
-    }
-    ApplicationId appID = Apps.toAppID(aid);
-    RMContext context = getInstance(RMContext.class);
-    RMApp rmApp = context.getRMApps().get(appID);
-    if (rmApp == null) {
-      // TODO: handle redirect to jobhistory server
-      setStatus(HttpServletResponse.SC_NOT_FOUND);
-      setTitle("Application not found: "+ aid);
-      return;
-    }
-    AppInfo app = new AppInfo(rmApp, true);
-
-    // Check for the authorization.
-    String remoteUser = request().getRemoteUser();
-    UserGroupInformation callerUGI = null;
-    if (remoteUser != null) {
-      callerUGI = UserGroupInformation.createRemoteUser(remoteUser);
-    }
-    if (callerUGI != null
-        && !this.aclsManager.checkAccess(callerUGI,
-            ApplicationAccessType.VIEW_APP, app.getUser(), appID)) {
-      setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-      setTitle("Unauthorized request for viewing application " + appID);
-      renderText("You (User " + remoteUser
-          + ") are not authorized to view the logs for application " + appID);
-      return;
-    }
-
-    setTitle(join("Application ", aid));
-
-    ResponseInfo info = info("Application Overview").
-      _("User:", app.getUser()).
-      _("Name:", app.getName()).
-      _("State:", app.getState()).
-      _("FinalStatus:", app.getFinalStatus()).
-      _("Started:", Times.format(app.getStartTime())).
-      _("Elapsed:", StringUtils.formatTime(
-        Times.elapsed(app.getStartTime(), app.getFinishTime()))).
-      _("Tracking URL:", !app.isTrackingUrlReady() ?
-        "#" : app.getTrackingUrlPretty(), app.getTrackingUI()).
-      _("Diagnostics:", app.getNote());
-    if (app.amContainerLogsExist()) {
-      info._("AM container logs:", app.getAMContainerLogs(), app.getAMContainerLogs());
-    } else {
-      info._("AM container logs:", "");
-    }
     render(AppPage.class);
   }
 
