@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.webapp;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -75,6 +76,14 @@ public abstract class WebApp extends ServletModule {
 
   @Provides public HttpServer httpServer() { return httpServer; }
 
+  /**
+   * Get the address the http server is bound to
+   * @return InetSocketAddress
+   */
+  public InetSocketAddress getListenerAddress() {
+    return checkNotNull(httpServer, "httpServer").getListenerAddress();
+  }
+	
   public int port() {
     return checkNotNull(httpServer, "httpServer").getPort();
   }
