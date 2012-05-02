@@ -196,6 +196,18 @@ void test_check_user() {
   }
 }
 
+void test_resolve_config_path() {
+  printf("\nTesting resolve_config_path\n");
+  if (strcmp(resolve_config_path("/etc/passwd", NULL), "/etc/passwd") != 0) {
+    printf("FAIL: failed to resolve config_name on an absolute path name: /etc/passwd\n");
+    exit(1);
+  }
+  if (strcmp(resolve_config_path("../etc/passwd", "/etc/passwd"), "/etc/passwd") != 0) {
+    printf("FAIL: failed to resolve config_name on a relative path name: ../etc/passwd (relative to /etc/passwd)");
+    exit(1);
+  }
+}
+
 void test_check_configuration_permissions() {
   printf("\nTesting check_configuration_permissions\n");
   if (check_configuration_permissions("/etc/passwd") != 0) {
@@ -668,7 +680,9 @@ int main(int argc, char **argv) {
   int my_username = 0;
 
   // clean up any junk from previous run
-  system("chmod -R u=rwx " TEST_ROOT "; rm -fr " TEST_ROOT);
+  if (system("chmod -R u=rwx " TEST_ROOT "; rm -fr " TEST_ROOT)) {
+    exit(1);
+  }
   
   if (mkdirs(TEST_ROOT "/logs/userlogs", 0755) != 0) {
     exit(1);
@@ -699,6 +713,9 @@ int main(int argc, char **argv) {
   }
 
   printf("\nStarting tests\n");
+
+  printf("\nTesting resolve_config_path()\n");
+  test_resolve_config_path();
 
   printf("\nTesting get_user_directory()\n");
   test_get_user_directory();

@@ -54,6 +54,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3883. Document yarn.nodemanager.delete.debug-delay-sec 
     configuration property (Eugene Koontz via tgraves)
 
+    MAPREDUCE-4219. make default container-executor.conf.dir be a path 
+    relative to the container-executor binary. (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
