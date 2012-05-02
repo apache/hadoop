@@ -148,6 +148,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-7549. Use JDK ServiceLoader mechanism to find FileSystem implementations. (tucu)
 
+    HADOOP-8185. Update namenode -format documentation and add -nonInteractive and -force. (Arpit Gupta via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
