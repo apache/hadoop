@@ -1592,6 +1592,14 @@
 
     <copy todir="${dist.dir}/" file="build.xml"/>
 
+    <subant target="task-controller">
+      <fileset dir="." includes="build.xml"/>
+    </subant>
+
+    <subant target="jsvc">
+      <fileset dir="." includes="build.xml"/>
+    </subant>
+
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/sbin"/>
@@ -1759,6 +1767,14 @@
         <include name="${build.platform}/lib/*"/>
       </fileset>
     </copy>
+
+    <subant target="task-controller">
+      <fileset dir="." includes="build.xml"/>
+    </subant>
+
+    <subant target="jsvc">
+      <fileset dir="." includes="build.xml"/>
+    </subant>
 
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
