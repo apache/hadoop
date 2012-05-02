@@ -201,6 +201,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4079. Allow MR AppMaster to limit ephemeral port range.
     (bobby via tgraves)
 
+    MAPREDUCE-4210. Expose listener address for WebApp (Daryn Sharp via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
