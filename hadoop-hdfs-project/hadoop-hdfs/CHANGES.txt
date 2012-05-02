@@ -583,6 +583,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3326. Append enabled log message uses the wrong variable.
     (Matthew Jacobs via eli)
 
+    HDFS-3336. hdfs launcher script will be better off not special casing 
+    namenode command with regards to hadoop.security.logger (rvs via tucu)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
