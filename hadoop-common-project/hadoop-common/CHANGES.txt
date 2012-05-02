@@ -150,6 +150,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8185. Update namenode -format documentation and add -nonInteractive and -force. (Arpit Gupta via atm)
 
+    HADOOP-8214. make hadoop script recognize a full set of deprecated commands (rvs via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
