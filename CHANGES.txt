@@ -39,10 +39,12 @@ Release 1.0.3 - unreleased
     MAPREDUCE-4154. streaming MR job succeeds even if the streaming command 
     fails. (Devaraj Das via tgraves)
 
-    HDFS-119. Fix a bug in logSync(), which causes NameNode block forever. (shv)
+    HDFS-119. Fix a bug in logSync(), which causes NameNode block forever. 
+    (shv)
 
-    HADOOP-8294. IPC Connection becomes unusable even if server address was temporarilly
-    unresolvable. Backport of HADOOP-7428. (Kihwal Lee via mattf)
+    HADOOP-8294. IPC Connection becomes unusable even if server address 
+    was temporarilly unresolvable. Backport of HADOOP-7428. (Kihwal Lee via 
+    mattf)
 
     HDFS-3310. Make sure that we abort when no edit log directories are left.
     (Colin Patrick McCabe via eli)
@@ -53,10 +55,12 @@ Release 1.0.3 - unreleased
     HDFS-3265. PowerPc Build error. (Kumar Ravi via mattf)
 
     HDFS-3316. The tar ball doesn't include jsvc any more.
-    (Owen O'Malley via mattf)
+    (omalley via mattf)
 
     HDFS-1041. DFSClient.getFileChecksum(..) should retry if connection to
     the first datanode fails.  (szetszwo)
+
+    HADOOP-8338. Fix renew and cancel of RPC HDFS delegation tokens. (omalley)
 
 Release 1.0.2 - 2012.03.24
 
