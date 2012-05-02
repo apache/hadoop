@@ -52,9 +52,6 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-2850. Add test for MAPREDUCE-2413. (ravigummadi)
 
-    HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
-    (todd)
-
     MAPREDUCE-3278. Fix a busy loop in ReduceTask that would cause 100%
     cpu utilization during the fetch phase. (todd)
 
@@ -243,8 +240,6 @@ Release 1.1.0 - unreleased
     MAPREDUCE-4088. Task stuck in JobLocalizer prevented other tasks on the
     same node from (Ravi Prakash via bobby)
 
-committing
-
 Release 1.0.3 - unreleased
 
   NEW FEATURES
@@ -284,11 +279,12 @@ Release 1.0.3 - unreleased
     MAPREDUCE-4154. streaming MR job succeeds even if the streaming command 
     fails. (Devaraj Das via tgraves)
 
-    HDFS-119. Fix a bug in logSync(), which causes NameNode block
-    forever. (shv)
+    HDFS-119. Fix a bug in logSync(), which causes NameNode block forever. 
+    (shv)
 
-    HADOOP-8294. IPC Connection becomes unusable even if server address was temporarilly
-    unresolvable. Backport of HADOOP-7428. (Kihwal Lee via mattf)
+    HADOOP-8294. IPC Connection becomes unusable even if server address 
+    was temporarilly unresolvable. Backport of HADOOP-7428. (Kihwal Lee via 
+    mattf)
 
     HDFS-3310. Make sure that we abort when no edit log directories are left.
     (Colin Patrick McCabe via eli)
@@ -299,10 +295,12 @@ Release 1.0.3 - unreleased
     HDFS-3265. PowerPc Build error. (Kumar Ravi via mattf)
 
     HDFS-3316. The tar ball doesn't include jsvc any more.
-    (Owen O'Malley via mattf)
+    (omalley via mattf)
 
     HDFS-1041. DFSClient.getFileChecksum(..) should retry if connection to
     the first datanode fails.  (szetszwo)
+
+    HADOOP-8338. Fix renew and cancel of RPC HDFS delegation tokens. (omalley)
 
 Release 1.0.2 - 2012.03.24
 
@@ -381,10 +379,13 @@ Release 1.0.1 - 2012.02.14
     HADOOP-7988. Upper case in hostname part of the principals doesn't
     work with kerberos. (jitendra)
 
-    HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
-
     HDFS-2814. NamenodeMXBean does not account for svn revision in the version 
     information. (Hitesh Shah via jitendra)
+
+    HADOOP-7470. Move up to Jackson 1.8.8.  (Enis Soztutar via szetszwo)
+
+    HDFS-2379. Allow block reports to proceed without holding FSDataset lock.
+    (todd via suresh)
 
     HADOOP-8009. Create hadoop-client and hadoop-minicluster artifacts for
     downstream projects. (Alejandro Abdelnur via mattf)
@@ -778,12 +779,6 @@ Release 0.20.205.0 - 2011.10.06
     HDFS-2328. HFTP throws NPE if security is enabled locally, but not
     remotely. (omalley)
 
-    HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
-    version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
-
-    HDFS-2333. Change DFSOutputStream back to package private, otherwise,
-    there are two SC_START_IN_CTOR findbugs warnings.  (szetszwo)
-
     HADOOP-7602. wordcount, sort etc on har files fails with NPE.
     (John George via jitendra)
 
@@ -814,25 +809,33 @@ Release 0.20.205.0 - 2011.10.06
     HADOOP-7649. TestMapredGroupMappingServiceRefresh and
     TestRefreshUserMappings fail after HADOOP-7625. (jitendra)
 
+    HADOOP-7658. Fix hadoop config template for secured and unsecured
+    installation (Eric Yang via gkesavan)
+
     MAPREDUCE-3076. Annotate o.a.h.mapreduce.TestSleepJob with @Ignore since it
     is not a junit test.  (acmurthy via szetszwo)
 
-    HADOOP-7658. Fix hadoop config template for secured and unsecured
-    installation (Eric Yang via gkesavan)
+    HDFS-2331. Fix WebHdfsFileSystem compilation problems for a bug in JDK
+    version < 1.6.0_26.  (Abhijit Suresh Shingate via szetszwo)
 
     HADOOP-7645. HTTP auth tests requiring Kerberos infrastructure are not
     disabled on branch-0.20-security. (jitendra)
 
     HADOOP-7674. TestKerberosName fails in 20 branch. (jitendra)
 
+    HDFS-2333. Change DFSOutputStream back to package private, otherwise,
+    there are two SC_START_IN_CTOR findbugs warnings.  (szetszwo)
+
+    HADOOP-7676. Enable hbase to run as hdfs user (gkesavan)
+
     HDFS-2359. Fix NullPointerException in DataBlockScanner.
     (Jonthan Eagles via suresh)
 
-    HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
-    (szetszwo)
-
     MAPREDUCE-3081. Fix for vaidya.sh to work with the new layout
     (Suhas via gkesavan)
+
+    HDFS-2366. Initialize WebHdfsFileSystem.ugi in object construction.
+    (szetszwo)
 
     HDFS-2361. hftp is broken. Fixed username checks in JspHelper. (jitendra)
 
@@ -864,8 +867,6 @@ Release 0.20.205.0 - 2011.10.06
 
     HDFS-2411. With WebHDFS enabled in secure mode the auth to local mappings
     are not being respected. (jitendra)
-
-    HADOOP-7676. Enable hbase to run as hdfs user (gkesavan)
 
   IMPROVEMENTS
 
