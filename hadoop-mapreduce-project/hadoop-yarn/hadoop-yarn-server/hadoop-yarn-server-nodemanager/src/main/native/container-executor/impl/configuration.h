@@ -24,6 +24,13 @@
  */
 int check_configuration_permissions(const char* file_name);
 
+/**
+ * Return a string with the configuration file path name resolved via realpath(3)
+ *
+ * NOTE: relative path names are resolved relative to the second argument not getwd(3)
+ */
+char *resolve_config_path(const char* file_name, const char *root);
+
 // read the given configuration file
 void read_config(const char* config_file);
 
