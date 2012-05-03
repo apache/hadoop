@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -46,11 +44,14 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * This class tests if a balancer schedules tasks correctly.
  */
-public class TestBalancer extends TestCase {
+public class TestBalancer {
   private static final Log LOG = LogFactory.getLog(
   "org.apache.hadoop.hdfs.TestBalancer");
   
@@ -365,8 +366,33 @@ public class TestBalancer extends TestCase {
     oneNodeTest(conf);
   }
   
+  /**
+   * Test parse method in Balancer#Cli class with threshold value out of
+   * boundaries.
+   */
+  @Test
+  public void testBalancerCliParseWithThresholdOutOfBoundaries() {
+    String parameters[] = new String[] { "-threshold", "0" };
+    String reason = "IllegalArgumentException is expected when threshold value"
+        + " is out of boundary.";
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+      assertEquals("Number out of range: threshold = 0.0", e.getMessage());
+    }
+    parameters = new String[] { "-threshold", "101" };
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+      assertEquals("Number out of range: threshold = 101.0", e.getMessage());
+    }
+  }
+  
   /** Test a cluster with even distribution, 
    * then a new empty node is added to the cluster*/
+  @Test
   public void testBalancer0() throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -375,6 +401,7 @@ public class TestBalancer extends TestCase {
   }
 
   /** Test unevenly distributed cluster */
+  @Test
   public void testBalancer1() throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);
@@ -384,6 +411,7 @@ public class TestBalancer extends TestCase {
         new String[] {RACK0, RACK1});
   }
   
+  @Test
   public void testBalancer2() throws Exception {
     Configuration conf = new HdfsConfiguration();
     initConf(conf);

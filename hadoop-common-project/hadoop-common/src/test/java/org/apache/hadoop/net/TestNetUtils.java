@@ -170,6 +170,19 @@ public class TestNetUtils {
   }
   
   @Test
+  public void testGetConnectAddress() throws IOException {
+    NetUtils.addStaticResolution("host", "127.0.0.1");
+    InetSocketAddress addr = NetUtils.createSocketAddrForHost("host", 1);
+    InetSocketAddress connectAddr = NetUtils.getConnectAddress(addr);
+    assertEquals(addr.getHostName(), connectAddr.getHostName());
+    
+    addr = new InetSocketAddress(1);
+    connectAddr = NetUtils.getConnectAddress(addr);
+    assertEquals(InetAddress.getLocalHost().getHostName(),
+                 connectAddr.getHostName());
+  }
+
+  @Test
   public void testCreateSocketAddress() throws Throwable {
     InetSocketAddress addr = NetUtils.createSocketAddr(
         "127.0.0.1:12345", 1000, "myconfig");

@@ -44,7 +44,7 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -99,7 +99,7 @@ import org.apache.hadoop.util.Progressable;
  * starts sending packets from the dataQueue.
 ****************************************************************/
 @InterfaceAudience.Private
-class DFSOutputStream extends FSOutputSummer implements Syncable {
+public class DFSOutputStream extends FSOutputSummer implements Syncable {
   private final DFSClient dfsClient;
   private static final int MAX_PACKETS = 80; // each packet 64K, total 5MB
   private Socket s;
@@ -1233,14 +1233,11 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     this.checksum = checksum;
   }
 
-  /**
-   * Create a new output stream to the given DataNode.
-   * @see ClientProtocol#create(String, FsPermission, String, EnumSetWritable, boolean, short, long)
-   */
-  DFSOutputStream(DFSClient dfsClient, String src, FsPermission masked, EnumSet<CreateFlag> flag,
-      boolean createParent, short replication, long blockSize, Progressable progress,
-      int buffersize, DataChecksum checksum) 
-      throws IOException {
+  /** Construct a new output stream for creating a file. */
+  private DFSOutputStream(DFSClient dfsClient, String src, FsPermission masked,
+      EnumSet<CreateFlag> flag, boolean createParent, short replication,
+      long blockSize, Progressable progress, int buffersize,
+      DataChecksum checksum) throws IOException {
     this(dfsClient, src, blockSize, progress, checksum, replication);
 
     computePacketChunkSize(dfsClient.getConf().writePacketSize,
@@ -1260,14 +1257,21 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
                                      UnresolvedPathException.class);
     }
     streamer = new DataStreamer();
-    streamer.start();
   }
 
-  /**
-   * Create a new output stream to the given DataNode.
-   * @see ClientProtocol#create(String, FsPermission, String, boolean, short, long)
-   */
-  DFSOutputStream(DFSClient dfsClient, String src, int buffersize, Progressable progress,
+  static DFSOutputStream newStreamForCreate(DFSClient dfsClient, String src,
+      FsPermission masked, EnumSet<CreateFlag> flag, boolean createParent,
+      short replication, long blockSize, Progressable progress, int buffersize,
+      DataChecksum checksum) throws IOException {
+    final DFSOutputStream out = new DFSOutputStream(dfsClient, src, masked,
+        flag, createParent, replication, blockSize, progress, buffersize,
+        checksum);
+    out.streamer.start();
+    return out;
+  }
+
+  /** Construct a new output stream for append. */
+  private DFSOutputStream(DFSClient dfsClient, String src, int buffersize, Progressable progress,
       LocatedBlock lastBlock, HdfsFileStatus stat,
       DataChecksum checksum) throws IOException {
     this(dfsClient, src, stat.getBlockSize(), progress, checksum, stat.getReplication());
@@ -1285,7 +1289,15 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
           checksum.getBytesPerChecksum());
       streamer = new DataStreamer();
     }
-    streamer.start();
+  }
+
+  static DFSOutputStream newStreamForAppend(DFSClient dfsClient, String src,
+      int buffersize, Progressable progress, LocatedBlock lastBlock,
+      HdfsFileStatus stat, DataChecksum checksum) throws IOException {
+    final DFSOutputStream out = new DFSOutputStream(dfsClient, src, buffersize,
+        progress, lastBlock, stat, checksum);
+    out.streamer.start();
+    return out;
   }
 
   private void computePacketChunkSize(int psize, int csize) {
@@ -1530,14 +1542,20 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   }
 
   /**
-   * Returns the number of replicas of current block. This can be different
-   * from the designated replication factor of the file because the NameNode
-   * does not replicate the block to which a client is currently writing to.
-   * The client continues to write to a block even if a few datanodes in the
-   * write pipeline have failed. 
+   * @deprecated use {@link HdfsDataOutputStream#getCurrentBlockReplication()}.
+   */
+  @Deprecated
+  public synchronized int getNumCurrentReplicas() throws IOException {
+    return getCurrentBlockReplication();
+  }
+
+  /**
+   * Note that this is not a public API;
+   * use {@link HdfsDataOutputStream#getCurrentBlockReplication()} instead.
+   * 
    * @return the number of valid replicas of the current block
    */
-  public synchronized int getNumCurrentReplicas() throws IOException {
+  public synchronized int getCurrentBlockReplication() throws IOException {
     dfsClient.checkOpen();
     isClosed();
     if (streamer == null) {

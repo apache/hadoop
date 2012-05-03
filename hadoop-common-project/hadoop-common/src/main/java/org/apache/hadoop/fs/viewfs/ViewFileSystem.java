@@ -150,6 +150,17 @@ public class ViewFileSystem extends FileSystem {
   }
 
   /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>viewfs</code>
+   */
+  @Override
+  public String getScheme() {
+    return "viewfs";
+  }
+
+  /**
    * Called after a new FileSystem instance is constructed.
    * @param theUri a uri whose authority section names the host, port, etc. for
    *          this FileSystem

@@ -1160,7 +1160,9 @@ public abstract class FSEditLogOp {
     @Override
     protected void toXml(ContentHandler contentHandler) throws SAXException {
       XMLUtils.addSaxString(contentHandler, "SRC", src);
-      XMLUtils.addSaxString(contentHandler, "USERNAME", username);
+      if (username != null) {
+        XMLUtils.addSaxString(contentHandler, "USERNAME", username);
+      }
       if (groupname != null) {
         XMLUtils.addSaxString(contentHandler, "GROUPNAME", groupname);
       }
@@ -1168,12 +1170,10 @@ public abstract class FSEditLogOp {
     
     @Override void fromXml(Stanza st) throws InvalidXmlException {
       this.src = st.getValue("SRC");
-      this.username = st.getValue("USERNAME");
-      if (st.hasChildren("GROUPNAME")) {
-        this.groupname = st.getValue("GROUPNAME");
-      } else {
-        this.groupname = null;
-      }
+      this.username = (st.hasChildren("USERNAME")) ? 
+          st.getValue("USERNAME") : null;
+      this.groupname = (st.hasChildren("GROUPNAME")) ? 
+          st.getValue("GROUPNAME") : null;
     }
   }
 
@@ -2346,7 +2346,7 @@ public abstract class FSEditLogOp {
         Long.valueOf(block.getBlockId()).toString());
     XMLUtils.addSaxString(contentHandler, "NUM_BYTES",
         Long.valueOf(block.getNumBytes()).toString());
-    XMLUtils.addSaxString(contentHandler, "GENERATION_STAMP",
+    XMLUtils.addSaxString(contentHandler, "GENSTAMP",
         Long.valueOf(block.getGenerationStamp()).toString());
     contentHandler.endElement("", "", "BLOCK");
   }
@@ -2355,7 +2355,7 @@ public abstract class FSEditLogOp {
       throws InvalidXmlException {
     long blockId = Long.valueOf(st.getValue("BLOCK_ID"));
     long numBytes = Long.valueOf(st.getValue("NUM_BYTES"));
-    long generationStamp = Long.valueOf(st.getValue("GENERATION_STAMP"));
+    long generationStamp = Long.valueOf(st.getValue("GENSTAMP"));
     return new Block(blockId, numBytes, generationStamp);
   }
 

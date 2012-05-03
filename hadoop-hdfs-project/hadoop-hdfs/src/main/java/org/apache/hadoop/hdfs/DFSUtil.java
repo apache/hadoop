@@ -52,7 +52,6 @@ import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -137,37 +136,6 @@ public class DFSUtil {
       }
     }
     return true;
-  }
-
-  /**
-   * Utility class to facilitate junit test error simulation.
-   */
-  @InterfaceAudience.Private
-  public static class ErrorSimulator {
-    private static boolean[] simulation = null; // error simulation events
-    public static void initializeErrorSimulationEvent(int numberOfEvents) {
-      simulation = new boolean[numberOfEvents]; 
-      for (int i = 0; i < numberOfEvents; i++) {
-        simulation[i] = false;
-      }
-    }
-    
-    public static boolean getErrorSimulation(int index) {
-      if(simulation == null)
-        return false;
-      assert(index < simulation.length);
-      return simulation[index];
-    }
-    
-    public static void setErrorSimulation(int index) {
-      assert(index < simulation.length);
-      simulation[index] = true;
-    }
-    
-    public static void clearErrorSimulation(int index) {
-      assert(index < simulation.length);
-      simulation[index] = false;
-    }
   }
 
   /**
@@ -1010,7 +978,7 @@ public class DFSUtil {
   public static void addPBProtocol(Configuration conf, Class<?> protocol,
       BlockingService service, RPC.Server server) throws IOException {
     RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine.class);
-    server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
   }
 
   /**

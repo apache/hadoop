@@ -30,6 +30,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -269,12 +271,15 @@ public class ContainerLogsPage extends NMView {
           }
         }
       } else {
-        // Just print out the log-types
+        // Print out log types in lexical order
         List<File> containerLogsDirs = getContainerLogDirs(containerId,
             dirsHandler);
+        Collections.sort(containerLogsDirs);
         boolean foundLogFile = false;
         for (File containerLogsDir : containerLogsDirs) {
-          for (File logFile : containerLogsDir.listFiles()) {
+          File[] logFiles = containerLogsDir.listFiles();
+          Arrays.sort(logFiles);
+          for (File logFile : logFiles) {
             foundLogFile = true;
             html.p()
                 .a(url("containerlogs", $(CONTAINER_ID), $(APP_OWNER), 

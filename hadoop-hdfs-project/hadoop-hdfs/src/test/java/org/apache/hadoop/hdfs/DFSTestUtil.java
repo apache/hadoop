@@ -55,8 +55,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -515,15 +515,14 @@ public class DFSTestUtil {
   }
   
   public static ExtendedBlock getFirstBlock(FileSystem fs, Path path) throws IOException {
-    DFSDataInputStream in = 
-      (DFSDataInputStream) ((DistributedFileSystem)fs).open(path);
+    HdfsDataInputStream in = (HdfsDataInputStream)((DistributedFileSystem)fs).open(path);
     in.readByte();
     return in.getCurrentBlock();
   }  
 
   public static List<LocatedBlock> getAllBlocks(FSDataInputStream in)
       throws IOException {
-    return ((DFSClient.DFSDataInputStream) in).getAllBlocks();
+    return ((HdfsDataInputStream) in).getAllBlocks();
   }
 
   public static Token<BlockTokenIdentifier> getBlockToken(

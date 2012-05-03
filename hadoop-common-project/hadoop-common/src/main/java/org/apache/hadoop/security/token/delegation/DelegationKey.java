@@ -41,6 +41,7 @@ public class DelegationKey implements Writable {
   private long expiryDate;
   @Nullable
   private byte[] keyBytes = null;
+  private static final int MAX_KEY_LEN = 1024 * 1024;
 
   /** Default constructore required for Writable */
   public DelegationKey() {
@@ -55,6 +56,10 @@ public class DelegationKey implements Writable {
     this.keyId = keyId;
     this.expiryDate = expiryDate;
     if (encodedKey != null) {
+      if (encodedKey.length > MAX_KEY_LEN) {
+        throw new RuntimeException("can't create " + encodedKey.length +
+            " byte long DelegationKey.");
+      }
       this.keyBytes = encodedKey;
     }
   }
@@ -102,7 +107,7 @@ public class DelegationKey implements Writable {
   public void readFields(DataInput in) throws IOException {
     keyId = WritableUtils.readVInt(in);
     expiryDate = WritableUtils.readVLong(in);
-    int len = WritableUtils.readVInt(in);
+    int len = WritableUtils.readVIntInRange(in, -1, MAX_KEY_LEN);
     if (len == -1) {
       keyBytes = null;
     } else {

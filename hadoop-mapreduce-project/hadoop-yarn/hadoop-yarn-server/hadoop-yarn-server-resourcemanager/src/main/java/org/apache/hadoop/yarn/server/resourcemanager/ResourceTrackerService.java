@@ -133,6 +133,11 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     this.server.start();
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String resolvedAddress =
+        server.getListenerAddress().getHostName() + ":" + server.getListenerAddress().getPort();
+      conf.set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS, resolvedAddress);
+    }
   }
 
   @Override

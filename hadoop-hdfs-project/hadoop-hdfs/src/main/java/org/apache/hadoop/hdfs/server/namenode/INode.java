@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -34,7 +35,8 @@ import org.apache.hadoop.util.StringUtils;
  * This is a base INode class containing common fields for file and 
  * directory inodes.
  */
-public abstract class INode implements Comparable<byte[]>, FSInodeInfo {
+@InterfaceAudience.Private
+abstract class INode implements Comparable<byte[]>, FSInodeInfo {
   /*
    *  The inode name is in java UTF8 encoding; 
    *  The name in HdfsFileStatus should keep the same encoding as this.

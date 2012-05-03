@@ -322,10 +322,9 @@ public class TestCompressionEmulationUtils {
   public void testOutputCompressionRatioConfiguration() throws Exception {
     Configuration conf = new Configuration();
     float ratio = 0.567F;
-    CompressionEmulationUtil.setReduceOutputCompressionEmulationRatio(conf, 
-                                                                      ratio);
+    CompressionEmulationUtil.setJobOutputCompressionEmulationRatio(conf, ratio);
     assertEquals(ratio, 
-        CompressionEmulationUtil.getReduceOutputCompressionEmulationRatio(conf),
+        CompressionEmulationUtil.getJobOutputCompressionEmulationRatio(conf),
         0.0D);
   }
   

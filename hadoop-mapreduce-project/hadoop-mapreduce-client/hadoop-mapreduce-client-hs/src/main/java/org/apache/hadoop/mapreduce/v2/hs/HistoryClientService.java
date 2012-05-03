@@ -78,6 +78,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -146,6 +147,18 @@ public class HistoryClientService extends AbstractService {
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
             + ":" + server.getPort());
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
+
+    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      String resolvedAddress = bindAddress.getHostName() + ":" + bindAddress.getPort();
+      conf.set(JHAdminConfig.MR_HISTORY_ADDRESS, resolvedAddress);
+
+      String hostname = getConfig().get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+                                        JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
+      hostname = (hostname.contains(":")) ? hostname.substring(0, hostname.indexOf(":")) : hostname;
+      int port = webApp.port();
+      resolvedAddress = hostname + ":" + port;
+      conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, resolvedAddress);
+    }
 
     super.start();
   }

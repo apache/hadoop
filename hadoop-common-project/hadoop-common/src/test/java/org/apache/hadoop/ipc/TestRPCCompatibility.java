@@ -31,7 +31,6 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureRequestProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.GetProtocolSignatureResponseProto;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolSignatureProto;
@@ -134,7 +133,7 @@ public class TestRPCCompatibility {
     TestImpl1 impl = new TestImpl1();
     server = RPC.getServer(TestProtocol1.class,
                             impl, ADDRESS, 0, 2, false, conf, null);
-    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
+    server.addProtocol(RPC.RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -201,7 +200,7 @@ System.out.println("echo int is NOT supported");
     TestImpl1 impl = new TestImpl1();
     server = RPC.getServer(TestProtocol1.class,
                               impl, ADDRESS, 0, 2, false, conf, null);
-    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
+    server.addProtocol(RPC.RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -222,7 +221,7 @@ System.out.println("echo int is NOT supported");
     TestImpl2 impl = new TestImpl2();
     server = RPC.getServer(TestProtocol2.class,
                              impl, ADDRESS, 0, 2, false, conf, null);
-    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
+    server.addProtocol(RPC.RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -316,11 +315,11 @@ System.out.println("echo int is NOT supported");
     TestProtocol2 proxy = RPC.getProxy(TestProtocol2.class,
         TestProtocol2.versionID, addr, conf);
     boolean supported = RpcClientUtil.isMethodSupported(proxy,
-        TestProtocol2.class, RpcKind.RPC_WRITABLE,
+        TestProtocol2.class, RPC.RpcKind.RPC_WRITABLE,
         RPC.getProtocolVersion(TestProtocol2.class), "echo");
     Assert.assertTrue(supported);
     supported = RpcClientUtil.isMethodSupported(proxy,
-        TestProtocol2.class, RpcKind.RPC_PROTOCOL_BUFFER,
+        TestProtocol2.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
         RPC.getProtocolVersion(TestProtocol2.class), "echo");
     Assert.assertFalse(supported);
   }
@@ -334,7 +333,7 @@ System.out.println("echo int is NOT supported");
     TestImpl1 impl = new TestImpl1();
     server = RPC.getServer(TestProtocol1.class, impl, ADDRESS, 0, 2, false,
         conf, null);
-    server.addProtocol(RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
+    server.addProtocol(RPC.RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
 
     ProtocolMetaInfoServerSideTranslatorPB xlator = 
@@ -343,13 +342,13 @@ System.out.println("echo int is NOT supported");
     GetProtocolSignatureResponseProto resp = xlator.getProtocolSignature(
         null,
         createGetProtocolSigRequestProto(TestProtocol1.class,
-            RpcKind.RPC_PROTOCOL_BUFFER));
+            RPC.RpcKind.RPC_PROTOCOL_BUFFER));
     //No signatures should be found
     Assert.assertEquals(0, resp.getProtocolSignatureCount());
     resp = xlator.getProtocolSignature(
         null,
         createGetProtocolSigRequestProto(TestProtocol1.class,
-            RpcKind.RPC_WRITABLE));
+            RPC.RpcKind.RPC_WRITABLE));
     Assert.assertEquals(1, resp.getProtocolSignatureCount());
     ProtocolSignatureProto sig = resp.getProtocolSignatureList().get(0);
     Assert.assertEquals(TestProtocol1.versionID, sig.getVersion());
@@ -366,7 +365,7 @@ System.out.println("echo int is NOT supported");
   }
   
   private GetProtocolSignatureRequestProto createGetProtocolSigRequestProto(
-      Class<?> protocol, RpcKind rpcKind) {
+      Class<?> protocol, RPC.RpcKind rpcKind) {
     GetProtocolSignatureRequestProto.Builder builder = 
         GetProtocolSignatureRequestProto.newBuilder();
     builder.setProtocol(protocol.getName());

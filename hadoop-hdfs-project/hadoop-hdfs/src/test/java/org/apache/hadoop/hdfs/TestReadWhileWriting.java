@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.ipc.RemoteException;
@@ -147,7 +147,7 @@ public class TestReadWhileWriting {
     
     final FileSystem fs = DFSTestUtil.getFileSystemAs(ugi, conf);
     
-    final DFSDataInputStream in = (DFSDataInputStream)fs.open(p);
+    final HdfsDataInputStream in = (HdfsDataInputStream)fs.open(p);
 
     //Check visible length
     Assert.assertTrue(in.getVisibleLength() >= expectedsize);

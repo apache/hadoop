@@ -457,7 +457,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       this.accessTimePrecision = conf.getLong(DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, 0);
       this.supportAppends = conf.getBoolean(DFS_SUPPORT_APPEND_KEY, DFS_SUPPORT_APPEND_DEFAULT);
-      LOG.info("Append Enabled: " + haEnabled);
+      LOG.info("Append Enabled: " + supportAppends);
 
       this.dtpReplaceDatanodeOnFailure = ReplaceDatanodeOnFailure.get(conf);
       
@@ -3332,8 +3332,26 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
     
   void finalizeUpgrade() throws IOException {
+    writeLock();
+    try {
+      checkOperation(OperationCategory.WRITE);
+      checkSuperuserPrivilege();
+      getFSImage().finalizeUpgrade();
+    } finally {
+      writeUnlock();
+    }
+  }
+
+  void refreshNodes() throws IOException {
+    checkOperation(OperationCategory.UNCHECKED);
     checkSuperuserPrivilege();
-    getFSImage().finalizeUpgrade();
+    getBlockManager().getDatanodeManager().refreshNodes(new HdfsConfiguration());
+  }
+
+  void setBalancerBandwidth(long bandwidth) throws IOException {
+    checkOperation(OperationCategory.UNCHECKED);
+    checkSuperuserPrivilege();
+    getBlockManager().getDatanodeManager().setBalancerBandwidth(bandwidth);
   }
 
   /**
@@ -3723,7 +3741,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           msg += String.format(
             "The number of live datanodes %d needs an additional %d live "
             + "datanodes to reach the minimum number %d.",
-            numLive, (datanodeThreshold - numLive) + 1 , datanodeThreshold);
+            numLive, (datanodeThreshold - numLive), datanodeThreshold);
         }
         msg += " " + leaveMsg;
       } else {

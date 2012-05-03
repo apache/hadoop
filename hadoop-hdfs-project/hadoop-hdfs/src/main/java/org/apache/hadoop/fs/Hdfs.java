@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -43,8 +45,8 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.util.Progressable;
 
@@ -88,11 +90,11 @@ public class Hdfs extends AbstractFileSystem {
   }
 
   @Override
-  public FSDataOutputStream createInternal(Path f,
+  public HdfsDataOutputStream createInternal(Path f,
       EnumSet<CreateFlag> createFlag, FsPermission absolutePermission,
       int bufferSize, short replication, long blockSize, Progressable progress,
       int bytesPerChecksum, boolean createParent) throws IOException {
-    return new FSDataOutputStream(dfs.primitiveCreate(getUriPath(f),
+    return new HdfsDataOutputStream(dfs.primitiveCreate(getUriPath(f),
         absolutePermission, createFlag, createParent, replication, blockSize,
         progress, bufferSize, bytesPerChecksum), getStatistics());
   }
@@ -324,8 +326,9 @@ public class Hdfs extends AbstractFileSystem {
     dfs.mkdirs(getUriPath(dir), permission, createParent);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
-  public FSDataInputStream open(Path f, int bufferSize) 
+  public HdfsDataInputStream open(Path f, int bufferSize) 
       throws IOException, UnresolvedLinkException {
     return new DFSClient.DFSDataInputStream(dfs.open(getUriPath(f),
         bufferSize, verifyChecksum));

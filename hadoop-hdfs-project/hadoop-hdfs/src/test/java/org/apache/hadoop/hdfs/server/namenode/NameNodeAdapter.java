@@ -126,7 +126,8 @@ public class NameNodeAdapter {
   }
 
   public static String getLeaseHolderForPath(NameNode namenode, String path) {
-    return namenode.getNamesystem().leaseManager.getLeaseByPath(path).getHolder();
+    Lease l = namenode.getNamesystem().leaseManager.getLeaseByPath(path);
+    return l == null? null: l.getHolder();
   }
 
   /**

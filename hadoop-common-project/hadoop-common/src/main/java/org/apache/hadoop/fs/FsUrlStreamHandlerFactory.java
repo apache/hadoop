@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.IOException;
 import java.net.URLStreamHandlerFactory;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,25 +51,23 @@ public class FsUrlStreamHandlerFactory implements
   private java.net.URLStreamHandler handler;
 
   public FsUrlStreamHandlerFactory() {
-    this.conf = new Configuration();
-    // force the resolution of the configuration files
-    // this is required if we want the factory to be able to handle
-    // file:// URLs
-    this.conf.getClass("fs.file.impl", null);
-    this.handler = new FsUrlStreamHandler(this.conf);
+    this(new Configuration());
   }
 
   public FsUrlStreamHandlerFactory(Configuration conf) {
     this.conf = new Configuration(conf);
-    // force the resolution of the configuration files
-    this.conf.getClass("fs.file.impl", null);
     this.handler = new FsUrlStreamHandler(this.conf);
   }
 
   public java.net.URLStreamHandler createURLStreamHandler(String protocol) {
     if (!protocols.containsKey(protocol)) {
-      boolean known =
-          (conf.getClass("fs." + protocol + ".impl", null) != null);
+      boolean known = true;
+      try {
+        FileSystem.getFileSystemClass(protocol, conf);
+      }
+      catch (IOException ex) {
+        known = false;
+      }
       protocols.put(protocol, known);
     }
     if (protocols.get(protocol)) {

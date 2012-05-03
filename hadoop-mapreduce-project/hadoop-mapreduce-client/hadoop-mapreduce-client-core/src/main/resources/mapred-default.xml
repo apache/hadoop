@@ -1237,6 +1237,14 @@
 </property>
 
 <property>
+  <name>yarn.app.mapreduce.am.job.client.port-range</name>
+  <value></value>
+  <description>Range of ports that the MapReduce AM can use when binding.
+    Leave blank if you want all possible ports.  
+    For example 50000-50050,50100-50200</description>
+</property>
+
+<property>
   <name>yarn.app.mapreduce.am.scheduler.heartbeat.interval-ms</name>
   <value>1000</value>
   <description>The interval in ms at which the MR AppMaster should send
@@ -1248,6 +1256,19 @@
   <value>1</value>
   <description>The number of client retries to the AM - before reconnecting
     to the RM to fetch Application Status.</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.client.max-retries</name>
+  <value>3</value>
+  <description>The number of client retries to the RM/HS/AM before
+    throwing exception. This is a layer above the ipc.</description>
+</property>
+
+<property>
+  <name>yarn.app.mapreduce.am.resource.mb</name>
+  <value>1536</value>
+  <description>The amount of memory the MR AppMaster needs.</description>
 </property>
 
 <!-- jobhistory properties -->

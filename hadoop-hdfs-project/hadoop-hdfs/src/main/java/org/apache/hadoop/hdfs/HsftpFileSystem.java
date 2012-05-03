@@ -58,6 +58,17 @@ public class HsftpFileSystem extends HftpFileSystem {
   private static final long MM_SECONDS_PER_DAY = 1000 * 60 * 60 * 24;
   private volatile int ExpWarnDays = 0;
 
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>hsftp</code>
+   */
+  @Override
+  public String getScheme() {
+    return "hsftp";
+  }
+
   @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
@@ -133,11 +144,16 @@ public class HsftpFileSystem extends HftpFileSystem {
   }
 
   @Override
+  protected URI getNamenodeUri(URI uri) {
+    return getNamenodeSecureUri(uri);
+  }
+  
+  @Override
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     query = addDelegationTokenParam(query);
-    final URL url = new URL("https", nnAddr.getHostName(), 
-        nnAddr.getPort(), path + '?' + query);
+    final URL url = new URL("https", nnUri.getHost(), 
+        nnUri.getPort(), path + '?' + query);
     HttpsURLConnection conn = (HttpsURLConnection)URLUtils.openConnection(url);
     // bypass hostname verification
     conn.setHostnameVerifier(new DummyHostnameVerifier());

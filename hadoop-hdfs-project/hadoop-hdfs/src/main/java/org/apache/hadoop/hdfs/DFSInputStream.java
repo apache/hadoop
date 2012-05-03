@@ -118,6 +118,39 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
    * Grab the open-file info from namenode
    */
   synchronized void openInfo() throws IOException, UnresolvedLinkException {
+    lastBlockBeingWrittenLength = fetchLocatedBlocksAndGetLastBlockLength();
+    int retriesForLastBlockLength = 3;
+    while (retriesForLastBlockLength > 0) {
+      // Getting last block length as -1 is a special case. When cluster
+      // restarts, DNs may not report immediately. At this time partial block
+      // locations will not be available with NN for getting the length. Lets
+      // retry for 3 times to get the length.
+      if (lastBlockBeingWrittenLength == -1) {
+        DFSClient.LOG.warn("Last block locations not available. "
+            + "Datanodes might not have reported blocks completely."
+            + " Will retry for " + retriesForLastBlockLength + " times");
+        waitFor(4000);
+        lastBlockBeingWrittenLength = fetchLocatedBlocksAndGetLastBlockLength();
+      } else {
+        break;
+      }
+      retriesForLastBlockLength--;
+    }
+    if (retriesForLastBlockLength == 0) {
+      throw new IOException("Could not obtain the last block locations.");
+    }
+  }
+
+  private void waitFor(int waitTime) throws IOException {
+    try {
+      Thread.sleep(waitTime);
+    } catch (InterruptedException e) {
+      throw new IOException(
+          "Interrupted while getting the last block length.");
+    }
+  }
+
+  private long fetchLocatedBlocksAndGetLastBlockLength() throws IOException {
     LocatedBlocks newInfo = DFSClient.callGetBlockLocations(dfsClient.namenode, src, 0, prefetchSize);
     if (DFSClient.LOG.isDebugEnabled()) {
       DFSClient.LOG.debug("newInfo = " + newInfo);
@@ -136,10 +169,13 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
       }
     }
     locatedBlocks = newInfo;
-    lastBlockBeingWrittenLength = 0;
+    long lastBlockBeingWrittenLength = 0;
     if (!locatedBlocks.isLastBlockComplete()) {
       final LocatedBlock last = locatedBlocks.getLastLocatedBlock();
       if (last != null) {
+        if (last.getLocations().length == 0) {
+          return -1;
+        }
         final long len = readBlockLength(last);
         last.getBlock().setNumBytes(len);
         lastBlockBeingWrittenLength = len; 
@@ -147,13 +183,12 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     }
 
     currentNode = null;
+    return lastBlockBeingWrittenLength;
   }
 
   /** Read the block length from one of the datanodes. */
   private long readBlockLength(LocatedBlock locatedblock) throws IOException {
-    if (locatedblock == null || locatedblock.getLocations().length == 0) {
-      return 0;
-    }
+    assert locatedblock != null : "LocatedBlock cannot be null";
     int replicaNotFoundCount = locatedblock.getLocations().length;
     
     for(DatanodeInfo datanode : locatedblock.getLocations()) {
@@ -224,7 +259,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
   /**
    * Return collection of blocks that has already been located.
    */
-  synchronized List<LocatedBlock> getAllBlocks() throws IOException {
+  public synchronized List<LocatedBlock> getAllBlocks() throws IOException {
     return getBlockRange(0, getFileLength());
   }
 

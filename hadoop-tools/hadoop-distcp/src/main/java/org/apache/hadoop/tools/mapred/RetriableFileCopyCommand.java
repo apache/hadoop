@@ -107,8 +107,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
                              throws IOException {
     OutputStream outStream = new BufferedOutputStream(targetFS.create(
             tmpTargetPath, true, BUFFER_SIZE,
-            getReplicationFactor(fileAttributes, sourceFileStatus, targetFS),
-            getBlockSize(fileAttributes, sourceFileStatus, targetFS), context));
+            getReplicationFactor(fileAttributes, sourceFileStatus, targetFS, tmpTargetPath),
+            getBlockSize(fileAttributes, sourceFileStatus, targetFS, tmpTargetPath), context));
     return copyBytes(sourceFileStatus, outStream, BUFFER_SIZE, true, context);
   }
 
@@ -218,16 +218,16 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
   private static short getReplicationFactor(
           EnumSet<FileAttribute> fileAttributes,
-          FileStatus sourceFile, FileSystem targetFS) {
+          FileStatus sourceFile, FileSystem targetFS, Path tmpTargetPath) {
     return fileAttributes.contains(FileAttribute.REPLICATION)?
-            sourceFile.getReplication() : targetFS.getDefaultReplication();
+            sourceFile.getReplication() : targetFS.getDefaultReplication(tmpTargetPath);
   }
 
   private static long getBlockSize(
           EnumSet<FileAttribute> fileAttributes,
-          FileStatus sourceFile, FileSystem targetFS) {
+          FileStatus sourceFile, FileSystem targetFS, Path tmpTargetPath) {
     return fileAttributes.contains(FileAttribute.BLOCKSIZE)?
-            sourceFile.getBlockSize() : targetFS.getDefaultBlockSize();
+            sourceFile.getBlockSize() : targetFS.getDefaultBlockSize(tmpTargetPath);
   }
 
   /**

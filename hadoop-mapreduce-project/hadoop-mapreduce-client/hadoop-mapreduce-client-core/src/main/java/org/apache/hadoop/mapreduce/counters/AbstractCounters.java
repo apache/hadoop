@@ -201,7 +201,15 @@ public abstract class AbstractCounters<C extends Counter,
    * @return the group
    */
   public synchronized G getGroup(String groupName) {
-    String newGroupName = filterGroupName(groupName);
+
+    // filterGroupName
+    boolean groupNameInLegacyMap = true;
+    String newGroupName = legacyMap.get(groupName);
+    if (newGroupName == null) {
+      groupNameInLegacyMap = false;
+      newGroupName = Limits.filterGroupName(groupName);
+    }
+
     boolean isFGroup = isFrameworkGroup(newGroupName);
     G group = isFGroup ? fgroups.get(newGroupName) : groups.get(newGroupName);
     if (group == null) {
@@ -212,17 +220,12 @@ public abstract class AbstractCounters<C extends Counter,
         limits.checkGroups(groups.size() + 1);
         groups.put(newGroupName, group);
       }
+      if (groupNameInLegacyMap) {
+        LOG.warn("Group " + groupName + " is deprecated. Use " + newGroupName
+            + " instead");
+      }
     }
     return group;
-  }
-
-  private String filterGroupName(String oldName) {
-    String newName = legacyMap.get(oldName);
-    if (newName == null) {
-      return Limits.filterGroupName(oldName);
-    }
-    LOG.warn("Group "+ oldName +" is deprecated. Use "+ newName +" instead");
-    return newName;
   }
 
   /**

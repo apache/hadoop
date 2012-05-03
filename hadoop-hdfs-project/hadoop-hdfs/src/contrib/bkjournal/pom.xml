@@ -65,4 +65,50 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+  <profiles>
+    <profile>
+      <id>dist</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-shade-plugin</artifactId>
+            <version>1.5</version>
+            <executions>
+              <execution>
+                <phase>package</phase>
+                <goals>
+                  <goal>shade</goal>
+                </goals>
+                <configuration>
+                  <createDependencyReducedPom>false</createDependencyReducedPom>
+                  <artifactSet>
+                    <includes>
+                      <include>org.apache.bookkeeper:bookkeeper-server</include>
+                      <include>org.apache.zookeeper:zookeeper</include>
+                      <include>org.jboss.netty:netty</include>
+                    </includes>
+                  </artifactSet>
+                <relocations>
+                  <relocation>
+                    <pattern>org.apache.bookkeeper</pattern>
+                    <shadedPattern>hidden.bkjournal.org.apache.bookkeeper</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>org.apache.zookeeper</pattern>
+                    <shadedPattern>hidden.bkjournal.org.apache.zookeeper</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>org.jboss.netty</pattern>
+                    <shadedPattern>hidden.bkjournal.org.jboss.netty</shadedPattern>
+                  </relocation>
+                </relocations>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

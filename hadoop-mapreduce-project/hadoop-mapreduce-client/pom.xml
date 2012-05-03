@@ -124,14 +124,11 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.jboss.netty</groupId>
       <artifactId>netty</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.cenqua.clover</groupId>
-      <artifactId>clover</artifactId>
     </dependency>
 
   </dependencies>

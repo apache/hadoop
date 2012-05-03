@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -341,7 +342,7 @@ public class TestRMContainerAllocator {
     }
     @Override
     protected ResourceScheduler createScheduler() {
-      return new MyFifoScheduler(getRMContext());
+      return new MyFifoScheduler();
     }
   }
 
@@ -997,18 +998,6 @@ public class TestRMContainerAllocator {
   }
   
   private static class MyFifoScheduler extends FifoScheduler {
-
-    public MyFifoScheduler(RMContext rmContext) {
-      super();
-      try {
-        reinitialize(new Configuration(), new ContainerTokenSecretManager(),
-            rmContext);
-      } catch (IOException ie) {
-        LOG.info("add application failed with ", ie);
-        assert (false);
-      }
-    }
-
     // override this to copy the objects otherwise FifoScheduler updates the
     // numContainers in same objects as kept by RMContainerAllocator
     @Override

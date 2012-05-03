@@ -314,8 +314,6 @@ Deprecated Properties
 *---+---+
 |mapred.map.child.log.level | mapreduce.map.log.level
 *---+---+
-|mapred.map.child.ulimit | mapreduce.map.ulimit
-*---+---+
 |mapred.map.max.attempts | mapreduce.map.maxattempts
 *---+---+
 |mapred.map.output.compression.codec | mapreduce.map.output.compress.codec
@@ -377,8 +375,6 @@ Deprecated Properties
 |mapred.reduce.child.java.opts | mapreduce.reduce.java.opts
 *---+---+
 |mapred.reduce.child.log.level | mapreduce.reduce.log.level
-*---+---+
-|mapred.reduce.child.ulimit | mapreduce.reduce.ulimit
 *---+---+
 |mapred.reduce.max.attempts | mapreduce.reduce.maxattempts
 *---+---+

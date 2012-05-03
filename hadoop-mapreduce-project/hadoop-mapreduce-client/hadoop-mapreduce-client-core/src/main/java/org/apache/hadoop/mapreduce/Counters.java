@@ -49,8 +49,8 @@ public class Counters extends AbstractCounters<Counter, CounterGroup> {
     }
 
     @Override
-    protected FrameworkCounter newCounter(T key) {
-      return new FrameworkCounter(key);
+    protected FrameworkCounter<T> newCounter(T key) {
+      return new FrameworkCounter<T>(key, getName());
     }
 
     @Override

@@ -71,7 +71,7 @@ AC_DEFUN([AP_SUPPORTED_HOST],[
   esac
 
   case $host_cpu in
-  powerpc)
+  powerpc*)
     CFLAGS="$CFLAGS -DCPU=\\\"$host_cpu\\\""
     HOST_CPU=$host_cpu;;
   sparc*)

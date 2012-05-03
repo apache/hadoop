@@ -30,7 +30,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.token.SecretManager;
@@ -62,10 +61,19 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
   private RpcServerFactoryPBImpl() {
   }
   
-  @Override
   public Server getServer(Class<?> protocol, Object instance,
       InetSocketAddress addr, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager, int numHandlers)
+      throws YarnException {
+    return getServer(protocol, instance, addr, conf, secretManager, numHandlers,
+        null);
+  }
+  
+  @Override
+  public Server getServer(Class<?> protocol, Object instance,
+      InetSocketAddress addr, Configuration conf,
+      SecretManager<? extends TokenIdentifier> secretManager, int numHandlers,
+      String portRangeConfig)
       throws YarnException {
     
     Constructor<?> constructor = serviceCache.get(protocol);
@@ -122,7 +130,7 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
     
     try {
       return createServer(pbProtocol, addr, conf, secretManager, numHandlers,
-          (BlockingService)method.invoke(null, service));
+          (BlockingService)method.invoke(null, service), portRangeConfig);
     } catch (InvocationTargetException e) {
       throw new YarnException(e);
     } catch (IllegalAccessException e) {
@@ -156,13 +164,13 @@ public class RpcServerFactoryPBImpl implements RpcServerFactory {
 
   private Server createServer(Class<?> pbProtocol, InetSocketAddress addr, Configuration conf, 
       SecretManager<? extends TokenIdentifier> secretManager, int numHandlers, 
-      BlockingService blockingService) throws IOException {
+      BlockingService blockingService, String portRangeConfig) throws IOException {
     RPC.setProtocolEngine(conf, pbProtocol, ProtobufRpcEngine.class);
     RPC.Server server = RPC.getServer(pbProtocol, blockingService, 
         addr.getHostName(), addr.getPort(), numHandlers, false, conf, 
-        secretManager);
+        secretManager, portRangeConfig);
     LOG.info("Adding protocol "+pbProtocol.getCanonicalName()+" to the server");
-    server.addProtocol(RpcKind.RPC_PROTOCOL_BUFFER, pbProtocol, blockingService);
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, pbProtocol, blockingService);
     return server;
   }
 }

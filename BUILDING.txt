@@ -87,4 +87,8 @@ Create source and binary distributions with native code and documentation:
 
   $ mvn package -Pdist,native,docs,src -DskipTests -Dtar
 
+Create a local staging version of the website (in /tmp/hadoop-site)
+
+  $ mvn clean site; mvn site:stage -DstagingDirectory=/tmp/hadoop-site
+
 ----------------------------------------------------------------------------------

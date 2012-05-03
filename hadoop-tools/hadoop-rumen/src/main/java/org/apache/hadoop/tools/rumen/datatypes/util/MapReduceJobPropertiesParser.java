@@ -43,7 +43,7 @@ import org.apache.log4j.Logger;
  * across versions. {@link MapReduceJobPropertiesParser} is a utility class that
  * parses MapReduce job configuration properties and converts the value into a 
  * well defined {@link DataType}. Users can use the
- * {@link MapReduceJobPropertiesParser#parseJobProperty()} API to process job 
+ * {@link #parseJobProperty(String, String)} API to process job 
  * configuration parameters. This API will parse a job property represented as a
  * key-value pair and return the value wrapped inside a {@link DataType}. 
  * Callers can then use the returned {@link DataType} for further processing.
@@ -61,12 +61,12 @@ import org.apache.log4j.Logger;
  * {@link DefaultDataType}. Currently only '-Xmx' and '-Xms' settings are 
  * considered while the rest are ignored.
  * 
- * Note that the {@link MapReduceJobPropertiesParser#parseJobProperty()} API 
+ * Note that the {@link #parseJobProperty(String, String)} API 
  * maps the keys to a configuration parameter listed in 
  * {@link MRJobConfig}. This not only filters non-framework specific keys thus 
  * ignoring user-specific and hard-to-parse keys but also provides a consistent
  * view for all possible inputs. So if users invoke the 
- * {@link MapReduceJobPropertiesParser#parseJobProperty()} API with either
+ * {@link #parseJobProperty(String, String)} API with either
  * <"mapreduce.job.user.name", "bob"> or <"user.name", "bob">, then the result 
  * would be a {@link UserName} {@link DataType} wrapping the user-name "bob".
  */

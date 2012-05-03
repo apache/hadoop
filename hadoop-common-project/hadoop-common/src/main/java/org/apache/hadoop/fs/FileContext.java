@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.ShutdownHookManager;
 
 /**
  * The FileContext class provides an interface to the application writer for
@@ -171,7 +172,12 @@ public final class FileContext {
   
   public static final Log LOG = LogFactory.getLog(FileContext.class);
   public static final FsPermission DEFAULT_PERM = FsPermission.getDefault();
-  
+
+  /**
+   * Priority of the FileContext shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 20;
+
   /**
    * List of files that should be deleted on JVM shutdown.
    */
@@ -1456,8 +1462,8 @@ public final class FileContext {
       return false;
     }
     synchronized (DELETE_ON_EXIT) {
-      if (DELETE_ON_EXIT.isEmpty() && !FINALIZER.isAlive()) {
-        Runtime.getRuntime().addShutdownHook(FINALIZER);
+      if (DELETE_ON_EXIT.isEmpty()) {
+        ShutdownHookManager.get().addShutdownHook(FINALIZER, SHUTDOWN_HOOK_PRIORITY);
       }
       
       Set<Path> set = DELETE_ON_EXIT.get(this);
@@ -2215,7 +2221,7 @@ public final class FileContext {
   /**
    * Deletes all the paths in deleteOnExit on JVM shutdown.
    */
-  static class FileContextFinalizer extends Thread {
+  static class FileContextFinalizer implements Runnable {
     public synchronized void run() {
       processDeleteOnExit();
     }

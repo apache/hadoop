@@ -604,12 +604,6 @@
       </dependency>
 
       <dependency>
-        <groupId>com.cenqua.clover</groupId>
-        <artifactId>clover</artifactId>
-        <version>3.0.2</version>
-      </dependency>
-
-      <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
         <version>3.4.2</version>
@@ -684,11 +678,6 @@
               <exclude>mrapp-generated-classpath</exclude>
             </excludes>
           </configuration>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.2.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -902,6 +891,7 @@
             <groupId>com.atlassian.maven.plugins</groupId>
             <artifactId>maven-clover2-plugin</artifactId>
             <configuration>
+              <includesAllSourceRoots>true</includesAllSourceRoots>
               <includesTestSourceRoots>true</includesTestSourceRoots>
               <licenseLocation>${cloverLicenseLocation}</licenseLocation>
               <cloverDatabase>${cloverDatabase}</cloverDatabase>
@@ -912,8 +902,8 @@
             </configuration>
             <executions>
               <execution>
-                <id>setup</id>
-                <phase>generate-sources</phase>
+                <id>clover-setup</id>
+                <phase>process-sources</phase>
                 <goals>
                   <goal>setup</goal>
                 </goals>

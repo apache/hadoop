@@ -67,6 +67,17 @@ public class S3FileSystem extends FileSystem {
     this.store = store;
   }
 
+  /**
+   * Return the protocol scheme for the FileSystem.
+   * <p/>
+   *
+   * @return <code>s3</code>
+   */
+  @Override
+  public String getScheme() {
+    return "s3";
+  }
+
   @Override
   public URI getUri() {
     return uri;
