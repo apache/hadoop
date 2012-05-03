@@ -471,6 +471,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3332. NullPointerException in DN when directoryscanner is trying to 
     report bad blocks. (Amith D K via umamahesh)
 
+    HDFS-3359. DFSClient.close should close cached sockets. (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
