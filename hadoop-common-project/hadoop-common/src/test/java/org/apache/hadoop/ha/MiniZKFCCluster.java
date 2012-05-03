@@ -29,6 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HealthMonitor.State;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -126,6 +128,10 @@ public class MiniZKFCCluster {
   public ActiveStandbyElector getElector(int i) {
     return thrs[i].zkfc.getElectorForTests();
   }
+
+  public DummyZKFC getZkfc(int i) {
+    return thrs[i].zkfc;
+  }
   
   public void setHealthy(int idx, boolean healthy) {
     svcs[idx].isHealthy = healthy;
@@ -133,6 +139,14 @@ public class MiniZKFCCluster {
 
   public void setFailToBecomeActive(int idx, boolean doFail) {
     svcs[idx].failToBecomeActive = doFail;
+  }
+
+  public void setFailToBecomeStandby(int idx, boolean doFail) {
+    svcs[idx].failToBecomeStandby = doFail;
+  }
+  
+  public void setFailToFence(int idx, boolean doFail) {
+    svcs[idx].failToFence = doFail;
   }
   
   public void setUnreachable(int idx, boolean unreachable) {
@@ -289,6 +303,26 @@ public class MiniZKFCCluster {
     @Override
     protected String getScopeInsideParentNode() {
       return DUMMY_CLUSTER;
+    }
+
+    @Override
+    protected void checkRpcAdminAccess() throws AccessControlException {
+    }
+
+    @Override
+    protected InetSocketAddress getRpcAddressToBindTo() {
+      return new InetSocketAddress(0);
+    }
+
+    @Override
+    protected void initRPC() throws IOException {
+      super.initRPC();
+      localTarget.zkfcProxy = this.getRpcServerForTests();
+    }
+
+    @Override
+    protected PolicyProvider getPolicyProvider() {
+      return null;
     }
   }
 }

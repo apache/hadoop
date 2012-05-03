@@ -27,6 +27,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HealthMonitor.State;
 import org.apache.hadoop.ha.MiniZKFCCluster.DummyZKFC;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -374,6 +375,205 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
           cluster.getElector(0).getZKSessionIdForTests());
       assertEquals(session1,
           cluster.getElector(1).getZKSessionIdForTests());
+    } finally {
+      cluster.stop();
+    }
+  }
+  
+  /**
+   * Test that the ZKFC can gracefully cede its active status.
+   */
+  @Test(timeout=15000)
+  public void testCedeActive() throws Exception {
+    try {
+      cluster.start();
+      DummyZKFC zkfc = cluster.getZkfc(0);
+      // It should be in active to start.
+      assertEquals(ActiveStandbyElector.State.ACTIVE,
+          zkfc.getElectorForTests().getStateForTests());
+
+      // Ask it to cede active for 3 seconds. It should respond promptly
+      // (i.e. the RPC itself should not take 3 seconds!)
+      ZKFCProtocol proxy = zkfc.getLocalTarget().getZKFCProxy(conf, 5000);
+      long st = System.currentTimeMillis();
+      proxy.cedeActive(3000);
+      long et = System.currentTimeMillis();
+      assertTrue("RPC to cedeActive took " + (et - st) + " ms",
+          et - st < 1000);
+      
+      // Should be in "INIT" state since it's not in the election
+      // at this point.
+      assertEquals(ActiveStandbyElector.State.INIT,
+          zkfc.getElectorForTests().getStateForTests());
+
+      // After the prescribed 3 seconds, should go into STANDBY state,
+      // since the other node in the cluster would have taken ACTIVE.
+      cluster.waitForElectorState(0, ActiveStandbyElector.State.STANDBY);
+      long et2 = System.currentTimeMillis();
+      assertTrue("Should take ~3 seconds to rejoin. Only took " + (et2 - et) +
+          "ms before rejoining.",
+          et2 - et > 2800);      
+    } finally {
+      cluster.stop();
+    }
+  }
+  
+  @Test(timeout=15000)
+  public void testGracefulFailover() throws Exception {
+    try {
+      cluster.start();
+
+      cluster.waitForActiveLockHolder(0);
+      cluster.getService(1).getZKFCProxy(conf, 5000).gracefulFailover();
+      cluster.waitForActiveLockHolder(1);
+      cluster.getService(0).getZKFCProxy(conf, 5000).gracefulFailover();
+      cluster.waitForActiveLockHolder(0);
+      
+      assertEquals(0, cluster.getService(0).fenceCount);
+      assertEquals(0, cluster.getService(1).fenceCount);
+    } finally {
+      cluster.stop();
+    }
+  }
+  
+  @Test(timeout=15000)
+  public void testGracefulFailoverToUnhealthy() throws Exception {
+    try {
+      cluster.start();
+
+      cluster.waitForActiveLockHolder(0);
+
+      // Mark it unhealthy, wait for it to exit election
+      cluster.setHealthy(1, false);
+      cluster.waitForElectorState(1, ActiveStandbyElector.State.INIT);
+      
+      // Ask for failover, it should fail, because it's unhealthy
+      try {
+        cluster.getService(1).getZKFCProxy(conf, 5000).gracefulFailover();
+        fail("Did not fail to graceful failover to unhealthy service!");
+      } catch (ServiceFailedException sfe) {
+        GenericTestUtils.assertExceptionContains(
+            cluster.getService(1).toString() + 
+            " is not currently healthy.", sfe);
+      }
+    } finally {
+      cluster.stop();
+    }
+  }
+  
+  @Test(timeout=15000)
+  public void testGracefulFailoverFailBecomingActive() throws Exception {
+    try {
+      cluster.start();
+
+      cluster.waitForActiveLockHolder(0);
+      cluster.setFailToBecomeActive(1, true);
+      
+      // Ask for failover, it should fail and report back to user.
+      try {
+        cluster.getService(1).getZKFCProxy(conf, 5000).gracefulFailover();
+        fail("Did not fail to graceful failover when target failed " +
+            "to become active!");
+      } catch (ServiceFailedException sfe) {
+        GenericTestUtils.assertExceptionContains(
+            "Couldn't make " + cluster.getService(1) + " active", sfe);
+        GenericTestUtils.assertExceptionContains(
+            "injected failure", sfe);
+      }
+      
+      // No fencing
+      assertEquals(0, cluster.getService(0).fenceCount);
+      assertEquals(0, cluster.getService(1).fenceCount);
+
+      // Service 0 should go back to being active after the failed failover
+      cluster.waitForActiveLockHolder(0);
+    } finally {
+      cluster.stop();
+    }
+  }
+
+  @Test(timeout=15000)
+  public void testGracefulFailoverFailBecomingStandby() throws Exception {
+    try {
+      cluster.start();
+
+      cluster.waitForActiveLockHolder(0);
+      
+      // Ask for failover when old node fails to transition to standby.
+      // This should trigger fencing, since the cedeActive() command
+      // still works, but leaves the breadcrumb in place.
+      cluster.setFailToBecomeStandby(0, true);
+      cluster.getService(1).getZKFCProxy(conf, 5000).gracefulFailover();
+
+      // Check that the old node was fenced
+      assertEquals(1, cluster.getService(0).fenceCount);
+    } finally {
+      cluster.stop();
+    }
+  }
+  
+  @Test(timeout=15000)
+  public void testGracefulFailoverFailBecomingStandbyAndFailFence()
+      throws Exception {
+    try {
+      cluster.start();
+
+      cluster.waitForActiveLockHolder(0);
+      
+      // Ask for failover when old node fails to transition to standby.
+      // This should trigger fencing, since the cedeActive() command
+      // still works, but leaves the breadcrumb in place.
+      cluster.setFailToBecomeStandby(0, true);
+      cluster.setFailToFence(0, true);
+
+      try {
+        cluster.getService(1).getZKFCProxy(conf, 5000).gracefulFailover();
+        fail("Failover should have failed when old node wont fence");
+      } catch (ServiceFailedException sfe) {
+        GenericTestUtils.assertExceptionContains(
+            "Unable to fence " + cluster.getService(0), sfe);
+      }
+    } finally {
+      cluster.stop();
+    }
+  }
+
+  /**
+   * Test which exercises all of the inputs into ZKFC. This is particularly
+   * useful for running under jcarder to check for lock order violations.
+   */
+  @Test(timeout=30000)
+  public void testOneOfEverything() throws Exception {
+    try {
+      cluster.start();
+      
+      // Failover by session expiration
+      LOG.info("====== Failing over by session expiration");
+      cluster.expireAndVerifyFailover(0, 1);
+      cluster.expireAndVerifyFailover(1, 0);
+      
+      // Restart ZK
+      LOG.info("====== Restarting server");
+      stopServer();
+      waitForServerDown(hostPort, CONNECTION_TIMEOUT);
+      startServer();
+      waitForServerUp(hostPort, CONNECTION_TIMEOUT);
+
+      // Failover by bad health
+      cluster.setHealthy(0, false);
+      cluster.waitForHAState(0, HAServiceState.STANDBY);
+      cluster.waitForHAState(1, HAServiceState.ACTIVE);
+      cluster.setHealthy(1, true);
+      cluster.setHealthy(0, false);
+      cluster.waitForHAState(1, HAServiceState.ACTIVE);
+      cluster.waitForHAState(0, HAServiceState.STANDBY);
+      cluster.setHealthy(0, true);
+      
+      cluster.waitForHealthState(0, State.SERVICE_HEALTHY);
+      
+      // Graceful failovers
+      cluster.getZkfc(1).gracefulFailoverToYou();
+      cluster.getZkfc(0).gracefulFailoverToYou();
     } finally {
       cluster.stop();
     }

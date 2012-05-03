@@ -378,7 +378,7 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
         createConnection();
       }
       Stat stat = new Stat();
-      return zkClient.getData(zkLockFilePath, false, stat);
+      return getDataWithRetries(zkLockFilePath, false, stat);
     } catch(KeeperException e) {
       Code code = e.code();
       if (isNodeDoesNotExist(code)) {
@@ -885,6 +885,15 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
     return zkDoWithRetries(new ZKAction<String>() {
       public String run() throws KeeperException, InterruptedException {
         return zkClient.create(path, data, acl, mode);
+      }
+    });
+  }
+
+  private byte[] getDataWithRetries(final String path, final boolean watch,
+      final Stat stat) throws InterruptedException, KeeperException {
+    return zkDoWithRetries(new ZKAction<byte[]>() {
+      public byte[] run() throws KeeperException, InterruptedException {
+        return zkClient.getData(path, watch, stat);
       }
     });
   }

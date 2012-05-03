@@ -38,6 +38,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -201,9 +202,26 @@ public abstract class HAAdmin extends Configured implements Tool {
     HAServiceTarget fromNode = resolveTarget(args[0]);
     HAServiceTarget toNode = resolveTarget(args[1]);
     
-    if (!checkManualStateManagementOK(fromNode) ||
-        !checkManualStateManagementOK(toNode)) {
-      return -1;
+    // Check that auto-failover is consistently configured for both nodes.
+    Preconditions.checkState(
+        fromNode.isAutoFailoverEnabled() ==
+          toNode.isAutoFailoverEnabled(),
+          "Inconsistent auto-failover configs between %s and %s!",
+          fromNode, toNode);
+    
+    if (fromNode.isAutoFailoverEnabled()) {
+      if (forceFence || forceActive) {
+        // -forceActive doesn't make sense with auto-HA, since, if the node
+        // is not healthy, then its ZKFC will immediately quit the election
+        // again the next time a health check runs.
+        //
+        // -forceFence doesn't seem to have any real use cases with auto-HA
+        // so it isn't implemented.
+        errOut.println(FORCEFENCE + " and " + FORCEACTIVE + " flags not " +
+            "supported with auto-failover enabled.");
+        return -1;
+      }
+      return gracefulFailoverThroughZKFCs(toNode);
     }
     
     FailoverController fc = new FailoverController(getConf(),
@@ -216,6 +234,31 @@ public abstract class HAAdmin extends Configured implements Tool {
       errOut.println("Failover failed: " + ffe.getLocalizedMessage());
       return -1;
     }
+    return 0;
+  }
+  
+
+  /**
+   * Initiate a graceful failover by talking to the target node's ZKFC.
+   * This sends an RPC to the ZKFC, which coordinates the failover.
+   * 
+   * @param toNode the node to fail to
+   * @return status code (0 for success)
+   * @throws IOException if failover does not succeed
+   */
+  private int gracefulFailoverThroughZKFCs(HAServiceTarget toNode)
+      throws IOException {
+
+    int timeout = FailoverController.getRpcTimeoutToNewActive(getConf());
+    ZKFCProtocol proxy = toNode.getZKFCProxy(getConf(), timeout);
+    try {
+      proxy.gracefulFailover();
+      out.println("Failover to " + toNode + " successful");
+    } catch (ServiceFailedException sfe) {
+      errOut.println("Failover failed: " + sfe.getLocalizedMessage());
+      return -1;
+    }
+
     return 0;
   }
 

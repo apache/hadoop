@@ -15,14 +15,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-option java_package = "org.apache.hadoop.hdfs.server.namenode.ha.proto";
-option java_outer_classname = "HAZKInfoProtos";
 
-message ActiveNodeInfo {
-  required string nameserviceId = 1;
-  required string namenodeId = 2;
+option java_package = "org.apache.hadoop.ha.proto";
+option java_outer_classname = "ZKFCProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
 
-  required string hostname = 3;
-  required int32 port = 4;
-  required int32 zkfcPort = 5;
+message CedeActiveRequestProto {
+  required uint32 millisToCede = 1;
+}
+
+message CedeActiveResponseProto {
+}
+
+message GracefulFailoverRequestProto {
+}
+
+message GracefulFailoverResponseProto {
+}
+
+
+/**
+ * Protocol provides manual control of the ZK Failover Controllers
+ */
+service ZKFCProtocolService {
+  /**
+   * Request that the service cede its active state, and quit the election
+   * for some amount of time
+   */
+  rpc cedeActive(CedeActiveRequestProto)
+      returns(CedeActiveResponseProto);
+
+
+  rpc gracefulFailover(GracefulFailoverRequestProto)
+      returns(GracefulFailoverResponseProto);
 }

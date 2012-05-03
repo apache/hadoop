@@ -30,11 +30,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.ZKFailoverController;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.proto.HAZKInfoProtos.ActiveNodeInfo;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -48,6 +55,7 @@ public class DFSZKFailoverController extends ZKFailoverController {
     LogFactory.getLog(DFSZKFailoverController.class);
   private NNHAServiceTarget localTarget;
   private Configuration localNNConf;
+  private AccessControlList adminAcl;
 
   @Override
   protected HAServiceTarget dataToTarget(byte[] data) {
@@ -68,21 +76,43 @@ public class DFSZKFailoverController extends ZKFailoverController {
           ret + ": Stored protobuf was " + proto + ", address from our own " +
           "configuration for this NameNode was " + ret.getAddress());
     }
+    
+    ret.setZkfcPort(proto.getZkfcPort());
     return ret;
   }
 
   @Override
   protected byte[] targetToData(HAServiceTarget target) {
     InetSocketAddress addr = target.getAddress();
+
     return ActiveNodeInfo.newBuilder()
       .setHostname(addr.getHostName())
       .setPort(addr.getPort())
+      .setZkfcPort(target.getZKFCAddress().getPort())
       .setNameserviceId(localTarget.getNameServiceId())
       .setNamenodeId(localTarget.getNameNodeId())
       .build()
       .toByteArray();
   }
   
+  @Override
+  protected InetSocketAddress getRpcAddressToBindTo() {
+    int zkfcPort = getZkfcPort(localNNConf);
+    return new InetSocketAddress(localTarget.getAddress().getAddress(),
+          zkfcPort);
+  }
+  
+
+  @Override
+  protected PolicyProvider getPolicyProvider() {
+    return new HDFSPolicyProvider();
+  }
+  
+  static int getZkfcPort(Configuration conf) {
+    return conf.getInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY,
+        DFSConfigKeys.DFS_HA_ZKFC_PORT_DEFAULT);
+  }
+
   @Override
   public void setConf(Configuration conf) {
     localNNConf = DFSHAAdmin.addSecurityConfiguration(conf);
@@ -98,9 +128,20 @@ public class DFSZKFailoverController extends ZKFailoverController {
     
     localTarget = new NNHAServiceTarget(localNNConf, nsId, nnId);
     
+    // Setup ACLs
+    adminAcl = new AccessControlList(
+        conf.get(DFSConfigKeys.DFS_ADMIN, " "));
+    
     super.setConf(localNNConf);
     LOG.info("Failover controller configured for NameNode " +
         nsId + "." + nnId);
+  }
+  
+  
+  @Override
+  protected void initRPC() throws IOException {
+    super.initRPC();
+    localTarget.setZkfcPort(rpcServer.getAddress().getPort());
   }
 
   @Override
@@ -126,5 +167,20 @@ public class DFSZKFailoverController extends ZKFailoverController {
       throws Exception {
     System.exit(ToolRunner.run(
         new DFSZKFailoverController(), args));
+  }
+
+  @Override
+  protected void checkRpcAdminAccess() throws IOException, AccessControlException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    UserGroupInformation zkfcUgi = UserGroupInformation.getLoginUser();
+    if (adminAcl.isUserAllowed(ugi) ||
+        ugi.getShortUserName().equals(zkfcUgi.getShortUserName())) {
+      LOG.info("Allowed RPC access from " + ugi + " at " + Server.getRemoteAddress());
+      return;
+    }
+    String msg = "Disallowed RPC access from " + ugi + " at " +
+        Server.getRemoteAddress() + ". Not listed in " + DFSConfigKeys.DFS_ADMIN; 
+    LOG.warn(msg);
+    throw new AccessControlException(msg);
   }
 }

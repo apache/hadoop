@@ -22,10 +22,10 @@ import static org.junit.Assert.*;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
-import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
@@ -61,6 +61,15 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY,
         AlwaysSucceedFencer.class.getName());
     conf.setBoolean(DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY, true);
+
+    // Turn off IPC client caching, so that the suite can handle
+    // the restart of the daemons between test cases.
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
+        0);
+    
+    conf.setInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY + ".ns1.nn1", 10003);
+    conf.setInt(DFSConfigKeys.DFS_HA_ZKFC_PORT_KEY + ".ns1.nn2", 10004);
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
     .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
@@ -101,18 +110,6 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   }
   
   /**
-   * Test that, when automatic failover is enabled, the manual
-   * failover script refuses to run.
-   */
-  @Test(timeout=10000)
-  public void testManualFailoverIsDisabled() throws Exception {
-    DFSHAAdmin admin = new DFSHAAdmin();
-    admin.setConf(conf);
-    int rc = admin.run(new String[]{"-failover", "nn1", "nn2"});
-    assertEquals(-1, rc);
-  }
-  
-  /**
    * Test that automatic failover is triggered by shutting the
    * active NN down.
    */
@@ -146,6 +143,29 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     assertTrue(fs.exists(p2));
     assertEquals(AlwaysSucceedFencer.getLastFencedService().getAddress(),
         thr2.zkfc.getLocalTarget().getAddress());
+  }
+  
+  @Test(timeout=30000)
+  public void testManualFailover() throws Exception {
+    thr2.zkfc.getLocalTarget().getZKFCProxy(conf, 15000).gracefulFailover();
+    waitForHAState(0, HAServiceState.STANDBY);
+    waitForHAState(1, HAServiceState.ACTIVE);
+
+    thr1.zkfc.getLocalTarget().getZKFCProxy(conf, 15000).gracefulFailover();
+    waitForHAState(0, HAServiceState.ACTIVE);
+    waitForHAState(1, HAServiceState.STANDBY);
+  }
+  
+  @Test(timeout=30000)
+  public void testManualFailoverWithDFSHAAdmin() throws Exception {
+    DFSHAAdmin tool = new DFSHAAdmin();
+    tool.setConf(conf);
+    tool.run(new String[]{"-failover", "nn1", "nn2"});
+    waitForHAState(0, HAServiceState.STANDBY);
+    waitForHAState(1, HAServiceState.ACTIVE);
+    tool.run(new String[]{"-failover", "nn2", "nn1"});
+    waitForHAState(0, HAServiceState.ACTIVE);
+    waitForHAState(1, HAServiceState.STANDBY);
   }
   
   private void waitForHAState(int nnidx, final HAServiceState state)

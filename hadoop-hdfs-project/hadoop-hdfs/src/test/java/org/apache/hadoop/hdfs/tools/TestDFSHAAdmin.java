@@ -38,7 +38,7 @@ import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.HealthCheckFailedException;
-import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.ha.ZKFCProtocol;
 import org.apache.hadoop.test.MockitoUtil;
 
 import org.junit.Before;
@@ -56,6 +56,7 @@ public class TestDFSHAAdmin {
   private ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
   private String errOutput;
   private HAServiceProtocol mockProtocol;
+  private ZKFCProtocol mockZkfcProtocol;
   
   private static final String NSID = "ns1";
 
@@ -88,6 +89,7 @@ public class TestDFSHAAdmin {
   @Before
   public void setup() throws IOException {
     mockProtocol = MockitoUtil.mockProtocol(HAServiceProtocol.class);
+    mockZkfcProtocol = MockitoUtil.mockProtocol(ZKFCProtocol.class);
     tool = new DFSHAAdmin() {
 
       @Override
@@ -97,7 +99,9 @@ public class TestDFSHAAdmin {
         // OVerride the target to return our mock protocol
         try {
           Mockito.doReturn(mockProtocol).when(spy).getProxy(
-              Mockito.<Configuration>any(), Mockito.anyInt()); 
+              Mockito.<Configuration>any(), Mockito.anyInt());
+          Mockito.doReturn(mockZkfcProtocol).when(spy).getZKFCProxy(
+              Mockito.<Configuration>any(), Mockito.anyInt());
         } catch (IOException e) {
           throw new AssertionError(e); // mock setup doesn't really throw
         }
@@ -172,8 +176,6 @@ public class TestDFSHAAdmin {
     assertTrue(errOutput.contains("Refusing to manually manage"));
     assertEquals(-1, runTool("-transitionToStandby", "nn1"));
     assertTrue(errOutput.contains("Refusing to manually manage"));
-    assertEquals(-1, runTool("-failover", "nn1", "nn2"));
-    assertTrue(errOutput.contains("Refusing to manually manage"));
 
     Mockito.verify(mockProtocol, Mockito.never())
       .transitionToActive(anyReqInfo());
@@ -186,12 +188,10 @@ public class TestDFSHAAdmin {
     assertEquals(0, runTool("-transitionToActive", "-forcemanual", "nn1"));
     setupConfirmationOnSystemIn();
     assertEquals(0, runTool("-transitionToStandby", "-forcemanual", "nn1"));
-    setupConfirmationOnSystemIn();
-    assertEquals(0, runTool("-failover", "-forcemanual", "nn1", "nn2"));
 
-    Mockito.verify(mockProtocol, Mockito.times(2)).transitionToActive(
+    Mockito.verify(mockProtocol, Mockito.times(1)).transitionToActive(
         reqInfoCaptor.capture());
-    Mockito.verify(mockProtocol, Mockito.times(2)).transitionToStandby(
+    Mockito.verify(mockProtocol, Mockito.times(1)).transitionToStandby(
         reqInfoCaptor.capture());
     
     // All of the RPCs should have had the "force" source
@@ -299,6 +299,19 @@ public class TestDFSHAAdmin {
     conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "foobar!");
     tool.setConf(conf);
     assertEquals(-1, runTool("-failover", "nn1", "nn2", "--forcefence"));
+  }
+  
+  @Test
+  public void testFailoverWithAutoHa() throws Exception {
+    Mockito.doReturn(STANDBY_READY_RESULT).when(mockProtocol).getServiceStatus();
+    // Turn on auto-HA in the config
+    HdfsConfiguration conf = getHAConf();
+    conf.setBoolean(DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY, true);
+    conf.set(DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY, "shell(true)");
+    tool.setConf(conf);
+
+    assertEquals(0, runTool("-failover", "nn1", "nn2"));
+    Mockito.verify(mockZkfcProtocol).gracefulFailover();
   }
 
   @Test

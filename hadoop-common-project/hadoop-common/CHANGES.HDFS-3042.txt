@@ -21,3 +21,5 @@ HADOOP-8246. Auto-HA: automatically scope znode by nameservice ID (todd)
 HADOOP-8247. Add a config to enable auto-HA, which disables manual FailoverController (todd)
 
 HADOOP-8306. ZKFC: improve error message when ZK is not running. (todd)
+
+HADOOP-8279. Allow manual failover to be invoked when auto-failover is enabled. (todd)

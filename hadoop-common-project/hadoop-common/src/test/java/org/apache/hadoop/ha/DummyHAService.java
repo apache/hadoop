@@ -40,13 +40,15 @@ class DummyHAService extends HAServiceTarget {
   private static final String DUMMY_FENCE_KEY = "dummy.fence.key";
   volatile HAServiceState state;
   HAServiceProtocol proxy;
+  ZKFCProtocol zkfcProxy = null;
   NodeFencer fencer;
   InetSocketAddress address;
   boolean isHealthy = true;
   boolean actUnreachable = false;
-  boolean failToBecomeActive;
+  boolean failToBecomeActive, failToBecomeStandby, failToFence;
   
   DummySharedResource sharedResource;
+  public int fenceCount = 0;
   
   static ArrayList<DummyHAService> instances = Lists.newArrayList();
   int index;
@@ -83,9 +85,21 @@ class DummyHAService extends HAServiceTarget {
   }
 
   @Override
+  public InetSocketAddress getZKFCAddress() {
+    return null;
+  }
+
+  @Override
   public HAServiceProtocol getProxy(Configuration conf, int timeout)
       throws IOException {
     return proxy;
+  }
+  
+  @Override
+  public ZKFCProtocol getZKFCProxy(Configuration conf, int timeout)
+      throws IOException {
+    assert zkfcProxy != null;
+    return zkfcProxy;
   }
   
   @Override
@@ -139,6 +153,9 @@ class DummyHAService extends HAServiceTarget {
     public void transitionToStandby(StateChangeRequestInfo req) throws ServiceFailedException,
         AccessControlException, IOException {
       checkUnreachable();
+      if (failToBecomeStandby) {
+        throw new ServiceFailedException("injected failure");
+      }
       if (sharedResource != null) {
         sharedResource.release(DummyHAService.this);
       }
@@ -167,7 +184,6 @@ class DummyHAService extends HAServiceTarget {
   }
   
   public static class DummyFencer implements FenceMethod {
-
     public void checkArgs(String args) throws BadFencingConfigurationException {
     }
 
@@ -176,6 +192,13 @@ class DummyHAService extends HAServiceTarget {
         throws BadFencingConfigurationException {
       LOG.info("tryFence(" + target + ")");
       DummyHAService svc = (DummyHAService)target;
+      synchronized (svc) {
+        svc.fenceCount++;
+      }
+      if (svc.failToFence) {
+        LOG.info("Injected failure to fence");
+        return false;
+      }
       svc.sharedResource.release(svc);
       return true;
     }
