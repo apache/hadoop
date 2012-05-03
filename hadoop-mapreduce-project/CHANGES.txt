@@ -338,6 +338,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4211. Error conditions (missing appid, appid not found) are 
     masked in the RM app page (Jonathan Eagles via bobby)
 
+    MAPREDUCE-4163. consistently set the bind address (Daryn Sharp via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
