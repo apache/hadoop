@@ -47,7 +47,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
-import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
@@ -476,10 +475,7 @@ public class SecondaryNameNode implements Runnable {
     }
 
     // error simulation code for junit test
-    if (ErrorSimulator.getErrorSimulation(0)) {
-      throw new IOException("Simulating error0 " +
-                            "after creating edits.new");
-    }
+    CheckpointFaultInjector.getInstance().afterSecondaryCallsRollEditLog();
 
     RemoteEditLogManifest manifest =
       namenode.getEditLogManifest(sig.mostRecentCheckpointTxId + 1);
@@ -497,10 +493,7 @@ public class SecondaryNameNode implements Runnable {
         dstStorage, txid);
 
     // error simulation code for junit test
-    if (ErrorSimulator.getErrorSimulation(1)) {
-      throw new IOException("Simulating error1 " +
-                            "after uploading new image to NameNode");
-    }
+    CheckpointFaultInjector.getInstance().afterSecondaryUploadsNewImage();
 
     LOG.warn("Checkpoint done. New Image Size: " 
              + dstStorage.getFsImageName(txid).length());
