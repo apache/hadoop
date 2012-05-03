@@ -2159,7 +2159,7 @@
   </target>
 
   <target name="compile-c++" 
-          depends="compile-c++-pipes"/>
+          depends="create-c++-configure,compile-c++-pipes"/>
 
   <target name="create-c++-examples-pipes-makefile" 
           depends="check-c++-makefiles" 
