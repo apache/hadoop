@@ -473,6 +473,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3359. DFSClient.close should close cached sockets. (todd)
 
+    HDFS-3350. In INode, add final to compareTo(..), equals(..) and hashCode(),
+    and remove synchronized from updatePermissionStatus(..).  (szetszwo)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
