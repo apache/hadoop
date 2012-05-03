@@ -465,6 +465,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3330. If GetImageServlet throws an Error or RTE, response should not
     have HTTP "OK" status. (todd)
 
+    HDFS-3351. NameNode#initializeGenericKeys should always set fs.defaultFS
+    regardless of whether HA or Federation is enabled. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

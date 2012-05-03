@@ -1130,20 +1130,18 @@ public class NameNode {
    */
   public static void initializeGenericKeys(Configuration conf,
       String nameserviceId, String namenodeId) {
-    if ((nameserviceId == null || nameserviceId.isEmpty()) && 
-        (namenodeId == null || namenodeId.isEmpty())) {
-      return;
+    if ((nameserviceId != null && !nameserviceId.isEmpty()) || 
+        (namenodeId != null && !namenodeId.isEmpty())) {
+      if (nameserviceId != null) {
+        conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
+      }
+      if (namenodeId != null) {
+        conf.set(DFS_HA_NAMENODE_ID_KEY, namenodeId);
+      }
+      
+      DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,
+          NAMESERVICE_SPECIFIC_KEYS);
     }
-    
-    if (nameserviceId != null) {
-      conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
-    }
-    if (namenodeId != null) {
-      conf.set(DFS_HA_NAMENODE_ID_KEY, namenodeId);
-    }
-    
-    DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,
-        NAMESERVICE_SPECIFIC_KEYS);
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));

@@ -320,6 +320,25 @@ public class TestDFSUtil {
   }
 
   /**
+   * Ensure that fs.defaultFS is set in the configuration even if neither HA nor
+   * Federation is enabled.
+   * 
+   * Regression test for HDFS-3351.
+   */
+  @Test
+  public void testConfModificationNoFederationOrHa() {
+    final HdfsConfiguration conf = new HdfsConfiguration();
+    String nsId = null;
+    String nnId = null;
+    
+    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "localhost:1234");
+
+    assertFalse("hdfs://localhost:1234".equals(conf.get(FS_DEFAULT_NAME_KEY)));
+    NameNode.initializeGenericKeys(conf, nsId, nnId);
+    assertEquals("hdfs://localhost:1234", conf.get(FS_DEFAULT_NAME_KEY));
+  }
+
+  /**
    * Regression test for HDFS-2934.
    */
   @Test
