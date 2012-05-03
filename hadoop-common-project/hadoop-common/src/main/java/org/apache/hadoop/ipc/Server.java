@@ -218,7 +218,7 @@ public abstract class Server {
   public static final Log AUDITLOG = 
     LogFactory.getLog("SecurityLogger."+Server.class.getName());
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
-  private static final String AUTH_SUCCESSFULL_FOR = "Auth successfull for ";
+  private static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
   
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
 
@@ -1235,7 +1235,7 @@ public abstract class Server {
             LOG.debug("SASL server successfully authenticated client: " + user);
           }
           rpcMetrics.incrAuthenticationSuccesses();
-          AUDITLOG.info(AUTH_SUCCESSFULL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
           saslContextEstablished = true;
         }
       } else {
