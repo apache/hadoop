@@ -155,6 +155,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8347. Hadoop Common logs misspell 'successful'.
     (Philip Zeyliger via eli)
 
+    HADOOP-8350. Improve NetUtils.getInputStream to return a stream which has
+    a tunable timeout. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

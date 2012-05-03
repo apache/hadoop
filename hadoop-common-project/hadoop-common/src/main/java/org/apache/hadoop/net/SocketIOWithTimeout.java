@@ -247,6 +247,10 @@ abstract class SocketIOWithTimeout {
                                                               ops)); 
     }
   }
+
+  public void setTimeout(long timeoutMs) {
+    this.timeout = timeoutMs;
+  }
     
   private static String timeoutExceptionString(SelectableChannel channel,
                                                long timeout, int ops) {
