@@ -468,6 +468,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3351. NameNode#initializeGenericKeys should always set fs.defaultFS
     regardless of whether HA or Federation is enabled. (atm)
 
+    HDFS-3332. NullPointerException in DN when directoryscanner is trying to 
+    report bad blocks. (Amith D K via umamahesh)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
