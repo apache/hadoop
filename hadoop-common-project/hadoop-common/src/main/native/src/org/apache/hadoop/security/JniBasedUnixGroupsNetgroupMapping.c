@@ -70,7 +70,7 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsNetgroupMapping_getUsersForNet
 
   // set the name of the group for subsequent calls to getnetgrent
   // note that we want to end group lokup regardless whether setnetgrent
-  // was successfull or not (as long as it was called we need to call
+  // was successful or not (as long as it was called we need to call
   // endnetgrent)
   setnetgrentCalledFlag = 1;
   if(setnetgrent(cgroup) == 1) {

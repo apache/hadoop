@@ -59,7 +59,7 @@ public class ServiceAuthorizationManager {
   public static final Log AUDITLOG =
     LogFactory.getLog("SecurityLogger."+ServiceAuthorizationManager.class.getName());
 
-  private static final String AUTHZ_SUCCESSFULL_FOR = "Authorization successfull for ";
+  private static final String AUTHZ_SUCCESSFUL_FOR = "Authorization successful for ";
   private static final String AUTHZ_FAILED_FOR = "Authorization failed for ";
 
   
@@ -108,7 +108,7 @@ public class ServiceAuthorizationManager {
           " is not authorized for protocol " + protocol + 
           ", expected client Kerberos principal is " + clientPrincipal);
     }
-    AUDITLOG.info(AUTHZ_SUCCESSFULL_FOR + user + " for protocol="+protocol);
+    AUDITLOG.info(AUTHZ_SUCCESSFUL_FOR + user + " for protocol="+protocol);
   }
 
   public synchronized void refresh(Configuration conf,
