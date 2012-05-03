@@ -62,8 +62,11 @@ Release 1.0.3 - unreleased
 
     HADOOP-8338. Fix renew and cancel of RPC HDFS delegation tokens. (omalley)
 
-    HADOOP-8346. Makes oid changes to make SPNEGO work. Was broken due to fixes 
-    introduced by the IBM JDK compatibility patch. (ddas)
+    HADOOP-8346. Makes oid changes to make SPNEGO work. Was broken due
+    to fixes introduced by the IBM JDK compatibility patch. (ddas)
+
+    HADOOP-8352. Regenerate configure scripts for the c++ compilation. 
+    (omalley)
 
 Release 1.0.2 - 2012.03.24
 
