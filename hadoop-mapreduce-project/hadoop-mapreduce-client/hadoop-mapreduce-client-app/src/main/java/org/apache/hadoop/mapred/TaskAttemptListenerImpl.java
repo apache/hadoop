@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -127,10 +126,7 @@ public class TaskAttemptListenerImpl extends CompositeService
       }
 
       server.start();
-      InetSocketAddress listenerAddress = server.getListenerAddress();
-      listenerAddress.getAddress();
-      this.address = NetUtils.createSocketAddr(InetAddress.getLocalHost()
-        .getCanonicalHostName() + ":" + listenerAddress.getPort());
+      this.address = NetUtils.getConnectAddress(server);
     } catch (IOException e) {
       throw new YarnException(e);
     }

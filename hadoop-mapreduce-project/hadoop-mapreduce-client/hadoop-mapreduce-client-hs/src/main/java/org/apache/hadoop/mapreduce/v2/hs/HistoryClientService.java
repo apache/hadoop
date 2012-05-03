@@ -19,9 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
@@ -76,7 +74,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
@@ -117,17 +114,10 @@ public class HistoryClientService extends AbstractService {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     initializeWebApp(conf);
-    String serviceAddr = conf.get(JHAdminConfig.MR_HISTORY_ADDRESS,
-        JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
-    InetSocketAddress address = NetUtils.createSocketAddr(serviceAddr,
-      JHAdminConfig.DEFAULT_MR_HISTORY_PORT,
-      JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS);
-    InetAddress hostNameResolved = null;
-    try {
-      hostNameResolved = InetAddress.getLocalHost(); 
-    } catch (UnknownHostException e) {
-      throw new YarnException(e);
-    }
+    InetSocketAddress address = conf.getSocketAddr(
+        JHAdminConfig.MR_HISTORY_ADDRESS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_ADDRESS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_PORT);
 
     server =
         rpc.getServer(HSClientProtocol.class, protocolHandler, address,
@@ -143,31 +133,24 @@ public class HistoryClientService extends AbstractService {
     }
     
     server.start();
-    this.bindAddress =
-        NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
-            + ":" + server.getPort());
+    this.bindAddress = conf.updateConnectAddr(JHAdminConfig.MR_HISTORY_ADDRESS,
+                                              server.getListenerAddress());
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
-
-    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-      String resolvedAddress = bindAddress.getHostName() + ":" + bindAddress.getPort();
-      conf.set(JHAdminConfig.MR_HISTORY_ADDRESS, resolvedAddress);
-
-      String hostname = getConfig().get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
-                                        JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
-      hostname = (hostname.contains(":")) ? hostname.substring(0, hostname.indexOf(":")) : hostname;
-      int port = webApp.port();
-      resolvedAddress = hostname + ":" + port;
-      conf.set(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS, resolvedAddress);
-    }
 
     super.start();
   }
 
   private void initializeWebApp(Configuration conf) {
     webApp = new HsWebApp(history);
-    String bindAddress = conf.get(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
-        JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS);
-    WebApps.$for("jobhistory", HistoryClientService.class, this, "ws").with(conf).at(bindAddress).start(webApp);
+    InetSocketAddress bindAddress = conf.getSocketAddr(
+        JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_ADDRESS,
+        JHAdminConfig.DEFAULT_MR_HISTORY_WEBAPP_PORT);
+    // NOTE: there should be a .at(InetSocketAddress)
+    WebApps.$for("jobhistory", HistoryClientService.class, this, "ws")
+        .with(conf).at(NetUtils.getHostPortString(bindAddress)).start(webApp);
+    conf.updateConnectAddr(JHAdminConfig.MR_HISTORY_WEBAPP_ADDRESS,
+                           webApp.getListenerAddress());
   }
 
   @Override
