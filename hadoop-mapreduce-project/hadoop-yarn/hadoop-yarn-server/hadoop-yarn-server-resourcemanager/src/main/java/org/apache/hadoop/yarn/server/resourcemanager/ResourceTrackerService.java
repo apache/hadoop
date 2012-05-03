@@ -133,6 +133,8 @@ public class ResourceTrackerService extends AbstractService implements
     }
 
     this.server.start();
+    conf.updateConnectAddr(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+                           server.getListenerAddress());
   }
 
   @Override

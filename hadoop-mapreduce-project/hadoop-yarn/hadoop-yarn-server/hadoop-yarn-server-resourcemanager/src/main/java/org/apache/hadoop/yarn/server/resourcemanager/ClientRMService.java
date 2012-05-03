@@ -149,6 +149,8 @@ public class ClientRMService extends AbstractService implements
     }
     
     this.server.start();
+    clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_ADDRESS,
+                                               server.getListenerAddress());
     super.start();
   }
 

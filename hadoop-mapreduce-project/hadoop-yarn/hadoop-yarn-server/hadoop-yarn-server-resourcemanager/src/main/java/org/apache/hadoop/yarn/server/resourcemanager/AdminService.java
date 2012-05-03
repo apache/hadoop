@@ -120,6 +120,8 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
     }
 
     this.server.start();
+    conf.updateConnectAddr(YarnConfiguration.RM_ADMIN_ADDRESS,
+                           server.getListenerAddress());
     super.start();
   }
 

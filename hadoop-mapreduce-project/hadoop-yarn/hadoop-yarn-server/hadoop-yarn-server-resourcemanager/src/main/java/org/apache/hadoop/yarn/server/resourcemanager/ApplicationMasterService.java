@@ -30,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.StringUtils;
@@ -114,9 +113,8 @@ public class ApplicationMasterService extends AbstractService implements
     this.server.start();
 
     this.bindAddress =
-        NetUtils.createSocketAddr(masterServiceAddress.getHostName(),
-          this.server.getPort());
-
+        conf.updateConnectAddr(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+                               server.getListenerAddress());
     super.start();
   }
 

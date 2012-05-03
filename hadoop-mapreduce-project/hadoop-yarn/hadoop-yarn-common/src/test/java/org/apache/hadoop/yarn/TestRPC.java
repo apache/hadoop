@@ -82,8 +82,7 @@ public class TestRPC {
 
     // Any unrelated protocol would do
     ClientRMProtocol proxy = (ClientRMProtocol) rpc.getProxy(
-        ClientRMProtocol.class, NetUtils.createSocketAddr("localhost:"
-            + server.getPort()), conf);
+        ClientRMProtocol.class, NetUtils.getConnectAddress(server), conf);
 
     try {
       proxy.getNewApplication(Records
@@ -113,7 +112,7 @@ public class TestRPC {
     server.start();
     ContainerManager proxy = (ContainerManager) 
         rpc.getProxy(ContainerManager.class, 
-            NetUtils.createSocketAddr("localhost:" + server.getPort()), conf);
+            NetUtils.getConnectAddress(server), conf);
     ContainerLaunchContext containerLaunchContext = 
         recordFactory.newRecordInstance(ContainerLaunchContext.class);
     containerLaunchContext.setUser("dummy-user");

@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.client;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -78,7 +76,6 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -116,13 +113,7 @@ public class MRClientService extends AbstractService
   public void start() {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
-    InetSocketAddress address = NetUtils.createSocketAddr("0.0.0.0:0");
-    InetAddress hostNameResolved = null;
-    try {
-      hostNameResolved = InetAddress.getLocalHost();
-    } catch (UnknownHostException e) {
-      throw new YarnException(e);
-    }
+    InetSocketAddress address = new InetSocketAddress(0);
 
     ClientToAMSecretManager secretManager = null;
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -150,9 +141,7 @@ public class MRClientService extends AbstractService
     }
 
     server.start();
-    this.bindAddress =
-        NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
-            + ":" + server.getPort());
+    this.bindAddress = NetUtils.getConnectAddress(server);
     LOG.info("Instantiated MRClientService at " + this.bindAddress);
     try {
       webApp = WebApps.$for("mapreduce", AppContext.class, appContext, "ws").with(conf).

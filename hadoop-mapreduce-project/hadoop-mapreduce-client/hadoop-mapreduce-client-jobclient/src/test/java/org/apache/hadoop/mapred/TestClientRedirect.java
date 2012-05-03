@@ -386,9 +386,7 @@ public class TestClientRedirect {
           rpc.getServer(MRClientProtocol.class, this, address,
               conf, null, 1);
       server.start();
-      this.bindAddress =
-        NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
-            + ":" + server.getPort());
+      this.bindAddress = NetUtils.getConnectAddress(server);
        super.start();
        amRunning = true;
     }

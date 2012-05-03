@@ -397,8 +397,7 @@ public class TestContainerManagerSecurity {
     Token<ApplicationTokenIdentifier> appToken =
         new Token<ApplicationTokenIdentifier>(appTokenIdentifier,
           appTokenSecretManager);
-    appToken.setService(new Text(schedulerAddr.getHostName() + ":"
-        + schedulerAddr.getPort()));
+    SecurityUtil.setTokenService(appToken, schedulerAddr);
     currentUser.addToken(appToken);
     SecurityUtil.setTokenService(appToken, schedulerAddr);
     
