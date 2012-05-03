@@ -173,9 +173,9 @@ class INodeDirectory extends INode {
    */
   int getExistingPathINodes(byte[][] components, INode[] existing, 
       boolean resolveLink) throws UnresolvedLinkException {
-    assert compareBytes(this.name, components[0]) == 0 :
-      "Incorrect name " + getLocalName() + " expected " + 
-      DFSUtil.bytes2String(components[0]);
+    assert this.compareTo(components[0]) == 0 :
+        "Incorrect name " + getLocalName() + " expected "
+        + (components[0] == null? null: DFSUtil.bytes2String(components[0]));
 
     INode curNode = this;
     int count = 0;
@@ -317,8 +317,7 @@ class INodeDirectory extends INode {
                               INode newNode,
                               INodeDirectory parent,
                               boolean propagateModTime
-                              ) throws FileNotFoundException, 
-                                       UnresolvedLinkException {
+                              ) throws FileNotFoundException {
     // insert into the parent children list
     newNode.name = localname;
     if(parent.addChild(newNode, propagateModTime) == null)
