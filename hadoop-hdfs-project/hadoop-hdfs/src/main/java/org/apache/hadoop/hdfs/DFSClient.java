@@ -560,6 +560,7 @@ public class DFSClient implements java.io.Closeable {
   void abort() {
     clientRunning = false;
     closeAllFilesBeingWritten(true);
+    socketCache.clear();
     closeConnectionToNamenode();
   }
 
@@ -597,6 +598,7 @@ public class DFSClient implements java.io.Closeable {
   public synchronized void close() throws IOException {
     if(clientRunning) {
       closeAllFilesBeingWritten(false);
+      socketCache.clear();
       clientRunning = false;
       leaserenewer.closeClient(this);
       // close connections to the namenode
