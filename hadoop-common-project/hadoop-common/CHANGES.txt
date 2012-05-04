@@ -289,6 +289,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8346. Makes oid changes to make SPNEGO work. Was broken due
     to fixes introduced by the IBM JDK compatibility patch. (ddas)
 
+    HADOOP-8355. SPNEGO filter throws/logs exception when authentication fails (tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
