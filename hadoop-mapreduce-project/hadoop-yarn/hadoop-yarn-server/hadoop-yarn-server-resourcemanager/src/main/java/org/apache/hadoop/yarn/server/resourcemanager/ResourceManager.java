@@ -32,6 +32,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -87,6 +88,12 @@ import org.apache.hadoop.yarn.webapp.WebApps.Builder;
  */
 @SuppressWarnings("unchecked")
 public class ResourceManager extends CompositeService implements Recoverable {
+
+  /**
+   * Priority of the ResourceManager shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
+
   private static final Log LOG = LogFactory.getLog(ResourceManager.class);
   public static final long clusterTimeStamp = System.currentTimeMillis();
 
@@ -613,8 +620,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
       Configuration conf = new YarnConfiguration();
       Store store =  StoreFactory.getStore(conf);
       ResourceManager resourceManager = new ResourceManager(store);
-      Runtime.getRuntime().addShutdownHook(
-          new CompositeServiceShutdownHook(resourceManager));
+      ShutdownHookManager.get().addShutdownHook(
+        new CompositeServiceShutdownHook(resourceManager),
+        SHUTDOWN_HOOK_PRIORITY);
       resourceManager.init(conf);
       //resourceManager.recover(store.restore());
       //store.doneWithRecovery();
