@@ -4556,7 +4556,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (destinationExisted && dinfo.isDir()) {
       Path spath = new Path(src);
       Path parent = spath.getParent();
-      if (isRoot(parent)) {
+      if (parent.isRoot()) {
         overwrite = parent.toString();
       } else {
         overwrite = parent.toString() + Path.SEPARATOR;
@@ -4568,10 +4568,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     leaseManager.changeLease(src, dst, overwrite, replaceBy);
-  }
-           
-  private boolean isRoot(Path path) {
-    return path.getParent() == null;
   }
 
   /**

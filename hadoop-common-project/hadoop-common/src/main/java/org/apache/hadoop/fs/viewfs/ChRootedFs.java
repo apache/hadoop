@@ -79,7 +79,8 @@ class ChRootedFs extends AbstractFileSystem {
    */
   protected Path fullPath(final Path path) {
     super.checkPath(path);
-    return new Path(chRootPathPartString + path.toUri().getPath());
+    return new Path((chRootPathPart.isRoot() ? "" : chRootPathPartString)
+        + path.toUri().getPath());
   }
   
   public ChRootedFs(final AbstractFileSystem fs, final Path theRoot)
@@ -127,7 +128,8 @@ class ChRootedFs extends AbstractFileSystem {
     }
     String pathPart = p.toUri().getPath();
     return  (pathPart.length() == chRootPathPartString.length()) ?
-        "" : pathPart.substring(chRootPathPartString.length() + 1);   
+        "" : pathPart.substring(chRootPathPartString.length() +
+            (chRootPathPart.isRoot() ? 0 : 1));
   }
   
 
