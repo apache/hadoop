@@ -92,7 +92,7 @@ public class StandbyCheckpointer {
   }
   
   private String getHttpAddress(Configuration conf) {
-    String configuredAddr = DFSUtil.getInfoServer(null, conf, true);
+    String configuredAddr = DFSUtil.getInfoServer(null, conf, false);
     
     // Use the hostname from the RPC address as a default, in case
     // the HTTP address is configured to 0.0.0.0.

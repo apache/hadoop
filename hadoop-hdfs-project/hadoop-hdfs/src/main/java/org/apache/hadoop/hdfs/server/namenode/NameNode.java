@@ -164,10 +164,8 @@ public class NameNode {
     DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY,
     DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_HTTP_ADDRESS_KEY,
-    DFS_NAMENODE_HTTPS_ADDRESS_KEY,
     DFS_NAMENODE_KEYTAB_FILE_KEY,
     DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
-    DFS_NAMENODE_SECONDARY_HTTPS_PORT_KEY,
     DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
     DFS_NAMENODE_BACKUP_ADDRESS_KEY,
     DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
@@ -361,8 +359,9 @@ public class NameNode {
   }
   
   protected void setHttpServerAddress(Configuration conf) {
-    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY,
-        NetUtils.getHostPortString(getHttpAddress()));
+    String hostPort = NetUtils.getHostPortString(getHttpAddress());
+    conf.set(DFS_NAMENODE_HTTP_ADDRESS_KEY, hostPort);
+    LOG.info("Web-server up at: " + hostPort);
   }
 
   protected void loadNamesystem(Configuration conf) throws IOException {

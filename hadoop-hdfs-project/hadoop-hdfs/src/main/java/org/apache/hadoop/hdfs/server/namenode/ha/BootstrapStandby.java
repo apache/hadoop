@@ -95,7 +95,6 @@ public class BootstrapStandby implements Tool, Configurable {
   static final int ERR_CODE_LOGS_UNAVAILABLE = 6; 
 
   public int run(String[] args) throws Exception {
-    SecurityUtil.initKrb5CipherSuites();
     parseArgs(args);
     parseConfAndFindOtherNN();
     NameNode.checkAllowFormat(conf);
@@ -322,7 +321,7 @@ public class BootstrapStandby implements Tool, Configurable {
         "Could not determine valid IPC address for other NameNode (%s)" +
         ", got: %s", otherNNId, otherIpcAddr);
 
-    otherHttpAddr = DFSUtil.getInfoServer(null, otherNode, true);
+    otherHttpAddr = DFSUtil.getInfoServer(null, otherNode, false);
     otherHttpAddr = DFSUtil.substituteForWildcardAddress(otherHttpAddr,
         otherIpcAddr.getHostName());
     

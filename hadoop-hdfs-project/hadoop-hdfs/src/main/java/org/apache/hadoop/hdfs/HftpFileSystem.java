@@ -144,7 +144,7 @@ public class HftpFileSystem extends FileSystem
   }
 
   protected URI getNamenodeSecureUri(URI uri) {
-    return DFSUtil.createUri("https", getNamenodeSecureAddr(uri));
+    return DFSUtil.createUri("http", getNamenodeSecureAddr(uri));
   }
 
   @Override
@@ -247,7 +247,7 @@ public class HftpFileSystem extends FileSystem
             c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
           } catch (Exception e) {
             LOG.info("Couldn't get a delegation token from " + nnHttpUrl + 
-            " using https.");
+            " using http.");
             if(LOG.isDebugEnabled()) {
               LOG.debug("error was ", e);
             }
@@ -686,11 +686,11 @@ public class HftpFileSystem extends FileSystem
                       Configuration conf) throws IOException {
       // update the kerberos credentials, if they are coming from a keytab
       UserGroupInformation.getLoginUser().reloginFromKeytab();
-      // use https to renew the token
+      // use http to renew the token
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
       return 
         DelegationTokenFetcher.renewDelegationToken
-        (DFSUtil.createUri("https", serviceAddr).toString(), 
+        (DFSUtil.createUri("http", serviceAddr).toString(),
          (Token<DelegationTokenIdentifier>) token);
     }
 
@@ -700,10 +700,10 @@ public class HftpFileSystem extends FileSystem
                        Configuration conf) throws IOException {
       // update the kerberos credentials, if they are coming from a keytab
       UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
-      // use https to cancel the token
+      // use http to cancel the token
       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
       DelegationTokenFetcher.cancelDelegationToken
-        (DFSUtil.createUri("https", serviceAddr).toString(), 
+        (DFSUtil.createUri("http", serviceAddr).toString(),
          (Token<DelegationTokenIdentifier>) token);
     }    
   }

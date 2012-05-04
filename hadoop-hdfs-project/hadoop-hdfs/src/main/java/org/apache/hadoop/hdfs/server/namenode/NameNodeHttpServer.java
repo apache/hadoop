@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT;
@@ -43,6 +44,7 @@ import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
 /**
@@ -78,127 +80,101 @@ public class NameNodeHttpServer {
         conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
         nn.getNameNodeAddress().getHostName());
   }
-  
+
   public void start() throws IOException {
     final String infoHost = bindAddress.getHostName();
-    
-    if(UserGroupInformation.isSecurityEnabled()) {
-      String httpsUser = SecurityUtil.getServerPrincipal(conf
-          .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), infoHost);
-      if (httpsUser == null) {
-        LOG.warn(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY
-            + " not defined in config. Starting http server as "
-            + getDefaultServerPrincipal()
-            + ": Kerberized SSL may be not function correctly.");
-      } else {
-        // Kerberized SSL servers must be run from the host principal...
-        LOG.info("Logging in as " + httpsUser + " to start http server.");
-        SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-            DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY, infoHost);
-      }
-    }
+    int infoPort = bindAddress.getPort();
 
-    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    try {
-      this.httpServer = ugi.doAs(new PrivilegedExceptionAction<HttpServer>() {
-        @Override
-        public HttpServer run() throws IOException, InterruptedException {
-          int infoPort = bindAddress.getPort();
-          httpServer = new HttpServer("hdfs", infoHost, infoPort,
-              infoPort == 0, conf, 
-              new AccessControlList(conf.get(DFSConfigKeys.DFS_ADMIN, " "))) {
-            {
-              if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
-                //add SPNEGO authentication filter for webhdfs
-                final String name = "SPNEGO";
-                final String classname =  AuthFilter.class.getName();
-                final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
-                Map<String, String> params = getAuthFilterParams(conf);
-                defineFilter(webAppContext, name, classname, params,
-                    new String[]{pathSpec});
-                LOG.info("Added filter '" + name + "' (class=" + classname + ")");
-
-                // add webhdfs packages
-                addJerseyResourcePackage(
-                    NamenodeWebHdfsMethods.class.getPackage().getName()
-                    + ";" + Param.class.getPackage().getName(), pathSpec);
-              }
+    httpServer = new HttpServer("hdfs", infoHost, infoPort,
+                                infoPort == 0, conf,
+                                new AccessControlList(conf.get(DFS_ADMIN, " "))) {
+      {
+        // Add SPNEGO support to NameNode
+        if (UserGroupInformation.isSecurityEnabled()) {
+          Map<String, String> params = new HashMap<String, String>();
+          String principalInConf = conf.get(
+            DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPENGO_USER_NAME_KEY);
+          if (principalInConf != null && !principalInConf.isEmpty()) {
+            params.put("kerberos.principal",
+                       SecurityUtil.getServerPrincipal(principalInConf, infoHost));
+            String httpKeytab = conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
+            if (httpKeytab != null && !httpKeytab.isEmpty()) {
+              params.put("kerberos.keytab", httpKeytab);
             }
 
-            private Map<String, String> getAuthFilterParams(Configuration conf)
-                throws IOException {
-              Map<String, String> params = new HashMap<String, String>();
-              String principalInConf = conf
-                  .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
-              if (principalInConf != null && !principalInConf.isEmpty()) {
-                params
-                    .put(
-                        DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-                        SecurityUtil.getServerPrincipal(principalInConf,
-                            infoHost));
-              }
-              String httpKeytab = conf
-                  .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
-              if (httpKeytab != null && !httpKeytab.isEmpty()) {
-                params.put(
-                    DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
-                    httpKeytab);
-              }
-              return params;
-            }
-          };
+            params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
 
-          boolean certSSL = conf.getBoolean(DFSConfigKeys.DFS_HTTPS_ENABLE_KEY, false);
-          boolean useKrb = UserGroupInformation.isSecurityEnabled();
-          if (certSSL || useKrb) {
-            boolean needClientAuth = conf.getBoolean(
-                DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_KEY,
-                DFSConfigKeys.DFS_CLIENT_HTTPS_NEED_AUTH_DEFAULT);
-            InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(conf
-                .get(DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-                    DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT));
-            Configuration sslConf = new HdfsConfiguration(false);
-            if (certSSL) {
-              sslConf.addResource(conf.get(DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
-                  DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_DEFAULT));
-            }
-            httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth,
-                useKrb);
-            // assume same ssl port for all datanodes
-            InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(
-                conf.get(DFS_DATANODE_HTTPS_ADDRESS_KEY,
-                    infoHost + ":" + DFSConfigKeys.DFS_DATANODE_HTTPS_DEFAULT_PORT));
-            httpServer.setAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY,
-                datanodeSslPort.getPort());
+            defineFilter(webAppContext, SPNEGO_FILTER,
+                         AuthenticationFilter.class.getName(), params, null);
           }
-          httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
-          httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
-              nn.getNameNodeAddress());
-          httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, nn.getFSImage());
-          httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-          setupServlets(httpServer, conf);
-          httpServer.start();
-
-          // The web-server port can be ephemeral... ensure we have the correct
-          // info
-          infoPort = httpServer.getPort();
-          httpAddress = new InetSocketAddress(infoHost, infoPort);
-          LOG.info(nn.getRole() + " Web-server up at: " + httpAddress);
-          return httpServer;
         }
-      });
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    } finally {
-      if(UserGroupInformation.isSecurityEnabled() && 
-          conf.get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY) != null) {
-        // Go back to being the correct Namenode principal
-        LOG.info("Logging back in as NameNode user following http server start");
-        nn.loginAsNameNodeUser(conf);
+        if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
+          //add SPNEGO authentication filter for webhdfs
+          final String name = "SPNEGO";
+          final String classname = AuthFilter.class.getName();
+          final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
+          Map<String, String> params = getAuthFilterParams(conf);
+          defineFilter(webAppContext, name, classname, params,
+                       new String[]{pathSpec});
+          LOG.info("Added filter '" + name + "' (class=" + classname + ")");
+
+          // add webhdfs packages
+          addJerseyResourcePackage(
+            NamenodeWebHdfsMethods.class.getPackage().getName()
+            + ";" + Param.class.getPackage().getName(), pathSpec);
+        }
       }
+
+      private Map<String, String> getAuthFilterParams(Configuration conf)
+        throws IOException {
+        Map<String, String> params = new HashMap<String, String>();
+        String principalInConf = conf
+          .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY);
+        if (principalInConf != null && !principalInConf.isEmpty()) {
+          params
+            .put(
+              DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
+              SecurityUtil.getServerPrincipal(principalInConf,
+                                              bindAddress.getHostName()));
+        }
+        String httpKeytab = conf
+          .get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
+        if (httpKeytab != null && !httpKeytab.isEmpty()) {
+          params.put(
+            DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
+            httpKeytab);
+        }
+        return params;
+      }
+    };
+
+    boolean certSSL = conf.getBoolean("dfs.https.enable", false);
+    if (certSSL) {
+      boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
+      InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(infoHost + ":" + conf.get(
+        "dfs.https.port", infoHost + ":" + 0));
+      Configuration sslConf = new Configuration(false);
+      if (certSSL) {
+        sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
+                                     "ssl-server.xml"));
+      }
+      httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth);
+      // assume same ssl port for all datanodes
+      InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
+        "dfs.datanode.https.address", infoHost + ":" + 50475));
+      httpServer.setAttribute("datanode.https.port", datanodeSslPort
+        .getPort());
     }
+    httpServer.setAttribute("name.node", nn);
+    httpServer.setAttribute("name.node.address", bindAddress);
+    httpServer.setAttribute("name.system.image", nn.getFSImage());
+    httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
+    setupServlets(httpServer, conf);
+    httpServer.start();
+    httpAddress = new InetSocketAddress(bindAddress.getAddress(), httpServer.getPort());
   }
-  
+
+
   public void stop() throws Exception {
     if (httpServer != null) {
       httpServer.stop();

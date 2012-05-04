@@ -121,13 +121,6 @@
   </property>
 
   <property>
-    <name>dfs.secondary.https.port</name>
-    <value>50490</value>
-    <description>The https port where secondary-namenode binds</description>
-
-  </property>
-
-  <property>
     <name>dfs.datanode.kerberos.principal</name>
     <value>dn/_HOST@${local.realm}</value>
     <description>

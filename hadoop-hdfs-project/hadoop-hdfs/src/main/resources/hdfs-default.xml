@@ -858,4 +858,15 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.kerberos.internal.spnego.principal</name>
+  <value>${dfs.web.authentication.kerberos.principal}</value>
+</property>
+
+<property>
+  <name>dfs.secondary.namenode.kerberos.internal.spnego.principal</name>
+  <value>${dfs.web.authentication.kerberos.principal}</value>
+</property>
+
+
 </configuration>
