@@ -343,6 +343,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4163. consistently set the bind address (Daryn Sharp via bobby)
 
+    MAPREDUCE-4048. NullPointerException exception while accessing the
+    Application Master UI (Devaraj K via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
