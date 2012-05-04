@@ -30,6 +30,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8210. Common side of HDFS-3148: The client should be able
     to use multiple local interfaces for data transfer. (eli)
 
+    HADOOP-8343. Allow configuration of authorization for JmxJsonServlet and 
+    MetricsServlet (tucu)
+
   IMPROVEMENTS
 
     HADOOP-7524. Change RPC to allow multiple protocols including multuple

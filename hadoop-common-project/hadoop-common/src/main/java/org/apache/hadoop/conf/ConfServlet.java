@@ -18,7 +18,6 @@
 package org.apache.hadoop.conf;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.Writer;
 
 import javax.servlet.ServletException;
@@ -57,9 +56,8 @@ public class ConfServlet extends HttpServlet {
   public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
 
-    // Do the authorization
-    if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
-        response)) {
+    if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+                                                   request, response)) {
       return;
     }
 
