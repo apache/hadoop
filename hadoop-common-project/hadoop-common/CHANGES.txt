@@ -65,6 +65,8 @@ Trunk (unreleased changes)
 
     HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
 
+    HADOOP-8308. Support cross-project Jenkins builds. (tomwhite)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -124,6 +126,9 @@ Trunk (unreleased changes)
     HADOOP-8312. testpatch.sh should provide a simpler way to see which
     warnings changed (bobby)
 
+    HADOOP-8339. jenkins complaining about 16 javadoc warnings 
+    (Tom White and Robert Evans via tgraves)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -157,6 +162,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8210. Common side of HDFS-3148: The client should be able
     to use multiple local interfaces for data transfer. (eli)
+
+    HADOOP-8343. Allow configuration of authorization for JmxJsonServlet and 
+    MetricsServlet (tucu)
 
   IMPROVEMENTS
 
@@ -274,6 +282,20 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-7549. Use JDK ServiceLoader mechanism to find FileSystem implementations. (tucu)
 
+    HADOOP-8185. Update namenode -format documentation and add -nonInteractive
+    and -force. (Arpit Gupta via atm)
+
+    HADOOP-8214. make hadoop script recognize a full set of deprecated commands (rvs via tucu)
+
+    HADOOP-8347. Hadoop Common logs misspell 'successful'.
+    (Philip Zeyliger via eli)
+
+    HADOOP-8350. Improve NetUtils.getInputStream to return a stream which has
+    a tunable timeout. (todd)
+
+    HADOOP-8356. FileSystem service loading mechanism should print the FileSystem 
+    impl it is failing to load (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -390,6 +412,17 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8325. Add a ShutdownHookManager to be used by different
     components instead of the JVM shutdownhook (tucu)
 
+    HADOOP-8275. Range check DelegationKey length.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8342. HDFS command fails with exception following merge of 
+    HADOOP-8325 (tucu)
+
+    HADOOP-8346. Makes oid changes to make SPNEGO work. Was broken due
+    to fixes introduced by the IBM JDK compatibility patch. (ddas)
+
+    HADOOP-8355. SPNEGO filter throws/logs exception when authentication fails (tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -441,6 +474,12 @@ Release 2.0.0 - UNRELEASED
     
     HADOOP-8116. RetriableCommand is using RetryPolicy incorrectly after
     HADOOP-7896. (atm)
+
+    HADOOP-8317. Update maven-assembly-plugin to 2.3 - fix build on FreeBSD
+    (Radim Kolar via bobby)
+
+    HADOOP-8172. Configuration no longer sets all keys in a deprecated key 
+    list. (Anupam Seth via bobby)
 
 Release 0.23.3 - UNRELEASED
 

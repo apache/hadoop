@@ -164,7 +164,7 @@ public class TestConfigurationDeprecation {
     conf.set("Y", "y");
     conf.set("Z", "z");
     // get old key
-    assertEquals("y", conf.get("X"));
+    assertEquals("z", conf.get("X"));
   }
 
   /**
@@ -305,7 +305,7 @@ public class TestConfigurationDeprecation {
     assertTrue("deprecated Key not found", dKFound);
     assertTrue("new Key not found", nKFound);
   }
-
+  
   @Test
   public void testUnsetWithDeprecatedKeys() {
     Configuration conf = new Configuration();

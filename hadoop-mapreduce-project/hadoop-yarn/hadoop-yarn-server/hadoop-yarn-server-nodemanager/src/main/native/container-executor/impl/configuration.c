@@ -29,6 +29,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <limits.h>
 
 #define MAX_SIZE 10
 
@@ -84,6 +85,25 @@ static int is_only_root_writable(const char *file) {
     return 0;
   }
   return 1;
+}
+
+/**
+ * Return a string with the configuration file path name resolved via realpath(3)
+ *
+ * NOTE: relative path names are resolved relative to the second argument not getwd(3)
+ */
+char *resolve_config_path(const char* file_name, const char *root) {
+  const char *real_fname = NULL;
+  char buffer[PATH_MAX*2 + 1];
+
+  if (file_name[0] == '/') {
+    real_fname = file_name;
+  } else if (realpath(root, buffer) != NULL) {
+    strncpy(strrchr(buffer, '/') + 1, file_name, PATH_MAX);
+    real_fname = buffer;
+  }
+
+  return (real_fname == NULL) ? NULL : realpath(real_fname, NULL);
 }
 
 /**

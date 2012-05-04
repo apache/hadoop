@@ -119,6 +119,7 @@ public class GetImageServlet extends HttpServlet {
             if (imageFile == null) {
               throw new IOException(errorMessage);
             }
+            CheckpointFaultInjector.getInstance().beforeGetImageSetsHeaders();
             setFileNameHeaders(response, imageFile);
             setVerificationHeaders(response, imageFile);
             // send fsImage
@@ -189,8 +190,8 @@ public class GetImageServlet extends HttpServlet {
         }       
       });
       
-    } catch (Exception ie) {
-      String errMsg = "GetImage failed. " + StringUtils.stringifyException(ie);
+    } catch (Throwable t) {
+      String errMsg = "GetImage failed. " + StringUtils.stringifyException(t);
       response.sendError(HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
     } finally {

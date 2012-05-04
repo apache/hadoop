@@ -79,7 +79,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
@@ -150,11 +149,8 @@ public class ClientRMService extends AbstractService implements
     }
     
     this.server.start();
-    if (getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-      String resolvedAddress =
-        this.server.getListenerAddress().getHostName() + ":" + this.server.getListenerAddress().getPort();
-      conf.set(YarnConfiguration.RM_ADDRESS, resolvedAddress);
-    }
+    clientBindAddress = conf.updateConnectAddr(YarnConfiguration.RM_ADDRESS,
+                                               server.getListenerAddress());
     super.start();
   }
 
@@ -417,7 +413,7 @@ public class ClientRMService extends AbstractService implements
     } 
     
     NodeReport report = BuilderUtils.newNodeReport(rmNode.getNodeID(),
-        RMNodeState.toNodeState(rmNode.getState()),
+        rmNode.getState(),
         rmNode.getHttpAddress(), rmNode.getRackName(), used,
         rmNode.getTotalCapability(), numContainers,
         rmNode.getNodeHealthStatus());

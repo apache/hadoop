@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -41,7 +42,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -124,13 +124,13 @@ public class TestRMWebApp {
 
     // Unhealthy nodes
     instance.moreParams().put(YarnWebParams.NODE_STATE,
-      RMNodeState.UNHEALTHY.toString());
+      NodeState.UNHEALTHY.toString());
     instance.render();
     WebAppTests.flushOutput(injector);
 
     // Lost nodes
     instance.moreParams().put(YarnWebParams.NODE_STATE,
-      RMNodeState.LOST.toString());
+      NodeState.LOST.toString());
     instance.render();
     WebAppTests.flushOutput(injector);
 

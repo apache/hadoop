@@ -696,7 +696,7 @@
 					<a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Upgrade+and+Rollback">Upgrade and Rollback</a>.
 				</p>
 				<p>
-					<code>Usage: hadoop namenode [-format] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint] | [-checkpoint] | [-backup]</code>
+					<code>Usage: hadoop namenode [-format [-force] [-nonInteractive] [-clusterid someid]] | [-upgrade] | [-rollback] | [-finalize] | [-importCheckpoint] | [-checkpoint] | [-backup]</code>
 				</p>
 				<table>
 			          <tr><th> COMMAND_OPTION </th><th> Description </th></tr>
@@ -714,8 +714,11 @@
                   <td>Start namenode in backup role, maintaining an up-to-date in-memory copy of the namespace and creating periodic checkpoints.</td>
                 </tr>
 			           <tr>
-			          	<td><code>-format</code></td>
-			            <td>Formats the namenode. It starts the namenode, formats it and then shut it down.</td>
+			          	<td><code>-format [-force] [-nonInteractive] [-clusterid someid]</code></td>
+			            <td>Formats the namenode. It starts the namenode, formats it and then shuts it down. User will be prompted before formatting any non empty name directories in the local filesystem.<br/>
+                                    -nonInteractive: User will not be prompted for input if non empty name directories exist in the local filesystem and the format will fail.<br/>
+                                    -force: Formats the namenode and the user will NOT be prompted to confirm formatting of the name directories in the local filesystem. If -nonInteractive option is specified it will be ignored.<br/>
+                                    -clusterid: Associates the namenode with the id specified. When formatting federated namenodes use this option to make sure all namenodes are associated with the same id.</td>
 			           </tr>
 			           <tr>
 			          	<td><code>-upgrade</code></td>

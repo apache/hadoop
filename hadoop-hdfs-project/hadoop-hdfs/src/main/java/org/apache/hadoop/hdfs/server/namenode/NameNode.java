@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -674,10 +675,14 @@ public class NameNode {
     initializeGenericKeys(conf, nsId, namenodeId);
     checkAllowFormat(conf);
     
-    Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
+    Collection<URI> nameDirsToFormat = FSNamesystem.getNamespaceDirs(conf);
+    List<URI> sharedDirs = FSNamesystem.getSharedEditsDirs(conf);
+    List<URI> dirsToPrompt = new ArrayList<URI>();
+    dirsToPrompt.addAll(nameDirsToFormat);
+    dirsToPrompt.addAll(sharedDirs);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
-    if (!confirmFormat(dirsToFormat, force, isInteractive)) {
+    if (!confirmFormat(dirsToPrompt, force, isInteractive)) {
       return true; // aborted
     }
 
@@ -689,7 +694,7 @@ public class NameNode {
     }
     System.out.println("Formatting using clusterid: " + clusterId);
     
-    FSImage fsImage = new FSImage(conf, dirsToFormat, editDirsToFormat);
+    FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
     fsImage.format(fsn, clusterId);
     return false;
@@ -711,7 +716,18 @@ public class NameNode {
       boolean force, boolean interactive)
       throws IOException {
     for(Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
-      File curDir = new File(it.next().getPath());
+      URI dirUri = it.next();
+      if (!dirUri.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
+        System.err.println("Skipping format for directory \"" + dirUri
+            + "\". Can only format local directories with scheme \""
+            + NNStorage.LOCAL_URI_SCHEME + "\".");
+        continue;
+      }
+      // To validate only file based schemes are formatted
+      assert dirUri.getScheme().equals(NNStorage.LOCAL_URI_SCHEME) :
+        "formatting is not supported for " + dirUri;
+
+      File curDir = new File(dirUri.getPath());
       // Its alright for a dir not to exist, or to exist (properly accessible)
       // and be completely empty.
       if (!curDir.exists() ||
@@ -1114,20 +1130,18 @@ public class NameNode {
    */
   public static void initializeGenericKeys(Configuration conf,
       String nameserviceId, String namenodeId) {
-    if ((nameserviceId == null || nameserviceId.isEmpty()) && 
-        (namenodeId == null || namenodeId.isEmpty())) {
-      return;
+    if ((nameserviceId != null && !nameserviceId.isEmpty()) || 
+        (namenodeId != null && !namenodeId.isEmpty())) {
+      if (nameserviceId != null) {
+        conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
+      }
+      if (namenodeId != null) {
+        conf.set(DFS_HA_NAMENODE_ID_KEY, namenodeId);
+      }
+      
+      DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,
+          NAMESERVICE_SPECIFIC_KEYS);
     }
-    
-    if (nameserviceId != null) {
-      conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
-    }
-    if (namenodeId != null) {
-      conf.set(DFS_HA_NAMENODE_ID_KEY, namenodeId);
-    }
-    
-    DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,
-        NAMESERVICE_SPECIFIC_KEYS);
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));

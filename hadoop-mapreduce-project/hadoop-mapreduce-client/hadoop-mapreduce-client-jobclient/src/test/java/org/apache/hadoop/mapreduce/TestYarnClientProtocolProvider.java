@@ -28,6 +28,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.LocalJobRunner;
 import org.apache.hadoop.mapred.ResourceMgrDelegate;
 import org.apache.hadoop.mapred.YARNRunner;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
@@ -54,17 +55,26 @@ public class TestYarnClientProtocolProvider extends TestCase {
 
     try {
       cluster = new Cluster(conf);
-      fail("Cluster should not be initialized with out any framework name");
-    } catch (IOException e) {
-
+    } catch (Exception e) {
+      throw new Exception(
+          "Failed to initialize a local runner w/o a cluster framework key", e);
     }
-
+    
+    try {
+      assertTrue("client is not a LocalJobRunner",
+          cluster.getClient() instanceof LocalJobRunner);
+    } finally {
+      if (cluster != null) {
+        cluster.close();
+      }
+    }
+    
     try {
       conf = new Configuration();
       conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
       cluster = new Cluster(conf);
       ClientProtocol client = cluster.getClient();
-      assertTrue(client instanceof YARNRunner);
+      assertTrue("client is a YARNRunner", client instanceof YARNRunner);
     } catch (IOException e) {
 
     } finally {

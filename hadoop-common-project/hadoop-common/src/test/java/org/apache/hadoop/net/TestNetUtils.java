@@ -25,11 +25,14 @@ import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
+import java.util.concurrent.TimeUnit;
 
 import junit.framework.AssertionFailedError;
 
@@ -37,7 +40,11 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.NetUtilsTestResolver;
+import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
+import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -49,6 +56,13 @@ public class TestNetUtils {
   private static final String DEST_PORT_NAME = Integer.toString(DEST_PORT);
   private static final int LOCAL_PORT = 8080;
   private static final String LOCAL_PORT_NAME = Integer.toString(LOCAL_PORT);
+
+  /**
+   * Some slop around expected times when making sure timeouts behave
+   * as expected. We assume that they will be accurate to within
+   * this threshold.
+   */
+  static final long TIME_FUDGE_MILLIS = 200;
 
   /**
    * Test that we can't accidentally connect back to the connecting socket due
@@ -79,6 +93,79 @@ public class TestNetUtils {
       // here. This is also OK.
       assertTrue(se.getMessage().contains("Invalid argument"));
     }
+  }
+  
+  @Test
+  public void testSocketReadTimeoutWithChannel() throws Exception {
+    doSocketReadTimeoutTest(true);
+  }
+  
+  @Test
+  public void testSocketReadTimeoutWithoutChannel() throws Exception {
+    doSocketReadTimeoutTest(false);
+  }
+
+  
+  private void doSocketReadTimeoutTest(boolean withChannel)
+      throws IOException {
+    // Binding a ServerSocket is enough to accept connections.
+    // Rely on the backlog to accept for us.
+    ServerSocket ss = new ServerSocket(0);
+    
+    Socket s;
+    if (withChannel) {
+      s = NetUtils.getDefaultSocketFactory(new Configuration())
+          .createSocket();
+      Assume.assumeNotNull(s.getChannel());
+    } else {
+      s = new Socket();
+      assertNull(s.getChannel());
+    }
+    
+    SocketInputWrapper stm = null;
+    try {
+      NetUtils.connect(s, ss.getLocalSocketAddress(), 1000);
+
+      stm = NetUtils.getInputStream(s, 1000);
+      assertReadTimeout(stm, 1000);
+
+      // Change timeout, make sure it applies.
+      stm.setTimeout(1);
+      assertReadTimeout(stm, 1);
+      
+      // If there is a channel, then setting the socket timeout
+      // should not matter. If there is not a channel, it will
+      // take effect.
+      s.setSoTimeout(1000);
+      if (withChannel) {
+        assertReadTimeout(stm, 1);
+      } else {
+        assertReadTimeout(stm, 1000);        
+      }
+    } finally {
+      IOUtils.closeStream(stm);
+      IOUtils.closeSocket(s);
+      ss.close();
+    }
+  }
+  
+  private void assertReadTimeout(SocketInputWrapper stm, int timeoutMillis)
+      throws IOException {
+    long st = System.nanoTime();
+    try {
+      stm.read();
+      fail("Didn't time out");
+    } catch (SocketTimeoutException ste) {
+      assertTimeSince(st, timeoutMillis);
+    }
+  }
+
+  private void assertTimeSince(long startNanos, int expectedMillis) {
+    long durationNano = System.nanoTime() - startNanos;
+    long millis = TimeUnit.MILLISECONDS.convert(
+        durationNano, TimeUnit.NANOSECONDS);
+    assertTrue("Expected " + expectedMillis + "ms, but took " + millis,
+        Math.abs(millis - expectedMillis) < TIME_FUDGE_MILLIS);
   }
   
   /**

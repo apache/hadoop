@@ -217,7 +217,7 @@ public abstract class Server {
   public static final Log AUDITLOG = 
     LogFactory.getLog("SecurityLogger."+Server.class.getName());
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
-  private static final String AUTH_SUCCESSFULL_FOR = "Auth successfull for ";
+  private static final String AUTH_SUCCESSFUL_FOR = "Auth successful for ";
   
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
 
@@ -1234,7 +1234,7 @@ public abstract class Server {
             LOG.debug("SASL server successfully authenticated client: " + user);
           }
           rpcMetrics.incrAuthenticationSuccesses();
-          AUDITLOG.info(AUTH_SUCCESSFULL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
           saslContextEstablished = true;
         }
       } else {
@@ -1776,7 +1776,7 @@ public abstract class Server {
    * from configuration. Otherwise the configuration will be picked up.
    * 
    * If rpcRequestClass is null then the rpcRequestClass must have been 
-   * registered via {@link #registerProtocolEngine(RpcPayloadHeader.RpcKind,
+   * registered via {@link #registerProtocolEngine(RPC.RpcKind,
    *  Class, RPC.RpcInvoker)}
    * This parameter has been retained for compatibility with existing tests
    * and usage.
@@ -1990,7 +1990,7 @@ public abstract class Server {
   
   /** 
    * Called for each call. 
-   * @deprecated Use  {@link #call(RpcPayloadHeader.RpcKind, String,
+   * @deprecated Use  {@link #call(RPC.RpcKind, String,
    *  Writable, long)} instead
    */
   @Deprecated

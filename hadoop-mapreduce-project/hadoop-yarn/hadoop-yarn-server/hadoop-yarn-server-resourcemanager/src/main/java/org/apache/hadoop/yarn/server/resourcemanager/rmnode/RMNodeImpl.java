@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -104,53 +105,53 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .newRecordInstance(HeartbeatResponse.class);
 
   private static final StateMachineFactory<RMNodeImpl,
-                                           RMNodeState,
+                                           NodeState,
                                            RMNodeEventType,
                                            RMNodeEvent> stateMachineFactory 
                  = new StateMachineFactory<RMNodeImpl,
-                                           RMNodeState,
+                                           NodeState,
                                            RMNodeEventType,
-                                           RMNodeEvent>(RMNodeState.NEW)
+                                           RMNodeEvent>(NodeState.NEW)
   
      //Transitions from NEW state
-     .addTransition(RMNodeState.NEW, RMNodeState.RUNNING, 
+     .addTransition(NodeState.NEW, NodeState.RUNNING, 
          RMNodeEventType.STARTED, new AddNodeTransition())
 
      //Transitions from RUNNING state
-     .addTransition(RMNodeState.RUNNING, 
-         EnumSet.of(RMNodeState.RUNNING, RMNodeState.UNHEALTHY),
+     .addTransition(NodeState.RUNNING, 
+         EnumSet.of(NodeState.RUNNING, NodeState.UNHEALTHY),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenHealthyTransition())
-     .addTransition(RMNodeState.RUNNING, RMNodeState.DECOMMISSIONED,
+     .addTransition(NodeState.RUNNING, NodeState.DECOMMISSIONED,
          RMNodeEventType.DECOMMISSION,
-         new DeactivateNodeTransition(RMNodeState.DECOMMISSIONED))
-     .addTransition(RMNodeState.RUNNING, RMNodeState.LOST,
+         new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
+     .addTransition(NodeState.RUNNING, NodeState.LOST,
          RMNodeEventType.EXPIRE,
-         new DeactivateNodeTransition(RMNodeState.LOST))
-     .addTransition(RMNodeState.RUNNING, RMNodeState.REBOOTED,
+         new DeactivateNodeTransition(NodeState.LOST))
+     .addTransition(NodeState.RUNNING, NodeState.REBOOTED,
          RMNodeEventType.REBOOTING,
-         new DeactivateNodeTransition(RMNodeState.REBOOTED))
-     .addTransition(RMNodeState.RUNNING, RMNodeState.RUNNING,
+         new DeactivateNodeTransition(NodeState.REBOOTED))
+     .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
-     .addTransition(RMNodeState.RUNNING, RMNodeState.RUNNING,
+     .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
-     .addTransition(RMNodeState.RUNNING, RMNodeState.RUNNING,
+     .addTransition(NodeState.RUNNING, NodeState.RUNNING,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
 
      //Transitions from UNHEALTHY state
-     .addTransition(RMNodeState.UNHEALTHY, 
-         EnumSet.of(RMNodeState.UNHEALTHY, RMNodeState.RUNNING),
+     .addTransition(NodeState.UNHEALTHY, 
+         EnumSet.of(NodeState.UNHEALTHY, NodeState.RUNNING),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenUnHealthyTransition())
-     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
+     .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
-     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
+     .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
-     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
+     .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
          
      // create the topology tables
      .installTopology(); 
 
-  private final StateMachine<RMNodeState, RMNodeEventType,
+  private final StateMachine<NodeState, RMNodeEventType,
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
@@ -252,7 +253,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   @Override
-  public RMNodeState getState() {
+  public NodeState getState() {
     this.readLock.lock();
 
     try {
@@ -302,7 +303,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     LOG.debug("Processing " + event.getNodeId() + " of type " + event.getType());
     try {
       writeLock.lock();
-      RMNodeState oldState = getState();
+      NodeState oldState = getState();
       try {
          stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitonException e) {
@@ -321,7 +322,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
-  private void updateMetricsForRejoinedNode(RMNodeState previousNodeState) {
+  private void updateMetricsForRejoinedNode(NodeState previousNodeState) {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
     metrics.incrNumActiveNodes();
 
@@ -341,7 +342,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
   }
 
-  private void updateMetricsForDeactivatedNode(RMNodeState finalState) {
+  private void updateMetricsForDeactivatedNode(NodeState finalState) {
     ClusterMetrics metrics = ClusterMetrics.getMetrics();
     metrics.decrNumActiveNodes();
 
@@ -440,8 +441,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   public static class DeactivateNodeTransition
     implements SingleArcTransition<RMNodeImpl, RMNodeEvent> {
 
-    private final RMNodeState finalState;
-    public DeactivateNodeTransition(RMNodeState finalState) {
+    private final NodeState finalState;
+    public DeactivateNodeTransition(NodeState finalState) {
       this.finalState = finalState;
     }
 
@@ -466,9 +467,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   public static class StatusUpdateWhenHealthyTransition implements
-      MultipleArcTransition<RMNodeImpl, RMNodeEvent, RMNodeState> {
+      MultipleArcTransition<RMNodeImpl, RMNodeEvent, NodeState> {
     @Override
-    public RMNodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
+    public NodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
 
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
 
@@ -486,8 +487,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             new NodesListManagerEvent(
                 NodesListManagerEventType.NODE_UNUSABLE, rmNode));
         // Update metrics
-        rmNode.updateMetricsForDeactivatedNode(RMNodeState.UNHEALTHY);
-        return RMNodeState.UNHEALTHY;
+        rmNode.updateMetricsForDeactivatedNode(NodeState.UNHEALTHY);
+        return NodeState.UNHEALTHY;
       }
 
       // Filter the map to only obtain just launched containers and finished
@@ -541,15 +542,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       rmNode.containersToClean.clear();
       rmNode.finishedApplications.clear();
 
-      return RMNodeState.RUNNING;
+      return NodeState.RUNNING;
     }
   }
 
   public static class StatusUpdateWhenUnHealthyTransition implements
-      MultipleArcTransition<RMNodeImpl, RMNodeEvent, RMNodeState> {
+      MultipleArcTransition<RMNodeImpl, RMNodeEvent, NodeState> {
 
     @Override
-    public RMNodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
+    public NodeState transition(RMNodeImpl rmNode, RMNodeEvent event) {
       RMNodeStatusEvent statusEvent = (RMNodeStatusEvent) event;
 
       // Switch the last heartbeatresponse.
@@ -566,11 +567,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         // notifiers get update metadata because they will very likely query it
         // upon notification
         // Update metrics
-        rmNode.updateMetricsForRejoinedNode(RMNodeState.UNHEALTHY);
-        return RMNodeState.RUNNING;
+        rmNode.updateMetricsForRejoinedNode(NodeState.UNHEALTHY);
+        return NodeState.RUNNING;
       }
 
-      return RMNodeState.UNHEALTHY;
+      return NodeState.UNHEALTHY;
     }
   }
  }

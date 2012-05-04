@@ -35,7 +35,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
-import org.apache.hadoop.hdfs.DFSUtil.ErrorSimulator;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -153,15 +152,12 @@ public class TransferFsImage {
     FileInputStream infile = null;
     try {
       infile = new FileInputStream(localfile);
-      if (ErrorSimulator.getErrorSimulation(2)
-          && localfile.getAbsolutePath().contains("secondary")) {
-        // throw exception only when the secondary sends its image
-        throw new IOException("If this exception is not caught by the " +
-            "name-node fs image will be truncated.");
-      }
+      CheckpointFaultInjector.getInstance()
+          .aboutToSendFile(localfile);
       
-      if (ErrorSimulator.getErrorSimulation(3)
-          && localfile.getAbsolutePath().contains("fsimage")) {
+
+      if (CheckpointFaultInjector.getInstance().
+            shouldSendShortFile(localfile)) {
           // Test sending image shorter than localfile
           long len = localfile.length();
           buf = new byte[(int)Math.min(len/2, HdfsConstants.IO_FILE_BUFFER_SIZE)];
@@ -175,8 +171,8 @@ public class TransferFsImage {
         if (num <= 0) {
           break;
         }
-
-        if (ErrorSimulator.getErrorSimulation(4)) {
+        if (CheckpointFaultInjector.getInstance()
+              .shouldCorruptAByte(localfile)) {
           // Simulate a corrupted byte on the wire
           LOG.warn("SIMULATING A CORRUPT BYTE IN IMAGE TRANSFER!");
           buf[0]++;

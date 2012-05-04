@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.SocketInputWrapper;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
@@ -83,13 +84,24 @@ class DataXceiver extends Receiver implements Runnable {
   private final DataXceiverServer dataXceiverServer;
 
   private long opStartTime; //the start time of receiving an Op
+  private final SocketInputWrapper socketInputWrapper;
   
-  public DataXceiver(Socket s, DataNode datanode, 
+  public static DataXceiver create(Socket s, DataNode dn,
+      DataXceiverServer dataXceiverServer) throws IOException {
+    
+    SocketInputWrapper iw = NetUtils.getInputStream(s);
+    return new DataXceiver(s, iw, dn, dataXceiverServer);
+  }
+  
+  private DataXceiver(Socket s, 
+      SocketInputWrapper socketInput,
+      DataNode datanode, 
       DataXceiverServer dataXceiverServer) throws IOException {
     super(new DataInputStream(new BufferedInputStream(
-        NetUtils.getInputStream(s), HdfsConstants.SMALL_BUFFER_SIZE)));
+        socketInput, HdfsConstants.SMALL_BUFFER_SIZE)));
 
     this.s = s;
+    this.socketInputWrapper = socketInput;
     this.isLocal = s.getInetAddress().equals(s.getLocalAddress());
     this.datanode = datanode;
     this.dnConf = datanode.getDnConf();
@@ -128,8 +140,6 @@ class DataXceiver extends Receiver implements Runnable {
     Op op = null;
     dataXceiverServer.childSockets.add(s);
     try {
-      int stdTimeout = s.getSoTimeout();
-
       // We process requests in a loop, and stay around for a short timeout.
       // This optimistic behaviour allows the other end to reuse connections.
       // Setting keepalive timeout to 0 disable this behavior.
@@ -139,7 +149,9 @@ class DataXceiver extends Receiver implements Runnable {
         try {
           if (opsProcessed != 0) {
             assert dnConf.socketKeepaliveTimeout > 0;
-            s.setSoTimeout(dnConf.socketKeepaliveTimeout);
+            socketInputWrapper.setTimeout(dnConf.socketKeepaliveTimeout);
+          } else {
+            socketInputWrapper.setTimeout(dnConf.socketTimeout);
           }
           op = readOp();
         } catch (InterruptedIOException ignored) {
@@ -160,7 +172,7 @@ class DataXceiver extends Receiver implements Runnable {
 
         // restore normal timeout
         if (opsProcessed != 0) {
-          s.setSoTimeout(stdTimeout);
+          s.setSoTimeout(dnConf.socketTimeout);
         }
 
         opStartTime = now();

@@ -118,12 +118,7 @@ if $cygwin; then
 fi
 export CLASSPATH=$CLASSPATH
 
-#turn security logger on the namenode
-if [ $COMMAND = "namenode" ]; then
-  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,RFAS}"
-else
-  HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
-fi
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,NullAppender}"
 
 # Check to see if we should start a secure datanode
 if [ "$starting_secure_dn" = "true" ]; then

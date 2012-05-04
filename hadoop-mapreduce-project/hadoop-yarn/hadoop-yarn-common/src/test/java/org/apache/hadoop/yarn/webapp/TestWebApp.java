@@ -149,6 +149,18 @@ public class TestWebApp {
     app.stop();
   }
 
+  @Test public void testCreateWithPort() {
+    // see if the ephemeral port is updated
+    WebApp app = WebApps.$for(this).at(0).start();
+    int port = app.getListenerAddress().getPort();
+    assertTrue(port > 0);
+    app.stop();
+    // try to reuse the port
+    app = WebApps.$for(this).at(port).start();
+    assertEquals(port, app.getListenerAddress().getPort());
+    app.stop();
+  }
+
   @Test public void testServePaths() {
     WebApp app = WebApps.$for("test", this).start();
     assertEquals("/test", app.getRedirectPath());

@@ -417,6 +417,11 @@ Release 2.0.0 - UNRELEASED
     HDFS-3322. Use HdfsDataInputStream and HdfsDataOutputStream in Hdfs.
     (szetszwo)
 
+    HDFS-3339. Change INode to package private.  (John George via szetszwo)
+
+    HDFS-3303. Remove Writable implementation from RemoteEditLogManifest.
+    (Brandon Li via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -580,6 +585,23 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3326. Append enabled log message uses the wrong variable.
     (Matthew Jacobs via eli)
+
+    HDFS-3336. hdfs launcher script will be better off not special casing 
+    namenode command with regards to hadoop.security.logger (rvs via tucu)
+
+    HDFS-3330. If GetImageServlet throws an Error or RTE, response should not
+    have HTTP "OK" status. (todd)
+
+    HDFS-3351. NameNode#initializeGenericKeys should always set fs.defaultFS
+    regardless of whether HA or Federation is enabled. (atm)
+
+    HDFS-3359. DFSClient.close should close cached sockets. (todd)
+
+    HDFS-3350. In INode, add final to compareTo(..), equals(..) and hashCode(),
+    and remove synchronized from updatePermissionStatus(..).  (szetszwo)
+
+    HDFS-3357. DataXceiver reads from client socket with incorrect/no timeout
+    (todd)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

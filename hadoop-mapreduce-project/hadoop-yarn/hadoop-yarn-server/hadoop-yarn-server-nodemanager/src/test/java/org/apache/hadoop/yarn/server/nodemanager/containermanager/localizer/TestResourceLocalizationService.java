@@ -95,6 +95,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
@@ -103,7 +104,14 @@ public class TestResourceLocalizationService {
 
   static final Path basedir =
       new Path("target", TestResourceLocalizationService.class.getName());
-
+  static Server mockServer;
+  
+  @BeforeClass
+  public static void setup() {
+    mockServer = mock(Server.class);
+    doReturn(new InetSocketAddress(123)).when(mockServer).getListenerAddress();
+  }
+  
   @Test
   public void testLocalizationInit() throws Exception {
     final Configuration conf = new Configuration();
@@ -178,7 +186,6 @@ public class TestResourceLocalizationService {
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
 
-    Server ignore = mock(Server.class);
     LocalizerTracker mockLocallilzerTracker = mock(LocalizerTracker.class);
     DrainDispatcher dispatcher = new DrainDispatcher();
     dispatcher.init(conf);
@@ -203,7 +210,7 @@ public class TestResourceLocalizationService {
       new ResourceLocalizationService(dispatcher, exec, delService,
                                       dirsHandler);
     ResourceLocalizationService spyService = spy(rawService);
-    doReturn(ignore).when(spyService).createServer();
+    doReturn(mockServer).when(spyService).createServer();
     doReturn(mockLocallilzerTracker).when(spyService).createLocalizerTracker(
         isA(Configuration.class));
     doReturn(lfs).when(spyService)
@@ -366,7 +373,6 @@ public class TestResourceLocalizationService {
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
 
-    Server ignore = mock(Server.class);
     DrainDispatcher dispatcher = new DrainDispatcher();
     dispatcher.init(conf);
     dispatcher.start();
@@ -388,7 +394,7 @@ public class TestResourceLocalizationService {
       new ResourceLocalizationService(dispatcher, exec, delService,
                                       dirsHandler);
     ResourceLocalizationService spyService = spy(rawService);
-    doReturn(ignore).when(spyService).createServer();
+    doReturn(mockServer).when(spyService).createServer();
     doReturn(lfs).when(spyService).getLocalFileContext(isA(Configuration.class));
     try {
       spyService.init(conf);

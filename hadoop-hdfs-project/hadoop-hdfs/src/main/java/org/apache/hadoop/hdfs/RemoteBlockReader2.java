@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.util.DirectBufferPool;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.net.SocketInputStream;
+import org.apache.hadoop.net.SocketInputWrapper;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -450,11 +450,8 @@ public class RemoteBlockReader2  implements BlockReader {
     //
     // Get bytes in block, set streams
     //
-    Preconditions.checkArgument(sock.getChannel() != null,
-        "Socket %s does not have an associated Channel.",
-        sock);
-    SocketInputStream sin =
-      (SocketInputStream)NetUtils.getInputStream(sock);
+    SocketInputWrapper sin = NetUtils.getInputStream(sock);
+    ReadableByteChannel ch = sin.getReadableByteChannel();
     DataInputStream in = new DataInputStream(sin);
 
     BlockOpResponseProto status = BlockOpResponseProto.parseFrom(
@@ -477,7 +474,7 @@ public class RemoteBlockReader2  implements BlockReader {
     }
 
     return new RemoteBlockReader2(file, block.getBlockPoolId(), block.getBlockId(),
-        sin, checksum, verifyChecksum, startOffset, firstChunkOffset, len, sock);
+        ch, checksum, verifyChecksum, startOffset, firstChunkOffset, len, sock);
   }
 
   static void checkSuccess(

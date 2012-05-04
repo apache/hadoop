@@ -28,9 +28,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 /**
  * This implements an input stream that can have a timeout while reading.
  * This sets non-blocking flag on the socket channel.
@@ -40,9 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  * IllegalBlockingModeException. 
  * Please use {@link SocketOutputStream} for writing.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-@InterfaceStability.Unstable
-public class SocketInputStream extends InputStream
+class SocketInputStream extends InputStream
                                implements ReadableByteChannel {
 
   private Reader reader;
@@ -170,5 +165,9 @@ public class SocketInputStream extends InputStream
    */
   public void waitForReadable() throws IOException {
     reader.waitForIO(SelectionKey.OP_READ);
+  }
+
+  public void setTimeout(long timeoutMs) {
+    reader.setTimeout(timeoutMs);
   }
 }

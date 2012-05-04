@@ -160,6 +160,12 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3883. Document yarn.nodemanager.delete.debug-delay-sec 
     configuration property (Eugene Koontz via tgraves)
 
+    MAPREDUCE-4219. make default container-executor.conf.dir be a path 
+    relative to the container-executor binary. (rvs via tucu)
+
+    MAPREDUCE-4205. retrofit all JVM shutdown hooks to use ShutdownHookManager 
+    (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -269,6 +275,15 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4193. broken doc link for yarn-default.xml in site.xml.
     (phunt via tomwhite)
 
+    MAPREDUCE-4202. TestYarnClientProtocolProvider is broken (Daryn Sharp via
+    bobby)
+
+    MAPREDUCE-3173. MRV2 UI doesn't work properly without internet (Devaraj K
+    via bobby)
+
+    MAPREDUCE-3958. RM: Remove RMNodeState and replace it with NodeState
+    (Bikas Saha via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -303,6 +318,8 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4079. Allow MR AppMaster to limit ephemeral port range.
     (bobby via tgraves)
+
+    MAPREDUCE-4210. Expose listener address for WebApp (Daryn Sharp via bobby)
 
   OPTIMIZATIONS
 
@@ -429,6 +446,17 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4206. Sorting by Last Health-Update on the RM nodes page sorts
     does not work correctly (Jonathon Eagles via tgraves)
+
+    MAPREDUCE-4212. TestJobClientGetJob sometimes fails 
+    (Daryn Sharp via tgraves)
+
+    MAPREDUCE-4211. Error conditions (missing appid, appid not found) are 
+    masked in the RM app page (Jonathan Eagles via bobby)
+
+    MAPREDUCE-4163. consistently set the bind address (Daryn Sharp via bobby)
+
+    MAPREDUCE-4048. NullPointerException exception while accessing the
+    Application Master UI (Devaraj K via bobby)
 
 Release 0.23.2 - UNRELEASED
 
