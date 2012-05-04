@@ -23,10 +23,10 @@ import java.util.List;
 
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 
 /**
@@ -99,7 +99,7 @@ public interface RMNode {
    */
   public Node getNode();
   
-  public RMNodeState getState();
+  public NodeState getState();
 
   public List<ContainerId> getContainersToCleanUp();
 

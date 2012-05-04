@@ -33,7 +33,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
@@ -83,7 +82,7 @@ public class TestAMRMRPCNodeUpdates {
   
   private void syncNodeLost(MockNM nm) throws Exception {
     rm.sendNodeStarted(nm);
-    rm.NMwaitForState(nm.getNodeId(), RMNodeState.RUNNING);
+    rm.NMwaitForState(nm.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(nm);
     dispatcher.await();
   }

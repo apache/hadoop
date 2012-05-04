@@ -20,9 +20,9 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.NodesPage.NodesBlock;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Before;
@@ -44,7 +44,7 @@ public class TestNodesPage {
   // The following is because of the way TestRMWebApp.mockRMContext creates
   // nodes.
   final int numberOfLostNodesPerRack = numberOfNodesPerRack
-      / RMNodeState.values().length;
+      / NodeState.values().length;
 
   // Number of Actual Table Headers for NodesPage.NodesBlock might change in
   // future. In that case this value should be adjusted to the new value.

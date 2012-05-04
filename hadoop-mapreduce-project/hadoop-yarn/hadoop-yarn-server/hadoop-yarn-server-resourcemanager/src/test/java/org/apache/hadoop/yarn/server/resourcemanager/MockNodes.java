@@ -26,11 +26,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 
 import com.google.common.collect.Lists;
 
@@ -48,7 +48,7 @@ public class MockNodes {
       for (int j = 0; j < nodesPerRack; ++j) {
         if (j == (nodesPerRack - 1)) {
           // One unhealthy node per rack.
-          list.add(nodeInfo(i, perNode, RMNodeState.UNHEALTHY));
+          list.add(nodeInfo(i, perNode, NodeState.UNHEALTHY));
         }
         list.add(newNodeInfo(i, perNode));
       }
@@ -61,7 +61,7 @@ public class MockNodes {
     List<RMNode> list = Lists.newArrayList();
     for (int i = 0; i < racks; ++i) {
       for (int j = 0; j < nodesPerRack; ++j) {
-        RMNodeState[] allStates = RMNodeState.values();
+        NodeState[] allStates = NodeState.values();
         list.add(nodeInfo(i, perNode, allStates[j % allStates.length]));
       }
     }
@@ -102,11 +102,11 @@ public class MockNodes {
     private Resource perNode;
     private String rackName;
     private NodeHealthStatus nodeHealthStatus;
-    private RMNodeState state;
+    private NodeState state;
 
     public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, NodeHealthStatus nodeHealthStatus,
-        int cmdPort, String hostName, RMNodeState state) {
+        int cmdPort, String hostName, NodeState state) {
       this.nodeId = nodeId;
       this.nodeAddr = nodeAddr;
       this.httpAddress = httpAddress;
@@ -169,7 +169,7 @@ public class MockNodes {
     }
 
     @Override
-    public RMNodeState getState() {
+    public NodeState getState() {
       return this.state;
     }
 
@@ -189,11 +189,11 @@ public class MockNodes {
     }
   };
 
-  private static RMNode buildRMNode(int rack, final Resource perNode, RMNodeState state, String httpAddr) {
+  private static RMNode buildRMNode(int rack, final Resource perNode, NodeState state, String httpAddr) {
     return buildRMNode(rack, perNode, state, httpAddr, NODE_ID++);
   }
 
-  private static RMNode buildRMNode(int rack, final Resource perNode, RMNodeState state, String httpAddr, int hostnum) {
+  private static RMNode buildRMNode(int rack, final Resource perNode, NodeState state, String httpAddr, int hostnum) {
     final String rackName = "rack"+ rack;
     final int nid = hostnum;
     final String hostName = "host"+ nid;
@@ -202,7 +202,7 @@ public class MockNodes {
     final String httpAddress = httpAddr;
     final NodeHealthStatus nodeHealthStatus =
         recordFactory.newRecordInstance(NodeHealthStatus.class);
-    if (state != RMNodeState.UNHEALTHY) {
+    if (state != NodeState.UNHEALTHY) {
       nodeHealthStatus.setIsNodeHealthy(true);
       nodeHealthStatus.setHealthReport("HealthyMe");
     }
@@ -211,12 +211,12 @@ public class MockNodes {
   }
 
   public static RMNode nodeInfo(int rack, final Resource perNode,
-      RMNodeState state) {
+      NodeState state) {
     return buildRMNode(rack, perNode, state, "N/A");
   }
 
   public static RMNode newNodeInfo(int rack, final Resource perNode) {
-    return buildRMNode(rack, perNode, RMNodeState.RUNNING, "localhost:0");
+    return buildRMNode(rack, perNode, NodeState.RUNNING, "localhost:0");
   }
 
   public static RMNode newNodeInfo(int rack, final Resource perNode, int hostnum) {
