@@ -27,6 +27,8 @@ import java.util.Locale;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -47,6 +49,8 @@ import com.google.inject.Inject;
  * This class renders the various pages that the web app supports.
  */
 public class AppController extends Controller implements AMParams {
+  private static final Log LOG = LogFactory.getLog(AppController.class);
+  
   protected final App app;
   
   protected AppController(App app, Configuration conf, RequestContext ctx,
@@ -220,6 +224,8 @@ public class AppController extends Controller implements AMParams {
             toString().toLowerCase(Locale.US));
         setTitle(join(tt, " Tasks for ", $(JOB_ID)));
       } catch (Exception e) {
+        LOG.error("Failed to render tasks page with task type : "
+            + $(TASK_TYPE) + " for job id : " + $(JOB_ID), e);
         badRequest(e.getMessage());
       }
     }
@@ -283,6 +289,8 @@ public class AppController extends Controller implements AMParams {
 
         render(attemptsPage());
       } catch (Exception e) {
+        LOG.error("Failed to render attempts page with task type : "
+            + $(TASK_TYPE) + " for job id : " + $(JOB_ID), e);
         badRequest(e.getMessage());
       }
     }
@@ -316,7 +324,8 @@ public class AppController extends Controller implements AMParams {
    */
   void badRequest(String s) {
     setStatus(HttpServletResponse.SC_BAD_REQUEST);
-    setTitle(join("Bad request: ", s));
+    String title = "Bad request: ";
+    setTitle((s != null) ? join(title, s) : title);
   }
 
   /**
