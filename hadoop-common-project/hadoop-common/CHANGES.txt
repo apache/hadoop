@@ -158,6 +158,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8350. Improve NetUtils.getInputStream to return a stream which has
     a tunable timeout. (todd)
 
+    HADOOP-8356. FileSystem service loading mechanism should print the FileSystem 
+    impl it is failing to load (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
