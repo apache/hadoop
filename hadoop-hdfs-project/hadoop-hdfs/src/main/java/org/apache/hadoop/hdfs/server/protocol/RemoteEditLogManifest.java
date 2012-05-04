@@ -17,22 +17,16 @@
  */
 package org.apache.hadoop.hdfs.server.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.io.Writable;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 
 /**
  * An enumeration of logs available on a remote NameNode.
  */
-public class RemoteEditLogManifest implements Writable {
+public class RemoteEditLogManifest {
 
   private List<RemoteEditLog> logs;
   
@@ -74,26 +68,5 @@ public class RemoteEditLogManifest implements Writable {
   @Override
   public String toString() {
     return "[" + Joiner.on(", ").join(logs) + "]";
-  }
-  
-  
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(logs.size());
-    for (RemoteEditLog log : logs) {
-      log.write(out);
-    }
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    int numLogs = in.readInt();
-    logs = Lists.newArrayList();
-    for (int i = 0; i < numLogs; i++) {
-      RemoteEditLog log = new RemoteEditLog();
-      log.readFields(in);
-      logs.add(log);
-    }
-    checkState();
   }
 }

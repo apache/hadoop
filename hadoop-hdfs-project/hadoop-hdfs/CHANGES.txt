@@ -419,6 +419,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3339. Change INode to package private.  (John George via szetszwo)
 
+    HDFS-3303. Remove Writable implementation from RemoteEditLogManifest.
+    (Brandon Li via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
