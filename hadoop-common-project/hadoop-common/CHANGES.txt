@@ -294,6 +294,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8355. SPNEGO filter throws/logs exception when authentication fails (tucu)
 
+    HADOOP-8349. ViewFS doesn't work when the root of a file system is mounted. (atm)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)

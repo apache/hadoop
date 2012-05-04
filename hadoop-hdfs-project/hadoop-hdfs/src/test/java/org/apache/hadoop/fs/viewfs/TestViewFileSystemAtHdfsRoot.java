@@ -17,36 +17,30 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-
-public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
+/**
+ * Make sure that ViewFileSystem works when the root of an FS is mounted to a
+ * ViewFileSystem mount point.
+ */
+public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
 
   private static MiniDFSCluster cluster;
-  private static Path defaultWorkingDirectory;
-  private static Path defaultWorkingDirectory2;
   private static Configuration CONF = new Configuration();
   private static FileSystem fHdfs;
-  private static FileSystem fHdfs2;
-  private FileSystem fsTarget2;
-  Path targetTestRoot2;
   
   @BeforeClass
   public static void clusterSetupAtBegining() throws IOException,
@@ -55,71 +49,45 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
     CONF.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     
-    cluster =
-        new MiniDFSCluster.Builder(CONF).nnTopology(
-                MiniDFSNNTopology.simpleFederatedTopology(2))
-            .numDataNodes(2)
-            .build();
+    cluster = new MiniDFSCluster.Builder(CONF)
+      .numDataNodes(2)
+      .build();
     cluster.waitClusterUp();
     
-    fHdfs = cluster.getFileSystem(0);
-    fHdfs2 = cluster.getFileSystem(1);
-    
-    defaultWorkingDirectory = fHdfs.makeQualified( new Path("/user/" + 
-        UserGroupInformation.getCurrentUser().getShortUserName()));
-    defaultWorkingDirectory2 = fHdfs2.makeQualified( new Path("/user/" + 
-        UserGroupInformation.getCurrentUser().getShortUserName()));
-    
-    fHdfs.mkdirs(defaultWorkingDirectory);
-    fHdfs2.mkdirs(defaultWorkingDirectory2);
+    fHdfs = cluster.getFileSystem();
   }
-
       
   @AfterClass
-  public static void ClusterShutdownAtEnd() throws Exception {
+  public static void clusterShutdownAtEnd() throws Exception {
     cluster.shutdown();   
   }
 
   @Before
   public void setUp() throws Exception {
-    // create the test root on local_fs
     fsTarget = fHdfs;
-    fsTarget2 = fHdfs2;
-    targetTestRoot2 = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget2);
     super.setUp();
   }
 
-  @After
-  public void tearDown() throws Exception {
-    super.tearDown();
-  }
-
+  /**
+   * Override this so that we don't set the targetTestRoot to any path under the
+   * root of the FS, and so that we don't try to delete the test dir, but rather
+   * only its contents.
+   */
   @Override
-  void setupMountPoints() {
-    super.setupMountPoints();
-    ConfigUtil.addLink(conf, "/mountOnNn2", new Path(targetTestRoot2,
-        "mountOnNn2").toUri());
-  }
-
-  // Overriden test helper methods - changed values based on hdfs and the
-  // additional mount.
-  @Override
-  int getExpectedDirPaths() {
-    return 8;
-  }
-  
-  @Override
-  int getExpectedMountPoints() {
-    return 9;
+  void initializeTargetTestRoot() throws IOException {
+    targetTestRoot = fHdfs.makeQualified(new Path("/"));
+    for (FileStatus status : fHdfs.listStatus(targetTestRoot)) {
+      fHdfs.delete(status.getPath(), true);
+    }
   }
 
   @Override
   int getExpectedDelegationTokenCount() {
-    return 9;
+    return 8;
   }
 
   @Override
   int getExpectedDelegationTokenCountWithCredentials() {
-    return 2;
+    return 1;
   }
 }
