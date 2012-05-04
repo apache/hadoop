@@ -153,8 +153,7 @@ public class DFSck extends Configured implements Tool {
         url.append("&startblockafter=").append(String.valueOf(cookie));
       }
       URL path = new URL(url.toString());
-      SecurityUtil.fetchServiceTicket(path);
-      URLConnection connection = path.openConnection();
+      URLConnection connection = SecurityUtil.openSecureHttpConnection(path);
       InputStream stream = connection.getInputStream();
       BufferedReader input = new BufferedReader(new InputStreamReader(
           stream, "UTF-8"));
@@ -222,16 +221,11 @@ public class DFSck extends Configured implements Tool {
       return null;
     }
     
-    return DFSUtil.getInfoServer(HAUtil.getAddressOfActive(fs), conf, true);
+    return DFSUtil.getInfoServer(HAUtil.getAddressOfActive(fs), conf, false);
   }
 
   private int doWork(final String[] args) throws IOException {
-    String proto = "http://";
-    if (UserGroupInformation.isSecurityEnabled()) {
-      SecurityUtil.initKrb5CipherSuites();
-      proto = "https://";
-    }
-    final StringBuilder url = new StringBuilder(proto);
+    final StringBuilder url = new StringBuilder("http://");
     
     String namenodeAddress = getCurrentNamenodeAddress();
     if (namenodeAddress == null) {
@@ -279,8 +273,7 @@ public class DFSck extends Configured implements Tool {
       return listCorruptFileBlocks(dir, url.toString());
     }
     URL path = new URL(url.toString());
-    SecurityUtil.fetchServiceTicket(path);
-    URLConnection connection = path.openConnection();
+    URLConnection connection = SecurityUtil.openSecureHttpConnection(path);
     InputStream stream = connection.getInputStream();
     BufferedReader input = new BufferedReader(new InputStreamReader(
                                               stream, "UTF-8"));

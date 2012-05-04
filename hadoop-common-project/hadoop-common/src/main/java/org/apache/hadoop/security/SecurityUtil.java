@@ -17,14 +17,11 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -45,6 +42,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
@@ -134,79 +133,6 @@ public class SecurityUtil {
     return isTGSPrincipal(ticket.getServer());
   }
 
-  /**
-   * Explicitly pull the service ticket for the specified host.  This solves a
-   * problem with Java's Kerberos SSL problem where the client cannot 
-   * authenticate against a cross-realm service.  It is necessary for clients
-   * making kerberized https requests to call this method on the target URL
-   * to ensure that in a cross-realm environment the remote host will be 
-   * successfully authenticated.  
-   * 
-   * This method is internal to Hadoop and should not be used by other 
-   * applications.  This method should not be considered stable or open: 
-   * it will be removed when the Java behavior is changed.
-   * 
-   * @param remoteHost Target URL the krb-https client will access
-   * @throws IOException if the service ticket cannot be retrieved
-   */
-  public static void fetchServiceTicket(URL remoteHost) throws IOException {
-    if(!UserGroupInformation.isSecurityEnabled())
-      return;
-    
-    String serviceName = "host/" + remoteHost.getHost();
-    if (LOG.isDebugEnabled())
-      LOG.debug("Fetching service ticket for host at: " + serviceName);
-    Object serviceCred = null;
-    Method credsToTicketMeth;
-    Class<?> krb5utilClass;
-    try {
-      Class<?> principalClass;
-      Class<?> credentialsClass;
-      
-      if (System.getProperty("java.vendor").contains("IBM")) {
-        principalClass = Class.forName("com.ibm.security.krb5.PrincipalName");
-        
-        credentialsClass = Class.forName("com.ibm.security.krb5.Credentials");
-        krb5utilClass = Class.forName("com.ibm.security.jgss.mech.krb5");
-      } else {
-        principalClass = Class.forName("sun.security.krb5.PrincipalName");
-        credentialsClass = Class.forName("sun.security.krb5.Credentials");
-        krb5utilClass = Class.forName("sun.security.jgss.krb5.Krb5Util");
-      }
-      @SuppressWarnings("rawtypes")
-      Constructor principalConstructor = principalClass.getConstructor(String.class, 
-          int.class);
-      Field KRB_NT_SRV_HST = principalClass.getDeclaredField("KRB_NT_SRV_HST");
-      Method acquireServiceCredsMeth = 
-          credentialsClass.getDeclaredMethod("acquireServiceCreds", 
-              String.class, credentialsClass);
-      Method ticketToCredsMeth = krb5utilClass.getDeclaredMethod("ticketToCreds", 
-          KerberosTicket.class);
-      credsToTicketMeth = krb5utilClass.getDeclaredMethod("credsToTicket", 
-          credentialsClass);
-      
-      Object principal = principalConstructor.newInstance(serviceName,
-          KRB_NT_SRV_HST.get(principalClass));
-      
-      serviceCred = acquireServiceCredsMeth.invoke(credentialsClass, 
-          principal.toString(), 
-          ticketToCredsMeth.invoke(krb5utilClass, getTgtFromSubject()));
-    } catch (Exception e) {
-      throw new IOException("Can't get service ticket for: "
-          + serviceName, e);
-    }
-    if (serviceCred == null) {
-      throw new IOException("Can't get service ticket for " + serviceName);
-    }
-    try {
-      Subject.getSubject(AccessController.getContext()).getPrivateCredentials()
-          .add(credsToTicketMeth.invoke(krb5utilClass, serviceCred));
-    } catch (Exception e) {
-      throw new IOException("Can't get service ticket for: "
-          + serviceName, e);
-    }
-  }
-  
   /**
    * Convert Kerberos principal name pattern to valid Kerberos principal
    * names. It replaces hostname pattern with hostname, which should be
@@ -514,6 +440,30 @@ public class SecurityUtil {
   }
 
   /**
+   * Open a (if need be) secure connection to a URL in a secure environment
+   * that is using SPNEGO to authenticate its URLs. All Namenode and Secondary
+   * Namenode URLs that are protected via SPNEGO should be accessed via this
+   * method.
+   *
+   * @param url to authenticate via SPNEGO.
+   * @return A connection that has been authenticated via SPNEGO
+   * @throws IOException If unable to authenticate via SPNEGO
+   */
+  public static URLConnection openSecureHttpConnection(URL url) throws IOException {
+    if(!UserGroupInformation.isSecurityEnabled()) {
+      return url.openConnection();
+    }
+
+    AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+    try {
+      return new AuthenticatedURL().openConnection(url, token);
+    } catch (AuthenticationException e) {
+      throw new IOException("Exception trying to open authenticated connection to "
+              + url, e);
+    }
+  }
+
+  /**
    * Resolves a host subject to the security requirements determined by
    * hadoop.security.token.service.use_ip.
    * 
@@ -664,10 +614,4 @@ public class SecurityUtil {
     }
   }
 
-  public static void initKrb5CipherSuites() {
-    if (UserGroupInformation.isSecurityEnabled()) {
-      System.setProperty("https.cipherSuites",
-          Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
-    }
-  }
 }
