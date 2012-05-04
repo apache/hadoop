@@ -40,6 +40,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3331. In namenode, check superuser privilege for setBalancerBandwidth
     and acquire the write lock for finalizeUpgrade.  (szetszwo)
 
+    HDFS-3359. DFSClient.close should close cached sockets. (todd)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
