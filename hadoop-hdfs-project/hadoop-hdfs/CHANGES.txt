@@ -422,6 +422,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3303. Remove Writable implementation from RemoteEditLogManifest.
     (Brandon Li via szetszwo)
 
+    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck
+    with SPNEGO-based solution. (jghoman, tucu, and atm via eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -434,9 +437,6 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
-
-    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck
-    with SPNEGO-based solution. (jghoman, tucu, and atm via eli)
 
   BUG FIXES
 
