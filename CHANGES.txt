@@ -308,6 +308,10 @@ Release 1.0.3 - unreleased
     HADOOP-8352. Regenerate configure scripts for the c++ compilation. 
     (omalley)
 
+    HDFS-3061. Cached directory size in INodeDirectory can get permanently
+    out of sync with computed size, causing quota issues; port of HDFS-1487.
+    (Kihwal Lee via mattf)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
