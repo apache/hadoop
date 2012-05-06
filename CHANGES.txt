@@ -294,9 +294,6 @@ Release 1.0.3 - unreleased
 
     HDFS-3265. PowerPc Build error. (Kumar Ravi via mattf)
 
-    HDFS-3316. The tar ball doesn't include jsvc any more.
-    (omalley via mattf)
-
     HDFS-1041. DFSClient.getFileChecksum(..) should retry if connection to
     the first datanode fails.  (szetszwo)
 
