@@ -309,6 +309,8 @@ Release 1.0.3 - unreleased
     out of sync with computed size, causing quota issues; port of HDFS-1487.
     (Kihwal Lee via mattf)
 
+    HADOOP-7381. FindBugs OutOfMemoryError. (Joep Rottinghuis via mattf)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES

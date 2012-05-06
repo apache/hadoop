@@ -204,6 +204,9 @@
   <property name="hadoop.conf.dir" value="/etc/hadoop"/>
 
   <!-- end of task-controller properties -->
+       
+  <!-- These args are passed along to FindBugs -->
+  <property name="findbugs.jvmargs" value="-Xmx512M" />
 
   <property name="package.buildroot" value="/tmp/hadoop_package_build_${user.name}"/>
   <property name="package.build.dir" value="/tmp/hadoop_package_build_${user.name}/BUILD"/>
@@ -1256,7 +1259,7 @@
 
     <findbugs home="${findbugs.home}" output="xml:withMessages"
         outputFile="${findbugs.report.xmlfile}" effort="max"
-        excludeFilter="${findbugs.exclude.file}" jvmargs="-Xmx512M">
+        excludeFilter="${findbugs.exclude.file}" jvmargs="${findbugs.jvmargs}">
       <auxClasspath>
         <fileset dir="${lib.dir}">
           <include name="**/*.jar"/>
