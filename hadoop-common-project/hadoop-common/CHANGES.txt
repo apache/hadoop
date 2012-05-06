@@ -197,8 +197,6 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8104. Inconsistent Jackson versions (tucu)
 
-    HADOOP-7940. The Text.clear() method does not clear the bytes as intended. (Csaba Miklos via harsh)
-
     HADOOP-8119. Fix javac warnings in TestAuthenticationFilter in hadoop-auth.
     (szetszwo)
 
