@@ -239,7 +239,6 @@ public class Text extends BinaryComparable
    */
   public void clear() {
     length = 0;
-    bytes = EMPTY_BYTES;
   }
 
   /*
