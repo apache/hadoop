@@ -63,7 +63,7 @@ public class JournalHttpServer {
   private final Configuration conf;
 
   JournalHttpServer(Configuration conf, Journal journal,
-      InetSocketAddress bindAddress) throws Exception {
+      InetSocketAddress bindAddress) {
     this.conf = conf;
     this.localJournal = journal;
     this.httpAddress = bindAddress;
@@ -125,12 +125,20 @@ public class JournalHttpServer {
         + " and https port is: " + httpsPort);
   }
 
-  void stop() throws Exception {
+  void stop() throws IOException {
     if (httpServer != null) {
-      httpServer.stop();
+      try {
+        httpServer.stop();
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
     }
   }
 
+  InetSocketAddress getHttpAddress() {
+    return httpAddress;
+  }
+  
   public static Journal getJournalFromContext(ServletContext context) {
     return (Journal) context.getAttribute(JOURNAL_ATTRIBUTE_KEY);
   }
@@ -145,7 +153,7 @@ public class JournalHttpServer {
    * @return true if a new image has been downloaded and needs to be loaded
    * @throws IOException
    */
-  public boolean downloadEditFiles(final String jnHostPort,
+  boolean downloadEditFiles(final String jnHostPort,
       final RemoteEditLogManifest manifest) throws IOException {
 
     // Sanity check manifest

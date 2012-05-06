@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -615,6 +616,39 @@ public class JournalSet implements JournalManager {
           + ret);      
     }
     return ret;
+  }
+
+  /**
+   * Returns a list of finalized edit logs that are available in given
+   * storageDir {@code currentDir}. All available edit logs are returned
+   * starting from the transaction id {@code fromTxId}. Note that the list may
+   * have gaps in these finalized edit logs.
+   * 
+   * @param fromTxId Starting transaction id to read the logs.
+   * @param currentDir The storage directory to find the logs.
+   * @return a list of finalized segments.
+   */
+  public synchronized List<RemoteEditLog> getFinalizedSegments(long fromTxId,
+      File currentDir) {
+    List<RemoteEditLog> allLogs = null;
+    for (JournalAndStream j : journals) {
+      if (j.getManager() instanceof FileJournalManager) {
+        FileJournalManager fjm = (FileJournalManager) j.getManager();
+        if (fjm.getStorageDirectory().getRoot().equals(currentDir)) {
+          try {
+            allLogs = fjm.getRemoteEditLogs(fromTxId);
+            break;
+          } catch (IOException t) {
+            LOG.warn("Cannot list edit logs in " + fjm, t);
+          }
+        }
+      }
+    }
+    // sort collected segments
+    if (allLogs != null && allLogs.size() > 0) {
+      Collections.sort(allLogs);
+    }
+    return allLogs;
   }
 
   /**

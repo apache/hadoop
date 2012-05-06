@@ -22,6 +22,7 @@ import java.io.File;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -35,6 +36,9 @@ public class TestJournal {
   static Configuration newConf(String name) {
     Configuration conf = new HdfsConfiguration();
     File dir = new File(MiniDFSCluster.getBaseDirectory(), name + "-edits");
+    if (dir.exists()) {
+      Assert.assertTrue(FileUtil.fullyDelete(dir));
+    }
     Assert.assertTrue(dir.mkdirs());
     conf.set(DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_KEY, dir.toURI().toString());
     return conf;

@@ -26,6 +26,9 @@ HDFS-3092 branch changes
     HDFS-3313. Create a protocol for journal service synchronziation.  (Brandon
     Li via szetszwo)
 
+    HDFS-3186. Add ability to journal service to sync journals from another
+    active journal service. (Brandon Li via suresh)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS

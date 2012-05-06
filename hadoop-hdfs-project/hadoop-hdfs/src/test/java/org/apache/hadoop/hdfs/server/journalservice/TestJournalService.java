@@ -52,6 +52,7 @@ public class TestJournalService {
   @Test
   public void testCallBacks() throws Exception {
     Configuration conf = TestJournal.newConf("testCallBacks");
+    Journal journal = new Journal(conf);
     JournalListener listener = Mockito.mock(JournalListener.class);
     JournalService service = null;
     MiniDFSCluster cluster = null;
@@ -59,7 +60,7 @@ public class TestJournalService {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitActive(0);
       InetSocketAddress nnAddr = cluster.getNameNode(0).getNameNodeAddress();
-      service = newJournalService(nnAddr, listener, conf);
+      service = newJournalService(nnAddr, listener, journal, conf);
       service.start();
       verifyRollLogsCallback(service, listener);
       verifyJournalCallback(cluster.getFileSystem(), service, listener);
@@ -73,6 +74,10 @@ public class TestJournalService {
     }
   }
 
+  /**
+   * Test journal service fence with a combination of epoch, nsid and clusterid
+   * @throws Exception
+   */
   @Test
   public void testFence() throws Exception {
     final Configuration conf = TestJournal.newConf("testFence");
@@ -86,7 +91,8 @@ public class TestJournalService {
       cluster.waitActive(0);
       NameNode nn = cluster.getNameNode(0);
       nnAddress = nn.getNameNodeAddress();
-      service = newJournalService(nnAddress, listener, conf);
+      Journal j1 = new Journal(conf);
+      service = newJournalService(nnAddress, listener, j1, conf);
       service.start();
       String cid = nn.getNamesystem().getClusterId();
       int nsId = nn.getNamesystem().getFSImage().getNamespaceID();
@@ -101,17 +107,29 @@ public class TestJournalService {
     StorageInfo before = service.getJournal().getStorage();
     LOG.info("before: " + before);
     service.stop();
-    service = newJournalService(nnAddress, listener, conf);
+    Journal j2 = new Journal(conf);
+    service = newJournalService(nnAddress, listener, j2, conf);
     StorageInfo after = service.getJournal().getStorage();
     LOG.info("after : " + after);
     Assert.assertEquals(before.toString(), after.toString());
   }
 
+  /**
+   * Create additional journal service
+   * @param nnAddr  namenode rpc address
+   * @param listener the listener serving journal requests from namenode
+   * @param journal local journal
+   * @param conf local confiuration 
+   * @return journal service
+   * @throws Exception
+   */
   private JournalService newJournalService(InetSocketAddress nnAddr,
-      JournalListener listener, Configuration conf) throws IOException {
-    return new JournalService(conf, nnAddr, RPC_ADDR, listener);
+      JournalListener listener, Journal journal, Configuration conf)
+      throws Exception {
+    return new JournalService(conf, nnAddr, RPC_ADDR, new InetSocketAddress(0),
+        listener, journal);
   }
-  
+
   /**
    * Starting {@link JournalService} should result in Namenode calling
    * {@link JournalService#startLogSegment}, resulting in callback 
@@ -135,6 +153,16 @@ public class TestJournalService {
         Mockito.anyLong(), Mockito.anyInt(), (byte[]) Mockito.any());
   }
   
+  /**
+   * Verify the fence with different epoch, clusterid and nsid combinations
+   *  
+   * @param s The Journal Service to write to 
+   * @param listener the listener to serve journal request
+   * @param cid cluster id
+   * @param nsId namespace id
+   * @param lv layoutVersion
+   * @throws Exception
+   */
   void verifyFence(JournalService s, JournalListener listener,
       String cid, int nsId, int lv) throws Exception {
     

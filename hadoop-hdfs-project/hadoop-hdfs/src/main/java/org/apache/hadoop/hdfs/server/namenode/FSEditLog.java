@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.URI;
@@ -63,6 +64,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.UpdateMasterKeyOp;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -434,6 +436,59 @@ public class FSEditLog  {
     Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
     return curSegmentTxId;
+  }
+  
+  /**
+   * Check if current node has complete set of journal segments from sinceTxid
+   * to (curSegmentTxId-1)
+   * @param sinceTxid the transaction to start with
+   * @param currentDir the storage directory to find journal segments
+   * @return true if journal segments are complete, otherwise false
+   * @throws IOException
+   */
+  public synchronized boolean hasCompleteJournalSegments(long sinceTxid,
+      File currentDir) throws IOException {
+    List<RemoteEditLog> segments = getFinalizedSegments(sinceTxid, currentDir);
+    long curSegTxid = getCurSegmentTxId();
+    return hasCompleteJournalSegments(segments, sinceTxid, curSegTxid);
+  }
+
+  public static boolean hasCompleteJournalSegments(
+      List<RemoteEditLog> segments, long sinceTxid, long curSegTxid)
+      throws IOException {
+    long minTxid = -1, maxTxid = -1;
+
+    if (sinceTxid > curSegTxid) {
+      throw new RuntimeException("illegal input: sinceTxid=" + sinceTxid
+          + " curSegTxid= " + curSegTxid);
+    }
+    if (segments.size() == 0) {      
+      return false;
+    }
+
+    for (RemoteEditLog log : segments) {
+      if (log.getStartTxId() > curSegTxid || log.getEndTxId() > curSegTxid) {
+        throw new RuntimeException("Invalid log: [" + log.getStartTxId() + ","
+            + log.getEndTxId() + "] and curSegTxid=" + curSegTxid);
+      }
+      
+      if (minTxid == -1 || minTxid == -1) {
+        minTxid = log.getStartTxId();
+        maxTxid = log.getEndTxId();
+        assert (minTxid > 0 && maxTxid > 0 && maxTxid > minTxid);
+      } else {
+        // check gap in the middle
+        if (maxTxid != log.getStartTxId() - 1) {
+          return false;
+        }
+        maxTxid = log.getEndTxId();
+      }
+    }
+    // check gap at ends
+    if (minTxid > sinceTxid || maxTxid < curSegTxid - 1) {
+      return false;
+    }    
+    return true;
   }
   
   /**
@@ -860,7 +915,15 @@ public class FSEditLog  {
       throws IOException {
     return journalSet.getEditLogManifest(fromTxId);
   }
- 
+  
+  /**
+   * Return a list of what finalized edit logs are available
+   */
+  public synchronized List<RemoteEditLog> getFinalizedSegments(long fromTxId,
+      File currentDir) throws IOException {
+    return journalSet.getFinalizedSegments(fromTxId, currentDir);
+  }
+  
   /**
    * Finalizes the current edit log and opens a new log segment.
    * @return the transaction id of the BEGIN_LOG_SEGMENT transaction

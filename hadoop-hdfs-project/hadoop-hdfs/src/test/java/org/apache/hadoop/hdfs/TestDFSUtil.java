@@ -587,5 +587,16 @@ public class TestDFSUtil {
     for (InetSocketAddress addr: ret) {
       assertTrue(addr.equals(isa1) || addr.equals(isa2));
     }
+    
+    // Test Http addresses
+    InetSocketAddress isa3 = NetUtils.createSocketAddr("localhost:50100");
+    InetSocketAddress isa4 = NetUtils.createSocketAddr("localhost:50110");
+    conf.set(DFS_JOURNAL_HTTP_ADDRESS_KEY, "localhost:50100, localhost:50110");
+    ret = DFSUtil.getJournalNodeHttpAddresses(conf);
+    assertEquals(ret.size(), 2);
+    
+    for (InetSocketAddress addr: ret) {
+      assertTrue(addr.equals(isa3) || addr.equals(isa4));
+    }
   }
 }

@@ -1025,9 +1025,21 @@ public class DFSUtil {
     }
   }
   
+  private static Collection<InetSocketAddress> getAddresses(Configuration conf,
+      String addrKey) {
+    Collection<String> addresses = conf.getTrimmedStringCollection(addrKey);
+    Collection<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
+    for (String address : emptyAsSingletonNull(addresses)) {
+      if (address == null) {
+        continue;
+      }
+      ret.add(NetUtils.createSocketAddr(address));
+    }
+    return ret;
+  }
   
   /**
-   * Returns list of InetSocketAddresses of journalnodes from the
+   * Returns list of RPC server InetSocketAddresses of journal services from the
    * configuration.
    * 
    * @param conf configuration
@@ -1035,15 +1047,38 @@ public class DFSUtil {
    */
   public static Collection<InetSocketAddress> getJournalNodeAddresses(
       Configuration conf) {
-    Collection<String> jnames = conf
-        .getTrimmedStringCollection(DFS_JOURNAL_ADDRESS_KEY);
-    Collection<InetSocketAddress> ret = new ArrayList<InetSocketAddress>();
-    for (String jname : emptyAsSingletonNull(jnames)) {
-      if (jname == null) {
-        continue;
+    return getAddresses(conf, DFS_JOURNAL_ADDRESS_KEY);
+  }
+  
+  /**
+   * Returns list of http InetSocketAddresses of journal services from the
+   * configuration.
+   * 
+   * @param conf configuration
+   * @return list of http InetSocketAddresses
+   */
+  public static Collection<InetSocketAddress> getJournalNodeHttpAddresses(
+      Configuration conf) {
+    return getAddresses(conf, DFS_JOURNAL_HTTP_ADDRESS_KEY);
+  }
+  
+  /**
+   * Returns corresponding rpc address with the hostname running journal
+   * service.
+   * 
+   * @param conf configuration
+   * @param hostname the hostname in the http address
+   * @return rpc address of the journal service
+   */
+  public static InetSocketAddress getJournalRpcAddrFromHostName(
+      Configuration conf, String hostname) {
+    Collection<InetSocketAddress> jRpcAddr = DFSUtil
+        .getJournalNodeAddresses(conf);
+    for (InetSocketAddress addr : jRpcAddr) {
+      if (addr != null && addr.getHostName().equals(hostname)) {
+        return addr;
       }
-      ret.add(NetUtils.createSocketAddr(jname));
     }
-    return ret;
+    return null;
   }
 }

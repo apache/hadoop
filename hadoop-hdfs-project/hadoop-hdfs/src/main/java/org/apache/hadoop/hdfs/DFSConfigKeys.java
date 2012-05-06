@@ -204,6 +204,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   // This is a comma separated host:port list of addresses hosting the journal service
   public static final String  DFS_JOURNAL_ADDRESS_KEY = "dfs.journal.addresses";
   public static final String  DFS_JOURNAL_EDITS_DIR_KEY = "dfs.journal.edits.dir";
+  public static final String  DFS_JOURNAL_HTTP_ADDRESS_KEY = "dfs.journal.http-addresses";
   public static final String  DFS_JOURNAL_HTTPS_PORT_KEY = "dfs.journal.https-port";
   public static final int     DFS_JOURNAL_HTTPS_PORT_DEFAULT = 50510;
   public static final String  DFS_JOURNAL_KRB_HTTPS_USER_NAME_KEY = "dfs.journal.kerberos.https.principal";

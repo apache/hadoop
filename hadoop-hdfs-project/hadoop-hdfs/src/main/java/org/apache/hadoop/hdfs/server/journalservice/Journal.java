@@ -117,7 +117,7 @@ class Journal {
     return image.getEditLog();
   }
   
-  RemoteEditLogManifest getRemoteEditLogs(long sinceTxId) throws IOException {
+  RemoteEditLogManifest getEditLogManifest(long sinceTxId) throws IOException {
     return image.getEditLog().getEditLogManifest(sinceTxId);
   }
   

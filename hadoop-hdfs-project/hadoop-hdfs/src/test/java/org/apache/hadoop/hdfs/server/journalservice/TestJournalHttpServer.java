@@ -20,9 +20,15 @@ package org.apache.hadoop.hdfs.server.journalservice;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,20 +39,17 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.journalservice.JournalHttpServer;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
-import org.apache.hadoop.hdfs.server.protocol.JournalSyncProtocol;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 public class TestJournalHttpServer {
   public static final Log LOG = LogFactory.getLog(TestJournalHttpServer.class);
@@ -85,7 +88,7 @@ public class TestJournalHttpServer {
   }
 
   /**
-   * Test Journal service Http Server
+   * Test Journal service Http Server by verifying the html page is accessible
    * 
    * @throws Exception
    */
@@ -116,79 +119,113 @@ public class TestJournalHttpServer {
         cluster.shutdown();
     }
   }
+  
+  /**
+   * Test hasCompleteJournalSegments with different log list combinations
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testHasCompleteJournalSegments() throws Exception {
+    List<RemoteEditLog> logs = new ArrayList<RemoteEditLog>();
+    logs.add(new RemoteEditLog(3,6));
+    logs.add(new RemoteEditLog(7,10));
+    logs.add(new RemoteEditLog(11,12));
+
+    assertTrue(FSEditLog.hasCompleteJournalSegments(logs, 3, 13));
+    assertFalse(FSEditLog.hasCompleteJournalSegments(logs, 1, 13));
+    assertFalse(FSEditLog.hasCompleteJournalSegments(logs, 13, 19));
+    assertFalse(FSEditLog.hasCompleteJournalSegments(logs, 11, 19));
+
+    logs.remove(1);
+    assertFalse(FSEditLog.hasCompleteJournalSegments(logs, 3, 13));
+    assertFalse(FSEditLog.hasCompleteJournalSegments(logs, 1, 13));
+    assertFalse(FSEditLog.hasCompleteJournalSegments(logs, 3, 19));
+  }
+  
+  private void copyNNFiles(MiniDFSCluster cluster, File dstDir)
+      throws IOException {
+    Collection<URI> editURIs = cluster.getNameEditsDirs(0);
+    String firstURI = editURIs.iterator().next().getPath().toString();
+    File nnDir = new File(new String(firstURI + "/current"));
+   
+    File allFiles[] = FileUtil.listFiles(nnDir);
+    for (File f : allFiles) {
+      IOUtils.copyBytes(new FileInputStream(f),
+          new FileOutputStream(dstDir + "/" + f.getName()), 4096, true);
+    }
+  }
 
   /**
    * Test lagging Journal service copies edit segments from another Journal
-   * service
+   * service: 
+   * 1. start one journal service 
+   * 2. reboot namenode so more segments are created
+   * 3. add another journal service and this new journal service should sync
+   *    with the first journal service
    * 
    * @throws Exception
    */
   @Test
   public void testCopyEdits() throws Exception {
     MiniDFSCluster cluster = null;
-    JournalService service = null;
-    JournalHttpServer jhs1 = null, jhs2 = null;
+    JournalService service1 = null, service2 = null;
 
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
 
-      // restart namenode, so it will have finalized edit segments
-      cluster.restartNameNode();
-
+      // start journal service
       conf.set(DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_KEY, path1.getPath());
       InetSocketAddress nnAddr = cluster.getNameNode(0).getNameNodeAddress();
-      InetSocketAddress serverAddr = new InetSocketAddress(50900);
-      JournalListener listener = Mockito.mock(JournalListener.class);
-      service = new JournalService(conf, nnAddr, serverAddr, listener);
-      service.start();
-      
+      InetSocketAddress serverAddr = NetUtils
+          .createSocketAddr("localhost:50900");
+      Journal j1 = new Journal(conf);
+      JournalListener listener1 = new JournalDiskWriter(j1);
+      service1 = new JournalService(conf, nnAddr, serverAddr,
+          new InetSocketAddress(50901), listener1, j1);
+      service1.start();
+
       // get namenode clusterID/layoutVersion/namespaceID
-      StorageInfo si = service.getJournal().getStorage();
+      StorageInfo si = service1.getJournal().getStorage();
       JournalInfo journalInfo = new JournalInfo(si.layoutVersion, si.clusterID,
           si.namespaceID);
 
-      // start jns1 with path1
-      jhs1 = new JournalHttpServer(conf, service.getJournal(),
-          NetUtils.createSocketAddr("localhost:50200"));
-      jhs1.start();
+      // restart namenode, so there will be one more journal segments
+      cluster.restartNameNode();
 
-      // get all edit segments
-      InetSocketAddress srcRpcAddr = NameNode.getServiceAddress(conf, true);
-      NamenodeProtocol namenode = NameNodeProxies.createNonHAProxy(conf,
-          srcRpcAddr, NamenodeProtocol.class,
-          UserGroupInformation.getCurrentUser(), true).getProxy();
+      // TODO: remove file copy when NN can work with journal auto-machine
+      copyNNFiles(cluster, new File(new String(path1.toString() + "/current")));
 
-      RemoteEditLogManifest manifest = namenode.getEditLogManifest(1);      
-      jhs1.downloadEditFiles(
-          conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY), manifest);
-
-      // start jns2 with path2
+      // start another journal service that will do the sync
+      conf.set(DFSConfigKeys.DFS_JOURNAL_ADDRESS_KEY, "localhost:50900");
       conf.set(DFSConfigKeys.DFS_JOURNAL_EDITS_DIR_KEY, path2.getPath());
-      Journal journal2 = new Journal(conf);
-      journal2.format(si.namespaceID, si.clusterID);   
-      jhs2 = new JournalHttpServer(conf, journal2,
-          NetUtils.createSocketAddr("localhost:50300"));
-      jhs2.start();
+      conf.set(DFSConfigKeys.DFS_JOURNAL_HTTP_ADDRESS_KEY,
+          "localhost:50902, localhost:50901");
+      Journal j2 = new Journal(conf);
+      JournalListener listener2 = new JournalDiskWriter(j2);
+      service2 = new JournalService(conf, nnAddr, new InetSocketAddress(50800),
+          NetUtils.createSocketAddr("localhost:50902"), listener2, j2);
+      service2.start();
 
-      // transfer edit logs from j1 to j2
-      JournalSyncProtocol journalp = JournalService.createProxyWithJournalSyncProtocol(
-          NetUtils.createSocketAddr("localhost:50900"), conf,
-          UserGroupInformation.getCurrentUser());
-      RemoteEditLogManifest manifest1 = journalp.getEditLogManifest(journalInfo, 1);  
-      jhs2.downloadEditFiles("localhost:50200", manifest1);
+      // give service2 sometime to sync
+      Thread.sleep(5000);
+      
+      // TODO: change to sinceTxid to 1 after NN is modified to use journal
+      // service to start
+      RemoteEditLogManifest manifest2 = service2.getEditLogManifest(
+          journalInfo, 3);
+      assertTrue(manifest2.getLogs().size() > 0);
 
     } catch (IOException e) {
       LOG.error("Error in TestCopyEdits:", e);
       assertTrue(e.getLocalizedMessage(), false);
     } finally {
-      if (jhs1 != null)
-        jhs1.stop();
-      if (jhs2 != null)
-        jhs2.stop();
       if (cluster != null)
         cluster.shutdown();
-      if (service != null)
-        service.stop();
+      if (service1 != null)
+        service1.stop();
+      if (service2 != null)
+        service2.stop();
     }
   }
 }
