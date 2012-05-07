@@ -83,6 +83,9 @@ Release 1.0.3 - unreleased
     MAPREDUCE-1238. mapred metrics shows negative count of waiting maps and
     reduces (tgraves via bobby)
 
+    MAPREDUCE-4003. log.index (No such file or directory) AND Task process 
+    exit with nonzero status of 126. (Koji Noguchi via tgraves)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
