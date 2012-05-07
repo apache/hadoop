@@ -69,13 +69,18 @@ public class TestDelegationToken {
     cluster.waitActive();
     cluster.getNameNode().getNamesystem().getDelegationTokenSecretManager()
 				.startThreads();
+    LOG.info("cluster up and running");
   }
 
   @After
   public void tearDown() throws Exception {
+    LOG.info("starting shutting down the cluster");
     if(cluster!=null) {
+      cluster.getNameNode().getNamesystem().getDelegationTokenSecretManager()
+             .stopThreads();
       cluster.shutdown();
     }
+    LOG.info("finished shutting down the cluster");
   }
 
   private Token<DelegationTokenIdentifier> generateDelegationToken(
