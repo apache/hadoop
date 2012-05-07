@@ -2,7 +2,7 @@
 <html>
 <head>
 <META http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Hadoop 1.0.2 Release Notes</title>
+<title>Hadoop 1.0.3 Release Notes</title>
 <STYLE type="text/css">
 		H1 {font-family: sans-serif}
 		H2 {font-family: sans-serif; margin-left: 7mm}
@@ -10,10 +10,171 @@
 	</STYLE>
 </head>
 <body>
-<h1>Hadoop 1.0.2 Release Notes</h1>
+<h1>Hadoop 1.0.3 Release Notes</h1>
 		These release notes include new developer and user-facing incompatibilities, features, and major improvements. 
 
 <a name="changes"/>
+
+<h2>Changes since Hadoop 1.0.2</h2>
+
+<h3>Jiras with Release Notes (describe major or incompatible changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-5528">HADOOP-5528</a>.
+     Major new feature reported by klbostee and fixed by klbostee <br>
+     <b>Binary partitioner</b><br>
+     <blockquote>                                              New BinaryPartitioner that partitions BinaryComparable keys by hashing a configurable part of the bytes array corresponding to the key.
+
+      
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4017">MAPREDUCE-4017</a>.
+     Trivial improvement reported by knoguchi and fixed by tgraves (jobhistoryserver, jobtracker)<br>
+     <b>Add jobname to jobsummary log</b><br>
+     <blockquote>                                              The Job Summary log may contain commas in values that are escaped by a &#39;\&#39; character.  This was true before, but is more likely to be exposed now. 
+
+      
+</blockquote></li>
+
+</ul>
+
+
+<h3>Other Jiras (describe bug fixes and minor changes)</h3>
+<ul>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6924">HADOOP-6924</a>.
+     Major bug reported by wattsteve and fixed by devaraj <br>
+     <b>Build fails with non-Sun JREs due to different pathing to the operating system architecture shared libraries</b><br>
+     <blockquote>The src/native/configure script used to build the native libraries has an environment variable called JNI_LDFLAGS which is set as follows:<br><br>JNI_LDFLAGS=&quot;-L$JAVA_HOME/jre/lib/$OS_ARCH/server&quot;<br><br>This pathing convention to the shared libraries for the operating system architecture is unique to Oracle/Sun Java and thus on other flavors of Java the path will not exist and will result in a build failure with the following exception:<br><br>     [exec] gcc -shared  ../src/org/apache/hadoop/io/compress/zlib...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6941">HADOOP-6941</a>.
+     Major bug reported by wattsteve and fixed by devaraj <br>
+     <b>Support non-SUN JREs in UserGroupInformation</b><br>
+     <blockquote>Attempting to format the namenode or attempting to start Hadoop using Apache Harmony or the IBM Java JREs results in the following exception:<br><br>10/09/07 16:35:05 ERROR namenode.NameNode: java.lang.NoClassDefFoundError: com.sun.security.auth.UnixPrincipal<br>	at org.apache.hadoop.security.UserGroupInformation.&lt;clinit&gt;(UserGroupInformation.java:223)<br>	at java.lang.J9VMInternals.initializeImpl(Native Method)<br>	at java.lang.J9VMInternals.initialize(J9VMInternals.java:200)<br>	at org.apache.hadoop.hdfs.ser...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-6963">HADOOP-6963</a>.
+     Critical bug reported by owen.omalley and fixed by raviprak (fs)<br>
+     <b>Fix FileUtil.getDU. It should not include the size of the directory or follow symbolic links</b><br>
+     <blockquote>The getDU method should not include the size of the directory. The Java interface says that the value is undefined and in Linux/Sun it gets the 4096 for the inode. Clearly this isn&apos;t useful.<br>It also recursively calls itself. In case the directory has a symbolic link forming a cycle, getDU keeps spinning in the cycle. In our case, we saw this in the org.apache.hadoop.mapred.JobLocalizer.downloadPrivateCacheObjects call. This prevented other tasks on the same node from committing, causing the T...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7381">HADOOP-7381</a>.
+     Major bug reported by jrottinghuis and fixed by jrottinghuis (build)<br>
+     <b>FindBugs OutOfMemoryError</b><br>
+     <blockquote>When running the findbugs target from Jenkins, I get an OutOfMemory error.<br>The &quot;effort&quot; in FindBugs is set to Max which ends up using a lot of memory to go through all the classes. The jvmargs passed to FindBugs is hardcoded to 512 MB max.<br><br>We can leave the default to 512M, as long as we pass this as an ant parameter which can be overwritten in individual cases through -D, or in the build.properties file (either basedir, or user&apos;s home directory).<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8151">HADOOP-8151</a>.
+     Major bug reported by tlipcon and fixed by mattf (io, native)<br>
+     <b>Error handling in snappy decompressor throws invalid exceptions</b><br>
+     <blockquote>SnappyDecompressor.c has the following code in a few places:<br>{code}<br>    THROW(env, &quot;Ljava/lang/InternalError&quot;, &quot;Could not decompress data. Buffer length is too small.&quot;);<br>{code}<br>this is incorrect, though, since the THROW macro doesn&apos;t need the &quot;L&quot; before the class name. This results in a ClassNotFoundException for Ljava.lang.InternalError being thrown, instead of the intended exception.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8188">HADOOP-8188</a>.
+     Major improvement reported by devaraj and fixed by devaraj <br>
+     <b>Fix the build process to do with jsvc, with IBM&apos;s JDK as the underlying jdk</b><br>
+     <blockquote>When IBM JDK is used as the underlying JDK for the build process, the build of jsvc fails. I just needed to add an extra &quot;os arch&quot; expression in the condition that sets os-arch.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8251">HADOOP-8251</a>.
+     Blocker bug reported by tlipcon and fixed by tlipcon (security)<br>
+     <b>SecurityUtil.fetchServiceTicket broken after HADOOP-6941</b><br>
+     <blockquote>HADOOP-6941 replaced direct references to some classes with reflective access so as to support other JDKs. Unfortunately there was a mistake in the name of the Krb5Util class, which broke fetchServiceTicket. This manifests itself as the inability to run checkpoints or other krb5-SSL HTTP-based transfers:<br><br>java.lang.ClassNotFoundException: sun.security.jgss.krb5</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8293">HADOOP-8293</a>.
+     Major bug reported by owen.omalley and fixed by owen.omalley (build)<br>
+     <b>The native library&apos;s Makefile.am doesn&apos;t include JNI path</b><br>
+     <blockquote>When compiling on centos 6, I get the following error when compiling the native library:<br><br>{code}<br> [exec] /usr/bin/ld: cannot find -ljvm<br>{code}<br><br>The problem is simply that the Makefile.am libhadoop_la_LDFLAGS doesn&apos;t include AM_LDFLAGS.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8294">HADOOP-8294</a>.
+     Critical bug reported by kihwal and fixed by kihwal (ipc)<br>
+     <b>IPC Connection becomes unusable even if server address was temporarilly unresolvable</b><br>
+     <blockquote>This is same as HADOOP-7428, but was observed on 1.x data nodes. This can happen more frequently after HADOOP-7472, which allows IPC Connection to re-resolve the name. HADOOP-7428 needs to be back-ported.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8338">HADOOP-8338</a>.
+     Major bug reported by owen.omalley and fixed by owen.omalley (security)<br>
+     <b>Can&apos;t renew or cancel HDFS delegation tokens over secure RPC</b><br>
+     <blockquote>The fetchdt tool is failing for secure deployments when given --renew or --cancel on tokens fetched using RPC. (The tokens fetched over HTTP can be renewed and canceled fine.)</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8346">HADOOP-8346</a>.
+     Blocker bug reported by tucu00 and fixed by devaraj (security)<br>
+     <b>Changes to support Kerberos with non Sun JVM (HADOOP-6941) broke SPNEGO</b><br>
+     <blockquote>before HADOOP-6941 hadoop-auth testcases with Kerberos ON pass, *mvn test -PtestKerberos*<br><br>after HADOOP-6941 the tests fail with the error below.<br><br>Doing some IDE debugging I&apos;ve found out that the changes in HADOOP-6941 are making the JVM Kerberos libraries to append an extra element to the kerberos principal of the server (on the client side when creating the token) so *HTTP/localhost* ends up being *HTTP/localhost/localhost*. Then, when contacting the KDC to get the granting ticket, the serv...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8352">HADOOP-8352</a>.
+     Major improvement reported by owen.omalley and fixed by owen.omalley <br>
+     <b>We should always generate a new configure script for the c++ code</b><br>
+     <blockquote>If you are compiling c++, you should always generate a configure script.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-119">HDFS-119</a>.
+     Major bug reported by shv and fixed by sureshms (name-node)<br>
+     <b>logSync() may block NameNode forever.</b><br>
+     <blockquote># {{FSEditLog.logSync()}} first waits until {{isSyncRunning}} is false and then performs syncing to file streams by calling {{EditLogOutputStream.flush()}}.<br>If an exception is thrown after {{isSyncRunning}} is set to {{true}} all threads will always wait on this condition.<br>An {{IOException}} may be thrown by {{EditLogOutputStream.setReadyToFlush()}} or a {{RuntimeException}} may be thrown by {{EditLogOutputStream.flush()}} or by {{processIOError()}}.<br># The loop that calls {{eStream.flush()}} ...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-1041">HDFS-1041</a>.
+     Major bug reported by szetszwo and fixed by szetszwo (hdfs client)<br>
+     <b>DFSClient does not retry in getFileChecksum(..)</b><br>
+     <blockquote>If connection to the first datanode fails, DFSClient does not retry in getFileChecksum(..).</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3061">HDFS-3061</a>.
+     Blocker bug reported by alex.holmes and fixed by kihwal (name-node)<br>
+     <b>Cached directory size in INodeDirectory can get permantently out of sync with computed size, causing quota issues</b><br>
+     <blockquote>It appears that there&apos;s a condition under which a HDFS directory with a space quota set can get to a point where the cached size for the directory can permanently differ from the computed value.  When this happens the following command:<br><br>{code}<br>hadoop fs -count -q /tmp/quota-test<br>{code}<br><br>results in the following output in the NameNode logs:<br><br>{code}<br>WARN org.apache.hadoop.hdfs.server.namenode.NameNode: Inconsistent diskspace for directory quota-test. Cached: 6000 Computed: 6072<br>{code}<br><br>I&apos;ve ob...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3127">HDFS-3127</a>.
+     Major bug reported by brandonli and fixed by brandonli (name-node)<br>
+     <b>failure in recovering removed storage directories should not stop checkpoint process</b><br>
+     <blockquote>When a restore fails, rollEditLog() also fails even if there are healthy directories. Any exceptions from recovering the removed directories should not fail checkpoint process.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3265">HDFS-3265</a>.
+     Major bug reported by kumarr and fixed by kumarr (build)<br>
+     <b>PowerPc Build error.</b><br>
+     <blockquote>When attempting to build branch-1, the following error is seen and ant exits.<br>[exec] configure: error: Unsupported CPU architecture &quot;powerpc64&quot;<br><br>The following command was used to build hadoop-common<br><br>ant -Dlibhdfs=true -Dcompile.native=true -Dfusedfs=true -Dcompile.c++=true -Dforrest.home=$FORREST_HOME compile-core-native compile-c++ compile-c++-examples task-controller tar record-parser compile-hdfs-classes package -Djava5.home=/opt/ibm/ibm-java2-ppc64-50/ </blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3310">HDFS-3310</a>.
+     Major bug reported by cmccabe and fixed by cmccabe <br>
+     <b>Make sure that we abort when no edit log directories are left</b><br>
+     <blockquote>We should make sure to abort when there are no edit log directories left to write to.  It seems that there is at least one case that is slipping through the cracks right now in branch-1.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3374">HDFS-3374</a>.
+     Major bug reported by owen.omalley and fixed by owen.omalley (name-node)<br>
+     <b>hdfs&apos; TestDelegationToken fails intermittently with a race condition</b><br>
+     <blockquote>The testcase is failing because the MiniDFSCluster is shutdown before the secret manager can change the key, which calls system.exit with no edit streams available.<br><br>{code}<br><br>    [junit] 2012-05-04 15:03:51,521 WARN  common.Storage (FSImage.java:updateRemovedDirs(224)) - Removing storage dir /home/horton/src/hadoop/build/test/data/dfs/name1<br>    [junit] 2012-05-04 15:03:51,522 FATAL namenode.FSNamesystem (FSEditLog.java:fatalExit(388)) - No edit streams are accessible<br>    [junit] java.lang.Exce...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1238">MAPREDUCE-1238</a>.
+     Major bug reported by rramya and fixed by tgraves (jobtracker)<br>
+     <b>mapred metrics shows negative count of waiting maps and reduces </b><br>
+     <blockquote>Negative waiting_maps and waiting_reduces count is observed in the mapred metrics</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3377">MAPREDUCE-3377</a>.
+     Major bug reported by jxchen and fixed by jxchen <br>
+     <b>Compatibility issue with 0.20.203.</b><br>
+     <blockquote>I have an OutputFormat which implements Configurable.  I set new config entries to a job configuration during checkOutputSpec() so that the tasks will get the config entries through the job configuration.  This works fine in 0.20.2, but stopped working starting from 0.20.203.  With 0.20.203, my OutputFormat still has the configuration set, but the copy a task gets does not have the new entries that are set as part of checkOutputSpec().  <br><br>I believe that the problem is with JobClient.  The job...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3857">MAPREDUCE-3857</a>.
+     Major bug reported by jeagles and fixed by jeagles (examples)<br>
+     <b>Grep example ignores mapred.job.queue.name</b><br>
+     <blockquote>Grep example creates two jobs as part of its implementation. The first job correctly uses the configuration settings. The second job ignores configuration settings.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4003">MAPREDUCE-4003</a>.
+     Major bug reported by zaozaowang and fixed by knoguchi (task-controller, tasktracker)<br>
+     <b>log.index (No such file or directory) AND Task process exit with nonzero status of 126</b><br>
+     <blockquote>hello?I have dwelled on this hadoop(cdhu3) problem for 2 days,I have tried every google method.This is the issue: when ran hadoop example &quot;wordcount&quot; ,the tasktracker&apos;s log in one slave node presented such errors<br><br> 1.WARN org.apache.hadoop.mapred.DefaultTaskController: Task wrapper stderr: bash: /var/tmp/mapred/local/ttprivate/taskTracker/hdfs/jobcache/job_201203131751_0003/attempt_201203131751_0003_m_000006_0/taskjvm.sh: Permission denied<br><br>2.WARN org.apache.hadoop.mapred.TaskRunner: attempt_...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4012">MAPREDUCE-4012</a>.
+     Minor bug reported by knoguchi and fixed by tgraves <br>
+     <b>Hadoop Job setup error leaves no useful info to users (when LinuxTaskController is used)</b><br>
+     <blockquote>When distributed cache pull fail on the TaskTracker, job webUI only shows <br>{noformat}<br>Job initialization failed (255)<br>{noformat}<br>leaving users confused.  <br><br>On the TaskTracker log, there is a log with useful info <br>{noformat}<br>2012-03-14 21:44:17,083 INFO org.apache.hadoop.mapred.TaskController: org.apache.hadoop.security.AccessControlException: org.apache.hadoop.security.AccessControlException: <br>Permission denied: user=user1, access=READ, inode=&quot;testfile&quot;:user3:users:rw-------<br>...<br>2012-03-14 21...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4154">MAPREDUCE-4154</a>.
+     Major bug reported by thejas and fixed by devaraj <br>
+     <b>streaming MR job succeeds even if the streaming command fails</b><br>
+     <blockquote>Hadoop 1.0.1 behaves as expected - The task fails for streaming MR job if the streaming command fails. But it succeeds in hadoop 1.0.2 .<br></blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4207">MAPREDUCE-4207</a>.
+     Major bug reported by kihwal and fixed by kihwal (mrv1)<br>
+     <b>Remove System.out.println() in FileInputFormat</b><br>
+     <blockquote>MAPREDUCE-3607 accidentally left the println statement. </blockquote></li>
+
+
+</ul>
+
 
 <h2>Changes since Hadoop 1.0.1</h2>
 
