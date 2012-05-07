@@ -794,7 +794,13 @@ public class DFSInputStream extends FSInputStream {
     // Allow retry since there is no way of knowing whether the cached socket
     // is good until we actually use it.
     for (int retries = 0; retries <= nCachedConnRetry && fromCache; ++retries) {
-      Socket sock = socketCache.get(dnAddr);
+      Socket sock = null;
+      // Don't use the cache on the last attempt - it's possible that there
+      // are arbitrarily many unusable sockets in the cache, but we don't
+      // want to fail the read.
+      if (retries < nCachedConnRetry) {
+        sock = socketCache.get(dnAddr);
+      }
       if (sock == null) {
         fromCache = false;
 

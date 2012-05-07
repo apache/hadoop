@@ -485,6 +485,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3357. DataXceiver reads from client socket with incorrect/no timeout
     (todd)
 
+    HDFS-3376. DFSClient fails to make connection to DN if there are many
+    unusable cached sockets (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
