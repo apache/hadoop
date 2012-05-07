@@ -311,6 +311,9 @@ Release 1.0.3 - unreleased
 
     HADOOP-7381. FindBugs OutOfMemoryError. (Joep Rottinghuis via mattf)
 
+    HADOOP-8151. Error handling in snappy decompressor throws invalid
+    exceptions. (Matt Foley)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
