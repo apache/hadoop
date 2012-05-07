@@ -286,6 +286,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3365. Enable users to disable socket caching in DFS client
     configuration (todd)
 
+    HDFS-3375. Put client name in DataXceiver thread name for readBlock
+    and keepalive (todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
