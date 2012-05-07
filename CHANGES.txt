@@ -74,6 +74,9 @@ Release 1.0.3 - unreleased
     HADOOP-8151. Error handling in snappy decompressor throws invalid
     exceptions. (Matt Foley)
 
+    HDFS-3374. hdfs' TestDelegationToken fails intermittently with a race
+    condition. (Owen O'Malley via mattf)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
