@@ -297,6 +297,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8328. Duplicate FileSystem Statistics object for 'file' scheme.
     (tomwhite)
 
+    HADOOP-8359. Fix javadoc warnings in Configuration.  (Anupam Seth via
+    szetszwo)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)

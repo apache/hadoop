@@ -278,7 +278,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param key
    * @param newKeys
    * @param customMessage
-   * @deprecated use {@link addDeprecation(String key, String newKey,
+   * @deprecated use {@link #addDeprecation(String key, String newKey,
       String customMessage)} instead
    */
   @Deprecated
@@ -328,7 +328,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * 
    * @param key Key that is to be deprecated
    * @param newKeys list of keys that take up the values of deprecated key
-   * @deprecated use {@link addDeprecation(String key, String newKey)} instead
+   * @deprecated use {@link #addDeprecation(String key, String newKey)} instead
    */
   @Deprecated
   public synchronized static void addDeprecation(String key, String[] newKeys) {
