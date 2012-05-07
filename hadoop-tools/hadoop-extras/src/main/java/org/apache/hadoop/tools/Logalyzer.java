@@ -194,7 +194,7 @@ public class Logalyzer {
     throws IOException
   {
     String destURL = FileSystem.getDefaultUri(fsConfig) + archiveDirectory;
-    DistCp.copy(new JobConf(fsConfig), logListURI, destURL, null, true, false);
+    DistCpV1.copy(new JobConf(fsConfig), logListURI, destURL, null, true, false);
   }
   
   /**

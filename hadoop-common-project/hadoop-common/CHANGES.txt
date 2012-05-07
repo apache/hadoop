@@ -407,6 +407,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8335. Improve Configuration's address handling (Daryn Sharp via
     bobby)
 
+    HADOOP-8327. distcpv2 and distcpv1 jars should not coexist (Dave Thompson
+    via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
