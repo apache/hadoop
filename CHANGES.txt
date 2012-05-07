@@ -80,6 +80,9 @@ Release 1.0.3 - unreleased
     MAPREDUCE-3857. Grep example ignores mapred.job.queue.name.
     (Jonathan Eagles via mattf)
 
+    MAPREDUCE-1238. mapred metrics shows negative count of waiting maps and
+    reduces (tgraves via bobby)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
