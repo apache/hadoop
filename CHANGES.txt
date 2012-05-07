@@ -92,6 +92,9 @@ Release 1.0.3 - 2012.05.07
     MAPREDUCE-4012. Hadoop Job setup error leaves no useful info to users
     (when LinuxTaskController is used) (tgraves)
 
+    HADOOP-8027. Visiting /jmx on the daemon web interfaces may print unnecessary
+    error in logs (Aaron Myers and Hitesh Shah)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES
