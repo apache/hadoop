@@ -3507,7 +3507,8 @@ public class JobInProgress {
           .add("mapSlotSeconds", mapSlotSeconds)
           .add("reduceSlotsSeconds", reduceSlotSeconds)
           .add("clusterMapCapacity", cluster.getMaxMapTasks())
-          .add("clusterReduceCapacity", cluster.getMaxReduceTasks());
+          .add("clusterReduceCapacity", cluster.getMaxReduceTasks())
+          .add("jobName", profile.getJobName());
 
       LOG.info(summary);
     }

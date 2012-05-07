@@ -6,6 +6,9 @@ Release 1.0.3 - unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-4017. Add jobname to jobsummary log (tgraves and Koji Noguchi
+    via bobby)
+
   BUG FIXES
 
     HADOOP-6924. Adds a directory to the list of directories to search for 
