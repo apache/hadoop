@@ -78,8 +78,8 @@ import org.apache.hadoop.util.ToolRunner;
  * A Map-reduce program to recursively copy directories between
  * different file-systems.
  */
-public class DistCp implements Tool {
-  public static final Log LOG = LogFactory.getLog(DistCp.class);
+public class DistCpV1 implements Tool {
+  public static final Log LOG = LogFactory.getLog(DistCpV1.class);
 
   private static final String NAME = "distcp";
 
@@ -221,7 +221,7 @@ public class DistCp implements Tool {
     return conf;
   }
 
-  public DistCp(Configuration conf) {
+  public DistCpV1(Configuration conf) {
     setConf(conf);
   }
 
@@ -565,7 +565,7 @@ public class DistCp implements Tool {
     private void updateDestStatus(FileStatus src, FileStatus dst
         ) throws IOException {
       if (preserve_status) {
-        DistCp.updateDestStatus(src, dst, preseved, destFileSys);
+        DistCpV1.updateDestStatus(src, dst, preseved, destFileSys);
       }
     }
 
@@ -1049,8 +1049,8 @@ public class DistCp implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    JobConf job = new JobConf(DistCp.class);
-    DistCp distcp = new DistCp(job);
+    JobConf job = new JobConf(DistCpV1.class);
+    DistCpV1 distcp = new DistCpV1(job);
     int res = ToolRunner.run(distcp, args);
     System.exit(res);
   }
@@ -1117,7 +1117,7 @@ public class DistCp implements Tool {
 
   //Job configuration
   private static JobConf createJobConf(Configuration conf) {
-    JobConf jobconf = new JobConf(conf, DistCp.class);
+    JobConf jobconf = new JobConf(conf, DistCpV1.class);
     jobconf.setJobName(conf.get("mapred.job.name", NAME));
 
     // turn off speculative execution, because DFS doesn't handle
