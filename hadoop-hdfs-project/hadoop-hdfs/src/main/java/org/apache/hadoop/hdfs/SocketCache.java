@@ -47,6 +47,9 @@ class SocketCache {
   public SocketCache(int capacity) {
     multimap = LinkedListMultimap.create();
     this.capacity = capacity;
+    if (capacity <= 0) {
+      LOG.debug("SocketCache disabled in configuration.");
+    }
   }
 
   /**
@@ -55,6 +58,10 @@ class SocketCache {
    * @return  A socket with unknown state, possibly closed underneath. Or null.
    */
   public synchronized Socket get(SocketAddress remote) {
+    if (capacity <= 0) { // disabled
+      return null;
+    }
+    
     List<Socket> socklist = multimap.get(remote);
     if (socklist == null) {
       return null;
@@ -76,6 +83,12 @@ class SocketCache {
    * @param sock socket not used by anyone.
    */
   public synchronized void put(Socket sock) {
+    if (capacity <= 0) {
+      // Cache disabled.
+      IOUtils.closeSocket(sock);
+      return;
+    }
+    
     Preconditions.checkNotNull(sock);
 
     SocketAddress remoteAddr = sock.getRemoteSocketAddress();

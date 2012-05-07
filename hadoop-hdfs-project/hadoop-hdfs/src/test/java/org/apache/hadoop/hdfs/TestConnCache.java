@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.io.IOUtils;
 
 import org.apache.hadoop.security.token.Token;
 import org.junit.Test;
@@ -229,6 +231,33 @@ public class TestConnCache {
     pread(in, 64, dataBuf, 0, dataBuf.length / 2);
 
     in.close();
+  }
+  
+  /**
+   * Test that the socket cache can be disabled by setting the capacity to
+   * 0. Regression test for HDFS-3365.
+   */
+  @Test
+  public void testDisableCache() throws IOException {
+    LOG.info("Starting testDisableCache()");
+
+    // Reading with the normally configured filesystem should
+    // cache a socket.
+    DFSTestUtil.readFile(fs, testFile);
+    assertEquals(1, ((DistributedFileSystem)fs).dfs.socketCache.size());
+    
+    // Configure a new instance with no caching, ensure that it doesn't
+    // cache anything
+    Configuration confWithoutCache = new Configuration(fs.getConf());
+    confWithoutCache.setInt(
+        DFSConfigKeys.DFS_CLIENT_SOCKET_CACHE_CAPACITY_KEY, 0);
+    FileSystem fsWithoutCache = FileSystem.newInstance(confWithoutCache);
+    try {
+      DFSTestUtil.readFile(fsWithoutCache, testFile);
+      assertEquals(0, ((DistributedFileSystem)fsWithoutCache).dfs.socketCache.size());
+    } finally {
+      fsWithoutCache.close();
+    }
   }
 
   @AfterClass
