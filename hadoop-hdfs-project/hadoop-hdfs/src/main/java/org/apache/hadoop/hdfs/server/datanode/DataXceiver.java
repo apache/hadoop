@@ -85,6 +85,12 @@ class DataXceiver extends Receiver implements Runnable {
 
   private long opStartTime; //the start time of receiving an Op
   private final SocketInputWrapper socketInputWrapper;
+
+  /**
+   * Client Name used in previous operation. Not available on first request
+   * on the socket.
+   */
+  private String previousOpClientName;
   
   public static DataXceiver create(Socket s, DataNode dn,
       DataXceiverServer dataXceiverServer) throws IOException {
@@ -122,7 +128,11 @@ class DataXceiver extends Receiver implements Runnable {
    */
   private void updateCurrentThreadName(String status) {
     StringBuilder sb = new StringBuilder();
-    sb.append("DataXceiver for client ").append(remoteAddress);
+    sb.append("DataXceiver for client ");
+    if (previousOpClientName != null) {
+      sb.append(previousOpClientName).append(" at ");
+    }
+    sb.append(remoteAddress);
     if (status != null) {
       sb.append(" [").append(status).append("]");
     }
@@ -202,6 +212,8 @@ class DataXceiver extends Receiver implements Runnable {
       final String clientName,
       final long blockOffset,
       final long length) throws IOException {
+    previousOpClientName = clientName;
+
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         dnConf.socketWriteTimeout);
     DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
@@ -295,7 +307,8 @@ class DataXceiver extends Receiver implements Runnable {
       final long maxBytesRcvd,
       final long latestGenerationStamp,
       DataChecksum requestedChecksum) throws IOException {
-    updateCurrentThreadName("Receiving block " + block + " client=" + clientname);
+    previousOpClientName = clientname;
+    updateCurrentThreadName("Receiving block " + block);
     final boolean isDatanode = clientname.length() == 0;
     final boolean isClient = !isDatanode;
     final boolean isTransfer = stage == BlockConstructionStage.TRANSFER_RBW
@@ -502,7 +515,7 @@ class DataXceiver extends Receiver implements Runnable {
       final DatanodeInfo[] targets) throws IOException {
     checkAccess(null, true, blk, blockToken,
         Op.TRANSFER_BLOCK, BlockTokenSecretManager.AccessMode.COPY);
-
+    previousOpClientName = clientName;
     updateCurrentThreadName(Op.TRANSFER_BLOCK + " " + blk);
 
     final DataOutputStream out = new DataOutputStream(
