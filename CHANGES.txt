@@ -217,9 +217,6 @@ Release 1.1.0 - unreleased
     HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
     Lee via szetszwo)
 
-    MAPREDUCE-4017. Add jobname to jobsummary log (tgraves and Koji Noguchi
-    via bobby)
-
     HADOOP-8269. Fix some javadoc warnings on branch-1.
 
     MAPREDUCE-3674. Invoked with no queueName request param, the
@@ -236,6 +233,9 @@ Release 1.0.3 - unreleased
   NEW FEATURES
 
   IMPROVEMENTS
+
+    MAPREDUCE-4017. Add jobname to jobsummary log (tgraves and Koji Noguchi
+    via bobby)
 
   BUG FIXES
 
