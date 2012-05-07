@@ -294,6 +294,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8349. ViewFS doesn't work when the root of a file system is mounted. (atm)
 
+    HADOOP-8328. Duplicate FileSystem Statistics object for 'file' scheme.
+    (tomwhite)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
