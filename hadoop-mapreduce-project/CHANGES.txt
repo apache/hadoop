@@ -352,6 +352,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4220. RM apps page starttime/endtime sorts are incorrect
     (Jonathan Eagles via bobby)
 
+    MAPREDUCE-4226. ConcurrentModificationException in FileSystemCounterGroup.
+    (tomwhite)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
