@@ -283,6 +283,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-2617. Replaced Kerberized SSL for image transfer and fsck
     with SPNEGO-based solution. (jghoman, tucu, and atm via eli)
 
+    HDFS-3365. Enable users to disable socket caching in DFS client
+    configuration (todd)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
