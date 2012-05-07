@@ -86,6 +86,9 @@ Release 1.0.3 - unreleased
     MAPREDUCE-4003. log.index (No such file or directory) AND Task process 
     exit with nonzero status of 126. (Koji Noguchi via tgraves)
 
+    MAPREDUCE-4012. Hadoop Job setup error leaves no useful info to users
+    (when LinuxTaskController is used) (tgraves)
+
 Release 1.0.2 - 2012.03.24
 
   NEW FEATURES

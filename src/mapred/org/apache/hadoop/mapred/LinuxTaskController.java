@@ -189,7 +189,8 @@ class LinuxTaskController extends TaskController {
     } catch (ExitCodeException e) {
       int exitCode = shExec.getExitCode();
       logOutput(shExec.getOutput());
-      throw new IOException("Job initialization failed (" + exitCode + ")", e);
+      throw new IOException("Job initialization failed (" + exitCode + 
+          ") with output: " + shExec.getOutput(), e);
     }
   }
 
