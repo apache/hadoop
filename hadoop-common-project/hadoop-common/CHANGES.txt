@@ -58,6 +58,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8327. distcpv2 and distcpv1 jars should not coexist (Dave Thompson
     via bobby)
 
+    HADOOP-8328. Duplicate FileSystem Statistics object for 'file' scheme.
+    (tomwhite)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
