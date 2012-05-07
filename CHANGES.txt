@@ -214,9 +214,6 @@ Release 1.1.0 - unreleased
     MAPREDUCE-4095. TestJobInProgress#testLocality uses a bogus topology.
     (Colin Patrick McCabe via eli)
 
-    MAPREDUCE-4012. Hadoop Job setup error leaves no useful info to users 
-    (when LinuxTaskController is used) (tgraves)
-
     HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
     Lee via szetszwo)
 
@@ -319,6 +316,9 @@ Release 1.0.3 - unreleased
 
     MAPREDUCE-4003. log.index (No such file or directory) AND Task process 
     exit with nonzero status of 126. (Koji Noguchi via tgraves)
+
+    MAPREDUCE-4012. Hadoop Job setup error leaves no useful info to users 
+    (when LinuxTaskController is used) (tgraves)
 
 Release 1.0.2 - 2012.03.24
 
