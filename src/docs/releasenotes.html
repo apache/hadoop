@@ -62,6 +62,11 @@
      <b>FindBugs OutOfMemoryError</b><br>
      <blockquote>When running the findbugs target from Jenkins, I get an OutOfMemory error.<br>The &quot;effort&quot; in FindBugs is set to Max which ends up using a lot of memory to go through all the classes. The jvmargs passed to FindBugs is hardcoded to 512 MB max.<br><br>We can leave the default to 512M, as long as we pass this as an ant parameter which can be overwritten in individual cases through -D, or in the build.properties file (either basedir, or user&apos;s home directory).<br></blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8027">HADOOP-8027</a>.
+     Minor improvement reported by qwertymaniac and fixed by atm (metrics)<br>
+     <b>Visiting /jmx on the daemon web interfaces may print unnecessary error in logs</b><br>
+     <blockquote>Logs that follow a {{/jmx}} servlet visit:<br><br>{code}<br>11/11/22 12:09:52 ERROR jmx.JMXJsonServlet: getting attribute UsageThreshold of java.lang:type=MemoryPool,name=Par Eden Space threw an exception<br>javax.management.RuntimeMBeanException: java.lang.UnsupportedOperationException: Usage threshold is not supported<br>	at com.sun.jmx.interceptor.DefaultMBeanServerInterceptor.rethrow(DefaultMBeanServerInterceptor.java:856)<br>...<br>{code}</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8151">HADOOP-8151</a>.
      Major bug reported by tlipcon and fixed by mattf (io, native)<br>
      <b>Error handling in snappy decompressor throws invalid exceptions</b><br>
