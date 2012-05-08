@@ -1804,7 +1804,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       case COMPLETE:
       case COMMITTED:
         if (storedBlock.getGenerationStamp() != iblk.getGenerationStamp()) {
-          return new BlockToMarkCorrupt(storedBlock,
+          return new BlockToMarkCorrupt(new BlockInfo(iblk, storedBlock
+              .getINode().getReplication()),
               "block is " + ucState + " and reported genstamp " +
               iblk.getGenerationStamp() + " does not match " +
               "genstamp in block map " + storedBlock.getGenerationStamp());
@@ -1824,7 +1825,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       if (!storedBlock.isComplete()) {
         return null; // not corrupt
       } else if (storedBlock.getGenerationStamp() != iblk.getGenerationStamp()) {
-        return new BlockToMarkCorrupt(storedBlock,
+        return new BlockToMarkCorrupt(new BlockInfo(iblk, storedBlock
+            .getINode().getReplication()),
             "reported " + reportedState + " replica with genstamp " +
             iblk.getGenerationStamp() + " does not match COMPLETE block's " +
             "genstamp in block map " + storedBlock.getGenerationStamp());
