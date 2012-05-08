@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedAction;
 import java.util.HashSet;
@@ -35,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.ShuffleHandler;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
@@ -58,7 +58,6 @@ import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.ProtoUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -322,13 +321,13 @@ public class ContainerLauncherImpl extends AbstractService implements
       final String containerManagerBindAddr, ContainerToken containerToken)
       throws IOException {
 
-    final InetSocketAddress cmAddr =
-        NetUtils.createSocketAddr(containerManagerBindAddr);
     UserGroupInformation user = UserGroupInformation.getCurrentUser();
 
     if (UserGroupInformation.isSecurityEnabled()) {
-      Token<ContainerTokenIdentifier> token =
-          ProtoUtils.convertFromProtoFormat(containerToken, cmAddr);
+      Token<ContainerTokenIdentifier> token = new Token<ContainerTokenIdentifier>(
+          containerToken.getIdentifier().array(), containerToken
+              .getPassword().array(), new Text(containerToken.getKind()),
+          new Text(containerToken.getService()));
       // the user in createRemoteUser in this context has to be ContainerID
       user = UserGroupInformation.createRemoteUser(containerID.toString());
       user.addToken(token);
@@ -339,7 +338,8 @@ public class ContainerLauncherImpl extends AbstractService implements
           @Override
           public ContainerManager run() {
             return (ContainerManager) rpc.getProxy(ContainerManager.class,
-                cmAddr, getConfig());
+                NetUtils.createSocketAddr(containerManagerBindAddr),
+                getConfig());
           }
         });
     return proxy;

@@ -176,10 +176,6 @@ public class HistoryClientService extends AbstractService {
 
     private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
-    public InetSocketAddress getConnectAddress() {
-      return getBindAddress();
-    }
-    
     private Job verifyAndGetJob(final JobId jobID) throws YarnRemoteException {
       UserGroupInformation loginUgi = null;
       Job job = null;
@@ -333,7 +329,8 @@ public class HistoryClientService extends AbstractService {
               jhsDTSecretManager);
       DelegationToken mrDToken = BuilderUtils.newDelegationToken(
         realJHSToken.getIdentifier(), realJHSToken.getKind().toString(),
-        realJHSToken.getPassword(), realJHSToken.getService().toString());
+        realJHSToken.getPassword(), bindAddress.getAddress().getHostAddress()
+            + ":" + bindAddress.getPort());
       response.setDelegationToken(mrDToken);
       return response;
       } catch (IOException i) {

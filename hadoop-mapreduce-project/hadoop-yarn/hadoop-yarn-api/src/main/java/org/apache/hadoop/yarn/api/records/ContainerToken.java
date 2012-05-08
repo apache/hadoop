@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.api.ContainerManager;
  */
 @Public
 @Stable
-public interface ContainerToken extends DelegationToken {
+public interface ContainerToken {
   /**
    * Get the token identifier.
    * @return token identifier

@@ -460,7 +460,8 @@ public class ClientRMService extends AbstractService implements
               realRMDTtoken.getIdentifier(),
               realRMDTtoken.getKind().toString(),
               realRMDTtoken.getPassword(),
-              realRMDTtoken.getService().toString()
+              clientBindAddress.getAddress().getHostAddress() + ":"
+              + clientBindAddress.getPort()
               ));
       return response;
     } catch(IOException io) {

@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -255,10 +254,10 @@ public class BuilderUtils {
     containerToken.setKind(ContainerTokenIdentifier.KIND.toString());
     containerToken.setPassword(password);
     // RPC layer client expects ip:port as service for tokens
-    InetSocketAddress addr = NetUtils.createSocketAddrForHost(nodeId.getHost(),
+    InetSocketAddress addr = NetUtils.createSocketAddr(nodeId.getHost(),
         nodeId.getPort());
-    // NOTE: use SecurityUtil.setTokenService if this becomes a "real" token 
-    containerToken.setService(SecurityUtil.buildTokenService(addr).toString());
+    containerToken.setService(addr.getAddress().getHostAddress() + ":"
+        + addr.getPort());
     return containerToken;
   }
 

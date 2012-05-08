@@ -32,9 +32,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
@@ -46,7 +46,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.ContainerToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -61,7 +61,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptLaunchFailedEvent;
-import org.apache.hadoop.yarn.util.ProtoUtils;
 
 /**
  * The launch of the AM itself.
@@ -132,25 +131,27 @@ public class AMLauncher implements Runnable {
 
     Container container = application.getMasterContainer();
 
-    final NodeId node = container.getNodeId();
-    final InetSocketAddress containerManagerBindAddress =
-        NetUtils.createSocketAddrForHost(node.getHost(), node.getPort());
+    final String containerManagerBindAddress = container.getNodeId().toString();
 
     final YarnRPC rpc = YarnRPC.create(conf); // TODO: Don't create again and again.
 
     UserGroupInformation currentUser = UserGroupInformation
         .createRemoteUser(containerId.toString());
     if (UserGroupInformation.isSecurityEnabled()) {
+      ContainerToken containerToken = container.getContainerToken();
       Token<ContainerTokenIdentifier> token =
-          ProtoUtils.convertFromProtoFormat(container.getContainerToken(),
-                                            containerManagerBindAddress);
+          new Token<ContainerTokenIdentifier>(
+              containerToken.getIdentifier().array(),
+              containerToken.getPassword().array(), new Text(
+                  containerToken.getKind()), new Text(
+                  containerToken.getService()));
       currentUser.addToken(token);
     }
     return currentUser.doAs(new PrivilegedAction<ContainerManager>() {
       @Override
       public ContainerManager run() {
         return (ContainerManager) rpc.getProxy(ContainerManager.class,
-            containerManagerBindAddress, conf);
+            NetUtils.createSocketAddr(containerManagerBindAddress), conf);
       }
     });
   }
@@ -217,21 +218,22 @@ public class AMLauncher implements Runnable {
       Token<ApplicationTokenIdentifier> token =
           new Token<ApplicationTokenIdentifier>(id,
               this.rmContext.getApplicationTokenSecretManager());
-      InetSocketAddress serviceAddr = conf.getSocketAddr(
+      InetSocketAddress unresolvedAddr = conf.getSocketAddr(
           YarnConfiguration.RM_SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS,
           YarnConfiguration.DEFAULT_RM_SCHEDULER_PORT);
-      // normally the client should set the service after acquiring the token,
-      // but this token is directly provided to the tasks
-      SecurityUtil.setTokenService(token, serviceAddr);
+      String resolvedAddr =
+          unresolvedAddr.getAddress().getHostAddress() + ":"
+              + unresolvedAddr.getPort();
+      token.setService(new Text(resolvedAddr));
       String appMasterTokenEncoded = token.encodeToUrlString();
-      LOG.debug("Putting appMaster token in env : " + token);
+      LOG.debug("Putting appMaster token in env : " + appMasterTokenEncoded);
       environment.put(
           ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME,
           appMasterTokenEncoded);
 
       // Add the RM token
-      credentials.addToken(token.getService(), token);
+      credentials.addToken(new Text(resolvedAddr), token);
       DataOutputBuffer dob = new DataOutputBuffer();
       credentials.writeTokenStorageToStream(dob);
       container.setContainerTokens(
@@ -243,6 +245,7 @@ public class AMLauncher implements Runnable {
           this.clientToAMSecretManager.getMasterKey(identifier);
       String encoded =
           Base64.encodeBase64URLSafeString(clientSecretKey.getEncoded());
+      LOG.debug("The encoded client secret-key to be put in env : " + encoded);
       environment.put(
           ApplicationConstants.APPLICATION_CLIENT_SECRET_ENV_NAME, 
           encoded);

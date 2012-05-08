@@ -36,7 +36,6 @@ import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -134,14 +133,15 @@ public abstract class RMCommunicator extends AbstractService  {
 
   protected void register() {
     //Register
-    InetSocketAddress serviceAddr = clientService.getBindAddress();
+    String host = clientService.getBindAddress().getAddress()
+        .getCanonicalHostName();
     try {
       RegisterApplicationMasterRequest request =
         recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
       request.setApplicationAttemptId(applicationAttemptId);
-      request.setHost(serviceAddr.getHostName());
-      request.setRpcPort(serviceAddr.getPort());
-      request.setTrackingUrl(serviceAddr.getHostName() + ":" + clientService.getHttpPort());
+      request.setHost(host);
+      request.setRpcPort(clientService.getBindAddress().getPort());
+      request.setTrackingUrl(host + ":" + clientService.getHttpPort());
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
       minContainerCapability = response.getMinimumResourceCapability();
@@ -262,6 +262,9 @@ public abstract class RMCommunicator extends AbstractService  {
     if (UserGroupInformation.isSecurityEnabled()) {
       String tokenURLEncodedStr = System.getenv().get(
           ApplicationConstants.APPLICATION_MASTER_TOKEN_ENV_NAME);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("AppMasterToken is " + tokenURLEncodedStr);
+      }
       Token<? extends TokenIdentifier> token = new Token<TokenIdentifier>();
 
       try {
@@ -270,10 +273,6 @@ public abstract class RMCommunicator extends AbstractService  {
         throw new YarnException(e);
       }
 
-      SecurityUtil.setTokenService(token, serviceAddr);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("AppMasterToken is " + token);
-      }
       currentUser.addToken(token);
     }
 

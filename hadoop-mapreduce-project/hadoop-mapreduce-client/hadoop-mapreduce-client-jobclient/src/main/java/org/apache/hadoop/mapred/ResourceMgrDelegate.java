@@ -37,6 +37,8 @@ import org.apache.hadoop.mapreduce.QueueInfo;
 import org.apache.hadoop.mapreduce.TaskTrackerInfo;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -65,14 +67,14 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
-import org.apache.hadoop.yarn.util.ProtoUtils;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 
 
 // TODO: This should be part of something like yarn-client.
 public class ResourceMgrDelegate {
   private static final Log LOG = LogFactory.getLog(ResourceMgrDelegate.class);
       
-  private final InetSocketAddress rmAddress;
+  private final String rmAddress;
   private YarnConfiguration conf;
   ClientRMProtocol applicationsManager;
   private ApplicationId applicationId;
@@ -85,7 +87,11 @@ public class ResourceMgrDelegate {
   public ResourceMgrDelegate(YarnConfiguration conf) {
     this.conf = conf;
     YarnRPC rpc = YarnRPC.create(this.conf);
-    this.rmAddress = getRmAddress(conf);
+    InetSocketAddress rmAddress = conf.getSocketAddr(
+            YarnConfiguration.RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_PORT);
+    this.rmAddress = rmAddress.toString();
     LOG.debug("Connecting to ResourceManager at " + rmAddress);
     applicationsManager =
         (ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class,
@@ -103,13 +109,7 @@ public class ResourceMgrDelegate {
       ClientRMProtocol applicationsManager) {
     this.conf = conf;
     this.applicationsManager = applicationsManager;
-    this.rmAddress = getRmAddress(conf);
-  }
-  
-  private static InetSocketAddress getRmAddress(YarnConfiguration conf) {
-    return conf.getSocketAddr(YarnConfiguration.RM_ADDRESS,
-                              YarnConfiguration.DEFAULT_RM_ADDRESS,
-                              YarnConfiguration.DEFAULT_RM_PORT);
+    this.rmAddress = applicationsManager.toString();
   }
   
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> arg0)
@@ -168,7 +168,9 @@ public class ResourceMgrDelegate {
     org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse 
       response = applicationsManager.getDelegationToken(rmDTRequest);
     DelegationToken yarnToken = response.getRMDelegationToken();
-    return ProtoUtils.convertFromProtoFormat(yarnToken, rmAddress);
+    return new Token<RMDelegationTokenIdentifier>(yarnToken.getIdentifier().array(),
+        yarnToken.getPassword().array(), 
+        new Text(yarnToken.getKind()), new Text(yarnToken.getService()));
   }
 
 
