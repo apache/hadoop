@@ -216,6 +216,9 @@ Release 0.23.3 - UNRELEASED
 
   OPTIMIZATIONS
 
+    MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
+    Sharp via bobby)
+
   BUG FIXES
 
     MAPREDUCE-4092.  commitJob Exception does not fail job (Jon Eagles via
