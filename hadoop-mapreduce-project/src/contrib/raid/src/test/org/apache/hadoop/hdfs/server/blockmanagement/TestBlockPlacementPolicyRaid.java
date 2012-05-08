@@ -41,7 +41,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRaid.CachedFullPathNames;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRaid.CachedLocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRaid.FileType;
-import org.apache.hadoop.hdfs.server.namenode.FSInodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeRaidTestUtil;
@@ -241,7 +240,7 @@ public class TestBlockPlacementPolicyRaid {
       // test full path cache
       CachedFullPathNames cachedFullPathNames =
           new CachedFullPathNames(namesystem);
-      final FSInodeInfo[] inodes = NameNodeRaidTestUtil.getFSInodeInfo(
+      final BlockCollection[] inodes = NameNodeRaidTestUtil.getBlockCollections(
           namesystem, file1, file2);
 
       verifyCachedFullPathNameResult(cachedFullPathNames, inodes[0]);
@@ -477,14 +476,14 @@ public class TestBlockPlacementPolicyRaid {
   }
 
   private void verifyCachedFullPathNameResult(
-      CachedFullPathNames cachedFullPathNames, FSInodeInfo inode)
+      CachedFullPathNames cachedFullPathNames, BlockCollection inode)
   throws IOException {
-    String res1 = inode.getFullPathName();
+    String res1 = inode.getName();
     String res2 = cachedFullPathNames.get(inode);
     LOG.info("Actual path name: " + res1);
     LOG.info("Cached path name: " + res2);
     Assert.assertEquals(cachedFullPathNames.get(inode),
-                        inode.getFullPathName());
+                        inode.getName());
   }
 
   private void verifyCachedBlocksResult(CachedLocatedBlocks cachedBlocks,
@@ -503,7 +502,7 @@ public class TestBlockPlacementPolicyRaid {
   private Collection<LocatedBlock> getCompanionBlocks(
       FSNamesystem namesystem, BlockPlacementPolicyRaid policy,
       ExtendedBlock block) throws IOException {
-    INodeFile inode = blockManager.blocksMap.getINode(block
+    INodeFile inode = (INodeFile)blockManager.blocksMap.getINode(block
         .getLocalBlock());
     FileType type = policy.getFileType(inode.getFullPathName());
     return policy.getCompanionBlocks(inode.getFullPathName(), type,
