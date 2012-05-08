@@ -360,6 +360,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4226. ConcurrentModificationException in FileSystemCounterGroup.
     (tomwhite)
 
+    MAPREDUCE-4215. RM app page shows 500 error on appid parse error 
+    (Jonathon Eagles via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -55,7 +55,15 @@ public class AppBlock extends HtmlBlock {
       puts("Bad request: requires application ID");
       return;
     }
-    ApplicationId appID = Apps.toAppID(aid);
+
+    ApplicationId appID = null;
+    try {
+      appID = Apps.toAppID(aid);
+    } catch (Exception e) {
+      puts("Invalid Application ID: " + aid);
+      return;
+    }
+
     RMContext context = getInstance(RMContext.class);
     RMApp rmApp = context.getRMApps().get(appID);
     if (rmApp == null) {
@@ -74,7 +82,7 @@ public class AppBlock extends HtmlBlock {
         && !this.aclsManager.checkAccess(callerUGI,
             ApplicationAccessType.VIEW_APP, app.getUser(), appID)) {
       puts("You (User " + remoteUser
-          + ") are not authorized to view the logs for application " + appID);
+          + ") are not authorized to view application " + appID);
       return;
     }
 
