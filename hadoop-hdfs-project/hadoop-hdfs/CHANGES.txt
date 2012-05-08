@@ -448,6 +448,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
 
+    HDFS-3378. Remove DFS_NAMENODE_SECONDARY_HTTPS_PORT_KEY and DEFAULT. (eli)
+
   BUG FIXES
 
     HDFS-2481. Unknown protocol: org.apache.hadoop.hdfs.protocol.ClientProtocol.
