@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -242,7 +243,7 @@ public class TestClientServiceDelegate {
     // should use the same proxy to AM2 and so instantiateProxy shouldn't be
     // called.
     doReturn(firstGenAMProxy).doReturn(secondGenAMProxy).when(
-        clientServiceDelegate).instantiateAMProxy(any(String.class));
+        clientServiceDelegate).instantiateAMProxy(any(InetSocketAddress.class));
 
     JobStatus jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
     Assert.assertNotNull(jobStatus);
@@ -257,7 +258,7 @@ public class TestClientServiceDelegate {
     Assert.assertEquals("jobName-secondGen", jobStatus.getJobName());
 
     verify(clientServiceDelegate, times(2)).instantiateAMProxy(
-        any(String.class));
+        any(InetSocketAddress.class));
   }
   
   @Test
@@ -286,19 +287,19 @@ public class TestClientServiceDelegate {
     Assert.assertEquals("N/A", jobStatus.getJobName());
     
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
-        any(String.class));
+        any(InetSocketAddress.class));
 
     // Should not reach AM even for second and third times too.
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
     Assert.assertNotNull(jobStatus);
     Assert.assertEquals("N/A", jobStatus.getJobName());    
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
-        any(String.class));
+        any(InetSocketAddress.class));
     jobStatus = clientServiceDelegate.getJobStatus(oldJobId);
     Assert.assertNotNull(jobStatus);
     Assert.assertEquals("N/A", jobStatus.getJobName());    
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
-        any(String.class));
+        any(InetSocketAddress.class));
 
     // The third time around, app is completed, so should go to JHS
     JobStatus jobStatus1 = clientServiceDelegate.getJobStatus(oldJobId);
@@ -309,7 +310,7 @@ public class TestClientServiceDelegate {
     Assert.assertEquals(1.0f, jobStatus1.getReduceProgress());
     
     verify(clientServiceDelegate, times(0)).instantiateAMProxy(
-        any(String.class));
+        any(InetSocketAddress.class));
   }
   
   @Test
