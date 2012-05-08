@@ -33,7 +33,7 @@
   <property name="name" value="hadoop-${module}"/>
   <!-- Need to change aop.xml project.version prop. synchronously -->
   <property name="_version" value="2.0.0"/>
-  <property name="version" value="${_version}-SNAPSHOT"/>
+  <property name="version" value="${_version}"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="examples.final.name" value="${name}-examples-${version}"/>
