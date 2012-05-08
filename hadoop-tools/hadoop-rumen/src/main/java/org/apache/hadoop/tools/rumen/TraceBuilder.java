@@ -20,6 +20,7 @@ package org.apache.hadoop.tools.rumen;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -98,7 +99,7 @@ public class TraceBuilder extends Configured implements Tool {
      * history file names should result in the order of jobs' submission times.
      */
     private static class HistoryLogsComparator
-        implements Comparator<FileStatus> {
+        implements Comparator<FileStatus>, Serializable {
       @Override
       public int compare(FileStatus file1, FileStatus file2) {
         return file1.getPath().getName().compareTo(

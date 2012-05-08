@@ -117,7 +117,7 @@ public class HadoopArchives implements Tool {
     // will when running the mapreduce job.
     String testJar = System.getProperty(TEST_HADOOP_ARCHIVES_JAR_PATH, null);
     if (testJar != null) {
-      ((JobConf)conf).setJar(testJar);
+      this.conf.setJar(testJar);
     }
   }
 

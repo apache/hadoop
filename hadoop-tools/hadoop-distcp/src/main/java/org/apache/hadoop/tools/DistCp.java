@@ -136,10 +136,13 @@ public class DistCp extends Configured implements Tool {
 
     Job job = null;
     try {
-      metaFolder = createMetaFolderPath();
-      jobFS = metaFolder.getFileSystem(getConf());
+      synchronized(this) {
+        //Don't cleanup while we are setting up.
+        metaFolder = createMetaFolderPath();
+        jobFS = metaFolder.getFileSystem(getConf());
 
-      job = createJob();
+        job = createJob();
+      }
       createInputFileListing(job);
 
       job.submit();
