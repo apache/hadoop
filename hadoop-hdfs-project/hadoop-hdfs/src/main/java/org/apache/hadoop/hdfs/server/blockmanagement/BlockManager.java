@@ -57,8 +57,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.apache.hadoop.hdfs.server.namenode.INodeFileUnderConstruction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -386,7 +384,7 @@ public class BlockManager {
                          numReplicas.decommissionedReplicas();
     
     if (block instanceof BlockInfo) {
-      String fileName = ((BlockInfo)block).getINode().getFullPathName();
+      String fileName = ((BlockInfo)block).getINode().getName();
       out.print(fileName + ": ");
     }
     // l: == live:, d: == decommissioned c: == corrupt e: == excess
@@ -462,7 +460,7 @@ public class BlockManager {
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  public boolean commitOrCompleteLastBlock(INodeFileUnderConstruction fileINode, 
+  public boolean commitOrCompleteLastBlock(MutableBlockCollection fileINode, 
       Block commitBlock) throws IOException {
     if(commitBlock == null)
       return false; // not committing, this is a block allocation retry
@@ -474,7 +472,7 @@ public class BlockManager {
     
     final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock);
     if(countNodes(lastBlock).liveReplicas() >= minReplication)
-      completeBlock(fileINode,fileINode.numBlocks()-1, false);
+      completeBlock(fileINode, fileINode.numBlocks()-1, false);
     return b;
   }
 
@@ -485,7 +483,7 @@ public class BlockManager {
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  private BlockInfo completeBlock(final INodeFile fileINode,
+  private BlockInfo completeBlock(final MutableBlockCollection fileINode,
       final int blkIndex, boolean force) throws IOException {
     if(blkIndex < 0)
       return null;
@@ -518,7 +516,7 @@ public class BlockManager {
     return blocksMap.replaceBlock(completeBlock);
   }
 
-  private BlockInfo completeBlock(final INodeFile fileINode,
+  private BlockInfo completeBlock(final MutableBlockCollection fileINode,
       final BlockInfo block, boolean force) throws IOException {
     BlockInfo[] fileBlocks = fileINode.getBlocks();
     for(int idx = 0; idx < fileBlocks.length; idx++)
@@ -533,7 +531,7 @@ public class BlockManager {
    * regardless of whether enough replicas are present. This is necessary
    * when tailing edit logs as a Standby.
    */
-  public BlockInfo forceCompleteBlock(final INodeFile fileINode,
+  public BlockInfo forceCompleteBlock(final MutableBlockCollection fileINode,
       final BlockInfoUnderConstruction block) throws IOException {
     block.commitBlock(block);
     return completeBlock(fileINode, block, true);
@@ -554,7 +552,7 @@ public class BlockManager {
    * @return the last block locations if the block is partial or null otherwise
    */
   public LocatedBlock convertLastBlockToUnderConstruction(
-      INodeFileUnderConstruction fileINode) throws IOException {
+      MutableBlockCollection fileINode) throws IOException {
     BlockInfo oldBlock = fileINode.getLastBlock();
     if(oldBlock == null ||
         fileINode.getPreferredBlockSize() == oldBlock.getNumBytes())
@@ -925,7 +923,7 @@ public class BlockManager {
                             " does not exist. ");
     }
 
-    INodeFile inode = storedBlock.getINode();
+    BlockCollection inode = storedBlock.getINode();
     if (inode == null) {
       NameNode.stateChangeLog.info("BLOCK markBlockAsCorrupt: " +
                                    "block " + storedBlock +
@@ -1053,7 +1051,7 @@ public class BlockManager {
     int requiredReplication, numEffectiveReplicas;
     List<DatanodeDescriptor> containingNodes, liveReplicaNodes;
     DatanodeDescriptor srcNode;
-    INodeFile fileINode = null;
+    BlockCollection fileINode = null;
     int additionalReplRequired;
 
     int scheduledWork = 0;
@@ -1067,7 +1065,7 @@ public class BlockManager {
             // block should belong to a file
             fileINode = blocksMap.getINode(block);
             // abandoned block or block reopened for append
-            if(fileINode == null || fileINode.isUnderConstruction()) {
+            if(fileINode == null || fileINode instanceof MutableBlockCollection) {
               neededReplications.remove(block, priority); // remove from neededReplications
               neededReplications.decrementReplicationIndex(priority);
               continue;
@@ -1153,7 +1151,7 @@ public class BlockManager {
           // block should belong to a file
           fileINode = blocksMap.getINode(block);
           // abandoned block or block reopened for append
-          if(fileINode == null || fileINode.isUnderConstruction()) {
+          if(fileINode == null || fileINode instanceof MutableBlockCollection) {
             neededReplications.remove(block, priority); // remove from neededReplications
             rw.targets = null;
             neededReplications.decrementReplicationIndex(priority);
@@ -1918,7 +1916,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     int numCurrentReplica = countLiveNodes(storedBlock);
     if (storedBlock.getBlockUCState() == BlockUCState.COMMITTED
         && numCurrentReplica >= minReplication) {
-      completeBlock(storedBlock.getINode(), storedBlock, false);
+      completeBlock((MutableBlockCollection)storedBlock.getINode(), storedBlock, false);
     } else if (storedBlock.isComplete()) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that.
@@ -1956,7 +1954,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       return block;
     }
     assert storedBlock != null : "Block must be stored by now";
-    INodeFile fileINode = storedBlock.getINode();
+    BlockCollection fileINode = storedBlock.getINode();
     assert fileINode != null : "Block must belong to a file";
 
     // add block to the datanode
@@ -1983,7 +1981,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
     if(storedBlock.getBlockUCState() == BlockUCState.COMMITTED &&
         numLiveReplicas >= minReplication) {
-      storedBlock = completeBlock(fileINode, storedBlock, false);
+      storedBlock = completeBlock((MutableBlockCollection)fileINode, storedBlock, false);
     } else if (storedBlock.isComplete()) {
       // check whether safe replication is reached for the block
       // only complete blocks are counted towards that
@@ -1994,7 +1992,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     }
     
     // if file is under construction, then done for now
-    if (fileINode.isUnderConstruction()) {
+    if (fileINode instanceof MutableBlockCollection) {
       return storedBlock;
     }
 
@@ -2131,7 +2129,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    * what happened with it.
    */
   private MisReplicationResult processMisReplicatedBlock(BlockInfo block) {
-    INodeFile fileINode = block.getINode();
+    BlockCollection fileINode = block.getINode();
     if (fileINode == null) {
       // block does not belong to any file
       addToInvalidates(block);
@@ -2260,7 +2258,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
                               BlockPlacementPolicy replicator) {
     assert namesystem.hasWriteLock();
     // first form a rack to datanodes map and
-    INodeFile inode = getINode(b);
+    BlockCollection inode = getINode(b);
     final Map<String, List<DatanodeDescriptor>> rackMap
         = new HashMap<String, List<DatanodeDescriptor>>();
     for(final Iterator<DatanodeDescriptor> iter = nonExcess.iterator();
@@ -2381,7 +2379,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       // necessary. In that case, put block on a possibly-will-
       // be-replicated list.
       //
-      INodeFile fileINode = blocksMap.getINode(block);
+      BlockCollection fileINode = blocksMap.getINode(block);
       if (fileINode != null) {
         namesystem.decrementSafeBlockCount(block);
         updateNeededReplications(block, -1, 0);
@@ -2613,7 +2611,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       NumberReplicas num) {
     int curReplicas = num.liveReplicas();
     int curExpectedReplicas = getReplication(block);
-    INodeFile fileINode = blocksMap.getINode(block);
+    BlockCollection fileINode = blocksMap.getINode(block);
     Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(block);
     StringBuilder nodeList = new StringBuilder();
     while (nodeIter.hasNext()) {
@@ -2626,7 +2624,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
         + ", corrupt replicas: " + num.corruptReplicas()
         + ", decommissioned replicas: " + num.decommissionedReplicas()
         + ", excess replicas: " + num.excessReplicas()
-        + ", Is Open File: " + fileINode.isUnderConstruction()
+        + ", Is Open File: " + (fileINode instanceof MutableBlockCollection)
         + ", Datanodes having this block: " + nodeList + ", Current Datanode: "
         + srcNode + ", Is current datanode decommissioning: "
         + srcNode.isDecommissionInProgress());
@@ -2641,7 +2639,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
     while(it.hasNext()) {
       final Block block = it.next();
-      INodeFile fileINode = blocksMap.getINode(block);
+      BlockCollection fileINode = blocksMap.getINode(block);
       short expectedReplication = fileINode.getReplication();
       NumberReplicas num = countNodes(block);
       int numCurrentReplica = num.liveReplicas();
@@ -2664,7 +2662,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     final Iterator<? extends Block> it = srcNode.getBlockIterator();
     while(it.hasNext()) {
       final Block block = it.next();
-      INodeFile fileINode = blocksMap.getINode(block);
+      BlockCollection fileINode = blocksMap.getINode(block);
 
       if (fileINode != null) {
         NumberReplicas num = countNodes(block);
@@ -2681,7 +2679,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
             if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
               decommissionOnlyReplicas++;
             }
-            if (fileINode.isUnderConstruction()) {
+            if (fileINode instanceof MutableBlockCollection) {
               underReplicatedInOpenFiles++;
             }
           }
@@ -2784,11 +2782,10 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
 
   /* get replication factor of a block */
   private int getReplication(Block block) {
-    INodeFile fileINode = blocksMap.getINode(block);
+    BlockCollection fileINode = blocksMap.getINode(block);
     if (fileINode == null) { // block does not belong to any file
       return 0;
     }
-    assert !fileINode.isDirectory() : "Block cannot belong to a directory.";
     return fileINode.getReplication();
   }
 
@@ -2861,11 +2858,11 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     return this.neededReplications.getCorruptBlockSize();
   }
 
-  public BlockInfo addINode(BlockInfo block, INodeFile iNode) {
+  public BlockInfo addINode(BlockInfo block, BlockCollection iNode) {
     return blocksMap.addINode(block, iNode);
   }
 
-  public INodeFile getINode(Block b) {
+  public BlockCollection getINode(Block b) {
     return blocksMap.getINode(b);
   }
 
@@ -3005,7 +3002,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
   private static class ReplicationWork {
 
     private Block block;
-    private INodeFile fileINode;
+    private BlockCollection fileINode;
 
     private DatanodeDescriptor srcNode;
     private List<DatanodeDescriptor> containingNodes;
@@ -3016,7 +3013,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     private int priority;
 
     public ReplicationWork(Block block,
-        INodeFile fileINode,
+        BlockCollection fileINode,
         DatanodeDescriptor srcNode,
         List<DatanodeDescriptor> containingNodes,
         List<DatanodeDescriptor> liveReplicaNodes,

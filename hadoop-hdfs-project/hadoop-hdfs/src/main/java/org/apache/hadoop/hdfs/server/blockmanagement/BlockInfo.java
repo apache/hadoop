@@ -19,14 +19,16 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 /**
  * Internal class for block metadata.
+ * BlockInfo class maintains for a given block
+ * the {@link BlockCollection} it is part of and datanodes where the replicas of 
+ * the block are stored.
  */
 public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
-  private INodeFile inode;
+  private BlockCollection inode;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */
   private LightWeightGSet.LinkedElement nextLinkedElement;
@@ -66,11 +68,11 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     this.inode = from.inode;
   }
 
-  public INodeFile getINode() {
+  public BlockCollection getINode() {
     return inode;
   }
 
-  public void setINode(INodeFile inode) {
+  public void setINode(BlockCollection inode) {
     this.inode = inode;
   }
 
