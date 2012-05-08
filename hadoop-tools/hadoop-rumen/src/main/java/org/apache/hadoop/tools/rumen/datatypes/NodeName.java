@@ -93,16 +93,8 @@ public class NodeName implements AnonymizableDataType<String> {
   }
   
   public NodeName(String rName, String hName) {
-    rName = (rName == null) 
-            ? rName 
-            : rName.length() == 0 
-              ? null 
-              : rName;
-    hName = (hName == null) 
-            ? hName 
-            : hName.length() == 0 
-              ? null 
-              : hName;
+    rName = (rName == null || rName.length() == 0) ? null : rName;
+    hName = (hName == null || hName.length() == 0) ? null : hName;
     if (hName == null) {
       nodeName = rName;
       rackName = rName;

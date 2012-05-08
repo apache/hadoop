@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.api;
 
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.FailTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetCountersRequest;
@@ -45,6 +47,11 @@ import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskResponse;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 public interface MRClientProtocol {
+  /**
+   * Address to which the client is connected
+   * @return InetSocketAddress
+   */
+  public InetSocketAddress getConnectAddress();
   public GetJobReportResponse getJobReport(GetJobReportRequest request) throws YarnRemoteException;
   public GetTaskReportResponse getTaskReport(GetTaskReportRequest request) throws YarnRemoteException;
   public GetTaskAttemptReportResponse getTaskAttemptReport(GetTaskAttemptReportRequest request) throws YarnRemoteException;

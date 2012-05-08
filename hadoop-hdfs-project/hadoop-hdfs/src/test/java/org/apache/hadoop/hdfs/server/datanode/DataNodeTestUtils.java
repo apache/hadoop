@@ -136,6 +136,11 @@ public class DataNodeTestUtils {
       ) throws IOException {
     return FsDatasetTestUtil.getBlockFile(dn.getFSDataset(), bpid, b);
   }
+  
+  public static File getMetaFile(DataNode dn, String bpid, Block b)
+      throws IOException {
+    return FsDatasetTestUtil.getMetaFile(dn.getFSDataset(), bpid, b);
+  }
 
   public static boolean unlinkBlock(DataNode dn, ExtendedBlock bk, int numLinks
       ) throws IOException {

@@ -500,6 +500,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3376. DFSClient fails to make connection to DN if there are many
     unusable cached sockets (todd)
 
+    HDFS-3157. Error in deleting block is keep on coming from DN even after 
+    the block report and directory scanning has happened. (Ashish Singhi via umamahesh)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

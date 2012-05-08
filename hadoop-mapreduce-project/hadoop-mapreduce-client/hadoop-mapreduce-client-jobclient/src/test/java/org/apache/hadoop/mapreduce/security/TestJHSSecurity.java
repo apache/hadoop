@@ -26,11 +26,9 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.v2.api.HSClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
-import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetJobReportRequest;
 import org.apache.hadoop.mapreduce.v2.hs.JobHistoryServer;
@@ -38,11 +36,11 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.util.ProtoUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -95,9 +93,8 @@ public class TestJHSSecurity {
     // Now try talking to JHS using the delegation token
     UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser("TheDarkLord");
-    ugi.addToken(new Token<MRDelegationTokenIdentifier>(token.getIdentifier()
-      .array(), token.getPassword().array(), new Text(token.getKind()),
-      new Text(token.getService())));
+    ugi.addToken(ProtoUtils.convertFromProtoFormat(
+        token, jobHistoryServer.getClientService().getBindAddress()));
     final YarnRPC rpc = YarnRPC.create(conf);
     MRClientProtocol userUsingDT =
         ugi.doAs(new PrivilegedAction<MRClientProtocol>() {

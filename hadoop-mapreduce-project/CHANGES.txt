@@ -175,6 +175,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3958. RM: Remove RMNodeState and replace it with NodeState
     (Bikas Saha via bobby)
 
+    MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
+    (szetszwo)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -212,7 +215,12 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4210. Expose listener address for WebApp (Daryn Sharp via bobby)
 
+    MAPREDUCE-4162. Correctly set token service (Daryn Sharp via bobby)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
+    Sharp via bobby)
 
   BUG FIXES
 
@@ -354,6 +362,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4226. ConcurrentModificationException in FileSystemCounterGroup.
     (tomwhite)
+
+    MAPREDUCE-4215. RM app page shows 500 error on appid parse error 
+    (Jonathon Eagles via tgraves)
 
 Release 0.23.2 - UNRELEASED
 

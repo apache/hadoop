@@ -180,6 +180,11 @@ public class MRClientService extends AbstractService
     private RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
+    @Override
+    public InetSocketAddress getConnectAddress() {
+      return getBindAddress();
+    }
+    
     private Job verifyAndGetJob(JobId jobID, 
         boolean modifyAccess) throws YarnRemoteException {
       Job job = appContext.getJob(jobID);

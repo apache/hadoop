@@ -27,7 +27,7 @@ import org.apache.commons.lang.StringUtils;
  * //TODO There is no caching for saving memory.
  */
 public class WordListAnonymizerUtility {
-  public static final String[] KNOWN_WORDS = 
+  static final String[] KNOWN_WORDS = 
     new String[] {"job", "tmp", "temp", "home", "homes", "usr", "user", "test"};
   
   /**
