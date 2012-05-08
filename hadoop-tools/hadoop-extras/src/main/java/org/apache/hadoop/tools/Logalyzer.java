@@ -65,9 +65,9 @@ import org.apache.hadoop.mapreduce.lib.map.RegexMapper;
 public class Logalyzer {
   // Constants
   private static Configuration fsConfig = new Configuration();
-  public static String SORT_COLUMNS = 
+  public static final String SORT_COLUMNS = 
     "logalizer.logcomparator.sort.columns";
-  public static String COLUMN_SEPARATOR = 
+  public static final String COLUMN_SEPARATOR = 
     "logalizer.logcomparator.column.separator";
   
   static {
