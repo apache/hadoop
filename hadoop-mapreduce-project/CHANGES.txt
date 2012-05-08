@@ -212,6 +212,8 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4210. Expose listener address for WebApp (Daryn Sharp via bobby)
 
+    MAPREDUCE-4162. Correctly set token service (Daryn Sharp via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES

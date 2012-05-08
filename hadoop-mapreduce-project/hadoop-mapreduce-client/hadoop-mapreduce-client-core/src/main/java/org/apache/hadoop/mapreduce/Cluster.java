@@ -35,13 +35,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.Master;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocolProvider;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.util.ConfigUtil;
 import org.apache.hadoop.mapreduce.v2.LogParams;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -388,21 +386,8 @@ public class Cluster {
    */
   public Token<DelegationTokenIdentifier> 
       getDelegationToken(Text renewer) throws IOException, InterruptedException{
-    Token<DelegationTokenIdentifier> result =
-      client.getDelegationToken(renewer);
-
-    if (result == null) {
-      return result;
-    }
-
-    InetSocketAddress addr = Master.getMasterAddress(conf);
-    StringBuilder service = new StringBuilder();
-    service.append(NetUtils.normalizeHostName(addr.getAddress().
-                                              getHostAddress()));
-    service.append(':');
-    service.append(addr.getPort());
-    result.setService(new Text(service.toString()));
-    return result;
+    // client has already set the service
+    return client.getDelegationToken(renewer);
   }
 
   /**

@@ -32,7 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -63,6 +62,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
@@ -144,7 +144,7 @@ public class ClientServiceDelegate {
     if (application != null) {
       trackingUrl = application.getTrackingUrl();
     }
-    String serviceAddr = null;
+    InetSocketAddress serviceAddr = null;
     while (application == null
         || YarnApplicationState.RUNNING == application
             .getYarnApplicationState()) {
@@ -172,25 +172,23 @@ public class ClientServiceDelegate {
         if(!conf.getBoolean(MRJobConfig.JOB_AM_ACCESS_DISABLED, false)) {
           UserGroupInformation newUgi = UserGroupInformation.createRemoteUser(
               UserGroupInformation.getCurrentUser().getUserName());
-          serviceAddr = application.getHost() + ":" + application.getRpcPort();
+          serviceAddr = NetUtils.createSocketAddrForHost(
+              application.getHost(), application.getRpcPort());
           if (UserGroupInformation.isSecurityEnabled()) {
             String clientTokenEncoded = application.getClientToken();
             Token<ApplicationTokenIdentifier> clientToken =
               new Token<ApplicationTokenIdentifier>();
             clientToken.decodeFromUrlString(clientTokenEncoded);
             // RPC layer client expects ip:port as service for tokens
-            InetSocketAddress addr = NetUtils.createSocketAddr(application
-                .getHost(), application.getRpcPort());
-            clientToken.setService(new Text(addr.getAddress().getHostAddress()
-                + ":" + addr.getPort()));
+            SecurityUtil.setTokenService(clientToken, serviceAddr);
             newUgi.addToken(clientToken);
           }
           LOG.debug("Connecting to " + serviceAddr);
-          final String tempStr = serviceAddr;
+          final InetSocketAddress finalServiceAddr = serviceAddr;
           realProxy = newUgi.doAs(new PrivilegedExceptionAction<MRClientProtocol>() {
             @Override
             public MRClientProtocol run() throws IOException {
-              return instantiateAMProxy(tempStr);
+              return instantiateAMProxy(finalServiceAddr);
             }
           });
         } else {
@@ -270,13 +268,13 @@ public class ClientServiceDelegate {
     return historyServerProxy;
   }
 
-  MRClientProtocol instantiateAMProxy(final String serviceAddr)
+  MRClientProtocol instantiateAMProxy(final InetSocketAddress serviceAddr)
       throws IOException {
     LOG.trace("Connecting to ApplicationMaster at: " + serviceAddr);
     YarnRPC rpc = YarnRPC.create(conf);
     MRClientProtocol proxy = 
          (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
-            NetUtils.createSocketAddr(serviceAddr), conf);
+            serviceAddr, conf);
     LOG.trace("Connected to ApplicationMaster at: " + serviceAddr);
     return proxy;
   }
