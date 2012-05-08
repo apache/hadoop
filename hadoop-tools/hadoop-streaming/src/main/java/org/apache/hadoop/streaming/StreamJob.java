@@ -91,7 +91,7 @@ public class StreamJob implements Tool {
   @Deprecated
   public StreamJob(String[] argv, boolean mayExit) {
     this();
-    argv_ = argv;
+    argv_ = Arrays.copyOf(argv, argv.length);
     this.config_ = new Configuration();
   }
 
@@ -113,7 +113,7 @@ public class StreamJob implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     try {
-      this.argv_ = args;
+      this.argv_ = Arrays.copyOf(args, args.length);
       init();
 
       preProcessArgs();
@@ -290,7 +290,7 @@ public class StreamJob implements Tool {
         LOG.warn("-file option is deprecated, please use generic option" +
         		" -files instead.");
 
-        String fileList = null;
+        StringBuffer fileList = new StringBuffer();
         for (String file : values) {
           packageFiles_.add(file);
           try {
@@ -298,13 +298,15 @@ public class StreamJob implements Tool {
             Path path = new Path(pathURI);
             FileSystem localFs = FileSystem.getLocal(config_);
             String finalPath = path.makeQualified(localFs).toString();
-            fileList = fileList == null ? finalPath : fileList + "," + finalPath;
+            if(fileList.length() > 0) {
+              fileList.append(',');
+            }
+            fileList.append(finalPath);
           } catch (Exception e) {
             throw new IllegalArgumentException(e);
           }
         }
-        config_.set("tmpfiles", config_.get("tmpfiles", "") +
-                                  (fileList == null ? "" : fileList));
+        config_.set("tmpfiles", config_.get("tmpfiles", "") + fileList);
         validate(packageFiles_);
       }
 

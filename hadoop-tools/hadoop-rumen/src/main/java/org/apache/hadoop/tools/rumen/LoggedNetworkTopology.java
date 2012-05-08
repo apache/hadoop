@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.tools.rumen;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,7 +69,8 @@ public class LoggedNetworkTopology implements DeepCompare {
    * order.
    * 
    */
-  static class TopoSort implements Comparator<LoggedNetworkTopology> {
+  static class TopoSort implements Comparator<LoggedNetworkTopology>, 
+  Serializable {
     public int compare(LoggedNetworkTopology t1, LoggedNetworkTopology t2) {
       return t1.name.getValue().compareTo(t2.name.getValue());
     }
