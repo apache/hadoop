@@ -228,6 +228,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-4088. Task stuck in JobLocalizer prevented other tasks on the
     same node from (Ravi Prakash via bobby)
 
+    HADOOP-6546. BloomMapFile can return false negatives. (Clark Jefcoat
+    via suresh)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
