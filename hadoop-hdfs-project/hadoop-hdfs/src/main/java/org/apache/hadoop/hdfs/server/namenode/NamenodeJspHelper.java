@@ -734,7 +734,7 @@ class NamenodeJspHelper {
         this.inode = null;
       } else {
         this.block = new Block(blockId);
-        this.inode = blockManager.getINode(block);
+        this.inode = (INodeFile) blockManager.getINode(block);
       }
     }
 

@@ -46,9 +46,9 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
-import org.apache.hadoop.hdfs.server.namenode.FSInodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -585,7 +585,7 @@ public class TestDNFencing {
     }
 
     @Override
-    public DatanodeDescriptor chooseReplicaToDelete(FSInodeInfo inode,
+    public DatanodeDescriptor chooseReplicaToDelete(BlockCollection inode,
         Block block, short replicationFactor,
         Collection<DatanodeDescriptor> first,
         Collection<DatanodeDescriptor> second) {

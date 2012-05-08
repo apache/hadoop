@@ -38,7 +38,7 @@ import com.google.common.primitives.SignedBytes;
  * directory inodes.
  */
 @InterfaceAudience.Private
-abstract class INode implements Comparable<byte[]>, FSInodeInfo {
+abstract class INode implements Comparable<byte[]> {
   /*
    *  The inode name is in java UTF8 encoding; 
    *  The name in HdfsFileStatus should keep the same encoding as this.
@@ -264,7 +264,6 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     this.name = name;
   }
 
-  @Override
   public String getFullPathName() {
     // Get the full path name of this inode.
     return FSDirectory.getFullPathName(this);
