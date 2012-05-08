@@ -175,6 +175,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3958. RM: Remove RMNodeState and replace it with NodeState
     (Bikas Saha via bobby)
 
+    MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
+    (szetszwo)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

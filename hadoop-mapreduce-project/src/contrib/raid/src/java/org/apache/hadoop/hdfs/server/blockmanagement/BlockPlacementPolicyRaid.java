@@ -144,7 +144,7 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
 
   /** {@inheritDoc} */
   @Override
-  public DatanodeDescriptor chooseReplicaToDelete(FSInodeInfo inode,
+  public DatanodeDescriptor chooseReplicaToDelete(BlockCollection inode,
       Block block, short replicationFactor,
       Collection<DatanodeDescriptor> first,
       Collection<DatanodeDescriptor> second) {
@@ -425,7 +425,7 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
   }
 
   /**
-   * Cache results for FSInodeInfo.getFullPathName()
+   * Cache results for getFullPathName()
    */
   static class CachedFullPathNames {
     FSNamesystem namesystem;
@@ -446,8 +446,8 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
       };
 
     static private class INodeWithHashCode {
-      FSInodeInfo inode;
-      INodeWithHashCode(FSInodeInfo inode) {
+      BlockCollection inode;
+      INodeWithHashCode(BlockCollection inode) {
         this.inode = inode;
       }
       @Override
@@ -459,11 +459,11 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
         return System.identityHashCode(inode);
       }
       String getFullPathName() {
-        return inode.getFullPathName();
+        return inode.getName();
       }
     }
 
-    public String get(FSInodeInfo inode) throws IOException {
+    public String get(BlockCollection inode) throws IOException {
       return cacheInternal.get(new INodeWithHashCode(inode));
     }
   }
