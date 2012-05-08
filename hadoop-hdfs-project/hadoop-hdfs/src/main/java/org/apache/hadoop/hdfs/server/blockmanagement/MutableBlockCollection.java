@@ -15,24 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.namenode;
+package org.apache.hadoop.hdfs.server.blockmanagement;
+
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.fs.ContentSummary;
 
 /** 
- * This interface is used used the pluggable block placement policy
- * to expose a few characteristics of an Inode.
+ * This interface is used by the block manager to expose a
+ * few characteristics of a collection of Block/BlockUnderConstruction.
  */
-@InterfaceAudience.Private
-public interface FSInodeInfo {
+public interface MutableBlockCollection extends BlockCollection {
+  /**
+   * Set block 
+   */
+  public void setBlock(int idx, BlockInfo blk);
 
   /**
-   * a string representation of an inode
-   * 
-   * @return the full pathname (from root) that this inode represents
+   * Convert the last block of the collection to an under-construction block.
+   * Set its locations.
    */
-
-  public String getFullPathName() ;
+  public BlockInfoUnderConstruction setLastBlock(BlockInfo lastBlock,
+                       DatanodeDescriptor[] targets) throws IOException;
 }
-    
-    

@@ -346,7 +346,7 @@ public abstract class AbstractFileSystem {
             path);
       } else {
         throw new InvalidPathException(
-            "Path without scheme with non-null autorhrity:" + path);
+            "Path without scheme with non-null authority:" + path);
       }
     }
     String thisScheme = this.getUri().getScheme();

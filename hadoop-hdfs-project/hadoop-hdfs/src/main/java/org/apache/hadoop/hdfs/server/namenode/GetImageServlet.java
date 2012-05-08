@@ -27,6 +27,8 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.SecurityUtil;
 
 import org.apache.commons.logging.Log;
@@ -34,7 +36,6 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
@@ -83,11 +84,11 @@ public class GetImageServlet extends HttpServlet {
         (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
       
       if(UserGroupInformation.isSecurityEnabled() && 
-          !isValidRequestor(request.getRemoteUser(), conf)) {
+          !isValidRequestor(request.getUserPrincipal().getName(), conf)) {
         response.sendError(HttpServletResponse.SC_FORBIDDEN, 
             "Only Namenode and Secondary Namenode may access this servlet");
         LOG.warn("Received non-NN/SNN request for image or edits from " 
-            + request.getRemoteHost());
+            + request.getUserPrincipal().getName() + " at " + request.getRemoteHost());
         return;
       }
       
@@ -156,15 +157,10 @@ public class GetImageServlet extends HttpServlet {
               }
               
               // issue a HTTP get request to download the new fsimage 
-              MD5Hash downloadImageDigest = reloginIfNecessary().doAs(
-                  new PrivilegedExceptionAction<MD5Hash>() {
-                  @Override
-                  public MD5Hash run() throws Exception {
-                    return TransferFsImage.downloadImageToStorage(
+              MD5Hash downloadImageDigest =
+                TransferFsImage.downloadImageToStorage(
                         parsedParams.getInfoServer(), txid,
                         nnImage.getStorage(), true);
-                    }
-              });
               nnImage.saveDigestAndRenameCheckpointImage(txid, downloadImageDigest);
               
               // Now that we have a new checkpoint, we might be able to
@@ -176,18 +172,6 @@ public class GetImageServlet extends HttpServlet {
           }
           return null;
         }
-        
-        // We may have lost our ticket since the last time we tried to open
-        // an http connection, so log in just in case.
-        private UserGroupInformation reloginIfNecessary() throws IOException {
-          // This method is only called on the NN, therefore it is safe to
-          // use these key values.
-          return UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-                  SecurityUtil.getServerPrincipal(conf
-                      .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-                      NameNode.getAddress(conf).getHostName()),
-              conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
-        }       
       });
       
     } catch (Throwable t) {
@@ -234,16 +218,8 @@ public class GetImageServlet extends HttpServlet {
 
     validRequestors.add(
         SecurityUtil.getServerPrincipal(conf
-            .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), NameNode
-            .getAddress(conf).getHostName()));
-    validRequestors.add(
-        SecurityUtil.getServerPrincipal(conf
             .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY), NameNode
             .getAddress(conf).getHostName()));
-    validRequestors.add(
-        SecurityUtil.getServerPrincipal(conf
-            .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-            SecondaryNameNode.getHttpAddress(conf).getHostName()));
     validRequestors.add(
         SecurityUtil.getServerPrincipal(conf
             .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY),
@@ -253,21 +229,17 @@ public class GetImageServlet extends HttpServlet {
       Configuration otherNnConf = HAUtil.getConfForOtherNode(conf);
       validRequestors.add(
           SecurityUtil.getServerPrincipal(otherNnConf
-              .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-              NameNode.getAddress(otherNnConf).getHostName()));
-      validRequestors.add(
-          SecurityUtil.getServerPrincipal(otherNnConf
               .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
               NameNode.getAddress(otherNnConf).getHostName()));
     }
 
     for(String v : validRequestors) {
       if(v != null && v.equals(remoteUser)) {
-        if(LOG.isDebugEnabled()) LOG.debug("isValidRequestor is allowing: " + remoteUser);
+        if(LOG.isInfoEnabled()) LOG.info("GetImageServlet allowing: " + remoteUser);
         return true;
       }
     }
-    if(LOG.isDebugEnabled()) LOG.debug("isValidRequestor is rejecting: " + remoteUser);
+    if(LOG.isInfoEnabled()) LOG.info("GetImageServlet rejecting: " + remoteUser);
     return false;
   }
   

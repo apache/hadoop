@@ -20,15 +20,18 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 
 /** I-node for closed file. */
-public class INodeFile extends INode {
+@InterfaceAudience.Private
+public class INodeFile extends INode implements BlockCollection {
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
   //Number of bits for Block size
@@ -167,6 +170,12 @@ public class INodeFile extends INode {
     blocks = null;
     return 1;
   }
+  
+  public String getName() {
+    // Get the full path name of this inode.
+    return getFullPathName();
+  }
+
 
   @Override
   long[] computeContentSummary(long[] summary) {

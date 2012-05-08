@@ -123,6 +123,11 @@ public class TestRPCFactories {
   public class MRClientProtocolTestImpl implements MRClientProtocol {
 
     @Override
+    public InetSocketAddress getConnectAddress() {
+      return null;
+    }
+    
+    @Override
     public GetJobReportResponse getJobReport(GetJobReportRequest request)
         throws YarnRemoteException {
       return null;

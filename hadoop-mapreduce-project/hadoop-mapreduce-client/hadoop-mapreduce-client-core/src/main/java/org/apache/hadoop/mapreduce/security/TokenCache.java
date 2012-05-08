@@ -19,7 +19,9 @@
 package org.apache.hadoop.mapreduce.security;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -92,8 +94,11 @@ public class TokenCache {
 
   static void obtainTokensForNamenodesInternal(Credentials credentials,
       Path[] ps, Configuration conf) throws IOException {
+    Set<FileSystem> fsSet = new HashSet<FileSystem>();
     for(Path p: ps) {
-      FileSystem fs = FileSystem.get(p.toUri(), conf);
+      fsSet.add(p.getFileSystem(conf));
+    }
+    for (FileSystem fs : fsSet) {
       obtainTokensForNamenodesInternal(fs, credentials, conf);
     }
   }

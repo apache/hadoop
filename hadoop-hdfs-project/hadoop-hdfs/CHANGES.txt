@@ -422,6 +422,19 @@ Release 2.0.0 - UNRELEASED
     HDFS-3303. Remove Writable implementation from RemoteEditLogManifest.
     (Brandon Li via szetszwo)
 
+    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck
+    with SPNEGO-based solution. (jghoman, tucu, and atm via eli)
+
+    HDFS-3365. Enable users to disable socket caching in DFS client
+    configuration (todd)
+
+    HDFS-3375. Put client name in DataXceiver thread name for readBlock
+    and keepalive (todd)
+
+    HDFS-3363. Define BlockCollection and MutableBlockCollection interfaces
+    so that INodeFile and INodeFileUnderConstruction do not have to be used in
+    block management.  (John George via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -434,6 +447,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
+
+    HDFS-3378. Remove DFS_NAMENODE_SECONDARY_HTTPS_PORT_KEY and DEFAULT. (eli)
 
   BUG FIXES
 
@@ -602,6 +617,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3357. DataXceiver reads from client socket with incorrect/no timeout
     (todd)
+
+    HDFS-3376. DFSClient fails to make connection to DN if there are many
+    unusable cached sockets (todd)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

@@ -18,11 +18,14 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem.Statistics;
+
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
 import java.io.*;
 
 import static org.junit.Assert.*;
+
 import org.junit.Before;
 import org.junit.Test;
 
@@ -232,5 +235,17 @@ public class TestLocalFileSystem {
         fs.delete(file3));
     assertTrue("Did not delete file", fs.delete(file1));
     assertTrue("Did not delete non-empty dir", fs.delete(dir1));
+  }
+  
+  @Test
+  public void testStatistics() throws Exception {
+    FileSystem.getLocal(new Configuration());
+    int fileSchemeCount = 0;
+    for (Statistics stats : FileSystem.getAllStatistics()) {
+      if (stats.getScheme().equals("file")) {
+        fileSchemeCount++;
+      }
+    }
+    assertEquals(1, fileSchemeCount);
   }
 }

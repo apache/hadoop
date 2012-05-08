@@ -72,11 +72,6 @@ public class DelegationTokenFetcher {
   private static final String RENEW = "renew";
   private static final String PRINT = "print";
 
-  static {
-    // Enable Kerberos sockets
-    System.setProperty("https.cipherSuites", "TLS_KRB5_WITH_3DES_EDE_CBC_SHA");
-  }
-
   private static void printUsage(PrintStream err) throws IOException {
     err.println("fetchdt retrieves delegation tokens from the NameNode");
     err.println();
@@ -106,7 +101,7 @@ public class DelegationTokenFetcher {
     final Configuration conf = new HdfsConfiguration();
     Options fetcherOptions = new Options();
     fetcherOptions.addOption(WEBSERVICE, true,
-        "HTTPS url to reach the NameNode at");
+        "HTTP url to reach the NameNode at");
     fetcherOptions.addOption(RENEWER, true,
         "Name of the delegation token renewer");
     fetcherOptions.addOption(CANCEL, false, "cancel the token");
@@ -224,8 +219,7 @@ public class DelegationTokenFetcher {
       }
       
       URL remoteURL = new URL(url.toString());
-      SecurityUtil.fetchServiceTicket(remoteURL);
-      URLConnection connection = URLUtils.openConnection(remoteURL);
+      URLConnection connection = SecurityUtil.openSecureHttpConnection(remoteURL);
       InputStream in = connection.getInputStream();
       Credentials ts = new Credentials();
       dis = new DataInputStream(in);
@@ -264,7 +258,7 @@ public class DelegationTokenFetcher {
     
     try {
       URL url = new URL(buf.toString());
-      SecurityUtil.fetchServiceTicket(url);
+      connection = (HttpURLConnection) SecurityUtil.openSecureHttpConnection(url);
       connection = (HttpURLConnection)URLUtils.openConnection(url);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error renewing token: " + 
@@ -358,8 +352,7 @@ public class DelegationTokenFetcher {
     HttpURLConnection connection=null;
     try {
       URL url = new URL(buf.toString());
-      SecurityUtil.fetchServiceTicket(url);
-      connection = (HttpURLConnection)URLUtils.openConnection(url);
+      connection = (HttpURLConnection) SecurityUtil.openSecureHttpConnection(url);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error cancelling token: " + 
             connection.getResponseMessage());

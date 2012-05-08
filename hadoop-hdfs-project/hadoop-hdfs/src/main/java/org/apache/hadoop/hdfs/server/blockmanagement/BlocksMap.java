@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.GSet;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
@@ -93,7 +92,7 @@ class BlocksMap {
     blocks = null;
   }
 
-  INodeFile getINode(Block b) {
+  BlockCollection getINode(Block b) {
     BlockInfo info = blocks.get(b);
     return (info != null) ? info.getINode() : null;
   }
@@ -101,7 +100,7 @@ class BlocksMap {
   /**
    * Add block b belonging to the specified file inode to the map.
    */
-  BlockInfo addINode(BlockInfo b, INodeFile iNode) {
+  BlockInfo addINode(BlockInfo b, BlockCollection iNode) {
     BlockInfo info = blocks.get(b);
     if (info != b) {
       info = b;

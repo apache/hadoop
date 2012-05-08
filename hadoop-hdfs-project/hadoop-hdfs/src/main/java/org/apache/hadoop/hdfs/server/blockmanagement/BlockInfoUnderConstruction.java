@@ -234,7 +234,7 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     blockRecoveryId = recoveryId;
     if (replicas.size() == 0) {
       NameNode.stateChangeLog.warn("BLOCK*"
-        + " INodeFileUnderConstruction.initLeaseRecovery:"
+        + " BlockInfoUnderConstruction.initLeaseRecovery:"
         + " No blocks found, lease removed.");
     }
 

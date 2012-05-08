@@ -18,16 +18,17 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 
 public class NameNodeRaidTestUtil {
-  public static FSInodeInfo[] getFSInodeInfo(final FSNamesystem namesystem,
+  public static BlockCollection[] getBlockCollections(final FSNamesystem namesystem,
       final String... files) throws UnresolvedLinkException {
-    final FSInodeInfo[] inodes = new FSInodeInfo[files.length];
+    final BlockCollection[] inodes = new BlockCollection[files.length];
     final FSDirectory dir = namesystem.dir; 
     dir.readLock();
     try {
       for(int i = 0; i < files.length; i++) {
-        inodes[i] = dir.rootDir.getNode(files[i], true);
+        inodes[i] = (BlockCollection)dir.rootDir.getNode(files[i], true);
       }
       return inodes;
     } finally {

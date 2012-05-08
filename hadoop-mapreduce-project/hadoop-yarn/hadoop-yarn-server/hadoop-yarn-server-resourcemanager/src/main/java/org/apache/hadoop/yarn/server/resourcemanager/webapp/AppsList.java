@@ -77,8 +77,10 @@ class AppsList implements ToJSON {
           append(escapeHtml(appInfo.getUser())).append(_SEP).
           append(escapeJavaScript(escapeHtml(appInfo.getName()))).append(_SEP).
           append(escapeHtml(appInfo.getQueue())).append(_SEP);
-      appendSortable(out, startTime).append(startTime).append(_SEP);
-      appendSortable(out, finishTime).append(finishTime).append(_SEP).
+      appendSortable(out, appInfo.getStartTime()).
+          append(startTime).append(_SEP);
+      appendSortable(out, appInfo.getFinishTime()).
+          append(finishTime).append(_SEP).
           append(appInfo.getState()).append(_SEP).
           append(appInfo.getFinalStatus()).append(_SEP);
       appendProgressBar(out, appInfo.getProgress()).append(_SEP);

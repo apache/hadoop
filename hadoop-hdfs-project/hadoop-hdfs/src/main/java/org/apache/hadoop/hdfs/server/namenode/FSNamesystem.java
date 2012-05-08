@@ -2840,7 +2840,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (storedBlock == null) {
         throw new IOException("Block (=" + lastblock + ") not found");
       }
-      INodeFile iFile = storedBlock.getINode();
+      INodeFile iFile = (INodeFile) storedBlock.getINode();
       if (!iFile.isUnderConstruction() || storedBlock.isComplete()) {
         throw new IOException("Unexpected block (=" + lastblock
                               + ") since the file (=" + iFile.getLocalName()
@@ -4394,7 +4394,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     
     // check file inode
-    INodeFile file = storedBlock.getINode();
+    INodeFile file = (INodeFile) storedBlock.getINode();
     if (file==null || !file.isUnderConstruction()) {
       throw new IOException("The file " + storedBlock + 
           " belonged to does not exist or it is not under construction.");
@@ -4556,7 +4556,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (destinationExisted && dinfo.isDir()) {
       Path spath = new Path(src);
       Path parent = spath.getParent();
-      if (isRoot(parent)) {
+      if (parent.isRoot()) {
         overwrite = parent.toString();
       } else {
         overwrite = parent.toString() + Path.SEPARATOR;
@@ -4568,10 +4568,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     leaseManager.changeLease(src, dst, overwrite, replaceBy);
-  }
-           
-  private boolean isRoot(Path path) {
-    return path.getParent() == null;
   }
 
   /**
@@ -4710,7 +4706,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       while (blkIterator.hasNext()) {
         Block blk = blkIterator.next();
-        INode inode = blockManager.getINode(blk);
+        INode inode = (INodeFile) blockManager.getINode(blk);
         skip++;
         if (inode != null && blockManager.countNodes(blk).liveReplicas() == 0) {
           String src = FSDirectory.getFullPathName(inode);

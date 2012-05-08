@@ -223,6 +223,13 @@ public class Path implements Comparable {
      return isUriPathAbsolute();
   }
 
+  /**
+   * @return true if and only if this path represents the root of a file system
+   */
+  public boolean isRoot() {
+    return getParent() == null;
+  }
+
   /** Returns the final component of this path.*/
   public String getName() {
     String path = uri.getPath();

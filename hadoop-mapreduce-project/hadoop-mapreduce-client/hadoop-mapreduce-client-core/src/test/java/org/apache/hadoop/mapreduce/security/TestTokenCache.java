@@ -252,6 +252,26 @@ public class TestTokenCache {
   }
 
   @Test
+  public void testSingleTokenFetch() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.RM_PRINCIPAL, "mapred/host@REALM");
+    String renewer = Master.getMasterPrincipal(conf);
+    Credentials credentials = new Credentials();
+    
+    FileSystem mockFs = mock(FileSystem.class);
+    when(mockFs.getCanonicalServiceName()).thenReturn("host:0");
+    when(mockFs.getUri()).thenReturn(new URI("mockfs://host:0"));
+    
+    Path mockPath = mock(Path.class);
+    when(mockPath.getFileSystem(conf)).thenReturn(mockFs);
+    
+    Path[] paths = new Path[]{ mockPath, mockPath };
+    when(mockFs.getDelegationTokens("me", credentials)).thenReturn(null);
+    TokenCache.obtainTokensForNamenodesInternal(credentials, paths, conf);
+    verify(mockFs, times(1)).getDelegationTokens(renewer, credentials);
+  }
+
+  @Test
   public void testCleanUpTokenReferral() throws Exception {
     Configuration conf = new Configuration();
     conf.set(MRJobConfig.MAPREDUCE_JOB_CREDENTIALS_BINARY, "foo");

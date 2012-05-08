@@ -368,6 +368,11 @@ public class TestClientRedirect {
       this(AMHOSTADDRESS);
     }
 
+    @Override
+    public InetSocketAddress getConnectAddress() {
+      return bindAddress;
+    }
+    
     public AMService(String hostAddress) {
       super("AMService");
       this.protocol = MRClientProtocol.class;

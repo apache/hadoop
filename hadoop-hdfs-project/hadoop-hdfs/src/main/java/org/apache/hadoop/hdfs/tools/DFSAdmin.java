@@ -504,7 +504,7 @@ public class DFSAdmin extends FsShell {
    */
   public int fetchImage(String[] argv, int idx) throws IOException {
     String infoServer = DFSUtil.getInfoServer(
-        HAUtil.getAddressOfActive(getDFS()), getConf(), true);
+        HAUtil.getAddressOfActive(getDFS()), getConf(), false);
     TransferFsImage.downloadMostRecentImageToDirectory(infoServer,
         new File(argv[idx]));
     return 0;

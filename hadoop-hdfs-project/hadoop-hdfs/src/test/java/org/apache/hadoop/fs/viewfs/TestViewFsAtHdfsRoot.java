@@ -17,24 +17,28 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
-
 import java.io.IOException;
 import java.net.URISyntaxException;
 
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-public class TestViewFsHdfs extends ViewFsBaseTest {
-
+/**
+ * Make sure that ViewFs works when the root of an FS is mounted to a ViewFs
+ * mount point.
+ */
+public class TestViewFsAtHdfsRoot extends ViewFsBaseTest {
+  
   private static MiniDFSCluster cluster;
   private static HdfsConfiguration CONF = new HdfsConfiguration();
   private static FileContext fc;
@@ -49,9 +53,6 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(0), CONF);
-    Path defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
-        UserGroupInformation.getCurrentUser().getShortUserName()));
-    fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
 
       
@@ -64,7 +65,21 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
   public void setUp() throws Exception {
     // create the test root on local_fs
     fcTarget = fc;
-    super.setUp();
+    super.setUp();    
+  }
+  
+  /**
+   * Override this so that we don't set the targetTestRoot to any path under the
+   * root of the FS, and so that we don't try to delete the test dir, but rather
+   * only its contents.
+   */
+  @Override
+  void initializeTargetTestRoot() throws IOException {
+    targetTestRoot = fc.makeQualified(new Path("/"));
+    RemoteIterator<FileStatus> dirContents = fc.listStatus(targetTestRoot);
+    while (dirContents.hasNext()) {
+      fc.delete(dirContents.next().getPath(), true);
+    }
   }
   
   /**
@@ -75,5 +90,4 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
   int getExpectedDelegationTokenCount() {
     return 8;
   }
- 
 }
