@@ -129,6 +129,9 @@ Trunk (unreleased changes)
     HADOOP-8339. jenkins complaining about 16 javadoc warnings 
     (Tom White and Robert Evans via tgraves)
 
+    HADOOP-8354. test-patch findbugs may fail if a dependent module is changed
+    (Tom White and Robert Evans)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

@@ -529,6 +529,24 @@ $JIRA_COMMENT_FOOTER"
 }
 
 ###############################################################################
+### Install the new jars so tests and findbugs can find all of the updated jars 
+buildAndInstall () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Installing all of the jars"
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  echo "$MVN install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess"
+  $MVN install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess
+  return $?
+}
+
+
+###############################################################################
 ### Check there are no changes in the number of Findbugs warnings
 checkFindbugsWarnings () {
   findbugs_version=`${FINDBUGS_HOME}/bin/findbugs -version`
@@ -891,6 +909,7 @@ checkEclipseGeneration
 ### Checkstyle not implemented yet
 #checkStyle
 #(( RESULT = RESULT + $? ))
+buildAndInstall
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings
