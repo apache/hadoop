@@ -296,6 +296,9 @@ Release 2.0.0 - UNRELEASED
     so that INodeFile and INodeFileUnderConstruction do not have to be used in
     block management.  (John George via szetszwo)
 
+    HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
+    logging is enabled. (atm)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -64,9 +66,11 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.Private
 public class DFSAdmin extends FsShell {
 
-  static{
+  static {
     HdfsConfiguration.init();
   }
+  
+  private static final Log LOG = LogFactory.getLog(DFSAdmin.class);
 
   /**
    * An abstract class for the execution of a file system command
@@ -1089,6 +1093,7 @@ public class DFSAdmin extends FsShell {
       return exitCode;
     }
 
+    Exception debugException = null;
     exitCode = 0;
     try {
       if ("-report".equals(cmd)) {
@@ -1143,6 +1148,7 @@ public class DFSAdmin extends FsShell {
         printUsage("");
       }
     } catch (IllegalArgumentException arge) {
+      debugException = arge;
       exitCode = -1;
       System.err.println(cmd.substring(1) + ": " + arge.getLocalizedMessage());
       printUsage(cmd);
@@ -1151,6 +1157,7 @@ public class DFSAdmin extends FsShell {
       // This is a error returned by hadoop server. Print
       // out the first line of the error message, ignore the stack trace.
       exitCode = -1;
+      debugException = e;
       try {
         String[] content;
         content = e.getLocalizedMessage().split("\n");
@@ -1159,12 +1166,17 @@ public class DFSAdmin extends FsShell {
       } catch (Exception ex) {
         System.err.println(cmd.substring(1) + ": "
                            + ex.getLocalizedMessage());
+        debugException = ex;
       }
     } catch (Exception e) {
       exitCode = -1;
+      debugException = e;
       System.err.println(cmd.substring(1) + ": "
                          + e.getLocalizedMessage());
-    } 
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Exception encountered:", debugException);
+    }
     return exitCode;
   }
 
