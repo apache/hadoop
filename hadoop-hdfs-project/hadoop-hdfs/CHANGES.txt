@@ -83,6 +83,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3298. Add HdfsDataOutputStream as a public API.  (szetszwo)
 
+    HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
+    via umamahesh)
+
   IMPROVEMENTS
 
     HDFS-2018. Move all journal stream management code into one place.
