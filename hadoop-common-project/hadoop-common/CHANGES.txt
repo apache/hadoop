@@ -418,6 +418,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8341. Fix or filter findbugs issues in hadoop-tools (bobby)
 
+    HADOOP-8373. Port RPC.getServerAddress to 0.23 (Daryn Sharp via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
