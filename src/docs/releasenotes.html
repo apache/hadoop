@@ -28,6 +28,11 @@
       
 </blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8352">HADOOP-8352</a>.
+     Major improvement reported by owen.omalley and fixed by owen.omalley <br>
+     <b>We should always generate a new configure script for the c++ code</b><br>
+     <blockquote>If you are compiling c++, the configure script will now be automatically regenerated as it should be.<br>This requires autoconf version 2.61 or greater.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4017">MAPREDUCE-4017</a>.
      Trivial improvement reported by knoguchi and fixed by tgraves (jobhistoryserver, jobtracker)<br>
      <b>Add jobname to jobsummary log</b><br>
@@ -101,11 +106,6 @@
      Blocker bug reported by tucu00 and fixed by devaraj (security)<br>
      <b>Changes to support Kerberos with non Sun JVM (HADOOP-6941) broke SPNEGO</b><br>
      <blockquote>before HADOOP-6941 hadoop-auth testcases with Kerberos ON pass, *mvn test -PtestKerberos*<br><br>after HADOOP-6941 the tests fail with the error below.<br><br>Doing some IDE debugging I&apos;ve found out that the changes in HADOOP-6941 are making the JVM Kerberos libraries to append an extra element to the kerberos principal of the server (on the client side when creating the token) so *HTTP/localhost* ends up being *HTTP/localhost/localhost*. Then, when contacting the KDC to get the granting ticket, the serv...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8352">HADOOP-8352</a>.
-     Major improvement reported by owen.omalley and fixed by owen.omalley <br>
-     <b>We should always generate a new configure script for the c++ code</b><br>
-     <blockquote>If you are compiling c++, you should always generate a configure script.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-119">HDFS-119</a>.
      Major bug reported by shv and fixed by sureshms (name-node)<br>
