@@ -14,6 +14,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8288. Remove references of mapred.child.ulimit etc. since they are
     not being used any more (Ravi Prakash via bobby)
 
+    HADOOP-8373. Port RPC.getServerAddress to 0.23 (Daryn Sharp via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES

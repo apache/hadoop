@@ -18,29 +18,31 @@
 
 package org.apache.hadoop.ipc;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Proxy;
-import java.lang.reflect.Method;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
-import java.io.*;
-import java.util.Map;
-import java.util.HashMap;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.io.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.ObjectWritable;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.*;
 
 /** An RpcEngine implementation for Writable data. */
 @InterfaceStability.Evolving
@@ -169,7 +171,7 @@ public class WritableRpcEngine implements RpcEngine {
 
   private static ClientCache CLIENTS=new ClientCache();
   
-  private static class Invoker implements InvocationHandler {
+  private static class Invoker implements RpcInvocationHandler {
     private Client.ConnectionId remoteId;
     private Client client;
     private boolean isClosed = false;
@@ -205,6 +207,11 @@ public class WritableRpcEngine implements RpcEngine {
         isClosed = true;
         CLIENTS.stopClient(client);
       }
+    }
+
+    @Override
+    public ConnectionId getConnectionId() {
+      return remoteId;
     }
   }
   

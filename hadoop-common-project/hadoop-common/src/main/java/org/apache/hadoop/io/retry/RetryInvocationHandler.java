@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.io.retry;
 
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collections;
@@ -26,8 +25,11 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
+import org.apache.hadoop.ipc.Client.ConnectionId;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RpcInvocationHandler;
 
-class RetryInvocationHandler implements InvocationHandler {
+class RetryInvocationHandler implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
   private FailoverProxyProvider proxyProvider;
   
@@ -103,4 +105,8 @@ class RetryInvocationHandler implements InvocationHandler {
     }
   }
 
+  @Override //RpcInvocationHandler
+  public ConnectionId getConnectionId() {
+    return RPC.getConnectionIdForProxy(currentProxy);
+  }
 }

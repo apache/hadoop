@@ -230,6 +230,28 @@ public class TestRPC extends TestCase {
     server.stop();    
   }
 
+  public void testProxyAddress() throws Exception {
+    Server server = RPC.getServer(TestProtocol.class,
+                                  new TestImpl(), ADDRESS, 0, conf);
+    TestProtocol proxy = null;
+    
+    try {
+      server.start();
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+
+      // create a client
+      proxy = (TestProtocol)RPC.getProxy(
+          TestProtocol.class, TestProtocol.versionID, addr, conf);
+      
+      assertEquals(addr, RPC.getServerAddress(proxy));
+    } finally {
+      server.stop();
+      if (proxy != null) {
+        RPC.stopProxy(proxy);
+      }
+    }
+  }
+  
   public void testSlowRpc() throws Exception {
     System.out.println("Testing Slow RPC");
     // create a server with two handlers

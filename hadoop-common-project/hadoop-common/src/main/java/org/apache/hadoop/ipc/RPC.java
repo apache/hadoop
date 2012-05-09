@@ -18,28 +18,28 @@
 
 package org.apache.hadoop.ipc;
 
-import java.lang.reflect.Proxy;
+import java.io.IOException;
 import java.lang.reflect.Method;
-
+import java.lang.reflect.Proxy;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
-import java.io.*;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.io.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** A simple RPC mechanism.
@@ -312,7 +312,26 @@ public class RPC {
     return getProtocolProxy(
         protocol, clientVersion, addr, conf, factory).getProxy();
   }
+  
+  /**
+   * Returns the server address for a given proxy.
+   */
+  public static InetSocketAddress getServerAddress(Object proxy) {
+    return getConnectionIdForProxy(proxy).getAddress();
+  }
 
+  /**
+   * Return the connection ID of the given object.
+   * 
+   * @param proxy the proxy object to get the connection ID of.
+   * @return the connection ID for the provided proxy object.
+   */
+  public static ConnectionId getConnectionIdForProxy(Object proxy) {
+    RpcInvocationHandler inv = (RpcInvocationHandler) Proxy
+        .getInvocationHandler(proxy);
+    return inv.getConnectionId();
+  }
+  
   /**
    * Get a protocol proxy that contains a proxy connection to a remote server
    * and a set of methods that are supported by the server
