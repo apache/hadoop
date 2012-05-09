@@ -104,6 +104,11 @@ public class MRClientProtocolPBClientImpl implements MRClientProtocol {
   }
   
   @Override
+  public InetSocketAddress getConnectAddress() {
+    return RPC.getServerAddress(proxy);
+  }
+
+  @Override
   public GetJobReportResponse getJobReport(GetJobReportRequest request)
       throws YarnRemoteException {
     GetJobReportRequestProto requestProto = ((GetJobReportRequestPBImpl)request).getProto();
