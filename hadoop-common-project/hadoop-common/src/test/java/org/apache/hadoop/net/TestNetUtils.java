@@ -31,7 +31,9 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import junit.framework.AssertionFailedError;
@@ -42,8 +44,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.NetUtilsTestResolver;
-import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
-import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -597,6 +597,26 @@ public class TestNetUtils {
   public void testCanonicalUriWithNoPortNoDefaultPort() {
     URI uri = NetUtils.getCanonicalUri(URI.create("scheme://host/path"), -1);
     assertEquals("scheme://host.a.b/path", uri.toString());
+  }
+  
+  /** 
+   * Test for {@link NetUtils#normalizeHostNames}
+   */
+  @Test
+  public void testNormalizeHostName() {	
+    List<String> hosts = Arrays.asList(new String[] {"127.0.0.1",
+        "localhost", "3w.org", "UnknownHost"});
+    List<String> normalizedHosts = NetUtils.normalizeHostNames(hosts);
+    // when ipaddress is normalized, same address is expected in return
+    assertEquals(normalizedHosts.get(0), hosts.get(0));
+    // for normalizing a resolvable hostname, resolved ipaddress is expected in return
+    assertFalse(normalizedHosts.get(1).equals(hosts.get(1)));
+    assertEquals(normalizedHosts.get(1), hosts.get(0));
+    // this address HADOOP-8372: when normalizing a valid resolvable hostname start with numeric, 
+    // its ipaddress is expected to return
+    assertFalse(normalizedHosts.get(2).equals(hosts.get(2)));
+    // return the same hostname after normalizing a irresolvable hostname.
+    assertEquals(normalizedHosts.get(3), hosts.get(3));
   }
   
   @Test

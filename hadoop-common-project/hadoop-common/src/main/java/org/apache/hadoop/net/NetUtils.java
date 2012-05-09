@@ -494,7 +494,7 @@ public class NetUtils {
    * also takes a local address and port to bind the socket to. 
    * 
    * @param socket
-   * @param address the remote address
+   * @param endpoint the remote address
    * @param localAddr the local address to bind the socket to
    * @param timeout timeout in milliseconds
    */
@@ -549,16 +549,11 @@ public class NetUtils {
    * @return its IP address in the string format
    */
   public static String normalizeHostName(String name) {
-    if (Character.digit(name.charAt(0), 10) != -1) { // it is an IP
+    try {
+      return InetAddress.getByName(name).getHostAddress();
+    } catch (UnknownHostException e) {
       return name;
-    } else {
-      try {
-        InetAddress ipAddress = InetAddress.getByName(name);
-        return ipAddress.getHostAddress();
-      } catch (UnknownHostException e) {
-        return name;
-      }
-    }
+    }    
   }
   
   /** 

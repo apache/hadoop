@@ -41,7 +41,7 @@ public class TestTableMapping {
   public void setUp() throws IOException {
     mappingFile = File.createTempFile(getClass().getSimpleName(), ".txt");
     Files.write("a.b.c /rack1\n" +
-                "1.2.3\t/rack2\n", mappingFile, Charsets.UTF_8);
+                "1.2.3.4\t/rack2\n", mappingFile, Charsets.UTF_8);
     mappingFile.deleteOnExit();
   }
 
@@ -55,7 +55,7 @@ public class TestTableMapping {
 
     List<String> names = new ArrayList<String>();
     names.add("a.b.c");
-    names.add("1.2.3");
+    names.add("1.2.3.4");
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
@@ -73,7 +73,7 @@ public class TestTableMapping {
 
     List<String> names = new ArrayList<String>();
     names.add("a.b.c");
-    names.add("1.2.3");
+    names.add("1.2.3.4");
 
     List<String> result1 = mapping.resolve(names);
     assertEquals(names.size(), result1.size());
@@ -96,7 +96,7 @@ public class TestTableMapping {
 
     List<String> names = new ArrayList<String>();
     names.add("a.b.c");
-    names.add("1.2.3");
+    names.add("1.2.3.4");
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
@@ -114,7 +114,7 @@ public class TestTableMapping {
 
     List<String> names = new ArrayList<String>();
     names.add("a.b.c");
-    names.add("1.2.3");
+    names.add("1.2.3.4");
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
@@ -134,7 +134,7 @@ public class TestTableMapping {
 
     List<String> names = new ArrayList<String>();
     names.add("a.b.c");
-    names.add("1.2.3");
+    names.add("1.2.3.4");
 
     List<String> result = mapping.resolve(names);
     assertEquals(names.size(), result.size());
