@@ -366,6 +366,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4215. RM app page shows 500 error on appid parse error 
     (Jonathon Eagles via tgraves)
 
+    MAPREDUCE-4237. TestNodeStatusUpdater can fail if localhost has a domain
+    associated with it (bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
