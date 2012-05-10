@@ -423,8 +423,8 @@ checkJavacWarnings () {
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 javac.  The patch appears to cause tar ant target to fail."
-    return 1
+    -1 javac.  The patch appears to cause the build to fail."
+    return 2
   fi
   ### Compare trunk and patch javac warning numbers
   if [[ -f $PATCH_DIR/patchJavacWarnings.txt ]] ; then
@@ -900,9 +900,15 @@ if [[ $? != 0 ]] ; then
   submitJiraComment 1
   cleanupAndExit 1
 fi
-checkJavadocWarnings
-(( RESULT = RESULT + $? ))
 checkJavacWarnings
+JAVAC_RET=$?
+#2 is returned if the code could not compile
+if [[ $JAVAC_RET == 2 ]] ; then
+  submitJiraComment 1
+  cleanupAndExit 1
+fi
+(( RESULT = RESULT + $JAVAC_RET ))
+checkJavadocWarnings
 (( RESULT = RESULT + $? ))
 checkEclipseGeneration
 (( RESULT = RESULT + $? ))
