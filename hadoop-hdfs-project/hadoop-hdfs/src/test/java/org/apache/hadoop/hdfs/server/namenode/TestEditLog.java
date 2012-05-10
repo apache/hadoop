@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -1154,6 +1155,77 @@ public class TestEditLog extends TestCase {
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
           "No non-corrupt logs for txid " + startGapTxId, ioe);
+    }
+  }
+
+  /**
+   * Test that we can read from a byte stream without crashing.
+   *
+   */
+  static void validateNoCrash(byte garbage[]) throws IOException {
+    final String TEST_LOG_NAME = "test_edit_log";
+
+    EditLogFileOutputStream elfos = null;
+    File file = null;
+    EditLogFileInputStream elfis = null;
+    try {
+      file = new File(TEST_LOG_NAME);
+      elfos = new EditLogFileOutputStream(file, 0);
+      elfos.create();
+      elfos.writeRaw(garbage, 0, garbage.length);
+      elfos.setReadyToFlush();
+      elfos.flushAndSync();
+      elfos.close();
+      elfos = null;
+      file = new File(TEST_LOG_NAME);
+      elfis = new EditLogFileInputStream(file);
+
+      // verify that we can read everything without killing the JVM or
+      // throwing an exception other than IOException
+      try {
+        while (true) {
+          FSEditLogOp op = elfis.readOp();
+          if (op == null)
+            break;
+        }
+      } catch (IOException e) {
+      } catch (Throwable t) {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        fail("caught non-IOException throwable with message " +
+            t.getMessage() + "\nstack trace\n" + sw.toString());
+      }
+    } finally {
+      if ((elfos != null) && (elfos.isOpen()))
+        elfos.close();
+      if (elfis != null)
+        elfis.close();
+    }
+  }
+
+  static byte[][] invalidSequenecs = null;
+
+  /**
+   * "Fuzz" test for the edit log.
+   *
+   * This tests that we can read random garbage from the edit log without
+   * crashing the JVM or throwing an unchecked exception.
+   */
+  @Test
+  public void testFuzzSequences() throws IOException {
+    final int MAX_GARBAGE_LENGTH = 512;
+    final int MAX_INVALID_SEQ = 5000;
+    // The seed to use for our random number generator.  When given the same
+    // seed, Java.util.Random will always produce the same sequence of values.
+    // This is important because it means that the test is deterministic and
+    // repeatable on any machine.
+    final int RANDOM_SEED = 123;
+
+    Random r = new Random(RANDOM_SEED);
+    for (int i = 0; i < MAX_INVALID_SEQ; i++) {
+      byte[] garbage = new byte[r.nextInt(MAX_GARBAGE_LENGTH)];
+      r.nextBytes(garbage);
+      validateNoCrash(garbage);
     }
   }
 }
