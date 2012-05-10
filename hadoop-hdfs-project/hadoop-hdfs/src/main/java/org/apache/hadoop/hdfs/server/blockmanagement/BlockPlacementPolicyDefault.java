@@ -546,7 +546,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   }
 
   @Override
-  public DatanodeDescriptor chooseReplicaToDelete(BlockCollection inode,
+  public DatanodeDescriptor chooseReplicaToDelete(BlockCollection bc,
                                                  Block block,
                                                  short replicationFactor,
                                                  Collection<DatanodeDescriptor> first, 

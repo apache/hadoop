@@ -25,7 +25,7 @@ import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 /**
  * This class maintains the map from a block to its metadata.
- * block's metadata currently includes INode it belongs to and
+ * block's metadata currently includes blockCollection it belongs to and
  * the datanodes that store the block.
  */
 class BlocksMap {
@@ -92,21 +92,21 @@ class BlocksMap {
     blocks = null;
   }
 
-  BlockCollection getINode(Block b) {
+  BlockCollection getBlockCollection(Block b) {
     BlockInfo info = blocks.get(b);
-    return (info != null) ? info.getINode() : null;
+    return (info != null) ? info.getBlockCollection() : null;
   }
 
   /**
-   * Add block b belonging to the specified file inode to the map.
+   * Add block b belonging to the specified block collection to the map.
    */
-  BlockInfo addINode(BlockInfo b, BlockCollection iNode) {
+  BlockInfo addBlockCollection(BlockInfo b, BlockCollection bc) {
     BlockInfo info = blocks.get(b);
     if (info != b) {
       info = b;
       blocks.put(info);
     }
-    info.setINode(iNode);
+    info.setBlockCollection(bc);
     return info;
   }
 
@@ -120,7 +120,7 @@ class BlocksMap {
     if (blockInfo == null)
       return;
 
-    blockInfo.setINode(null);
+    blockInfo.setBlockCollection(null);
     for(int idx = blockInfo.numNodes()-1; idx >= 0; idx--) {
       DatanodeDescriptor dn = blockInfo.getDatanode(idx);
       dn.removeBlock(blockInfo); // remove from the list and wipe the location
@@ -168,7 +168,7 @@ class BlocksMap {
     boolean removed = node.removeBlock(info);
 
     if (info.getDatanode(0) == null     // no datanodes left
-              && info.getINode() == null) {  // does not belong to a file
+              && info.getBlockCollection() == null) {  // does not belong to a file
       blocks.remove(b);  // remove block from the map
     }
     return removed;

@@ -384,7 +384,7 @@ public class TestBlockManager {
     Mockito.doReturn((short)3).when(iNode).getReplication();
     BlockInfo blockInfo = blockOnNodes(blockId, nodes);
 
-    bm.blocksMap.addINode(blockInfo, iNode);
+    bm.blocksMap.addBlockCollection(blockInfo, iNode);
     return blockInfo;
   }
 

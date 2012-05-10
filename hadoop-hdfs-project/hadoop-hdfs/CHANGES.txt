@@ -302,6 +302,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3341. Change minimum RPC versions to respective SNAPSHOTs instead of
     final releases. (todd)
 
+    HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and
+    BlocksMap to {get|set|add}BlockCollection(..).  (John George via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

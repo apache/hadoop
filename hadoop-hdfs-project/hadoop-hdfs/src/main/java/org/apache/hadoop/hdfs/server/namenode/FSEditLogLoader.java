@@ -603,7 +603,7 @@ public class FSEditLogLoader {
           // OP_ADD operations as each block is allocated.
           newBI = new BlockInfo(newBlock, file.getReplication());
         }
-        fsNamesys.getBlockManager().addINode(newBI, file);
+        fsNamesys.getBlockManager().addBlockCollection(newBI, file);
         file.addBlock(newBI);
         fsNamesys.getBlockManager().processQueuedMessagesForBlock(newBlock);
       }
