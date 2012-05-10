@@ -110,11 +110,11 @@ public abstract class BlockPlacementPolicy {
    * choose <i>numOfReplicas</i> data nodes for <i>writer</i>
    * If not, return as many as we can.
    * The base implemenatation extracts the pathname of the file from the
-   * specified srcInode, but this could be a costly operation depending on the
+   * specified srcBC, but this could be a costly operation depending on the
    * file system implementation. Concrete implementations of this class should
    * override this method to avoid this overhead.
    * 
-   * @param srcInode The inode of the file for which chooseTarget is being invoked.
+   * @param srcBC block collection of file for which chooseTarget is invoked.
    * @param numOfReplicas additional number of replicas wanted.
    * @param writer the writer's machine, null if not in the cluster.
    * @param chosenNodes datanodes that have been chosen as targets.
@@ -122,13 +122,13 @@ public abstract class BlockPlacementPolicy {
    * @return array of DatanodeDescriptor instances chosen as target 
    * and sorted as a pipeline.
    */
-  DatanodeDescriptor[] chooseTarget(BlockCollection srcInode,
+  DatanodeDescriptor[] chooseTarget(BlockCollection srcBC,
                                     int numOfReplicas,
                                     DatanodeDescriptor writer,
                                     List<DatanodeDescriptor> chosenNodes,
                                     HashMap<Node, Node> excludedNodes,
                                     long blocksize) {
-    return chooseTarget(srcInode.getName(), numOfReplicas, writer,
+    return chooseTarget(srcBC.getName(), numOfReplicas, writer,
                         chosenNodes, excludedNodes, blocksize);
   }
 
@@ -149,7 +149,7 @@ public abstract class BlockPlacementPolicy {
    * Decide whether deleting the specified replica of the block still makes 
    * the block conform to the configured block placement policy.
    * 
-   * @param srcInode The inode of the file to which the block-to-be-deleted belongs
+   * @param srcBC block collection of file to which block-to-be-deleted belongs
    * @param block The block to be deleted
    * @param replicationFactor The required number of replicas for this block
    * @param existingReplicas The replica locations of this block that are present
@@ -158,7 +158,7 @@ public abstract class BlockPlacementPolicy {
                    listed in the previous parameter.
    * @return the replica that is the best candidate for deletion
    */
-  abstract public DatanodeDescriptor chooseReplicaToDelete(BlockCollection srcInode,
+  abstract public DatanodeDescriptor chooseReplicaToDelete(BlockCollection srcBC,
                                       Block block, 
                                       short replicationFactor,
                                       Collection<DatanodeDescriptor> existingReplicas,
