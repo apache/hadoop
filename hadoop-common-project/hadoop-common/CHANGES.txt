@@ -6,6 +6,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-7920. Remove Avro Rpc. (suresh)
 
+    HADOOP-8388. Remove unused BlockLocation serialization.
+    (Colin Patrick McCabe via eli)
+
   NEW FEATURES
 
     HADOOP-7773. Add support for protocol buffer based RPC engine.
