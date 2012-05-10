@@ -514,6 +514,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3328. NPE in DataNode.getIpcPort. (eli)
 
+    HDFS-3396. FUSE build fails on Ubuntu 12.04. (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
