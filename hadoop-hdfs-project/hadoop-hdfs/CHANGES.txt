@@ -627,6 +627,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3376. DFSClient fails to make connection to DN if there are many
     unusable cached sockets (todd)
 
+    HDFS-3328. NPE in DataNode.getIpcPort. (eli)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
