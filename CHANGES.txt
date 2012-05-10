@@ -231,6 +231,9 @@ Release 1.1.0 - unreleased
     HADOOP-6546. BloomMapFile can return false negatives. (Clark Jefcoat
     via suresh)
 
+    MAPREDUCE-4241. Pipes examples do not compile on Ubuntu 12.04.
+    (Andrew Bayer via eli)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES

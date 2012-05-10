@@ -17,7 +17,7 @@ ACLOCAL_AMFLAGS = -I ../../c++/utils/m4
 AM_CXXFLAGS=-Wall -I$(HADOOP_UTILS_PREFIX)/include \
             -I$(HADOOP_PIPES_PREFIX)/include
 LDADD=-L$(HADOOP_UTILS_PREFIX)/lib -L$(HADOOP_PIPES_PREFIX)/lib \
-      -lhadooppipes -lhadooputils
+      -lhadooppipes -lhadooputils -lcrypto
 
 bin_PROGRAMS= wordcount-simple wordcount-part wordcount-nopipe pipes-sort
 
