@@ -706,13 +706,23 @@ public class DFSTestUtil {
         .join(nameservices));
   }
   
+  public static DatanodeID getLocalDatanodeID() {
+    return new DatanodeID("127.0.0.1", "localhost", DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT);
+  }
+
+  public static DatanodeID getLocalDatanodeID(int port) {
+    return new DatanodeID("127.0.0.1", "localhost", "", port, port, port);
+  }
+
   public static DatanodeDescriptor getLocalDatanodeDescriptor() {
-    return new DatanodeDescriptor(
-        new DatanodeID("127.0.0.1", DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT));
+    return new DatanodeDescriptor(getLocalDatanodeID());
   }
 
   public static DatanodeInfo getLocalDatanodeInfo() {
-    return new DatanodeInfo(
-        new DatanodeID("127.0.0.1", DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT));
+    return new DatanodeInfo(getLocalDatanodeID());
+  }
+
+  public static DatanodeInfo getLocalDatanodeInfo(int port) {
+    return new DatanodeInfo(getLocalDatanodeID(port));
   }
 }

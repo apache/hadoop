@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.*;
 
-import java.io.IOException;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -39,54 +39,55 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestReplicationPolicy {
-  private Random random= DFSUtil.getRandom();
+  private Random random = DFSUtil.getRandom();
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 6;
-  private static final Configuration CONF = new HdfsConfiguration();
-  private static final NetworkTopology cluster;
-  private static final NameNode namenode;
-  private static final BlockPlacementPolicy replicator;
+  private static NetworkTopology cluster;
+  private static NameNode namenode;
+  private static BlockPlacementPolicy replicator;
   private static final String filename = "/dummyfile.txt";
-  private static final DatanodeDescriptor dataNodes[] = 
-    new DatanodeDescriptor[] {
-      new DatanodeDescriptor(new DatanodeID("h1", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("h2", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("h3", 5020), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("h4", 5020), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("h5", 5020), "/d2/r3"),
-      new DatanodeDescriptor(new DatanodeID("h6", 5020), "/d2/r3")
-    };
-   
-  private final static DatanodeDescriptor NODE = 
-    new DatanodeDescriptor(new DatanodeID("h7", 5020), "/d2/r4");
-  
-  static {
-    try {
-      FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
-      CONF.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-      DFSTestUtil.formatNameNode(CONF);
-      namenode = new NameNode(CONF);
-    } catch (IOException e) {
-      e.printStackTrace();
-      throw (RuntimeException)new RuntimeException().initCause(e);
-    }
+  private static DatanodeDescriptor dataNodes[];
+
+  @BeforeClass
+  public static void setupCluster() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    dataNodes = new DatanodeDescriptor[] {
+        new DatanodeDescriptor(new DatanodeID("1.1.1.1", 5020), "/d1/r1"),
+        new DatanodeDescriptor(new DatanodeID("2.2.2.2", 5020), "/d1/r1"),
+        new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5020), "/d1/r2"),
+        new DatanodeDescriptor(new DatanodeID("4.4.4.4", 5020), "/d1/r2"),
+        new DatanodeDescriptor(new DatanodeID("5.5.5.5", 5020), "/d2/r3"),
+        new DatanodeDescriptor(new DatanodeID("6.6.6.6", 5020), "/d2/r3")
+      };
+
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    File baseDir = new File(System.getProperty(
+        "test.build.data", "build/test/data"), "dfs/");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        new File(baseDir, "name").getPath());
+
+    DFSTestUtil.formatNameNode(conf);
+    namenode = new NameNode(conf);
+
     final BlockManager bm = namenode.getNamesystem().getBlockManager();
     replicator = bm.getBlockPlacementPolicy();
     cluster = bm.getDatanodeManager().getNetworkTopology();
     // construct network topology
-    for(int i=0; i<NUM_OF_DATANODES; i++) {
+    for (int i=0; i < NUM_OF_DATANODES; i++) {
       cluster.add(dataNodes[i]);
     }
-    for(int i=0; i<NUM_OF_DATANODES; i++) {
+    for (int i=0; i < NUM_OF_DATANODES; i++) {
       dataNodes[i].updateHeartbeat(
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L,
           2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
-    }
+    }    
   }
-  
+
   /**
    * In this testcase, client is dataNodes[0]. So the 1st replica should be
    * placed on dataNodes[0], the 2nd replica should be placed on 
@@ -337,22 +338,25 @@ public class TestReplicationPolicy {
    */
   @Test
   public void testChooseTarget5() throws Exception {
+    DatanodeDescriptor writerDesc = 
+      new DatanodeDescriptor(new DatanodeID("7.7.7.7", 5020), "/d2/r4");
+
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(filename,
-                                      0, NODE, BLOCK_SIZE);
+                                      0, writerDesc, BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     targets = replicator.chooseTarget(filename,
-                                      1, NODE, BLOCK_SIZE);
+                                      1, writerDesc, BLOCK_SIZE);
     assertEquals(targets.length, 1);
     
     targets = replicator.chooseTarget(filename,
-                                      2, NODE, BLOCK_SIZE);
+                                      2, writerDesc, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
     
     targets = replicator.chooseTarget(filename,
-                                      3, NODE, BLOCK_SIZE);
+                                      3, writerDesc, BLOCK_SIZE);
     assertEquals(targets.length, 3);
     assertTrue(cluster.isOnSameRack(targets[1], targets[2]));
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));    
