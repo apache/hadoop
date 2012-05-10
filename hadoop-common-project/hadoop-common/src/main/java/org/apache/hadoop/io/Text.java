@@ -53,8 +53,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class Text extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
   
-  static final int SHORT_STRING_MAX = 1024 * 1024;
-  
   private static ThreadLocal<CharsetEncoder> ENCODER_FACTORY =
     new ThreadLocal<CharsetEncoder>() {
       protected CharsetEncoder initialValue() {
