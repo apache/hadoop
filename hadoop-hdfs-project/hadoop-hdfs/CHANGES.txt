@@ -444,6 +444,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and
     BlocksMap to {get|set|add}BlockCollection(..).  (John George via szetszwo)
 
+    HDFS-3134. harden edit log loader against malformed or malicious input.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)

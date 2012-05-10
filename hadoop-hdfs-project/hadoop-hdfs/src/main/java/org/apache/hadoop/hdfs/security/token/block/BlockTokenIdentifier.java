@@ -148,7 +148,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     userId = WritableUtils.readString(in);
     blockPoolId = WritableUtils.readString(in);
     blockId = WritableUtils.readVLong(in);
-    int length = WritableUtils.readVInt(in);
+    int length = WritableUtils.readVIntInRange(in, 0,
+        AccessMode.class.getEnumConstants().length);
     for (int i = 0; i < length; i++) {
       modes.add(WritableUtils.readEnum(in, AccessMode.class));
     }
