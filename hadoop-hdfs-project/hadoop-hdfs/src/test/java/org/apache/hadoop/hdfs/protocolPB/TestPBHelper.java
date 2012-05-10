@@ -131,7 +131,7 @@ public class TestPBHelper {
 
   @Test
   public void testConvertDatanodeID() {
-    DatanodeID dn = new DatanodeID("node", "node", "sid", 1, 2, 3);
+    DatanodeID dn = DFSTestUtil.getLocalDatanodeID();
     DatanodeIDProto dnProto = PBHelper.convert(dn);
     DatanodeID dn2 = PBHelper.convert(dnProto);
     compare(dn, dn2);
@@ -280,10 +280,6 @@ public class TestPBHelper {
     return new ExtendedBlock("bpid", blkid, 100, 2);
   }
   
-  private DatanodeInfo getDNInfo() {
-    return new DatanodeInfo(new DatanodeID("node", "node", "sid", 0, 1, 2));
-  }
-  
   private void compare(DatanodeInfo dn1, DatanodeInfo dn2) {
       assertEquals(dn1.getAdminState(), dn2.getAdminState());
       assertEquals(dn1.getBlockPoolUsed(), dn2.getBlockPoolUsed());
@@ -316,7 +312,9 @@ public class TestPBHelper {
   
   @Test
   public void testConvertRecoveringBlock() {
-    DatanodeInfo[] dnInfo = new DatanodeInfo[] { getDNInfo(), getDNInfo() };
+    DatanodeInfo di1 = DFSTestUtil.getLocalDatanodeInfo();
+    DatanodeInfo di2 = DFSTestUtil.getLocalDatanodeInfo();
+    DatanodeInfo[] dnInfo = new DatanodeInfo[] { di1, di2 };
     RecoveringBlock b = new RecoveringBlock(getExtendedBlock(), dnInfo, 3);
     RecoveringBlockProto bProto = PBHelper.convert(b);
     RecoveringBlock b1 = PBHelper.convert(bProto);
@@ -330,7 +328,9 @@ public class TestPBHelper {
   
   @Test
   public void testConvertBlockRecoveryCommand() {
-    DatanodeInfo[] dnInfo = new DatanodeInfo[] { getDNInfo(), getDNInfo() };
+    DatanodeInfo di1 = DFSTestUtil.getLocalDatanodeInfo();
+    DatanodeInfo di2 = DFSTestUtil.getLocalDatanodeInfo();
+    DatanodeInfo[] dnInfo = new DatanodeInfo[] { di1, di2 };
 
     List<RecoveringBlock> blks = ImmutableList.of(
       new RecoveringBlock(getExtendedBlock(1), dnInfo, 3),
@@ -401,11 +401,14 @@ public class TestPBHelper {
   @Test
   public void testConvertLocatedBlock() {
     DatanodeInfo [] dnInfos = new DatanodeInfo[3];
-    dnInfos[0] = new DatanodeInfo("host0", "host0", "0", 5000, 5001, 5002, 20000, 10001, 9999,
+    dnInfos[0] = new DatanodeInfo("127.0.0.1", "host1", "0",
+        5000, 5001, 5002, 20000, 10001, 9999,
         59, 69, 32, "local", AdminStates.DECOMMISSION_INPROGRESS);
-    dnInfos[1] = new DatanodeInfo("host1", "host1", "1", 5000, 5001, 5002, 20000, 10001, 9999,
+    dnInfos[1] = new DatanodeInfo("127.0.0.1", "host2", "1",
+        5000, 5001, 5002, 20000, 10001, 9999,
         59, 69, 32, "local", AdminStates.DECOMMISSIONED);
-    dnInfos[2] = new DatanodeInfo("host2", "host2", "2", 5000, 5001, 5002, 20000, 10001, 9999,
+    dnInfos[2] = new DatanodeInfo("127.0.0.1", "host3", "2",
+        5000, 5001, 5002, 20000, 10001, 9999,
         59, 69, 32, "local", AdminStates.NORMAL);
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);
@@ -424,7 +427,7 @@ public class TestPBHelper {
   
   @Test
   public void testConvertDatanodeRegistration() {
-    DatanodeID dnId = new DatanodeID("host", "host", "xyz", 0, 1, 0);
+    DatanodeID dnId = DFSTestUtil.getLocalDatanodeID();
     BlockKey[] keys = new BlockKey[] { getBlockKey(2), getBlockKey(3) };
     ExportedBlockKeys expKeys = new ExportedBlockKeys(true, 9, 10,
         getBlockKey(1), keys);

@@ -515,6 +515,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3395. NN doesn't start with HA+security enabled and HTTP address set to 0.0.0.0. (atm)
 
+    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
