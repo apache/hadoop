@@ -722,8 +722,11 @@ public class DFSUtil {
   public static String substituteForWildcardAddress(String configuredAddress,
       String defaultHost) throws IOException {
     InetSocketAddress sockAddr = NetUtils.createSocketAddr(configuredAddress);
+    InetSocketAddress defaultSockAddr = NetUtils.createSocketAddr(defaultHost
+        + ":0");
     if (sockAddr.getAddress().isAnyLocalAddress()) {
-      if(UserGroupInformation.isSecurityEnabled()) {
+      if (UserGroupInformation.isSecurityEnabled() &&
+          defaultSockAddr.getAddress().isAnyLocalAddress()) {
         throw new IOException("Cannot use a wildcard address with security. " +
                               "Must explicitly set bind address for Kerberos");
       }

@@ -140,7 +140,7 @@ public class NetUtils {
 
   /**
    * Util method to build socket addr from either:
-   *   <host>:<post>
+   *   <host>:<port>
    *   <fs>://<host>:<port>/<path>
    */
   public static InetSocketAddress createSocketAddr(String target) {
@@ -150,7 +150,7 @@ public class NetUtils {
   /**
    * Util method to build socket addr from either:
    *   <host>
-   *   <host>:<post>
+   *   <host>:<port>
    *   <fs>://<host>:<port>/<path>
    */
   public static InetSocketAddress createSocketAddr(String target,
