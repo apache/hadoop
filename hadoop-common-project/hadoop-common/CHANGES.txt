@@ -179,6 +179,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8224. Don't hardcode hdfs.audit.logger in the scripts.
     (Tomohiko Kinebuchi via eli)
 
+    HADOOP-8113. Correction to BUILDING.txt: HDFS needs ProtocolBuffer, too
+    (not just MapReduce). Contributed by Eugene Koontz.
+
   OPTIMIZATIONS
 
   BUG FIXES
