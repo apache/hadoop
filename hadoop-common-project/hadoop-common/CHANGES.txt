@@ -173,6 +173,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8361. Avoid out-of-memory problems when deserializing strings.
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8353. hadoop-daemon.sh and yarn-daemon.sh can be misleading on stop.
+    (Roman Shaposhnik via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
