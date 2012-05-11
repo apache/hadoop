@@ -312,6 +312,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. (eli)
 
+    HDFS-3400. DNs should be able start with jsvc even if security is disabled.
+    (atm via eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
