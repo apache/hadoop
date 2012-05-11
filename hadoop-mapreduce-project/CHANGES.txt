@@ -372,6 +372,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4237. TestNodeStatusUpdater can fail if localhost has a domain
     associated with it (bobby)
 
+    MAPREDUCE-4233. NPE can happen in RMNMNodeInfo. (bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

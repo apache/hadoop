@@ -21,6 +21,8 @@ package org.apache.hadoop.mapreduce.v2;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,8 +30,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMNMInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -37,6 +42,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import static org.mockito.Mockito.*;
 
 public class TestRMNMInfo {
   private static final Log LOG = LogFactory.getLog(TestRMNMInfo.class);
@@ -116,14 +122,47 @@ public class TestRMNMInfo {
               n.get("HealthStatus").getValueAsText().contains("Healthy"));
       Assert.assertNotNull(n.get("LastHealthUpdate"));
       Assert.assertNotNull(n.get("HealthReport"));
-      Assert.assertNotNull(n.get("NumContainersMB"));
+      Assert.assertNotNull(n.get("NumContainers"));
       Assert.assertEquals(
               n.get("NodeId") + ": Unexpected number of used containers",
-              0, n.get("NumContainersMB").getValueAsInt());
+              0, n.get("NumContainers").getValueAsInt());
       Assert.assertEquals(
               n.get("NodeId") + ": Unexpected amount of used memory",
               0, n.get("UsedMemoryMB").getValueAsInt());
       Assert.assertNotNull(n.get("AvailableMemoryMB"));
+    }
+  }
+  
+  @Test
+  public void testRMNMInfoMissmatch() throws Exception {
+    RMContext rmc = mock(RMContext.class);
+    ResourceScheduler rms = mock(ResourceScheduler.class);
+    ConcurrentMap<NodeId, RMNode> map = new ConcurrentHashMap<NodeId, RMNode>();
+    RMNode node = MockNodes.newNodeInfo(1, MockNodes.newResource(4 * 1024));
+    map.put(node.getNodeID(), node);
+    when(rmc.getRMNodes()).thenReturn(map);
+    
+    RMNMInfo rmInfo = new RMNMInfo(rmc,rms);
+    String liveNMs = rmInfo.getLiveNodeManagers();
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode jn = mapper.readTree(liveNMs);
+    Assert.assertEquals("Unexpected number of live nodes:",
+                                               1, jn.size());
+    Iterator<JsonNode> it = jn.iterator();
+    while (it.hasNext()) {
+      JsonNode n = it.next();
+      Assert.assertNotNull(n.get("HostName"));
+      Assert.assertNotNull(n.get("Rack"));
+      Assert.assertTrue("Node " + n.get("NodeId") + " should be RUNNING",
+              n.get("State").getValueAsText().contains("RUNNING"));
+      Assert.assertNotNull(n.get("NodeHTTPAddress"));
+      Assert.assertTrue("Node " + n.get("NodeId") + " should be Healthy",
+              n.get("HealthStatus").getValueAsText().contains("Healthy"));
+      Assert.assertNotNull(n.get("LastHealthUpdate"));
+      Assert.assertNotNull(n.get("HealthReport"));
+      Assert.assertNull(n.get("NumContainers"));
+      Assert.assertNull(n.get("UsedMemoryMB"));
+      Assert.assertNull(n.get("AvailableMemoryMB"));
     }
   }
 }
