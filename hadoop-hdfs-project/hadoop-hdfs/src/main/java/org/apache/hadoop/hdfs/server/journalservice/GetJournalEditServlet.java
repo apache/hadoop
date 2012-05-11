@@ -23,6 +23,7 @@ import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -140,8 +141,15 @@ public class GetJournalEditServlet extends HttpServlet {
                 DataTransferThrottler throttler = GetImageServlet.getThrottler(conf);
 
                 // send edits
-                TransferFsImage.getFileServer(response.getOutputStream(),
-                    editFile, throttler);
+                FaultInjector.instance.beforeSendEdits();
+                ServletOutputStream output = response.getOutputStream();
+                try {
+                  TransferFsImage.getFileServer(output, editFile, throttler);
+                } finally {
+                  if (output != null)
+                    output.close();
+                }
+
               } else {
                 response
                     .sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
@@ -155,9 +163,18 @@ public class GetJournalEditServlet extends HttpServlet {
       String errMsg = "getedit failed. " + StringUtils.stringifyException(ie);
       response.sendError(HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
-    } finally {
-      response.getOutputStream().close();
     }
   }
-
+  
+  /**
+   * Static nested class only for fault injection. Typical usage of this class
+   * is to make a Mockito object of this class, and then use the Mackito object
+   * to control the behavior of the fault injection.
+   */
+  public static class FaultInjector {
+    public static FaultInjector instance = 
+        new FaultInjector();
+    
+    public void beforeSendEdits() throws IOException {}
+  }
 }
