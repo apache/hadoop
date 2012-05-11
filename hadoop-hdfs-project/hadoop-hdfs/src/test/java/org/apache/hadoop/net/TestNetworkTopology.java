@@ -21,6 +21,7 @@ package org.apache.hadoop.net;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 
@@ -36,13 +37,13 @@ public class TestNetworkTopology {
   @Before
   public void setupDatanodes() {
     dataNodes = new DatanodeDescriptor[] {
-      new DatanodeDescriptor(new DatanodeID("1.1.1.1", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("2.2.2.2", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5020), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("4.4.4.4", 5020), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("5.5.5.5", 5020), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("6.6.6.6", 5020), "/d2/r3"),
-      new DatanodeDescriptor(new DatanodeID("7.7.7.7", 5020), "/d2/r3")
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d2/r3"),
+        DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r3")
     };
     for (int i = 0; i < dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
@@ -52,7 +53,7 @@ public class TestNetworkTopology {
   @Test
   public void testContains() throws Exception {
     DatanodeDescriptor nodeNotInMap = 
-      new DatanodeDescriptor(new DatanodeID("8.8.8.8", 5020), "/d2/r4");
+      DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/d2/r4");
     for (int i=0; i < dataNodes.length; i++) {
       assertTrue(cluster.contains(dataNodes[i]));
     }
@@ -68,9 +69,9 @@ public class TestNetworkTopology {
   public void testCreateInvalidTopology() throws Exception {
     NetworkTopology invalCluster = new NetworkTopology();
     DatanodeDescriptor invalDataNodes[] = new DatanodeDescriptor[] {
-      new DatanodeDescriptor(new DatanodeID("1.1.1.1", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("2.2.2.2", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5020), "/d1")
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1")
     };
     invalCluster.add(invalDataNodes[0]);
     invalCluster.add(invalDataNodes[1]);

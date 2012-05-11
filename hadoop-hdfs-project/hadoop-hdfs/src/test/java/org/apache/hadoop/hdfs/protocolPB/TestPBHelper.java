@@ -400,16 +400,11 @@ public class TestPBHelper {
   
   @Test
   public void testConvertLocatedBlock() {
-    DatanodeInfo [] dnInfos = new DatanodeInfo[3];
-    dnInfos[0] = new DatanodeInfo("127.0.0.1", "host1", "0",
-        5000, 5001, 5002, 20000, 10001, 9999,
-        59, 69, 32, "local", AdminStates.DECOMMISSION_INPROGRESS);
-    dnInfos[1] = new DatanodeInfo("127.0.0.1", "host2", "1",
-        5000, 5001, 5002, 20000, 10001, 9999,
-        59, 69, 32, "local", AdminStates.DECOMMISSIONED);
-    dnInfos[2] = new DatanodeInfo("127.0.0.1", "host3", "2",
-        5000, 5001, 5002, 20000, 10001, 9999,
-        59, 69, 32, "local", AdminStates.NORMAL);
+    DatanodeInfo [] dnInfos = {
+        DFSTestUtil.getLocalDatanodeInfo("1.1.1.1", "h1", AdminStates.DECOMMISSION_INPROGRESS),
+        DFSTestUtil.getLocalDatanodeInfo("2.2.2.2", "h2", AdminStates.DECOMMISSIONED),
+        DFSTestUtil.getLocalDatanodeInfo("3.3.3.3", "h3", AdminStates.NORMAL)
+    };
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);
     LocatedBlockProto lbProto = PBHelper.convert(lb);

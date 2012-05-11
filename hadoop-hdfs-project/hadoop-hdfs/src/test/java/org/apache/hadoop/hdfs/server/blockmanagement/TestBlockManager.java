@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -76,12 +77,12 @@ public class TestBlockManager {
     Mockito.doReturn(true).when(fsn).hasWriteLock();
     bm = new BlockManager(fsn, fsn, conf);
     nodes = ImmutableList.of(
-        new DatanodeDescriptor(new DatanodeID("1.1.1.1", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("2.2.2.2", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("4.4.4.4", 5020), "/rackB"),
-        new DatanodeDescriptor(new DatanodeID("5.5.5.5", 5020), "/rackB"),
-        new DatanodeDescriptor(new DatanodeID("6.6.6.6", 5020), "/rackB")
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/rackB"),
+        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/rackB"),
+        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/rackB")
       );
     rackA = nodes.subList(0, 3);
     rackB = nodes.subList(3, 6);
@@ -277,7 +278,7 @@ public class TestBlockManager {
     // the block is still under-replicated. Add a new node. This should allow
     // the third off-rack replica.
     DatanodeDescriptor rackCNode =
-      new DatanodeDescriptor(new DatanodeID("7.7.7.7", 100), "/rackC");
+      DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/rackC");
     addNodes(ImmutableList.of(rackCNode));
     try {
       DatanodeDescriptor[] pipeline2 = scheduleSingleReplication(blockInfo);
@@ -317,13 +318,13 @@ public class TestBlockManager {
   
   @Test
   public void testBlocksAreNotUnderreplicatedInSingleRack() throws Exception {
-    List<DatanodeDescriptor> nodes = ImmutableList.of( 
-        new DatanodeDescriptor(new DatanodeID("h1", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h2", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h3", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h4", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h5", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h6", 5020), "/rackA")
+    List<DatanodeDescriptor> nodes = ImmutableList.of(
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/rackA")
       );
     addNodes(nodes);
     List<DatanodeDescriptor> origNodes = nodes.subList(0, 3);;

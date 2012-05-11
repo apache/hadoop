@@ -56,12 +56,12 @@ public class TestReplicationPolicy {
   public static void setupCluster() throws Exception {
     Configuration conf = new HdfsConfiguration();
     dataNodes = new DatanodeDescriptor[] {
-        new DatanodeDescriptor(new DatanodeID("1.1.1.1", 5020), "/d1/r1"),
-        new DatanodeDescriptor(new DatanodeID("2.2.2.2", 5020), "/d1/r1"),
-        new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5020), "/d1/r2"),
-        new DatanodeDescriptor(new DatanodeID("4.4.4.4", 5020), "/d1/r2"),
-        new DatanodeDescriptor(new DatanodeID("5.5.5.5", 5020), "/d2/r3"),
-        new DatanodeDescriptor(new DatanodeID("6.6.6.6", 5020), "/d2/r3")
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d2/r3"),
+        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d2/r3")        
       };
 
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
@@ -329,6 +329,7 @@ public class TestReplicationPolicy {
           HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0, 0);
     }
   }
+
   /**
    * In this testcase, client is is a node outside of file system.
    * So the 1st replica can be placed on any node. 
@@ -338,8 +339,8 @@ public class TestReplicationPolicy {
    */
   @Test
   public void testChooseTarget5() throws Exception {
-    DatanodeDescriptor writerDesc = 
-      new DatanodeDescriptor(new DatanodeID("7.7.7.7", 5020), "/d2/r4");
+    DatanodeDescriptor writerDesc =
+      DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r4");
 
     DatanodeDescriptor[] targets;
     targets = replicator.chooseTarget(filename,

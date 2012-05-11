@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -32,10 +32,10 @@ public class TestHost2NodesMap {
   @Before
   public void setup() {
     dataNodes = new DatanodeDescriptor[] {
-      new DatanodeDescriptor(new DatanodeID("1.1.1.1", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("2.2.2.2", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5020), "/d1/r2"),
-      new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5030), "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", 5021, "/d1/r2"),
     };
     for (DatanodeDescriptor node : dataNodes) {
       map.add(node);
@@ -46,7 +46,7 @@ public class TestHost2NodesMap {
   @Test
   public void testContains() throws Exception {
     DatanodeDescriptor nodeNotInMap =
-      new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5040), "/d1/r4");
+      DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r4");
     for (int i = 0; i < dataNodes.length; i++) {
       assertTrue(map.contains(dataNodes[i]));
     }
@@ -66,7 +66,7 @@ public class TestHost2NodesMap {
   @Test
   public void testRemove() throws Exception {
     DatanodeDescriptor nodeNotInMap =
-      new DatanodeDescriptor(new DatanodeID("3.3.3.3", 5040), "/d1/r4");
+      DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r4");
     assertFalse(map.remove(nodeNotInMap));
     
     assertTrue(map.remove(dataNodes[0]));
