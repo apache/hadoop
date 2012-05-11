@@ -30,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Master;
@@ -179,16 +178,14 @@ public class TokenCache {
    * @param namenode
    * @return delegation token
    */
-  @SuppressWarnings("unchecked")
   @InterfaceAudience.Private
-  public static Token<DelegationTokenIdentifier> getDelegationToken(
+  public static Token<?> getDelegationToken(
       Credentials credentials, String namenode) {
     //No fs specific tokens issues by this fs. It may however issue tokens
     // for other filesystems - which would be keyed by that filesystems name.
     if (namenode == null)  
       return null;
-    return (Token<DelegationTokenIdentifier>) credentials.getToken(new Text(
-        namenode));
+    return (Token<?>) credentials.getToken(new Text(namenode));
   }
 
   /**
