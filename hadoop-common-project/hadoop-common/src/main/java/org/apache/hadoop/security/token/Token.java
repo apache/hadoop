@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.security.token;
 
+import com.google.common.collect.Maps;
+
+import java.io.ByteArrayInputStream;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.ServiceLoader;
 
 import org.apache.commons.codec.binary.Base64;
@@ -37,6 +42,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * The client-side form of the token.
@@ -45,6 +51,9 @@ import org.apache.hadoop.io.WritableUtils;
 @InterfaceStability.Evolving
 public class Token<T extends TokenIdentifier> implements Writable {
   public static final Log LOG = LogFactory.getLog(Token.class);
+  
+  private static Map<Text, Class<? extends TokenIdentifier>> tokenKindMap;
+  
   private byte[] identifier;
   private byte[] password;
   private Text kind;
@@ -100,11 +109,47 @@ public class Token<T extends TokenIdentifier> implements Writable {
   }
 
   /**
-   * Get the token identifier
-   * @return the token identifier
+   * Get the token identifier's byte representation
+   * @return the token identifier's byte representation
    */
   public byte[] getIdentifier() {
     return identifier;
+  }
+  
+  private static synchronized Class<? extends TokenIdentifier>
+      getClassForIdentifier(Text kind) {
+    if (tokenKindMap == null) {
+      tokenKindMap = Maps.newHashMap();
+      for (TokenIdentifier id : ServiceLoader.load(TokenIdentifier.class)) {
+        tokenKindMap.put(id.getKind(), id.getClass());
+      }
+    }
+    Class<? extends TokenIdentifier> cls = tokenKindMap.get(kind);
+    if (cls == null) {
+      LOG.warn("Cannot find class for token kind " + kind);
+       return null;
+    }
+    return cls;
+  }
+  
+  /**
+   * Get the token identifier object, or null if it could not be constructed
+   * (because the class could not be loaded, for example).
+   * @return the token identifier, or null
+   * @throws IOException 
+   */
+  @SuppressWarnings("unchecked")
+  public T decodeIdentifier() throws IOException {
+    Class<? extends TokenIdentifier> cls = getClassForIdentifier(getKind());
+    if (cls == null) {
+      return null;
+    }
+    TokenIdentifier tokenIdentifier = ReflectionUtils.newInstance(cls, null);
+    ByteArrayInputStream buf = new ByteArrayInputStream(identifier);
+    DataInputStream in = new DataInputStream(buf);  
+    tokenIdentifier.readFields(in);
+    in.close();
+    return (T) tokenIdentifier;
   }
   
   /**
@@ -260,16 +305,31 @@ public class Token<T extends TokenIdentifier> implements Writable {
       buffer.append(num);
     }
   }
+  
+  private void identifierToString(StringBuilder buffer) {
+    T id = null;
+    try {
+      id = decodeIdentifier();
+    } catch (IOException e) {
+      // handle in the finally block
+    } finally {
+      if (id != null) {
+        buffer.append("(").append(id).append(")");
+      } else {
+        addBinaryBuffer(buffer, identifier);
+      }
+    }
+  }
 
   @Override
   public String toString() {
     StringBuilder buffer = new StringBuilder();
-    buffer.append("Ident: ");
-    addBinaryBuffer(buffer, identifier);
-    buffer.append(", Kind: ");
+    buffer.append("Kind: ");
     buffer.append(kind.toString());
     buffer.append(", Service: ");
     buffer.append(service.toString());
+    buffer.append(", Ident: ");
+    identifierToString(buffer);
     return buffer.toString();
   }
   

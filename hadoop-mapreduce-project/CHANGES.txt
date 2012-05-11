@@ -178,6 +178,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
     (szetszwo)
 
+    MAPREDUCE-4148. MapReduce should not have a compile-time dependency on
+    HDFS. (tomwhite)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES

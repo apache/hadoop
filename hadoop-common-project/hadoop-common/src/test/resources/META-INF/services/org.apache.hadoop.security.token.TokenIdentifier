@@ -1,0 +1,2 @@
+org.apache.hadoop.ipc.TestSaslRPC$TestTokenIdentifier
+org.apache.hadoop.security.token.delegation.TestDelegationToken$TestDelegationTokenIdentifier

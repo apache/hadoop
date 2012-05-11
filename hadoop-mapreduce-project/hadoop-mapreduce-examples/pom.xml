@@ -58,7 +58,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <scope>provided</scope>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
        <groupId>org.apache.hadoop</groupId>
