@@ -176,6 +176,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8353. hadoop-daemon.sh and yarn-daemon.sh can be misleading on stop.
     (Roman Shaposhnik via atm)
 
+    HADOOP-8224. Don't hardcode hdfs.audit.logger in the scripts.
+    (Tomohiko Kinebuchi via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
