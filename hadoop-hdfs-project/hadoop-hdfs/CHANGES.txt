@@ -308,6 +308,10 @@ Release 2.0.0 - UNRELEASED
     HDFS-3134. harden edit log loader against malformed or malicious input.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
+
+    HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
@@ -520,8 +524,6 @@ Release 2.0.0 - UNRELEASED
     HDFS-3396. FUSE build fails on Ubuntu 12.04. (Colin Patrick McCabe via eli)
 
     HDFS-3395. NN doesn't start with HA+security enabled and HTTP address set to 0.0.0.0. (atm)
-
-    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

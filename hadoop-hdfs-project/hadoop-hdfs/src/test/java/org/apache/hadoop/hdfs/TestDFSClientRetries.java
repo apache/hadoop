@@ -332,7 +332,7 @@ public class TestDFSClientRetries extends TestCase {
       LocatedBlock badLocatedBlock = new LocatedBlock(
         goodLocatedBlock.getBlock(),
         new DatanodeInfo[] {
-          new DatanodeInfo(new DatanodeID("255.255.255.255", 234))
+          DFSTestUtil.getDatanodeInfo("1.2.3.4", "bogus", 1234)
         },
         goodLocatedBlock.getStartOffset(),
         false);
