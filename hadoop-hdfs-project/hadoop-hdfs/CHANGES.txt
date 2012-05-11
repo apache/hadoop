@@ -532,6 +532,8 @@ Release 2.0.0 - UNRELEASED
     necessarily a BlockInfoUnderConstruction, so do not cast it in
     FSNamesystem.recoverLeaseInternal(..).  (szetszwo)
 
+    HDFS-3026. HA: Handle failure during HA state transition. (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
