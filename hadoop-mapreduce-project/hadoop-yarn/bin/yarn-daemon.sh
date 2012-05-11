@@ -93,6 +93,7 @@ export YARN_LOGFILE=yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.log
 export YARN_ROOT_LOGGER=${YARN_ROOT_LOGGER:-INFO,RFA}
 log=$YARN_LOG_DIR/yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.out
 pid=$YARN_PID_DIR/yarn-$YARN_IDENT_STRING-$command.pid
+YARN_STOP_TIMEOUT=${YARN_STOP_TIMEOUT:-5}
 
 # Set default scheduling priority
 if [ "$YARN_NICENESS" = "" ]; then
@@ -128,9 +129,15 @@ case $startStop in
   (stop)
 
     if [ -f $pid ]; then
-      if kill -0 `cat $pid` > /dev/null 2>&1; then
+      TARGET_PID=`cat $pid`
+      if kill -0 $TARGET_PID > /dev/null 2>&1; then
         echo stopping $command
-        kill `cat $pid`
+        kill $TARGET_PID
+        sleep $YARN_STOP_TIMEOUT
+        if kill -0 $TARGET_PID > /dev/null 2>&1; then
+          echo "$command did not stop gracefully after $YARN_STOP_TIMEOUT seconds: killing with kill -9"
+          kill -9 $TARGET_PID
+        fi
       else
         echo no $command to stop
       fi

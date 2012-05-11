@@ -164,6 +164,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8356. FileSystem service loading mechanism should print the FileSystem 
     impl it is failing to load (tucu)
 
+    HADOOP-8353. hadoop-daemon.sh and yarn-daemon.sh can be misleading on stop.
+    (Roman Shaposhnik via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES
