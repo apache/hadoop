@@ -525,6 +525,10 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3395. NN doesn't start with HA+security enabled and HTTP address set to 0.0.0.0. (atm)
 
+    HDFS-3385. The last block of INodeFileUnderConstruction is not
+    necessarily a BlockInfoUnderConstruction, so do not cast it in
+    FSNamesystem.recoverLeaseInternal(..).  (szetszwo)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

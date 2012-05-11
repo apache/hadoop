@@ -1783,24 +1783,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 "Failed to close file " + src +
                 ". Lease recovery is in progress. Try again later.");
         } else {
-          BlockInfoUnderConstruction lastBlock=pendingFile.getLastBlock();
-          if(lastBlock != null && lastBlock.getBlockUCState() ==
-            BlockUCState.UNDER_RECOVERY) {
-            throw new RecoveryInProgressException(
-              "Recovery in progress, file [" + src + "], " +
-              "lease owner [" + lease.getHolder() + "]");
-            } else {
-              throw new AlreadyBeingCreatedException(
-                "Failed to create file [" + src + "] for [" + holder +
-                "] on client [" + clientMachine +
-                "], because this file is already being created by [" +
-                pendingFile.getClientName() + "] on [" +
-                pendingFile.getClientMachine() + "]");
-            }
-         }
+          final BlockInfo lastBlock = pendingFile.getLastBlock();
+          if (lastBlock != null
+              && lastBlock.getBlockUCState() == BlockUCState.UNDER_RECOVERY) {
+            throw new RecoveryInProgressException("Recovery in progress, file ["
+                + src + "], " + "lease owner [" + lease.getHolder() + "]");
+          } else {
+            throw new AlreadyBeingCreatedException("Failed to create file ["
+                + src + "] for [" + holder + "] on client [" + clientMachine
+                + "], because this file is already being created by ["
+                + pendingFile.getClientName() + "] on ["
+                + pendingFile.getClientMachine() + "]");
+          }
+        }
       }
     }
-
   }
 
   /**
