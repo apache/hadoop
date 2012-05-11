@@ -309,7 +309,7 @@ public class FSDirectory implements Closeable {
         INodeFile newF = (INodeFile)newNode;
         BlockInfo[] blocks = newF.getBlocks();
         for (int i = 0; i < blocks.length; i++) {
-          newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
+          newF.setBlock(i, getBlockManager().addBlockCollection(blocks[i], newF));
         }
       }
     } finally {
@@ -346,7 +346,7 @@ public class FSDirectory implements Closeable {
             fileINode.getReplication(),
             BlockUCState.UNDER_CONSTRUCTION,
             targets);
-      getBlockManager().addINode(blockInfo, fileINode);
+      getBlockManager().addBlockCollection(blockInfo, fileINode);
       fileINode.addBlock(blockInfo);
 
       if(NameNode.stateChangeLog.isDebugEnabled()) {
@@ -1127,7 +1127,7 @@ public class FSDirectory implements Closeable {
 
       int index = 0;
       for (BlockInfo b : newnode.getBlocks()) {
-        BlockInfo info = getBlockManager().addINode(b, newnode);
+        BlockInfo info = getBlockManager().addBlockCollection(b, newnode);
         newnode.setBlock(index, info); // inode refers to the block in BlocksMap
         index++;
       }

@@ -435,6 +435,22 @@ Release 2.0.0 - UNRELEASED
     so that INodeFile and INodeFileUnderConstruction do not have to be used in
     block management.  (John George via szetszwo)
 
+    HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
+    logging is enabled. (atm)
+
+    HDFS-3341. Change minimum RPC versions to respective SNAPSHOTs instead of
+    final releases. (todd)
+
+    HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and
+    BlocksMap to {get|set|add}BlockCollection(..).  (John George via szetszwo)
+
+    HDFS-3134. harden edit log loader against malformed or malicious input.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
+
+    HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. (eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -620,6 +636,17 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3376. DFSClient fails to make connection to DN if there are many
     unusable cached sockets (todd)
+
+    HDFS-3328. NPE in DataNode.getIpcPort. (eli)
+
+    HDFS-3396. FUSE build fails on Ubuntu 12.04. (Colin Patrick McCabe via eli)
+
+    HDFS-3395. NN doesn't start with HA+security enabled and HTTP address
+    set to 0.0.0.0. (atm)
+
+    HDFS-3385. The last block of INodeFileUnderConstruction is not
+    necessarily a BlockInfoUnderConstruction, so do not cast it in
+    FSNamesystem.recoverLeaseInternal(..).  (szetszwo)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

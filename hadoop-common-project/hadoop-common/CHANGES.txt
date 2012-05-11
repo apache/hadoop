@@ -129,6 +129,12 @@ Trunk (unreleased changes)
     HADOOP-8339. jenkins complaining about 16 javadoc warnings 
     (Tom White and Robert Evans via tgraves)
 
+    HADOOP-8354. test-patch findbugs may fail if a dependent module is changed
+    (Tom White and Robert Evans)
+
+    HADOOP-8375. test-patch should stop immediately once it has found
+    compilation errors (bobby)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -138,6 +144,9 @@ Release 2.0.0 - UNRELEASED
   INCOMPATIBLE CHANGES
 
     HADOOP-7920. Remove Avro Rpc. (suresh)
+
+    HADOOP-8388. Remove unused BlockLocation serialization.
+    (Colin Patrick McCabe via eli)
 
   NEW FEATURES
 
@@ -296,6 +305,12 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8356. FileSystem service loading mechanism should print the FileSystem 
     impl it is failing to load (tucu)
 
+    HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
+    final release. (todd)
+
+    HADOOP-8361. Avoid out-of-memory problems when deserializing strings.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -429,6 +444,9 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8359. Fix javadoc warnings in Configuration.  (Anupam Seth via
     szetszwo)
 
+    HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
+    starting with a numeric character. (Junping Du via suresh)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -486,6 +504,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8172. Configuration no longer sets all keys in a deprecated key 
     list. (Anupam Seth via bobby)
+
+    HADOOP-7868. Hadoop native fails to compile when default linker
+    option is -Wl,--as-needed. (Trevor Robinson via eli)
 
 Release 0.23.3 - UNRELEASED
 
@@ -546,6 +567,8 @@ Release 0.23.3 - UNRELEASED
     via bobby)
 
     HADOOP-8341. Fix or filter findbugs issues in hadoop-tools (bobby)
+
+    HADOOP-8373. Port RPC.getServerAddress to 0.23 (Daryn Sharp via bobby)
 
 Release 0.23.2 - UNRELEASED 
 

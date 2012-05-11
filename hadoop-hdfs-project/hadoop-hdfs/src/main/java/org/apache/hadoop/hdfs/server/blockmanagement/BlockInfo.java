@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.util.LightWeightGSet;
 @InterfaceAudience.Private
 public class BlockInfo extends Block implements
     LightWeightGSet.LinkedElement {
-  private BlockCollection inode;
+  private BlockCollection bc;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */
   private LightWeightGSet.LinkedElement nextLinkedElement;
@@ -57,13 +57,13 @@ public class BlockInfo extends Block implements
    */
   public BlockInfo(int replication) {
     this.triplets = new Object[3*replication];
-    this.inode = null;
+    this.bc = null;
   }
   
   public BlockInfo(Block blk, int replication) {
     super(blk);
     this.triplets = new Object[3*replication];
-    this.inode = null;
+    this.bc = null;
   }
 
   /**
@@ -72,16 +72,16 @@ public class BlockInfo extends Block implements
    * @param from BlockInfo to copy from.
    */
   protected BlockInfo(BlockInfo from) {
-    this(from, from.inode.getReplication());
-    this.inode = from.inode;
+    this(from, from.bc.getReplication());
+    this.bc = from.bc;
   }
 
-  public BlockCollection getINode() {
-    return inode;
+  public BlockCollection getBlockCollection() {
+    return bc;
   }
 
-  public void setINode(BlockCollection inode) {
-    this.inode = inode;
+  public void setBlockCollection(BlockCollection bc) {
+    this.bc = bc;
   }
 
   DatanodeDescriptor getDatanode(int index) {
@@ -334,7 +334,7 @@ public class BlockInfo extends Block implements
       BlockUCState s, DatanodeDescriptor[] targets) {
     if(isComplete()) {
       return new BlockInfoUnderConstruction(
-          this, getINode().getReplication(), s, targets);
+          this, getBlockCollection().getReplication(), s, targets);
     }
     // the block is already under construction
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;

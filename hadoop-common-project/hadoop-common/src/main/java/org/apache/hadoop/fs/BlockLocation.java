@@ -35,16 +35,7 @@ import org.apache.hadoop.io.WritableFactory;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class BlockLocation implements Writable {
-
-  static {               // register a ctor
-    WritableFactories.setFactory
-      (BlockLocation.class,
-       new WritableFactory() {
-         public Writable newInstance() { return new BlockLocation(); }
-       });
-  }
-
+public class BlockLocation {
   private String[] hosts; //hostnames of datanodes
   private String[] names; //hostname:portNumber of datanodes
   private String[] topologyPaths; // full path name in network topology
@@ -219,62 +210,6 @@ public class BlockLocation implements Writable {
     }
   }
 
-  /**
-   * Implement write of Writable
-   */
-  public void write(DataOutput out) throws IOException {
-    out.writeLong(offset);
-    out.writeLong(length);
-    out.writeBoolean(corrupt);
-    out.writeInt(names.length);
-    for (int i=0; i < names.length; i++) {
-      Text name = new Text(names[i]);
-      name.write(out);
-    }
-    out.writeInt(hosts.length);
-    for (int i=0; i < hosts.length; i++) {
-      Text host = new Text(hosts[i]);
-      host.write(out);
-    }
-    out.writeInt(topologyPaths.length);
-    for (int i=0; i < topologyPaths.length; i++) {
-      Text host = new Text(topologyPaths[i]);
-      host.write(out);
-    }
-  }
-  
-  /**
-   * Implement readFields of Writable
-   */
-  public void readFields(DataInput in) throws IOException {
-    this.offset = in.readLong();
-    this.length = in.readLong();
-    this.corrupt = in.readBoolean();
-    int numNames = in.readInt();
-    this.names = new String[numNames];
-    for (int i = 0; i < numNames; i++) {
-      Text name = new Text();
-      name.readFields(in);
-      names[i] = name.toString();
-    }
-    
-    int numHosts = in.readInt();
-    this.hosts = new String[numHosts];
-    for (int i = 0; i < numHosts; i++) {
-      Text host = new Text();
-      host.readFields(in);
-      hosts[i] = host.toString();
-    }
-    
-    int numTops = in.readInt();
-    topologyPaths = new String[numTops];
-    for (int i = 0; i < numTops; i++) {
-      Text path = new Text();
-      path.readFields(in);
-      topologyPaths[i] = path.toString();
-    }
-  }
-  
   public String toString() {
     StringBuilder result = new StringBuilder();
     result.append(offset);

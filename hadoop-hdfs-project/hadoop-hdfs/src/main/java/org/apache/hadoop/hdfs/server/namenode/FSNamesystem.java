@@ -1783,24 +1783,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
                 "Failed to close file " + src +
                 ". Lease recovery is in progress. Try again later.");
         } else {
-          BlockInfoUnderConstruction lastBlock=pendingFile.getLastBlock();
-          if(lastBlock != null && lastBlock.getBlockUCState() ==
-            BlockUCState.UNDER_RECOVERY) {
-            throw new RecoveryInProgressException(
-              "Recovery in progress, file [" + src + "], " +
-              "lease owner [" + lease.getHolder() + "]");
-            } else {
-              throw new AlreadyBeingCreatedException(
-                "Failed to create file [" + src + "] for [" + holder +
-                "] on client [" + clientMachine +
-                "], because this file is already being created by [" +
-                pendingFile.getClientName() + "] on [" +
-                pendingFile.getClientMachine() + "]");
-            }
-         }
+          final BlockInfo lastBlock = pendingFile.getLastBlock();
+          if (lastBlock != null
+              && lastBlock.getBlockUCState() == BlockUCState.UNDER_RECOVERY) {
+            throw new RecoveryInProgressException("Recovery in progress, file ["
+                + src + "], " + "lease owner [" + lease.getHolder() + "]");
+          } else {
+            throw new AlreadyBeingCreatedException("Failed to create file ["
+                + src + "] for [" + holder + "] on client [" + clientMachine
+                + "], because this file is already being created by ["
+                + pendingFile.getClientName() + "] on ["
+                + pendingFile.getClientMachine() + "]");
+          }
+        }
       }
     }
-
   }
 
   /**
@@ -2840,7 +2837,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       if (storedBlock == null) {
         throw new IOException("Block (=" + lastblock + ") not found");
       }
-      INodeFile iFile = (INodeFile) storedBlock.getINode();
+      INodeFile iFile = (INodeFile) storedBlock.getBlockCollection();
       if (!iFile.isUnderConstruction() || storedBlock.isComplete()) {
         throw new IOException("Unexpected block (=" + lastblock
                               + ") since the file (=" + iFile.getLocalName()
@@ -4135,7 +4132,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Returns whether the given block is one pointed-to by a file.
    */
   private boolean isValidBlock(Block b) {
-    return (blockManager.getINode(b) != null);
+    return (blockManager.getBlockCollection(b) != null);
   }
 
   // Distributed upgrade manager
@@ -4394,7 +4391,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     
     // check file inode
-    INodeFile file = (INodeFile) storedBlock.getINode();
+    INodeFile file = (INodeFile) storedBlock.getBlockCollection();
     if (file==null || !file.isUnderConstruction()) {
       throw new IOException("The file " + storedBlock + 
           " belonged to does not exist or it is not under construction.");
@@ -4706,7 +4703,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       while (blkIterator.hasNext()) {
         Block blk = blkIterator.next();
-        INode inode = (INodeFile) blockManager.getINode(blk);
+        INode inode = (INodeFile) blockManager.getBlockCollection(blk);
         skip++;
         if (inode != null && blockManager.countNodes(blk).liveReplicas() == 0) {
           String src = FSDirectory.getFullPathName(inode);

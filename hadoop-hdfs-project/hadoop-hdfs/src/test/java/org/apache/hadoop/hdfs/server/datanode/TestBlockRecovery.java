@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -197,9 +198,9 @@ public class TestBlockRecovery {
         locs, RECOVERY_ID);
     ArrayList<BlockRecord> syncList = new ArrayList<BlockRecord>(2);
     BlockRecord record1 = new BlockRecord(
-        new DatanodeID("xx", "yy", "zz", 1, 2, 3), dn1, replica1);
+        DFSTestUtil.getDatanodeInfo("1.2.3.4", "bogus", 1234), dn1, replica1);
     BlockRecord record2 = new BlockRecord(
-        new DatanodeID("aa", "bb", "cc", 1, 2, 3), dn2, replica2);
+        DFSTestUtil.getDatanodeInfo("1.2.3.4", "bogus", 1234), dn2, replica2);
     syncList.add(record1);
     syncList.add(record2);
     
@@ -401,8 +402,7 @@ public class TestBlockRecovery {
 
   private Collection<RecoveringBlock> initRecoveringBlocks() throws IOException {
     Collection<RecoveringBlock> blocks = new ArrayList<RecoveringBlock>(1);
-    DatanodeInfo mockOtherDN = new DatanodeInfo(
-        new DatanodeID("127.0.0.1", "localhost", "storage-1234", 0, 0, 0));
+    DatanodeInfo mockOtherDN = DFSTestUtil.getLocalDatanodeInfo();
     DatanodeInfo[] locs = new DatanodeInfo[] {
         new DatanodeInfo(dn.getDNRegistrationForBP(block.getBlockPoolId())),
         mockOtherDN };

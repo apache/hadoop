@@ -203,6 +203,10 @@ public abstract class FSEditLogOp {
     }
 
     <T extends AddCloseOp> T setBlocks(Block[] blocks) {
+      if (blocks.length > MAX_BLOCKS) {
+        throw new RuntimeException("Can't have more than " + MAX_BLOCKS +
+            " in an AddCloseOp.");
+      }
       this.blocks = blocks;
       return (T)this;
     }
@@ -296,10 +300,18 @@ public abstract class FSEditLogOp {
       }
     }
 
+    static final public int MAX_BLOCKS = 1024 * 1024 * 64;
+    
     private static Block[] readBlocks(
         DataInputStream in,
         int logVersion) throws IOException {
       int numBlocks = in.readInt();
+      if (numBlocks < 0) {
+        throw new IOException("invalid negative number of blocks");
+      } else if (numBlocks > MAX_BLOCKS) {
+        throw new IOException("invalid number of blocks: " + numBlocks +
+            ".  The maximum number of blocks per file is " + MAX_BLOCKS);
+      }
       Block[] blocks = new Block[numBlocks];
       for (int i = 0; i < numBlocks; i++) {
         Block blk = new Block();
@@ -579,6 +591,7 @@ public abstract class FSEditLogOp {
     String trg;
     String[] srcs;
     long timestamp;
+    final static public int MAX_CONCAT_SRC = 1024 * 1024;
 
     private ConcatDeleteOp() {
       super(OP_CONCAT_DELETE);
@@ -594,7 +607,12 @@ public abstract class FSEditLogOp {
     }
 
     ConcatDeleteOp setSources(String[] srcs) {
+      if (srcs.length > MAX_CONCAT_SRC) {
+        throw new RuntimeException("ConcatDeleteOp can only have " +
+            MAX_CONCAT_SRC + " sources at most.");
+      }
       this.srcs = srcs;
+
       return this;
     }
 
@@ -624,8 +642,8 @@ public abstract class FSEditLogOp {
       if (!LayoutVersion.supports(Feature.EDITLOG_OP_OPTIMIZATION, logVersion)) {
         this.length = in.readInt();
         if (length < 3) { // trg, srcs.., timestamp
-          throw new IOException("Incorrect data format. "
-              + "Concat delete operation.");
+          throw new IOException("Incorrect data format " +
+              "for ConcatDeleteOp.");
         }
       }
       this.trg = FSImageSerialization.readString(in);
@@ -634,6 +652,15 @@ public abstract class FSEditLogOp {
         srcSize = in.readInt();
       } else {
         srcSize = this.length - 1 - 1; // trg and timestamp
+      }
+      if (srcSize < 0) {
+          throw new IOException("Incorrect data format. "
+              + "ConcatDeleteOp cannot have a negative number of data " +
+              " sources.");
+      } else if (srcSize > MAX_CONCAT_SRC) {
+          throw new IOException("Incorrect data format. "
+              + "ConcatDeleteOp can have at most " + MAX_CONCAT_SRC +
+              " sources, but we tried to have " + (length - 3) + " sources.");
       }
       this.srcs = new String [srcSize];
       for(int i=0; i<srcSize;i++) {

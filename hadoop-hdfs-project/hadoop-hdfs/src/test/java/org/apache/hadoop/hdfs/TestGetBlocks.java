@@ -121,8 +121,7 @@ public class TestGetBlocks extends TestCase {
       getBlocksWithException(namenode, dataNodes[0], -1);
 
       // get blocks of size BlockSize from a non-existent datanode
-      DatanodeInfo info = DFSTestUtil.getLocalDatanodeInfo();
-      info.setIpAddr("1.2.3.4");
+      DatanodeInfo info = DFSTestUtil.getDatanodeInfo("1.2.3.4");
       getBlocksWithException(namenode, info, 2);
     } finally {
       cluster.shutdown();

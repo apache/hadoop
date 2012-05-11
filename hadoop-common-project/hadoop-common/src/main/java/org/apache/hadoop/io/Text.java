@@ -412,6 +412,8 @@ public class Text extends BinaryComparable
     return bytes;
   }
 
+  static final public int ONE_MEGABYTE = 1024 * 1024;
+
   /** Read a UTF8 encoded string from in
    */
   public static String readString(DataInput in) throws IOException {
@@ -420,12 +422,38 @@ public class Text extends BinaryComparable
     in.readFully(bytes, 0, length);
     return decode(bytes);
   }
-
+  
+  /** Read a UTF8 encoded string with a maximum size
+   */
+  public static String readString(DataInput in, int maxLength)
+      throws IOException {
+    int length = WritableUtils.readVIntInRange(in, 0, maxLength - 1);
+    byte [] bytes = new byte[length];
+    in.readFully(bytes, 0, length);
+    return decode(bytes);
+  }
+  
   /** Write a UTF8 encoded string to out
    */
   public static int writeString(DataOutput out, String s) throws IOException {
     ByteBuffer bytes = encode(s);
     int length = bytes.limit();
+    WritableUtils.writeVInt(out, length);
+    out.write(bytes.array(), 0, length);
+    return length;
+  }
+
+  /** Write a UTF8 encoded string with a maximum size to out
+   */
+  public static int writeString(DataOutput out, String s, int maxLength)
+      throws IOException {
+    ByteBuffer bytes = encode(s);
+    int length = bytes.limit();
+    if (length >= maxLength) {
+      throw new IOException("string was too long to write!  Expected " +
+          "less than " + maxLength + " bytes, but got " +
+          length + " bytes.");
+    }
     WritableUtils.writeVInt(out, length);
     out.write(bytes.array(), 0, length);
     return length;

@@ -84,8 +84,8 @@ public class PermissionStatus implements Writable {
 
   /** {@inheritDoc} */
   public void readFields(DataInput in) throws IOException {
-    username = Text.readString(in);
-    groupname = Text.readString(in);
+    username = Text.readString(in, Text.ONE_MEGABYTE);
+    groupname = Text.readString(in, Text.ONE_MEGABYTE);
     permission = FsPermission.read(in);
   }
 
@@ -110,8 +110,8 @@ public class PermissionStatus implements Writable {
                            String username, 
                            String groupname,
                            FsPermission permission) throws IOException {
-    Text.writeString(out, username);
-    Text.writeString(out, groupname);
+    Text.writeString(out, username, Text.ONE_MEGABYTE);
+    Text.writeString(out, groupname, Text.ONE_MEGABYTE);
     permission.write(out);
   }
 

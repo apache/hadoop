@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -47,17 +48,10 @@ import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Lists;
 
 public class TestBlockManager {
-  private final List<DatanodeDescriptor> nodes = ImmutableList.of( 
-      new DatanodeDescriptor(new DatanodeID("h1", 5020), "/rackA"),
-      new DatanodeDescriptor(new DatanodeID("h2", 5020), "/rackA"),
-      new DatanodeDescriptor(new DatanodeID("h3", 5020), "/rackA"),
-      new DatanodeDescriptor(new DatanodeID("h4", 5020), "/rackB"),
-      new DatanodeDescriptor(new DatanodeID("h5", 5020), "/rackB"),
-      new DatanodeDescriptor(new DatanodeID("h6", 5020), "/rackB")
-    );
-  private final List<DatanodeDescriptor> rackA = nodes.subList(0, 3);
-  private final List<DatanodeDescriptor> rackB = nodes.subList(3, 6);
-  
+  private List<DatanodeDescriptor> nodes;
+  private List<DatanodeDescriptor> rackA;
+  private List<DatanodeDescriptor> rackB;
+
   /**
    * Some of these tests exercise code which has some randomness involved -
    * ie even if there's a bug, they may pass because the random node selection
@@ -82,6 +76,16 @@ public class TestBlockManager {
     fsn = Mockito.mock(FSNamesystem.class);
     Mockito.doReturn(true).when(fsn).hasWriteLock();
     bm = new BlockManager(fsn, fsn, conf);
+    nodes = ImmutableList.of(
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/rackB"),
+        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/rackB"),
+        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/rackB")
+      );
+    rackA = nodes.subList(0, 3);
+    rackB = nodes.subList(3, 6);
   }
   
   private void addNodes(Iterable<DatanodeDescriptor> nodesToAdd) {
@@ -116,7 +120,7 @@ public class TestBlockManager {
   }
   
   private void doBasicTest(int testIndex) {
-    List<DatanodeDescriptor> origNodes = nodes(0, 1);
+    List<DatanodeDescriptor> origNodes = getNodes(0, 1);
     BlockInfo blockInfo = addBlockOnNodes((long)testIndex, origNodes);
 
     DatanodeDescriptor[] pipeline = scheduleSingleReplication(blockInfo);
@@ -147,7 +151,7 @@ public class TestBlockManager {
   
   private void doTestTwoOfThreeNodesDecommissioned(int testIndex) throws Exception {
     // Block originally on A1, A2, B1
-    List<DatanodeDescriptor> origNodes = nodes(0, 1, 3);
+    List<DatanodeDescriptor> origNodes = getNodes(0, 1, 3);
     BlockInfo blockInfo = addBlockOnNodes(testIndex, origNodes);
     
     // Decommission two of the nodes (A1, A2)
@@ -157,7 +161,7 @@ public class TestBlockManager {
     assertTrue("Source of replication should be one of the nodes the block " +
         "was on. Was: " + pipeline[0],
         origNodes.contains(pipeline[0]));
-    assertEquals("Should have two targets", 3, pipeline.length);
+    assertEquals("Should have three targets", 3, pipeline.length);
     
     boolean foundOneOnRackA = false;
     for (int i = 1; i < pipeline.length; i++) {
@@ -190,7 +194,7 @@ public class TestBlockManager {
 
   private void doTestAllNodesHoldingReplicasDecommissioned(int testIndex) throws Exception {
     // Block originally on A1, A2, B1
-    List<DatanodeDescriptor> origNodes = nodes(0, 1, 3);
+    List<DatanodeDescriptor> origNodes = getNodes(0, 1, 3);
     BlockInfo blockInfo = addBlockOnNodes(testIndex, origNodes);
     
     // Decommission all of the nodes
@@ -242,7 +246,7 @@ public class TestBlockManager {
   
   private void doTestOneOfTwoRacksDecommissioned(int testIndex) throws Exception {
     // Block originally on A1, A2, B1
-    List<DatanodeDescriptor> origNodes = nodes(0, 1, 3);
+    List<DatanodeDescriptor> origNodes = getNodes(0, 1, 3);
     BlockInfo blockInfo = addBlockOnNodes(testIndex, origNodes);
     
     // Decommission all of the nodes in rack A
@@ -252,7 +256,7 @@ public class TestBlockManager {
     assertTrue("Source of replication should be one of the nodes the block " +
         "was on. Was: " + pipeline[0],
         origNodes.contains(pipeline[0]));
-    assertEquals("Should have 2 targets", 3, pipeline.length);
+    assertEquals("Should have three targets", 3, pipeline.length);
     
     boolean foundOneOnRackB = false;
     for (int i = 1; i < pipeline.length; i++) {
@@ -273,7 +277,8 @@ public class TestBlockManager {
 
     // the block is still under-replicated. Add a new node. This should allow
     // the third off-rack replica.
-    DatanodeDescriptor rackCNode = new DatanodeDescriptor(new DatanodeID("h7", 100), "/rackC");
+    DatanodeDescriptor rackCNode =
+      DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/rackC");
     addNodes(ImmutableList.of(rackCNode));
     try {
       DatanodeDescriptor[] pipeline2 = scheduleSingleReplication(blockInfo);
@@ -313,13 +318,13 @@ public class TestBlockManager {
   
   @Test
   public void testBlocksAreNotUnderreplicatedInSingleRack() throws Exception {
-    List<DatanodeDescriptor> nodes = ImmutableList.of( 
-        new DatanodeDescriptor(new DatanodeID("h1", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h2", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h3", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h4", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h5", 5020), "/rackA"),
-        new DatanodeDescriptor(new DatanodeID("h6", 5020), "/rackA")
+    List<DatanodeDescriptor> nodes = ImmutableList.of(
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/rackA"),
+        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/rackA")
       );
     addNodes(nodes);
     List<DatanodeDescriptor> origNodes = nodes.subList(0, 3);;
@@ -359,7 +364,7 @@ public class TestBlockManager {
     return blockInfo;
   }
 
-  private List<DatanodeDescriptor> nodes(int ... indexes) {
+  private List<DatanodeDescriptor> getNodes(int ... indexes) {
     List<DatanodeDescriptor> ret = Lists.newArrayList();
     for (int idx : indexes) {
       ret.add(nodes.get(idx));
@@ -368,7 +373,7 @@ public class TestBlockManager {
   }
   
   private List<DatanodeDescriptor> startDecommission(int ... indexes) {
-    List<DatanodeDescriptor> nodes = nodes(indexes);
+    List<DatanodeDescriptor> nodes = getNodes(indexes);
     for (DatanodeDescriptor node : nodes) {
       node.startDecommission();
     }
@@ -380,7 +385,7 @@ public class TestBlockManager {
     Mockito.doReturn((short)3).when(iNode).getReplication();
     BlockInfo blockInfo = blockOnNodes(blockId, nodes);
 
-    bm.blocksMap.addINode(blockInfo, iNode);
+    bm.blocksMap.addBlockCollection(blockInfo, iNode);
     return blockInfo;
   }
 
@@ -404,8 +409,9 @@ public class TestBlockManager {
 
     LinkedListMultimap<DatanodeDescriptor, BlockTargetPair> repls = getAllPendingReplications();
     assertEquals(1, repls.size());
-    Entry<DatanodeDescriptor, BlockTargetPair> repl = repls.entries()
-        .iterator().next();
+    Entry<DatanodeDescriptor, BlockTargetPair> repl =
+      repls.entries().iterator().next();
+        
     DatanodeDescriptor[] targets = repl.getValue().targets;
 
     DatanodeDescriptor[] pipeline = new DatanodeDescriptor[1 + targets.length];

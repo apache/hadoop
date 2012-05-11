@@ -131,7 +131,7 @@ public class INodeFile extends INode implements BlockCollection {
     }
     
     for(BlockInfo bi: newlist) {
-      bi.setINode(this);
+      bi.setBlockCollection(this);
     }
     this.blocks = newlist;
   }
@@ -164,7 +164,7 @@ public class INodeFile extends INode implements BlockCollection {
     if(blocks != null && v != null) {
       for (BlockInfo blk : blocks) {
         v.add(blk);
-        blk.setINode(null);
+        blk.setBlockCollection(null);
       }
     }
     blocks = null;

@@ -20,6 +20,7 @@ package org.apache.hadoop.io;
 
 import junit.framework.TestCase;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.util.Random;
@@ -107,7 +108,6 @@ public class TestText extends TestCase {
     }
   }
   
-  
   public void testIO() throws Exception {
     DataOutputBuffer out = new DataOutputBuffer();
     DataInputBuffer in = new DataInputBuffer();
@@ -135,6 +135,40 @@ public class TestText extends TestCase {
                                  out.getLength()-strLenSize, "UTF-8");
       assertTrue(before.equals(after2));
     }
+  }
+  
+  public void doTestLimitedIO(String str, int strLen) throws IOException {
+    DataOutputBuffer out = new DataOutputBuffer();
+    DataInputBuffer in = new DataInputBuffer();
+
+    out.reset();
+    try {
+      Text.writeString(out, str, strLen);
+      fail("expected writeString to fail when told to write a string " +
+          "that was too long!  The string was '" + str + "'");
+    } catch (IOException e) {
+    }
+    Text.writeString(out, str, strLen + 1);
+
+    // test that it reads correctly
+    in.reset(out.getData(), out.getLength());
+    in.mark(strLen);
+    String after;
+    try {
+      after = Text.readString(in, strLen);
+      fail("expected readString to fail when told to read a string " +
+          "that was too long!  The string was '" + str + "'");
+    } catch (IOException e) {
+    }
+    in.reset();
+    after = Text.readString(in, strLen + 1);
+    assertTrue(str.equals(after));
+  }
+  
+  public void testLimitedIO() throws Exception {
+    doTestLimitedIO("abcd", 4);
+    doTestLimitedIO("", 0);
+    doTestLimitedIO("1", 1);
   }
 
   public void testCompare() throws Exception {

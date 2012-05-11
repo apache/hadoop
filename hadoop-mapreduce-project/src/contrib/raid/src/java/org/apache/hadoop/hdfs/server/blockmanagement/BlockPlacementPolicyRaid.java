@@ -144,25 +144,25 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
 
   /** {@inheritDoc} */
   @Override
-  public DatanodeDescriptor chooseReplicaToDelete(BlockCollection inode,
+  public DatanodeDescriptor chooseReplicaToDelete(BlockCollection bc,
       Block block, short replicationFactor,
       Collection<DatanodeDescriptor> first,
       Collection<DatanodeDescriptor> second) {
 
     DatanodeDescriptor chosenNode = null;
     try {
-      String path = cachedFullPathNames.get(inode);
+      String path = cachedFullPathNames.get(bc);
       FileType type = getFileType(path);
       if (type == FileType.NOT_RAID) {
         return defaultPolicy.chooseReplicaToDelete(
-            inode, block, replicationFactor, first, second);
+            bc, block, replicationFactor, first, second);
       }
       List<LocatedBlock> companionBlocks =
           getCompanionBlocks(path, type, block);
       if (companionBlocks == null || companionBlocks.size() == 0) {
         // Use the default method if it is not a valid raided or parity file
         return defaultPolicy.chooseReplicaToDelete(
-            inode, block, replicationFactor, first, second);
+            bc, block, replicationFactor, first, second);
       }
       // Delete from the first collection first
       // This ensures the number of unique rack of this block is not reduced
@@ -174,12 +174,12 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
         return chosenNode;
       }
       return defaultPolicy.chooseReplicaToDelete(
-          inode, block, replicationFactor, first, second);
+          bc, block, replicationFactor, first, second);
     } catch (Exception e) {
       LOG.debug("Error happend when choosing replica to delete" +
         StringUtils.stringifyException(e));
       return defaultPolicy.chooseReplicaToDelete(
-          inode, block, replicationFactor, first, second);
+          bc, block, replicationFactor, first, second);
     }
   }
 
@@ -446,25 +446,25 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
       };
 
     static private class INodeWithHashCode {
-      BlockCollection inode;
-      INodeWithHashCode(BlockCollection inode) {
-        this.inode = inode;
+      BlockCollection bc;
+      INodeWithHashCode(BlockCollection bc) {
+        this.bc= bc;
       }
       @Override
       public boolean equals(Object obj) {
-        return inode == obj;
+        return bc== obj;
       }
       @Override
       public int hashCode() {
-        return System.identityHashCode(inode);
+        return System.identityHashCode(bc);
       }
       String getFullPathName() {
-        return inode.getName();
+        return bc.getName();
       }
     }
 
-    public String get(BlockCollection inode) throws IOException {
-      return cacheInternal.get(new INodeWithHashCode(inode));
+    public String get(BlockCollection bc) throws IOException {
+      return cacheInternal.get(new INodeWithHashCode(bc));
     }
   }
 
