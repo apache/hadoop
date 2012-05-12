@@ -318,6 +318,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
     and epoch in JournalProtocol. (suresh via szetszwo)
 
+    HADOOP-8285 HDFS changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

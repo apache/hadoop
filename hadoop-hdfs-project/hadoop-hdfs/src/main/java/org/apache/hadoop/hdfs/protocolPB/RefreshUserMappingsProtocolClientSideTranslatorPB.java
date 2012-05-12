@@ -27,7 +27,6 @@ import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 
 import com.google.protobuf.RpcController;
@@ -76,7 +75,7 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
   public boolean isMethodSupported(String methodName) throws IOException {
     return RpcClientUtil
         .isMethodSupported(rpcProxy, RefreshUserMappingsProtocolPB.class,
-            RpcKind.RPC_PROTOCOL_BUFFER,
+            RPC.RpcKind.RPC_PROTOCOL_BUFFER,
             RPC.getProtocolVersion(RefreshUserMappingsProtocolPB.class),
             methodName);
   }
