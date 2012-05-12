@@ -184,6 +184,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
 
+    HADOOP-8366 Use ProtoBuf for RpcResponseHeader (sanjay radia)
+
   OPTIMIZATIONS
 
   BUG FIXES
