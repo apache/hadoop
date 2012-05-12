@@ -133,6 +133,9 @@ Trunk (unreleased changes)
     HADOOP-8375. test-patch should stop immediately once it has found
     compilation errors (bobby)
 
+    HADOOP-8395. Text shell command unnecessarily demands that a
+    SequenceFile's key class be WritableComparable (harsh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
