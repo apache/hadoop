@@ -33,7 +33,6 @@ import org.apache.commons.logging.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -75,7 +74,7 @@ public class WritableRpcEngine implements RpcEngine {
    * Register the rpcRequest deserializer for WritableRpcEngine
    */
   private static synchronized void initialize() {
-    org.apache.hadoop.ipc.Server.registerProtocolEngine(RpcKind.RPC_WRITABLE,
+    org.apache.hadoop.ipc.Server.registerProtocolEngine(RPC.RpcKind.RPC_WRITABLE,
         Invocation.class, new Server.WritableRpcInvoker());
     isInitialized = true;
   }
@@ -223,7 +222,7 @@ public class WritableRpcEngine implements RpcEngine {
       }
 
       ObjectWritable value = (ObjectWritable)
-        client.call(RpcKind.RPC_WRITABLE, new Invocation(method, args), remoteId);
+        client.call(RPC.RpcKind.RPC_WRITABLE, new Invocation(method, args), remoteId);
       if (LOG.isDebugEnabled()) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
@@ -412,12 +411,12 @@ public class WritableRpcEngine implements RpcEngine {
               protocolImpl.getClass());
         }
         // register protocol class and its super interfaces
-        registerProtocolAndImpl(RpcKind.RPC_WRITABLE, protocolClass, protocolImpl);
+        registerProtocolAndImpl(RPC.RpcKind.RPC_WRITABLE, protocolClass, protocolImpl);
         protocols = RPC.getProtocolInterfaces(protocolClass);
       }
       for (Class<?> p : protocols) {
         if (!p.equals(VersionedProtocol.class)) {
-          registerProtocolAndImpl(RpcKind.RPC_WRITABLE, p, protocolImpl);
+          registerProtocolAndImpl(RPC.RpcKind.RPC_WRITABLE, p, protocolImpl);
         }
       }
 
@@ -461,7 +460,7 @@ public class WritableRpcEngine implements RpcEngine {
             // registered directly.
             // Send the call to the highest  protocol version
             VerProtocolImpl highest = server.getHighestSupportedProtocol(
-                RpcKind.RPC_WRITABLE, protocolName);
+                RPC.RpcKind.RPC_WRITABLE, protocolName);
             if (highest == null) {
               throw new IOException("Unknown protocol: " + protocolName);
             }
@@ -473,10 +472,10 @@ public class WritableRpcEngine implements RpcEngine {
             ProtoNameVer pv = 
                 new ProtoNameVer(call.declaringClassProtocolName, clientVersion);
             protocolImpl = 
-                server.getProtocolImplMap(RpcKind.RPC_WRITABLE).get(pv);
+                server.getProtocolImplMap(RPC.RpcKind.RPC_WRITABLE).get(pv);
             if (protocolImpl == null) { // no match for Protocol AND Version
                VerProtocolImpl highest = 
-                   server.getHighestSupportedProtocol(RpcKind.RPC_WRITABLE, 
+                   server.getHighestSupportedProtocol(RPC.RpcKind.RPC_WRITABLE, 
                        protoName);
               if (highest == null) {
                 throw new IOException("Unknown protocol: " + protoName);

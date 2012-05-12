@@ -182,6 +182,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8113. Correction to BUILDING.txt: HDFS needs ProtocolBuffer, too
     (not just MapReduce). Contributed by Eugene Koontz.
 
+    HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
   OPTIMIZATIONS
 
   BUG FIXES
