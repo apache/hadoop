@@ -63,11 +63,7 @@ Trunk (unreleased changes)
 
     HADOOP-8290. Remove remaining references to hadoop.native.lib (harsh)
 
-    HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
-
     HADOOP-8308. Support cross-project Jenkins builds. (tomwhite)
-
-    HADOOP-8366 Use ProtoBuf for RpcResponseHeader (sanjay radia)
 
   BUG FIXES
 
@@ -321,6 +317,10 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8113. Correction to BUILDING.txt: HDFS needs ProtocolBuffer, too
     (not just MapReduce). Contributed by Eugene Koontz.
+
+    HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
+    HADOOP-8366 Use ProtoBuf for RpcResponseHeader (sanjay radia)
 
   OPTIMIZATIONS
 
