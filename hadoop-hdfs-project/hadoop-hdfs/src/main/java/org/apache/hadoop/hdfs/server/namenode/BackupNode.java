@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
+import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -207,7 +209,8 @@ public class BackupNode extends NameNode {
   }
   
   /* @Override */// NameNode
-  public boolean setSafeMode(SafeModeAction action) throws IOException {
+  public boolean setSafeMode(@SuppressWarnings("unused") SafeModeAction action)
+      throws IOException {
     throw new UnsupportedActionException("setSafeMode");
   }
   
@@ -226,50 +229,55 @@ public class BackupNode extends NameNode {
     
     /** 
      * Verifies a journal request
-     * @param nodeReg node registration
-     * @throws UnregisteredNodeException if the registration is invalid
      */
-    void verifyJournalRequest(NamenodeRegistration reg) throws IOException {
-      verifyLayoutVersion(reg.getLayoutVersion());
+    private void verifyJournalRequest(JournalInfo journalInfo)
+        throws IOException {
+      verifyLayoutVersion(journalInfo.getLayoutVersion());
       String errorMsg = null;
       int expectedNamespaceID = namesystem.getNamespaceInfo().getNamespaceID();
-      if (reg.getNamespaceID() != expectedNamespaceID) {
+      if (journalInfo.getNamespaceId() != expectedNamespaceID) {
         errorMsg = "Invalid namespaceID in journal request - expected " + expectedNamespaceID
-            + " actual " + reg.getNamespaceID();
+            + " actual " + journalInfo.getNamespaceId();
         LOG.warn(errorMsg);
-        throw new UnregisteredNodeException(reg);
+        throw new UnregisteredNodeException(journalInfo);
       } 
-      if (!reg.getClusterID().equals(namesystem.getClusterId())) {
+      if (!journalInfo.getClusterId().equals(namesystem.getClusterId())) {
         errorMsg = "Invalid clusterId in journal request - expected "
-            + reg.getClusterID() + " actual " + namesystem.getClusterId();
+            + journalInfo.getClusterId() + " actual " + namesystem.getClusterId();
         LOG.warn(errorMsg);
-        throw new UnregisteredNodeException(reg);
+        throw new UnregisteredNodeException(journalInfo);
       }
     }
-
 
     /////////////////////////////////////////////////////
     // BackupNodeProtocol implementation for backup node.
     /////////////////////////////////////////////////////
     @Override
-    public void startLogSegment(NamenodeRegistration registration, long txid)
-        throws IOException {
+    public void startLogSegment(JournalInfo journalInfo, long epoch,
+        long txid) throws IOException {
       namesystem.checkOperation(OperationCategory.JOURNAL);
-      verifyJournalRequest(registration);
+      verifyJournalRequest(journalInfo);
       getBNImage().namenodeStartedLogSegment(txid);
     }
     
     @Override
-    public void journal(NamenodeRegistration nnReg,
-        long firstTxId, int numTxns,
-        byte[] records) throws IOException {
+    public void journal(JournalInfo journalInfo, long epoch, long firstTxId,
+        int numTxns, byte[] records) throws IOException {
       namesystem.checkOperation(OperationCategory.JOURNAL);
-      verifyJournalRequest(nnReg);
+      verifyJournalRequest(journalInfo);
       getBNImage().journal(firstTxId, numTxns, records);
     }
 
     private BackupImage getBNImage() {
       return (BackupImage)nn.getFSImage();
+    }
+
+    @Override
+    public FenceResponse fence(JournalInfo journalInfo, long epoch,
+        String fencerInfo) throws IOException {
+      LOG.info("Fenced by " + fencerInfo + " with epoch " + epoch);
+      throw new UnsupportedOperationException(
+          "BackupNode does not support fence");
     }
   }
   

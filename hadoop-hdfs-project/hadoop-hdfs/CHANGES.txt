@@ -315,6 +315,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3400. DNs should be able start with jsvc even if security is disabled.
     (atm via eli)
 
+    HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
+    and epoch in JournalProtocol. (suresh via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the

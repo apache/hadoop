@@ -21,7 +21,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.KerberosInfo;
 
 /**
@@ -53,12 +52,15 @@ public interface JournalProtocol {
    * via {@code EditLogBackupOutputStream} in order to synchronize meta-data
    * changes with the backup namespace image.
    * 
-   * @param registration active node registration
+   * @param journalInfo journal information
+   * @param epoch marks beginning a new journal writer
    * @param firstTxnId the first transaction of this batch
    * @param numTxns number of transactions
    * @param records byte array containing serialized journal records
+   * @throws FencedException if the resource has been fenced
    */
-  public void journal(NamenodeRegistration registration,
+  public void journal(JournalInfo journalInfo,
+                      long epoch,
                       long firstTxnId,
                       int numTxns,
                       byte[] records) throws IOException;
@@ -66,9 +68,24 @@ public interface JournalProtocol {
   /**
    * Notify the BackupNode that the NameNode has rolled its edit logs
    * and is now writing a new log segment.
-   * @param registration the registration of the active NameNode
+   * @param journalInfo journal information
+   * @param epoch marks beginning a new journal writer
    * @param txid the first txid in the new log
+   * @throws FencedException if the resource has been fenced
    */
-  public void startLogSegment(NamenodeRegistration registration,
+  public void startLogSegment(JournalInfo journalInfo, long epoch,
       long txid) throws IOException;
+  
+  /**
+   * Request to fence any other journal writers.
+   * Older writers with at previous epoch will be fenced and can no longer
+   * perform journal operations.
+   * 
+   * @param journalInfo journal information
+   * @param epoch marks beginning a new journal writer
+   * @param fencerInfo info about fencer for debugging purposes
+   * @throws FencedException if the resource has been fenced
+   */
+  public FenceResponse fence(JournalInfo journalInfo, long epoch,
+      String fencerInfo) throws IOException;
 }
