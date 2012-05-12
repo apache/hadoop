@@ -368,9 +368,6 @@ Release 2.0.0 - UNRELEASED
     HDFS-2505. Add a test to verify getFileChecksum(..) with ViewFS.  (Ravi
     Prakash via szetszwo)
 
-    HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
-    and epoch in JournalProtocol. (suresh via szetszwo)
-
     HDFS-3240. Drop log level of "heartbeat: ..." in BPServiceActor to DEBUG
     (todd)
 
@@ -453,6 +450,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3400. DNs should be able start with jsvc even if security is disabled.
     (atm via eli)
+
+    HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
+    and epoch in JournalProtocol. (suresh via szetszwo)
 
   OPTIMIZATIONS
 
