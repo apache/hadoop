@@ -60,7 +60,6 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mortbay.util.ajax.JSON;
 
@@ -360,6 +359,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         true);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN,
+        true);
     conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
         DummyFilterInitializer.class.getName());
 
@@ -466,6 +467,26 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
     Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
 
+  }
+
+  @Test
+  public void testRequiresAuthorizationAccess() throws Exception {
+    Configuration conf = new Configuration();
+    ServletContext context = Mockito.mock(ServletContext.class);
+    Mockito.when(context.getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE)).thenReturn(conf);
+    HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+
+    //requires admin access to instrumentation, FALSE by default
+    Assert.assertTrue(HttpServer.isInstrumentationAccessAllowed(context, request, response));
+
+    //requires admin access to instrumentation, TRUE
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, true);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
+    AccessControlList acls = Mockito.mock(AccessControlList.class);
+    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
+    Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
+    Assert.assertFalse(HttpServer.isInstrumentationAccessAllowed(context, request, response));
   }
 
   @Test public void testBindAddress() throws Exception {

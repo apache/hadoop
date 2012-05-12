@@ -30,13 +30,15 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.primitives.SignedBytes;
+
 /**
  * We keep an in-memory representation of the file/block hierarchy.
  * This is a base INode class containing common fields for file and 
  * directory inodes.
  */
 @InterfaceAudience.Private
-abstract class INode implements Comparable<byte[]>, FSInodeInfo {
+abstract class INode implements Comparable<byte[]> {
   /*
    *  The inode name is in java UTF8 encoding; 
    *  The name in HdfsFileStatus should keep the same encoding as this.
@@ -143,8 +145,7 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
   protected PermissionStatus getPermissionStatus() {
     return new PermissionStatus(getUserName(),getGroupName(),getFsPermission());
   }
-  private synchronized void updatePermissionStatus(
-      PermissionStatusFormat f, long n) {
+  private void updatePermissionStatus(PermissionStatusFormat f, long n) {
     permission = f.combine(n, permission);
   }
   /** Get user name */
@@ -263,7 +264,6 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     this.name = name;
   }
 
-  @Override
   public String getFullPathName() {
     // Get the full path name of this inode.
     return FSDirectory.getFullPathName(this);
@@ -400,47 +400,29 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     }
   }
 
-  //
-  // Comparable interface
-  //
-  public int compareTo(byte[] o) {
-    return compareBytes(name, o);
+  private static final byte[] EMPTY_BYTES = {};
+
+  @Override
+  public final int compareTo(byte[] bytes) {
+    final byte[] left = name == null? EMPTY_BYTES: name;
+    final byte[] right = bytes == null? EMPTY_BYTES: bytes;
+    return SignedBytes.lexicographicalComparator().compare(left, right);
   }
 
-  public boolean equals(Object o) {
-    if (!(o instanceof INode)) {
+  @Override
+  public final boolean equals(Object that) {
+    if (this == that) {
+      return true;
+    }
+    if (that == null || !(that instanceof INode)) {
       return false;
     }
-    return Arrays.equals(this.name, ((INode)o).name);
+    return Arrays.equals(this.name, ((INode)that).name);
   }
 
-  public int hashCode() {
+  @Override
+  public final int hashCode() {
     return Arrays.hashCode(this.name);
-  }
-
-  //
-  // static methods
-  //
-  /**
-   * Compare two byte arrays.
-   * 
-   * @return a negative integer, zero, or a positive integer 
-   * as defined by {@link #compareTo(byte[])}.
-   */
-  static int compareBytes(byte[] a1, byte[] a2) {
-    if (a1==a2)
-        return 0;
-    int len1 = (a1==null ? 0 : a1.length);
-    int len2 = (a2==null ? 0 : a2.length);
-    int n = Math.min(len1, len2);
-    byte b1, b2;
-    for (int i=0; i<n; i++) {
-      b1 = a1[i];
-      b2 = a2[i];
-      if (b1 != b2)
-        return b1 - b2;
-    }
-    return len1 - len2;
   }
   
   /**

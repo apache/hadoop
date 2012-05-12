@@ -199,7 +199,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @return the protocol scheme for the FileSystem.
    */
   public String getScheme() {
-    throw new UnsupportedOperationException("Not implemented by  the FileSystem implementation");
+    throw new UnsupportedOperationException("Not implemented by the " + getClass().getSimpleName() + " FileSystem implementation");
   }
 
   /** Returns a URI whose scheme and authority identify this FileSystem.*/

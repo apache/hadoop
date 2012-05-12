@@ -327,6 +327,8 @@ public class AuthenticationFilter implements Filter {
   @Override
   public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
       throws IOException, ServletException {
+    boolean unauthorizedResponse = true;
+    String unauthorizedMsg = "";
     HttpServletRequest httpRequest = (HttpServletRequest) request;
     HttpServletResponse httpResponse = (HttpServletResponse) response;
     try {
@@ -350,6 +352,7 @@ public class AuthenticationFilter implements Filter {
         newToken = true;
       }
       if (token != null) {
+        unauthorizedResponse = false;
         if (LOG.isDebugEnabled()) {
           LOG.debug("Request [{}] user [{}] authenticated", getRequestURL(httpRequest), token.getUserName());
         }
@@ -378,17 +381,17 @@ public class AuthenticationFilter implements Filter {
         }
         filterChain.doFilter(httpRequest, httpResponse);
       }
-      else {
-        throw new AuthenticationException("Missing AuthenticationToken");
-      }
     } catch (AuthenticationException ex) {
+      unauthorizedMsg = ex.toString();
+      LOG.warn("Authentication exception: " + ex.getMessage(), ex);
+    }
+    if (unauthorizedResponse) {
       if (!httpResponse.isCommitted()) {
         Cookie cookie = createCookie("");
         cookie.setMaxAge(0);
         httpResponse.addCookie(cookie);
-        httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, ex.getMessage());
+        httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, unauthorizedMsg);
       }
-      LOG.warn("Authentication exception: " + ex.getMessage(), ex);
     }
   }
 

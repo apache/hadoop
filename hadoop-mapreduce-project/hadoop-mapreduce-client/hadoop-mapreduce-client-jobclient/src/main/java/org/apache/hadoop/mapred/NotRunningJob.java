@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -207,6 +208,12 @@ public class NotRunningJob implements MRClientProtocol {
   public GetDelegationTokenResponse getDelegationToken(
       GetDelegationTokenRequest request) throws YarnRemoteException {
     /* Should not be invoked by anyone. */
+    throw new NotImplementedException();
+  }
+  
+  @Override
+  public InetSocketAddress getConnectAddress() {
+    /* Should not be invoked by anyone.  Normally used to set token service */
     throw new NotImplementedException();
   }
 }

@@ -89,9 +89,11 @@ class AppsBlock extends HtmlBlock {
           td(appInfo.getName()).
           td(appInfo.getQueue()).
           td().
-            br().$title(startTime)._()._(startTime)._().
+            br().$title(String.valueOf(appInfo.getStartTime()))._().
+            _(startTime)._().
           td().
-          br().$title(finishTime)._()._(finishTime)._().
+            br().$title(String.valueOf(appInfo.getFinishTime()))._().
+            _(finishTime)._().
           td(appInfo.getState()).
           td(appInfo.getFinalStatus()).
           td().

@@ -333,7 +333,7 @@ public class TestDFSClientRetries extends TestCase {
       LocatedBlock badLocatedBlock = new LocatedBlock(
         goodLocatedBlock.getBlock(),
         new DatanodeInfo[] {
-          new DatanodeInfo(new DatanodeID("255.255.255.255", 234))
+          DFSTestUtil.getDatanodeInfo("1.2.3.4", "bogus", 1234)
         },
         goodLocatedBlock.getStartOffset(),
         false);
@@ -627,8 +627,7 @@ public class TestDFSClientRetries extends TestCase {
     server.start();
 
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
-    DatanodeID fakeDnId = new DatanodeID(
-        "localhost", "localhost", "fake-storage", addr.getPort(), 0, addr.getPort());
+    DatanodeID fakeDnId = DFSTestUtil.getLocalDatanodeID(addr.getPort());
     
     ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
     LocatedBlock fakeBlock = new LocatedBlock(b, new DatanodeInfo[0]);

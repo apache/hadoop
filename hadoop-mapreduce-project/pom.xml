@@ -128,8 +128,8 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <!-- needed for security and runtime -->
       <artifactId>hadoop-hdfs</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.inject</groupId>

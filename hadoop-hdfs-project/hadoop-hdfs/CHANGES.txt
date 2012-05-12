@@ -368,9 +368,6 @@ Release 2.0.0 - UNRELEASED
     HDFS-2505. Add a test to verify getFileChecksum(..) with ViewFS.  (Ravi
     Prakash via szetszwo)
 
-    HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
-    and epoch in JournalProtocol. (suresh via szetszwo)
-
     HDFS-3240. Drop log level of "heartbeat: ..." in BPServiceActor to DEBUG
     (todd)
 
@@ -419,6 +416,44 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3339. Change INode to package private.  (John George via szetszwo)
 
+    HDFS-3303. Remove Writable implementation from RemoteEditLogManifest.
+    (Brandon Li via szetszwo)
+
+    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck
+    with SPNEGO-based solution. (jghoman, tucu, and atm via eli)
+
+    HDFS-3365. Enable users to disable socket caching in DFS client
+    configuration (todd)
+
+    HDFS-3375. Put client name in DataXceiver thread name for readBlock
+    and keepalive (todd)
+
+    HDFS-3363. Define BlockCollection and MutableBlockCollection interfaces
+    so that INodeFile and INodeFileUnderConstruction do not have to be used in
+    block management.  (John George via szetszwo)
+
+    HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
+    logging is enabled. (atm)
+
+    HDFS-3341. Change minimum RPC versions to respective SNAPSHOTs instead of
+    final releases. (todd)
+
+    HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and
+    BlocksMap to {get|set|add}BlockCollection(..).  (John George via szetszwo)
+
+    HDFS-3134. harden edit log loader against malformed or malicious input.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
+
+    HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. (eli)
+
+    HDFS-3400. DNs should be able start with jsvc even if security is disabled.
+    (atm via eli)
+
+    HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
+    and epoch in JournalProtocol. (suresh via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
@@ -431,6 +466,8 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-2476. More CPU efficient data structure for under-replicated,
     over-replicated, and invalidated blocks. (Tomasz Nykiel via todd)
+
+    HDFS-3378. Remove DFS_NAMENODE_SECONDARY_HTTPS_PORT_KEY and DEFAULT. (eli)
 
   BUG FIXES
 
@@ -588,6 +625,33 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3330. If GetImageServlet throws an Error or RTE, response should not
     have HTTP "OK" status. (todd)
+
+    HDFS-3351. NameNode#initializeGenericKeys should always set fs.defaultFS
+    regardless of whether HA or Federation is enabled. (atm)
+
+    HDFS-3359. DFSClient.close should close cached sockets. (todd)
+
+    HDFS-3350. In INode, add final to compareTo(..), equals(..) and hashCode(),
+    and remove synchronized from updatePermissionStatus(..).  (szetszwo)
+
+    HDFS-3357. DataXceiver reads from client socket with incorrect/no timeout
+    (todd)
+
+    HDFS-3376. DFSClient fails to make connection to DN if there are many
+    unusable cached sockets (todd)
+
+    HDFS-3328. NPE in DataNode.getIpcPort. (eli)
+
+    HDFS-3396. FUSE build fails on Ubuntu 12.04. (Colin Patrick McCabe via eli)
+
+    HDFS-3395. NN doesn't start with HA+security enabled and HTTP address
+    set to 0.0.0.0. (atm)
+
+    HDFS-3385. The last block of INodeFileUnderConstruction is not
+    necessarily a BlockInfoUnderConstruction, so do not cast it in
+    FSNamesystem.recoverLeaseInternal(..).  (szetszwo)
+
+    HDFS-3026. HA: Handle failure during HA state transition. (atm)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

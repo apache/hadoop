@@ -21,8 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -88,9 +88,9 @@ public class TestNodeStatusUpdater {
       .getRecordFactory(null);
 
   int heartBeatID = 0;
-  volatile Error nmStartError = null;
+  volatile Throwable nmStartError = null;
   private final List<NodeId> registeredNodes = new ArrayList<NodeId>();
-  private final Configuration conf = new YarnConfiguration();
+  private final Configuration conf = createNMConfig();
   private NodeManager nm;
   protected NodeManager rebootedNodeManager;
 
@@ -118,12 +118,10 @@ public class TestNodeStatusUpdater {
       NodeId nodeId = request.getNodeId();
       Resource resource = request.getResource();
       LOG.info("Registering " + nodeId.toString());
-      try {
-        Assert.assertEquals(InetAddress.getLocalHost().getCanonicalHostName()
-            + ":12345", nodeId.toString());
-      } catch (UnknownHostException e) {
-        Assert.fail(e.getMessage());
-      }
+      // NOTE: this really should be checking against the config value
+      InetSocketAddress expected = NetUtils.getConnectAddress(
+          conf.getSocketAddr(YarnConfiguration.NM_ADDRESS, null, -1));
+      Assert.assertEquals(NetUtils.getHostPortString(expected), nodeId.toString());
       Assert.assertEquals(5 * 1024, resource.getMemory());
       registeredNodes.add(nodeId);
       RegistrationResponse regResponse = recordFactory
@@ -421,8 +419,9 @@ public class TestNodeStatusUpdater {
       public void run() {
         try {
           nm.start();
-        } catch (Error e) {
+        } catch (Throwable e) {
           TestNodeStatusUpdater.this.nmStartError = e;
+          throw new YarnException(e);
         }
       }
     }.start();
@@ -433,10 +432,11 @@ public class TestNodeStatusUpdater {
     int waitCount = 0;
     while (nm.getServiceState() == STATE.INITED && waitCount++ != 20) {
       LOG.info("Waiting for NM to start..");
+      if (nmStartError != null) {
+        LOG.error("Error during startup. ", nmStartError);
+        Assert.fail(nmStartError.getCause().getMessage());
+      }
       Thread.sleep(1000);
-    }
-    if (nmStartError != null) {
-      throw nmStartError;
     }
     if (nm.getServiceState() != STATE.STARTED) {
       // NM could have failed.

@@ -19,7 +19,6 @@ package org.apache.hadoop.util;
 
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 public class TestVersionUtil {
@@ -30,6 +29,8 @@ public class TestVersionUtil {
     assertEquals(0, VersionUtil.compareVersions("2.0.0", "2.0.0"));
     assertEquals(0, VersionUtil.compareVersions("2.0.0a", "2.0.0a"));
     assertEquals(0, VersionUtil.compareVersions("1", "1"));
+    assertEquals(0, VersionUtil.compareVersions(
+        "2.0.0-SNAPSHOT", "2.0.0-SNAPSHOT"));
     
     // Assert that lower versions are lower, and higher versions are higher.
     assertExpectedValues("1", "2.0.0");
@@ -52,6 +53,13 @@ public class TestVersionUtil {
     assertExpectedValues("1.0.0a2", "1.0.0a10");
     assertExpectedValues("1.0", "1.a");
     assertExpectedValues("1.0", "1.a0");
+    
+    // Snapshot builds precede their eventual releases.
+    assertExpectedValues("1.0-SNAPSHOT", "1.0");
+    assertExpectedValues("1.0", "1.0.0-SNAPSHOT");
+    assertExpectedValues("1.0.0-SNAPSHOT", "1.0.0");
+    assertExpectedValues("1.0.0", "1.0.1-SNAPSHOT");
+    assertExpectedValues("1.0.1-SNAPSHOT", "1.0.1");
   }
   
   private static void assertExpectedValues(String lower, String higher) {

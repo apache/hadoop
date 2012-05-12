@@ -52,8 +52,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.metrics.MetricsServlet;
-import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
-import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector.MODE;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -99,6 +97,7 @@ public class HttpServer implements FilterContainer {
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   static final String ADMINS_ACL = "admins.acl";
+  public static final String SPNEGO_FILTER = "SpnegoFilter";
 
   public static final String BIND_ADDRESS = "bind.address";
 
@@ -237,11 +236,7 @@ public class HttpServer implements FilterContainer {
     webServer.addHandler(webAppContext);
 
     addDefaultApps(contexts, appDir, conf);
-    
-    defineFilter(webAppContext, "krb5Filter", 
-        Krb5AndCertsSslSocketConnector.Krb5SslFilter.class.getName(), 
-        null, null);
-    
+        
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
     if (initializers != null) {
@@ -424,12 +419,13 @@ public class HttpServer implements FilterContainer {
    * protect with Kerberos authentication. 
    * Note: This method is to be used for adding servlets that facilitate
    * internal communication and not for user facing functionality. For
-   * servlets added using this method, filters (except internal Kerberized
+   +   * servlets added using this method, filters (except internal Kerberos
    * filters) are not enabled. 
    * 
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
    * @param clazz The servlet class
+   * @param requireAuth Require Kerberos authenticate to access servlet
    */
   public void addInternalServlet(String name, String pathSpec, 
       Class<? extends HttpServlet> clazz, boolean requireAuth) {
@@ -440,11 +436,11 @@ public class HttpServer implements FilterContainer {
     webAppContext.addServlet(holder, pathSpec);
     
     if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
-       LOG.info("Adding Kerberos filter to " + name);
+       LOG.info("Adding Kerberos (SPNEGO) filter to " + name);
        ServletHandler handler = webAppContext.getServletHandler();
        FilterMapping fmap = new FilterMapping();
        fmap.setPathSpec(pathSpec);
-       fmap.setFilterName("krb5Filter");
+       fmap.setFilterName(SPNEGO_FILTER);
        fmap.setDispatches(Handler.ALL);
        handler.addFilterMapping(fmap);
     }
@@ -584,22 +580,10 @@ public class HttpServer implements FilterContainer {
    * Configure an ssl listener on the server.
    * @param addr address to listen on
    * @param sslConf conf to retrieve ssl options
-   * @param needClientAuth whether client authentication is required
-   */
-  public void addSslListener(InetSocketAddress addr, Configuration sslConf,
-      boolean needClientAuth) throws IOException {
-    addSslListener(addr, sslConf, needClientAuth, false);
-  }
-
-  /**
-   * Configure an ssl listener on the server.
-   * @param addr address to listen on
-   * @param sslConf conf to retrieve ssl options
    * @param needCertsAuth whether x509 certificate authentication is required
-   * @param needKrbAuth whether to allow kerberos auth
    */
   public void addSslListener(InetSocketAddress addr, Configuration sslConf,
-      boolean needCertsAuth, boolean needKrbAuth) throws IOException {
+      boolean needCertsAuth) throws IOException {
     if (webServer.isStarted()) {
       throw new IOException("Failed to add ssl listener");
     }
@@ -612,15 +596,7 @@ public class HttpServer implements FilterContainer {
       System.setProperty("javax.net.ssl.trustStoreType", sslConf.get(
           "ssl.server.truststore.type", "jks"));
     }
-    Krb5AndCertsSslSocketConnector.MODE mode;
-    if(needCertsAuth && needKrbAuth)
-      mode = MODE.BOTH;
-    else if (!needCertsAuth && needKrbAuth)
-      mode = MODE.KRB;
-    else // Default to certificates
-      mode = MODE.CERTS;
-
-    SslSocketConnector sslListener = new Krb5AndCertsSslSocketConnector(mode);
+    SslSocketConnector sslListener = new SslSocketConnector();
     sslListener.setHost(addr.getHostName());
     sslListener.setPort(addr.getPort());
     sslListener.setKeystore(sslConf.get("ssl.server.keystore.location"));
@@ -780,6 +756,37 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
+   * Checks the user has privileges to access to instrumentation servlets.
+   * <p/>
+   * If <code>hadoop.security.instrumentation.requires.admin</code> is set to FALSE
+   * (default value) it always returns TRUE.
+   * <p/>
+   * If <code>hadoop.security.instrumentation.requires.admin</code> is set to TRUE
+   * it will check that if the current user is in the admin ACLS. If the user is
+   * in the admin ACLs it returns TRUE, otherwise it returns FALSE.
+   *
+   * @param servletContext the servlet context.
+   * @param request the servlet request.
+   * @param response the servlet response.
+   * @return TRUE/FALSE based on the logic decribed above.
+   */
+  public static boolean isInstrumentationAccessAllowed(
+    ServletContext servletContext, HttpServletRequest request,
+    HttpServletResponse response) throws IOException {
+    Configuration conf =
+      (Configuration) servletContext.getAttribute(CONF_CONTEXT_ATTRIBUTE);
+
+    boolean access = true;
+    boolean adminAccess = conf.getBoolean(
+      CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN,
+      false);
+    if (adminAccess) {
+      access = hasAdministratorAccess(servletContext, request, response);
+    }
+    return access;
+  }
+
+  /**
    * Does the user sending the HttpServletRequest has the administrator ACLs? If
    * it isn't the case, response will be modified to send an error to the user.
    * 
@@ -794,7 +801,6 @@ public class HttpServer implements FilterContainer {
       HttpServletResponse response) throws IOException {
     Configuration conf =
         (Configuration) servletContext.getAttribute(CONF_CONTEXT_ATTRIBUTE);
-
     // If there is no authorization, anybody has administrator access.
     if (!conf.getBoolean(
         CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
@@ -834,12 +840,11 @@ public class HttpServer implements FilterContainer {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-      response.setContentType("text/plain; charset=UTF-8");
-      // Do the authorization
-      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
-          response)) {
+      if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
+                                                     request, response)) {
         return;
       }
+      response.setContentType("text/plain; charset=UTF-8");
       PrintWriter out = response.getWriter();
       ReflectionUtils.printThreadInfo(out, "");
       out.close();

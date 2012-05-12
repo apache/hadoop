@@ -85,7 +85,7 @@ public class TestContainerLaunchRPC {
 
       ContainerManager proxy = (ContainerManager) rpc.getProxy(
           ContainerManager.class,
-          NetUtils.createSocketAddr("localhost:" + server.getPort()), conf);
+          server.getListenerAddress(), conf);
       ContainerLaunchContext containerLaunchContext = recordFactory
           .newRecordInstance(ContainerLaunchContext.class);
       containerLaunchContext.setUser("dummy-user");

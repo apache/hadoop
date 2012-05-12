@@ -860,7 +860,7 @@ public class DataNode extends Configured
    */
   public String getDisplayName() {
     // NB: our DatanodeID may not be set yet
-    return hostName + ":" + getIpcPort();
+    return hostName + ":" + getXferPort();
   }
 
   /**
@@ -877,7 +877,6 @@ public class DataNode extends Configured
   /**
    * @return the datanode's IPC port
    */
-  @VisibleForTesting
   public int getIpcPort() {
     return ipcServer.getListenerAddress().getPort();
   }

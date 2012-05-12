@@ -163,6 +163,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4219. make default container-executor.conf.dir be a path 
     relative to the container-executor binary. (rvs via tucu)
 
+    MAPREDUCE-4205. retrofit all JVM shutdown hooks to use ShutdownHookManager 
+    (tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -278,6 +281,15 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-3173. MRV2 UI doesn't work properly without internet (Devaraj K
     via bobby)
 
+    MAPREDUCE-3958. RM: Remove RMNodeState and replace it with NodeState
+    (Bikas Saha via bobby)
+
+    MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
+    (szetszwo)
+
+    MAPREDUCE-4148. MapReduce should not have a compile-time dependency on
+    HDFS. (tomwhite)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -315,7 +327,12 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4210. Expose listener address for WebApp (Daryn Sharp via bobby)
 
+    MAPREDUCE-4162. Correctly set token service (Daryn Sharp via bobby)
+
   OPTIMIZATIONS
+
+    MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
+    Sharp via bobby)
 
   BUG FIXES
 
@@ -446,6 +463,25 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4211. Error conditions (missing appid, appid not found) are 
     masked in the RM app page (Jonathan Eagles via bobby)
+
+    MAPREDUCE-4163. consistently set the bind address (Daryn Sharp via bobby)
+
+    MAPREDUCE-4048. NullPointerException exception while accessing the
+    Application Master UI (Devaraj K via bobby)
+
+    MAPREDUCE-4220. RM apps page starttime/endtime sorts are incorrect
+    (Jonathan Eagles via bobby)
+
+    MAPREDUCE-4226. ConcurrentModificationException in FileSystemCounterGroup.
+    (tomwhite)
+
+    MAPREDUCE-4215. RM app page shows 500 error on appid parse error 
+    (Jonathon Eagles via tgraves)
+
+    MAPREDUCE-4237. TestNodeStatusUpdater can fail if localhost has a domain
+    associated with it (bobby)
+
+    MAPREDUCE-4233. NPE can happen in RMNMNodeInfo. (bobby)
 
 Release 0.23.2 - UNRELEASED
 

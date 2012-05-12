@@ -399,10 +399,8 @@ public class TestContainerManagerSecurity {
     Token<ApplicationTokenIdentifier> appToken =
         new Token<ApplicationTokenIdentifier>(appTokenIdentifier,
           appTokenSecretManager);
-    appToken.setService(new Text(schedulerAddr.getHostName() + ":"
-        + schedulerAddr.getPort()));
-    currentUser.addToken(appToken);
     SecurityUtil.setTokenService(appToken, schedulerAddr);
+    currentUser.addToken(appToken);
     
     AMRMProtocol scheduler = currentUser
         .doAs(new PrivilegedAction<AMRMProtocol>() {

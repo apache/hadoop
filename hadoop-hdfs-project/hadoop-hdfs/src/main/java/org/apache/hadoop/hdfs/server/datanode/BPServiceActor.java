@@ -235,6 +235,9 @@ class BPServiceActor implements Runnable {
   }
 
   void reportBadBlocks(ExtendedBlock block) {
+    if (bpRegistration == null) {
+      return;
+    }
     DatanodeInfo[] dnArr = { new DatanodeInfo(bpRegistration) };
     LocatedBlock[] blocks = { new LocatedBlock(block, dnArr) }; 
     

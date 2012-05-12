@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.List;
 
 import javax.security.auth.login.LoginException;
 
@@ -30,20 +29,13 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
-
 
 public class TestViewFsHdfs extends ViewFsBaseTest {
 
   private static MiniDFSCluster cluster;
-  private static Path defaultWorkingDirectory;
   private static HdfsConfiguration CONF = new HdfsConfiguration();
   private static FileContext fc;
   
@@ -57,7 +49,7 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(0), CONF);
-    defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
+    Path defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
   }
@@ -73,25 +65,15 @@ public class TestViewFsHdfs extends ViewFsBaseTest {
     // create the test root on local_fs
     fcTarget = fc;
     super.setUp();
-    
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    super.tearDown();
   }
   
-  
-  /*
-   * This overides the default implementation since hdfs does have delegation
+  /**
+   * This overrides the default implementation since hdfs does have delegation
    * tokens.
    */
   @Override
-  @Test
-  public void testGetDelegationTokens() throws IOException {
-    List<Token<?>> delTokens = 
-        fcView.getDelegationTokens(new Path("/"), "sanjay");
-    Assert.assertEquals(7, delTokens.size()); 
+  int getExpectedDelegationTokenCount() {
+    return 8;
   }
  
 }

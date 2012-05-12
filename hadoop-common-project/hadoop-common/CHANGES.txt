@@ -63,8 +63,6 @@ Trunk (unreleased changes)
 
     HADOOP-8290. Remove remaining references to hadoop.native.lib (harsh)
 
-    HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
-
     HADOOP-8308. Support cross-project Jenkins builds. (tomwhite)
 
   BUG FIXES
@@ -129,6 +127,15 @@ Trunk (unreleased changes)
     HADOOP-8339. jenkins complaining about 16 javadoc warnings 
     (Tom White and Robert Evans via tgraves)
 
+    HADOOP-8354. test-patch findbugs may fail if a dependent module is changed
+    (Tom White and Robert Evans)
+
+    HADOOP-8375. test-patch should stop immediately once it has found
+    compilation errors (bobby)
+
+    HADOOP-8395. Text shell command unnecessarily demands that a
+    SequenceFile's key class be WritableComparable (harsh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -138,6 +145,9 @@ Release 2.0.0 - UNRELEASED
   INCOMPATIBLE CHANGES
 
     HADOOP-7920. Remove Avro Rpc. (suresh)
+
+    HADOOP-8388. Remove unused BlockLocation serialization.
+    (Colin Patrick McCabe via eli)
 
   NEW FEATURES
 
@@ -162,6 +172,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8210. Common side of HDFS-3148: The client should be able
     to use multiple local interfaces for data transfer. (eli)
+
+    HADOOP-8343. Allow configuration of authorization for JmxJsonServlet and 
+    MetricsServlet (tucu)
 
   IMPROVEMENTS
 
@@ -284,6 +297,34 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8214. make hadoop script recognize a full set of deprecated commands (rvs via tucu)
 
+    HADOOP-8347. Hadoop Common logs misspell 'successful'.
+    (Philip Zeyliger via eli)
+
+    HADOOP-8350. Improve NetUtils.getInputStream to return a stream which has
+    a tunable timeout. (todd)
+
+    HADOOP-8356. FileSystem service loading mechanism should print the FileSystem 
+    impl it is failing to load (tucu)
+
+    HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
+    final release. (todd)
+
+    HADOOP-8361. Avoid out-of-memory problems when deserializing strings.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8353. hadoop-daemon.sh and yarn-daemon.sh can be misleading on stop.
+    (Roman Shaposhnik via atm)
+
+    HADOOP-8224. Don't hardcode hdfs.audit.logger in the scripts.
+    (Tomohiko Kinebuchi via eli)
+
+    HADOOP-8113. Correction to BUILDING.txt: HDFS needs ProtocolBuffer, too
+    (not just MapReduce). Contributed by Eugene Koontz.
+
+    HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
+    HADOOP-8366 Use ProtoBuf for RpcResponseHeader (sanjay radia)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -313,8 +354,6 @@ Release 2.0.0 - UNRELEASED
     initialization. (atm)
 
     HADOOP-8104. Inconsistent Jackson versions (tucu)
-
-    HADOOP-7940. The Text.clear() method does not clear the bytes as intended. (Csaba Miklos via harsh)
 
     HADOOP-8119. Fix javac warnings in TestAuthenticationFilter in hadoop-auth.
     (szetszwo)
@@ -406,6 +445,22 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8342. HDFS command fails with exception following merge of 
     HADOOP-8325 (tucu)
 
+    HADOOP-8346. Makes oid changes to make SPNEGO work. Was broken due
+    to fixes introduced by the IBM JDK compatibility patch. (ddas)
+
+    HADOOP-8355. SPNEGO filter throws/logs exception when authentication fails (tucu)
+
+    HADOOP-8349. ViewFS doesn't work when the root of a file system is mounted. (atm)
+
+    HADOOP-8328. Duplicate FileSystem Statistics object for 'file' scheme.
+    (tomwhite)
+
+    HADOOP-8359. Fix javadoc warnings in Configuration.  (Anupam Seth via
+    szetszwo)
+
+    HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
+    starting with a numeric character. (Junping Du via suresh)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -464,6 +519,11 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8172. Configuration no longer sets all keys in a deprecated key 
     list. (Anupam Seth via bobby)
 
+    HADOOP-7868. Hadoop native fails to compile when default linker
+    option is -Wl,--as-needed. (Trevor Robinson via eli)
+
+    HADOOP-8316. Audit logging should be disabled by default. (eli)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -518,6 +578,13 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8335. Improve Configuration's address handling (Daryn Sharp via
     bobby)
+
+    HADOOP-8327. distcpv2 and distcpv1 jars should not coexist (Dave Thompson
+    via bobby)
+
+    HADOOP-8341. Fix or filter findbugs issues in hadoop-tools (bobby)
+
+    HADOOP-8373. Port RPC.getServerAddress to 0.23 (Daryn Sharp via bobby)
 
 Release 0.23.2 - UNRELEASED 
 

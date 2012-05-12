@@ -201,19 +201,17 @@ public class TransferFsImage {
       String queryString, List<File> localPaths,
       NNStorage dstStorage, boolean getChecksum) throws IOException {
     byte[] buf = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
-    String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
-    StringBuilder str = new StringBuilder(proto+nnHostPort+"/getimage?");
-    str.append(queryString);
 
+    String str = "http://" + nnHostPort + "/getimage?" + queryString;
+    LOG.info("Opening connection to " + str);
     //
     // open connection to remote server
     //
-    URL url = new URL(str.toString());
-    
-    // Avoid Krb bug with cross-realm hosts
-    SecurityUtil.fetchServiceTicket(url);
-    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-    
+    URL url = new URL(str);
+
+    HttpURLConnection connection = (HttpURLConnection)
+      SecurityUtil.openSecureHttpConnection(url);
+
     if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
       throw new HttpGetFailedException(
           "Image transfer servlet at " + url +

@@ -140,7 +140,7 @@ public class NetUtils {
 
   /**
    * Util method to build socket addr from either:
-   *   <host>:<post>
+   *   <host>:<port>
    *   <fs>://<host>:<port>/<path>
    */
   public static InetSocketAddress createSocketAddr(String target) {
@@ -150,7 +150,7 @@ public class NetUtils {
   /**
    * Util method to build socket addr from either:
    *   <host>
-   *   <host>:<post>
+   *   <host>:<port>
    *   <fs>://<host>:<port>/<path>
    */
   public static InetSocketAddress createSocketAddr(String target,
@@ -375,53 +375,44 @@ public class NetUtils {
   }
   
   /**
-   * Same as getInputStream(socket, socket.getSoTimeout()).<br><br>
+   * Same as <code>getInputStream(socket, socket.getSoTimeout()).</code>
+   * <br><br>
    * 
-   * From documentation for {@link #getInputStream(Socket, long)}:<br>
-   * Returns InputStream for the socket. If the socket has an associated
-   * SocketChannel then it returns a 
-   * {@link SocketInputStream} with the given timeout. If the socket does not
-   * have a channel, {@link Socket#getInputStream()} is returned. In the later
-   * case, the timeout argument is ignored and the timeout set with 
-   * {@link Socket#setSoTimeout(int)} applies for reads.<br><br>
-   *
-   * Any socket created using socket factories returned by {@link NetUtils},
-   * must use this interface instead of {@link Socket#getInputStream()}.
-   *     
    * @see #getInputStream(Socket, long)
-   * 
-   * @param socket
-   * @return InputStream for reading from the socket.
-   * @throws IOException
    */
-  public static InputStream getInputStream(Socket socket) 
+  public static SocketInputWrapper getInputStream(Socket socket) 
                                            throws IOException {
     return getInputStream(socket, socket.getSoTimeout());
   }
-  
+
   /**
-   * Returns InputStream for the socket. If the socket has an associated
-   * SocketChannel then it returns a 
-   * {@link SocketInputStream} with the given timeout. If the socket does not
-   * have a channel, {@link Socket#getInputStream()} is returned. In the later
-   * case, the timeout argument is ignored and the timeout set with 
-   * {@link Socket#setSoTimeout(int)} applies for reads.<br><br>
+   * Return a {@link SocketInputWrapper} for the socket and set the given
+   * timeout. If the socket does not have an associated channel, then its socket
+   * timeout will be set to the specified value. Otherwise, a
+   * {@link SocketInputStream} will be created which reads with the configured
+   * timeout.
    * 
-   * Any socket created using socket factories returned by {@link NetUtils},
+   * Any socket created using socket factories returned by {@link #NetUtils},
    * must use this interface instead of {@link Socket#getInputStream()}.
-   *     
+   * 
+   * In general, this should be called only once on each socket: see the note
+   * in {@link SocketInputWrapper#setTimeout(long)} for more information.
+   *
    * @see Socket#getChannel()
    * 
    * @param socket
-   * @param timeout timeout in milliseconds. This may not always apply. zero
-   *        for waiting as long as necessary.
-   * @return InputStream for reading from the socket.
+   * @param timeout timeout in milliseconds. zero for waiting as
+   *                long as necessary.
+   * @return SocketInputWrapper for reading from the socket.
    * @throws IOException
    */
-  public static InputStream getInputStream(Socket socket, long timeout) 
+  public static SocketInputWrapper getInputStream(Socket socket, long timeout) 
                                            throws IOException {
-    return (socket.getChannel() == null) ? 
-          socket.getInputStream() : new SocketInputStream(socket, timeout);
+    InputStream stm = (socket.getChannel() == null) ? 
+          socket.getInputStream() : new SocketInputStream(socket);
+    SocketInputWrapper w = new SocketInputWrapper(socket, stm);
+    w.setTimeout(timeout);
+    return w;
   }
   
   /**
@@ -503,7 +494,7 @@ public class NetUtils {
    * also takes a local address and port to bind the socket to. 
    * 
    * @param socket
-   * @param address the remote address
+   * @param endpoint the remote address
    * @param localAddr the local address to bind the socket to
    * @param timeout timeout in milliseconds
    */
@@ -558,16 +549,11 @@ public class NetUtils {
    * @return its IP address in the string format
    */
   public static String normalizeHostName(String name) {
-    if (Character.digit(name.charAt(0), 10) != -1) { // it is an IP
+    try {
+      return InetAddress.getByName(name).getHostAddress();
+    } catch (UnknownHostException e) {
       return name;
-    } else {
-      try {
-        InetAddress ipAddress = InetAddress.getByName(name);
-        return ipAddress.getHostAddress();
-      } catch (UnknownHostException e) {
-        return name;
-      }
-    }
+    }    
   }
   
   /** 

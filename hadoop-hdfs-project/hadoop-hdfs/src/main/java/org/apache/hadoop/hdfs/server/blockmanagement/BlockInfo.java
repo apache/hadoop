@@ -22,18 +22,17 @@ import java.util.LinkedList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
-import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 /**
  * BlockInfo class maintains for a given block
- * the {@link INodeFile} it is part of and datanodes where the replicas of 
+ * the {@link BlockCollection} it is part of and datanodes where the replicas of 
  * the block are stored.
  */
 @InterfaceAudience.Private
 public class BlockInfo extends Block implements
     LightWeightGSet.LinkedElement {
-  private INodeFile inode;
+  private BlockCollection bc;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */
   private LightWeightGSet.LinkedElement nextLinkedElement;
@@ -58,13 +57,13 @@ public class BlockInfo extends Block implements
    */
   public BlockInfo(int replication) {
     this.triplets = new Object[3*replication];
-    this.inode = null;
+    this.bc = null;
   }
   
   public BlockInfo(Block blk, int replication) {
     super(blk);
     this.triplets = new Object[3*replication];
-    this.inode = null;
+    this.bc = null;
   }
 
   /**
@@ -73,16 +72,16 @@ public class BlockInfo extends Block implements
    * @param from BlockInfo to copy from.
    */
   protected BlockInfo(BlockInfo from) {
-    this(from, from.inode.getReplication());
-    this.inode = from.inode;
+    this(from, from.bc.getReplication());
+    this.bc = from.bc;
   }
 
-  public INodeFile getINode() {
-    return inode;
+  public BlockCollection getBlockCollection() {
+    return bc;
   }
 
-  public void setINode(INodeFile inode) {
-    this.inode = inode;
+  public void setBlockCollection(BlockCollection bc) {
+    this.bc = bc;
   }
 
   DatanodeDescriptor getDatanode(int index) {
@@ -335,7 +334,7 @@ public class BlockInfo extends Block implements
       BlockUCState s, DatanodeDescriptor[] targets) {
     if(isComplete()) {
       return new BlockInfoUnderConstruction(
-          this, getINode().getReplication(), s, targets);
+          this, getBlockCollection().getReplication(), s, targets);
     }
     // the block is already under construction
     BlockInfoUnderConstruction ucBlock = (BlockInfoUnderConstruction)this;

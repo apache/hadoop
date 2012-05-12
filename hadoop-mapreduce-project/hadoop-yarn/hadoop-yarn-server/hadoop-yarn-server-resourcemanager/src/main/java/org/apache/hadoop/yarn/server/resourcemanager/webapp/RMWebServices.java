@@ -39,13 +39,13 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
@@ -162,7 +162,7 @@ public class RMWebServices {
     Collection<RMNode> rmNodes = this.rm.getRMContext().getRMNodes().values();
     boolean isInactive = false;
     if (filterState != null && !filterState.isEmpty()) {
-      RMNodeState nodeState = RMNodeState.valueOf(filterState.toUpperCase());
+      NodeState nodeState = NodeState.valueOf(filterState.toUpperCase());
       switch (nodeState) {
       case DECOMMISSIONED:
       case LOST:
@@ -182,7 +182,7 @@ public class RMWebServices {
       } else {
         // No filter. User is asking for all nodes. Make sure you skip the
         // unhealthy nodes.
-        if (ni.getState() == RMNodeState.UNHEALTHY) {
+        if (ni.getState() == NodeState.UNHEALTHY) {
           continue;
         }
       }

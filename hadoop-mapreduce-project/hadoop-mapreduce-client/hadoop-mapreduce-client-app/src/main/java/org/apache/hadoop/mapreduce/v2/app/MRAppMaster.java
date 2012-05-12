@@ -90,6 +90,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
@@ -129,6 +130,11 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 public class MRAppMaster extends CompositeService {
 
   private static final Log LOG = LogFactory.getLog(MRAppMaster.class);
+
+  /**
+   * Priority of the MRAppMaster shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
   private Clock clock;
   private final long startTime;
@@ -990,8 +996,8 @@ public class MRAppMaster extends CompositeService {
           new MRAppMaster(applicationAttemptId, containerId, nodeHostString,
               Integer.parseInt(nodePortString),
               Integer.parseInt(nodeHttpPortString), appSubmitTime);
-      Runtime.getRuntime().addShutdownHook(
-        new MRAppMasterShutdownHook(appMaster));
+      ShutdownHookManager.get().addShutdownHook(
+        new MRAppMasterShutdownHook(appMaster), SHUTDOWN_HOOK_PRIORITY);
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
       conf.addResource(new Path(MRJobConfig.JOB_CONF_FILE));
       String jobUserName = System
@@ -1010,7 +1016,7 @@ public class MRAppMaster extends CompositeService {
 
   // The shutdown hook that runs when a signal is received AND during normal
   // close of the JVM.
-  static class MRAppMasterShutdownHook extends Thread {
+  static class MRAppMasterShutdownHook implements Runnable {
     MRAppMaster appMaster;
     MRAppMasterShutdownHook(MRAppMaster appMaster) {
       this.appMaster = appMaster;
@@ -1028,12 +1034,6 @@ public class MRAppMaster extends CompositeService {
         appMaster.jobHistoryEventHandler.setSignalled(true);
       }
       appMaster.stop();
-      try {
-        //Close all the FileSystem objects
-        FileSystem.closeAll();
-      } catch (IOException ioe) {
-        LOG.warn("Failed to close all FileSystem objects", ioe);
-      }
     }
   }
 

@@ -25,8 +25,10 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -44,6 +46,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
@@ -63,9 +66,9 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
 import org.apache.hadoop.util.Daemon;
@@ -108,7 +111,6 @@ public class SecondaryNameNode implements Runnable {
   private volatile boolean shouldRun;
   private HttpServer infoServer;
   private int infoPort;
-  private int imagePort;
   private String infoBindAddress;
 
   private Collection<URI> checkpointDirs;
@@ -229,63 +231,47 @@ public class SecondaryNameNode implements Runnable {
 
     // Initialize other scheduling parameters from the configuration
     checkpointConf = new CheckpointConf(conf);
-    
-    // initialize the webserver for uploading files.
-    // Kerberized SSL servers must be run from the host principal...
-    UserGroupInformation httpUGI = 
-      UserGroupInformation.loginUserFromKeytabAndReturnUGI(
-          SecurityUtil.getServerPrincipal(conf
-              .get(DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-              infoBindAddress),
-          conf.get(DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY));
-    try {
-      infoServer = httpUGI.doAs(new PrivilegedExceptionAction<HttpServer>() {
-        @Override
-        public HttpServer run() throws IOException, InterruptedException {
-          LOG.info("Starting web server as: " +
-              UserGroupInformation.getCurrentUser().getUserName());
 
-          int tmpInfoPort = infoSocAddr.getPort();
-          infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
-              tmpInfoPort == 0, conf, 
-              new AccessControlList(conf.get(DFS_ADMIN, " ")));
-          
-          if(UserGroupInformation.isSecurityEnabled()) {
-            SecurityUtil.initKrb5CipherSuites();
-            InetSocketAddress secInfoSocAddr = 
-              NetUtils.createSocketAddr(infoBindAddress + ":"+ conf.getInt(
-                DFS_NAMENODE_SECONDARY_HTTPS_PORT_KEY,
-                DFS_NAMENODE_SECONDARY_HTTPS_PORT_DEFAULT));
-            imagePort = secInfoSocAddr.getPort();
-            infoServer.addSslListener(secInfoSocAddr, conf, false, true);
+    // initialize the webserver for uploading files.
+    int tmpInfoPort = infoSocAddr.getPort();
+    infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
+                                tmpInfoPort == 0, conf,
+                                new AccessControlList(conf.get(DFS_ADMIN, " "))) {
+      {
+        if (UserGroupInformation.isSecurityEnabled()) {
+          Map<String, String> params = new HashMap<String, String>();
+          String principalInConf = conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_INTERNAL_SPENGO_USER_NAME_KEY);
+          if (principalInConf != null && !principalInConf.isEmpty()) {
+            params.put("kerberos.principal",
+                       SecurityUtil.getServerPrincipal(principalInConf, infoSocAddr.getHostName()));
           }
-          
-          infoServer.setAttribute("secondary.name.node", SecondaryNameNode.this);
-          infoServer.setAttribute("name.system.image", checkpointImage);
-          infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-          infoServer.addInternalServlet("getimage", "/getimage",
-              GetImageServlet.class, true);
-          infoServer.start();
-          return infoServer;
+          String httpKeytab = conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
+          if (httpKeytab != null && !httpKeytab.isEmpty()) {
+            params.put("kerberos.keytab", httpKeytab);
+          }
+          params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
+
+          defineFilter(webAppContext, SPNEGO_FILTER, AuthenticationFilter.class.getName(),
+                       params, null);
         }
-      });
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    } 
-    
+      }
+    };
+    infoServer.setAttribute("secondary.name.node", this);
+    infoServer.setAttribute("name.system.image", checkpointImage);
+    infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
+    infoServer.addInternalServlet("getimage", "/getimage",
+                                  GetImageServlet.class, true);
+    infoServer.start();
+
     LOG.info("Web server init done");
 
     // The web-server port can be ephemeral... ensure we have the correct info
     infoPort = infoServer.getPort();
-    if (!UserGroupInformation.isSecurityEnabled()) {
-      imagePort = infoPort;
-    }
-    
-    conf.set(DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" +infoPort); 
-    LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" +infoPort);
-    LOG.info("Secondary image servlet up at: " + infoBindAddress + ":" + imagePort);
+
+    conf.set(DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, infoBindAddress + ":" + infoPort);
+    LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" + infoPort);
     LOG.info("Checkpoint Period   :" + checkpointConf.getPeriod() + " secs " +
-             "(" + checkpointConf.getPeriod()/60 + " min)");
+             "(" + checkpointConf.getPeriod() / 60 + " min)");
     LOG.info("Log Size Trigger    :" + checkpointConf.getTxnCount() + " txns");
   }
 
@@ -434,7 +420,7 @@ public class SecondaryNameNode implements Runnable {
       throw new IOException("This is not a DFS");
     }
 
-    String configuredAddress = DFSUtil.getInfoServer(null, conf, true);
+    String configuredAddress = DFSUtil.getInfoServer(null, conf, false);
     String address = DFSUtil.substituteForWildcardAddress(configuredAddress,
         fsName.getHost());
     LOG.debug("Will connect to NameNode at HTTP address: " + address);
@@ -446,7 +432,7 @@ public class SecondaryNameNode implements Runnable {
    * for image transfers
    */
   private InetSocketAddress getImageListenAddress() {
-    return new InetSocketAddress(infoBindAddress, imagePort);
+    return new InetSocketAddress(infoBindAddress, infoPort);
   }
 
   /**
@@ -507,7 +493,7 @@ public class SecondaryNameNode implements Runnable {
   
   
   /**
-   * @param argv The parameters passed to this program.
+   * @param opts The parameters passed to this program.
    * @exception Exception if the filesystem does not exist.
    * @return 0 on success, non zero on error.
    */
@@ -709,7 +695,7 @@ public class SecondaryNameNode implements Runnable {
      * Construct a checkpoint image.
      * @param conf Node configuration.
      * @param imageDirs URIs of storage for image.
-     * @param editDirs URIs of storage for edit logs.
+     * @param editsDirs URIs of storage for edit logs.
      * @throws IOException If storage cannot be access.
      */
     CheckpointStorage(Configuration conf, 

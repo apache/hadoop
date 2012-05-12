@@ -18,52 +18,60 @@
 
 package org.apache.hadoop.net;
 
-
 import java.util.HashMap;
 import java.util.Map;
 
-import junit.framework.TestCase;
-
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 
-public class TestNetworkTopology extends TestCase {
+import org.junit.Test;
+import org.junit.Before;
+
+import static org.junit.Assert.*;
+
+public class TestNetworkTopology {
   private final static NetworkTopology cluster = new NetworkTopology();
-  private final static DatanodeDescriptor dataNodes[] = new DatanodeDescriptor[] {
-    new DatanodeDescriptor(new DatanodeID("h1", 5020), "/d1/r1"),
-    new DatanodeDescriptor(new DatanodeID("h2", 5020), "/d1/r1"),
-    new DatanodeDescriptor(new DatanodeID("h3", 5020), "/d1/r2"),
-    new DatanodeDescriptor(new DatanodeID("h4", 5020), "/d1/r2"),
-    new DatanodeDescriptor(new DatanodeID("h5", 5020), "/d1/r2"),
-    new DatanodeDescriptor(new DatanodeID("h6", 5020), "/d2/r3"),
-    new DatanodeDescriptor(new DatanodeID("h7", 5020), "/d2/r3")
-  };
-  private final static DatanodeDescriptor NODE = 
-    new DatanodeDescriptor(new DatanodeID("h8", 5020), "/d2/r4");
+  private DatanodeDescriptor dataNodes[];
   
-  static {
-    for(int i=0; i<dataNodes.length; i++) {
+  @Before
+  public void setupDatanodes() {
+    dataNodes = new DatanodeDescriptor[] {
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/d1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/d2/r3"),
+        DFSTestUtil.getDatanodeDescriptor("7.7.7.7", "/d2/r3")
+    };
+    for (int i = 0; i < dataNodes.length; i++) {
       cluster.add(dataNodes[i]);
     }
   }
   
+  @Test
   public void testContains() throws Exception {
-    for(int i=0; i<dataNodes.length; i++) {
+    DatanodeDescriptor nodeNotInMap = 
+      DFSTestUtil.getDatanodeDescriptor("8.8.8.8", "/d2/r4");
+    for (int i=0; i < dataNodes.length; i++) {
       assertTrue(cluster.contains(dataNodes[i]));
     }
-    assertFalse(cluster.contains(NODE));
+    assertFalse(cluster.contains(nodeNotInMap));
   }
   
+  @Test
   public void testNumOfChildren() throws Exception {
     assertEquals(cluster.getNumOfLeaves(), dataNodes.length);
   }
 
+  @Test
   public void testCreateInvalidTopology() throws Exception {
     NetworkTopology invalCluster = new NetworkTopology();
     DatanodeDescriptor invalDataNodes[] = new DatanodeDescriptor[] {
-      new DatanodeDescriptor(new DatanodeID("h1", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("h2", 5020), "/d1/r1"),
-      new DatanodeDescriptor(new DatanodeID("h3", 5020), "/d1")
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/d1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/d1")
     };
     invalCluster.add(invalDataNodes[0]);
     invalCluster.add(invalDataNodes[1]);
@@ -77,6 +85,7 @@ public class TestNetworkTopology extends TestCase {
     }
   }
 
+  @Test
   public void testRacks() throws Exception {
     assertEquals(cluster.getNumOfRacks(), 3);
     assertTrue(cluster.isOnSameRack(dataNodes[0], dataNodes[1]));
@@ -87,6 +96,7 @@ public class TestNetworkTopology extends TestCase {
     assertTrue(cluster.isOnSameRack(dataNodes[5], dataNodes[6]));
   }
   
+  @Test
   public void testGetDistance() throws Exception {
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[0]), 0);
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[1]), 2);
@@ -94,6 +104,7 @@ public class TestNetworkTopology extends TestCase {
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[6]), 6);
   }
 
+  @Test
   public void testPseudoSortByDistance() throws Exception {
     DatanodeDescriptor[] testNodes = new DatanodeDescriptor[3];
     
@@ -136,6 +147,7 @@ public class TestNetworkTopology extends TestCase {
     assertTrue(testNodes[2] == dataNodes[3]);
   }
   
+  @Test
   public void testRemove() throws Exception {
     for(int i=0; i<dataNodes.length; i++) {
       cluster.remove(dataNodes[i]);
@@ -173,6 +185,7 @@ public class TestNetworkTopology extends TestCase {
   /**
    * This test checks that chooseRandom works for an excluded node.
    */
+  @Test
   public void testChooseRandomExcludedNode() {
     String scope = "~" + NodeBase.getPath(dataNodes[0]);
     Map<Node, Integer> frequency = pickNodesAtRandom(100, scope);
@@ -186,6 +199,7 @@ public class TestNetworkTopology extends TestCase {
   /**
    * This test checks that chooseRandom works for an excluded rack.
    */
+  @Test
   public void testChooseRandomExcludedRack() {
     Map<Node, Integer> frequency = pickNodesAtRandom(100, "~" + "/d2");
     // all the nodes on the second rack should be zero

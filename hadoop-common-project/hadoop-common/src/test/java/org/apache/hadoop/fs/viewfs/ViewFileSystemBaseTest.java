@@ -71,11 +71,8 @@ public class ViewFileSystemBaseTest {
 
   @Before
   public void setUp() throws Exception {
-    targetTestRoot = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget);
-    // In case previous test was killed before cleanup
-    fsTarget.delete(targetTestRoot, true);
+    initializeTargetTestRoot();
     
-    fsTarget.mkdirs(targetTestRoot);
     // Make  user and data dirs - we creates links to them in the mount table
     fsTarget.mkdirs(new Path(targetTestRoot,"user"));
     fsTarget.mkdirs(new Path(targetTestRoot,"data"));
@@ -99,7 +96,16 @@ public class ViewFileSystemBaseTest {
     fsTarget.delete(FileSystemTestHelper.getTestRootPath(fsTarget), true);
   }
   
+  void initializeTargetTestRoot() throws IOException {
+    targetTestRoot = FileSystemTestHelper.getAbsoluteTestRootPath(fsTarget);
+    // In case previous test was killed before cleanup
+    fsTarget.delete(targetTestRoot, true);
+    
+    fsTarget.mkdirs(targetTestRoot);
+  }
+  
   void setupMountPoints() {
+    ConfigUtil.addLink(conf, "/targetRoot", targetTestRoot.toUri());
     ConfigUtil.addLink(conf, "/user", new Path(targetTestRoot,"user").toUri());
     ConfigUtil.addLink(conf, "/user2", new Path(targetTestRoot,"user").toUri());
     ConfigUtil.addLink(conf, "/data", new Path(targetTestRoot,"data").toUri());
@@ -121,7 +127,7 @@ public class ViewFileSystemBaseTest {
   }
   
   int getExpectedMountPoints() {
-    return 7;
+    return 8;
   }
   
   /**
@@ -166,7 +172,7 @@ public class ViewFileSystemBaseTest {
         }
       }
     }
-    Assert.assertEquals(expectedTokenCount / 2, delTokens.size());
+    Assert.assertEquals((expectedTokenCount + 1) / 2, delTokens.size());
   }
 
   int getExpectedDelegationTokenCountWithCredentials() {
@@ -309,6 +315,16 @@ public class ViewFileSystemBaseTest {
     Assert.assertTrue("Renamed dest should  exist as dir in target",
         fsTarget.isDirectory(new Path(targetTestRoot,"user/dirFooBar")));
     
+    // Make a directory under a directory that's mounted from the root of another FS
+    fsView.mkdirs(new Path("/targetRoot/dirFoo"));
+    Assert.assertTrue(fsView.exists(new Path("/targetRoot/dirFoo")));
+    boolean dirFooPresent = false;
+    for (FileStatus fileStatus : fsView.listStatus(new Path("/targetRoot/"))) {
+      if (fileStatus.getPath().getName().equals("dirFoo")) {
+        dirFooPresent = true;
+      }
+    }
+    Assert.assertTrue(dirFooPresent);
   }
   
   // rename across mount points that point to same target also fail 
@@ -418,7 +434,7 @@ public class ViewFileSystemBaseTest {
   }
   
   int getExpectedDirPaths() {
-    return 6;
+    return 7;
   }
   
   @Test

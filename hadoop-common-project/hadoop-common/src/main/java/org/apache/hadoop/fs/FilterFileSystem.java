@@ -53,7 +53,7 @@ import org.apache.hadoop.util.Progressable;
 public class FilterFileSystem extends FileSystem {
   
   protected FileSystem fs;
-  private String swapScheme;
+  protected String swapScheme;
   
   /*
    * so that extending classes can define it

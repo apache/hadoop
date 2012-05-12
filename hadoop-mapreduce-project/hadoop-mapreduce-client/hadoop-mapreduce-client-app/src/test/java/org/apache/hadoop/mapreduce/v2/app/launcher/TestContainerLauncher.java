@@ -356,7 +356,7 @@ public class TestContainerLauncher {
           // make proxy connect to our local containerManager server
           ContainerManager proxy = (ContainerManager) rpc.getProxy(
               ContainerManager.class,
-              NetUtils.createSocketAddr("localhost:" + server.getPort()), conf);
+              NetUtils.getConnectAddress(server), conf);
           return proxy;
         }
       };

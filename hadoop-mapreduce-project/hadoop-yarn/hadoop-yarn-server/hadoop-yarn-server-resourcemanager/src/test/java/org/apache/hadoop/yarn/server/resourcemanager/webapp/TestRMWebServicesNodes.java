@@ -32,13 +32,13 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
@@ -54,7 +54,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
@@ -131,15 +130,15 @@ public class TestRMWebServicesNodes extends JerseyTest {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.NEW);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
 
     // One unhealthy node which should not appear in the list after
     // MAPREDUCE-3760.
     MockNM nm3 = rm.registerNode("h3:1236", 5122);
-    rm.NMwaitForState(nm3.getNodeId(), RMNodeState.NEW);
+    rm.NMwaitForState(nm3.getNodeId(), NodeState.NEW);
     rm.sendNodeStarted(nm3);
-    rm.NMwaitForState(nm3.getNodeId(), RMNodeState.RUNNING);
+    rm.NMwaitForState(nm3.getNodeId(), NodeState.RUNNING);
     RMNodeImpl node = (RMNodeImpl) rm.getRMContext().getRMNodes()
         .get(nm3.getNodeId());
     NodeHealthStatus nodeHealth = node.getNodeHealthStatus();
@@ -147,7 +146,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeHealth,
         new ArrayList<ContainerStatus>(), null, null));
-    rm.NMwaitForState(nm3.getNodeId(), RMNodeState.UNHEALTHY);
+    rm.NMwaitForState(nm3.getNodeId(), NodeState.UNHEALTHY);
 
     ClientResponse response =
         r.path("ws").path("v1").path("cluster").path("nodes")
@@ -169,11 +168,11 @@ public class TestRMWebServicesNodes extends JerseyTest {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.NEW);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("nodes").queryParam("state", RMNodeState.RUNNING.toString())
+        .path("nodes").queryParam("state", NodeState.RUNNING.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
 
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -196,7 +195,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes")
-        .queryParam("state", RMNodeState.DECOMMISSIONED.toString())
+        .queryParam("state", NodeState.DECOMMISSIONED.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
@@ -231,7 +230,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
       WebServicesTestUtils
           .checkStringMatch(
               "exception message",
-              "No enum const class org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeState.BOGUSSTATE",
+              "No enum const class org.apache.hadoop.yarn.api.records.NodeState.BOGUSSTATE",
               message);
       WebServicesTestUtils.checkStringMatch("exception type",
           "IllegalArgumentException", type);
@@ -250,13 +249,13 @@ public class TestRMWebServicesNodes extends JerseyTest {
     MockNM nm2 = rm.registerNode("h2:1234", 5120);
     rm.sendNodeStarted(nm1);
     rm.sendNodeStarted(nm2);
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.RUNNING);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(nm1);
     rm.sendNodeLost(nm2);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("nodes").queryParam("state", RMNodeState.LOST.toString())
+        .path("nodes").queryParam("state", NodeState.LOST.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
 
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
@@ -283,8 +282,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     MockNM nm2 = rm.registerNode("h2:1234", 5120);
     rm.sendNodeStarted(nm1);
     rm.sendNodeStarted(nm2);
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.RUNNING);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.RUNNING);
     rm.sendNodeLost(nm1);
     rm.sendNodeLost(nm2);
 
@@ -312,8 +311,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.NEW);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes").queryParam("healthy", "true")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
@@ -332,8 +331,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.NEW);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes").queryParam("healthy", "TRUe")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
@@ -353,8 +352,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.NEW);
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
     RMNodeImpl node = (RMNodeImpl) rm.getRMContext().getRMNodes()
         .get(nm1.getNodeId());
     NodeHealthStatus nodeHealth = node.getNodeHealthStatus();
@@ -362,11 +361,11 @@ public class TestRMWebServicesNodes extends JerseyTest {
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeHealth,
         new ArrayList<ContainerStatus>(), null, null));
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.UNHEALTHY);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.UNHEALTHY);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes").queryParam("healthy", "true")
-        .queryParam("state", RMNodeState.RUNNING.toString())
+        .queryParam("state", NodeState.RUNNING.toString())
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
     JSONObject json = response.getEntity(JSONObject.class);
@@ -380,8 +379,8 @@ public class TestRMWebServicesNodes extends JerseyTest {
     MockNM nm1 = rm.registerNode("h1:1234", 5120);
     MockNM nm2 = rm.registerNode("h2:1235", 5121);
     rm.sendNodeStarted(nm1);
-    rm.NMwaitForState(nm1.getNodeId(), RMNodeState.RUNNING);
-    rm.NMwaitForState(nm2.getNodeId(), RMNodeState.NEW);
+    rm.NMwaitForState(nm1.getNodeId(), NodeState.RUNNING);
+    rm.NMwaitForState(nm2.getNodeId(), NodeState.NEW);
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("nodes").queryParam("healthy", "false")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);

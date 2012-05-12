@@ -105,17 +105,17 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
   // additional mount.
   @Override
   int getExpectedDirPaths() {
-    return 7;
+    return 8;
   }
   
   @Override
   int getExpectedMountPoints() {
-    return 8;
+    return 9;
   }
 
   @Override
   int getExpectedDelegationTokenCount() {
-    return 8;
+    return 9;
   }
 
   @Override

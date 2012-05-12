@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.http;
 
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.Assert;
 import org.apache.hadoop.conf.Configuration;
 
@@ -68,6 +69,12 @@ public class HttpServerFunctionalTest extends Assert {
       throws IOException {
     prepareTestWebapp();
     return createServer(TEST, conf);
+  }
+
+  public static HttpServer createTestServer(Configuration conf, AccessControlList adminsAcl)
+      throws IOException {
+    prepareTestWebapp();
+    return createServer(TEST, conf, adminsAcl);
   }
 
   /**
@@ -131,6 +138,11 @@ public class HttpServerFunctionalTest extends Assert {
   public static HttpServer createServer(String webapp, Configuration conf)
       throws IOException {
     return new HttpServer(webapp, "0.0.0.0", 0, true, conf);
+  }
+
+  public static HttpServer createServer(String webapp, Configuration conf, AccessControlList adminsAcl)
+      throws IOException {
+    return new HttpServer(webapp, "0.0.0.0", 0, true, conf, adminsAcl);
   }
   /**
    * Create an HttpServer instance for the given webapp

@@ -75,7 +75,8 @@ class ChRootedFileSystem extends FilterFileSystem {
   protected Path fullPath(final Path path) {
     super.checkPath(path);
     return path.isAbsolute() ? 
-        new Path(chRootPathPartString + path.toUri().getPath()) :
+        new Path((chRootPathPart.isRoot() ? "" : chRootPathPartString)
+            + path.toUri().getPath()) :
         new Path(chRootPathPartString + workingDir.toUri().getPath(), path);
   }
   
@@ -127,7 +128,7 @@ class ChRootedFileSystem extends FilterFileSystem {
     }
     String pathPart = p.toUri().getPath();
     return (pathPart.length() == chRootPathPartString.length()) ? "" : pathPart
-        .substring(chRootPathPartString.length() + 1);   
+        .substring(chRootPathPartString.length() + (chRootPathPart.isRoot() ? 0 : 1));
   }
   
   @Override

@@ -25,13 +25,15 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+import org.apache.hadoop.hdfs.server.blockmanagement.MutableBlockCollection;
 
 import com.google.common.base.Joiner;
 
 /**
  * I-node for file being written.
  */
-public class INodeFileUnderConstruction extends INodeFile {
+public class INodeFileUnderConstruction extends INodeFile 
+                                        implements MutableBlockCollection {
   private  String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
@@ -154,7 +156,7 @@ public class INodeFileUnderConstruction extends INodeFile {
     BlockInfoUnderConstruction ucBlock =
       lastBlock.convertToBlockUnderConstruction(
           BlockUCState.UNDER_CONSTRUCTION, targets);
-    ucBlock.setINode(this);
+    ucBlock.setBlockCollection(this);
     setBlock(numBlocks()-1, ucBlock);
     return ucBlock;
   }

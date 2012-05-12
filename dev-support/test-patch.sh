@@ -423,8 +423,8 @@ checkJavacWarnings () {
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 javac.  The patch appears to cause tar ant target to fail."
-    return 1
+    -1 javac.  The patch appears to cause the build to fail."
+    return 2
   fi
   ### Compare trunk and patch javac warning numbers
   if [[ -f $PATCH_DIR/patchJavacWarnings.txt ]] ; then
@@ -527,6 +527,24 @@ $JIRA_COMMENT_FOOTER"
 #    +1 checkstyle.  The patch generated 0 code style errors."
   return 0
 }
+
+###############################################################################
+### Install the new jars so tests and findbugs can find all of the updated jars 
+buildAndInstall () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Installing all of the jars"
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  echo "$MVN install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess"
+  $MVN install -Dmaven.javadoc.skip=true -DskipTests -D${PROJECT_NAME}PatchProcess
+  return $?
+}
+
 
 ###############################################################################
 ### Check there are no changes in the number of Findbugs warnings
@@ -882,15 +900,22 @@ if [[ $? != 0 ]] ; then
   submitJiraComment 1
   cleanupAndExit 1
 fi
-checkJavadocWarnings
-(( RESULT = RESULT + $? ))
 checkJavacWarnings
+JAVAC_RET=$?
+#2 is returned if the code could not compile
+if [[ $JAVAC_RET == 2 ]] ; then
+  submitJiraComment 1
+  cleanupAndExit 1
+fi
+(( RESULT = RESULT + $JAVAC_RET ))
+checkJavadocWarnings
 (( RESULT = RESULT + $? ))
 checkEclipseGeneration
 (( RESULT = RESULT + $? ))
 ### Checkstyle not implemented yet
 #checkStyle
 #(( RESULT = RESULT + $? ))
+buildAndInstall
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings

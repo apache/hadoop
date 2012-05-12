@@ -19,7 +19,9 @@
 package org.apache.hadoop.mapreduce.security;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Master;
@@ -92,8 +93,11 @@ public class TokenCache {
 
   static void obtainTokensForNamenodesInternal(Credentials credentials,
       Path[] ps, Configuration conf) throws IOException {
+    Set<FileSystem> fsSet = new HashSet<FileSystem>();
     for(Path p: ps) {
-      FileSystem fs = FileSystem.get(p.toUri(), conf);
+      fsSet.add(p.getFileSystem(conf));
+    }
+    for (FileSystem fs : fsSet) {
       obtainTokensForNamenodesInternal(fs, credentials, conf);
     }
   }
@@ -174,16 +178,14 @@ public class TokenCache {
    * @param namenode
    * @return delegation token
    */
-  @SuppressWarnings("unchecked")
   @InterfaceAudience.Private
-  public static Token<DelegationTokenIdentifier> getDelegationToken(
+  public static Token<?> getDelegationToken(
       Credentials credentials, String namenode) {
     //No fs specific tokens issues by this fs. It may however issue tokens
     // for other filesystems - which would be keyed by that filesystems name.
     if (namenode == null)  
       return null;
-    return (Token<DelegationTokenIdentifier>) credentials.getToken(new Text(
-        namenode));
+    return (Token<?>) credentials.getToken(new Text(namenode));
   }
 
   /**

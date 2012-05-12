@@ -20,6 +20,7 @@ package org.apache.hadoop.tools.rumen;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.PriorityQueue;
@@ -59,7 +60,8 @@ public class DeskewedJobTraceReader implements Closeable {
   static final private Log LOG =
       LogFactory.getLog(DeskewedJobTraceReader.class);
 
-  static private class JobComparator implements Comparator<LoggedJob> {
+  static private class JobComparator implements Comparator<LoggedJob>, 
+  Serializable {
     @Override
     public int compare(LoggedJob j1, LoggedJob j2) {
       return (j1.getSubmitTime() < j2.getSubmitTime()) ? -1 : (j1

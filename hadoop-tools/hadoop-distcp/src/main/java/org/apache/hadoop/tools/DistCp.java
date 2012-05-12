@@ -33,6 +33,7 @@ import org.apache.hadoop.tools.CopyListing.*;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 import org.apache.hadoop.tools.mapred.CopyOutputFormat;
 import org.apache.hadoop.tools.util.DistCpUtils;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -49,6 +50,12 @@ import java.util.Random;
  * behaviour.
  */
 public class DistCp extends Configured implements Tool {
+
+  /**
+   * Priority of the ResourceManager shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
+
   private static final Log LOG = LogFactory.getLog(DistCp.class);
 
   private DistCpOptions inputOptions;
@@ -129,10 +136,13 @@ public class DistCp extends Configured implements Tool {
 
     Job job = null;
     try {
-      metaFolder = createMetaFolderPath();
-      jobFS = metaFolder.getFileSystem(getConf());
+      synchronized(this) {
+        //Don't cleanup while we are setting up.
+        metaFolder = createMetaFolderPath();
+        jobFS = metaFolder.getFileSystem(getConf());
 
-      job = createJob();
+        job = createJob();
+      }
       createInputFileListing(job);
 
       job.submit();
@@ -353,7 +363,8 @@ public class DistCp extends Configured implements Tool {
       DistCp distCp = new DistCp();
       Cleanup CLEANUP = new Cleanup(distCp);
 
-      Runtime.getRuntime().addShutdownHook(CLEANUP);
+      ShutdownHookManager.get().addShutdownHook(CLEANUP,
+        SHUTDOWN_HOOK_PRIORITY);
       System.exit(ToolRunner.run(getDefaultConf(), distCp, argv));
     }
     catch (Exception e) {
@@ -388,7 +399,7 @@ public class DistCp extends Configured implements Tool {
     return submitted;
   }
 
-  private static class Cleanup extends Thread {
+  private static class Cleanup implements Runnable {
     private final DistCp distCp;
 
     public Cleanup(DistCp distCp) {

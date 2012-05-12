@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.AbstractFileSystem;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileContextTestHelper;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.FileContextTestHelper.fileType;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsConstants;
@@ -77,12 +78,8 @@ public class ViewFsBaseTest {
 
   @Before
   public void setUp() throws Exception {
-
-    targetTestRoot = FileContextTestHelper.getAbsoluteTestRootPath(fcTarget);
-    // In case previous test was killed before cleanup
-    fcTarget.delete(targetTestRoot, true);
+    initializeTargetTestRoot();
     
-    fcTarget.mkdir(targetTestRoot, FileContext.DEFAULT_PERM, true);
     // Make  user and data dirs - we creates links to them in the mount table
     fcTarget.mkdir(new Path(targetTestRoot,"user"),
         FileContext.DEFAULT_PERM, true);
@@ -100,6 +97,7 @@ public class ViewFsBaseTest {
     
     // Set up the defaultMT in the config with our mount point links
     conf = new Configuration();
+    ConfigUtil.addLink(conf, "/targetRoot", targetTestRoot.toUri());
     ConfigUtil.addLink(conf, "/user",
         new Path(targetTestRoot,"user").toUri());
     ConfigUtil.addLink(conf, "/user2",
@@ -118,6 +116,14 @@ public class ViewFsBaseTest {
     fcView = FileContext.getFileContext(FsConstants.VIEWFS_URI, conf);
     // Also try viewfs://default/    - note authority is name of mount table
   }
+  
+  void initializeTargetTestRoot() throws IOException {
+    targetTestRoot = FileContextTestHelper.getAbsoluteTestRootPath(fcTarget);
+    // In case previous test was killed before cleanup
+    fcTarget.delete(targetTestRoot, true);
+    
+    fcTarget.mkdir(targetTestRoot, FileContext.DEFAULT_PERM, true);
+  }
 
   @After
   public void tearDown() throws Exception {
@@ -128,7 +134,11 @@ public class ViewFsBaseTest {
   public void testGetMountPoints() {
     ViewFs viewfs = (ViewFs) fcView.getDefaultFileSystem();
     MountPoint[] mountPoints = viewfs.getMountPoints();
-    Assert.assertEquals(7, mountPoints.length); 
+    Assert.assertEquals(8, mountPoints.length);
+  }
+  
+  int getExpectedDelegationTokenCount() {
+    return 0;
   }
   
   /**
@@ -140,7 +150,7 @@ public class ViewFsBaseTest {
   public void testGetDelegationTokens() throws IOException {
     List<Token<?>> delTokens = 
         fcView.getDelegationTokens(new Path("/"), "sanjay");
-    Assert.assertEquals(0, delTokens.size()); 
+    Assert.assertEquals(getExpectedDelegationTokenCount(), delTokens.size());
   }
 
   
@@ -281,6 +291,19 @@ public class ViewFsBaseTest {
     Assert.assertTrue("Renamed dest should  exist as dir in target",
         isDir(fcTarget,new Path(targetTestRoot,"user/dirFooBar")));
     
+    // Make a directory under a directory that's mounted from the root of another FS
+    fcView.mkdir(new Path("/targetRoot/dirFoo"), FileContext.DEFAULT_PERM, false);
+    Assert.assertTrue(exists(fcView, new Path("/targetRoot/dirFoo")));
+    boolean dirFooPresent = false;
+    RemoteIterator<FileStatus> dirContents = fcView.listStatus(new Path(
+        "/targetRoot/"));
+    while (dirContents.hasNext()) {
+      FileStatus fileStatus = dirContents.next();
+      if (fileStatus.getPath().getName().equals("dirFoo")) {
+        dirFooPresent = true;
+      }
+    }
+    Assert.assertTrue(dirFooPresent);
   }
   
   // rename across mount points that point to same target also fail 
@@ -358,7 +381,7 @@ public class ViewFsBaseTest {
     
     FileStatus[] dirPaths = fcView.util().listStatus(new Path("/"));
     FileStatus fs;
-    Assert.assertEquals(6, dirPaths.length);
+    Assert.assertEquals(7, dirPaths.length);
     fs = FileContextTestHelper.containsPath(fcView, "/user", dirPaths);
       Assert.assertNotNull(fs);
       Assert.assertTrue("A mount should appear as symlink", fs.isSymlink());
