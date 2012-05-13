@@ -197,18 +197,33 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
-/***************************************************
- * FSNamesystem does the actual bookkeeping work for the
- * DataNode.
+/**
+ * FSNamesystem is a container of both transient
+ * and persisted name-space state, and does all the book-keeping
+ * work on a NameNode.
  *
- * It tracks several important tables.
+ * Its roles are briefly described below:
  *
- * 1)  valid fsname --> blocklist  (kept on disk, logged)
+ * 1) Is the container for BlockManager, DatanodeManager,
+ *    DelegationTokens, LeaseManager, etc. services.
+ * 2) RPC calls that modify or inspect the name-space
+ *    should get delegated here.
+ * 3) Anything that touches only blocks (eg. block reports),
+ *    it delegates to BlockManager.
+ * 4) Anything that touches only file information (eg. permissions, mkdirs),
+ *    it delegates to FSDirectory.
+ * 5) Anything that crosses two of the above components should be
+ *    coordinated here.
+ * 6) Logs mutations to FSEditLog.
+ *
+ * This class and its contents keep:
+ *
+ * 1)  Valid fsname --> blocklist  (kept on disk, logged)
  * 2)  Set of all valid blocks (inverted #1)
  * 3)  block --> machinelist (kept in memory, rebuilt dynamically from reports)
  * 4)  machine --> blocklist (inverted #2)
  * 5)  LRU cache of updated-heartbeat machines
- ***************************************************/
+ */
 @InterfaceAudience.Private
 @Metrics(context="dfs")
 public class FSNamesystem implements Namesystem, FSClusterStats,
