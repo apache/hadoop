@@ -454,6 +454,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
     and epoch in JournalProtocol. (suresh via szetszwo)
 
+    HDFS-3404. Make putImage in GetImageServlet infer remote address to fetch
+    from request. (atm)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)

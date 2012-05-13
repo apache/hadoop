@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 
 import org.apache.commons.logging.Log;
@@ -49,6 +50,7 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.net.InetAddresses;
 
 /**
  * This class is used in Namesystem's jetty to retrieve a file.
@@ -282,8 +284,7 @@ public class GetImageServlet extends HttpServlet {
     return "putimage=1" +
       "&" + TXID_PARAM + "=" + txid +
       "&port=" + imageListenAddress.getPort() +
-      "&machine=" + imageListenAddress.getHostName()
-      + "&" + STORAGEINFO_PARAM + "=" +
+      "&" + STORAGEINFO_PARAM + "=" +
       storage.toColonSeparatedString();
   }
 
@@ -310,7 +311,10 @@ public class GetImageServlet extends HttpServlet {
       Map<String, String[]> pmap = request.getParameterMap();
       isGetImage = isGetEdit = isPutImage = fetchLatest = false;
       remoteport = 0;
-      machineName = null;
+      machineName = request.getRemoteHost();
+      if (InetAddresses.isInetAddress(machineName)) {
+        machineName = NetUtils.getHostNameOfIP(machineName);
+      }
 
       for (Map.Entry<String, String[]> entry : pmap.entrySet()) {
         String key = entry.getKey();
@@ -335,8 +339,6 @@ public class GetImageServlet extends HttpServlet {
           txId = parseLongParam(request, TXID_PARAM);
         } else if (key.equals("port")) { 
           remoteport = new Integer(val[0]).intValue();
-        } else if (key.equals("machine")) { 
-          machineName = val[0];
         } else if (key.equals(STORAGEINFO_PARAM)) {
           storageInfoString = val[0];
         }
