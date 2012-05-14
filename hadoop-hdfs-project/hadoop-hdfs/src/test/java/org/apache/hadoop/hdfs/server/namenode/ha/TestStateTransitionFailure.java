@@ -67,8 +67,8 @@ public class TestStateTransitionFailure {
         fail("Transitioned to active but should not have been able to.");
       } catch (ServiceFailedException sfe) {
         assertExceptionContains("Error encountered requiring NN shutdown. " +
-            "Shutting down immediately.", sfe);
-        LOG.info("got expected exception", sfe);
+            "Shutting down immediately.", sfe.getCause());
+        LOG.info("got expected exception", sfe.getCause());
       }
       verify(mockRuntime, times(1)).exit(anyInt());
     } finally {

@@ -214,6 +214,17 @@ public class Block implements Writable, Comparable<Block> {
     }
     return compareTo((Block)o) == 0;
   }
+  
+  /**
+   * @return true if the two blocks have the same block ID and the same
+   * generation stamp, or if both blocks are null.
+   */
+  public static boolean matchingIdAndGenStamp(Block a, Block b) {
+    if (a == b) return true; // same block, or both null
+    if (a == null || b == null) return false; // only one null
+    return a.blockId == b.blockId &&
+           a.generationStamp == b.generationStamp;
+  }
 
   @Override // Object
   public int hashCode() {
