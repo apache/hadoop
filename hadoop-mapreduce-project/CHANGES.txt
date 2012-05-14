@@ -60,6 +60,8 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4205. retrofit all JVM shutdown hooks to use ShutdownHookManager 
     (tucu)
 
+    HADOOP-8285 MR changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
+
   OPTIMIZATIONS
 
   BUG FIXES

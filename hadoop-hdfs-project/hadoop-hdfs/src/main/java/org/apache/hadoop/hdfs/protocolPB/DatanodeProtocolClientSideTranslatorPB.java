@@ -69,7 +69,6 @@ import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RpcClientUtil;
-import org.apache.hadoop.ipc.RpcPayloadHeader.RpcKind;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -308,7 +307,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
   public boolean isMethodSupported(String methodName)
       throws IOException {
     return RpcClientUtil.isMethodSupported(rpcProxy, DatanodeProtocolPB.class,
-        RpcKind.RPC_PROTOCOL_BUFFER,
+        RPC.RpcKind.RPC_PROTOCOL_BUFFER,
         RPC.getProtocolVersion(DatanodeProtocolPB.class), methodName);
   }
 }

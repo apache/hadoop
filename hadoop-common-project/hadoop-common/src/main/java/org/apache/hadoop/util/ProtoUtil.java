@@ -21,8 +21,10 @@ package org.apache.hadoop.util;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.UserInformationProto;
+import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.*;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -134,5 +136,31 @@ public abstract class ProtoUtil {
       }
     }
     return ugi;
+  }
+  
+  static RpcKindProto convert(RPC.RpcKind kind) {
+    switch (kind) {
+    case RPC_BUILTIN: return RpcKindProto.RPC_BUILTIN;
+    case RPC_WRITABLE: return RpcKindProto.RPC_WRITABLE;
+    case RPC_PROTOCOL_BUFFER: return RpcKindProto.RPC_PROTOCOL_BUFFER;
+    }
+    return null;
+  }
+  
+  
+  public static RPC.RpcKind convert( RpcKindProto kind) {
+    switch (kind) {
+    case RPC_BUILTIN: return RPC.RpcKind.RPC_BUILTIN;
+    case RPC_WRITABLE: return RPC.RpcKind.RPC_WRITABLE;
+    case RPC_PROTOCOL_BUFFER: return RPC.RpcKind.RPC_PROTOCOL_BUFFER;
+    }
+    return null;
+  }
+ 
+  public static RpcPayloadHeaderProto makeRpcPayloadHeader(RPC.RpcKind rpcKind,
+      RpcPayloadOperationProto operation, int callId) {
+    RpcPayloadHeaderProto.Builder result = RpcPayloadHeaderProto.newBuilder();
+    result.setRpcKind(convert(rpcKind)).setRpcOp(operation).setCallId(callId);
+    return result.build();
   }
 }
