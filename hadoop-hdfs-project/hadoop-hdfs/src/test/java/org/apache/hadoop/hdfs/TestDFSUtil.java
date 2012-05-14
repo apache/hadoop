@@ -533,29 +533,73 @@ public class TestDFSUtil {
   public void testGetNNUris() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     
-    final String NS1_NN1_HOST = "ns1-nn1.example.com:8020";
-    final String NS1_NN2_HOST = "ns1-nn1.example.com:8020";
-    final String NS2_NN_HOST  = "ns2-nn.example.com:8020";
-    final String NN_HOST      = "nn.example.com:8020";
+    final String NS1_NN1_ADDR   = "ns1-nn1.example.com:8020";
+    final String NS1_NN2_ADDR   = "ns1-nn2.example.com:8020";
+    final String NS2_NN_ADDR    = "ns2-nn.example.com:8020";
+    final String NN1_ADDR       = "nn.example.com:8020";
+    final String NN1_SRVC_ADDR  = "nn.example.com:8021";
+    final String NN2_ADDR       = "nn2.example.com:8020";
     
     conf.set(DFS_FEDERATION_NAMESERVICES, "ns1,ns2");
     conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"),"nn1,nn2");
     conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_HOST);
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), NS1_NN1_ADDR);
     conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), NS1_NN2_HOST);
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), NS1_NN2_ADDR);
     
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "ns2"),
-        NS2_NN_HOST);
+        NS2_NN_ADDR);
     
-    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "hdfs://" + NN_HOST);
+    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, "hdfs://" + NN1_ADDR);
     
-    Collection<URI> uris = DFSUtil.getNameServiceUris(conf, DFS_NAMENODE_RPC_ADDRESS_KEY, 
-        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN2_ADDR);
+    
+    Collection<URI> uris = DFSUtil.getNameServiceUris(conf,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,  DFS_NAMENODE_RPC_ADDRESS_KEY);
+    
+    assertEquals(4, uris.size());
+    assertTrue(uris.contains(new URI("hdfs://ns1")));
+    assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
+    assertTrue(uris.contains(new URI("hdfs://" + NN1_ADDR)));
+    assertTrue(uris.contains(new URI("hdfs://" + NN2_ADDR)));
+    
+    // Make sure that non-HDFS URIs in fs.defaultFS don't get included.
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY,
+        "viewfs://vfs-name.example.com");
+    
+    uris = DFSUtil.getNameServiceUris(conf, DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, 
+        DFS_NAMENODE_RPC_ADDRESS_KEY);
     
     assertEquals(3, uris.size());
     assertTrue(uris.contains(new URI("hdfs://ns1")));
-    assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_HOST)));
-    assertTrue(uris.contains(new URI("hdfs://" + NN_HOST)));
+    assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
+    assertTrue(uris.contains(new URI("hdfs://" + NN1_ADDR)));
+    
+    // Make sure that an HA URI being the default URI doesn't result in multiple
+    // entries being returned.
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://ns1");
+    
+    uris = DFSUtil.getNameServiceUris(conf, DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, 
+        DFS_NAMENODE_RPC_ADDRESS_KEY);
+    
+    assertEquals(3, uris.size());
+    assertTrue(uris.contains(new URI("hdfs://ns1")));
+    assertTrue(uris.contains(new URI("hdfs://" + NS2_NN_ADDR)));
+    assertTrue(uris.contains(new URI("hdfs://" + NN1_ADDR)));
+    
+    // Make sure that when a service RPC address is used that is distinct from
+    // the client RPC address, and that client RPC address is also used as the
+    // default URI, that the client URI does not end up in the set of URIs
+    // returned.
+    conf = new HdfsConfiguration();
+    conf.set(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY, "hdfs://" + NN1_ADDR);
+    conf.set(DFS_NAMENODE_RPC_ADDRESS_KEY, NN1_ADDR);
+    conf.set(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, NN1_SRVC_ADDR);
+    
+    uris = DFSUtil.getNameServiceUris(conf, DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, 
+        DFS_NAMENODE_RPC_ADDRESS_KEY);
+    
+    assertEquals(1, uris.size());
+    assertTrue(uris.contains(new URI("hdfs://" + NN1_SRVC_ADDR)));
   }
 }

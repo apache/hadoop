@@ -43,6 +43,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
@@ -614,6 +615,14 @@ public class DFSUtil {
   public static Collection<URI> getNameServiceUris(Configuration conf,
       String... keys) {
     Set<URI> ret = new HashSet<URI>();
+    
+    // We're passed multiple possible configuration keys for any given NN or HA
+    // nameservice, and search the config in order of these keys. In order to
+    // make sure that a later config lookup (e.g. fs.defaultFS) doesn't add a
+    // URI for a config key for which we've already found a preferred entry, we
+    // keep track of non-preferred keys here.
+    Set<URI> nonPreferredUris = new HashSet<URI>();
+    
     for (String nsId : getNameServiceIds(conf)) {
       if (HAUtil.isHAEnabled(conf, nsId)) {
         // Add the logical URI of the nameservice.
@@ -624,24 +633,46 @@ public class DFSUtil {
         }
       } else {
         // Add the URI corresponding to the address of the NN.
+        boolean uriFound = false;
         for (String key : keys) {
           String addr = conf.get(concatSuffixes(key, nsId));
           if (addr != null) {
-            ret.add(createUri(HdfsConstants.HDFS_URI_SCHEME,
-                NetUtils.createSocketAddr(addr)));
-            break;
+            URI uri = createUri(HdfsConstants.HDFS_URI_SCHEME,
+                NetUtils.createSocketAddr(addr));
+            if (!uriFound) {
+              uriFound = true;
+              ret.add(uri);
+            } else {
+              nonPreferredUris.add(uri);
+            }
           }
         }
       }
     }
+    
     // Add the generic configuration keys.
+    boolean uriFound = false;
     for (String key : keys) {
       String addr = conf.get(key);
       if (addr != null) {
-        ret.add(createUri("hdfs", NetUtils.createSocketAddr(addr)));
-        break;
+        URI uri = createUri("hdfs", NetUtils.createSocketAddr(addr));
+        if (!uriFound) {
+          uriFound = true;
+          ret.add(uri);
+        } else {
+          nonPreferredUris.add(uri);
+        }
       }
     }
+    
+    // Add the default URI if it is an HDFS URI.
+    URI defaultUri = FileSystem.getDefaultUri(conf);
+    if (defaultUri != null &&
+        HdfsConstants.HDFS_URI_SCHEME.equals(defaultUri.getScheme()) &&
+        !nonPreferredUris.contains(defaultUri)) {
+      ret.add(defaultUri);
+    }
+    
     return ret;
   }
 
