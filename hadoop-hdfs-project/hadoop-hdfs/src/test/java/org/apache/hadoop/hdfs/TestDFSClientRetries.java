@@ -63,9 +63,12 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
+import org.mockito.Mockito;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import com.google.common.base.Joiner;
 
 /**
  * These tests make sure that DFSClient retries fetching data from DFS
@@ -292,6 +295,100 @@ public class TestDFSClientRetries extends TestCase {
       is.seek(0);
       IOUtils.readFully(is, buf, 0, buf.length);
 
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Test that getAdditionalBlock() and close() are idempotent. This allows
+   * a client to safely retry a call and still produce a correct
+   * file. See HDFS-3031.
+   */
+  public void testIdempotentAllocateBlockAndClose() throws Exception {
+    final String src = "/testIdempotentAllocateBlock";
+    Path file = new Path(src);
+
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 4096);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+
+    try {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      NamenodeProtocols preSpyNN = cluster.getNameNodeRpc();
+      NamenodeProtocols spyNN = spy(preSpyNN);
+      DFSClient client = new DFSClient(null, spyNN, conf, null);
+
+      
+      // Make the call to addBlock() get called twice, as if it were retried
+      // due to an IPC issue.
+      doAnswer(new Answer<LocatedBlock>() {
+        @Override
+        public LocatedBlock answer(InvocationOnMock invocation) throws Throwable {
+          LocatedBlock ret = (LocatedBlock) invocation.callRealMethod();
+          LocatedBlocks lb = cluster.getNameNodeRpc().getBlockLocations(src, 0, Long.MAX_VALUE);
+          int blockCount = lb.getLocatedBlocks().size();
+          assertEquals(lb.getLastLocatedBlock().getBlock(), ret.getBlock());
+          
+          // Retrying should result in a new block at the end of the file.
+          // (abandoning the old one)
+          LocatedBlock ret2 = (LocatedBlock) invocation.callRealMethod();
+          lb = cluster.getNameNodeRpc().getBlockLocations(src, 0, Long.MAX_VALUE);
+          int blockCount2 = lb.getLocatedBlocks().size();
+          assertEquals(lb.getLastLocatedBlock().getBlock(), ret2.getBlock());
+
+          // We shouldn't have gained an extra block by the RPC.
+          assertEquals(blockCount, blockCount2);
+          return (LocatedBlock) ret2;
+        }
+      }).when(spyNN).addBlock(Mockito.anyString(), Mockito.anyString(),
+          Mockito.<ExtendedBlock>any(), Mockito.<DatanodeInfo[]>any());
+
+      doAnswer(new Answer<Boolean>() {
+
+        @Override
+        public Boolean answer(InvocationOnMock invocation) throws Throwable {
+          // complete() may return false a few times before it returns
+          // true. We want to wait until it returns true, and then
+          // make it retry one more time after that.
+          LOG.info("Called complete(: " +
+              Joiner.on(",").join(invocation.getArguments()) + ")");
+          if (!(Boolean)invocation.callRealMethod()) {
+            LOG.info("Complete call returned false, not faking a retry RPC");
+            return false;
+          }
+          // We got a successful close. Call it again to check idempotence.
+          try {
+            boolean ret = (Boolean) invocation.callRealMethod();
+            LOG.info("Complete call returned true, faked second RPC. " +
+                "Returned: " + ret);
+            return ret;
+          } catch (Throwable t) {
+            LOG.error("Idempotent retry threw exception", t);
+            throw t;
+          }
+        }
+      }).when(spyNN).complete(Mockito.anyString(), Mockito.anyString(),
+          Mockito.<ExtendedBlock>any());
+      
+      OutputStream stm = client.create(file.toString(), true);
+      try {
+        AppendTestUtil.write(stm, 0, 10000);
+        stm.close();
+        stm = null;
+      } finally {
+        IOUtils.cleanup(LOG, stm);
+      }
+      
+      // Make sure the mock was actually properly injected.
+      Mockito.verify(spyNN, Mockito.atLeastOnce()).addBlock(
+          Mockito.anyString(), Mockito.anyString(),
+          Mockito.<ExtendedBlock>any(), Mockito.<DatanodeInfo[]>any());
+      Mockito.verify(spyNN, Mockito.atLeastOnce()).complete(
+          Mockito.anyString(), Mockito.anyString(),
+          Mockito.<ExtendedBlock>any());
+      
+      AppendTestUtil.check(fs, file, 10000);
     } finally {
       cluster.shutdown();
     }

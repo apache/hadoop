@@ -545,6 +545,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3414. Balancer does not find NameNode if rpc-address or
     servicerpc-address are not set in client configs. (atm)
 
+    HDFS-3031. Fix complete() and getAdditionalBlock() RPCs to be idempotent
+    (todd)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

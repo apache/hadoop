@@ -965,6 +965,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       DatanodeInfo[] nodes = null;
       int count = dfsClient.getConf().nBlockWriteRetry;
       boolean success = false;
+      ExtendedBlock oldBlock = block;
       do {
         hasError = false;
         lastException = null;
@@ -972,9 +973,11 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         success = false;
 
         long startTime = System.currentTimeMillis();
-        DatanodeInfo[] w = excludedNodes.toArray(
+        DatanodeInfo[] excluded = excludedNodes.toArray(
             new DatanodeInfo[excludedNodes.size()]);
-        lb = locateFollowingBlock(startTime, w.length > 0 ? w : null);
+        block = oldBlock;
+        lb = locateFollowingBlock(startTime,
+            excluded.length > 0 ? excluded : null);
         block = lb.getBlock();
         block.setNumBytes(0);
         accessToken = lb.getBlockToken();
