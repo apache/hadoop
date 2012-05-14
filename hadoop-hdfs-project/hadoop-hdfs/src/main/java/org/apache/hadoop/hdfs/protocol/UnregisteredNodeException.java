@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 
 /**
@@ -33,6 +34,10 @@ import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 public class UnregisteredNodeException extends IOException {
   private static final long serialVersionUID = -5620209396945970810L;
 
+  public UnregisteredNodeException(JournalInfo info) {
+    super("Unregistered server: " + info.toString());
+  }
+  
   public UnregisteredNodeException(NodeRegistration nodeReg) {
     super("Unregistered server: " + nodeReg.toString());
   }

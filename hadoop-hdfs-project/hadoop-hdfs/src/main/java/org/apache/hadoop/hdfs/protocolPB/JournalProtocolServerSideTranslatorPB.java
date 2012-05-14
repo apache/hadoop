@@ -20,10 +20,13 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.FenceRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.FenceResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.StartLogSegmentResponseProto;
+import org.apache.hadoop.hdfs.server.protocol.FenceResponse;
 import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 
 import com.google.protobuf.RpcController;
@@ -48,9 +51,8 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
   public JournalResponseProto journal(RpcController unused,
       JournalRequestProto req) throws ServiceException {
     try {
-      impl.journal(PBHelper.convert(req.getJournalInfo()),
-          req.getFirstTxnId(), req.getNumTxns(), req.getRecords()
-              .toByteArray());
+      impl.journal(PBHelper.convert(req.getJournalInfo()), req.getEpoch(),
+          req.getFirstTxnId(), req.getNumTxns(), req.getRecords().toByteArray());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -63,10 +65,24 @@ public class JournalProtocolServerSideTranslatorPB implements JournalProtocolPB 
       StartLogSegmentRequestProto req) throws ServiceException {
     try {
       impl.startLogSegment(PBHelper.convert(req.getJournalInfo()),
-          req.getTxid());
+          req.getEpoch(), req.getTxid());
     } catch (IOException e) {
       throw new ServiceException(e);
     }
     return StartLogSegmentResponseProto.newBuilder().build();
+  }
+
+  @Override
+  public FenceResponseProto fence(RpcController controller,
+      FenceRequestProto req) throws ServiceException {
+    try {
+      FenceResponse resp = impl.fence(PBHelper.convert(req.getJournalInfo()), req.getEpoch(),
+          req.getFencerInfo());
+      return FenceResponseProto.newBuilder().setInSync(resp.isInSync())
+          .setLastTransactionId(resp.getLastTransactionId())
+          .setPreviousEpoch(resp.getPreviousEpoch()).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 }

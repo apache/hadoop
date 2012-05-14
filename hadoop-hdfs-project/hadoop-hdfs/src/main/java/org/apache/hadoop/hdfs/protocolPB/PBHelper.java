@@ -110,6 +110,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -117,6 +118,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage.State;
 import org.apache.hadoop.hdfs.server.protocol.FinalizeCommand;
+import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -127,7 +129,6 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStat
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
@@ -1349,25 +1350,19 @@ public class PBHelper {
         .setStorageID(r.getStorageID()).build();
   }
 
-  public static NamenodeRegistration convert(JournalInfoProto info) {
+  public static JournalInfo convert(JournalInfoProto info) {
     int lv = info.hasLayoutVersion() ? info.getLayoutVersion() : 0;
     int nsID = info.hasNamespaceID() ? info.getNamespaceID() : 0;
-    StorageInfo storage = new StorageInfo(lv, nsID, info.getClusterID(), 0);
-    
-    // Note that the role is always {@link NamenodeRole#NAMENODE} as this
-    // conversion happens for messages from Namenode to Journal receivers.
-    // Addresses in the registration are unused.
-    return new NamenodeRegistration("", "", storage, NamenodeRole.NAMENODE);
+    return new JournalInfo(lv, info.getClusterID(), nsID);
   }
 
   /**
    * Method used for converting {@link JournalInfoProto} sent from Namenode
    * to Journal receivers to {@link NamenodeRegistration}.
    */
-  public static JournalInfoProto convertToJournalInfo(
-      NamenodeRegistration reg) {
-    return JournalInfoProto.newBuilder().setClusterID(reg.getClusterID())
-        .setLayoutVersion(reg.getLayoutVersion())
-        .setNamespaceID(reg.getNamespaceID()).build();
+  public static JournalInfoProto convert(JournalInfo j) {
+    return JournalInfoProto.newBuilder().setClusterID(j.getClusterId())
+        .setLayoutVersion(j.getLayoutVersion())
+        .setNamespaceID(j.getNamespaceId()).build();
   }
 }
