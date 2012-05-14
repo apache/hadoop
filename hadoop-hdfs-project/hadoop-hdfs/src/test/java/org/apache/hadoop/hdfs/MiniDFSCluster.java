@@ -1251,6 +1251,13 @@ public class MiniDFSCluster {
   public int getNameNodePort(int nnIndex) {
     return nameNodes[nnIndex].nameNode.getNameNodeAddress().getPort();
   }
+
+  /**
+   * @return the service rpc port used by the NameNode at the given index.
+   */     
+  public int getNameNodeServicePort(int nnIndex) {
+    return nameNodes[nnIndex].nameNode.getServiceRpcAddress().getPort();
+  }
     
   /**
    * Shutdown all the nodes in the cluster.
