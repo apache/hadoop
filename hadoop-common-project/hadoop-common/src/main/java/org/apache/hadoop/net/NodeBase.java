@@ -110,7 +110,7 @@ public class NodeBase implements Node {
    * @return the path of a node
    */
   public static String getPath(Node node) {
-    return node.getNetworkLocation()+PATH_SEPARATOR_STR+node.getName();
+    return node.getNetworkLocation() + PATH_SEPARATOR_STR + node.getName();
   }
   
   /** @return this node's path as its string representation */

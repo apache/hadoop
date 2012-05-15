@@ -40,6 +40,7 @@ public interface Node {
    * @param location the location
    */
   public void setNetworkLocation(String location);
+
   /** @return this node's name */
   public String getName();
 

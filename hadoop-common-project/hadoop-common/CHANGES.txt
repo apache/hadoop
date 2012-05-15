@@ -186,6 +186,8 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8366 Use ProtoBuf for RpcResponseHeader (sanjay radia)
 
+    HADOOP-8398. Cleanup BlockLocation. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
