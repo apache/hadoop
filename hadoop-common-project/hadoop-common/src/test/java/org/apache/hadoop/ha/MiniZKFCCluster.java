@@ -253,8 +253,7 @@ public class MiniZKFCCluster {
 
     public DummyZKFCThread(TestContext ctx, DummyHAService svc) {
       super(ctx);
-      this.zkfc = new DummyZKFC(svc);
-      zkfc.setConf(conf);
+      this.zkfc = new DummyZKFC(conf, svc);
     }
 
     @Override
@@ -276,7 +275,8 @@ public class MiniZKFCCluster {
       SCOPED_PARENT_ZNODE + "/" + ActiveStandbyElector.LOCK_FILENAME;
     private final DummyHAService localTarget;
     
-    public DummyZKFC(DummyHAService localTarget) {
+    public DummyZKFC(Configuration conf, DummyHAService localTarget) {
+      super(conf, localTarget);
       this.localTarget = localTarget;
     }
 
@@ -289,11 +289,6 @@ public class MiniZKFCCluster {
     protected HAServiceTarget dataToTarget(byte[] data) {
       int index = Ints.fromByteArray(data);
       return DummyHAService.getInstance(index);
-    }
-
-    @Override
-    protected HAServiceTarget getLocalTarget() {
-      return localTarget;
     }
 
     @Override

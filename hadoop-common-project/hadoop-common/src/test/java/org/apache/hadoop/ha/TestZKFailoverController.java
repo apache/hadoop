@@ -112,13 +112,12 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
   public void testFormatOneClusterLeavesOtherClustersAlone() throws Exception {
     DummyHAService svc = cluster.getService(1);
 
-    DummyZKFC zkfcInOtherCluster = new DummyZKFC(cluster.getService(1)) {
+    DummyZKFC zkfcInOtherCluster = new DummyZKFC(conf, cluster.getService(1)) {
       @Override
       protected String getScopeInsideParentNode() {
         return "other-scope";
       }
     };
-    zkfcInOtherCluster.setConf(conf);
     
     // Run without formatting the base dir,
     // should barf
@@ -580,8 +579,7 @@ public class TestZKFailoverController extends ClientBaseWithFixes {
   }
 
   private int runFC(DummyHAService target, String ... args) throws Exception {
-    DummyZKFC zkfc = new DummyZKFC(target);
-    zkfc.setConf(conf);
+    DummyZKFC zkfc = new DummyZKFC(conf, target);
     return zkfc.run(args);
   }
 

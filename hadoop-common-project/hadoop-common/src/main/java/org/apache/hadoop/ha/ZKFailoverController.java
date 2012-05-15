@@ -44,7 +44,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Tool;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.hadoop.util.ToolRunner;
@@ -56,7 +55,7 @@ import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 @InterfaceAudience.LimitedPrivate("HDFS")
-public abstract class ZKFailoverController implements Tool {
+public abstract class ZKFailoverController {
 
   static final Log LOG = LogFactory.getLog(ZKFailoverController.class);
   
@@ -93,14 +92,13 @@ public abstract class ZKFailoverController implements Tool {
   /** Cannot connect to ZooKeeper */
   static final int ERR_CODE_NO_ZK = 6;
   
-  private Configuration conf;
+  protected Configuration conf;
   private String zkQuorum;
+  protected final HAServiceTarget localTarget;
 
   private HealthMonitor healthMonitor;
   private ActiveStandbyElector elector;
   protected ZKFCRpcServer rpcServer;
-
-  private HAServiceTarget localTarget;
 
   private State lastHealthState = State.INITIALIZING;
 
@@ -123,15 +121,13 @@ public abstract class ZKFailoverController implements Tool {
   private ActiveAttemptRecord lastActiveAttemptRecord;
   private Object activeAttemptRecordLock = new Object();
 
-  @Override
-  public void setConf(Configuration conf) {
+  protected ZKFailoverController(Configuration conf, HAServiceTarget localTarget) {
+    this.localTarget = localTarget;
     this.conf = conf;
-    localTarget = getLocalTarget();
   }
   
 
   protected abstract byte[] targetToData(HAServiceTarget target);
-  protected abstract HAServiceTarget getLocalTarget();
   protected abstract HAServiceTarget dataToTarget(byte[] data);
   protected abstract void loginAsFCUser() throws IOException;
   protected abstract void checkRpcAdminAccess()
@@ -147,12 +143,10 @@ public abstract class ZKFailoverController implements Tool {
    */
   protected abstract String getScopeInsideParentNode();
 
-  @Override
-  public Configuration getConf() {
-    return conf;
+  public HAServiceTarget getLocalTarget() {
+    return localTarget;
   }
-
-  @Override
+  
   public int run(final String[] args) throws Exception {
     if (!localTarget.isAutoFailoverEnabled()) {
       LOG.fatal("Automatic failover is not enabled for " + localTarget + "." +
@@ -792,8 +786,14 @@ public abstract class ZKFailoverController implements Tool {
    * by the HealthMonitor.
    */
   @VisibleForTesting
-  State getLastHealthState() {
+  synchronized State getLastHealthState() {
     return lastHealthState;
+  }
+
+  private synchronized void setLastHealthState(HealthMonitor.State newState) {
+    LOG.info("Local service " + localTarget +
+        " entered state: " + newState);
+    lastHealthState = newState;
   }
   
   @VisibleForTesting
@@ -836,7 +836,9 @@ public abstract class ZKFailoverController implements Tool {
     
     @Override
     public String toString() {
-      return "Elector callbacks for " + localTarget;
+      synchronized (ZKFailoverController.this) {
+        return "Elector callbacks for " + localTarget;
+      }
     }
   }
   
@@ -846,9 +848,7 @@ public abstract class ZKFailoverController implements Tool {
   class HealthCallbacks implements HealthMonitor.Callback {
     @Override
     public void enteredState(HealthMonitor.State newState) {
-      LOG.info("Local service " + localTarget +
-          " entered state: " + newState);
-      lastHealthState = newState;
+      setLastHealthState(newState);
       recheckElectability();
     }
   }

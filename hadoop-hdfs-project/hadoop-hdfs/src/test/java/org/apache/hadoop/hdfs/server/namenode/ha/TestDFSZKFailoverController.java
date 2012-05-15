@@ -193,8 +193,8 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
 
     public ZKFCThread(TestContext ctx, int idx) {
       super(ctx);
-      this.zkfc = new DFSZKFailoverController();
-      zkfc.setConf(cluster.getConfiguration(idx));
+      this.zkfc = DFSZKFailoverController.create(
+          cluster.getConfiguration(idx));
     }
 
     @Override
