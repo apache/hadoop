@@ -182,10 +182,10 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
       LOG.info("Nothing to flush");
       return;
     }
-    preallocate(); // preallocate file if necessary
     doubleBuf.flushTo(fp);
-    fc.force(false); // metadata updates not needed because of preallocation
+    fc.force(false); // metadata updates not needed
     fc.position(fc.position() - 1); // skip back the end-of-file marker
+    preallocate(); // preallocate file if necessary
   }
 
   /**

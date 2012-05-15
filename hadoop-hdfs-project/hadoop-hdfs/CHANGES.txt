@@ -548,6 +548,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3031. Fix complete() and getAdditionalBlock() RPCs to be idempotent
     (todd)
 
+    HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
+    (atm)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)

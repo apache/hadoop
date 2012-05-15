@@ -41,6 +41,7 @@ import org.mockito.Mockito;
 
 public class TestEditLogFileOutputStream {
   
+  private final static long PREALLOCATION_LENGTH = (1024 * 1024) + 4;
   private final static int HEADER_LEN = 17;
   private static final File TEST_EDITS =
     new File(System.getProperty("test.build.data","/tmp"),
@@ -65,8 +66,9 @@ public class TestEditLogFileOutputStream {
     assertEquals("Edit log should contain a header as valid length",
         HEADER_LEN, validation.getValidLength());
     assertEquals(1, validation.getNumTransactions());
-    assertEquals("Edit log should have 1MB of bytes allocated",
-        1024*1024, editLog.length());
+    assertEquals("Edit log should have 1MB pre-allocated, plus 4 bytes " +
+        "for the version number",
+        PREALLOCATION_LENGTH, editLog.length());
     
 
     cluster.getFileSystem().mkdirs(new Path("/tmp"),
@@ -79,8 +81,8 @@ public class TestEditLogFileOutputStream {
         validation.getValidLength() > oldLength);
     assertEquals(2, validation.getNumTransactions());
 
-    assertEquals("Edit log should be 1MB long",
-        1024 * 1024, editLog.length());
+    assertEquals("Edit log should be 1MB long, plus 4 bytes for the version number",
+        PREALLOCATION_LENGTH, editLog.length());
     // 256 blocks for the 1MB of preallocation space
     assertTrue("Edit log disk space used should be at least 257 blocks",
         256 * 4096 <= new DU(editLog, conf).getUsed());
