@@ -109,9 +109,6 @@ Trunk (unreleased changes)
     HDFS-2776. Missing interface annotation on JournalSet. 
     (Brandon Li via jitendra)
 
-    HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
-    (atm)
-
     HDFS-2908. Add apache license header for StorageReport.java. (Brandon Li
     via jitendra)
 
@@ -666,6 +663,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3031. Fix complete() and getAdditionalBlock() RPCs to be idempotent
     (todd)
+
+    HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
+    (atm)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
