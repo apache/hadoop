@@ -376,6 +376,8 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4233. NPE can happen in RMNMNodeInfo. (bobby)
 
+    MAPREDUCE-4238. mavenize data_join. (tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
