@@ -143,6 +143,9 @@ Trunk (unreleased changes)
     HDFS-3265. PowerPc Build error. (Kumar Ravi via mattf)
 
     HDFS-2312. FSNamesystem javadoc incorrectly says its for DNs. (harsh)
+
+    HDFS-3163. TestHDFSCLI.testAll fails if the user name is not all lowercase.
+    (Brandon Li via atm)
     
 Release 2.0.0 - UNRELEASED 
 
