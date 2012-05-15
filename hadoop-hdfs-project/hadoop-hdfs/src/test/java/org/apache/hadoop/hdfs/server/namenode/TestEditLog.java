@@ -527,7 +527,7 @@ public class TestEditLog extends TestCase {
     } catch (IOException e) {
       // expected
       assertEquals("Cause of exception should be ChecksumException",
-          e.getCause().getClass(), ChecksumException.class);
+          ChecksumException.class, e.getCause().getClass());
     }
   }
 

@@ -459,6 +459,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3404. Make putImage in GetImageServlet infer remote address to fetch
     from request. (atm)
 
+    HDFS-3335. check for edit log corruption at the end of the log
+    (Colin Patrick McCabe via todd)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)
