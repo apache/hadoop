@@ -51,7 +51,7 @@ public abstract class JobBase implements Mapper, Reducer {
    *          the value for the counter
    */
   protected void setLongValue(Object name, long value) {
-    this.longCounters.put(name, new Long(value));
+    this.longCounters.put(name, Long.valueOf(value));
   }
 
   /**
@@ -100,9 +100,9 @@ public abstract class JobBase implements Mapper, Reducer {
     Long val = this.longCounters.get(name);
     Long retv = null;
     if (val == null) {
-      retv = new Long(inc);
+      retv = Long.valueOf(inc);
     } else {
-      retv = new Long(val.longValue() + inc);
+      retv = Long.valueOf(val.longValue() + inc);
     }
     this.longCounters.put(name, retv);
     return retv;
