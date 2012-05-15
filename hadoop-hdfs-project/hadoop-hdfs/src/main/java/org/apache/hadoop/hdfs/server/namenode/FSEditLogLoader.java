@@ -146,7 +146,7 @@ public class FSEditLogLoader {
             check203UpgradeFailure(logVersion, e);
             String errorMessage =
               formatEditLogReplayError(in, recentOpcodeOffsets, expectedTxId);
-            FSImage.LOG.error(errorMessage);
+            FSImage.LOG.error(errorMessage, e);
             if (recovery == null) {
                // We will only try to skip over problematic opcodes when in
                // recovery mode.
@@ -732,29 +732,34 @@ public class FSEditLogLoader {
       super(is);
     }
 
+    @Override
     public int read() throws IOException {
       int ret = super.read();
       if (ret != -1) curPos++;
       return ret;
     }
 
+    @Override
     public int read(byte[] data) throws IOException {
       int ret = super.read(data);
       if (ret > 0) curPos += ret;
       return ret;
     }
 
+    @Override
     public int read(byte[] data, int offset, int length) throws IOException {
       int ret = super.read(data, offset, length);
       if (ret > 0) curPos += ret;
       return ret;
     }
 
+    @Override
     public void mark(int limit) {
       super.mark(limit);
       markPos = curPos;
     }
 
+    @Override
     public void reset() throws IOException {
       if (markPos == -1) {
         throw new IOException("Not marked!");
@@ -766,6 +771,13 @@ public class FSEditLogLoader {
 
     public long getPos() {
       return curPos;
+    }
+    
+    @Override
+    public long skip(long amt) throws IOException {
+      long ret = super.skip(amt);
+      curPos += ret;
+      return ret;
     }
   }
 

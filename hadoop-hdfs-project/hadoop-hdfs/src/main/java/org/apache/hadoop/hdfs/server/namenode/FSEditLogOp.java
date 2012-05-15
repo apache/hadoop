@@ -75,6 +75,7 @@ import java.io.EOFException;
 public abstract class FSEditLogOp {
   public final FSEditLogOpCodes opCode;
   long txid;
+  private static final int MAX_OP_SIZE = 100 * 1024 * 1024;
 
 
   @SuppressWarnings("deprecation")
@@ -2263,30 +2264,75 @@ public abstract class FSEditLogOp {
      * 
      * @param skipBrokenEdits    If true, attempt to skip over damaged parts of
      * the input stream, rather than throwing an IOException
-     * @return the operation read from the stream, or null at the end of the file
-     * @throws IOException on error.
+     * @return the operation read from the stream, or null at the end of the 
+     *         file
+     * @throws IOException on error.  This function should only throw an
+     *         exception when skipBrokenEdits is false.
      */
     public FSEditLogOp readOp(boolean skipBrokenEdits) throws IOException {
-      FSEditLogOp op = null;
       while (true) {
         try {
-          in.mark(in.available());
-          try {
-            op = decodeOp();
-          } finally {
-            // If we encountered an exception or an end-of-file condition,
-            // do not advance the input stream.
-            if (op == null) {
-              in.reset();
-            }
-          }
-          return op;
-        } catch (IOException e) {
+          in.mark(MAX_OP_SIZE);
+          return decodeOp();
+        } catch (GarbageAfterTerminatorException e) {
+          in.reset();
           if (!skipBrokenEdits) {
             throw e;
           }
-          if (in.skip(1) < 1) {
+          // If we saw a terminator opcode followed by a long region of 0x00 or
+          // 0xff, we want to skip over that region, because there's nothing
+          // interesting there.
+          long numSkip = e.getNumAfterTerminator();
+          if (in.skip(numSkip) < numSkip) {
+            FSImage.LOG.error("Failed to skip " + numSkip + " bytes of " +
+              "garbage after an OP_INVALID.  Unexpected early EOF.");
             return null;
+          }
+        } catch (IOException e) {
+          in.reset();
+          if (!skipBrokenEdits) {
+            throw e;
+          }
+        } catch (RuntimeException e) {
+          // FSEditLogOp#decodeOp is not supposed to throw RuntimeException.
+          // However, we handle it here for recovery mode, just to be more
+          // robust.
+          in.reset();
+          if (!skipBrokenEdits) {
+            throw e;
+          }
+        } catch (Throwable e) {
+          in.reset();
+          if (!skipBrokenEdits) {
+            throw new IOException("got unexpected exception " +
+                e.getMessage(), e);
+          }
+        }
+        // Move ahead one byte and re-try the decode process.
+        if (in.skip(1) < 1) {
+          return null;
+        }
+      }
+    }
+
+    private void verifyTerminator() throws IOException {
+      long off = 0;
+      /** The end of the edit log should contain only 0x00 or 0xff bytes.
+       * If it contains other bytes, the log itself may be corrupt.
+       * It is important to check this; if we don't, a stray OP_INVALID byte 
+       * could make us stop reading the edit log halfway through, and we'd never
+       * know that we had lost data.
+       */
+      byte[] buf = new byte[4096];
+      while (true) {
+        int numRead = in.read(buf);
+        if (numRead == -1) {
+          return;
+        }
+        for (int i = 0; i < numRead; i++, off++) {
+          if ((buf[i] != (byte)0) && (buf[i] != (byte)-1)) {
+            throw new GarbageAfterTerminatorException("Read garbage after " +
+            		"the terminator!", off);
           }
         }
       }
@@ -2306,8 +2352,10 @@ public abstract class FSEditLogOp {
       }
 
       FSEditLogOpCodes opCode = FSEditLogOpCodes.fromByte(opCodeByte);
-      if (opCode == OP_INVALID)
+      if (opCode == OP_INVALID) {
+        verifyTerminator();
         return null;
+      }
 
       FSEditLogOp op = cache.get(opCode);
       if (op == null) {
@@ -2477,4 +2525,35 @@ public abstract class FSEditLogOp {
     short mode = Short.valueOf(st.getValue("MODE"));
     return new PermissionStatus(username, groupname, new FsPermission(mode));
   }
-		}
+
+  /**
+   * Exception indicating that we found an OP_INVALID followed by some 
+   * garbage.  An OP_INVALID should signify the end of the file... if there 
+   * is additional content after that, then the edit log is corrupt. 
+   */
+  static class GarbageAfterTerminatorException extends IOException {
+    private static final long serialVersionUID = 1L;
+    private final long numAfterTerminator;
+
+    public GarbageAfterTerminatorException(String str,
+        long numAfterTerminator) {
+      super(str);
+      this.numAfterTerminator = numAfterTerminator;
+    }
+
+    /**
+     * Get the number of bytes after the terminator at which the garbage
+     * appeared.
+     *
+     * So if you had an OP_INVALID followed immediately by another valid opcode,
+     * this would be 0.
+     * If you had an OP_INVALID followed by some padding bytes, followed by a
+     * stray byte at the end, this would be the number of padding bytes.
+     * 
+     * @return numAfterTerminator
+     */
+    public long getNumAfterTerminator() {
+      return numAfterTerminator;
+    }
+  }
+}

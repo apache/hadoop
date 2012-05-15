@@ -108,7 +108,35 @@ public class EditLogFileInputStream extends EditLogInputStream {
 
   @Override
   protected FSEditLogOp nextOp() throws IOException {
-    return reader.readOp(false);
+    FSEditLogOp op = reader.readOp(false);
+    if ((op != null) && (op.hasTransactionId())) {
+      long txId = op.getTransactionId();
+      if ((txId >= lastTxId) &&
+          (lastTxId != HdfsConstants.INVALID_TXID)) {
+        //
+        // Sometimes, the NameNode crashes while it's writing to the
+        // edit log.  In that case, you can end up with an unfinalized edit log
+        // which has some garbage at the end.
+        // JournalManager#recoverUnfinalizedSegments will finalize these
+        // unfinished edit logs, giving them a defined final transaction 
+        // ID.  Then they will be renamed, so that any subsequent
+        // readers will have this information.
+        //
+        // Since there may be garbage at the end of these "cleaned up"
+        // logs, we want to be sure to skip it here if we've read everything
+        // we were supposed to read out of the stream.
+        // So we force an EOF on all subsequent reads.
+        //
+        long skipAmt = file.length() - tracker.getPos();
+        if (skipAmt > 0) {
+          FSImage.LOG.warn("skipping " + skipAmt + " bytes at the end " +
+              "of edit log  '" + getName() + "': reached txid " + txId +
+              " out of " + lastTxId);
+          tracker.skip(skipAmt);
+        }
+      }
+    }
+    return op;
   }
   
   @Override

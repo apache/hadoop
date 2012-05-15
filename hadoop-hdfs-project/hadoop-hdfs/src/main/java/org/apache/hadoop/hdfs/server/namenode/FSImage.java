@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -534,6 +535,11 @@ public class FSImage implements Closeable {
 
   public FSEditLog getEditLog() {
     return editLog;
+  }
+
+  @VisibleForTesting
+  void setEditLogForTesting(FSEditLog newLog) {
+    editLog = newLog;
   }
 
   void openEditLogForWrite() throws IOException {
