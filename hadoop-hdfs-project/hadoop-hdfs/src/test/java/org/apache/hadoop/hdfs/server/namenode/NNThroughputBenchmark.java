@@ -35,10 +35,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
@@ -765,6 +767,7 @@ public class NNThroughputBenchmark {
     ArrayList<Block> blocks;
     int nrBlocks; // actual number of blocks
     long[] blockReportList;
+    int dnIdx;
 
     /**
      * Return a a 6 digit integer port.
@@ -780,11 +783,7 @@ public class NNThroughputBenchmark {
     }
 
     TinyDatanode(int dnIdx, int blockCapacity) throws IOException {
-      String ipAddr = DNS.getDefaultIP("default");
-      String hostName = DNS.getDefaultHost("default", "default");
-      dnRegistration = new DatanodeRegistration(ipAddr, getNodePort(dnIdx));
-      dnRegistration.setHostName(hostName);
-      dnRegistration.setSoftwareVersion(VersionInfo.getVersion());
+      this.dnIdx = dnIdx;
       this.blocks = new ArrayList<Block>(blockCapacity);
       this.nrBlocks = 0;
     }
@@ -800,7 +799,14 @@ public class NNThroughputBenchmark {
     void register() throws IOException {
       // get versions from the namenode
       nsInfo = nameNodeProto.versionRequest();
-      dnRegistration.setStorageInfo(new DataStorage(nsInfo, ""));
+      dnRegistration = new DatanodeRegistration(
+          new DatanodeID(DNS.getDefaultIP("default"),
+              DNS.getDefaultHost("default", "default"),
+              "", getNodePort(dnIdx),
+              DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+              DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT),
+          new DataStorage(nsInfo, ""),
+          new ExportedBlockKeys(), VersionInfo.getVersion());
       DataNode.setNewStorageID(dnRegistration);
       // register datanode
       dnRegistration = nameNodeProto.registerDatanode(dnRegistration);
@@ -896,12 +902,9 @@ public class NNThroughputBenchmark {
         for(int t = 0; t < blockTargets.length; t++) {
           DatanodeInfo dnInfo = blockTargets[t];
           DatanodeRegistration receivedDNReg;
-          receivedDNReg =
-            new DatanodeRegistration(dnInfo.getIpAddr(), dnInfo.getXferPort());
-          receivedDNReg.setStorageInfo(
-            new DataStorage(nsInfo, dnInfo.getStorageID()));
-          receivedDNReg.setInfoPort(dnInfo.getInfoPort());
-          receivedDNReg.setIpcPort(dnInfo.getIpcPort());
+          receivedDNReg = new DatanodeRegistration(dnInfo,
+            new DataStorage(nsInfo, dnInfo.getStorageID()),
+            new ExportedBlockKeys(), VersionInfo.getVersion());
           ReceivedDeletedBlockInfo[] rdBlocks = {
             new ReceivedDeletedBlockInfo(
                   blocks[i], ReceivedDeletedBlockInfo.BlockStatus.RECEIVED_BLOCK,

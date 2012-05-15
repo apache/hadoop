@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -115,7 +116,7 @@ public class TestBPOfferService {
             0, HdfsConstants.LAYOUT_VERSION))
       .when(mock).versionRequest();
     
-    Mockito.doReturn(new DatanodeRegistration("1.2.3.4", 100))
+    Mockito.doReturn(DFSTestUtil.getLocalDatanodeRegistration())
       .when(mock).registerDatanode(Mockito.any(DatanodeRegistration.class));
     
     Mockito.doAnswer(new HeartbeatAnswer(nnIdx))

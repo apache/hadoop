@@ -329,6 +329,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3417. Rename BalancerDatanode#getName to getDisplayName to be
     consistent with Datanode. (eli)
 
+    HDFS-3416. Cleanup DatanodeID and DatanodeRegistration
+    constructors used by testing. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
