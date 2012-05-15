@@ -77,6 +77,8 @@ Trunk (unreleased changes)
     HDFS-3293. Add toString(), equals(..) and hashCode() to JournalInfo.
     (Hari Mankude via szetszwo)
 
+    HDFS-3197. Incorrect class comments in a few tests. (Andy Isaacson via eli)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.

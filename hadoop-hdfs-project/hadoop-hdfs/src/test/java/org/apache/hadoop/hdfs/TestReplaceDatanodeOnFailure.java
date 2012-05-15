@@ -38,8 +38,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 /**
- * This class tests that a file need not be closed before its
- * data can be read by another client.
+ * This class tests that data nodes are correctly replaced on failure.
  */
 public class TestReplaceDatanodeOnFailure {
   static final Log LOG = AppendTestUtil.LOG;
