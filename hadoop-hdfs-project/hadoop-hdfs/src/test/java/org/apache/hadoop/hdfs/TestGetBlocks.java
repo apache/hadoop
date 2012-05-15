@@ -101,18 +101,18 @@ public class TestGetBlocks extends TestCase {
       BlockWithLocations[] locs;
       locs = namenode.getBlocks(dataNodes[0], fileLen).getBlocks();
       assertEquals(locs.length, 2);
-      assertEquals(locs[0].getDatanodes().length, 2);
-      assertEquals(locs[1].getDatanodes().length, 2);
+      assertEquals(locs[0].getStorageIDs().length, 2);
+      assertEquals(locs[1].getStorageIDs().length, 2);
 
       // get blocks of size BlockSize from dataNodes[0]
       locs = namenode.getBlocks(dataNodes[0], DEFAULT_BLOCK_SIZE).getBlocks();
       assertEquals(locs.length, 1);
-      assertEquals(locs[0].getDatanodes().length, 2);
+      assertEquals(locs[0].getStorageIDs().length, 2);
 
       // get blocks of size 1 from dataNodes[0]
       locs = namenode.getBlocks(dataNodes[0], 1).getBlocks();
       assertEquals(locs.length, 1);
-      assertEquals(locs[0].getDatanodes().length, 2);
+      assertEquals(locs[0].getStorageIDs().length, 2);
 
       // get blocks of size 0 from dataNodes[0]
       getBlocksWithException(namenode, dataNodes[0], 0);     

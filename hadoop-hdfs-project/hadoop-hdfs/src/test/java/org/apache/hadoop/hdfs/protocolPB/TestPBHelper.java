@@ -161,7 +161,7 @@ public class TestPBHelper {
 
   private void compare(BlockWithLocations locs1, BlockWithLocations locs2) {
     assertEquals(locs1.getBlock(), locs2.getBlock());
-    assertTrue(Arrays.equals(locs1.getDatanodes(), locs2.getDatanodes()));
+    assertTrue(Arrays.equals(locs1.getStorageIDs(), locs2.getStorageIDs()));
   }
 
   @Test

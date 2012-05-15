@@ -300,6 +300,9 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-8285 HDFS changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
 
+    HDFS-3418. Rename BlockWithLocationsProto datanodeIDs field to storageIDs.
+    (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
