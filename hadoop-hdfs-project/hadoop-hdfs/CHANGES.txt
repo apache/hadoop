@@ -326,6 +326,9 @@ Release 2.0.0 - UNRELEASED
     HDFS-3335. check for edit log corruption at the end of the log
     (Colin Patrick McCabe via todd)
 
+    HDFS-3417. Rename BalancerDatanode#getName to getDisplayName to be
+    consistent with Datanode. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
