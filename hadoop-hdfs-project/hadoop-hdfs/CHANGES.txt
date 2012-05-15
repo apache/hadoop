@@ -468,6 +468,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3416. Cleanup DatanodeID and DatanodeRegistration
     constructors used by testing. (eli)
 
+    HDFS-3419. Cleanup LocatedBlock. (eli)
+
   OPTIMIZATIONS
 
     HDFS-3024. Improve performance of stringification in addStoredBlock (todd)

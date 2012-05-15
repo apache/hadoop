@@ -22,11 +22,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 
-/****************************************************
- * A LocatedBlock is a pair of Block, DatanodeInfo[]
- * objects.  It tells where to find a Block.
- * 
- ****************************************************/
+/**
+ * Associates a block with the Datanodes that contain its replicas
+ * and other block metadata (E.g. the file offset associated with this
+ * block, whether it is corrupt, security token, etc).
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class LocatedBlock {
@@ -39,19 +39,6 @@ public class LocatedBlock {
   // their locations are not part of this object
   private boolean corrupt;
   private Token<BlockTokenIdentifier> blockToken = new Token<BlockTokenIdentifier>();
-
-  public LocatedBlock() {
-    this(new ExtendedBlock(), new DatanodeInfo[0], 0L, false);
-  }
-  
-
-  public LocatedBlock(ExtendedBlock eb) {
-    this(eb, new DatanodeInfo[0], 0L, false);
-  }
-
-  public LocatedBlock(String bpid, Block b, DatanodeInfo[] locs) {
-    this(new ExtendedBlock(bpid, b), locs, -1, false); // startOffset is unknown
-  }
 
   public LocatedBlock(ExtendedBlock b, DatanodeInfo[] locs) {
     this(b, locs, -1, false); // startOffset is unknown
@@ -81,14 +68,10 @@ public class LocatedBlock {
     this.blockToken = token;
   }
 
-  /**
-   */
   public ExtendedBlock getBlock() {
     return b;
   }
 
-  /**
-   */
   public DatanodeInfo[] getLocations() {
     return locs;
   }
