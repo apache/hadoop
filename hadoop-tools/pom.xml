@@ -32,6 +32,7 @@
     <module>hadoop-distcp</module>
     <module>hadoop-archives</module>
     <module>hadoop-rumen</module>
+    <module>hadoop-datajoin</module>
     <module>hadoop-tools-dist</module>
     <module>hadoop-extras</module>
   </modules>
