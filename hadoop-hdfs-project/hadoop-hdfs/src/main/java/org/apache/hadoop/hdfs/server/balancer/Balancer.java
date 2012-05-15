@@ -262,9 +262,9 @@ public class Balancer {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Decided to move block "+ block.getBlockId()
                     +" with a length of "+StringUtils.byteDesc(block.getNumBytes())
-                    + " bytes from " + source.getName() 
-                    + " to " + target.getName()
-                    + " using proxy source " + proxySource.getName() );
+                    + " bytes from " + source.getDisplayName()
+                    + " to " + target.getDisplayName()
+                    + " using proxy source " + proxySource.getDisplayName() );
               }
               return true;
             }
@@ -317,15 +317,15 @@ public class Balancer {
         receiveResponse(in);
         bytesMoved.inc(block.getNumBytes());
         LOG.info( "Moving block " + block.getBlock().getBlockId() +
-              " from "+ source.getName() + " to " +
-              target.getName() + " through " +
-              proxySource.getName() +
+              " from "+ source.getDisplayName() + " to " +
+              target.getDisplayName() + " through " +
+              proxySource.getDisplayName() +
               " is succeeded." );
       } catch (IOException e) {
         LOG.warn("Error moving block "+block.getBlockId()+
-            " from " + source.getName() + " to " +
-            target.getName() + " through " +
-            proxySource.getName() +
+            " from " + source.getDisplayName() + " to " +
+            target.getDisplayName() + " through " +
+            proxySource.getDisplayName() +
             ": "+e.getMessage());
       } finally {
         IOUtils.closeStream(out);
@@ -378,7 +378,8 @@ public class Balancer {
         public void run() {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Starting moving "+ block.getBlockId() +
-                " from " + proxySource.getName() + " to " + target.getName());
+                " from " + proxySource.getDisplayName() + " to " +
+                target.getDisplayName());
           }
           dispatch();
         }
@@ -475,7 +476,7 @@ public class Balancer {
     
     @Override
     public String toString() {
-      return getClass().getSimpleName() + "[" + getName()
+      return getClass().getSimpleName() + "[" + datanode
           + ", utilization=" + utilization + "]";
     }
 
@@ -507,8 +508,8 @@ public class Balancer {
     }
     
     /** Get the name of the datanode */
-    protected String getName() {
-      return datanode.getName();
+    protected String getDisplayName() {
+      return datanode.toString();
     }
     
     /* Get the storage id of the datanode */
@@ -831,7 +832,7 @@ public class Balancer {
           this.aboveAvgUtilizedDatanodes.add((Source)datanodeS);
         } else {
           assert(isOverUtilized(datanodeS)) :
-            datanodeS.getName()+ "is not an overUtilized node";
+            datanodeS.getDisplayName()+ "is not an overUtilized node";
           this.overUtilizedDatanodes.add((Source)datanodeS);
           overLoadedBytes += (long)((datanodeS.utilization-avg
               -threshold)*datanodeS.datanode.getCapacity()/100.0);
@@ -842,7 +843,7 @@ public class Balancer {
           this.belowAvgUtilizedDatanodes.add(datanodeS);
         } else {
           assert isUnderUtilized(datanodeS) : "isUnderUtilized("
-              + datanodeS.getName() + ")=" + isUnderUtilized(datanodeS)
+              + datanodeS.getDisplayName() + ")=" + isUnderUtilized(datanodeS)
               + ", utilization=" + datanodeS.utilization; 
           this.underUtilizedDatanodes.add(datanodeS);
           underLoadedBytes += (long)((avg-threshold-
