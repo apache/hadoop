@@ -332,6 +332,8 @@ Release 2.0.0 - UNRELEASED
     HDFS-3416. Cleanup DatanodeID and DatanodeRegistration
     constructors used by testing. (eli)
 
+    HDFS-3419. Cleanup LocatedBlock. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
