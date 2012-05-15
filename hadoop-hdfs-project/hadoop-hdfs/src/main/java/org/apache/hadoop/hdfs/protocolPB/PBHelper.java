@@ -254,11 +254,11 @@ public class PBHelper {
   public static BlockWithLocationsProto convert(BlockWithLocations blk) {
     return BlockWithLocationsProto.newBuilder()
         .setBlock(convert(blk.getBlock()))
-        .addAllDatanodeIDs(Arrays.asList(blk.getDatanodes())).build();
+        .addAllStorageIDs(Arrays.asList(blk.getStorageIDs())).build();
   }
 
   public static BlockWithLocations convert(BlockWithLocationsProto b) {
-    return new BlockWithLocations(convert(b.getBlock()), b.getDatanodeIDsList()
+    return new BlockWithLocations(convert(b.getBlock()), b.getStorageIDsList()
         .toArray(new String[0]));
   }
 

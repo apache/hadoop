@@ -334,6 +334,9 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3419. Cleanup LocatedBlock. (eli)
 
+    HDFS-3418. Rename BlockWithLocationsProto datanodeIDs field to storageIDs.
+    (eli)
+
   OPTIMIZATIONS
 
     HDFS-2477. Optimize computing the diff between a block report and the
