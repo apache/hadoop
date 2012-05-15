@@ -274,7 +274,7 @@ message BlockProto {
  */
 message BlockWithLocationsProto {
   required BlockProto block = 1;   // Block
-  repeated string datanodeIDs = 2; // Datanodes with replicas of the block
+  repeated string storageIDs = 2;  // Datanodes with replicas of the block
 }
 
 /**

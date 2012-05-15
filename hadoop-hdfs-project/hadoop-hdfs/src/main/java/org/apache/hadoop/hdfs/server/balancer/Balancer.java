@@ -205,6 +205,7 @@ public class Balancer {
   private Map<Block, BalancerBlock> globalBlockList
                  = new HashMap<Block, BalancerBlock>();
   private MovedBlocks movedBlocks = new MovedBlocks();
+  // Map storage IDs to BalancerDatanodes
   private Map<String, BalancerDatanode> datanodes
                  = new HashMap<String, BalancerDatanode>();
   
@@ -621,8 +622,8 @@ public class Balancer {
         
           synchronized (block) {
             // update locations
-            for ( String location : blk.getDatanodes() ) {
-              BalancerDatanode datanode = datanodes.get(location);
+            for ( String storageID : blk.getStorageIDs() ) {
+              BalancerDatanode datanode = datanodes.get(storageID);
               if (datanode != null) { // not an unknown datanode
                 block.addLocation(datanode);
               }
