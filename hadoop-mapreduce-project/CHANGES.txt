@@ -183,6 +183,9 @@ Release 2.0.0 - UNRELEASED
     MAPREDUCE-4148. MapReduce should not have a compile-time dependency on
     HDFS. (tomwhite)
 
+    MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn 
+    jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
