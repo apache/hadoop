@@ -256,16 +256,21 @@ public class TestFailureToReadEdits {
     // Shutdown the active NN.
     cluster.shutdownNameNode(0);
     
+    Runtime mockRuntime = mock(Runtime.class);
+    cluster.getNameNode(1).setRuntimeForTesting(mockRuntime);
+    verify(mockRuntime, times(0)).exit(anyInt());
     try {
       // Transition the standby to active.
       cluster.transitionToActive(1);
       fail("Standby transitioned to active, but should not have been able to");
     } catch (ServiceFailedException sfe) {
-      LOG.info("got expected exception: " + sfe.toString(), sfe);
+      Throwable sfeCause = sfe.getCause();
+      LOG.info("got expected exception: " + sfeCause.toString(), sfeCause);
       assertTrue("Standby failed to catch up for some reason other than "
-          + "failure to read logs", sfe.toString().contains(
+          + "failure to read logs", sfeCause.getCause().toString().contains(
               EditLogInputException.class.getName()));
     }
+    verify(mockRuntime, times(1)).exit(anyInt());
   }
   
   private LimitedEditLogAnswer causeFailureOnEditLogRead() throws IOException {
