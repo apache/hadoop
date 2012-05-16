@@ -37,7 +37,7 @@ int dfs_truncate(const char *path, off_t size)
   assert(dfs);
 
   if (size != 0) {
-    return -ENOTSUP;
+    return 0;
   }
 
   int ret = dfs_unlink(path);

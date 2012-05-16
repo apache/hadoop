@@ -579,6 +579,9 @@ Release 2.0.0-alpha - UNRELEASED
 
     HDFS-3026. HA: Handle failure during HA state transition. (atm)
 
+    HDFS-860. fuse-dfs truncate behavior causes issues with scp.
+    (Brian Bockelman via eli)
+
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
     HDFS-2179. Add fencing framework and mechanisms for NameNode HA. (todd)
