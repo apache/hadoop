@@ -31,6 +31,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8316. Audit logging should be disabled by default. (eli)
 
+    HADOOP-8400. All commands warn "Kerberos krb5 configuration not found" when security is not enabled. (tucu)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
