@@ -81,6 +81,9 @@ public class JobCounterInfo {
     Map<TaskId, Task> tasks = job.getTasks();
     for (Task t : tasks.values()) {
       Counters counters = t.getCounters();
+      if (counters == null) {
+        continue;
+      }
       total.incrAllCounters(counters);
       switch (t.getType()) {
       case MAP:

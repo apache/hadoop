@@ -43,6 +43,14 @@ public class MockHistoryJobs extends MockJobs {
         numAttemptsPerTask);
     return split(mocked);
   }
+  
+  public static JobsPair newHistoryJobs(ApplicationId appID, int numJobsPerApp,
+      int numTasksPerJob, int numAttemptsPerTask, boolean hasFailedTasks)
+      throws IOException {
+    Map<JobId, Job> mocked = newJobs(appID, numJobsPerApp, numTasksPerJob,
+        numAttemptsPerTask, hasFailedTasks);
+    return split(mocked);
+  }
 
   private static JobsPair split(Map<JobId, Job> mocked) throws IOException {
     JobsPair ret = new JobsPair();
