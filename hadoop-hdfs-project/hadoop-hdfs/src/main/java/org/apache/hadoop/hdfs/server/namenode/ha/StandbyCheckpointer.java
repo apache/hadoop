@@ -112,7 +112,7 @@ public class StandbyCheckpointer {
    */
   private boolean checkAddress(String addrStr) {
     InetSocketAddress addr = NetUtils.createSocketAddr(addrStr);
-    return addr.getPort() != 0 && !addr.getAddress().isAnyLocalAddress();
+    return addr.getPort() != 0;
   }
 
   public void start() {

@@ -68,7 +68,7 @@ public class TestEditLogFileOutputStream {
     assertEquals(1, validation.getNumTransactions());
     assertEquals("Edit log should have 1MB pre-allocated, plus 4 bytes " +
         "for the version number",
-        PREALLOCATION_LENGTH, editLog.length());
+        EditLogFileOutputStream.PREALLOCATION_LENGTH + 4, editLog.length());
     
 
     cluster.getFileSystem().mkdirs(new Path("/tmp"),
@@ -82,7 +82,7 @@ public class TestEditLogFileOutputStream {
     assertEquals(2, validation.getNumTransactions());
 
     assertEquals("Edit log should be 1MB long, plus 4 bytes for the version number",
-        PREALLOCATION_LENGTH, editLog.length());
+        EditLogFileOutputStream.PREALLOCATION_LENGTH + 4, editLog.length());
     // 256 blocks for the 1MB of preallocation space
     assertTrue("Edit log disk space used should be at least 257 blocks",
         256 * 4096 <= new DU(editLog, conf).getUsed());

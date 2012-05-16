@@ -47,21 +47,6 @@ public class DatanodeRegistration extends DatanodeID
     this.softwareVersion = softwareVersion;
   }
 
-  public DatanodeRegistration(String ipAddr, int xferPort) {
-    this(ipAddr, xferPort, new StorageInfo(), new ExportedBlockKeys());
-  }
-
-  public DatanodeRegistration(String ipAddr, int xferPort, StorageInfo info,
-      ExportedBlockKeys keys) {
-    super(ipAddr, xferPort);
-    this.storageInfo = info;
-    this.exportedKeys = keys;
-  }
-  
-  public void setStorageInfo(StorageInfo storage) {
-    this.storageInfo = new StorageInfo(storage);
-  }
-
   public StorageInfo getStorageInfo() {
     return storageInfo;
   }
@@ -72,10 +57,6 @@ public class DatanodeRegistration extends DatanodeID
 
   public ExportedBlockKeys getExportedKeys() {
     return exportedKeys;
-  }
-  
-  public void setSoftwareVersion(String softwareVersion) {
-    this.softwareVersion = softwareVersion;
   }
   
   public String getSoftwareVersion() {

@@ -38,8 +38,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.junit.Test;
 
 /**
- * This class tests that a file need not be closed before its
- * data can be read by another client.
+ * This class tests data node registration.
  */
 public class TestDatanodeRegistration {
   

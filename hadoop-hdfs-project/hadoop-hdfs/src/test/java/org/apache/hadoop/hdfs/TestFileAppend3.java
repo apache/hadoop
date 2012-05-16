@@ -21,10 +21,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-import junit.extensions.TestSetup;
-import junit.framework.Test;
-import junit.framework.TestSuite;
-
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -43,9 +39,13 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.log4j.Level;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 /** This class implements some of tests posted in HADOOP-2658. */
-public class TestFileAppend3 extends junit.framework.TestCase {
+public class TestFileAppend3  {
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -64,29 +64,28 @@ public class TestFileAppend3 extends junit.framework.TestCase {
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
 
-  public static Test suite() {
-    return new TestSetup(new TestSuite(TestFileAppend3.class)) {
-      protected void setUp() throws java.lang.Exception {
-        AppendTestUtil.LOG.info("setUp()");
-        conf = new HdfsConfiguration();
-        conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
-        buffersize = conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
-        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
-        fs = (DistributedFileSystem)cluster.getFileSystem();
-      }
-    
-      protected void tearDown() throws Exception {
-        AppendTestUtil.LOG.info("tearDown()");
-        if(fs != null) fs.close();
-        if(cluster != null) cluster.shutdown();
-      }
-    };  
+  @BeforeClass
+  public static void setUp() throws java.lang.Exception {
+    AppendTestUtil.LOG.info("setUp()");
+    conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
+    buffersize = conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
+    fs = (DistributedFileSystem)cluster.getFileSystem();
+  }
+   
+  @AfterClass
+  public static void tearDown() throws Exception {
+    AppendTestUtil.LOG.info("tearDown()");
+    if(fs != null) fs.close();
+    if(cluster != null) cluster.shutdown();
   }
 
   /**
    * TC1: Append on block boundary.
    * @throws IOException an exception might be thrown
    */
+  @Test
   public void testTC1() throws Exception {
     final Path p = new Path("/TC1/foo");
     System.out.println("p=" + p);
@@ -115,6 +114,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    * TC2: Append on non-block boundary.
    * @throws IOException an exception might be thrown
    */
+  @Test
   public void testTC2() throws Exception {
     final Path p = new Path("/TC2/foo");
     System.out.println("p=" + p);
@@ -145,6 +145,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    * TC5: Only one simultaneous append.
    * @throws IOException an exception might be thrown
    */
+  @Test
   public void testTC5() throws Exception {
     final Path p = new Path("/TC5/foo");
     System.out.println("p=" + p);
@@ -175,6 +176,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    * TC7: Corrupted replicas are present.
    * @throws IOException an exception might be thrown
    */
+  @Test
   public void testTC7() throws Exception {
     final short repl = 2;
     final Path p = new Path("/TC7/foo");
@@ -224,6 +226,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    * TC11: Racing rename
    * @throws IOException an exception might be thrown
    */
+  @Test
   public void testTC11() throws Exception {
     final Path p = new Path("/TC11/foo");
     System.out.println("p=" + p);
@@ -282,6 +285,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    * TC12: Append to partial CRC chunk
    * @throws IOException an exception might be thrown
    */
+  @Test
   public void testTC12() throws Exception {
     final Path p = new Path("/TC12/foo");
     System.out.println("p=" + p);
@@ -313,6 +317,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
    * *
    * @throws IOException
    */
+  @Test
   public void testAppendToPartialChunk() throws IOException {
     final Path p = new Path("/partialChunk/foo");
     final int fileLen = 513;

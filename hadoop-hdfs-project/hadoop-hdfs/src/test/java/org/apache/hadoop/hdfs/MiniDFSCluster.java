@@ -1253,6 +1253,13 @@ public class MiniDFSCluster {
   public int getNameNodePort(int nnIndex) {
     return nameNodes[nnIndex].nameNode.getNameNodeAddress().getPort();
   }
+
+  /**
+   * @return the service rpc port used by the NameNode at the given index.
+   */     
+  public int getNameNodeServicePort(int nnIndex) {
+    return nameNodes[nnIndex].nameNode.getServiceRpcAddress().getPort();
+  }
     
   /**
    * Shutdown all the nodes in the cluster.
@@ -1653,20 +1660,15 @@ public class MiniDFSCluster {
     return FSNamesystem.getNamespaceEditsDirs(nameNodes[nnIndex].conf);
   }
   
-  private HAServiceProtocol getHaServiceClient(int nnIndex) throws IOException {
-    InetSocketAddress addr = nameNodes[nnIndex].nameNode.getServiceRpcAddress();
-    return new HAServiceProtocolClientSideTranslatorPB(addr, conf);
-  }
-  
   public void transitionToActive(int nnIndex) throws IOException,
       ServiceFailedException {
-    HAServiceProtocolHelper.transitionToActive(getHaServiceClient(nnIndex),
+    getNameNode(nnIndex).getRpcServer().transitionToActive(
         new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER_FORCED));
   }
   
   public void transitionToStandby(int nnIndex) throws IOException,
       ServiceFailedException {
-    HAServiceProtocolHelper.transitionToStandby(getHaServiceClient(nnIndex),
+    getNameNode(nnIndex).getRpcServer().transitionToStandby(
         new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER_FORCED));
   }
   

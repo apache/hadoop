@@ -17,29 +17,23 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 
-/*
- * A BlockLocation lists hosts, offset and length
- * of block. 
- * 
+/**
+ * Represents the network location of a block, information about the hosts
+ * that contain block replicas, and other block metadata (E.g. the file
+ * offset associated with the block, length, whether it is corrupt, etc).
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class BlockLocation {
-  private String[] hosts; //hostnames of datanodes
-  private String[] names; //hostname:portNumber of datanodes
-  private String[] topologyPaths; // full path name in network topology
-  private long offset;  //offset of the of the block in the file
+  private String[] hosts; // Datanode hostnames
+  private String[] names; // Datanode IP:xferPort for accessing the block
+  private String[] topologyPaths; // Full path name in network topology
+  private long offset;  // Offset of the block in the file
   private long length;
   private boolean corrupt;
 
@@ -105,7 +99,7 @@ public class BlockLocation {
    * Get the list of hosts (hostname) hosting this block
    */
   public String[] getHosts() throws IOException {
-    if ((hosts == null) || (hosts.length == 0)) {
+    if (hosts == null || hosts.length == 0) {
       return new String[0];
     } else {
       return hosts;
@@ -113,25 +107,25 @@ public class BlockLocation {
   }
 
   /**
-   * Get the list of names (hostname:port) hosting this block
+   * Get the list of names (IP:xferPort) hosting this block
    */
   public String[] getNames() throws IOException {
-    if ((names == null) || (names.length == 0)) {
+    if (names == null || names.length == 0) {
       return new String[0];
     } else {
-      return this.names;
+      return names;
     }
   }
 
   /**
    * Get the list of network topology paths for each of the hosts.
-   * The last component of the path is the host.
+   * The last component of the path is the "name" (IP:xferPort).
    */
   public String[] getTopologyPaths() throws IOException {
-    if ((topologyPaths == null) || (topologyPaths.length == 0)) {
+    if (topologyPaths == null || topologyPaths.length == 0) {
       return new String[0];
     } else {
-      return this.topologyPaths;
+      return topologyPaths;
     }
   }
   

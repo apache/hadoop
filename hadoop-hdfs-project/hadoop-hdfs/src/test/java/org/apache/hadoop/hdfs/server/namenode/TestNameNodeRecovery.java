@@ -25,6 +25,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +39,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
-import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteOp;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -213,15 +214,129 @@ public class TestNameNodeRecovery {
   public void testSkipEdit() throws IOException {
     runEditLogTest(new EltsTestGarbageInEditLog());
   }
-  
-  /** Test that we can successfully recover from a situation where the last
-   * entry in the edit log has been truncated. */
-  @Test(timeout=180000)
-  public void testRecoverTruncatedEditLog() throws IOException {
+
+  /**
+   * An algorithm for corrupting an edit log.
+   */
+  static interface Corruptor {
+    /*
+     * Corrupt an edit log file.
+     *
+     * @param editFile   The edit log file
+     */
+    public void corrupt(File editFile) throws IOException;
+
+    /*
+     * Explain whether we need to read the log in recovery mode
+     *
+     * @param finalized  True if the edit log in question is finalized.
+     *                   We're a little more lax about reading unfinalized
+     *                   logs.  We will allow a small amount of garbage at
+     *                   the end.  In a finalized log, every byte must be
+     *                   perfect.
+     *
+     * @return           Whether we need to read the log in recovery mode
+     */
+    public boolean needRecovery(boolean finalized);
+
+    /*
+     * Get the name of this corruptor
+     *
+     * @return           The Corruptor name
+     */
+    public String getName();
+  }
+
+  static class TruncatingCorruptor implements Corruptor {
+    @Override
+    public void corrupt(File editFile) throws IOException {
+      // Corrupt the last edit
+      long fileLen = editFile.length();
+      RandomAccessFile rwf = new RandomAccessFile(editFile, "rw");
+      rwf.setLength(fileLen - 1);
+      rwf.close();
+    }
+
+    @Override
+    public boolean needRecovery(boolean finalized) {
+      return finalized;
+    }
+
+    @Override
+    public String getName() {
+      return "truncated";
+    }
+  }
+
+  static class PaddingCorruptor implements Corruptor {
+    @Override
+    public void corrupt(File editFile) throws IOException {
+      // Add junk to the end of the file
+      RandomAccessFile rwf = new RandomAccessFile(editFile, "rw");
+      rwf.seek(editFile.length());
+      for (int i = 0; i < 129; i++) {
+        rwf.write((byte)0);
+      }
+      rwf.write(0xd);
+      rwf.write(0xe);
+      rwf.write(0xa);
+      rwf.write(0xd);
+      rwf.close();
+    }
+
+    @Override
+    public boolean needRecovery(boolean finalized) {
+      // With finalized edit logs, we ignore what's at the end as long as we
+      // can make it to the correct transaction ID.
+      // With unfinalized edit logs, the finalization process ignores garbage
+      // at the end.
+      return false;
+    }
+
+    @Override
+    public String getName() {
+      return "padFatal";
+    }
+  }
+
+  static class SafePaddingCorruptor implements Corruptor {
+    private byte padByte;
+
+    public SafePaddingCorruptor(byte padByte) {
+      this.padByte = padByte;
+      assert ((this.padByte == 0) || (this.padByte == -1));
+    }
+
+    @Override
+    public void corrupt(File editFile) throws IOException {
+      // Add junk to the end of the file
+      RandomAccessFile rwf = new RandomAccessFile(editFile, "rw");
+      rwf.seek(editFile.length());
+      rwf.write((byte)-1);
+      for (int i = 0; i < 1024; i++) {
+        rwf.write(padByte);
+      }
+      rwf.close();
+    }
+
+    @Override
+    public boolean needRecovery(boolean finalized) {
+      return false;
+    }
+
+    @Override
+    public String getName() {
+      return "pad" + ((int)padByte);
+    }
+  }
+
+  static void testNameNodeRecoveryImpl(Corruptor corruptor, boolean finalize)
+      throws IOException {
     final String TEST_PATH = "/test/path/dir";
     final int NUM_TEST_MKDIRS = 10;
-    
-    // start a cluster 
+    final boolean needRecovery = corruptor.needRecovery(finalize);
+
+    // start a cluster
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
@@ -230,6 +345,15 @@ public class TestNameNodeRecovery {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
           .build();
       cluster.waitActive();
+      if (!finalize) {
+        // Normally, the in-progress edit log would be finalized by
+        // FSEditLog#endCurrentLogSegment.  For testing purposes, we
+        // disable that here.
+        FSEditLog spyLog =
+            spy(cluster.getNameNode().getFSImage().getEditLog());
+        doNothing().when(spyLog).endCurrentLogSegment(true);
+        cluster.getNameNode().getFSImage().setEditLogForTesting(spyLog);
+      }
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
       FSImage fsimage = namesystem.getFSImage();
@@ -246,13 +370,11 @@ public class TestNameNodeRecovery {
     File editFile = FSImageTestUtil.findLatestEditsLog(sd).getFile();
     assertTrue("Should exist: " + editFile, editFile.exists());
 
-    // Corrupt the last edit
-    long fileLen = editFile.length();
-    RandomAccessFile rwf = new RandomAccessFile(editFile, "rw");
-    rwf.setLength(fileLen - 1);
-    rwf.close();
-    
-    // Make sure that we can't start the cluster normally before recovery
+    // Corrupt the edit log
+    corruptor.corrupt(editFile);
+
+    // If needRecovery == true, make sure that we can't start the
+    // cluster normally before recovery
     cluster = null;
     try {
       LOG.debug("trying to start normally (this should fail)...");
@@ -260,16 +382,24 @@ public class TestNameNodeRecovery {
           .format(false).build();
       cluster.waitActive();
       cluster.shutdown();
-      fail("expected the truncated edit log to prevent normal startup");
+      if (needRecovery) {
+        fail("expected the corrupted edit log to prevent normal startup");
+      }
     } catch (IOException e) {
-      // success
+      if (!needRecovery) {
+        LOG.error("Got unexpected failure with " + corruptor.getName() +
+            corruptor, e);
+        fail("got unexpected exception " + e.getMessage());
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
-    
-    // Perform recovery
+
+    // Perform NameNode recovery.
+    // Even if there was nothing wrong previously (needRecovery == false),
+    // this should still work fine.
     cluster = null;
     try {
       LOG.debug("running recovery...");
@@ -277,22 +407,22 @@ public class TestNameNodeRecovery {
           .format(false).startupOption(recoverStartOpt).build();
     } catch (IOException e) {
       fail("caught IOException while trying to recover. " +
-          "message was " + e.getMessage() + 
+          "message was " + e.getMessage() +
           "\nstack trace\n" + StringUtils.stringifyException(e));
     } finally {
       if (cluster != null) {
         cluster.shutdown();
       }
     }
-    
+
     // Make sure that we can start the cluster normally after recovery
     cluster = null;
     try {
       LOG.debug("starting cluster normally after recovery...");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
           .format(false).build();
-      LOG.debug("testRecoverTruncatedEditLog: successfully recovered the " +
-          "truncated edit log");
+      LOG.debug("successfully recovered the " + corruptor.getName() +
+          " corrupted edit log");
       assertTrue(cluster.getFileSystem().exists(new Path(TEST_PATH)));
     } catch (IOException e) {
       fail("failed to recover.  Error message: " + e.getMessage());
@@ -301,5 +431,37 @@ public class TestNameNodeRecovery {
         cluster.shutdown();
       }
     }
+  }
+
+  /** Test that we can successfully recover from a situation where the last
+   * entry in the edit log has been truncated. */
+  @Test(timeout=180000)
+  public void testRecoverTruncatedEditLog() throws IOException {
+    testNameNodeRecoveryImpl(new TruncatingCorruptor(), true);
+    testNameNodeRecoveryImpl(new TruncatingCorruptor(), false);
+  }
+
+  /** Test that we can successfully recover from a situation where the last
+   * entry in the edit log has been padded with garbage. */
+  @Test(timeout=180000)
+  public void testRecoverPaddedEditLog() throws IOException {
+    testNameNodeRecoveryImpl(new PaddingCorruptor(), true);
+    testNameNodeRecoveryImpl(new PaddingCorruptor(), false);
+  }
+
+  /** Test that don't need to recover from a situation where the last
+   * entry in the edit log has been padded with 0. */
+  @Test(timeout=180000)
+  public void testRecoverZeroPaddedEditLog() throws IOException {
+    testNameNodeRecoveryImpl(new SafePaddingCorruptor((byte)0), true);
+    testNameNodeRecoveryImpl(new SafePaddingCorruptor((byte)0), false);
+  }
+
+  /** Test that don't need to recover from a situation where the last
+   * entry in the edit log has been padded with 0xff bytes. */
+  @Test(timeout=180000)
+  public void testRecoverNegativeOnePaddedEditLog() throws IOException {
+    testNameNodeRecoveryImpl(new SafePaddingCorruptor((byte)-1), true);
+    testNameNodeRecoveryImpl(new SafePaddingCorruptor((byte)-1), false);
   }
 }

@@ -41,12 +41,13 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 public class EditLogFileOutputStream extends EditLogOutputStream {
   private static Log LOG = LogFactory.getLog(EditLogFileOutputStream.class);
+  public static final int PREALLOCATION_LENGTH = 1024 * 1024;
 
   private File file;
   private FileOutputStream fp; // file stream for storing edit logs
   private FileChannel fc; // channel of the file stream for sync
   private EditsDoubleBuffer doubleBuf;
-  static ByteBuffer fill = ByteBuffer.allocateDirect(1024 * 1024); // preallocation, 1MB
+  static ByteBuffer fill = ByteBuffer.allocateDirect(PREALLOCATION_LENGTH);
 
   static {
     fill.position(0);

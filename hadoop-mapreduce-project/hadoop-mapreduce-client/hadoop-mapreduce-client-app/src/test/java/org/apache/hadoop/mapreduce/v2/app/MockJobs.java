@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.v2.app;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -127,6 +128,17 @@ public class MockJobs extends MockApps {
     Map<JobId, Job> map = Maps.newHashMap();
     for (int j = 0; j < numJobsPerApp; ++j) {
       Job job = newJob(appID, j, numTasksPerJob, numAttemptsPerTask);
+      map.put(job.getID(), job);
+    }
+    return map;
+  }
+  
+  public static Map<JobId, Job> newJobs(ApplicationId appID, int numJobsPerApp,
+      int numTasksPerJob, int numAttemptsPerTask, boolean hasFailedTasks) {
+    Map<JobId, Job> map = Maps.newHashMap();
+    for (int j = 0; j < numJobsPerApp; ++j) {
+      Job job = newJob(appID, j, numTasksPerJob, numAttemptsPerTask, null,
+          hasFailedTasks);
       map.put(job.getID(), job);
     }
     return map;
@@ -316,16 +328,16 @@ public class MockJobs extends MockApps {
     };
   }
 
-  public static Map<TaskId, Task> newTasks(JobId jid, int n, int m) {
+  public static Map<TaskId, Task> newTasks(JobId jid, int n, int m, boolean hasFailedTasks) {
     Map<TaskId, Task> map = Maps.newHashMap();
     for (int i = 0; i < n; ++i) {
-      Task task = newTask(jid, i, m);
+      Task task = newTask(jid, i, m, hasFailedTasks);
       map.put(task.getID(), task);
     }
     return map;
   }
 
-  public static Task newTask(JobId jid, int i, int m) {
+  public static Task newTask(JobId jid, int i, int m, final boolean hasFailedTasks) {
     final TaskId tid = Records.newRecord(TaskId.class);
     tid.setJobId(jid);
     tid.setId(i);
@@ -345,6 +357,9 @@ public class MockJobs extends MockApps {
 
       @Override
       public Counters getCounters() {
+        if (hasFailedTasks) {
+          return null;
+        }
         return new Counters(
           TypeConverter.fromYarn(report.getCounters()));
       }
@@ -394,8 +409,14 @@ public class MockJobs extends MockApps {
 
   public static Counters getCounters(
       Collection<Task> tasks) {
+    List<Task> completedTasks = new ArrayList<Task>();
+    for (Task task : tasks) {
+      if (task.getCounters() != null) {
+        completedTasks.add(task);
+      }
+    }
     Counters counters = new Counters();
-    return JobImpl.incrTaskCounters(counters, tasks);
+    return JobImpl.incrTaskCounters(counters, completedTasks);
   }
 
   static class TaskCount {
@@ -434,10 +455,15 @@ public class MockJobs extends MockApps {
   }
 
   public static Job newJob(ApplicationId appID, int i, int n, int m, Path confFile) {
+    return newJob(appID, i, n, m, confFile, false);
+  }
+  
+  public static Job newJob(ApplicationId appID, int i, int n, int m,
+      Path confFile, boolean hasFailedTasks) {
     final JobId id = newJobID(appID, i);
     final String name = newJobName();
     final JobReport report = newJobReport(id);
-    final Map<TaskId, Task> tasks = newTasks(id, n, m);
+    final Map<TaskId, Task> tasks = newTasks(id, n, m, hasFailedTasks);
     final TaskCount taskCount = getTaskCount(tasks.values());
     final Counters counters = getCounters(tasks
       .values());

@@ -57,6 +57,7 @@ public class TestDataJoin extends TestCase {
   public void testDataJoin() throws Exception {
     final int srcs = 4;
     JobConf job = new JobConf();
+    job.setBoolean("mapreduce.fileoutputcommitter.marksuccessfuljobs", false);
     Path base = cluster.getFileSystem().makeQualified(new Path("/inner"));
     Path[] src = writeSimpleSrc(base, job, srcs);
     job.setInputFormat(SequenceFileInputFormat.class);

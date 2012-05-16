@@ -109,7 +109,25 @@ Trunk (unreleased changes)
     MAPREDUCE-1740. NPE in getMatchingLevelForNodes when node locations are 
     variable depth (ahmed via tucu) [IMPORTANT: this is dead code in trunk]
 
-Release 2.0.0 - UNRELEASED
+Release 2.0.1-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-4148. MapReduce should not have a compile-time dependency on
+    HDFS. (tomwhite)
+
+    MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn 
+    jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+
+Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -286,9 +304,6 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
     (szetszwo)
-
-    MAPREDUCE-4148. MapReduce should not have a compile-time dependency on
-    HDFS. (tomwhite)
 
 Release 0.23.3 - UNRELEASED
 
@@ -482,6 +497,11 @@ Release 0.23.3 - UNRELEASED
     associated with it (bobby)
 
     MAPREDUCE-4233. NPE can happen in RMNMNodeInfo. (bobby)
+
+    MAPREDUCE-4238. mavenize data_join. (tgraves)
+
+    MAPREDUCE-4102. job counters not available in Jobhistory webui for 
+    killed jobs (Bhallamudi Venkata Siva Kamesh via tgraves)
 
 Release 0.23.2 - UNRELEASED
 
