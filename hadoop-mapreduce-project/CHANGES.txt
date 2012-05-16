@@ -1,6 +1,24 @@
 Hadoop MapReduce Change Log
 
-Release 2.0.0 - UNRELEASED
+Release 2.0.1-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    MAPREDUCE-4148. MapReduce should not have a compile-time dependency on
+    HDFS. (tomwhite)
+
+    MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn 
+    jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+
+Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -179,12 +197,6 @@ Release 2.0.0 - UNRELEASED
 
     MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
     (szetszwo)
-
-    MAPREDUCE-4148. MapReduce should not have a compile-time dependency on
-    HDFS. (tomwhite)
-
-    MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn 
-    jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
 
 Release 0.23.3 - UNRELEASED
 

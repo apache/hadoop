@@ -1,13 +1,41 @@
 Hadoop Change Log
 
-Release 2.0.0 - UNRELEASED
+Release 2.0.1-alpha - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+    HADOOP-8388. Remove unused BlockLocation serialization.
+    (Colin Patrick McCabe via eli)
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
+    final release. (todd)
+
+    HADOOP-8361. Avoid out-of-memory problems when deserializing strings.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8224. Don't hardcode hdfs.audit.logger in the scripts.
+    (Tomohiko Kinebuchi via eli)
+
+    HADOOP-8398. Cleanup BlockLocation. (eli)
+
+  BUG FIXES
+
+    HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
+    starting with a numeric character. (Junping Du via suresh)
+
+    HADOOP-8393. hadoop-config.sh missing variable exports, causes Yarn jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+
+    HADOOP-8316. Audit logging should be disabled by default. (eli)
+
+Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
     HADOOP-7920. Remove Avro Rpc. (suresh)
-
-    HADOOP-8388. Remove unused BlockLocation serialization.
-    (Colin Patrick McCabe via eli)
 
   NEW FEATURES
 
@@ -167,17 +195,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8356. FileSystem service loading mechanism should print the FileSystem 
     impl it is failing to load (tucu)
 
-    HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
-    final release. (todd)
-
-    HADOOP-8361. Avoid out-of-memory problems when deserializing strings.
-    (Colin Patrick McCabe via eli)
-
     HADOOP-8353. hadoop-daemon.sh and yarn-daemon.sh can be misleading on stop.
     (Roman Shaposhnik via atm)
-
-    HADOOP-8224. Don't hardcode hdfs.audit.logger in the scripts.
-    (Tomohiko Kinebuchi via eli)
 
     HADOOP-8113. Correction to BUILDING.txt: HDFS needs ProtocolBuffer, too
     (not just MapReduce). Contributed by Eugene Koontz.
@@ -185,8 +204,6 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
 
     HADOOP-8366 Use ProtoBuf for RpcResponseHeader (sanjay radia)
-
-    HADOOP-8398. Cleanup BlockLocation. (eli)
 
   OPTIMIZATIONS
 
@@ -324,11 +341,6 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8359. Fix javadoc warnings in Configuration.  (Anupam Seth via
     szetszwo)
 
-    HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
-    starting with a numeric character. (Junping Du via suresh)
-
-    HADOOP-8393. hadoop-config.sh missing variable exports, causes Yarn jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
-
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
@@ -389,8 +401,6 @@ Release 2.0.0 - UNRELEASED
 
     HADOOP-7868. Hadoop native fails to compile when default linker
     option is -Wl,--as-needed. (Trevor Robinson via eli)
-
-    HADOOP-8316. Audit logging should be disabled by default. (eli)
 
 Release 0.23.3 - UNRELEASED
 

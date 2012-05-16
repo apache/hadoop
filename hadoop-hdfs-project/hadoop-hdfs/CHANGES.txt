@@ -1,6 +1,64 @@
 Hadoop HDFS Change Log
 
-Release 2.0.0 - UNRELEASED
+Release 2.0.1-alpha - UNRELEASED
+  
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
+    logging is enabled. (atm)
+
+    HDFS-3341. Change minimum RPC versions to respective SNAPSHOTs instead of
+    final releases. (todd)
+
+    HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and
+    BlocksMap to {get|set|add}BlockCollection(..).  (John George via szetszwo)
+
+    HDFS-3134. harden edit log loader against malformed or malicious input.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
+
+    HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. (eli)
+
+    HDFS-3400. DNs should be able start with jsvc even if security is disabled.
+    (atm via eli)
+
+    HDFS-3404. Make putImage in GetImageServlet infer remote address to fetch
+    from request. (atm)
+
+    HDFS-3335. check for edit log corruption at the end of the log
+    (Colin Patrick McCabe via todd)
+
+    HDFS-3417. Rename BalancerDatanode#getName to getDisplayName to be
+    consistent with Datanode. (eli)
+
+    HDFS-3416. Cleanup DatanodeID and DatanodeRegistration
+    constructors used by testing. (eli)
+
+    HDFS-3419. Cleanup LocatedBlock. (eli)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+    HDFS-3385. The last block of INodeFileUnderConstruction is not
+    necessarily a BlockInfoUnderConstruction, so do not cast it in
+    FSNamesystem.recoverLeaseInternal(..).  (szetszwo)
+
+    HDFS-3414. Balancer does not find NameNode if rpc-address or
+    servicerpc-address are not set in client configs. (atm)
+
+    HDFS-3031. Fix complete() and getAdditionalBlock() RPCs to be idempotent
+    (todd)
+
+    HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
+    (atm)
+
+Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
@@ -296,43 +354,10 @@ Release 2.0.0 - UNRELEASED
     so that INodeFile and INodeFileUnderConstruction do not have to be used in
     block management.  (John George via szetszwo)
 
-    HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
-    logging is enabled. (atm)
-
-    HDFS-3341. Change minimum RPC versions to respective SNAPSHOTs instead of
-    final releases. (todd)
-
-    HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and
-    BlocksMap to {get|set|add}BlockCollection(..).  (John George via szetszwo)
-
-    HDFS-3134. harden edit log loader against malformed or malicious input.
-    (Colin Patrick McCabe via eli)
-
-    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
-
-    HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. (eli)
-
-    HDFS-3400. DNs should be able start with jsvc even if security is disabled.
-    (atm via eli)
-
     HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
     and epoch in JournalProtocol. (suresh via szetszwo)
 
     HADOOP-8285 HDFS changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
-
-    HDFS-3404. Make putImage in GetImageServlet infer remote address to fetch
-    from request. (atm)
-
-    HDFS-3335. check for edit log corruption at the end of the log
-    (Colin Patrick McCabe via todd)
-
-    HDFS-3417. Rename BalancerDatanode#getName to getDisplayName to be
-    consistent with Datanode. (eli)
-
-    HDFS-3416. Cleanup DatanodeID and DatanodeRegistration
-    constructors used by testing. (eli)
-
-    HDFS-3419. Cleanup LocatedBlock. (eli)
 
     HDFS-3418. Rename BlockWithLocationsProto datanodeIDs field to storageIDs.
     (eli)
@@ -550,20 +575,7 @@ Release 2.0.0 - UNRELEASED
 
     HDFS-3395. NN doesn't start with HA+security enabled and HTTP address set to 0.0.0.0. (atm)
 
-    HDFS-3385. The last block of INodeFileUnderConstruction is not
-    necessarily a BlockInfoUnderConstruction, so do not cast it in
-    FSNamesystem.recoverLeaseInternal(..).  (szetszwo)
-
     HDFS-3026. HA: Handle failure during HA state transition. (atm)
-
-    HDFS-3414. Balancer does not find NameNode if rpc-address or
-    servicerpc-address are not set in client configs. (atm)
-
-    HDFS-3031. Fix complete() and getAdditionalBlock() RPCs to be idempotent
-    (todd)
-
-    HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
-    (atm)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
