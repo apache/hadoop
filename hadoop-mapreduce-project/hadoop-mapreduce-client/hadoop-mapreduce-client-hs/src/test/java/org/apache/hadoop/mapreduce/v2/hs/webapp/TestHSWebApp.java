@@ -63,10 +63,16 @@ public class TestHSWebApp {
     final Map<JobId, Job> jobs;
     final long startTime = System.currentTimeMillis();
 
-    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
+    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts,
+        boolean hasFailedTasks) {
       appID = MockJobs.newAppID(appid);
       appAttemptID = MockJobs.newAppAttemptID(appID, 0);
-      jobs = MockJobs.newJobs(appID, numJobs, numTasks, numAttempts);
+      jobs = MockJobs.newJobs(appID, numJobs, numTasks, numAttempts,
+          hasFailedTasks);
+    }
+    
+    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
+      this(appid, numJobs, numTasks, numAttempts, false);
     }
 
     TestAppContext() {
@@ -196,6 +202,14 @@ public class TestHSWebApp {
     Map<String, String> params = TestAMWebApp.getJobParams(appContext);
     WebAppTests.testPage(HsCountersPage.class, AppContext.class,
                          appContext, params);
+  }
+  
+  @Test public void testJobCounterViewForKilledJob() {
+    LOG.info("JobCounterViewForKilledJob");
+    AppContext appContext = new TestAppContext(0, 1, 1, 1, true);
+    Map<String, String> params = TestAMWebApp.getJobParams(appContext);
+    WebAppTests.testPage(HsCountersPage.class, AppContext.class,
+        appContext, params);
   }
   
   @Test public void testSingleCounterView() {
