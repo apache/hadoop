@@ -22,6 +22,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8398. Cleanup BlockLocation. (eli)
 
+    HADOOP-8403. bump up POMs version to 2.0.1-SNAPSHOT. (tucu)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
