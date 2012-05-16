@@ -327,6 +327,8 @@ Release 2.0.0 - UNRELEASED
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
     starting with a numeric character. (Junping Du via suresh)
 
+    HADOOP-8393. hadoop-config.sh missing variable exports, causes Yarn jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+
   BREAKDOWN OF HADOOP-7454 SUBTASKS
 
     HADOOP-7455. HA: Introduce HA Service Protocol Interface. (suresh)
