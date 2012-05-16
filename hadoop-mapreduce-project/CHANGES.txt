@@ -393,6 +393,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4238. mavenize data_join. (tgraves)
 
+    MAPREDUCE-4102. job counters not available in Jobhistory webui for 
+    killed jobs (Bhallamudi Venkata Siva Kamesh via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

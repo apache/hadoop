@@ -69,7 +69,7 @@ public class CountersBlock extends HtmlBlock {
       return;
     }
     
-    if(total == null || total.getGroupNames() == null) {
+    if(total == null || total.getGroupNames() == null || total.countCounters() == 0) {
       String type = $(TASK_ID);
       if(type == null || type.isEmpty()) {
         type = $(JOB_ID, "the job");
@@ -180,13 +180,24 @@ public class CountersBlock extends HtmlBlock {
     // Get all types of counters
     Map<TaskId, Task> tasks = job.getTasks();
     total = job.getAllCounters();
+    boolean needTotalCounters = false;
+    if (total == null) {
+      total = new Counters();
+      needTotalCounters = true;
+    }
     map = new Counters();
     reduce = new Counters();
     for (Task t : tasks.values()) {
       Counters counters = t.getCounters();
+      if (counters == null) {
+        continue;
+      }
       switch (t.getType()) {
         case MAP:     map.incrAllCounters(counters);     break;
         case REDUCE:  reduce.incrAllCounters(counters);  break;
+      }
+      if (needTotalCounters) {
+        total.incrAllCounters(counters);
       }
     }
   }
