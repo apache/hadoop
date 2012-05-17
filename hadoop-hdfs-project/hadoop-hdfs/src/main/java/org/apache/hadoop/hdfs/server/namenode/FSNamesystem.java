@@ -687,7 +687,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   void prepareToStopStandbyServices() throws ServiceFailedException {
     if (standbyCheckpointer != null) {
-      standbyCheckpointer.cancelAndPreventCheckpoints();
+      standbyCheckpointer.cancelAndPreventCheckpoints(
+          "About to leave standby state");
     }
   }
 
@@ -3352,27 +3353,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       getFSImage().saveNamespace(this);
       LOG.info("New namespace image has been created.");
-    } finally {
-      readUnlock();
-    }
-  }
-  
-  /**
-   * Cancel an ongoing saveNamespace operation and wait for its
-   * threads to exit, if one is currently in progress.
-   *
-   * If no such operation is in progress, this call does nothing.
-   *
-   * @param reason a reason to be communicated to the caller saveNamespace 
-   * @throws IOException
-   */
-  void cancelSaveNamespace(String reason) throws IOException {
-    readLock();
-    try {
-      checkSuperuserPrivilege();
-      getFSImage().cancelSaveNamespace(reason);
-    } catch (InterruptedException e) {
-      throw new IOException(e);
     } finally {
       readUnlock();
     }

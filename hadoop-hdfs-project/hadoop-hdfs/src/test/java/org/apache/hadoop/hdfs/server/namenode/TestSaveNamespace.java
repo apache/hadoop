@@ -52,8 +52,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
 import org.apache.log4j.Level;
@@ -546,14 +547,15 @@ public class TestSaveNamespace {
     
     try {
       doAnEdit(fsn, 1);
-
+      final Canceler canceler = new Canceler();
+      
       // Save namespace
       fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       try {
         Future<Void> saverFuture = pool.submit(new Callable<Void>() {
           @Override
           public Void call() throws Exception {
-            image.saveNamespace(finalFsn);
+            image.saveNamespace(finalFsn, canceler);
             return null;
           }
         });
@@ -563,7 +565,7 @@ public class TestSaveNamespace {
         // then cancel the saveNamespace
         Future<Void> cancelFuture = pool.submit(new Callable<Void>() {
           public Void call() throws Exception {
-            image.cancelSaveNamespace("cancelled");
+            canceler.cancel("cancelled");
             return null;
           }
         });

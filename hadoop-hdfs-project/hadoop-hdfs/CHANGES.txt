@@ -70,6 +70,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3434. InvalidProtocolBufferException when visiting DN
     browseDirectory.jsp (eli)
 
+    HDFS-2800. Fix cancellation of checkpoints in the standby node to be more
+    reliable. (todd)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
