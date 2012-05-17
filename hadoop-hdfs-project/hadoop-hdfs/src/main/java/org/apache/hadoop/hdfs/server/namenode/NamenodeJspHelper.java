@@ -587,6 +587,10 @@ class NamenodeJspHelper {
 
       whatNodes = request.getParameter("whatNodes"); // show only live or only
                                                      // dead nodes
+      if (null == whatNodes || whatNodes.isEmpty()) {
+        out.print("Invalid input");
+        return;
+      }
       sorterField = request.getParameter("sorter/field");
       sorterOrder = request.getParameter("sorter/order");
       if (sorterField == null)
@@ -714,6 +718,8 @@ class NamenodeJspHelper {
             }
             out.print("</table>\n");
           }
+        } else {
+          out.print("Invalid input");
         }
         out.print("</div>");
       }
