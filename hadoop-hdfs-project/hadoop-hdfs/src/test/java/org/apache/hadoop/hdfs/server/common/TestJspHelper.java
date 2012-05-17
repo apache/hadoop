@@ -114,7 +114,7 @@ public class TestJspHelper {
     UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
     Token<? extends TokenIdentifier> tokenInUgi = ugi.getTokens().iterator()
         .next();
-    Assert.assertEquals(tokenInUgi.getService().toString(), expected);
+    Assert.assertEquals(expected, tokenInUgi.getService().toString());
   }
   
   

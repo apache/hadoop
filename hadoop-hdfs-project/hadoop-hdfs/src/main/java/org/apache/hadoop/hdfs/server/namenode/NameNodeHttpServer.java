@@ -165,9 +165,9 @@ public class NameNodeHttpServer {
       httpServer.setAttribute("datanode.https.port", datanodeSslPort
         .getPort());
     }
-    httpServer.setAttribute("name.node", nn);
-    httpServer.setAttribute("name.node.address", bindAddress);
-    httpServer.setAttribute("name.system.image", nn.getFSImage());
+    httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
+    httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY, nn.getNameNodeAddress());
+    httpServer.setAttribute(FSIMAGE_ATTRIBUTE_KEY, nn.getFSImage());
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     setupServlets(httpServer, conf);
     httpServer.start();
