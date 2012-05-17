@@ -174,31 +174,42 @@ public class LightWeightHashSet<T> implements Collection<T> {
    * @return true if element present, false otherwise.
    */
   @SuppressWarnings("unchecked")
+  @Override
   public boolean contains(final Object key) {
+    return getElement((T)key) != null;
+  }
+  
+  /**
+   * Return the element in this set which is equal to
+   * the given key, if such an element exists.
+   * Otherwise returns null.
+   */
+  public T getElement(final T key) {
     // validate key
     if (key == null) {
       throw new IllegalArgumentException("Null element is not supported.");
     }
     // find element
-    final int hashCode = ((T)key).hashCode();
+    final int hashCode = key.hashCode();
     final int index = getIndex(hashCode);
-    return containsElem(index, (T) key, hashCode);
+    return getContainedElem(index, key, hashCode);
   }
 
   /**
-   * Check if the set contains given element at given index.
+   * Check if the set contains given element at given index. If it
+   * does, return that element.
    *
-   * @return true if element present, false otherwise.
+   * @return the element, or null, if no element matches
    */
-  protected boolean containsElem(int index, final T key, int hashCode) {
+  protected T getContainedElem(int index, final T key, int hashCode) {
     for (LinkedElement<T> e = entries[index]; e != null; e = e.next) {
       // element found
       if (hashCode == e.hashCode && e.element.equals(key)) {
-        return true;
+        return e.element;
       }
     }
     // element not found
-    return false;
+    return null;
   }
 
   /**
@@ -241,7 +252,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
     final int hashCode = element.hashCode();
     final int index = getIndex(hashCode);
     // return false if already present
-    if (containsElem(index, element, hashCode)) {
+    if (getContainedElem(index, element, hashCode) != null) {
       return false;
     }
 

@@ -165,6 +165,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.annotations.VisibleForTesting;
@@ -1710,13 +1711,16 @@ public class DataNode extends Configured
     secureMain(args, null);
   }
 
-  public Daemon recoverBlocks(final Collection<RecoveringBlock> blocks) {
+  public Daemon recoverBlocks(
+      final String who,
+      final Collection<RecoveringBlock> blocks) {
+    
     Daemon d = new Daemon(threadGroup, new Runnable() {
       /** Recover a list of blocks. It is run by the primary datanode. */
       public void run() {
         for(RecoveringBlock b : blocks) {
           try {
-            logRecoverBlock("NameNode", b.getBlock(), b.getLocations());
+            logRecoverBlock(who, b);
             recoverBlock(b);
           } catch (IOException e) {
             LOG.warn("recoverBlocks FAILED: " + b, e);
@@ -1977,14 +1981,13 @@ public class DataNode extends Configured
         datanodes, storages);
   }
   
-  private static void logRecoverBlock(String who,
-      ExtendedBlock block, DatanodeID[] targets) {
-    StringBuilder msg = new StringBuilder(targets[0].toString());
-    for (int i = 1; i < targets.length; i++) {
-      msg.append(", " + targets[i]);
-    }
+  private static void logRecoverBlock(String who, RecoveringBlock rb) {
+    ExtendedBlock block = rb.getBlock();
+    DatanodeInfo[] targets = rb.getLocations();
+    
     LOG.info(who + " calls recoverBlock(block=" + block
-        + ", targets=[" + msg + "])");
+        + ", targets=[" + Joiner.on(", ").join(targets) + "]"
+        + ", newGenerationStamp=" + rb.getNewGenerationStamp() + ")");
   }
 
   @Override // ClientDataNodeProtocol

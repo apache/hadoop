@@ -592,7 +592,8 @@ class BPOfferService {
       processDistributedUpgradeCommand((UpgradeCommand)cmd);
       break;
     case DatanodeProtocol.DNA_RECOVERBLOCK:
-      dn.recoverBlocks(((BlockRecoveryCommand)cmd).getRecoveringBlocks());
+      String who = "NameNode at " + actor.getNNSocketAddress();
+      dn.recoverBlocks(who, ((BlockRecoveryCommand)cmd).getRecoveringBlocks());
       break;
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
       LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
