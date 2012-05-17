@@ -200,6 +200,8 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4264. ClassCastException with oozie. (tgraves via bobby)
 
+    MAPREDUCE-3543. Mavenize Gridmix. (tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
