@@ -1,5 +1,7 @@
 package org.apache.hadoop.mapred.gridmix;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -32,6 +34,7 @@ import java.io.IOException;
  * limitations under the License.
  */
 public class GridmixTestUtils {
+  private static final Log LOG = LogFactory.getLog(GridmixTestUtils.class);
   static final Path DEST = new Path("/gridmix");
   static FileSystem dfs = null;
   static MiniDFSCluster dfsCluster = null;
@@ -69,15 +72,13 @@ public class GridmixTestUtils {
       if(fs.exists(homeDirectory)) {
         fs.delete(homeDirectory,true);
       }
-      TestGridmixSubmission.LOG.info(
-        "Creating Home directory : " + homeDirectory);
+      LOG.info("Creating Home directory : " + homeDirectory);
       fs.mkdirs(homeDirectory);
       changePermission(user,homeDirectory, fs);
       Path stagingArea = 
         new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
                           "/tmp/hadoop/mapred/staging"));
-      TestGridmixSubmission.LOG.info(
-        "Creating Staging root directory : " + stagingArea);
+      LOG.info("Creating Staging root directory : " + stagingArea);
       fs.mkdirs(stagingArea);
       fs.setPermission(stagingArea, new FsPermission((short) 0777));
     } catch (IOException ioe) {
