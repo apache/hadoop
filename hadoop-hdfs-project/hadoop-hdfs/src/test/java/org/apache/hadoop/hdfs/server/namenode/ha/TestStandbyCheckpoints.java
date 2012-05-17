@@ -21,6 +21,7 @@ import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
 import java.util.List;
 
@@ -36,6 +37,11 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.util.Canceler;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.GzipCodec;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,12 +58,18 @@ public class TestStandbyCheckpoints {
   private NameNode nn0, nn1;
   private FileSystem fs;
 
+  @SuppressWarnings("rawtypes")
   @Before
   public void setupCluster() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_CHECK_PERIOD_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 5);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
+    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
+        SlowCodec.class.getCanonicalName());
+    CompressionCodecFactory.setCodecClasses(conf,
+        ImmutableList.<Class>of(SlowCodec.class));
 
     MiniDFSNNTopology topology = new MiniDFSNNTopology()
       .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
@@ -159,14 +171,15 @@ public class TestStandbyCheckpoints {
     
     // We should make exactly one checkpoint at this new txid. 
     Mockito.verify(spyImage1, Mockito.times(1))
-      .saveNamespace((FSNamesystem) Mockito.anyObject());       
+      .saveNamespace((FSNamesystem) Mockito.anyObject(),
+          (Canceler)Mockito.anyObject());       
   }
   
   /**
    * Test cancellation of ongoing checkpoints when failover happens
    * mid-checkpoint. 
    */
-  @Test
+  @Test(timeout=120000)
   public void testCheckpointCancellation() throws Exception {
     cluster.transitionToStandby(0);
     
@@ -191,22 +204,41 @@ public class TestStandbyCheckpoints {
 
     cluster.transitionToActive(0);    
     
-    for (int i = 0; i < 10; i++) {
+    boolean canceledOne = false;
+    for (int i = 0; i < 10 && !canceledOne; i++) {
       
       doEdits(i*10, i*10 + 10);
       cluster.transitionToStandby(0);
       cluster.transitionToActive(1);
       cluster.transitionToStandby(1);
       cluster.transitionToActive(0);
+      canceledOne = StandbyCheckpointer.getCanceledCount() > 0;
     }
     
-    assertTrue(StandbyCheckpointer.getCanceledCount() > 0);
+    assertTrue(canceledOne);
   }
 
   private void doEdits(int start, int stop) throws IOException {
     for (int i = start; i < stop; i++) {
       Path p = new Path("/test" + i);
       fs.mkdirs(p);
+    }
+  }
+  
+  /**
+   * A codec which just slows down the saving of the image significantly
+   * by sleeping a few milliseconds on every write. This makes it easy to
+   * catch the standby in the middle of saving a checkpoint.
+   */
+  public static class SlowCodec extends GzipCodec {
+    @Override
+    public CompressionOutputStream createOutputStream(OutputStream out)
+        throws IOException {
+      CompressionOutputStream ret = super.createOutputStream(out);
+      CompressionOutputStream spy = Mockito.spy(ret);
+      Mockito.doAnswer(new GenericTestUtils.SleepAnswer(2))
+        .when(spy).write(Mockito.<byte[]>any(), Mockito.anyInt(), Mockito.anyInt());
+      return spy;
     }
   }
 

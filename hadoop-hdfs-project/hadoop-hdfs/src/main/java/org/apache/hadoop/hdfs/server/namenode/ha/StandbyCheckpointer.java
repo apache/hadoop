@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SaveNamespaceCancelledException;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
+import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -58,6 +59,9 @@ public class StandbyCheckpointer {
   private final CheckpointerThread thread;
   private String activeNNAddress;
   private InetSocketAddress myNNAddress;
+
+  private Object cancelLock = new Object();
+  private Canceler canceler;
   
   // Keep track of how many checkpoints were canceled.
   // This is for use in tests.
@@ -123,6 +127,7 @@ public class StandbyCheckpointer {
   }
   
   public void stop() throws IOException {
+    cancelAndPreventCheckpoints("Stopping checkpointer");
     thread.setShouldRun(false);
     thread.interrupt();
     try {
@@ -134,6 +139,7 @@ public class StandbyCheckpointer {
   }
 
   private void doCheckpoint() throws InterruptedException, IOException {
+    assert canceler != null;
     long txid;
     
     namesystem.writeLockInterruptibly();
@@ -153,8 +159,8 @@ public class StandbyCheckpointer {
             thisCheckpointTxId + ". Skipping...");
         return;
       }
-      
-      img.saveNamespace(namesystem);
+
+      img.saveNamespace(namesystem, canceler);
       txid = img.getStorage().getMostRecentCheckpointTxId();
       assert txid == thisCheckpointTxId : "expected to save checkpoint at txid=" +
         thisCheckpointTxId + " but instead saved at txid=" + txid;
@@ -173,16 +179,18 @@ public class StandbyCheckpointer {
    * and prevent any new checkpoints from starting for the next
    * minute or so.
    */
-  public void cancelAndPreventCheckpoints() throws ServiceFailedException {
-    try {
-      thread.preventCheckpointsFor(PREVENT_AFTER_CANCEL_MS);
-      // TODO(HA): there is a really narrow race here if we are just
-      // about to start a checkpoint - this won't cancel it!
-      namesystem.getFSImage().cancelSaveNamespace(
-          "About to exit standby state");
-    } catch (InterruptedException e) {
-      throw new ServiceFailedException(
-          "Interrupted while trying to cancel checkpoint");
+  public void cancelAndPreventCheckpoints(String msg) throws ServiceFailedException {
+    thread.preventCheckpointsFor(PREVENT_AFTER_CANCEL_MS);
+    synchronized (cancelLock) {
+      // Before beginning a checkpoint, the checkpointer thread
+      // takes this lock, and creates a canceler object.
+      // If the canceler is non-null, then a checkpoint is in
+      // progress and we need to cancel it. If it's null, then
+      // the operation has not started, meaning that the above
+      // time-based prevention will take effect.
+      if (canceler != null) {
+        canceler.cancel(msg);
+      }
     }
   }
   
@@ -272,10 +280,18 @@ public class StandbyCheckpointer {
                 "exceeds the configured interval " + checkpointConf.getPeriod());
             needCheckpoint = true;
           }
-          if (needCheckpoint && now < preventCheckpointsUntil) {
-            LOG.info("But skipping this checkpoint since we are about to failover!");
-            canceledCount++;
-          } else if (needCheckpoint) {
+          
+          synchronized (cancelLock) {
+            if (now < preventCheckpointsUntil) {
+              LOG.info("But skipping this checkpoint since we are about to failover!");
+              canceledCount++;
+              continue;
+            }
+            assert canceler == null;
+            canceler = new Canceler();
+          }
+          
+          if (needCheckpoint) {
             doCheckpoint();
             lastCheckpointTime = now;
           }
@@ -287,6 +303,10 @@ public class StandbyCheckpointer {
           continue;
         } catch (Throwable t) {
           LOG.error("Exception in doCheckpoint", t);
+        } finally {
+          synchronized (cancelLock) {
+            canceler = null;
+          }
         }
       }
     }
