@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +44,8 @@ import com.google.common.base.Preconditions;
  * Classes which need callbacks should implement the {@link Callback}
  * interface.
  */
-class HealthMonitor {
+@InterfaceAudience.Private
+public class HealthMonitor {
   private static final Log LOG = LogFactory.getLog(
       HealthMonitor.class);
 
@@ -75,7 +77,8 @@ class HealthMonitor {
   private HAServiceStatus lastServiceState = new HAServiceStatus(
       HAServiceState.INITIALIZING);
   
-  enum State {
+  @InterfaceAudience.Private
+  public enum State {
     /**
      * The health monitor is still starting up.
      */

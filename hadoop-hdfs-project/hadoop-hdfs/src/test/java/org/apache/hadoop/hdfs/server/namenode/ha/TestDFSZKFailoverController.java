@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ha.ClientBaseWithFixes;
+import org.apache.hadoop.ha.HealthMonitor;
+import org.apache.hadoop.ha.ZKFCTestUtil;
 import org.apache.hadoop.ha.ZKFailoverController;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
@@ -90,6 +92,12 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
     
     ctx.addThread(thr2 = new ZKFCThread(ctx, 1));
     thr2.start();
+    
+    // Wait for the ZKFCs to fully start up
+    ZKFCTestUtil.waitForHealthState(thr1.zkfc,
+        HealthMonitor.State.SERVICE_HEALTHY, ctx);
+    ZKFCTestUtil.waitForHealthState(thr2.zkfc,
+        HealthMonitor.State.SERVICE_HEALTHY, ctx);
     
     fs = HATestUtil.configureFailoverFs(cluster, conf);
   }
@@ -160,10 +168,12 @@ public class TestDFSZKFailoverController extends ClientBaseWithFixes {
   public void testManualFailoverWithDFSHAAdmin() throws Exception {
     DFSHAAdmin tool = new DFSHAAdmin();
     tool.setConf(conf);
-    tool.run(new String[]{"-failover", "nn1", "nn2"});
+    assertEquals(0, 
+        tool.run(new String[]{"-failover", "nn1", "nn2"}));
     waitForHAState(0, HAServiceState.STANDBY);
     waitForHAState(1, HAServiceState.ACTIVE);
-    tool.run(new String[]{"-failover", "nn2", "nn1"});
+    assertEquals(0,
+        tool.run(new String[]{"-failover", "nn2", "nn1"}));
     waitForHAState(0, HAServiceState.ACTIVE);
     waitForHAState(1, HAServiceState.STANDBY);
   }

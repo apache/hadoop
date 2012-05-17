@@ -15,3 +15,5 @@ HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
 HDFS-3159. Document NN auto-failover setup and configuration (todd)
 
 HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
+
+HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)

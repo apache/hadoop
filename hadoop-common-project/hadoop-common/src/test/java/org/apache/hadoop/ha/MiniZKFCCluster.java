@@ -170,11 +170,7 @@ public class MiniZKFCCluster {
    */
   public void waitForHealthState(int idx, State state)
       throws Exception {
-    ZKFailoverController zkfc = thrs[idx].zkfc; 
-    while (zkfc.getLastHealthState() != state) {
-      ctx.checkException();
-      Thread.sleep(50);
-    }
+    ZKFCTestUtil.waitForHealthState(thrs[idx].zkfc, state, ctx);
   }
 
   /**
