@@ -21,17 +21,26 @@ import static org.junit.Assert.*;
 
 import java.io.IOException;
 
+import javax.servlet.ServletContext;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
+import org.mockito.Mockito;
 
 public class TestGetImageServlet {
   
   @Test
-  public void testIsValidRequestorWithHa() throws IOException {
+  public void testIsValidRequestor() throws IOException {
     Configuration conf = new HdfsConfiguration();
+    KerberosName.setRules("RULE:[1:$1]\nRULE:[2:$1]");
     
     // Set up generic HA configs.
     conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "ns1");
@@ -53,8 +62,33 @@ public class TestGetImageServlet {
     // Initialize this conf object as though we're running on NN1.
     NameNode.initializeGenericKeys(conf, "ns1", "nn1");
     
+    AccessControlList acls = Mockito.mock(AccessControlList.class);
+    Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation>any())).thenReturn(false);
+    ServletContext context = Mockito.mock(ServletContext.class);
+    Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
+    
     // Make sure that NN2 is considered a valid fsimage/edits requestor.
-    assertTrue(GetImageServlet.isValidRequestor("hdfs/host2@TEST-REALM.COM",
-        conf));
+    assertTrue(GetImageServlet.isValidRequestor(context,
+        "hdfs/host2@TEST-REALM.COM", conf));
+    
+    // Mark atm as an admin.
+    Mockito.when(acls.isUserAllowed(Mockito.argThat(new ArgumentMatcher<UserGroupInformation>() {
+      @Override
+      public boolean matches(Object argument) {
+        return ((UserGroupInformation) argument).getShortUserName().equals("atm");
+      }
+    }))).thenReturn(true);
+    
+    // Make sure that NN2 is still considered a valid requestor.
+    assertTrue(GetImageServlet.isValidRequestor(context,
+        "hdfs/host2@TEST-REALM.COM", conf));
+    
+    // Make sure an admin is considered a valid requestor.
+    assertTrue(GetImageServlet.isValidRequestor(context,
+        "atm@TEST-REALM.COM", conf));
+    
+    // Make sure other users are *not* considered valid requestors.
+    assertFalse(GetImageServlet.isValidRequestor(context,
+        "todd@TEST-REALM.COM", conf));
   }
 }
