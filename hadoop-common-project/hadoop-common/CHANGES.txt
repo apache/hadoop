@@ -67,6 +67,9 @@ Trunk (unreleased changes)
 
     HADOOP-8297. Writable javadocs don't carry default constructor (harsh)
 
+    HADOOP-8360. empty-configuration.xml fails xml validation
+    (Radim Kolar via harsh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
