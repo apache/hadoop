@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -85,11 +86,12 @@ public class GetImageServlet extends HttpServlet {
       final Configuration conf = 
         (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
       
-      if(UserGroupInformation.isSecurityEnabled() && 
-          !isValidRequestor(request.getUserPrincipal().getName(), conf)) {
+      if (UserGroupInformation.isSecurityEnabled() && 
+          !isValidRequestor(context, request.getUserPrincipal().getName(), conf)) {
         response.sendError(HttpServletResponse.SC_FORBIDDEN, 
-            "Only Namenode and Secondary Namenode may access this servlet");
-        LOG.warn("Received non-NN/SNN request for image or edits from " 
+            "Only Namenode, Secondary Namenode, and administrators may access " +
+            "this servlet");
+        LOG.warn("Received non-NN/SNN/administrator request for image or edits from " 
             + request.getUserPrincipal().getName() + " at " + request.getRemoteHost());
         return;
       }
@@ -209,8 +211,8 @@ public class GetImageServlet extends HttpServlet {
   }
   
   @VisibleForTesting
-  static boolean isValidRequestor(String remoteUser, Configuration conf)
-      throws IOException {
+  static boolean isValidRequestor(ServletContext context, String remoteUser,
+      Configuration conf) throws IOException {
     if(remoteUser == null) { // This really shouldn't happen...
       LOG.warn("Received null remoteUser while authorizing access to getImage servlet");
       return false;
@@ -237,11 +239,17 @@ public class GetImageServlet extends HttpServlet {
 
     for(String v : validRequestors) {
       if(v != null && v.equals(remoteUser)) {
-        if(LOG.isInfoEnabled()) LOG.info("GetImageServlet allowing: " + remoteUser);
+        LOG.info("GetImageServlet allowing checkpointer: " + remoteUser);
         return true;
       }
     }
-    if(LOG.isInfoEnabled()) LOG.info("GetImageServlet rejecting: " + remoteUser);
+    
+    if (HttpServer.userHasAdministratorAccess(context, remoteUser)) {
+      LOG.info("GetImageServlet allowing administrator: " + remoteUser);
+      return true;
+    }
+    
+    LOG.info("GetImageServlet rejecting: " + remoteUser);
     return false;
   }
   

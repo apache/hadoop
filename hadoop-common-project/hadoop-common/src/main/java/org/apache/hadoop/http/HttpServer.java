@@ -95,7 +95,7 @@ public class HttpServer implements FilterContainer {
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
-  static final String ADMINS_ACL = "admins.acl";
+  public static final String ADMINS_ACL = "admins.acl";
   public static final String SPNEGO_FILTER = "SpnegoFilter";
 
   public static final String BIND_ADDRESS = "bind.address";
@@ -744,7 +744,7 @@ public class HttpServer implements FilterContainer {
    * 
    * @param servletContext
    * @param request
-   * @param response
+   * @param response used to send the error response if user does not have admin access.
    * @return true if admin-authorized, false otherwise
    * @throws IOException
    */
@@ -766,18 +766,33 @@ public class HttpServer implements FilterContainer {
                          "authorized to access this page.");
       return false;
     }
+    
+    if (servletContext.getAttribute(ADMINS_ACL) != null &&
+        !userHasAdministratorAccess(servletContext, remoteUser)) {
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
+          + remoteUser + " is unauthorized to access this page.");
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Get the admin ACLs from the given ServletContext and check if the given
+   * user is in the ACL.
+   * 
+   * @param servletContext the context containing the admin ACL.
+   * @param remoteUser the remote user to check for.
+   * @return true if the user is present in the ACL, false if no ACL is set or
+   *         the user is not present
+   */
+  public static boolean userHasAdministratorAccess(ServletContext servletContext,
+      String remoteUser) {
     AccessControlList adminsAcl = (AccessControlList) servletContext
         .getAttribute(ADMINS_ACL);
     UserGroupInformation remoteUserUGI =
         UserGroupInformation.createRemoteUser(remoteUser);
-    if (adminsAcl != null) {
-      if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
-            + remoteUser + " is unauthorized to access this page.");
-        return false;
-      }
-    }
-    return true;
+    return adminsAcl != null && adminsAcl.isUserAllowed(remoteUserUGI);
   }
 
   /**

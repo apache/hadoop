@@ -62,6 +62,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3422. TestStandbyIsHot timeouts too aggressive (todd)
 
+    HDFS-3433. GetImageServlet should allow administrative requestors when security is enabled. (atm)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
