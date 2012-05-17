@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
@@ -36,10 +35,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.ProtocolProxy;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcEngine;
 import org.apache.hadoop.ipc.ClientCache;
+import org.apache.hadoop.ipc.RpcInvocationHandler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -81,7 +82,7 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
     }
   }
 
-  private static class Invoker implements InvocationHandler, Closeable {
+  private static class Invoker implements RpcInvocationHandler, Closeable {
     private Map<String, Message> returnTypes = new ConcurrentHashMap<String, Message>();
     private boolean isClosed = false;
     private Client.ConnectionId remoteId;
@@ -119,6 +120,11 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
 
       rpcRequest = builder.build();
       return rpcRequest;
+    }
+
+    @Override //RpcInvocationHandler
+    public ConnectionId getConnectionId() {
+      return remoteId;
     }
 
     @Override
