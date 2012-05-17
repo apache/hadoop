@@ -163,6 +163,10 @@ public abstract class ZKFailoverController {
             return doRun(args);
           } catch (Exception t) {
             throw new RuntimeException(t);
+          } finally {
+            if (elector != null) {
+              elector.terminateConnection();
+            }
           }
         }
       });

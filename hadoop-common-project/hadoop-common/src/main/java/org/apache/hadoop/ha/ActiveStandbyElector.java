@@ -717,11 +717,20 @@ public class ActiveStandbyElector implements StatCallback, StringCallback {
   }
 
   private void createConnection() throws IOException {
+    if (zkClient != null) {
+      try {
+        zkClient.close();
+      } catch (InterruptedException e) {
+        throw new IOException("Interrupted while closing ZK",
+            e);
+      }
+      zkClient = null;
+    }
     zkClient = getNewZooKeeper();
     LOG.debug("Created new connection for " + this);
   }
   
-  private void terminateConnection() {
+  void terminateConnection() {
     if (zkClient == null) {
       return;
     }

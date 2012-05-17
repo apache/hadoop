@@ -25,3 +25,5 @@ HADOOP-8306. ZKFC: improve error message when ZK is not running. (todd)
 HADOOP-8279. Allow manual failover to be invoked when auto-failover is enabled. (todd)
 
 HADOOP-8276. Auto-HA: add config for java options to pass to zkfc daemon (todd via eli)
+
+HADOOP-8405. ZKFC tests leak ZK instances. (todd)
