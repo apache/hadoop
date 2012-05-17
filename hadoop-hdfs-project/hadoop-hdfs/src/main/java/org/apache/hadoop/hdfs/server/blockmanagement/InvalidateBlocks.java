@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -54,10 +53,23 @@ class InvalidateBlocks {
     return numBlocks;
   }
 
-  /** Does this contain the block which is associated with the storage? */
+  /**
+   * @return true if the given storage has the given block listed for
+   * invalidation. Blocks are compared including their generation stamps:
+   * if a block is pending invalidation but with a different generation stamp,
+   * returns false.
+   * @param storageID the storage to check
+   * @param the block to look for
+   * 
+   */
   synchronized boolean contains(final String storageID, final Block block) {
-    final Collection<Block> s = node2blocks.get(storageID);
-    return s != null && s.contains(block);
+    final LightWeightHashSet<Block> s = node2blocks.get(storageID);
+    if (s == null) {
+      return false; // no invalidate blocks for this storage ID
+    }
+    Block blockInSet = s.getElement(block);
+    return blockInSet != null &&
+        block.getGenerationStamp() == blockInSet.getGenerationStamp();
   }
 
   /**

@@ -88,7 +88,7 @@ public class LightWeightLinkedSet<T> extends LightWeightHashSet<T> {
     final int hashCode = element.hashCode();
     final int index = getIndex(hashCode);
     // return false if already present
-    if (containsElem(index, element, hashCode)) {
+    if (getContainedElem(index, element, hashCode) != null) {
       return false;
     }
 
