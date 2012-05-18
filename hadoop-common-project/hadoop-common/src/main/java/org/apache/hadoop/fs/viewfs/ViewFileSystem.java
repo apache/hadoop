@@ -233,6 +233,11 @@ public class ViewFileSystem extends FileSystem {
       fsState.resolve(getUriPath(f), true);
     return res.isInternalDir() ? null : res.targetFileSystem.getHomeDirectory();
   }
+  
+  @Override
+  public String getCanonicalServiceName() {
+    return getUri().getHost();
+  }
 
   @Override
   public URI getUri() {
