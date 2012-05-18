@@ -237,6 +237,8 @@ Release 1.1.0 - unreleased
     HDFS-3330. If GetImageServlet throws an Error or RTE, response should not
     have HTTP "OK" status. (todd via eli)
 
+    HADOOP-8329. Build fails with Java 7. (eli)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
