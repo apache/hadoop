@@ -723,17 +723,31 @@ public class FSEditLogLoader {
 
   /**
    * Stream wrapper that keeps track of the current stream position.
+   * 
+   * This stream also allows us to set a limit on how many bytes we can read
+   * without getting an exception.
    */
-  public static class PositionTrackingInputStream extends FilterInputStream {
+  public static class PositionTrackingInputStream extends FilterInputStream
+      implements StreamLimiter {
     private long curPos = 0;
     private long markPos = -1;
+    private long limitPos = Long.MAX_VALUE;
 
     public PositionTrackingInputStream(InputStream is) {
       super(is);
     }
 
+    private void checkLimit(long amt) throws IOException {
+      long extra = (curPos + amt) - limitPos;
+      if (extra > 0) {
+        throw new IOException("Tried to read " + amt + " byte(s) past " +
+            "the limit at offset " + limitPos);
+      }
+    }
+    
     @Override
     public int read() throws IOException {
+      checkLimit(1);
       int ret = super.read();
       if (ret != -1) curPos++;
       return ret;
@@ -741,6 +755,7 @@ public class FSEditLogLoader {
 
     @Override
     public int read(byte[] data) throws IOException {
+      checkLimit(data.length);
       int ret = super.read(data);
       if (ret > 0) curPos += ret;
       return ret;
@@ -748,9 +763,15 @@ public class FSEditLogLoader {
 
     @Override
     public int read(byte[] data, int offset, int length) throws IOException {
+      checkLimit(length);
       int ret = super.read(data, offset, length);
       if (ret > 0) curPos += ret;
       return ret;
+    }
+
+    @Override
+    public void setLimit(long limit) {
+      limitPos = curPos + limit;
     }
 
     @Override
@@ -775,6 +796,11 @@ public class FSEditLogLoader {
     
     @Override
     public long skip(long amt) throws IOException {
+      long extra = (curPos + amt) - limitPos;
+      if (extra > 0) {
+        throw new IOException("Tried to skip " + extra + " bytes past " +
+            "the limit at offset " + limitPos);
+      }
       long ret = super.skip(amt);
       curPos += ret;
       return ret;

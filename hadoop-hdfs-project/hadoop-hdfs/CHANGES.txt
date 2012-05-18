@@ -41,6 +41,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3419. Cleanup LocatedBlock. (eli)
 
+    HDFS-3440. More effectively limit stream memory consumption when reading
+    corrupt edit logs (Colin Patrick McCabe via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

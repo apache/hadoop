@@ -766,7 +766,7 @@ public class TestEditLog extends TestCase {
       tracker = new FSEditLogLoader.PositionTrackingInputStream(in);
       in = new DataInputStream(tracker);
             
-      reader = new FSEditLogOp.Reader(in, version);
+      reader = new FSEditLogOp.Reader(in, tracker, version);
     }
   
     @Override

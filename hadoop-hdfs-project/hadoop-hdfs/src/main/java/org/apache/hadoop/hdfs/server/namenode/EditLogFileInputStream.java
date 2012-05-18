@@ -85,7 +85,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
       throw new LogHeaderCorruptException("No header found in log");
     }
 
-    reader = new FSEditLogOp.Reader(in, logVersion);
+    reader = new FSEditLogOp.Reader(in, tracker, logVersion);
     this.firstTxId = firstTxId;
     this.lastTxId = lastTxId;
     this.isInProgress = isInProgress;
