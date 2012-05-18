@@ -75,7 +75,7 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
     tracker = new FSEditLogLoader.PositionTrackingInputStream(bin);
     DataInputStream in = new DataInputStream(tracker);
 
-    reader = new FSEditLogOp.Reader(in, logVersion);
+    reader = new FSEditLogOp.Reader(in, tracker, logVersion);
   }
 
   @Override

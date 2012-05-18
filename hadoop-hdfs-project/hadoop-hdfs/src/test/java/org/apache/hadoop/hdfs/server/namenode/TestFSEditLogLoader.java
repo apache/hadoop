@@ -22,8 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
@@ -314,6 +316,49 @@ public class TestFSEditLogLoader {
       return 0;
     } finally {
       fis.close();
+    }
+  }
+  
+  @Test
+  public void testStreamLimiter() throws IOException {
+    final File LIMITER_TEST_FILE = new File(TEST_DIR, "limiter.test");
+    
+    FileOutputStream fos = new FileOutputStream(LIMITER_TEST_FILE);
+    try {
+      fos.write(0x12);
+      fos.write(0x12);
+      fos.write(0x12);
+    } finally {
+      fos.close();
+    }
+    
+    FileInputStream fin = new FileInputStream(LIMITER_TEST_FILE);
+    BufferedInputStream bin = new BufferedInputStream(fin);
+    FSEditLogLoader.PositionTrackingInputStream tracker = 
+        new FSEditLogLoader.PositionTrackingInputStream(bin);
+    try {
+      tracker.setLimit(2);
+      tracker.mark(100);
+      tracker.read();
+      tracker.read();
+      try {
+        tracker.read();
+        fail("expected to get IOException after reading past the limit");
+      } catch (IOException e) {
+      }
+      tracker.reset();
+      tracker.mark(100);
+      byte arr[] = new byte[3];
+      try {
+        tracker.read(arr);
+        fail("expected to get IOException after reading past the limit");
+      } catch (IOException e) {
+      }
+      tracker.reset();
+      arr = new byte[2];
+      tracker.read(arr);
+    } finally {
+      tracker.close();
     }
   }
 }

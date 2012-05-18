@@ -75,7 +75,10 @@ import java.io.EOFException;
 public abstract class FSEditLogOp {
   public final FSEditLogOpCodes opCode;
   long txid;
-  private static final int MAX_OP_SIZE = 100 * 1024 * 1024;
+  /**
+   * Opcode size is limited to 1.5 megabytes
+   */
+  public static final int MAX_OP_SIZE = (3 * 1024 * 1024) / 2;
 
 
   @SuppressWarnings("deprecation")
@@ -2229,6 +2232,7 @@ public abstract class FSEditLogOp {
    */
   public static class Reader {
     private final DataInputStream in;
+    private final StreamLimiter limiter;
     private final int logVersion;
     private final Checksum checksum;
     private final OpInstanceCache cache;
@@ -2239,7 +2243,7 @@ public abstract class FSEditLogOp {
      * @param logVersion The version of the data coming from the stream.
      */
     @SuppressWarnings("deprecation")
-    public Reader(DataInputStream in, int logVersion) {
+    public Reader(DataInputStream in, StreamLimiter limiter, int logVersion) {
       this.logVersion = logVersion;
       if (LayoutVersion.supports(Feature.EDITS_CHESKUM, logVersion)) {
         this.checksum = new PureJavaCrc32();
@@ -2253,6 +2257,7 @@ public abstract class FSEditLogOp {
       } else {
         this.in = in;
       }
+      this.limiter = limiter;
       this.cache = new OpInstanceCache();
     }
 
@@ -2272,6 +2277,7 @@ public abstract class FSEditLogOp {
     public FSEditLogOp readOp(boolean skipBrokenEdits) throws IOException {
       while (true) {
         try {
+          limiter.setLimit(MAX_OP_SIZE);
           in.mark(MAX_OP_SIZE);
           return decodeOp();
         } catch (GarbageAfterTerminatorException e) {
