@@ -126,8 +126,8 @@ public class GetImageServlet extends HttpServlet {
         }
       });
 
-    } catch (Exception ie) {
-      String errMsg = "GetImage failed. " + StringUtils.stringifyException(ie);
+    } catch (Throwable t) {
+      String errMsg = "GetImage failed. " + StringUtils.stringifyException(t);
       response.sendError(HttpServletResponse.SC_GONE, errMsg);
       throw new IOException(errMsg);
     } finally {

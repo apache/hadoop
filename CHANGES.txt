@@ -234,6 +234,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-4241. Pipes examples do not compile on Ubuntu 12.04.
     (Andrew Bayer via eli)
 
+    HDFS-3330. If GetImageServlet throws an Error or RTE, response should not
+    have HTTP "OK" status. (todd via eli)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
