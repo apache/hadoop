@@ -398,6 +398,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-3543. Mavenize Gridmix. (tgraves)
 
+    MAPREDUCE-4197. Include the hsqldb jar in the hadoop-mapreduce tar 
+    file (Ravi Prakash via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
