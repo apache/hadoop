@@ -40,6 +40,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8287. etc/hadoop is missing hadoop-env.sh (eli)
 
+    HADOOP-8408. MR doesn't work with a non-default ViewFS mount table
+    and security enabled. (atm via eli)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
