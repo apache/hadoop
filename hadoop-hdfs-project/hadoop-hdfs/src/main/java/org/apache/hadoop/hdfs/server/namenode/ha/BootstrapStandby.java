@@ -33,16 +33,10 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ha.HAServiceProtocol;
-import org.apache.hadoop.ha.HAServiceStatus;
-import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
-import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -52,10 +46,8 @@ import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.tools.DFSHAAdmin;
-import org.apache.hadoop.hdfs.tools.NNHAServiceTarget;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
@@ -90,7 +82,7 @@ public class BootstrapStandby implements Tool, Configurable {
   // Exit/return codes.
   static final int ERR_CODE_FAILED_CONNECT = 2;
   static final int ERR_CODE_INVALID_VERSION = 3;
-  static final int ERR_CODE_OTHER_NN_NOT_ACTIVE = 4;
+  // Skip 4 - was used in previous versions, but no longer returned.
   static final int ERR_CODE_ALREADY_FORMATTED = 5;
   static final int ERR_CODE_LOGS_UNAVAILABLE = 6; 
 
@@ -142,12 +134,6 @@ public class BootstrapStandby implements Tool, Configurable {
         .getProxy();
   }
   
-  private HAServiceProtocol createHAProtocolProxy()
-      throws IOException {
-    return new NNHAServiceTarget(new HdfsConfiguration(conf), nsId, otherNNId)
-        .getProxy(conf, 15000);
-  }
-
   private int doRun() throws IOException {
 
     NamenodeProtocol proxy = createNNProtocolProxy();
@@ -184,29 +170,6 @@ public class BootstrapStandby implements Tool, Configurable {
         "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
         "=====================================================");
 
-    // Ensure the other NN is active - we can't force it to roll edit logs
-    // below if it's not active.
-    if (!isOtherNNActive()) {
-      String err = "NameNode " + nsId + "." + nnId + " at " + otherIpcAddr +
-          " is not currently in ACTIVE state.";
-      if (!interactive) {
-        LOG.fatal(err + " Please transition it to " +
-            "active before attempting to bootstrap a standby node.");
-        return ERR_CODE_OTHER_NN_NOT_ACTIVE;
-      }
-      
-      System.err.println(err);
-      if (ToolRunner.confirmPrompt(
-            "Do you want to automatically transition it to active now?")) {
-        transitionOtherNNActive();
-      } else {
-        LOG.fatal("User aborted. Exiting without bootstrapping standby.");
-        return ERR_CODE_OTHER_NN_NOT_ACTIVE;
-      }
-    }
-    
-
-    
     // Check with the user before blowing away data.
     if (!NameNode.confirmFormat(
             Sets.union(Sets.newHashSet(dirsToFormat),
@@ -214,13 +177,10 @@ public class BootstrapStandby implements Tool, Configurable {
             force, interactive)) {
       return ERR_CODE_ALREADY_FORMATTED;
     }
-
-    // Force the active to roll its log
-    CheckpointSignature csig = proxy.rollEditLog();
-    long imageTxId = csig.getMostRecentCheckpointTxId();
-    long rollTxId = csig.getCurSegmentTxId();
-
-
+    
+    long imageTxId = proxy.getMostRecentCheckpointTxId();
+    long curTxId = proxy.getTransactionID();
+    
     // Format the storage (writes VERSION file)
     NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
     storage.format(nsInfo);
@@ -233,11 +193,11 @@ public class BootstrapStandby implements Tool, Configurable {
     
     // Ensure that we have enough edits already in the shared directory to
     // start up from the last checkpoint on the active.
-    if (!checkLogsAvailableForRead(image, imageTxId, rollTxId)) {
+    if (!checkLogsAvailableForRead(image, imageTxId, curTxId)) {
       return ERR_CODE_LOGS_UNAVAILABLE;
     }
     
-    image.getStorage().writeTransactionIdFileToStorage(rollTxId);
+    image.getStorage().writeTransactionIdFileToStorage(curTxId);
 
     // Download that checkpoint into our storage directories.
     MD5Hash hash = TransferFsImage.downloadImageToStorage(
@@ -248,31 +208,31 @@ public class BootstrapStandby implements Tool, Configurable {
   }
 
   
-  private void transitionOtherNNActive()
-      throws AccessControlException, ServiceFailedException, IOException {
-    LOG.info("Transitioning the running namenode to active...");
-    createHAProtocolProxy().transitionToActive();    
-    LOG.info("Successful");
-  }
-
   private boolean checkLogsAvailableForRead(FSImage image, long imageTxId,
-      long rollTxId) {
-    
+      long curTxIdOnOtherNode) {
+
+    if (imageTxId == curTxIdOnOtherNode) {
+      // The other node hasn't written any logs since the last checkpoint.
+      // This can be the case if the NN was freshly formatted as HA, and
+      // then started in standby mode, so it has no edit logs at all.
+      return true;
+    }
     long firstTxIdInLogs = imageTxId + 1;
-    long lastTxIdInLogs = rollTxId - 1;
-    assert lastTxIdInLogs >= firstTxIdInLogs;
+    
+    assert curTxIdOnOtherNode >= firstTxIdInLogs :
+      "first=" + firstTxIdInLogs + " onOtherNode=" + curTxIdOnOtherNode;
     
     try {
       Collection<EditLogInputStream> streams =
         image.getEditLog().selectInputStreams(
-          firstTxIdInLogs, lastTxIdInLogs, false);
+          firstTxIdInLogs, curTxIdOnOtherNode, true);
       for (EditLogInputStream stream : streams) {
         IOUtils.closeStream(stream);
       }
       return true;
     } catch (IOException e) {
       String msg = "Unable to read transaction ids " +
-          firstTxIdInLogs + "-" + lastTxIdInLogs +
+          firstTxIdInLogs + "-" + curTxIdOnOtherNode +
           " from the configured shared edits storage " +
           Joiner.on(",").join(sharedEditsUris) + ". " +
           "Please copy these logs into the shared edits storage " + 
@@ -291,12 +251,6 @@ public class BootstrapStandby implements Tool, Configurable {
     return (nsInfo.getLayoutVersion() == HdfsConstants.LAYOUT_VERSION);
   }
   
-  private boolean isOtherNNActive()
-      throws AccessControlException, IOException {
-    HAServiceStatus status = createHAProtocolProxy().getServiceStatus();
-    return status.getState() == HAServiceState.ACTIVE;
-  }
-
   private void parseConfAndFindOtherNN() throws IOException {
     Configuration conf = getConf();
     nsId = DFSUtil.getNamenodeNameServiceId(conf);

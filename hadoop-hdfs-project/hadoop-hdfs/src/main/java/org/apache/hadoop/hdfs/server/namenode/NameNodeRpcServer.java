@@ -50,7 +50,6 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
@@ -713,10 +712,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // NamenodeProtocol
   public long getTransactionID() throws IOException {
-    namesystem.checkOperation(OperationCategory.CHECKPOINT);
-    return namesystem.getEditLog().getSyncTxId();
+    namesystem.checkOperation(OperationCategory.UNCHECKED);
+    return namesystem.getFSImage().getLastAppliedOrWrittenTxId();
   }
-
+  
+  @Override // NamenodeProtocol
+  public long getMostRecentCheckpointTxId() throws IOException {
+    namesystem.checkOperation(OperationCategory.UNCHECKED);
+    return namesystem.getFSImage().getMostRecentCheckpointTxId();
+  }
+  
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
     return namesystem.rollEditLog();
