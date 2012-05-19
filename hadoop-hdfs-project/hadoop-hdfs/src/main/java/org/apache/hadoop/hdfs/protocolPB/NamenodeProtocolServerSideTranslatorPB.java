@@ -32,6 +32,8 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlocksReq
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlocksResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RegisterRequestProto;
@@ -104,6 +106,20 @@ public class NamenodeProtocolServerSideTranslatorPB implements
     }
     return GetTransactionIdResponseProto.newBuilder().setTxId(txid).build();
   }
+  
+  @Override
+  public GetMostRecentCheckpointTxIdResponseProto getMostRecentCheckpointTxId(
+      RpcController unused, GetMostRecentCheckpointTxIdRequestProto request)
+      throws ServiceException {
+    long txid;
+    try {
+      txid = impl.getMostRecentCheckpointTxId();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return GetMostRecentCheckpointTxIdResponseProto.newBuilder().setTxId(txid).build();
+  }
+
 
   @Override
   public RollEditLogResponseProto rollEditLog(RpcController unused,
