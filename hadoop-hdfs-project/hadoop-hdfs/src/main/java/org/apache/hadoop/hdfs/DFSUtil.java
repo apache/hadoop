@@ -288,7 +288,7 @@ public class DFSUtil {
    * @return collection of nameservice Ids, or null if not specified
    */
   public static Collection<String> getNameServiceIds(Configuration conf) {
-    return conf.getTrimmedStringCollection(DFS_FEDERATION_NAMESERVICES);
+    return conf.getTrimmedStringCollection(DFS_NAMESERVICES);
   }
 
   /**
@@ -873,7 +873,7 @@ public class DFSUtil {
    * Get the nameservice Id by matching the {@code addressKey} with the
    * the address of the local node. 
    * 
-   * If {@link DFSConfigKeys#DFS_FEDERATION_NAMESERVICE_ID} is not specifically
+   * If {@link DFSConfigKeys#DFS_NAMESERVICE_ID} is not specifically
    * configured, and more than one nameservice Id is configured, this method 
    * determines the nameservice Id by matching the local node's address with the
    * configured addresses. When a match is found, it returns the nameservice Id
@@ -885,7 +885,7 @@ public class DFSUtil {
    * @throws HadoopIllegalArgumentException on error
    */
   private static String getNameServiceId(Configuration conf, String addressKey) {
-    String nameserviceId = conf.get(DFS_FEDERATION_NAMESERVICE_ID);
+    String nameserviceId = conf.get(DFS_NAMESERVICE_ID);
     if (nameserviceId != null) {
       return nameserviceId;
     }
@@ -957,7 +957,7 @@ public class DFSUtil {
     if (found > 1) { // Only one address must match the local address
       String msg = "Configuration has multiple addresses that match "
           + "local node's address. Please configure the system with "
-          + DFS_FEDERATION_NAMESERVICE_ID + " and "
+          + DFS_NAMESERVICE_ID + " and "
           + DFS_HA_NAMENODE_ID_KEY;
       throw new HadoopIllegalArgumentException(msg);
     }

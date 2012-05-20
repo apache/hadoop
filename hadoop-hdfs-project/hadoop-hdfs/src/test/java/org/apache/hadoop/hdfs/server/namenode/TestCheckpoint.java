@@ -1115,7 +1115,7 @@ public class TestCheckpoint extends TestCase {
     Configuration conf = new HdfsConfiguration();
     String nameserviceId1 = "ns1";
     String nameserviceId2 = "ns2";
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceId1
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, nameserviceId1
         + "," + nameserviceId2);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))

@@ -46,7 +46,7 @@ public class TestDeleteBlockPool {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES,
           "namesServerId1,namesServerId2");
       cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
@@ -79,7 +79,7 @@ public class TestDeleteBlockPool {
       }
 
       Configuration nn1Conf = cluster.getConfiguration(1);
-      nn1Conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId2");
+      nn1Conf.set(DFSConfigKeys.DFS_NAMESERVICES, "namesServerId2");
       dn1.refreshNamenodes(nn1Conf);
       assertEquals(1, dn1.getAllBpOs().length);
 
@@ -155,7 +155,7 @@ public class TestDeleteBlockPool {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
-      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES,
           "namesServerId1,namesServerId2");
       cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2))
@@ -178,7 +178,7 @@ public class TestDeleteBlockPool {
       File dn1StorageDir2 = cluster.getInstanceStorageDir(0, 1);
       
       Configuration nn1Conf = cluster.getConfiguration(0);
-      nn1Conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId1");
+      nn1Conf.set(DFSConfigKeys.DFS_NAMESERVICES, "namesServerId1");
       dn1.refreshNamenodes(nn1Conf);
       Assert.assertEquals(1, dn1.getAllBpOs().length);
       

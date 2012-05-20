@@ -142,7 +142,7 @@ public class HAUtil {
     Preconditions.checkArgument(nsId != null,
         "Could not determine namespace id. Please ensure that this " +
         "machine is one of the machines listed as a NN RPC address, " +
-        "or configure " + DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID);
+        "or configure " + DFSConfigKeys.DFS_NAMESERVICE_ID);
     
     Collection<String> nnIds = DFSUtil.getNameNodeIds(myConf, nsId);
     String myNNId = myConf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY);

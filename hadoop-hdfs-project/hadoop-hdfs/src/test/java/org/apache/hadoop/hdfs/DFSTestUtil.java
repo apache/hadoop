@@ -707,7 +707,7 @@ public class DFSTestUtil {
           info.nameserviceId), DFSUtil.createUri(HdfsConstants.HDFS_URI_SCHEME,
               info.nameNode.getNameNodeAddress()).toString());
     }
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, Joiner.on(",")
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, Joiner.on(",")
         .join(nameservices));
   }
   

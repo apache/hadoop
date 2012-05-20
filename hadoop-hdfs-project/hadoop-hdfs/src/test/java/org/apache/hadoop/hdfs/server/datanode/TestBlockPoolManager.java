@@ -101,7 +101,7 @@ public class TestBlockPoolManager {
   @Test
   public void testFederationRefresh() throws Exception {
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES,
         "ns1,ns2");
     addNN(conf, "ns1", "mock1:8020");
     addNN(conf, "ns2", "mock1:8020");
@@ -112,7 +112,7 @@ public class TestBlockPoolManager {
     log.setLength(0);
 
     // Remove the first NS
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES,
         "ns1");
     bpm.refreshNamenodes(conf);
     assertEquals(
@@ -122,7 +122,7 @@ public class TestBlockPoolManager {
     
     // Add back an NS -- this creates a new BPOS since the old
     // one for ns2 should have been previously retired
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES,
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES,
         "ns1,ns2");
     bpm.refreshNamenodes(conf);
     assertEquals(

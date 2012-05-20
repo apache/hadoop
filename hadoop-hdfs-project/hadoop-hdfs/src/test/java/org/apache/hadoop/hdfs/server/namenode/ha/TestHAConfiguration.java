@@ -57,7 +57,7 @@ public class TestHAConfiguration {
 
   private Configuration getHAConf(String nsId, String host1, String host2) {
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nsId);    
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, nsId);    
     conf.set(DFSUtil.addKeySuffixes(
         DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX, nsId),
         "nn1,nn2");    
@@ -75,7 +75,7 @@ public class TestHAConfiguration {
   public void testGetOtherNNHttpAddress() {
     // Use non-local addresses to avoid host address matching
     Configuration conf = getHAConf("ns1", "1.2.3.1", "1.2.3.2");
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID, "ns1");
+    conf.set(DFSConfigKeys.DFS_NAMESERVICE_ID, "ns1");
 
     // This is done by the NN before the StandbyCheckpointer is created
     NameNode.initializeGenericKeys(conf, "ns1", "nn1");

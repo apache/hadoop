@@ -778,7 +778,7 @@
 </property>
 
 <property>
-  <name>dfs.federation.nameservices</name>
+  <name>dfs.nameservices</name>
   <value></value>
   <description>
     Comma-separated list of nameservices.
@@ -786,12 +786,12 @@
 </property>
 
 <property>
-  <name>dfs.federation.nameservice.id</name>
+  <name>dfs.nameservice.id</name>
   <value></value>
   <description>
     The ID of this nameservice. If the nameservice ID is not
     configured or more than one nameservice is configured for
-    dfs.federation.nameservices it is determined automatically by
+    dfs.nameservices it is determined automatically by
     matching the local node's address with the configured address.
   </description>
 </property>

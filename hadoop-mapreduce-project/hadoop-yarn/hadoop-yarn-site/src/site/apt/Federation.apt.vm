@@ -131,7 +131,7 @@ HDFS Federation
 ** Configuration:
 
   <<Step 1>>: Add the following parameters to your configuration:
-  <<<dfs.federation.nameservices>>>: Configure with list of comma separated 
+  <<<dfs.nameservices>>>: Configure with list of comma separated 
   NameServiceIDs. This will be used by Datanodes to determine all the 
   Namenodes in the cluster.
   
@@ -164,7 +164,7 @@ HDFS Federation
 ----
 <configuration>
   <property>
-    <name>dfs.federation.nameservices</name>
+    <name>dfs.nameservices</name>
     <value>ns1,ns2</value>
   </property>
   <property>
@@ -233,8 +233,7 @@ HDFS Federation
 
   Follow the following steps:
 
-  * Add configuration parameter <<<dfs.federation.nameservices>>> to 
-    the configuration.
+  * Add configuration parameter <<<dfs.nameservices>>> to the configuration.
 
   * Update the configuration with NameServiceID suffix. Configuration 
     key names have changed post release 0.20. You must use new configuration 
