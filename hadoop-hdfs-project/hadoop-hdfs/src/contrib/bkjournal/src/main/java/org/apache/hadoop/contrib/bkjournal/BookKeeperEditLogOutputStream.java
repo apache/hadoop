@@ -33,6 +33,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.io.DataOutputBuffer;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * Output stream for BookKeeper Journal.
  * Multiple complete edit log entries are packed into a single bookkeeper
@@ -44,11 +47,15 @@ import java.io.IOException;
  */
 class BookKeeperEditLogOutputStream
   extends EditLogOutputStream implements AddCallback {
+  static final Log LOG = LogFactory.getLog(BookKeeperEditLogOutputStream.class);
+
   private final DataOutputBuffer bufCurrent;
   private final AtomicInteger outstandingRequests;
   private final int transmissionThreshold;
   private final LedgerHandle lh;
   private CountDownLatch syncLatch;
+  private final AtomicInteger transmitResult
+    = new AtomicInteger(BKException.Code.OK);
   private final WriteLock wl;
   private final Writer writer;
 
@@ -141,6 +148,11 @@ class BookKeeperEditLogOutputStream
     } catch (InterruptedException ie) {
       throw new IOException("Interrupted waiting on latch", ie);
     }
+    if (transmitResult.get() != BKException.Code.OK) {
+      throw new IOException("Failed to write to bookkeeper; Error is ("
+                            + transmitResult.get() + ") "
+                            + BKException.getMessage(transmitResult.get()));
+    }
 
     syncLatch = null;
     // wait for whatever we wait on
@@ -154,6 +166,12 @@ class BookKeeperEditLogOutputStream
   private void transmit() throws IOException {
     wl.checkWriteLock();
 
+    if (!transmitResult.compareAndSet(BKException.Code.OK,
+                                     BKException.Code.OK)) {
+      throw new IOException("Trying to write to an errored stream;"
+          + " Error code : (" + transmitResult.get()
+          + ") " + BKException.getMessage(transmitResult.get()));
+    }
     if (bufCurrent.getLength() > 0) {
       byte[] entry = Arrays.copyOf(bufCurrent.getData(),
                                    bufCurrent.getLength());
@@ -168,6 +186,12 @@ class BookKeeperEditLogOutputStream
                           long entryId, Object ctx) {
     synchronized(this) {
       outstandingRequests.decrementAndGet();
+      if (!transmitResult.compareAndSet(BKException.Code.OK, rc)) {
+        LOG.warn("Tried to set transmit result to (" + rc + ") \""
+            + BKException.getMessage(rc) + "\""
+            + " but is already (" + transmitResult.get() + ") \""
+            + BKException.getMessage(transmitResult.get()) + "\"");
+      }
       CountDownLatch l = syncLatch;
       if (l != null) {
         l.countDown();
