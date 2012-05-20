@@ -127,6 +127,9 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn 
     jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
 
+    MAPREDUCE-4002. MultiFileWordCount job fails if the input path is not
+    from default file system. (Bhallamudi Venkata Siva Kamesh via todd)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
