@@ -63,7 +63,7 @@ public class HdfsConfiguration extends Configuration {
   }
 
   private static void deprecate(String oldKey, String newKey) {
-    Configuration.addDeprecation(oldKey, new String[]{newKey});
+    Configuration.addDeprecation(oldKey, newKey);
   }
 
   private static void addDeprecatedKeys() {
@@ -102,5 +102,7 @@ public class HdfsConfiguration extends Configuration {
     deprecate("dfs.block.size", DFSConfigKeys.DFS_BLOCK_SIZE_KEY);
     deprecate("dfs.datanode.max.xcievers", DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY);
     deprecate("io.bytes.per.checksum", DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY);
+    deprecate("dfs.federation.nameservices", DFSConfigKeys.DFS_NAMESERVICES);
+    deprecate("dfs.federation.nameservice.id", DFSConfigKeys.DFS_NAMESERVICE_ID);
   }
 }

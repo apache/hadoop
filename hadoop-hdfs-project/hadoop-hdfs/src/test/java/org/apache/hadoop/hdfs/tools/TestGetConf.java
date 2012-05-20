@@ -61,7 +61,7 @@ public class TestGetConf {
       }
       nsList.append(getNameServiceId(i));
     }
-    conf.set(DFS_FEDERATION_NAMESERVICES, nsList.toString());
+    conf.set(DFS_NAMESERVICES, nsList.toString());
   }
 
   /** Set a given key with value as address, for all the nameServiceIds.

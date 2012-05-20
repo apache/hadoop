@@ -1138,7 +1138,7 @@ public class NameNode {
     if ((nameserviceId != null && !nameserviceId.isEmpty()) || 
         (namenodeId != null && !namenodeId.isEmpty())) {
       if (nameserviceId != null) {
-        conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
+        conf.set(DFS_NAMESERVICE_ID, nameserviceId);
       }
       if (namenodeId != null) {
         conf.set(DFS_HA_NAMENODE_ID_KEY, namenodeId);

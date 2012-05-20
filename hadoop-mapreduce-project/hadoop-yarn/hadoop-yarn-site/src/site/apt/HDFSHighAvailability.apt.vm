@@ -147,12 +147,12 @@ HDFS High Availability
   <<hdfs-site.xml>> configuration file.
 
   The order in which you set these configurations is unimportant, but the values
-  you choose for <<dfs.federation.nameservices>> and
+  you choose for <<dfs.nameservices>> and
   <<dfs.ha.namenodes.[nameservice ID]>> will determine the keys of those that
   follow. Thus, you should decide on these values before setting the rest of the
   configuration options.
 
-  * <<dfs.federation.nameservices>> - the logical name for this new nameservice
+  * <<dfs.nameservices>> - the logical name for this new nameservice
 
     Choose a logical name for this nameservice, for example "mycluster", and use
     this logical name for the value of this config option. The name you choose is
@@ -165,7 +165,7 @@ HDFS High Availability
 
 ----
 <property>
-  <name>dfs.federation.nameservices</name>
+  <name>dfs.nameservices</name>
   <value>mycluster</value>
 </property>
 ----

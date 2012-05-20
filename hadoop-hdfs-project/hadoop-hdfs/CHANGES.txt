@@ -47,6 +47,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3438. BootstrapStandby should not require a rollEdits on active node
     (todd)
 
+    HDFS-2885. Remove "federation" from the nameservice config options.
+    (Tsz Wo (Nicholas) via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
