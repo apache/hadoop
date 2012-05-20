@@ -109,8 +109,12 @@ public class CompressionCodecFactory {
     List<Class<? extends CompressionCodec>> result
       = new ArrayList<Class<? extends CompressionCodec>>();
     // Add codec classes discovered via service loading
-    for (CompressionCodec codec : CODEC_PROVIDERS) {
-      result.add(codec.getClass());
+    synchronized (CODEC_PROVIDERS) {
+      // CODEC_PROVIDERS is a lazy collection. Synchronize so it is
+      // thread-safe. See HADOOP-8406.
+      for (CompressionCodec codec : CODEC_PROVIDERS) {
+        result.add(codec.getClass());
+      }
     }
     // Add codec classes from configuration
     String codecsString = conf.get("io.compression.codecs");

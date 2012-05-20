@@ -187,6 +187,12 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3419. Cleanup LocatedBlock. (eli)
 
+    HDFS-3440. More effectively limit stream memory consumption when reading
+    corrupt edit logs (Colin Patrick McCabe via todd)
+
+    HDFS-3438. BootstrapStandby should not require a rollEdits on active node
+    (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -205,6 +211,25 @@ Release 2.0.1-alpha - UNRELEASED
     (atm)
 
     HDFS-3413. TestFailureToReadEdits timing out. (atm)
+
+    HDFS-3422. TestStandbyIsHot timeouts too aggressive (todd)
+
+    HDFS-3433. GetImageServlet should allow administrative requestors when
+    security is enabled. (atm)
+
+    HDFS-1153. dfsnodelist.jsp should handle invalid input parameters.
+    (Ravi Phulari via eli)
+
+    HDFS-3434. InvalidProtocolBufferException when visiting DN
+    browseDirectory.jsp (eli)
+
+    HDFS-2800. Fix cancellation of checkpoints in the standby node to be more
+    reliable. (todd)
+
+    HDFS-3391. Fix InvalidateBlocks to compare blocks including their
+    generation stamps. (todd)
+
+    HDFS-3444. hdfs groups command doesn't work with security enabled. (atm)
 
 Release 2.0.0-alpha - UNRELEASED
 
@@ -696,6 +721,9 @@ Release 2.0.0-alpha - UNRELEASED
     set to 0.0.0.0. (atm)
 
     HDFS-3026. HA: Handle failure during HA state transition. (atm)
+
+    HDFS-860. fuse-dfs truncate behavior causes issues with scp.
+    (Brian Bockelman via eli)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

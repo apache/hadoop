@@ -54,6 +54,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -88,9 +89,6 @@ public class FSImage implements Closeable {
   final private Configuration conf;
 
   private final NNStorageRetentionManager archivalManager;
-
-  private SaveNamespaceContext curSaveNamespaceContext = null; 
-
 
   /**
    * Construct an FSImage
@@ -804,17 +802,28 @@ public class FSImage implements Closeable {
         try {
           thread.join();
         } catch (InterruptedException iex) {
-          LOG.error("Caught exception while waiting for thread " +
+          LOG.error("Caught interrupted exception while waiting for thread " +
                     thread.getName() + " to finish. Retrying join");
         }        
       }
     }
   }
+  
+  /**
+   * @see #saveNamespace(FSNamesystem, Canceler)
+   */
+  public synchronized void saveNamespace(FSNamesystem source)
+      throws IOException {
+    saveNamespace(source, null);
+  }
+  
   /**
    * Save the contents of the FS image to a new image file in each of the
    * current storage directories.
+   * @param canceler 
    */
-  public synchronized void saveNamespace(FSNamesystem source) throws IOException {
+  public synchronized void saveNamespace(FSNamesystem source,
+      Canceler canceler) throws IOException {
     assert editLog != null : "editLog must be initialized";
     storage.attemptRestoreRemovedStorage();
 
@@ -825,7 +834,7 @@ public class FSImage implements Closeable {
     }
     long imageTxId = getLastAppliedOrWrittenTxId();
     try {
-      saveFSImageInAllDirs(source, imageTxId);
+      saveFSImageInAllDirs(source, imageTxId, canceler);
       storage.writeAll();
     } finally {
       if (editLogWasOpen) {
@@ -837,27 +846,27 @@ public class FSImage implements Closeable {
         storage.writeTransactionIdFileToStorage(imageTxId + 1);
       }
     }
-    
-  }
-  
-  public void cancelSaveNamespace(String reason)
-      throws InterruptedException {
-    SaveNamespaceContext ctx = curSaveNamespaceContext;
-    if (ctx != null) {
-      ctx.cancel(reason); // waits until complete
-    }
   }
 
-  
+  /**
+   * @see #saveFSImageInAllDirs(FSNamesystem, long, Canceler)
+   */
   protected synchronized void saveFSImageInAllDirs(FSNamesystem source, long txid)
+      throws IOException {
+    saveFSImageInAllDirs(source, txid, null);
+  }
+
+  protected synchronized void saveFSImageInAllDirs(FSNamesystem source, long txid,
+      Canceler canceler)
       throws IOException {    
     if (storage.getNumStorageDirs(NameNodeDirType.IMAGE) == 0) {
       throw new IOException("No image directories available!");
     }
-    
+    if (canceler == null) {
+      canceler = new Canceler();
+    }
     SaveNamespaceContext ctx = new SaveNamespaceContext(
-        source, txid);
-    curSaveNamespaceContext = ctx;
+        source, txid, canceler);
     
     try {
       List<Thread> saveThreads = new ArrayList<Thread>();
@@ -878,7 +887,7 @@ public class FSImage implements Closeable {
         throw new IOException(
           "Failed to save in any storage directories while saving namespace.");
       }
-      if (ctx.isCancelled()) {
+      if (canceler.isCancelled()) {
         deleteCancelledCheckpoint(txid);
         ctx.checkCancelled(); // throws
         assert false : "should have thrown above!";

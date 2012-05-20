@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -70,7 +69,7 @@ public class TestStandbyIsHot {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
   }
 
-  @Test
+  @Test(timeout=60000)
   public void testStandbyIsHot() throws Exception {
     Configuration conf = new Configuration();
     // We read from the standby to watch block locations
@@ -111,6 +110,8 @@ public class TestStandbyIsHot {
       // Change replication
       LOG.info("Changing replication to 1");
       fs.setReplication(TEST_FILE_PATH, (short)1);
+      BlockManagerTestUtil.computeAllPendingWork(
+          nn1.getNamesystem().getBlockManager());
       waitForBlockLocations(cluster, nn1, TEST_FILE, 1);
 
       nn1.getRpcServer().rollEditLog();
@@ -121,6 +122,8 @@ public class TestStandbyIsHot {
       // Change back to 3
       LOG.info("Changing replication to 3");
       fs.setReplication(TEST_FILE_PATH, (short)3);
+      BlockManagerTestUtil.computeAllPendingWork(
+          nn1.getNamesystem().getBlockManager());
       nn1.getRpcServer().rollEditLog();
       
       LOG.info("Waiting for higher replication to show up on standby");
@@ -142,7 +145,7 @@ public class TestStandbyIsHot {
    * In the bug, the standby node would only very slowly notice the blocks returning
    * to the cluster.
    */
-  @Test
+  @Test(timeout=60000)
   public void testDatanodeRestarts() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024);
@@ -224,17 +227,16 @@ public class TestStandbyIsHot {
           
           LOG.info("Got " + numReplicas + " locs: " + locs);
           if (numReplicas > expectedReplicas) {
-            for (DataNode dn : cluster.getDataNodes()) {
-              DataNodeTestUtils.triggerDeletionReport(dn);
-            }
+            cluster.triggerDeletionReports();
           }
+          cluster.triggerHeartbeats();
           return numReplicas == expectedReplicas;
         } catch (IOException e) {
           LOG.warn("No block locations yet: " + e.getMessage());
           return false;
         }
       }
-    }, 500, 10000);
+    }, 500, 20000);
     
   }
 }

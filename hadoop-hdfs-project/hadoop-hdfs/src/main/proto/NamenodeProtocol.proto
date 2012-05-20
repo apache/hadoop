@@ -85,6 +85,16 @@ message RollEditLogResponseProto {
 }
 
 /**
+ * void request
+ */
+message GetMostRecentCheckpointTxIdRequestProto {
+}
+
+message GetMostRecentCheckpointTxIdResponseProto{
+  required uint64 txId = 1;
+}
+
+/**
  * registration - Namenode reporting the error
  * errorCode - error code indicating the error
  * msg - Free text description of the error
@@ -189,12 +199,18 @@ service NamenodeProtocolService {
       returns(GetTransactionIdResponseProto);
 
   /**
+   * Get the transaction ID of the most recently persisted editlog record
+   */
+  rpc getMostRecentCheckpointTxId(GetMostRecentCheckpointTxIdRequestProto) 
+      returns(GetMostRecentCheckpointTxIdResponseProto);
+
+  /**
    * Close the current editlog and open a new one for checkpointing purposes
    */
   rpc rollEditLog(RollEditLogRequestProto) returns(RollEditLogResponseProto);
 
   /**
-   * Close the current editlog and open a new one for checkpointing purposes
+   * Request info about the version running on this NameNode
    */
   rpc versionRequest(VersionRequestProto) returns(VersionResponseProto);
 

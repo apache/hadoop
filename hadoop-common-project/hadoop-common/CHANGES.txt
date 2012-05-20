@@ -67,6 +67,9 @@ Trunk (unreleased changes)
 
     HADOOP-8297. Writable javadocs don't carry default constructor (harsh)
 
+    HADOOP-8360. empty-configuration.xml fails xml validation
+    (Radim Kolar via harsh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -174,6 +177,16 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8316. Audit logging should be disabled by default. (eli)
 
     HADOOP-8400. All commands warn "Kerberos krb5 configuration not found" when security is not enabled. (tucu)
+
+    HADOOP-8406. CompressionCodecFactory.CODEC_PROVIDERS iteration is
+    thread-unsafe (todd)
+
+    HADOOP-8287. etc/hadoop is missing hadoop-env.sh (eli)
+
+    HADOOP-8408. MR doesn't work with a non-default ViewFS mount table
+    and security enabled. (atm via eli)
+
+    HADOOP-8329. Build fails with Java 7. (eli)
 
 Release 2.0.0-alpha - UNRELEASED
 
