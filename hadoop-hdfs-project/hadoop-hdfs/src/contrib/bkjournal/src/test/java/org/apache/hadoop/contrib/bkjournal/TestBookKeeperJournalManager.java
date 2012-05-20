@@ -28,6 +28,8 @@ import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.bookkeeper.proto.BookieServer;
+import org.apache.bookkeeper.conf.ServerConfiguration;
 import org.apache.bookkeeper.util.LocalBookKeeper;
 
 import java.io.RandomAccessFile;
@@ -74,10 +76,14 @@ public class TestBookKeeperJournalManager {
   
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final String zkEnsemble = "localhost:2181";
+  final static private int numBookies = 5;
 
   private static Thread bkthread;
   protected static Configuration conf = new Configuration();
   private ZooKeeper zkc;
+
+  
+  static int nextPort = 6000; // next port for additionally created bookies
 
   private static ZooKeeper connectZooKeeper(String ensemble) 
       throws IOException, KeeperException, InterruptedException {
@@ -96,9 +102,72 @@ public class TestBookKeeperJournalManager {
     return zkc;
   }
 
+  private static BookieServer newBookie() throws Exception {
+    int port = nextPort++;
+    ServerConfiguration bookieConf = new ServerConfiguration();
+    bookieConf.setBookiePort(port);
+    File tmpdir = File.createTempFile("bookie" + Integer.toString(port) + "_",
+                                      "test");
+    tmpdir.delete();
+    tmpdir.mkdir();
+
+    bookieConf.setZkServers(zkEnsemble);
+    bookieConf.setJournalDirName(tmpdir.getPath());
+    bookieConf.setLedgerDirNames(new String[] { tmpdir.getPath() });
+
+    BookieServer b = new BookieServer(bookieConf);
+    b.start();
+    for (int i = 0; i < 10 && !b.isRunning(); i++) {
+      Thread.sleep(10000);
+    }
+    if (!b.isRunning()) {
+      throw new IOException("Bookie would not start");
+    }
+    return b;
+  }
+
+  /**
+   * Check that a number of bookies are available
+   * @param count number of bookies required
+   * @param timeout number of seconds to wait for bookies to start
+   * @throws IOException if bookies are not started by the time the timeout hits
+   */
+  private static int checkBookiesUp(int count, int timeout) throws Exception {
+    ZooKeeper zkc = connectZooKeeper(zkEnsemble);
+    try {
+      boolean up = false;
+      int mostRecentSize = 0;
+      for (int i = 0; i < timeout; i++) {
+        try {
+          List<String> children = zkc.getChildren("/ledgers/available",
+                                                  false);
+          mostRecentSize = children.size();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Found " + mostRecentSize + " bookies up, "
+                      + "waiting for " + count);
+            if (LOG.isTraceEnabled()) {
+              for (String child : children) {
+                LOG.trace(" server: " + child);
+              }
+            }
+          }
+          if (mostRecentSize == count) {
+            up = true;
+            break;
+          }
+        } catch (KeeperException e) {
+          // ignore
+        }
+        Thread.sleep(1000);
+      }
+      return mostRecentSize;
+    } finally {
+      zkc.close();
+    }
+  }
+
   @BeforeClass
   public static void setupBookkeeper() throws Exception {
-    final int numBookies = 5;
     bkthread = new Thread() {
         public void run() {
           try {
@@ -118,29 +187,8 @@ public class TestBookKeeperJournalManager {
     if (!LocalBookKeeper.waitForServerUp(zkEnsemble, 10000)) {
       throw new Exception("Error starting zookeeper/bookkeeper");
     }
-
-    ZooKeeper zkc = connectZooKeeper(zkEnsemble);
-    try {
-      boolean up = false;
-      for (int i = 0; i < 10; i++) {
-        try {
-          List<String> children = zkc.getChildren("/ledgers/available", 
-                                                  false);
-          if (children.size() == numBookies) {
-            up = true;
-            break;
-          }
-        } catch (KeeperException e) {
-          // ignore
-        }
-        Thread.sleep(1000);
-      }
-      if (!up) {
-        throw new IOException("Not enough bookies started");
-      }
-    } finally {
-      zkc.close();
-    }
+    assertEquals("Not all bookies started", 
+                 numBookies, checkBookiesUp(numBookies, 10));
   }
   
   @Before
@@ -178,7 +226,7 @@ public class TestBookKeeperJournalManager {
     String zkpath = bkjm.finalizedLedgerZNode(1, 100);
     
     assertNotNull(zkc.exists(zkpath, false));
-    assertNull(zkc.exists(bkjm.inprogressZNode(), false));
+    assertNull(zkc.exists(bkjm.inprogressZNode(1), false));
   }
 
   @Test
@@ -385,11 +433,158 @@ public class TestBookKeeperJournalManager {
 
 
     assertNull(zkc.exists(bkjm.finalizedLedgerZNode(1, 100), false));
-    assertNotNull(zkc.exists(bkjm.inprogressZNode(), false));
+    assertNotNull(zkc.exists(bkjm.inprogressZNode(1), false));
 
     bkjm.recoverUnfinalizedSegments();
 
     assertNotNull(zkc.exists(bkjm.finalizedLedgerZNode(1, 100), false));
-    assertNull(zkc.exists(bkjm.inprogressZNode(), false));
+    assertNull(zkc.exists(bkjm.inprogressZNode(1), false));
   }
+
+  /**
+   * Test that if enough bookies fail to prevent an ensemble,
+   * writes the bookkeeper will fail. Test that when once again
+   * an ensemble is available, it can continue to write.
+   */
+  @Test
+  public void testAllBookieFailure() throws Exception {
+    BookieServer bookieToFail = newBookie();
+    BookieServer replacementBookie = null;
+
+    try {
+      int ensembleSize = numBookies + 1;
+      assertEquals("New bookie didn't start",
+                   ensembleSize, checkBookiesUp(ensembleSize, 10));
+
+      // ensure that the journal manager has to use all bookies,
+      // so that a failure will fail the journal manager
+      Configuration conf = new Configuration();
+      conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_ENSEMBLE_SIZE,
+                  ensembleSize);
+      conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_QUORUM_SIZE,
+                  ensembleSize);
+      long txid = 1;
+      BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+          URI.create("bookkeeper://" + zkEnsemble
+                     + "/hdfsjournal-allbookiefailure"));
+      EditLogOutputStream out = bkjm.startLogSegment(txid);
+
+      for (long i = 1 ; i <= 3; i++) {
+        FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+        op.setTransactionId(txid++);
+        out.write(op);
+      }
+      out.setReadyToFlush();
+      out.flush();
+      bookieToFail.shutdown();
+      assertEquals("New bookie didn't die",
+                   numBookies, checkBookiesUp(numBookies, 10));
+
+      try {
+        for (long i = 1 ; i <= 3; i++) {
+          FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+          op.setTransactionId(txid++);
+          out.write(op);
+        }
+        out.setReadyToFlush();
+        out.flush();
+        fail("should not get to this stage");
+      } catch (IOException ioe) {
+        LOG.debug("Error writing to bookkeeper", ioe);
+        assertTrue("Invalid exception message",
+                   ioe.getMessage().contains("Failed to write to bookkeeper"));
+      }
+      replacementBookie = newBookie();
+
+      assertEquals("New bookie didn't start",
+                   numBookies+1, checkBookiesUp(numBookies+1, 10));
+      out = bkjm.startLogSegment(txid);
+      for (long i = 1 ; i <= 3; i++) {
+        FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+        op.setTransactionId(txid++);
+        out.write(op);
+      }
+
+      out.setReadyToFlush();
+      out.flush();
+
+    } catch (Exception e) {
+      LOG.error("Exception in test", e);
+      throw e;
+    } finally {
+      if (replacementBookie != null) {
+        replacementBookie.shutdown();
+      }
+      bookieToFail.shutdown();
+
+      if (checkBookiesUp(numBookies, 30) != numBookies) {
+        LOG.warn("Not all bookies from this test shut down, expect errors");
+      }
+    }
+  }
+
+  /**
+   * Test that a BookKeeper JM can continue to work across the
+   * failure of a bookie. This should be handled transparently
+   * by bookkeeper.
+   */
+  @Test
+  public void testOneBookieFailure() throws Exception {
+    BookieServer bookieToFail = newBookie();
+    BookieServer replacementBookie = null;
+
+    try {
+      int ensembleSize = numBookies + 1;
+      assertEquals("New bookie didn't start",
+                   ensembleSize, checkBookiesUp(ensembleSize, 10));
+
+      // ensure that the journal manager has to use all bookies,
+      // so that a failure will fail the journal manager
+      Configuration conf = new Configuration();
+      conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_ENSEMBLE_SIZE,
+                  ensembleSize);
+      conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_QUORUM_SIZE,
+                  ensembleSize);
+      long txid = 1;
+      BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+          URI.create("bookkeeper://" + zkEnsemble
+                     + "/hdfsjournal-onebookiefailure"));
+      EditLogOutputStream out = bkjm.startLogSegment(txid);
+      for (long i = 1 ; i <= 3; i++) {
+        FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+        op.setTransactionId(txid++);
+        out.write(op);
+      }
+      out.setReadyToFlush();
+      out.flush();
+
+      replacementBookie = newBookie();
+      assertEquals("replacement bookie didn't start",
+                   ensembleSize+1, checkBookiesUp(ensembleSize+1, 10));
+      bookieToFail.shutdown();
+      assertEquals("New bookie didn't die",
+                   ensembleSize, checkBookiesUp(ensembleSize, 10));
+
+      for (long i = 1 ; i <= 3; i++) {
+        FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+        op.setTransactionId(txid++);
+        out.write(op);
+      }
+      out.setReadyToFlush();
+      out.flush();
+    } catch (Exception e) {
+      LOG.error("Exception in test", e);
+      throw e;
+    } finally {
+      if (replacementBookie != null) {
+        replacementBookie.shutdown();
+      }
+      bookieToFail.shutdown();
+
+      if (checkBookiesUp(numBookies, 30) != numBookies) {
+        LOG.warn("Not all bookies from this test shut down, expect errors");
+      }
+    }
+  }
+
 }

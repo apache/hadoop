@@ -61,7 +61,7 @@ import org.apache.commons.logging.LogFactory;
  * </property>
  *
  * <property>
- *   <name>dfs.namenode.edits.journalPlugin.bookkeeper</name>
+ *   <name>dfs.namenode.edits.journal-plugin.bookkeeper</name>
  *   <value>org.apache.hadoop.contrib.bkjournal.BookKeeperJournalManager</value>
  * </property>
  * }
@@ -212,15 +212,15 @@ public class BookKeeperJournalManager implements JournalManager {
       throw new IOException("We've already seen " + txId
           + ". A new stream cannot be created with it");
     }
-    if (currentLedger != null) {
-      throw new IOException("Already writing to a ledger, id="
-                            + currentLedger.getId());
-    }
     try {
+      if (currentLedger != null) {
+        // bookkeeper errored on last stream, clean up ledger
+        currentLedger.close();
+      }
       currentLedger = bkc.createLedger(ensembleSize, quorumSize,
                                        BookKeeper.DigestType.MAC,
                                        digestpw.getBytes());
-      String znodePath = inprogressZNode();
+      String znodePath = inprogressZNode(txId);
       EditLogLedgerMetadata l = new EditLogLedgerMetadata(znodePath,
           HdfsConstants.LAYOUT_VERSION,  currentLedger.getId(), txId);
       /* Write the ledger metadata out to the inprogress ledger znode
@@ -258,7 +258,7 @@ public class BookKeeperJournalManager implements JournalManager {
   @Override
   public void finalizeLogSegment(long firstTxId, long lastTxId)
       throws IOException {
-    String inprogressPath = inprogressZNode();
+    String inprogressPath = inprogressZNode(firstTxId);
     try {
       Stat inprogressStat = zkc.exists(inprogressPath, false);
       if (inprogressStat == null) {
@@ -372,21 +372,33 @@ public class BookKeeperJournalManager implements JournalManager {
   @Override
   public void recoverUnfinalizedSegments() throws IOException {
     wl.acquire();
-
     synchronized (this) {
       try {
-        EditLogLedgerMetadata l
-          = EditLogLedgerMetadata.read(zkc, inprogressZNode());
-        long endTxId = recoverLastTxId(l);
-        if (endTxId == HdfsConstants.INVALID_TXID) {
-          LOG.error("Unrecoverable corruption has occurred in segment "
-                    + l.toString() + " at path " + inprogressZNode()
-                    + ". Unable to continue recovery.");
-          throw new IOException("Unrecoverable corruption, please check logs.");
+        List<String> children = zkc.getChildren(ledgerPath, false);
+        for (String child : children) {
+          if (!child.startsWith("inprogress_")) {
+            continue;
+          }
+          String znode = ledgerPath + "/" + child;
+          EditLogLedgerMetadata l
+            = EditLogLedgerMetadata.read(zkc, znode);
+          long endTxId = recoverLastTxId(l);
+          if (endTxId == HdfsConstants.INVALID_TXID) {
+            LOG.error("Unrecoverable corruption has occurred in segment "
+                      + l.toString() + " at path " + znode
+                      + ". Unable to continue recovery.");
+            throw new IOException("Unrecoverable corruption,"
+                                  + " please check logs.");
+          }
+          finalizeLogSegment(l.getFirstTxId(), endTxId);
         }
-        finalizeLogSegment(l.getFirstTxId(), endTxId);
       } catch (KeeperException.NoNodeException nne) {
           // nothing to recover, ignore
+      } catch (KeeperException ke) {
+        throw new IOException("Couldn't get list of inprogress segments", ke);
+      } catch (InterruptedException ie) {
+        throw new IOException("Interrupted getting list of inprogress segments",
+                              ie);
       } finally {
         if (wl.haveLock()) {
           wl.release();
@@ -495,8 +507,8 @@ public class BookKeeperJournalManager implements JournalManager {
   /**
    * Get the znode path for the inprogressZNode
    */
-  String inprogressZNode() {
-    return ledgerPath + "/inprogress";
+  String inprogressZNode(long startTxid) {
+    return ledgerPath + "/inprogress_" + Long.toString(startTxid, 16);
   }
 
   /**
