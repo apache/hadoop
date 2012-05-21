@@ -141,6 +141,9 @@ Trunk (unreleased changes)
     HADOOP-8395. Text shell command unnecessarily demands that a
     SequenceFile's key class be WritableComparable (harsh)
 
+    HADOOP-8413. test-patch.sh gives out the wrong links for
+    newPatchFindbugsWarnings (Colin Patrick McCabe via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
