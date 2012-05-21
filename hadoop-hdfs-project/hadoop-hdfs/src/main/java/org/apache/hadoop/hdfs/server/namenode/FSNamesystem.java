@@ -2768,9 +2768,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new IOException(message);
     }
 
-    // no we know that the last block is not COMPLETE, and
+    // The last block is not COMPLETE, and
     // that the penultimate block if exists is either COMPLETE or COMMITTED
-    BlockInfoUnderConstruction lastBlock = pendingFile.getLastBlock();
+    final BlockInfo lastBlock = pendingFile.getLastBlock();
     BlockUCState lastBlockState = lastBlock.getBlockUCState();
     BlockInfo penultimateBlock = pendingFile.getPenultimateBlock();
     boolean penultimateBlockMinReplication;
@@ -2814,13 +2814,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throw new AlreadyBeingCreatedException(message);
     case UNDER_CONSTRUCTION:
     case UNDER_RECOVERY:
+      final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)lastBlock;
       // setup the last block locations from the blockManager if not known
-      if(lastBlock.getNumExpectedLocations() == 0)
-        lastBlock.setExpectedLocations(blockManager.getNodes(lastBlock));
+      if (uc.getNumExpectedLocations() == 0) {
+        uc.setExpectedLocations(blockManager.getNodes(lastBlock));
+      }
       // start recovery of the last block for this file
       long blockRecoveryId = nextGenerationStamp();
       lease = reassignLease(lease, src, recoveryLeaseHolder, pendingFile);
-      lastBlock.initializeBlockRecovery(blockRecoveryId);
+      uc.initializeBlockRecovery(blockRecoveryId);
       leaseManager.renewLease(lease);
       // Cannot close file right now, since the last block requires recovery.
       // This may potentially cause infinite loop in lease recovery
@@ -4557,15 +4559,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     LOG.info("updatePipeline(" + oldBlock + ") successfully to " + newBlock);
   }
 
-  /** @see updatePipeline(String, ExtendedBlock, ExtendedBlock, DatanodeID[]) */
+  /** @see #updatePipeline(String, ExtendedBlock, ExtendedBlock, DatanodeID[]) */
   private void updatePipelineInternal(String clientName, ExtendedBlock oldBlock, 
       ExtendedBlock newBlock, DatanodeID[] newNodes)
       throws IOException {
     assert hasWriteLock();
     // check the vadility of the block and lease holder name
-    final INodeFileUnderConstruction pendingFile = 
-      checkUCBlock(oldBlock, clientName);
-    final BlockInfoUnderConstruction blockinfo = pendingFile.getLastBlock();
+    final INodeFileUnderConstruction pendingFile
+        = checkUCBlock(oldBlock, clientName);
+    final BlockInfoUnderConstruction blockinfo
+        = (BlockInfoUnderConstruction)pendingFile.getLastBlock();
 
     // check new GS & length: this is not expected
     if (newBlock.getGenerationStamp() <= blockinfo.getGenerationStamp() ||

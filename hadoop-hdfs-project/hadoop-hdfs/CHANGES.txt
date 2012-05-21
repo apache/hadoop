@@ -48,7 +48,11 @@ Release 2.0.1-alpha - UNRELEASED
     (todd)
 
     HDFS-2885. Remove "federation" from the nameservice config options.
-    (Tsz Wo (Nicholas) via eli)
+    (Tsz Wo (Nicholas) Sze via eli)
+
+    HDFS-3394. Do not use generic in INodeFile.getLastBlock(): the run-time
+    ClassCastException check is useless since generic type information is only
+    available in compile-time.  (szetszwo)
 
   OPTIMIZATIONS
 

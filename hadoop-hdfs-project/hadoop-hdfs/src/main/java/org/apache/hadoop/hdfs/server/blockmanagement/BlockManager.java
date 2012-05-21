@@ -439,7 +439,7 @@ public class BlockManager {
    * @throws IOException if the block does not have at least a minimal number
    * of replicas reported from data-nodes.
    */
-  private boolean commitBlock(final BlockInfoUnderConstruction block,
+  private static boolean commitBlock(final BlockInfoUnderConstruction block,
       final Block commitBlock) throws IOException {
     if (block.getBlockUCState() == BlockUCState.COMMITTED)
       return false;
