@@ -254,8 +254,6 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
   /**
    * We try to use some light-weight mechanism to determine cluster load.
    *
-   * @param stats
-   * @param clusterStatus Cluster status
    * @throws java.io.IOException
    */
   private void checkLoadAndGetSlotsToBackfill(

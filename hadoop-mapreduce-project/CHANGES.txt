@@ -404,6 +404,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4197. Include the hsqldb jar in the hadoop-mapreduce tar 
     file (Ravi Prakash via tgraves)
 
+    MAPREDUCE-4269. documentation: Gridmix has javadoc warnings in 
+    StressJobFactory (Jonathon Eagles via tgraves).
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
