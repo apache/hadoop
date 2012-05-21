@@ -49,7 +49,7 @@ public class QueueMetrics {
   @Metric("# of pending apps") MutableGaugeInt appsPending;
   @Metric("# of apps completed") MutableCounterInt appsCompleted;
   @Metric("# of apps killed") MutableCounterInt appsKilled;
-  @Metric("# of apps failed") MutableCounterInt appsFailed;
+  @Metric("# of apps failed") MutableGaugeInt appsFailed;
 
   @Metric("Allocated memory in MB") MutableGaugeInt allocatedMB;
   @Metric("# of allocated containers") MutableGaugeInt allocatedContainers;
@@ -131,15 +131,19 @@ public class QueueMetrics {
     return metrics;
   }
 
-  public void submitApp(String user) {
-    appsSubmitted.incr();
+  public void submitApp(String user, int attemptId) {
+    if (attemptId == 1) {
+      appsSubmitted.incr();
+    } else {
+      appsFailed.decr();
+    }
     appsPending.incr();
     QueueMetrics userMetrics = getUserMetrics(user);
     if (userMetrics != null) {
-      userMetrics.submitApp(user);
+      userMetrics.submitApp(user, attemptId);
     }
     if (parent != null) {
-      parent.submitApp(user);
+      parent.submitApp(user, attemptId);
     }
   }
 

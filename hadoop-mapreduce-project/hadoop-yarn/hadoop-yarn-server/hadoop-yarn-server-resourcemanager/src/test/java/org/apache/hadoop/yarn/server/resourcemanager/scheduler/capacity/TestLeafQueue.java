@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
@@ -62,6 +63,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -88,7 +90,8 @@ public class TestLeafQueue {
 
   @Before
   public void setUp() throws Exception {
-    cs = new CapacityScheduler();
+    CapacityScheduler spyCs = new CapacityScheduler();
+    cs = spy(spyCs);
     rmContext = TestUtils.getMockRMContext();
     
     csConf = 
@@ -306,6 +309,14 @@ public class TestLeafQueue {
     SchedulerApp app_0 = new SchedulerApp(appAttemptId_0, user_0, a, null,
         rmContext, null);
     a.submitApplication(app_0, user_0, B);
+    
+    when(cs.getApplication(appAttemptId_0)).thenReturn(app_0);
+    AppRemovedSchedulerEvent event = new AppRemovedSchedulerEvent(
+        appAttemptId_0, RMAppAttemptState.FAILED);
+    cs.handle(event);
+    
+    assertEquals(0, a.getMetrics().getAppsPending());
+    assertEquals(1, a.getMetrics().getAppsFailed());
 
     // Attempt the same application again
     final ApplicationAttemptId appAttemptId_1 = TestUtils
@@ -316,6 +327,16 @@ public class TestLeafQueue {
 
     assertEquals(1, a.getMetrics().getAppsSubmitted());
     assertEquals(1, a.getMetrics().getAppsPending());
+    
+    when(cs.getApplication(appAttemptId_1)).thenReturn(app_0);
+    event = new AppRemovedSchedulerEvent(appAttemptId_0,
+        RMAppAttemptState.FINISHED);
+    cs.handle(event);
+    
+    assertEquals(1, a.getMetrics().getAppsSubmitted());
+    assertEquals(0, a.getMetrics().getAppsPending());
+    assertEquals(0, a.getMetrics().getAppsFailed());
+    assertEquals(1, a.getMetrics().getAppsCompleted());
 
     QueueMetrics userMetrics = a.getMetrics().getUserMetrics(user_0);
     assertEquals(1, userMetrics.getAppsSubmitted());

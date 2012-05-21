@@ -31,9 +31,12 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 
 public class TestQueueMetrics {
@@ -49,7 +52,7 @@ public class TestQueueMetrics {
     MetricsSource queueSource= queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
+    metrics.submitApp(user, 1);
     MetricsSource userSource = userSource(ms, queueName, user);
     checkApps(queueSource, 1, 1, 0, 0, 0, 0);
 
@@ -72,6 +75,52 @@ public class TestQueueMetrics {
     checkApps(queueSource, 1, 0, 0, 1, 0, 0);
     assertNull(userSource);
   }
+  
+  @Test
+  public void testQueueAppMetricsForMultipleFailures() {
+    String queueName = "single";
+    String user = "alice";
+
+    QueueMetrics metrics = QueueMetrics.forQueue(ms, queueName, null, false);
+    MetricsSource queueSource = queueSource(ms, queueName);
+    AppSchedulingInfo app = mockApp(user);
+
+    metrics.submitApp(user, 1);
+    MetricsSource userSource = userSource(ms, queueName, user);
+    checkApps(queueSource, 1, 1, 0, 0, 0, 0);
+
+    metrics.incrAppsRunning(user);
+    checkApps(queueSource, 1, 0, 1, 0, 0, 0);
+
+    metrics.finishApp(app, RMAppAttemptState.FAILED);
+    checkApps(queueSource, 1, 0, 0, 0, 1, 0);
+
+    // As the application has failed, framework retries the same application
+    // based on configuration
+    metrics.submitApp(user, 2);
+    checkApps(queueSource, 1, 1, 0, 0, 0, 0);
+
+    metrics.incrAppsRunning(user);
+    checkApps(queueSource, 1, 0, 1, 0, 0, 0);
+
+    // Suppose say application has failed this time as well.
+    metrics.finishApp(app, RMAppAttemptState.FAILED);
+    checkApps(queueSource, 1, 0, 0, 0, 1, 0);
+
+    // As the application has failed, framework retries the same application
+    // based on configuration
+    metrics.submitApp(user, 3);
+    checkApps(queueSource, 1, 1, 0, 0, 0, 0);
+
+    metrics.incrAppsRunning(user);
+    checkApps(queueSource, 1, 0, 1, 0, 0, 0);
+
+    // Suppose say application has finished.
+    metrics.finishApp(app, RMAppAttemptState.FINISHED);
+    checkApps(queueSource, 1, 0, 0, 1, 0, 0);
+
+    assertNull(userSource);
+  }
 
   @Test public void testSingleQueueWithUserMetrics() {
     String queueName = "single2";
@@ -81,7 +130,7 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, queueName);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
+    metrics.submitApp(user, 1);
     MetricsSource userSource = userSource(ms, queueName, user);
 
     checkApps(queueSource, 1, 1, 0, 0, 0, 0);
@@ -127,7 +176,7 @@ public class TestQueueMetrics {
     MetricsSource queueSource = queueSource(ms, leafQueueName);
     AppSchedulingInfo app = mockApp(user);
 
-    metrics.submitApp(user);
+    metrics.submitApp(user, 1);
     MetricsSource userSource = userSource(ms, leafQueueName, user);
     MetricsSource parentUserSource = userSource(ms, parentQueueName, user);
 
@@ -180,7 +229,7 @@ public class TestQueueMetrics {
     assertGauge("AppsPending", pending, rb);
     assertGauge("AppsRunning", running, rb);
     assertCounter("AppsCompleted", completed, rb);
-    assertCounter("AppsFailed", failed, rb);
+    assertGauge("AppsFailed", failed, rb);
     assertCounter("AppsKilled", killed, rb);
   }
 
@@ -203,6 +252,9 @@ public class TestQueueMetrics {
   private static AppSchedulingInfo mockApp(String user) {
     AppSchedulingInfo app = mock(AppSchedulingInfo.class);
     when(app.getUser()).thenReturn(user);
+    ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationAttemptId id = BuilderUtils.newApplicationAttemptId(appId, 1);
+    when(app.getApplicationAttemptId()).thenReturn(id);
     return app;
   }
 
