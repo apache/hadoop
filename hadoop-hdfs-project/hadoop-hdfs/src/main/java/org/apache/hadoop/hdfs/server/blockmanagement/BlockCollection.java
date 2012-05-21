@@ -19,9 +19,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.fs.ContentSummary;
 
 /** 
@@ -31,19 +28,24 @@ import org.apache.hadoop.fs.ContentSummary;
 public interface BlockCollection {
   /**
    * Get the last block of the collection.
-   * Make sure it has the right type.
    */
-  public <T extends BlockInfo> T getLastBlock() throws IOException;
+  public BlockInfo getLastBlock() throws IOException;
 
   /** 
    * Get content summary.
    */
   public ContentSummary computeContentSummary();
 
-  /** @return the number of blocks */ 
+  /**
+   * @return the number of blocks
+   */ 
   public int numBlocks();
 
+  /**
+   * Get the blocks.
+   */
   public BlockInfo[] getBlocks();
+
   /**
    * Get preferred block size for the collection 
    * @return preferred block size in bytes
@@ -57,7 +59,7 @@ public interface BlockCollection {
   public short getReplication();
 
   /**
-   *  Get name of collection.
+   * Get the name of the collection.
    */
   public String getName();
 }
