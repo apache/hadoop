@@ -410,6 +410,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4269. documentation: Gridmix has javadoc warnings in 
     StressJobFactory (Jonathon Eagles via tgraves).
 
+    MAPREDUCE-3870. Invalid App Metrics 
+    (Bhallamudi Venkata Siva Kamesh via tgraves).
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
