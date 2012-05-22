@@ -31,15 +31,15 @@ import org.junit.Test;
 /**
  * Test ViewFileSystem's support for having delegation tokens fetched and cached
  * for the file system.
+ * 
+ * Currently this class just ensures that getCanonicalServiceName() always
+ * returns <code>null</code> for ViewFileSystem instances.
  */
 public class TestViewFileSystemDelegationTokenSupport {
   
   private static final String MOUNT_TABLE_NAME = "vfs-cluster";
 
   /**
-   * Ensure that a canonical service name can be determined for ViewFileSystem
-   * instances configured with a non-default mount table name.
-   * 
    * Regression test for HADOOP-8408.
    */
   @Test
@@ -53,8 +53,7 @@ public class TestViewFileSystemDelegationTokenSupport {
         "://" + MOUNT_TABLE_NAME), conf);
     
     String serviceName = viewFs.getCanonicalServiceName();
-    assertNotNull(serviceName);
-    assertEquals(MOUNT_TABLE_NAME, serviceName);
+    assertNull(serviceName);
   }
   
   @Test
