@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -58,6 +59,7 @@ import org.apache.hadoop.net.DNS;
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * NNStorage is responsible for management of the StorageDirectories used by
@@ -1070,13 +1072,14 @@ public class NNStorage extends Storage implements Closeable {
    * inspected each directory.
    * 
    * <b>Note:</b> this can mutate the storage info fields (ctime, version, etc).
-   * @throws IOException if no valid storage dirs are found
+   * @throws IOException if no valid storage dirs are found or no valid layout version
    */
   FSImageStorageInspector readAndInspectDirs()
       throws IOException {
-    int minLayoutVersion = Integer.MAX_VALUE; // the newest
-    int maxLayoutVersion = Integer.MIN_VALUE; // the oldest
-    
+    Integer layoutVersion = null;
+    boolean multipleLV = false;
+    StringBuilder layoutVersions = new StringBuilder();
+
     // First determine what range of layout versions we're going to inspect
     for (Iterator<StorageDirectory> it = dirIterator();
          it.hasNext();) {
@@ -1086,24 +1089,29 @@ public class NNStorage extends Storage implements Closeable {
         continue;
       }
       readProperties(sd); // sets layoutVersion
-      minLayoutVersion = Math.min(minLayoutVersion, getLayoutVersion());
-      maxLayoutVersion = Math.max(maxLayoutVersion, getLayoutVersion());
+      int lv = getLayoutVersion();
+      if (layoutVersion == null) {
+        layoutVersion = Integer.valueOf(lv);
+      } else if (!layoutVersion.equals(lv)) {
+        multipleLV = true;
+      }
+      layoutVersions.append("(").append(sd.getRoot()).append(", ").append(lv).append(") ");
     }
     
-    if (minLayoutVersion > maxLayoutVersion) {
+    if (layoutVersion == null) {
       throw new IOException("No storage directories contained VERSION information");
     }
-    assert minLayoutVersion <= maxLayoutVersion;
-    
-    // If we have any storage directories with the new layout version
+    if (multipleLV) {            
+      throw new IOException(
+          "Storage directories containe multiple layout versions: "
+              + layoutVersions);
+    }
+    // If the storage directories are with the new layout version
     // (ie edits_<txnid>) then use the new inspector, which will ignore
     // the old format dirs.
     FSImageStorageInspector inspector;
-    if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, minLayoutVersion)) {
+    if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, getLayoutVersion())) {
       inspector = new FSImageTransactionalStorageInspector();
-      if (!LayoutVersion.supports(Feature.TXID_BASED_LAYOUT, maxLayoutVersion)) {
-        FSImage.LOG.warn("Ignoring one or more storage directories with old layouts");
-      }
     } else {
       inspector = new FSImagePreTransactionalStorageInspector();
     }
