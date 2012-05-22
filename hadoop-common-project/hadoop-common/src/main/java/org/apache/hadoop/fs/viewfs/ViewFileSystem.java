@@ -236,7 +236,7 @@ public class ViewFileSystem extends FileSystem {
   
   @Override
   public String getCanonicalServiceName() {
-    return getUri().getHost();
+    return null;
   }
 
   @Override
