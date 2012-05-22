@@ -73,8 +73,9 @@ public class TestModTime extends TestCase {
 
   /**
    * Tests modification time in DFS.
+   * @throws InterruptedException 
    */
-  public void testModTime() throws IOException {
+  public void testModTime() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
@@ -134,6 +135,8 @@ public class TestModTime extends TestCase {
      //
      Path newfile = new Path(dir2, "testnew.dat");
      System.out.println("Moving " + file1 + " to " + newfile);
+     // Sleep for a while to make sure modification time changes
+     Thread.sleep(20);
      fileSys.rename(file1, newfile);
      //
      // verify that modification time of file1 did not change.
@@ -155,6 +158,7 @@ public class TestModTime extends TestCase {
      // delete newfile
      //
      System.out.println("Deleting testdir2/testnew.dat.");
+     Thread.sleep(20);
      assertTrue(fileSys.delete(newfile, true));
      //
      // verify that modification time of testdir1 has not changed.

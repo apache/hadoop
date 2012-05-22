@@ -15,6 +15,9 @@ branch-hadoop-1-win - unreleased
 
     MAPREDUCE-4204 Refactor ProcfsBasedProcessTree to make the resource collection object pluggable (Bikas Saha via Sanjay)
 
+    HADOOP-8412 TestModTime, TestDelegationToken and TestAuthenticationToken fail
+                intermittently on Windows  (Ivan Mitic via Sanjay Radia)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

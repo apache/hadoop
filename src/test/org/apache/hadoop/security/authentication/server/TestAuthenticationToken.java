@@ -18,6 +18,11 @@ import junit.framework.TestCase;
 
 public class TestAuthenticationToken extends TestCase {
 
+  // System.currentTimeMillis has a 15ms resolution on Windows. Allowing
+  // latency of up to twice the resolution in the test.
+  public static long currentTimeMillisError =
+      System.getProperty("os.name").startsWith("Windows") ? 30 : 1;
+
   public void testAnonymous() {
     assertNotNull(AuthenticationToken.ANONYMOUS);
     assertEquals(null, AuthenticationToken.ANONYMOUS.getUserName());
@@ -88,7 +93,7 @@ public class TestAuthenticationToken extends TestCase {
     assertEquals("t", token.getType());
     assertEquals(expires, token.getExpires());
     assertFalse(token.isExpired());
-    Thread.sleep(51);
+    Thread.sleep(50 + TestAuthenticationToken.currentTimeMillisError);
     assertTrue(token.isExpired());
   }
 
@@ -102,7 +107,7 @@ public class TestAuthenticationToken extends TestCase {
     assertEquals("t", token.getType());
     assertEquals(expires, token.getExpires());
     assertFalse(token.isExpired());
-    Thread.sleep(51);
+    Thread.sleep(50 + TestAuthenticationToken.currentTimeMillisError);
     assertTrue(token.isExpired());
   }
 

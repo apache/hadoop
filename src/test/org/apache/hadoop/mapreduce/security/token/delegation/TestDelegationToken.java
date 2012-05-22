@@ -86,7 +86,7 @@ public class TestDelegationToken {
     System.out.println("create time: " + createTime);
     System.out.println("current time: " + currentTime);
     System.out.println("max time: " + maxTime);
-    assertTrue("createTime < current", createTime < currentTime);
+    assertTrue("createTime <= current", createTime <= currentTime);
     assertTrue("current < maxTime", currentTime < maxTime);
     client.renewDelegationToken(token);
     client.renewDelegationToken(token);
