@@ -70,6 +70,9 @@ Trunk (unreleased changes)
     HADOOP-8360. empty-configuration.xml fails xml validation
     (Radim Kolar via harsh)
 
+    HADOOP-8367 Improve documentation of declaringClassProtocolName in rpc headers 
+                (Sanjay Radia)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
