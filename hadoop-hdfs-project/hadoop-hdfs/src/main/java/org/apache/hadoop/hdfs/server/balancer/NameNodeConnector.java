@@ -200,7 +200,7 @@ class NameNodeConnector {
           Thread.sleep(keyUpdaterInterval);
         }
       } catch (InterruptedException e) {
-        LOG.info("InterruptedException in block key updater thread", e);
+        LOG.debug("InterruptedException in block key updater thread", e);
       } catch (Throwable e) {
         LOG.error("Exception in block key updater thread", e);
         shouldRun = false;
