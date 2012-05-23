@@ -22,6 +22,7 @@ import java.io.*;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -740,8 +741,9 @@ public class TestEditLog extends TestCase {
         throw ioe;
       } else {
         GenericTestUtils.assertExceptionContains(
-            "No non-corrupt logs for txid 3",
-            ioe);
+          "Gap in transactions. Expected to be able to read up until " +
+          "at least txid 3 but unable to find any edit logs containing " +
+          "txid 3", ioe);
       }
     } finally {
       cluster.shutdown();
@@ -770,12 +772,12 @@ public class TestEditLog extends TestCase {
     }
   
     @Override
-    public long getFirstTxId() throws IOException {
+    public long getFirstTxId() {
       return HdfsConstants.INVALID_TXID;
     }
     
     @Override
-    public long getLastTxId() throws IOException {
+    public long getLastTxId() {
       return HdfsConstants.INVALID_TXID;
     }
   
@@ -1104,9 +1106,9 @@ public class TestEditLog extends TestCase {
 
     for (EditLogInputStream edits : editStreams) {
       FSEditLogLoader.EditLogValidation val = FSEditLogLoader.validateEditLog(edits);
-      long read = val.getNumTransactions();
+      long read = (val.getEndTxId() - edits.getFirstTxId()) + 1;
       LOG.info("Loading edits " + edits + " read " + read);
-      assertEquals(startTxId, val.getStartTxId());
+      assertEquals(startTxId, edits.getFirstTxId());
       startTxId += read;
       totaltxnread += read;
     }
@@ -1154,7 +1156,9 @@ public class TestEditLog extends TestCase {
       fail("Should have thrown exception");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
-          "No non-corrupt logs for txid " + startGapTxId, ioe);
+          "Gap in transactions. Expected to be able to read up until " +
+          "at least txid 40 but unable to find any edit logs containing " +
+          "txid 11", ioe);
     }
   }
 
@@ -1227,5 +1231,56 @@ public class TestEditLog extends TestCase {
       r.nextBytes(garbage);
       validateNoCrash(garbage);
     }
+  }
+
+  /**
+   * Test creating a directory with lots and lots of edit log segments
+   */
+  @Test
+  public void testManyEditLogSegments() throws IOException {
+    final int NUM_EDIT_LOG_ROLLS = 1000;
+    // start a cluster
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = null;
+    FileSystem fileSys = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
+      cluster.waitActive();
+      fileSys = cluster.getFileSystem();
+      final FSNamesystem namesystem = cluster.getNamesystem();
+      FSImage fsimage = namesystem.getFSImage();
+      final FSEditLog editLog = fsimage.getEditLog();
+      for (int i = 0; i < NUM_EDIT_LOG_ROLLS; i++){
+        editLog.logSetReplication("fakefile" + i, (short)(i % 3));
+        assertExistsInStorageDirs(
+            cluster, NameNodeDirType.EDITS,
+            NNStorage.getInProgressEditsFileName((i * 3) + 1));
+        editLog.logSync();
+        editLog.rollEditLog();
+        assertExistsInStorageDirs(
+            cluster, NameNodeDirType.EDITS,
+            NNStorage.getFinalizedEditsFileName((i * 3) + 1, (i * 3) + 3));
+      }
+      editLog.close();
+    } finally {
+      if(fileSys != null) fileSys.close();
+      if(cluster != null) cluster.shutdown();
+    }
+
+    // How long does it take to read through all these edit logs?
+    long startTime = System.currentTimeMillis();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).
+          numDataNodes(NUM_DATA_NODES).build();
+      cluster.waitActive();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+    long endTime = System.currentTimeMillis();
+    double delta = ((float)(endTime - startTime)) / 1000.0;
+    LOG.info(String.format("loaded %d edit log segments in %.2f seconds",
+        NUM_EDIT_LOG_ROLLS, delta));
   }
 }

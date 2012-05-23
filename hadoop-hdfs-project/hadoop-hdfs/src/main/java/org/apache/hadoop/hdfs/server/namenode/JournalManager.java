@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -46,26 +47,17 @@ public interface JournalManager extends Closeable {
   void finalizeLogSegment(long firstTxId, long lastTxId) throws IOException;
 
    /**
-   * Get the input stream starting with fromTxnId from this journal manager
+   * Get a list of edit log input streams.  The list will start with the
+   * stream that contains fromTxnId, and continue until the end of the journal
+   * being managed.
+   * 
    * @param fromTxnId the first transaction id we want to read
    * @param inProgressOk whether or not in-progress streams should be returned
-   * @return the stream starting with transaction fromTxnId
-   * @throws IOException if a stream cannot be found.
-   */
-  EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
-    throws IOException;
-
-  /**
-   * Get the number of transaction contiguously available from fromTxnId.
    *
-   * @param fromTxnId Transaction id to count from
-   * @param inProgressOk whether or not in-progress streams should be counted
-   * @return The number of transactions available from fromTxnId
-   * @throws IOException if the journal cannot be read.
-   * @throws CorruptionException if there is a gap in the journal at fromTxnId.
+   * @return a list of streams
    */
-  long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
-      throws IOException, CorruptionException;
+  void selectInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxnId, boolean inProgressOk);
 
   /**
    * Set the amount of memory that this stream should use to buffer edits
@@ -92,7 +84,7 @@ public interface JournalManager extends Closeable {
    * Close the journal manager, freeing any resources it may hold.
    */
   void close() throws IOException;
-
+  
   /** 
    * Indicate that a journal is cannot be used to load a certain range of 
    * edits.

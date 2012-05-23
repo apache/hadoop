@@ -22,6 +22,7 @@ import java.net.URI;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.lang.reflect.Constructor;
 
@@ -246,13 +247,14 @@ public class FSEditLog  {
     long segmentTxId = getLastWrittenTxId() + 1;
     // Safety check: we should never start a segment if there are
     // newer txids readable.
-    EditLogInputStream s = journalSet.getInputStream(segmentTxId, true);
-    try {
-      Preconditions.checkState(s == null,
-          "Cannot start writing at txid %s when there is a stream " +
-          "available for read: %s", segmentTxId, s);
-    } finally {
-      IOUtils.closeStream(s);
+    List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
+    journalSet.selectInputStreams(streams, segmentTxId, true);
+    if (!streams.isEmpty()) {
+      String error = String.format("Cannot start writing at txid %s " +
+        "when there is a stream available for read: %s",
+        segmentTxId, streams.get(0));
+      IOUtils.cleanup(LOG, streams.toArray(new EditLogInputStream[0]));
+      throw new IllegalStateException(error);
     }
     
     startLogSegment(segmentTxId, true);
@@ -1071,10 +1073,10 @@ public class FSEditLog  {
       // All journals have failed, it is handled in logSync.
     }
   }
-  
-  Collection<EditLogInputStream> selectInputStreams(long fromTxId,
-      long toAtLeastTxId) throws IOException {
-    return selectInputStreams(fromTxId, toAtLeastTxId, true);
+
+  public Collection<EditLogInputStream> selectInputStreams(
+      long fromTxId, long toAtLeastTxId) throws IOException {
+    return selectInputStreams(fromTxId, toAtLeastTxId, null, true);
   }
 
   /**
@@ -1084,24 +1086,70 @@ public class FSEditLog  {
    * @param toAtLeast the selected streams must contain this transaction
    * @param inProgessOk set to true if in-progress streams are OK
    */
-  public synchronized Collection<EditLogInputStream> selectInputStreams(long fromTxId,
-      long toAtLeastTxId, boolean inProgressOk) throws IOException {
+  public synchronized Collection<EditLogInputStream> selectInputStreams(
+      long fromTxId, long toAtLeastTxId, MetaRecoveryContext recovery,
+      boolean inProgressOk) throws IOException {
     List<EditLogInputStream> streams = new ArrayList<EditLogInputStream>();
-    EditLogInputStream stream = journalSet.getInputStream(fromTxId, inProgressOk);
-    while (stream != null) {
-      streams.add(stream);
-      // We're now looking for a higher range, so reset the fromTxId
-      fromTxId = stream.getLastTxId() + 1;
-      stream = journalSet.getInputStream(fromTxId, inProgressOk);
+    journalSet.selectInputStreams(streams, fromTxId, inProgressOk);
+
+    try {
+      checkForGaps(streams, fromTxId, toAtLeastTxId, inProgressOk);
+    } catch (IOException e) {
+      if (recovery != null) {
+        // If recovery mode is enabled, continue loading even if we know we
+        // can't load up to toAtLeastTxId.
+        LOG.error(e);
+      } else {
+        closeAllStreams(streams);
+        throw e;
+      }
     }
-    
-    if (fromTxId <= toAtLeastTxId) {
-      closeAllStreams(streams);
-      throw new IOException(String.format("Gap in transactions. Expected to "
-          + "be able to read up until at least txid %d but unable to find any "
-          + "edit logs containing txid %d", toAtLeastTxId, fromTxId));
+    // This code will go away as soon as RedundantEditLogInputStream is
+    // introduced. (HDFS-3049)
+    try {
+      if (!streams.isEmpty()) {
+        streams.get(0).skipUntil(fromTxId);
+      }
+    } catch (IOException e) {
+      // We don't want to throw an exception from here, because that would make
+      // recovery impossible even if the user requested it.  An exception will
+      // be thrown later, when we don't read the starting txid we expect.
+      LOG.error("error skipping until transaction " + fromTxId, e);
     }
     return streams;
+  }
+  
+  /**
+   * Check for gaps in the edit log input stream list.
+   * Note: we're assuming that the list is sorted and that txid ranges don't
+   * overlap.  This could be done better and with more generality with an
+   * interval tree.
+   */
+  private void checkForGaps(List<EditLogInputStream> streams, long fromTxId,
+      long toAtLeastTxId, boolean inProgressOk) throws IOException {
+    Iterator<EditLogInputStream> iter = streams.iterator();
+    long txId = fromTxId;
+    while (true) {
+      if (txId > toAtLeastTxId) return;
+      if (!iter.hasNext()) break;
+      EditLogInputStream elis = iter.next();
+      if (elis.getFirstTxId() > txId) break;
+      long next = elis.getLastTxId();
+      if (next == HdfsConstants.INVALID_TXID) {
+        if (!inProgressOk) {
+          throw new RuntimeException("inProgressOk = false, but " +
+              "selectInputStreams returned an in-progress edit " +
+              "log input stream (" + elis + ")");
+        }
+        // We don't know where the in-progress stream ends.
+        // It could certainly go all the way up to toAtLeastTxId.
+        return;
+      }
+      txId = next + 1;
+    }
+    throw new IOException(String.format("Gap in transactions. Expected to "
+        + "be able to read up until at least txid %d but unable to find any "
+        + "edit logs containing txid %d", toAtLeastTxId, txId));
   }
 
   /** 

@@ -59,6 +59,9 @@ Release 2.0.1-alpha - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-2982. Startup performance suffers when there are many edit log
+    segments. (Colin Patrick McCabe via todd)
+
   BUG FIXES
 
     HDFS-3385. The last block of INodeFileUnderConstruction is not

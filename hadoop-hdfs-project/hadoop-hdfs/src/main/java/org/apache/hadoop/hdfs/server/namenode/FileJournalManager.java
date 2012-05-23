@@ -22,6 +22,7 @@ import org.apache.commons.logging.LogFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Comparator;
 import java.util.Collections;
@@ -73,7 +74,7 @@ class FileJournalManager implements JournalManager {
 
   @Override 
   public void close() throws IOException {}
-
+  
   @Override
   synchronized public EditLogOutputStream startLogSegment(long txid) 
       throws IOException {
@@ -212,90 +213,46 @@ class FileJournalManager implements JournalManager {
   }
 
   @Override
-  synchronized public EditLogInputStream getInputStream(long fromTxId,
-      boolean inProgressOk) throws IOException {
-    for (EditLogFile elf : getLogFiles(fromTxId)) {
-      if (elf.containsTxId(fromTxId)) {
-        if (!inProgressOk && elf.isInProgress()) {
+  synchronized public void selectInputStreams(
+      Collection<EditLogInputStream> streams, long fromTxId,
+      boolean inProgressOk) {
+    List<EditLogFile> elfs;
+    try {
+      elfs = matchEditLogs(sd.getCurrentDir());
+    } catch (IOException e) {
+      LOG.error("error listing files in " + this + ". " +
+          "Skipping all edit logs in this directory.", e);
+      return;
+    }
+    LOG.debug(this + ": selecting input streams starting at " + fromTxId + 
+        (inProgressOk ? " (inProgress ok) " : " (excluding inProgress) ") +
+        "from among " + elfs.size() + " candidate file(s)");
+    for (EditLogFile elf : elfs) {
+      if (elf.lastTxId < fromTxId) {
+        LOG.debug("passing over " + elf + " because it ends at " +
+            elf.lastTxId + ", but we only care about transactions " +
+            "as new as " + fromTxId);
+        continue;
+      }
+      if (elf.isInProgress()) {
+        if (!inProgressOk) {
+          LOG.debug("passing over " + elf + " because it is in progress " +
+              "and we are ignoring in-progress logs.");
           continue;
         }
-        if (elf.isInProgress()) {
+        try {
           elf.validateLog();
+        } catch (IOException e) {
+          LOG.error("got IOException while trying to validate header of " +
+              elf + ".  Skipping.", e);
+          continue;
         }
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Returning edit stream reading from " + elf);
-        }
-        EditLogFileInputStream elfis = new EditLogFileInputStream(elf.getFile(),
+      }
+      EditLogFileInputStream elfis = new EditLogFileInputStream(elf.getFile(),
             elf.getFirstTxId(), elf.getLastTxId(), elf.isInProgress());
-        long transactionsToSkip = fromTxId - elf.getFirstTxId();
-        if (transactionsToSkip > 0) {
-          LOG.info(String.format("Log begins at txid %d, but requested start "
-              + "txid is %d. Skipping %d edits.", elf.getFirstTxId(), fromTxId,
-              transactionsToSkip));
-        }
-        if (elfis.skipUntil(fromTxId) == false) {
-          throw new IOException("failed to advance input stream to txid " +
-              fromTxId);
-        }
-        return elfis;
-      }
+      LOG.debug("selecting edit log stream " + elf);
+      streams.add(elfis);
     }
-
-    throw new IOException("Cannot find editlog file containing " + fromTxId);
-  }
-
-  @Override
-  public long getNumberOfTransactions(long fromTxId, boolean inProgressOk)
-      throws IOException, CorruptionException {
-    long numTxns = 0L;
-    
-    for (EditLogFile elf : getLogFiles(fromTxId)) {
-      if (LOG.isTraceEnabled()) {
-        LOG.trace("Counting " + elf);
-      }
-      if (elf.getFirstTxId() > fromTxId) { // there must be a gap
-        LOG.warn("Gap in transactions in " + sd.getRoot() + ". Gap is "
-            + fromTxId + " - " + (elf.getFirstTxId() - 1));
-        break;
-      } else if (elf.containsTxId(fromTxId)) {
-        if (!inProgressOk && elf.isInProgress()) {
-          break;
-        }
-        
-        if (elf.isInProgress()) {
-          elf.validateLog();
-        } 
-
-        if (elf.hasCorruptHeader()) {
-          break;
-        }
-        numTxns += elf.getLastTxId() + 1 - fromTxId;
-        fromTxId = elf.getLastTxId() + 1;
-        
-        if (elf.isInProgress()) {
-          break;
-        }
-      }
-    }
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Journal " + this + " has " + numTxns 
-                + " txns from " + fromTxId);
-    }
-
-    long max = findMaxTransaction(inProgressOk);
-    
-    // fromTxId should be greater than max, as it points to the next 
-    // transaction we should expect to find. If it is less than or equal
-    // to max, it means that a transaction with txid == max has not been found
-    if (numTxns == 0 && fromTxId <= max) { 
-      String error = String.format("Gap in transactions, max txnid is %d"
-                                   + ", 0 txns from %d", max, fromTxId);
-      LOG.error(error);
-      throw new CorruptionException(error);
-    }
-
-    return numTxns;
   }
 
   @Override
@@ -318,7 +275,7 @@ class FileJournalManager implements JournalManager {
           }
           continue;
         }
-        
+
         elf.validateLog();
 
         if (elf.hasCorruptHeader()) {
@@ -326,19 +283,16 @@ class FileJournalManager implements JournalManager {
           throw new CorruptionException("In-progress edit log file is corrupt: "
               + elf);
         }
-        
-        // If the file has a valid header (isn't corrupt) but contains no
-        // transactions, we likely just crashed after opening the file and
-        // writing the header, but before syncing any transactions. Safe to
-        // delete the file.
-        if (elf.getNumTransactions() == 0) {
-          LOG.info("Deleting edit log file with zero transactions " + elf);
-          if (!elf.getFile().delete()) {
-            throw new IOException("Unable to delete " + elf.getFile());
-          }
+        if (elf.getLastTxId() == HdfsConstants.INVALID_TXID) {
+          // If the file has a valid header (isn't corrupt) but contains no
+          // transactions, we likely just crashed after opening the file and
+          // writing the header, but before syncing any transactions. Safe to
+          // delete the file.
+          LOG.info("Moving aside edit log file that seems to have zero " +
+              "transactions " + elf);
+          elf.moveAsideEmptyFile();
           continue;
         }
-        
         finalizeLogSegment(elf.getFirstTxId(), elf.getLastTxId());
       }
     }
@@ -361,39 +315,6 @@ class FileJournalManager implements JournalManager {
     return logFiles;
   }
 
-  /** 
-   * Find the maximum transaction in the journal.
-   */
-  private long findMaxTransaction(boolean inProgressOk)
-      throws IOException {
-    boolean considerSeenTxId = true;
-    long seenTxId = NNStorage.readTransactionIdFile(sd);
-    long maxSeenTransaction = 0;
-    for (EditLogFile elf : getLogFiles(0)) {
-      if (elf.isInProgress() && !inProgressOk) {
-        if (elf.getFirstTxId() != HdfsConstants.INVALID_TXID &&
-            elf.getFirstTxId() <= seenTxId) {
-          // don't look at the seen_txid file if in-progress logs are not to be
-          // examined, and the value in seen_txid falls within the in-progress
-          // segment.
-          considerSeenTxId = false;
-        }
-        continue;
-      }
-      
-      if (elf.isInProgress()) {
-        maxSeenTransaction = Math.max(elf.getFirstTxId(), maxSeenTransaction);
-        elf.validateLog();
-      }
-      maxSeenTransaction = Math.max(elf.getLastTxId(), maxSeenTransaction);
-    }
-    if (considerSeenTxId) {
-      return Math.max(maxSeenTransaction, seenTxId);
-    } else {
-      return maxSeenTransaction;
-    }
-  }
-
   @Override
   public String toString() {
     return String.format("FileJournalManager(root=%s)", sd.getRoot());
@@ -406,7 +327,6 @@ class FileJournalManager implements JournalManager {
     private File file;
     private final long firstTxId;
     private long lastTxId;
-    private long numTx = -1;
 
     private boolean hasCorruptHeader = false;
     private final boolean isInProgress;
@@ -454,19 +374,14 @@ class FileJournalManager implements JournalManager {
     }
 
     /** 
-     * Count the number of valid transactions in a log.
+     * Find out where the edit log ends.
      * This will update the lastTxId of the EditLogFile or
      * mark it as corrupt if it is.
      */
     void validateLog() throws IOException {
       EditLogValidation val = EditLogFileInputStream.validateEditLog(file);
-      this.numTx = val.getNumTransactions();
       this.lastTxId = val.getEndTxId();
       this.hasCorruptHeader = val.hasCorruptHeader();
-    }
-    
-    long getNumTransactions() {
-      return numTx;
     }
 
     boolean isInProgress() {
@@ -483,23 +398,31 @@ class FileJournalManager implements JournalManager {
 
     void moveAsideCorruptFile() throws IOException {
       assert hasCorruptHeader;
-    
+      renameSelf(".corrupt");
+    }
+
+    void moveAsideEmptyFile() throws IOException {
+      assert lastTxId == HdfsConstants.INVALID_TXID;
+      renameSelf(".empty");
+    }
+      
+    private void renameSelf(String newSuffix) throws IOException {
       File src = file;
-      File dst = new File(src.getParent(), src.getName() + ".corrupt");
+      File dst = new File(src.getParent(), src.getName() + newSuffix);
       boolean success = src.renameTo(dst);
       if (!success) {
         throw new IOException(
-          "Couldn't rename corrupt log " + src + " to " + dst);
+          "Couldn't rename log " + src + " to " + dst);
       }
       file = dst;
     }
-    
+
     @Override
     public String toString() {
       return String.format("EditLogFile(file=%s,first=%019d,last=%019d,"
-                           +"inProgress=%b,hasCorruptHeader=%b,numTx=%d)",
+                           +"inProgress=%b,hasCorruptHeader=%b)",
                            file.toString(), firstTxId, lastTxId,
-                           isInProgress(), hasCorruptHeader, numTx);
+                           isInProgress(), hasCorruptHeader);
     }
   }
 }

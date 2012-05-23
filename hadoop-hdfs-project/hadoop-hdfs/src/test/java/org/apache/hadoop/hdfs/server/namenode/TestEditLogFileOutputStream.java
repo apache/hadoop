@@ -40,8 +40,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 public class TestEditLogFileOutputStream {
-  
-  private final static long PREALLOCATION_LENGTH = (1024 * 1024) + 4;
   private final static int HEADER_LEN = 17;
   private static final File TEST_EDITS =
     new File(System.getProperty("test.build.data","/tmp"),
@@ -51,21 +49,22 @@ public class TestEditLogFileOutputStream {
   public void deleteEditsFile() {
     TEST_EDITS.delete();
   }
-  
+
   @Test
   public void testPreallocation() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
         .build();
 
+    final long START_TXID = 1;
     StorageDirectory sd = cluster.getNameNode().getFSImage()
       .getStorage().getStorageDir(0);
-    File editLog = NNStorage.getInProgressEditsFile(sd, 1);
+    File editLog = NNStorage.getInProgressEditsFile(sd, START_TXID);
 
     EditLogValidation validation = EditLogFileInputStream.validateEditLog(editLog);
     assertEquals("Edit log should contain a header as valid length",
         HEADER_LEN, validation.getValidLength());
-    assertEquals(1, validation.getNumTransactions());
+    assertEquals(validation.getEndTxId(), START_TXID);
     assertEquals("Edit log should have 1MB pre-allocated, plus 4 bytes " +
         "for the version number",
         EditLogFileOutputStream.PREALLOCATION_LENGTH + 4, editLog.length());
@@ -79,7 +78,7 @@ public class TestEditLogFileOutputStream {
     assertTrue("Edit log should have more valid data after writing a txn " +
         "(was: " + oldLength + " now: " + validation.getValidLength() + ")",
         validation.getValidLength() > oldLength);
-    assertEquals(2, validation.getNumTransactions());
+    assertEquals(1, validation.getEndTxId() - START_TXID);
 
     assertEquals("Edit log should be 1MB long, plus 4 bytes for the version number",
         EditLogFileOutputStream.PREALLOCATION_LENGTH + 4, editLog.length());
