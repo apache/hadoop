@@ -54,6 +54,9 @@ Release 2.0.1-alpha - UNRELEASED
     ClassCastException check is useless since generic type information is only
     available in compile-time.  (szetszwo)
 
+    HDFS-3454. Balancer unconditionally logs InterruptedException at
+    INFO level on shutdown if security is enabled. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
