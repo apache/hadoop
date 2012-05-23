@@ -68,8 +68,10 @@ public class DeletionService extends AbstractService {
    */
   public void delete(String user, Path subDir, Path... baseDirs) {
     // TODO if parent owned by NM, rename within parent inline
-    sched.schedule(new FileDeletion(user, subDir, baseDirs),
-        debugDelay, TimeUnit.SECONDS);
+    if (debugDelay != -1) {
+      sched.schedule(new FileDeletion(user, subDir, baseDirs), debugDelay,
+          TimeUnit.SECONDS);
+    }
   }
 
   @Override

@@ -27,6 +27,8 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4262. NM gives wrong log message saying "Connected to 
     ResourceManager" before trying to connect. (Devaraj K via tgraves)
 
+    MAPREDUCE-4276. Allow setting yarn.nodemanager.delete.debug-delay-sec property to "-1" for easier container debugging. (ahmed via tucu)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
