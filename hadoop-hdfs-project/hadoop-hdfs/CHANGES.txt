@@ -97,6 +97,13 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-2717. BookKeeper Journal output stream doesn't check addComplete rc.
     (Ivan Kelly via umamahesh)
 
+    HDFS-3415. Make sure all layout versions are the same for all storage
+    directories in the Namenode.  (Brandon Li via szetszwo)
+
+    HDFS-3436. In DataNode.transferReplicaForPipelineRecovery(..), it should
+    use the stored generation stamp to check if the block is valid.  (Vinay
+    via szetszwo)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -618,9 +625,6 @@ Release 2.0.0-alpha - UNRELEASED
 
     HDFS-860. fuse-dfs truncate behavior causes issues with scp.
     (Brian Bockelman via eli)
-
-    HDFS-3415. Make sure all layout versions are the same for all storage
-    directories in the Namenode.  (Brandon Li via szetszwo)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 
