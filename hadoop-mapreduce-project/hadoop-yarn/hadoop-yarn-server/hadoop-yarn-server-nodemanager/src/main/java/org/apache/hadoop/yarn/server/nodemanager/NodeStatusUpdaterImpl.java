@@ -181,7 +181,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
 
   private void registerWithRM() throws YarnRemoteException {
     this.resourceTracker = getRMClient();
-    LOG.info("Connected to ResourceManager at " + this.rmAddress);
+    LOG.info("Connecting to ResourceManager at " + this.rmAddress);
     
     RegisterNodeManagerRequest request = recordFactory.newRecordInstance(RegisterNodeManagerRequest.class);
     request.setHttpPort(this.httpPort);
