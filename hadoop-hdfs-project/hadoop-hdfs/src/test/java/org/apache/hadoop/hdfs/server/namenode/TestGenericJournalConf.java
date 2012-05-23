@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.mockito.Mockito.mock;
@@ -26,9 +24,9 @@ import static org.junit.Assert.*;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.io.Writable;
 
 import java.net.URI;
+import java.util.Collection;
 import java.io.IOException;
 
 public class TestGenericJournalConf {
@@ -144,15 +142,8 @@ public class TestGenericJournalConf {
     }
 
     @Override
-    public EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
-        throws IOException {
-      return null;
-    }
-
-    @Override
-    public long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
-        throws IOException {
-      return 0;
+    public void selectInputStreams(Collection<EditLogInputStream> streams,
+        long fromTxnId, boolean inProgressOk) {
     }
 
     @Override

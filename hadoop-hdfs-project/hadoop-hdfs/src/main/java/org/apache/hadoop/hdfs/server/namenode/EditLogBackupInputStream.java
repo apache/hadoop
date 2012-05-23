@@ -129,12 +129,12 @@ class EditLogBackupInputStream extends EditLogInputStream {
   }
 
   @Override
-  public long getFirstTxId() throws IOException {
+  public long getFirstTxId() {
     return HdfsConstants.INVALID_TXID;
   }
 
   @Override
-  public long getLastTxId() throws IOException {
+  public long getLastTxId() {
     return HdfsConstants.INVALID_TXID;
   }
 

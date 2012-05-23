@@ -37,6 +37,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
@@ -313,8 +314,7 @@ public class BookKeeperJournalManager implements JournalManager {
   }
 
   // TODO(HA): Handle inProgressOk
-  @Override
-  public EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
+  EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
       throws IOException {
     for (EditLogLedgerMetadata l : getLedgerList()) {
       if (l.getFirstTxId() == fromTxnId) {
@@ -328,12 +328,34 @@ public class BookKeeperJournalManager implements JournalManager {
         }
       }
     }
-    throw new IOException("No ledger for fromTxnId " + fromTxnId + " found.");
+    return null;
+  }
+
+  @Override
+  public void selectInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxId, boolean inProgressOk) {
+    // NOTE: could probably be rewritten more efficiently
+    while (true) {
+      EditLogInputStream elis;
+      try {
+        elis = getInputStream(fromTxId, inProgressOk);
+      } catch (IOException e) {
+        LOG.error(e);
+        return;
+      }
+      if (elis == null) {
+        return;
+      }
+      streams.add(elis);
+      if (elis.getLastTxId() == HdfsConstants.INVALID_TXID) {
+        return;
+      }
+      fromTxId = elis.getLastTxId() + 1;
+    }
   }
 
   // TODO(HA): Handle inProgressOk
-  @Override
-  public long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
+  long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
       throws IOException {
     long count = 0;
     long expectedStart = 0;

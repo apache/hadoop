@@ -201,7 +201,7 @@ public class EditLogTailer {
       }
       Collection<EditLogInputStream> streams;
       try {
-        streams = editLog.selectInputStreams(lastTxnId + 1, 0, false);
+        streams = editLog.selectInputStreams(lastTxnId + 1, 0, null, false);
       } catch (IOException ioe) {
         // This is acceptable. If we try to tail edits in the middle of an edits
         // log roll, i.e. the last one has been finalized but the new inprogress

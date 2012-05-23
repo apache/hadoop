@@ -207,7 +207,7 @@ public class BackupImage extends FSImage {
       int logVersion = storage.getLayoutVersion();
       backupInputStream.setBytes(data, logVersion);
 
-      long numTxnsAdvanced = logLoader.loadEditRecords(logVersion, 
+      long numTxnsAdvanced = logLoader.loadEditRecords(
           backupInputStream, true, lastAppliedTxId + 1, null);
       if (numTxnsAdvanced != numTxns) {
         throw new IOException("Batch of txns starting at txnid " +

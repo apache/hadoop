@@ -333,7 +333,7 @@ public class TestNameNodeRecovery {
   static void testNameNodeRecoveryImpl(Corruptor corruptor, boolean finalize)
       throws IOException {
     final String TEST_PATH = "/test/path/dir";
-    final int NUM_TEST_MKDIRS = 10;
+    final String TEST_PATH2 = "/second/dir";
     final boolean needRecovery = corruptor.needRecovery(finalize);
 
     // start a cluster
@@ -357,9 +357,8 @@ public class TestNameNodeRecovery {
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
       FSImage fsimage = namesystem.getFSImage();
-      for (int i = 0; i < NUM_TEST_MKDIRS; i++) {
-        fileSys.mkdirs(new Path(TEST_PATH));
-      }
+      fileSys.mkdirs(new Path(TEST_PATH));
+      fileSys.mkdirs(new Path(TEST_PATH2));
       sd = fsimage.getStorage().dirIterator(NameNodeDirType.EDITS).next();
     } finally {
       if (cluster != null) {
@@ -371,6 +370,7 @@ public class TestNameNodeRecovery {
     assertTrue("Should exist: " + editFile, editFile.exists());
 
     // Corrupt the edit log
+    LOG.info("corrupting edit log file '" + editFile + "'");
     corruptor.corrupt(editFile);
 
     // If needRecovery == true, make sure that we can't start the
@@ -423,6 +423,7 @@ public class TestNameNodeRecovery {
           .format(false).build();
       LOG.debug("successfully recovered the " + corruptor.getName() +
           " corrupted edit log");
+      cluster.waitActive();
       assertTrue(cluster.getFileSystem().exists(new Path(TEST_PATH)));
     } catch (IOException e) {
       fail("failed to recover.  Error message: " + e.getMessage());

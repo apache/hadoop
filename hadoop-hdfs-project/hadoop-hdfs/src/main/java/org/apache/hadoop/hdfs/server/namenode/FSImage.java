@@ -559,7 +559,7 @@ public class FSImage implements Closeable {
 
   /**
    * Choose latest image from one of the directories,
-   * load it and merge with the edits from that directory.
+   * load it and merge with the edits.
    * 
    * Saving and loading fsimage should never trigger symlink resolution. 
    * The paths that are persisted do not have *intermediate* symlinks 
@@ -595,7 +595,7 @@ public class FSImage implements Closeable {
       // OK to not be able to read all of edits right now.
       long toAtLeastTxId = editLog.isOpenForWrite() ? inspector.getMaxSeenTxId() : 0;
       editStreams = editLog.selectInputStreams(imageFile.getCheckpointTxId() + 1,
-          toAtLeastTxId, false);
+          toAtLeastTxId, recovery, false);
     } else {
       editStreams = FSImagePreTransactionalStorageInspector
         .getEditLogStreams(storage);
@@ -603,7 +603,10 @@ public class FSImage implements Closeable {
  
     LOG.debug("Planning to load image :\n" + imageFile);
     for (EditLogInputStream l : editStreams) {
-      LOG.debug("\t Planning to load edit stream: " + l);
+      LOG.debug("Planning to load edit log stream: " + l);
+    }
+    if (!editStreams.iterator().hasNext()) {
+      LOG.info("No edit log streams selected.");
     }
     
     try {
