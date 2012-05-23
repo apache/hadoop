@@ -164,6 +164,39 @@ public class TestDeletionService {
   }
 
   @Test
+  public void testNoDelete() throws Exception {
+    Random r = new Random();
+    long seed = r.nextLong();
+    r.setSeed(seed);
+    System.out.println("SEED: " + seed);
+    List<Path> dirs = buildDirs(r, base, 20);
+    createDirs(new Path("."), dirs);
+    FakeDefaultContainerExecutor exec = new FakeDefaultContainerExecutor();
+    Configuration conf = new Configuration();
+    conf.setInt(YarnConfiguration.DEBUG_NM_DELETE_DELAY_SEC, -1);
+    exec.setConf(conf);
+    DeletionService del = new DeletionService(exec);
+    del.init(conf);
+    del.start();
+    try {
+      for (Path p : dirs) {
+        del.delete((Long.parseLong(p.getName()) % 2) == 0 ? null : "dingo", p,
+            null);
+      }
+      int msecToWait = 20 * 1000;
+      for (Path p : dirs) {
+        while (msecToWait > 0 && lfs.util().exists(p)) {
+          Thread.sleep(100);
+          msecToWait -= 100;
+        }
+        assertTrue(lfs.util().exists(p));
+      }
+    } finally {
+      del.stop();
+    }
+  }
+
+  @Test
   public void testStopWithDelayedTasks() throws Exception {
     DeletionService del = new DeletionService(Mockito.mock(ContainerExecutor.class));
     Configuration conf = new YarnConfiguration();
