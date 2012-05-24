@@ -39,10 +39,10 @@
 
 <!DOCTYPE html>
 <html>
-
+<head>
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 <title>Hadoop <%=namenodeRole%>&nbsp;<%=namenodeLabel%></title>
-    
+</head>    
 <body>
 <h1><%=namenodeRole%> '<%=namenodeLabel%>' (<%=namenodeState%>)</h1>
 <%= NamenodeJspHelper.getVersionTable(fsn) %>
