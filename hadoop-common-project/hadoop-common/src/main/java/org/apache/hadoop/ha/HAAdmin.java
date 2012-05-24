@@ -19,11 +19,11 @@ package org.apache.hadoop.ha;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.util.Arrays;
 import java.util.Map;
 
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
@@ -33,9 +33,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
 /**
@@ -49,6 +52,13 @@ public abstract class HAAdmin extends Configured implements Tool {
   
   private static final String FORCEFENCE  = "forcefence";
   private static final String FORCEACTIVE = "forceactive";
+  
+  /**
+   * Undocumented flag which allows an administrator to use manual failover
+   * state transitions even when auto-failover is enabled. This is an unsafe
+   * operation, which is why it is not documented in the usage below.
+   */
+  private static final String FORCEMANUAL = "forcemanual";
   private static final Log LOG = LogFactory.getLog(HAAdmin.class);
 
   private int rpcTimeoutForChecks = -1;
@@ -79,6 +89,7 @@ public abstract class HAAdmin extends Configured implements Tool {
   /** Output stream for errors, for use in tests */
   protected PrintStream errOut = System.err;
   PrintStream out = System.out;
+  private RequestSource requestSource = RequestSource.REQUEST_BY_USER;
 
   protected abstract HAServiceTarget resolveTarget(String string);
 
@@ -106,63 +117,83 @@ public abstract class HAAdmin extends Configured implements Tool {
     errOut.println("Usage: HAAdmin [" + cmd + " " + usage.args + "]");
   }
 
-  private int transitionToActive(final String[] argv)
+  private int transitionToActive(final CommandLine cmd)
       throws IOException, ServiceFailedException {
-    if (argv.length != 2) {
+    String[] argv = cmd.getArgs();
+    if (argv.length != 1) {
       errOut.println("transitionToActive: incorrect number of arguments");
       printUsage(errOut, "-transitionToActive");
       return -1;
     }
-    
-    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy(
+    HAServiceTarget target = resolveTarget(argv[0]);
+    if (!checkManualStateManagementOK(target)) {
+      return -1;
+    }
+    HAServiceProtocol proto = target.getProxy(
         getConf(), 0);
-    HAServiceProtocolHelper.transitionToActive(proto);
+    HAServiceProtocolHelper.transitionToActive(proto, createReqInfo());
     return 0;
   }
 
-  private int transitionToStandby(final String[] argv)
+  private int transitionToStandby(final CommandLine cmd)
       throws IOException, ServiceFailedException {
-    if (argv.length != 2) {
+    String[] argv = cmd.getArgs();
+    if (argv.length != 1) {
       errOut.println("transitionToStandby: incorrect number of arguments");
       printUsage(errOut, "-transitionToStandby");
       return -1;
     }
     
-    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy(
-        getConf(), 0);
-    HAServiceProtocolHelper.transitionToStandby(proto);
-    return 0;
-  }
-
-  private int failover(final String[] argv)
-      throws IOException, ServiceFailedException {
-    boolean forceFence = false;
-    boolean forceActive = false;
-
-    Options failoverOpts = new Options();
-    // "-failover" isn't really an option but we need to add
-    // it to appease CommandLineParser
-    failoverOpts.addOption("failover", false, "failover");
-    failoverOpts.addOption(FORCEFENCE, false, "force fencing");
-    failoverOpts.addOption(FORCEACTIVE, false, "force failover");
-
-    CommandLineParser parser = new GnuParser();
-    CommandLine cmd;
-
-    try {
-      cmd = parser.parse(failoverOpts, argv);
-      forceFence = cmd.hasOption(FORCEFENCE);
-      forceActive = cmd.hasOption(FORCEACTIVE);
-    } catch (ParseException pe) {
-      errOut.println("failover: incorrect arguments");
-      printUsage(errOut, "-failover");
+    HAServiceTarget target = resolveTarget(argv[0]);
+    if (!checkManualStateManagementOK(target)) {
       return -1;
     }
-    
+    HAServiceProtocol proto = target.getProxy(
+        getConf(), 0);
+    HAServiceProtocolHelper.transitionToStandby(proto, createReqInfo());
+    return 0;
+  }
+  /**
+   * Ensure that we are allowed to manually manage the HA state of the target
+   * service. If automatic failover is configured, then the automatic
+   * failover controllers should be doing state management, and it is generally
+   * an error to use the HAAdmin command line to do so.
+   * 
+   * @param target the target to check
+   * @return true if manual state management is allowed
+   */
+  private boolean checkManualStateManagementOK(HAServiceTarget target) {
+    if (target.isAutoFailoverEnabled()) {
+      if (requestSource != RequestSource.REQUEST_BY_USER_FORCED) {
+        errOut.println(
+            "Automatic failover is enabled for " + target + "\n" +
+            "Refusing to manually manage HA state, since it may cause\n" +
+            "a split-brain scenario or other incorrect state.\n" +
+            "If you are very sure you know what you are doing, please \n" +
+            "specify the " + FORCEMANUAL + " flag.");
+        return false;
+      } else {
+        LOG.warn("Proceeding with manual HA state management even though\n" +
+            "automatic failover is enabled for " + target);
+        return true;
+      }
+    }
+    return true;
+  }
+
+  private StateChangeRequestInfo createReqInfo() {
+    return new StateChangeRequestInfo(requestSource);
+  }
+
+  private int failover(CommandLine cmd)
+      throws IOException, ServiceFailedException {
+    boolean forceFence = cmd.hasOption(FORCEFENCE);
+    boolean forceActive = cmd.hasOption(FORCEACTIVE);
+
     int numOpts = cmd.getOptions() == null ? 0 : cmd.getOptions().length;
     final String[] args = cmd.getArgs();
 
-    if (numOpts > 2 || args.length != 2) {
+    if (numOpts > 3 || args.length != 2) {
       errOut.println("failover: incorrect arguments");
       printUsage(errOut, "-failover");
       return -1;
@@ -171,7 +202,30 @@ public abstract class HAAdmin extends Configured implements Tool {
     HAServiceTarget fromNode = resolveTarget(args[0]);
     HAServiceTarget toNode = resolveTarget(args[1]);
     
-    FailoverController fc = new FailoverController(getConf());
+    // Check that auto-failover is consistently configured for both nodes.
+    Preconditions.checkState(
+        fromNode.isAutoFailoverEnabled() ==
+          toNode.isAutoFailoverEnabled(),
+          "Inconsistent auto-failover configs between %s and %s!",
+          fromNode, toNode);
+    
+    if (fromNode.isAutoFailoverEnabled()) {
+      if (forceFence || forceActive) {
+        // -forceActive doesn't make sense with auto-HA, since, if the node
+        // is not healthy, then its ZKFC will immediately quit the election
+        // again the next time a health check runs.
+        //
+        // -forceFence doesn't seem to have any real use cases with auto-HA
+        // so it isn't implemented.
+        errOut.println(FORCEFENCE + " and " + FORCEACTIVE + " flags not " +
+            "supported with auto-failover enabled.");
+        return -1;
+      }
+      return gracefulFailoverThroughZKFCs(toNode);
+    }
+    
+    FailoverController fc = new FailoverController(getConf(),
+        requestSource);
     
     try {
       fc.failover(fromNode, toNode, forceFence, forceActive); 
@@ -182,19 +236,44 @@ public abstract class HAAdmin extends Configured implements Tool {
     }
     return 0;
   }
+  
 
-  private int checkHealth(final String[] argv)
+  /**
+   * Initiate a graceful failover by talking to the target node's ZKFC.
+   * This sends an RPC to the ZKFC, which coordinates the failover.
+   * 
+   * @param toNode the node to fail to
+   * @return status code (0 for success)
+   * @throws IOException if failover does not succeed
+   */
+  private int gracefulFailoverThroughZKFCs(HAServiceTarget toNode)
+      throws IOException {
+
+    int timeout = FailoverController.getRpcTimeoutToNewActive(getConf());
+    ZKFCProtocol proxy = toNode.getZKFCProxy(getConf(), timeout);
+    try {
+      proxy.gracefulFailover();
+      out.println("Failover to " + toNode + " successful");
+    } catch (ServiceFailedException sfe) {
+      errOut.println("Failover failed: " + sfe.getLocalizedMessage());
+      return -1;
+    }
+
+    return 0;
+  }
+
+  private int checkHealth(final CommandLine cmd)
       throws IOException, ServiceFailedException {
-    if (argv.length != 2) {
+    String[] argv = cmd.getArgs();
+    if (argv.length != 1) {
       errOut.println("checkHealth: incorrect number of arguments");
       printUsage(errOut, "-checkHealth");
       return -1;
     }
-    
-    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy(
+    HAServiceProtocol proto = resolveTarget(argv[0]).getProxy(
         getConf(), rpcTimeoutForChecks);
     try {
-      HAServiceProtocolHelper.monitorHealth(proto);
+      HAServiceProtocolHelper.monitorHealth(proto, createReqInfo());
     } catch (HealthCheckFailedException e) {
       errOut.println("Health check failed: " + e.getLocalizedMessage());
       return -1;
@@ -202,15 +281,16 @@ public abstract class HAAdmin extends Configured implements Tool {
     return 0;
   }
 
-  private int getServiceState(final String[] argv)
+  private int getServiceState(final CommandLine cmd)
       throws IOException, ServiceFailedException {
-    if (argv.length != 2) {
+    String[] argv = cmd.getArgs();
+    if (argv.length != 1) {
       errOut.println("getServiceState: incorrect number of arguments");
       printUsage(errOut, "-getServiceState");
       return -1;
     }
 
-    HAServiceProtocol proto = resolveTarget(argv[1]).getProxy(
+    HAServiceProtocol proto = resolveTarget(argv[0]).getProxy(
         getConf(), rpcTimeoutForChecks);
     out.println(proto.getServiceStatus().getState());
     return 0;
@@ -263,24 +343,99 @@ public abstract class HAAdmin extends Configured implements Tool {
       printUsage(errOut);
       return -1;
     }
-
-    if ("-transitionToActive".equals(cmd)) {
-      return transitionToActive(argv);
-    } else if ("-transitionToStandby".equals(cmd)) {
-      return transitionToStandby(argv);
-    } else if ("-failover".equals(cmd)) {
-      return failover(argv);
-    } else if ("-getServiceState".equals(cmd)) {
-      return getServiceState(argv);
-    } else if ("-checkHealth".equals(cmd)) {
-      return checkHealth(argv);
-    } else if ("-help".equals(cmd)) {
-      return help(argv);
-    } else {
+    
+    if (!USAGE.containsKey(cmd)) {
       errOut.println(cmd.substring(1) + ": Unknown command");
       printUsage(errOut);
       return -1;
+    }
+    
+    Options opts = new Options();
+
+    // Add command-specific options
+    if ("-failover".equals(cmd)) {
+      addFailoverCliOpts(opts);
+    }
+    // Mutative commands take FORCEMANUAL option
+    if ("-transitionToActive".equals(cmd) ||
+        "-transitionToStandby".equals(cmd) ||
+        "-failover".equals(cmd)) {
+      opts.addOption(FORCEMANUAL, false,
+          "force manual control even if auto-failover is enabled");
+    }
+         
+    CommandLine cmdLine = parseOpts(cmd, opts, argv);
+    if (cmdLine == null) {
+      // error already printed
+      return -1;
+    }
+    
+    if (cmdLine.hasOption(FORCEMANUAL)) {
+      if (!confirmForceManual()) {
+        LOG.fatal("Aborted");
+        return -1;
+      }
+      // Instruct the NNs to honor this request even if they're
+      // configured for manual failover.
+      requestSource = RequestSource.REQUEST_BY_USER_FORCED;
+    }
+
+    if ("-transitionToActive".equals(cmd)) {
+      return transitionToActive(cmdLine);
+    } else if ("-transitionToStandby".equals(cmd)) {
+      return transitionToStandby(cmdLine);
+    } else if ("-failover".equals(cmd)) {
+      return failover(cmdLine);
+    } else if ("-getServiceState".equals(cmd)) {
+      return getServiceState(cmdLine);
+    } else if ("-checkHealth".equals(cmd)) {
+      return checkHealth(cmdLine);
+    } else if ("-help".equals(cmd)) {
+      return help(argv);
+    } else {
+      // we already checked command validity above, so getting here
+      // would be a coding error
+      throw new AssertionError("Should not get here, command: " + cmd);
     } 
+  }
+  
+  private boolean confirmForceManual() throws IOException {
+     return ToolRunner.confirmPrompt(
+        "You have specified the " + FORCEMANUAL + " flag. This flag is " +
+        "dangerous, as it can induce a split-brain scenario that WILL " +
+        "CORRUPT your HDFS namespace, possibly irrecoverably.\n" +
+        "\n" +
+        "It is recommended not to use this flag, but instead to shut down the " +
+        "cluster and disable automatic failover if you prefer to manually " +
+        "manage your HA state.\n" +
+        "\n" +
+        "You may abort safely by answering 'n' or hitting ^C now.\n" +
+        "\n" +
+        "Are you sure you want to continue?");
+  }
+
+  /**
+   * Add CLI options which are specific to the failover command and no
+   * others.
+   */
+  private void addFailoverCliOpts(Options failoverOpts) {
+    failoverOpts.addOption(FORCEFENCE, false, "force fencing");
+    failoverOpts.addOption(FORCEACTIVE, false, "force failover");
+    // Don't add FORCEMANUAL, since that's added separately for all commands
+    // that change state.
+  }
+  
+  private CommandLine parseOpts(String cmdName, Options opts, String[] argv) {
+    try {
+      // Strip off the first arg, since that's just the command name
+      argv = Arrays.copyOfRange(argv, 1, argv.length); 
+      return new GnuParser().parse(opts, argv);
+    } catch (ParseException pe) {
+      errOut.println(cmdName.substring(1) +
+          ": incorrect arguments");
+      printUsage(errOut, cmdName);
+      return null;
+    }
   }
   
   private int help(String[] argv) {

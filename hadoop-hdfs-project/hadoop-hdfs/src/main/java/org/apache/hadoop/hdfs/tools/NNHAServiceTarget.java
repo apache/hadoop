@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.BadFencingConfigurationException;
 import org.apache.hadoop.ha.HAServiceTarget;
 import org.apache.hadoop.ha.NodeFencer;
@@ -44,12 +45,14 @@ public class NNHAServiceTarget extends HAServiceTarget {
   private static final String NAMENODE_ID_KEY = "namenodeid";
   
   private final InetSocketAddress addr;
+  private InetSocketAddress zkfcAddr;
   private NodeFencer fencer;
   private BadFencingConfigurationException fenceConfigError;
   private final String nnId;
   private final String nsId;
-
-  public NNHAServiceTarget(HdfsConfiguration conf,
+  private final boolean autoFailoverEnabled;
+  
+  public NNHAServiceTarget(Configuration conf,
       String nsId, String nnId) {
     Preconditions.checkNotNull(nnId);
     
@@ -75,12 +78,24 @@ public class NNHAServiceTarget extends HAServiceTarget {
     }
     this.addr = NetUtils.createSocketAddr(serviceAddr,
         NameNode.DEFAULT_PORT);
+
+    this.autoFailoverEnabled = targetConf.getBoolean(
+        DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY,
+        DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT);
+    if (autoFailoverEnabled) {
+      int port = DFSZKFailoverController.getZkfcPort(targetConf);
+      if (port != 0) {
+        setZkfcPort(port);
+      }
+    }
+    
     try {
       this.fencer = NodeFencer.create(targetConf,
           DFSConfigKeys.DFS_HA_FENCE_METHODS_KEY);
     } catch (BadFencingConfigurationException e) {
       this.fenceConfigError = e;
     }
+    
     this.nnId = nnId;
     this.nsId = nsId;
   }
@@ -94,9 +109,28 @@ public class NNHAServiceTarget extends HAServiceTarget {
   }
 
   @Override
+  public InetSocketAddress getZKFCAddress() {
+    Preconditions.checkState(autoFailoverEnabled,
+        "ZKFC address not relevant when auto failover is off");
+    assert zkfcAddr != null;
+    
+    return zkfcAddr;
+  }
+  
+  void setZkfcPort(int port) {
+    assert autoFailoverEnabled;
+          
+    this.zkfcAddr = new InetSocketAddress(addr.getAddress(), port);
+  }
+
+  @Override
   public void checkFencingConfigured() throws BadFencingConfigurationException {
     if (fenceConfigError != null) {
       throw fenceConfigError;
+    }
+    if (fencer == null) {
+      throw new BadFencingConfigurationException(
+          "No fencer configured for " + this);
     }
   }
   
@@ -124,5 +158,10 @@ public class NNHAServiceTarget extends HAServiceTarget {
     
     ret.put(NAMESERVICE_ID_KEY, getNameServiceId());
     ret.put(NAMENODE_ID_KEY, getNameNodeId());
+  }
+
+  @Override
+  public boolean isAutoFailoverEnabled() {
+    return autoFailoverEnabled;
   }
 }

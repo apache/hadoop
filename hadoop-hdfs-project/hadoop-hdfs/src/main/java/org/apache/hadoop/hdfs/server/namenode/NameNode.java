@@ -36,6 +36,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
@@ -145,17 +147,25 @@ public class NameNode {
   }
   
   /**
-   * HDFS federation configuration can have two types of parameters:
+   * HDFS configuration can have three types of parameters:
    * <ol>
-   * <li>Parameter that is common for all the name services in the cluster.</li>
-   * <li>Parameters that are specific to a name service. This keys are suffixed
+   * <li>Parameters that are common for all the name services in the cluster.</li>
+   * <li>Parameters that are specific to a name service. These keys are suffixed
    * with nameserviceId in the configuration. For example,
    * "dfs.namenode.rpc-address.nameservice1".</li>
+   * <li>Parameters that are specific to a single name node. These keys are suffixed
+   * with nameserviceId and namenodeId in the configuration. for example,
+   * "dfs.namenode.rpc-address.nameservice1.namenode1"</li>
    * </ol>
    * 
-   * Following are nameservice specific keys.
+   * In the latter cases, operators may specify the configuration without
+   * any suffix, with a nameservice suffix, or with a nameservice and namenode
+   * suffix. The more specific suffix will take precedence.
+   * 
+   * These keys are specific to a given namenode, and thus may be configured
+   * globally, for a nameservice, or for a specific namenode within a nameservice.
    */
-  public static final String[] NAMESERVICE_SPECIFIC_KEYS = {
+  public static final String[] NAMENODE_SPECIFIC_KEYS = {
     DFS_NAMENODE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_NAME_DIR_KEY,
     DFS_NAMENODE_EDITS_DIR_KEY,
@@ -170,8 +180,19 @@ public class NameNode {
     DFS_NAMENODE_BACKUP_ADDRESS_KEY,
     DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_USER_NAME_KEY,
     DFS_HA_FENCE_METHODS_KEY,
-    DFS_NAMENODE_USER_NAME_KEY
+    DFS_HA_ZKFC_PORT_KEY,
+    DFS_HA_FENCE_METHODS_KEY
+  };
+  
+  /**
+   * @see #NAMENODE_SPECIFIC_KEYS
+   * These keys are specific to a nameservice, but may not be overridden
+   * for a specific namenode.
+   */
+  public static final String[] NAMESERVICE_SPECIFIC_KEYS = {
+    DFS_HA_AUTO_FAILOVER_ENABLED_KEY
   };
   
   public long getProtocolVersion(String protocol, 
@@ -1145,8 +1166,11 @@ public class NameNode {
       }
       
       DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,
+          NAMENODE_SPECIFIC_KEYS);
+      DFSUtil.setGenericConf(conf, nameserviceId, null,
           NAMESERVICE_SPECIFIC_KEYS);
     }
+    
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
@@ -1361,5 +1385,44 @@ public class NameNode {
   
   public boolean isStandbyState() {
     return (state.equals(STANDBY_STATE));
+  }
+
+  /**
+   * Check that a request to change this node's HA state is valid.
+   * In particular, verifies that, if auto failover is enabled, non-forced
+   * requests from the HAAdmin CLI are rejected, and vice versa.
+   *
+   * @param req the request to check
+   * @throws AccessControlException if the request is disallowed
+   */
+  void checkHaStateChange(StateChangeRequestInfo req)
+      throws AccessControlException {
+    boolean autoHaEnabled = conf.getBoolean(DFS_HA_AUTO_FAILOVER_ENABLED_KEY,
+        DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT);
+    switch (req.getSource()) {
+    case REQUEST_BY_USER:
+      if (autoHaEnabled) {
+        throw new AccessControlException(
+            "Manual HA control for this NameNode is disallowed, because " +
+            "automatic HA is enabled.");
+      }
+      break;
+    case REQUEST_BY_USER_FORCED:
+      if (autoHaEnabled) {
+        LOG.warn("Allowing manual HA control from " +
+            Server.getRemoteAddress() +
+            " even though automatic HA is enabled, because the user " +
+            "specified the force flag");
+      }
+      break;
+    case REQUEST_BY_ZKFC:
+      if (!autoHaEnabled) {
+        throw new AccessControlException(
+            "Request from ZK failover controller at " +
+            Server.getRemoteAddress() + " denied since automatic HA " +
+            "is not enabled"); 
+      }
+      break;
+    }
   }
 }

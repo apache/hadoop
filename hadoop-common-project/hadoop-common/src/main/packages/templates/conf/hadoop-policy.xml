@@ -223,6 +223,12 @@
     <description>ACL for HAService protocol used by HAAdmin to manage the
       active and stand-by states of namenode.</description>
   </property>
+  <property>
+    <name>security.zkfc.protocol.acl</name>
+    <value>*</value>
+    <description>ACL for access to the ZK Failover Controller
+    </description>
+  </property>
 
    <property>
       <name>security.mrhs.client.protocol.acl</name>

@@ -274,7 +274,7 @@ public class TestDFSUtil {
     conf.set(DFS_NAMESERVICE_ID, nsId);
 
     // Set the nameservice specific keys with nameserviceId in the config key
-    for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
+    for (String key : NameNode.NAMENODE_SPECIFIC_KEYS) {
       // Note: value is same as the key
       conf.set(DFSUtil.addKeySuffixes(key, nsId), key);
     }
@@ -284,7 +284,7 @@ public class TestDFSUtil {
 
     // Retrieve the keys without nameserviceId and Ensure generic keys are set
     // to the correct value
-    for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
+    for (String key : NameNode.NAMENODE_SPECIFIC_KEYS) {
       assertEquals(key, conf.get(key));
     }
   }
@@ -304,7 +304,7 @@ public class TestDFSUtil {
     conf.set(DFS_HA_NAMENODES_KEY_PREFIX + "." + nsId, nnId);
 
     // Set the nameservice specific keys with nameserviceId in the config key
-    for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
+    for (String key : NameNode.NAMENODE_SPECIFIC_KEYS) {
       // Note: value is same as the key
       conf.set(DFSUtil.addKeySuffixes(key, nsId, nnId), key);
     }
@@ -314,7 +314,7 @@ public class TestDFSUtil {
 
     // Retrieve the keys without nameserviceId and Ensure generic keys are set
     // to the correct value
-    for (String key : NameNode.NAMESERVICE_SPECIFIC_KEYS) {
+    for (String key : NameNode.NAMENODE_SPECIFIC_KEYS) {
       assertEquals(key, conf.get(key));
     }
   }

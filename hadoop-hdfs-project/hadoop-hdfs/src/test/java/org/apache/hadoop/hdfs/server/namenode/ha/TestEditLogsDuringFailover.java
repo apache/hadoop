@@ -71,7 +71,7 @@ public class TestEditLogsDuringFailover {
       // Set the first NN to active, make sure it creates edits
       // in its own dirs and the shared dir. The standby
       // should still have no edits!
-      cluster.getNameNode(0).getRpcServer().transitionToActive();
+      cluster.transitionToActive(0);
       
       assertEditFiles(cluster.getNameDirs(0),
           NNStorage.getInProgressEditsFileName(1));
@@ -107,7 +107,7 @@ public class TestEditLogsDuringFailover {
       // If we restart NN0, it'll come back as standby, and we can
       // transition NN1 to active and make sure it reads edits correctly at this point.
       cluster.restartNameNode(0);
-      cluster.getNameNode(1).getRpcServer().transitionToActive();
+      cluster.transitionToActive(1);
 
       // NN1 should have both the edits that came before its restart, and the edits that
       // came after its restart.
@@ -134,7 +134,7 @@ public class TestEditLogsDuringFailover {
           NNStorage.getInProgressEditsFileName(1));
 
       // Transition one of the NNs to active
-      cluster.getNameNode(0).getRpcServer().transitionToActive();
+      cluster.transitionToActive(0);
       
       // In the transition to active, it should have read the log -- and
       // hence see one of the dirs we made in the fake log.

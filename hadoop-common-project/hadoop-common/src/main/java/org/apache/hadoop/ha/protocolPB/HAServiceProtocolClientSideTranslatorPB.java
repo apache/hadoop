@@ -30,13 +30,14 @@ import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.GetServiceStatusRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.GetServiceStatusResponseProto;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAStateChangeRequestInfoProto;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HARequestSource;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.MonitorHealthRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToActiveRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.TransitionToStandbyRequestProto;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
-import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -57,10 +58,6 @@ public class HAServiceProtocolClientSideTranslatorPB implements
   private final static RpcController NULL_CONTROLLER = null;
   private final static MonitorHealthRequestProto MONITOR_HEALTH_REQ = 
       MonitorHealthRequestProto.newBuilder().build();
-  private final static TransitionToActiveRequestProto TRANSITION_TO_ACTIVE_REQ = 
-      TransitionToActiveRequestProto.newBuilder().build();
-  private final static TransitionToStandbyRequestProto TRANSITION_TO_STANDBY_REQ = 
-      TransitionToStandbyRequestProto.newBuilder().build();
   private final static GetServiceStatusRequestProto GET_SERVICE_STATUS_REQ = 
       GetServiceStatusRequestProto.newBuilder().build();
   
@@ -94,18 +91,25 @@ public class HAServiceProtocolClientSideTranslatorPB implements
   }
 
   @Override
-  public void transitionToActive() throws IOException {
+  public void transitionToActive(StateChangeRequestInfo reqInfo) throws IOException {
     try {
-      rpcProxy.transitionToActive(NULL_CONTROLLER, TRANSITION_TO_ACTIVE_REQ);
+      TransitionToActiveRequestProto req =
+          TransitionToActiveRequestProto.newBuilder()
+            .setReqInfo(convert(reqInfo)).build();
+
+      rpcProxy.transitionToActive(NULL_CONTROLLER, req);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   @Override
-  public void transitionToStandby() throws IOException {
+  public void transitionToStandby(StateChangeRequestInfo reqInfo) throws IOException {
     try {
-      rpcProxy.transitionToStandby(NULL_CONTROLLER, TRANSITION_TO_STANDBY_REQ);
+      TransitionToStandbyRequestProto req =
+        TransitionToStandbyRequestProto.newBuilder()
+          .setReqInfo(convert(reqInfo)).build();
+      rpcProxy.transitionToStandby(NULL_CONTROLLER, req);
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -143,6 +147,27 @@ public class HAServiceProtocolClientSideTranslatorPB implements
     }
   }
   
+  private HAStateChangeRequestInfoProto convert(StateChangeRequestInfo reqInfo) {
+    HARequestSource src;
+    switch (reqInfo.getSource()) {
+    case REQUEST_BY_USER:
+      src = HARequestSource.REQUEST_BY_USER;
+      break;
+    case REQUEST_BY_USER_FORCED:
+      src = HARequestSource.REQUEST_BY_USER_FORCED;
+      break;
+    case REQUEST_BY_ZKFC:
+      src = HARequestSource.REQUEST_BY_ZKFC;
+      break;
+    default:
+      throw new IllegalArgumentException("Bad source: " + reqInfo.getSource());
+    }
+    return HAStateChangeRequestInfoProto.newBuilder()
+        .setReqSource(src)
+        .build();
+  }
+
+
   @Override
   public void close() {
     RPC.stopProxy(rpcProxy);

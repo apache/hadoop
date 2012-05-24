@@ -27,11 +27,12 @@ import static org.mockito.Mockito.verify;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysSucceedFencer;
 import org.apache.hadoop.ha.TestNodeFencer.AlwaysFailFencer;
 import static org.apache.hadoop.ha.TestNodeFencer.setupFencer;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.test.MockitoUtil;
 
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -118,7 +119,8 @@ public class TestFailoverController {
   public void testFailoverToUnreadyService() throws Exception {
     DummyHAService svc1 = new DummyHAService(HAServiceState.ACTIVE, svc1Addr);
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
-    Mockito.doReturn(STATE_NOT_READY).when(svc2.proxy).getServiceStatus();
+    Mockito.doReturn(STATE_NOT_READY).when(svc2.proxy)
+        .getServiceStatus();
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
@@ -162,7 +164,7 @@ public class TestFailoverController {
   public void testFailoverFromFaultyServiceSucceeds() throws Exception {
     DummyHAService svc1 = new DummyHAService(HAServiceState.ACTIVE, svc1Addr);
     Mockito.doThrow(new ServiceFailedException("Failed!"))
-        .when(svc1.proxy).transitionToStandby();
+        .when(svc1.proxy).transitionToStandby(anyReqInfo());
 
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
@@ -185,7 +187,7 @@ public class TestFailoverController {
   public void testFailoverFromFaultyServiceFencingFailure() throws Exception {
     DummyHAService svc1 = new DummyHAService(HAServiceState.ACTIVE, svc1Addr);
     Mockito.doThrow(new ServiceFailedException("Failed!"))
-        .when(svc1.proxy).transitionToStandby();
+        .when(svc1.proxy).transitionToStandby(anyReqInfo());
 
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     svc1.fencer = svc2.fencer = setupFencer(AlwaysFailFencer.class.getName());
@@ -284,7 +286,7 @@ public class TestFailoverController {
     DummyHAService svc1 = spy(new DummyHAService(HAServiceState.ACTIVE, svc1Addr));
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     Mockito.doThrow(new ServiceFailedException("Failed!"))
-        .when(svc2.proxy).transitionToActive();
+        .when(svc2.proxy).transitionToActive(anyReqInfo());
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
@@ -295,8 +297,8 @@ public class TestFailoverController {
     }
 
     // svc1 went standby then back to active
-    verify(svc1.proxy).transitionToStandby();
-    verify(svc1.proxy).transitionToActive();
+    verify(svc1.proxy).transitionToStandby(anyReqInfo());
+    verify(svc1.proxy).transitionToActive(anyReqInfo());
     assertEquals(HAServiceState.ACTIVE, svc1.state);
     assertEquals(HAServiceState.STANDBY, svc2.state);
   }
@@ -306,7 +308,7 @@ public class TestFailoverController {
     DummyHAService svc1 = new DummyHAService(HAServiceState.ACTIVE, svc1Addr);
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     Mockito.doThrow(new ServiceFailedException("Failed!"))
-        .when(svc2.proxy).transitionToActive();
+        .when(svc2.proxy).transitionToActive(anyReqInfo());
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
     try {
@@ -327,7 +329,7 @@ public class TestFailoverController {
     DummyHAService svc1 = new DummyHAService(HAServiceState.ACTIVE, svc1Addr);
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     Mockito.doThrow(new ServiceFailedException("Failed!"))
-        .when(svc2.proxy).transitionToActive();
+        .when(svc2.proxy).transitionToActive(anyReqInfo());
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
     AlwaysSucceedFencer.fenceCalled = 0;
 
@@ -346,12 +348,16 @@ public class TestFailoverController {
     assertSame(svc2, AlwaysSucceedFencer.fencedSvc);
   }
 
+  private StateChangeRequestInfo anyReqInfo() {
+    return Mockito.<StateChangeRequestInfo>any();
+  }
+
   @Test
   public void testFailureToFenceOnFailbackFailsTheFailback() throws Exception {
     DummyHAService svc1 = new DummyHAService(HAServiceState.ACTIVE, svc1Addr);
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     Mockito.doThrow(new IOException("Failed!"))
-        .when(svc2.proxy).transitionToActive();
+        .when(svc2.proxy).transitionToActive(anyReqInfo());
     svc1.fencer = svc2.fencer = setupFencer(AlwaysFailFencer.class.getName());
     AlwaysFailFencer.fenceCalled = 0;
 
@@ -374,10 +380,10 @@ public class TestFailoverController {
   public void testFailbackToFaultyServiceFails() throws Exception {
     DummyHAService svc1 = new DummyHAService(HAServiceState.ACTIVE, svc1Addr);
     Mockito.doThrow(new ServiceFailedException("Failed!"))
-        .when(svc1.proxy).transitionToActive();
+        .when(svc1.proxy).transitionToActive(anyReqInfo());
     DummyHAService svc2 = new DummyHAService(HAServiceState.STANDBY, svc2Addr);
     Mockito.doThrow(new ServiceFailedException("Failed!"))
-        .when(svc2.proxy).transitionToActive();
+        .when(svc2.proxy).transitionToActive(anyReqInfo());
 
     svc1.fencer = svc2.fencer = setupFencer(AlwaysSucceedFencer.class.getName());
 
@@ -420,7 +426,8 @@ public class TestFailoverController {
   
   private void doFailover(HAServiceTarget tgt1, HAServiceTarget tgt2,
       boolean forceFence, boolean forceActive) throws FailoverFailedException {
-    FailoverController fc = new FailoverController(conf);
+    FailoverController fc = new FailoverController(conf, 
+        RequestSource.REQUEST_BY_USER);
     fc.failover(tgt1, tgt2, forceFence, forceActive);
   }
 
