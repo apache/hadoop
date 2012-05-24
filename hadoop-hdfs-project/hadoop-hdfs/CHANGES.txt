@@ -57,6 +57,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3454. Balancer unconditionally logs InterruptedException at
     INFO level on shutdown if security is enabled. (eli)
 
+    HDFS-1013. Miscellaneous improvements to HTML markup for web UIs
+    (Eugene Koontz via todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
