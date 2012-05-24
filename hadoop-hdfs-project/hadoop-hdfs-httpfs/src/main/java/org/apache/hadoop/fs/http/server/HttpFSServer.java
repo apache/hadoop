@@ -49,6 +49,7 @@ import org.apache.hadoop.lib.service.ProxyUser;
 import org.apache.hadoop.lib.servlet.FileSystemReleaseFilter;
 import org.apache.hadoop.lib.servlet.HostnameFilter;
 import org.apache.hadoop.lib.wsrs.InputStreamEntity;
+import org.apache.hadoop.security.authentication.server.AuthenticationToken;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,9 +146,15 @@ public class HttpFSServer {
     String effectiveUser = user.getName();
     if (doAs != null && !doAs.equals(user.getName())) {
       ProxyUser proxyUser = HttpFSServerWebApp.get().get(ProxyUser.class);
-      proxyUser.validate(user.getName(), HostnameFilter.get(), doAs);
+      String proxyUserName;
+      if (user instanceof AuthenticationToken) {
+        proxyUserName = ((AuthenticationToken)user).getUserName();
+      } else {
+        proxyUserName = user.getName();
+      }
+      proxyUser.validate(proxyUserName, HostnameFilter.get(), doAs);
       effectiveUser = doAs;
-      AUDIT_LOG.info("Proxy user [{}] DoAs user [{}]", user.getName(), doAs);
+      AUDIT_LOG.info("Proxy user [{}] DoAs user [{}]", proxyUserName, doAs);
     }
     return effectiveUser;
   }
