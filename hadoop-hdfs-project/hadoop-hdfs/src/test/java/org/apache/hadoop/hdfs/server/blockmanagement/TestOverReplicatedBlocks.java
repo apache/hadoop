@@ -17,12 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.server.common.Util.now;
 import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,11 +35,14 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.junit.Test;
 
 public class TestOverReplicatedBlocks {
@@ -116,6 +122,77 @@ public class TestOverReplicatedBlocks {
       cluster.shutdown();
     }
   }
+
+  static final long SMALL_BLOCK_SIZE =
+    DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_DEFAULT;
+  static final long SMALL_FILE_LENGTH = SMALL_BLOCK_SIZE * 4;
+
+  /**
+   * The test verifies that replica for deletion is chosen on a node,
+   * with the oldest heartbeat, when this heartbeat is larger than the
+   * tolerable heartbeat interval.
+   * It creates a file with several blocks and replication 4.
+   * The last DN is configured to send heartbeats rarely.
+   * 
+   * Test waits until the tolerable heartbeat interval expires, and reduces
+   * replication of the file. All replica deletions should be scheduled for the
+   * last node. No replicas will actually be deleted, since last DN doesn't
+   * send heartbeats. 
+   */
+  @Test
+  public void testChooseReplicaToDelete() throws IOException {
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, SMALL_BLOCK_SIZE);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      fs = cluster.getFileSystem();
+      final FSNamesystem namesystem = cluster.getNamesystem();
+
+      conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 300);
+      cluster.startDataNodes(conf, 1, true, null, null, null);
+      DataNode lastDN = cluster.getDataNodes().get(3);
+      DatanodeRegistration dnReg = DataNodeTestUtils.getDNRegistrationForBP(
+          lastDN, namesystem.getBlockPoolId());
+      String lastDNid = dnReg.getStorageID();
+
+      final Path fileName = new Path("/foo2");
+      DFSTestUtil.createFile(fs, fileName, SMALL_FILE_LENGTH, (short)4, 0L);
+      DFSTestUtil.waitReplication(fs, fileName, (short)4);
+
+      // Wait for tolerable number of heartbeats plus one
+      DatanodeDescriptor nodeInfo = null;
+      long lastHeartbeat = 0;
+      long waitTime = DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT * 1000 *
+        (DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_DEFAULT + 1);
+      do {
+        nodeInfo = 
+          namesystem.getBlockManager().getDatanodeManager().getDatanode(dnReg);
+        lastHeartbeat = nodeInfo.getLastUpdate();
+      } while(now() - lastHeartbeat < waitTime);
+      fs.setReplication(fileName, (short)3);
+
+      BlockLocation locs[] = fs.getFileBlockLocations(
+          fs.getFileStatus(fileName), 0, Long.MAX_VALUE);
+
+      // All replicas for deletion should be scheduled on lastDN.
+      // And should not actually be deleted, because lastDN does not heartbeat.
+      namesystem.readLock();
+      Collection<Block> dnBlocks = 
+        namesystem.getBlockManager().excessReplicateMap.get(lastDNid);
+      assertEquals("Replicas on node " + lastDNid + " should have been deleted",
+          SMALL_FILE_LENGTH / SMALL_BLOCK_SIZE, dnBlocks.size());
+      namesystem.readUnlock();
+      for(BlockLocation location : locs)
+        assertEquals("Block should still have 4 replicas",
+            4, location.getNames().length);
+    } finally {
+      if(fs != null) fs.close();
+      if(cluster != null) cluster.shutdown();
+    }
+  }
+
   /**
    * Test over replicated block should get invalidated when decreasing the
    * replication for a partial block.
