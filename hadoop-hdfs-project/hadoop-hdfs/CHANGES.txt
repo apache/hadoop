@@ -116,6 +116,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3058. HA: Bring BookKeeperJournalManager up to date with HA changes.
     (Ivan Kelly via umamahesh)
 
+    HDFS-3368. Missing blocks due to bad DataNodes coming up and down. (shv)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
