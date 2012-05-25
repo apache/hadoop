@@ -153,6 +153,11 @@ Trunk (unreleased changes)
     HADOOP-8413. test-patch.sh gives out the wrong links for
     newPatchFindbugsWarnings (Colin Patrick McCabe via bobby)
 
+    HADOOP-6871. When the value of a configuration key is set to its
+    unresolved form, it causes the IllegalStateException in
+    Configuration.get() stating that substitution depth is too large.
+    (Arvind Prabhakar via harsh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

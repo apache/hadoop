@@ -999,6 +999,15 @@ public class TestConfiguration extends TestCase {
         "Not returning expected number of classes. Number of returned classes ="
             + classes.length, 0, classes.length);
   }
+
+  public void testInvalidSubstitutation() {
+    String key = "test.random.key";
+    String keyExpression = "${" + key + "}";
+    Configuration configuration = new Configuration();
+    configuration.set(key, keyExpression);
+    String value = configuration.get(key);
+    assertTrue("Unexpected value " + value, value.equals(keyExpression));
+  }
   
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{

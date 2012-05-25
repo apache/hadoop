@@ -617,7 +617,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     Matcher match = varPat.matcher("");
     String eval = expr;
+    Set<String> evalSet = new HashSet<String>();
     for(int s=0; s<MAX_SUBST; s++) {
+      if (evalSet.contains(eval)) {
+        // Cyclic resolution pattern detected. Return current expression.
+        return eval;
+      }
+      evalSet.add(eval);
       match.reset(eval);
       if (!match.find()) {
         return eval;
