@@ -210,6 +210,10 @@ public class FSEditLog  {
         DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_DEFAULT);
 
     journalSet = new JournalSet(minimumRedundantJournals);
+    // set runtime so we can test starting with a faulty or unavailable
+    // shared directory
+    this.journalSet.setRuntimeForTesting(runtime);
+
     for (URI u : dirs) {
       boolean required = FSNamesystem.getRequiredNamespaceEditsDirs(conf)
           .contains(u);
@@ -821,7 +825,7 @@ public class FSEditLog  {
    * Used only by unit tests.
    */
   @VisibleForTesting
-  synchronized void setRuntimeForTesting(Runtime runtime) {
+  synchronized public void setRuntimeForTesting(Runtime runtime) {
     this.runtime = runtime;
     this.journalSet.setRuntimeForTesting(runtime);
   }
