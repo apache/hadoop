@@ -113,6 +113,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3460. HttpFS proxyuser validation with Kerberos ON uses full 
     principal name. (tucu)
 
+    HDFS-3058. HA: Bring BookKeeperJournalManager up to date with HA changes.
+    (Ivan Kelly via umamahesh)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

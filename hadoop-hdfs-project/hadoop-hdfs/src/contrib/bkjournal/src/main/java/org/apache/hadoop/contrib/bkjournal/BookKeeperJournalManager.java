@@ -233,11 +233,14 @@ public class BookKeeperJournalManager implements JournalManager {
        */
       l.write(zkc, znodePath);
 
+      maxTxId.store(txId);
       return new BookKeeperEditLogOutputStream(conf, currentLedger, wl);
     } catch (Exception e) {
       if (currentLedger != null) {
         try {
+          long id = currentLedger.getId();
           currentLedger.close();
+          bkc.deleteLedger(id);
         } catch (Exception e2) {
           //log & ignore, an IOException will be thrown soon
           LOG.error("Error closing ledger", e2);
@@ -384,8 +387,8 @@ public class BookKeeperJournalManager implements JournalManager {
             break;
           }
         }
-        count += (l.getLastTxId() - l.getFirstTxId()) + 1;
-        expectedStart = l.getLastTxId() + 1;
+        count += (lastTxId - l.getFirstTxId()) + 1;
+        expectedStart = lastTxId + 1;
       }
     }
     return count;
@@ -404,7 +407,7 @@ public class BookKeeperJournalManager implements JournalManager {
           String znode = ledgerPath + "/" + child;
           EditLogLedgerMetadata l
             = EditLogLedgerMetadata.read(zkc, znode);
-          long endTxId = recoverLastTxId(l);
+          long endTxId = recoverLastTxId(l, true);
           if (endTxId == HdfsConstants.INVALID_TXID) {
             LOG.error("Unrecoverable corruption has occurred in segment "
                       + l.toString() + " at path " + znode
@@ -474,11 +477,19 @@ public class BookKeeperJournalManager implements JournalManager {
    * Find the id of the last edit log transaction writen to a edit log
    * ledger.
    */
-  private long recoverLastTxId(EditLogLedgerMetadata l) throws IOException {
+  private long recoverLastTxId(EditLogLedgerMetadata l, boolean fence)
+      throws IOException {
     try {
-      LedgerHandle lh = bkc.openLedger(l.getLedgerId(),
-                                       BookKeeper.DigestType.MAC,
-                                       digestpw.getBytes());
+      LedgerHandle lh = null;
+      if (fence) {
+        lh = bkc.openLedger(l.getLedgerId(),
+                            BookKeeper.DigestType.MAC,
+                            digestpw.getBytes());
+      } else {
+        lh = bkc.openLedgerNoRecovery(l.getLedgerId(),
+                                      BookKeeper.DigestType.MAC,
+                                      digestpw.getBytes());
+      }
       long lastAddConfirmed = lh.getLastAddConfirmed();
       BookKeeperEditLogInputStream in
         = new BookKeeperEditLogInputStream(lh, l, lastAddConfirmed);
