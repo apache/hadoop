@@ -54,9 +54,9 @@ import com.google.common.collect.Lists;
 
 public class TestStandbyCheckpoints {
   private static final int NUM_DIRS_IN_LOG = 200000;
-  private MiniDFSCluster cluster;
-  private NameNode nn0, nn1;
-  private FileSystem fs;
+  protected MiniDFSCluster cluster;
+  protected NameNode nn0, nn1;
+  protected FileSystem fs;
 
   @SuppressWarnings("rawtypes")
   @Before
