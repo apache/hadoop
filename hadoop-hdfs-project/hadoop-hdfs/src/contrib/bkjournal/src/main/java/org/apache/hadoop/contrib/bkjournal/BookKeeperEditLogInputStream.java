@@ -41,7 +41,6 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
   private final long firstTxId;
   private final long lastTxId;
   private final int logVersion;
-  private final boolean inProgress;
   private final LedgerHandle lh;
 
   private final FSEditLogOp.Reader reader;
@@ -70,7 +69,6 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
     this.firstTxId = metadata.getFirstTxId();
     this.lastTxId = metadata.getLastTxId();
     this.logVersion = metadata.getVersion();
-    this.inProgress = metadata.isInProgress();
 
     BufferedInputStream bin = new BufferedInputStream(
         new LedgerInputStream(lh, firstBookKeeperEntry));
@@ -125,28 +123,10 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
         lh.toString(), firstTxId, lastTxId);
   }
 
+  // TODO(HA): Test this.
   @Override
   public boolean isInProgress() {
-    return inProgress;
-  }
-
-  /**
-   * Skip forward to specified transaction id.
-   * Currently we do this by just iterating forward.
-   * If this proves to be too expensive, this can be reimplemented
-   * with a binary search over bk entries
-   */
-  public void skipTo(long txId) throws IOException {
-    long numToSkip = getFirstTxId() - txId;
-
-    FSEditLogOp op = null;
-    for (long i = 0; i < numToSkip; i++) {
-      op = readOp();
-    }
-    if (op != null && op.getTransactionId() != txId-1) {
-      throw new IOException("Corrupt stream, expected txid "
-          + (txId-1) + ", got " + op.getTransactionId());
-    }
+    return true;
   }
 
   /**
