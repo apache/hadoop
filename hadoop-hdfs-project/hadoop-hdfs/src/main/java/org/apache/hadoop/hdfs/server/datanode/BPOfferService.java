@@ -609,6 +609,9 @@ class BPOfferService {
       if (bandwidth > 0) {
         DataXceiverServer dxcs =
                      (DataXceiverServer) dn.dataXceiverServer.getRunnable();
+        LOG.info("Updating balance throttler bandwidth from "
+            + dxcs.balanceThrottler.getBandwidth() + " bytes/s "
+            + "to: " + bandwidth + " bytes/s.");
         dxcs.balanceThrottler.setBandwidth(bandwidth);
       }
       break;

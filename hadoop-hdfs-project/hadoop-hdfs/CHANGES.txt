@@ -79,6 +79,9 @@ Trunk (unreleased changes)
 
     HDFS-3197. Incorrect class comments in a few tests. (Andy Isaacson via eli)
 
+    HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
+    (harsh)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
