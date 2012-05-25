@@ -33,6 +33,8 @@ Release 0.22.1 - Unreleased
     HDFS-2991. Fix case where OP_ADD would not be logged in append().
     (Todd Lipcon via shv)
 
+    HDFS-3368. Missing blocks due to bad DataNodes coming up and down. (shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
