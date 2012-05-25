@@ -179,6 +179,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8422. Deprecate FileSystem#getDefault* and getServerDefault
     methods that don't take a Path argument. (eli)
 
+    HADOOP-8323. Add javadoc and tests for Text.clear() behavior (harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
