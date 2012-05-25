@@ -24,6 +24,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8403. bump up POMs version to 2.0.1-SNAPSHOT. (tucu)
 
+    HADOOP-8323. Add javadoc and tests for Text.clear() behavior (harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
