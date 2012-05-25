@@ -202,7 +202,7 @@ public class TestDFSPermission extends TestCase {
     case CREATE:
       FSDataOutputStream out = fs.create(name, permission, true, 
           conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-          fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
+          fs.getDefaultReplication(name), fs.getDefaultBlockSize(name), null);
       out.close();
       break;
     case MKDIRS:

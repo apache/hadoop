@@ -221,6 +221,9 @@ Release 2.0.0-alpha - UNRELEASED
 
   OPTIMIZATIONS
 
+    HADOOP-8422. Deprecate FileSystem#getDefault* and getServerDefault
+    methods that don't take a Path argument. (eli)
+
   BUG FIXES
 
     HADOOP-8199. Fix issues in start-all.sh and stop-all.sh (Devaraj K via umamahesh)

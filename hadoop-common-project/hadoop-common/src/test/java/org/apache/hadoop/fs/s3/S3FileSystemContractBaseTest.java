@@ -47,11 +47,9 @@ public abstract class S3FileSystemContractBaseTest
   }
   
   public void testBlockSize() throws Exception {
-    
-    long newBlockSize = fs.getDefaultBlockSize() * 2;
-    fs.getConf().setLong("fs.s3.block.size", newBlockSize);
-    
     Path file = path("/test/hadoop/file");
+    long newBlockSize = fs.getDefaultBlockSize(file) * 2;
+    fs.getConf().setLong("fs.s3.block.size", newBlockSize);
     createFile(file);
     assertEquals("Double default block size", newBlockSize,
 	fs.getFileStatus(file).getBlockSize());

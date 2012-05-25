@@ -123,9 +123,10 @@ public class TestPermission extends TestCase {
       checkPermission(fs, "/aa/1/aa/2/aa/3", dirPerm);
 
       FsPermission filePerm = new FsPermission((short)0444);
-      FSDataOutputStream out = fs.create(new Path("/b1/b2/b3.txt"), filePerm,
+      Path p = new Path("/b1/b2/b3.txt");
+      FSDataOutputStream out = fs.create(p, filePerm,
           true, conf.getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-          fs.getDefaultReplication(), fs.getDefaultBlockSize(), null);
+          fs.getDefaultReplication(p), fs.getDefaultBlockSize(p), null);
       out.write(123);
       out.close();
       checkPermission(fs, "/b1", inheritPerm);

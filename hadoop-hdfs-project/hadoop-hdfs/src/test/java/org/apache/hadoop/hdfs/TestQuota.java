@@ -865,8 +865,8 @@ public class TestQuota {
       // 6kb block
       // 192kb quota
       final int FILE_SIZE = 1024;
-      final int QUOTA_SIZE = 32 * (int) fs.getDefaultBlockSize();
-      assertEquals(6 * 1024, fs.getDefaultBlockSize());
+      final int QUOTA_SIZE = 32 * (int) fs.getDefaultBlockSize(dir);
+      assertEquals(6 * 1024, fs.getDefaultBlockSize(dir));
       assertEquals(192 * 1024, QUOTA_SIZE);
 
       // Create the dir and set the quota. We need to enable the quota before
@@ -893,7 +893,7 @@ public class TestQuota {
       assertEquals("Invalid space consumed", 59 * FILE_SIZE * 3,
           c.getSpaceConsumed());
       assertEquals("Invalid space consumed", QUOTA_SIZE - (59 * FILE_SIZE * 3),
-          3 * (fs.getDefaultBlockSize() - FILE_SIZE));
+          3 * (fs.getDefaultBlockSize(dir) - FILE_SIZE));
 
       // Now check that trying to create another file violates the quota
       try {
