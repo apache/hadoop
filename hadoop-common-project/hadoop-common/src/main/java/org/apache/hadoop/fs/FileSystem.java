@@ -615,7 +615,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Return a set of server default configuration values
    * @return server default configuration values
    * @throws IOException
+   * @deprecated use {@link #getServerDefaults(Path)} instead
    */
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     Configuration conf = getConf();
     return new FsServerDefaults(getDefaultBlockSize(), 
@@ -1939,8 +1941,12 @@ public abstract class FileSystem extends Configured implements Closeable {
     return getFileStatus(f).getBlockSize();
   }
 
-  /** Return the number of bytes that large input files should be optimally
-   * be split into to minimize i/o time. */
+  /**
+   * Return the number of bytes that large input files should be optimally
+   * be split into to minimize i/o time.
+   * @deprecated use {@link #getDefaultBlockSize(Path)} instead
+   */
+  @Deprecated
   public long getDefaultBlockSize() {
     // default to 32MB: large enough to minimize the impact of seeks
     return getConf().getLong("fs.local.block.size", 32 * 1024 * 1024);
@@ -1958,7 +1964,9 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Get the default replication.
+   * @deprecated use {@link #getDefaultReplication(Path)} instead
    */
+  @Deprecated
   public short getDefaultReplication() { return 1; }
 
   /**
