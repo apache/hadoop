@@ -52,6 +52,9 @@ Trunk (unreleased changes)
 
     HADOOP-8285 MR changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
 
+    MAPREDUCE-3302. Remove the last dependency call from
+    org.apache.hadoop.record package in MR. (harsh)
+
   BUG FIXES
 
     MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
