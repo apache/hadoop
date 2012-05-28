@@ -115,6 +115,9 @@ Trunk (unreleased changes)
     MAPREDUCE-1740. NPE in getMatchingLevelForNodes when node locations are 
     variable depth (ahmed via tucu) [IMPORTANT: this is dead code in trunk]
 
+    MAPREDUCE-3990. MRBench allows Long-sized input-lines value
+    but parses CLI argument as an Integer. (harsh)
+
 Release 2.0.1-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
