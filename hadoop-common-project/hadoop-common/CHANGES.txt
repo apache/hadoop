@@ -26,6 +26,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8323. Add javadoc and tests for Text.clear() behavior (harsh)
 
+    HADOOP-8358. Config-related WARN for dfs.web.ugi can be avoided. (harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname

@@ -71,10 +71,12 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.VersionInfo;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
+
 @InterfaceAudience.Private
 public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
-  final static public String WEB_UGI_PROPERTY_NAME = DFSConfigKeys.DFS_WEB_UGI_KEY;
   public static final String DELEGATION_PARAMETER_NAME = DelegationParam.NAME;
   public static final String NAMENODE_ADDRESS = "nnaddr";
   static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
@@ -483,11 +485,12 @@ public class JspHelper {
    */
   public static UserGroupInformation getDefaultWebUser(Configuration conf
                                                        ) throws IOException {
-    String[] strings = conf.getStrings(JspHelper.WEB_UGI_PROPERTY_NAME);
-    if (strings == null || strings.length == 0) {
+    String user = conf.get(
+        HADOOP_HTTP_STATIC_USER, DEFAULT_HADOOP_HTTP_STATIC_USER);
+    if (user == null || user.length() == 0) {
       throw new IOException("Cannot determine UGI from request or conf");
     }
-    return UserGroupInformation.createRemoteUser(strings[0]);
+    return UserGroupInformation.createRemoteUser(user);
   }
 
   private static InetSocketAddress getNNServiceAddress(ServletContext context,

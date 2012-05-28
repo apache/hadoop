@@ -37,15 +37,15 @@ import org.apache.hadoop.http.FilterInitializer;
 
 import javax.servlet.Filter;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DEFAULT_HADOOP_HTTP_STATIC_USER;
+
 /**
  * Provides a servlet filter that pretends to authenticate a fake user (Dr.Who)
  * so that the web UI is usable for a secure cluster without authentication.
  */
 public class StaticUserWebFilter extends FilterInitializer {
   static final String DEPRECATED_UGI_KEY = "dfs.web.ugi";
-  
-  static final String USERNAME_KEY = "hadoop.http.staticuser.user";
-  static final String USERNAME_DEFAULT = "dr.who";
 
   private static final Log LOG = LogFactory.getLog(StaticUserWebFilter.class);
 
@@ -112,7 +112,7 @@ public class StaticUserWebFilter extends FilterInitializer {
 
     @Override
     public void init(FilterConfig conf) throws ServletException {
-      this.username = conf.getInitParameter(USERNAME_KEY);
+      this.username = conf.getInitParameter(HADOOP_HTTP_STATIC_USER);
       this.user = new User(username);
     }
     
@@ -123,7 +123,7 @@ public class StaticUserWebFilter extends FilterInitializer {
     HashMap<String, String> options = new HashMap<String, String>();
     
     String username = getUsernameFromConf(conf);
-    options.put(USERNAME_KEY, username);
+    options.put(HADOOP_HTTP_STATIC_USER, username);
 
     container.addFilter("static_user_filter", 
                         StaticUserFilter.class.getName(), 
@@ -139,11 +139,12 @@ public class StaticUserWebFilter extends FilterInitializer {
       // We can't use the normal configuration deprecation mechanism here
       // since we need to split out the username from the configured UGI.
       LOG.warn(DEPRECATED_UGI_KEY + " should not be used. Instead, use " + 
-               USERNAME_KEY + ".");
+          HADOOP_HTTP_STATIC_USER + ".");
       String[] parts = oldStyleUgi.split(",");
       return parts[0];
     } else {
-      return conf.get(USERNAME_KEY, USERNAME_DEFAULT);
+      return conf.get(HADOOP_HTTP_STATIC_USER,
+        DEFAULT_HADOOP_HTTP_STATIC_USER);
     }
   }
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.http.lib.StaticUserWebFilter;
 
 /** 
  * This class contains constants for configuration keys used
@@ -161,5 +162,12 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "ha.failover-controller.cli-check.rpc-timeout.ms";
   public static final int HA_FC_CLI_CHECK_TIMEOUT_DEFAULT = 20000;
 
+  /** Static user web-filter properties.
+   * See {@link StaticUserWebFilter}.
+   */
+  public static final String HADOOP_HTTP_STATIC_USER =
+    "hadoop.http.staticuser.user";
+  public static final String DEFAULT_HADOOP_HTTP_STATIC_USER =
+    "dr.who";
 }
 

@@ -944,4 +944,15 @@
   </description>
 </property>
 
+
+<!-- Static Web User Filter properties. -->
+<property>
+  <description>
+    The user name to filter as, on static web filters
+    while rendering content. An example use is the HDFS
+    web UI (user to be used for browsing files).
+  </description>
+  <name>hadoop.http.staticuser.user</name>
+  <value>dr.who</value>
+</property>
 </configuration>
