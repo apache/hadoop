@@ -12,7 +12,10 @@
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
 -->
-<project>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -217,7 +220,7 @@
                 <echo file="target/compile-proto.sh">
                     PROTO_DIR=src/main/proto
                     JAVA_DIR=target/generated-sources/java
-                    which cygpath 2> /dev/null
+                    which cygpath 2&gt; /dev/null
                     if [ $? = 1 ]; then
                       IS_WIN=false
                     else
@@ -225,8 +228,8 @@
                       WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
                       WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
                     fi
-                    mkdir -p $JAVA_DIR 2> /dev/null
-                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2> /dev/null`
+                    mkdir -p $JAVA_DIR 2&gt; /dev/null
+                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
                     do
                         if [ "$IS_WIN" = "true" ]; then
                           protoc -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
