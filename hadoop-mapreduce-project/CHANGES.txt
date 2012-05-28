@@ -55,6 +55,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3302. Remove the last dependency call from
     org.apache.hadoop.record package in MR. (harsh)
 
+    MAPREDUCE-2384. The job submitter should make sure to validate
+    jobs before creation of necessary files. (harsh)
+
   BUG FIXES
 
     MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
