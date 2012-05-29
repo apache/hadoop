@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
@@ -25,10 +26,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.MRConfig;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import static org.junit.Assert.*;
 
 /**
@@ -98,7 +104,28 @@ public class TestReporter {
                    progressRange, reporter.getProgress(), 0f);
     }
   }
-  
+
+  static class StatusLimitMapper extends
+      org.apache.hadoop.mapreduce.Mapper<LongWritable, Text, Text, Text> {
+
+    @Override
+    public void map(LongWritable key, Text value, Context context)
+        throws IOException {
+      StringBuilder sb = new StringBuilder(512);
+      for (int i = 0; i < 1000; i++) {
+        sb.append("a");
+      }
+      context.setStatus(sb.toString());
+      int progressStatusLength = context.getConfiguration().getInt(
+          MRConfig.PROGRESS_STATUS_LEN_LIMIT_KEY,
+          MRConfig.PROGRESS_STATUS_LEN_LIMIT_DEFAULT);
+
+      if (context.getStatus().length() > progressStatusLength) {
+        throw new IOException("Status is not truncated");
+      }
+    }
+  }
+
   /**
    * Test {@link Reporter}'s progress for a map-only job.
    * This will make sure that only the map phase decides the attempt's progress.
@@ -166,7 +193,6 @@ public class TestReporter {
   /**
    * Test {@link Reporter}'s progress for map-reduce job.
    */
-  @SuppressWarnings("deprecation")
   @Test
   public void testReporterProgressForMRJob() throws IOException {
     Path test = new Path(testRootTempDir, "testReporterProgressForMRJob");
@@ -186,4 +212,39 @@ public class TestReporter {
     
     assertTrue("Job failed", job.isSuccessful());
   }
+
+  @Test
+  public void testStatusLimit() throws IOException, InterruptedException,
+      ClassNotFoundException {
+    Path test = new Path(testRootTempDir, "testStatusLimit");
+
+    Configuration conf = new Configuration();
+    Path inDir = new Path(test, "in");
+    Path outDir = new Path(test, "out");
+    FileSystem fs = FileSystem.get(conf);
+    if (fs.exists(inDir)) {
+      fs.delete(inDir, true);
+    }
+    fs.mkdirs(inDir);
+    DataOutputStream file = fs.create(new Path(inDir, "part-" + 0));
+    file.writeBytes("testStatusLimit");
+    file.close();
+
+    if (fs.exists(outDir)) {
+      fs.delete(outDir, true);
+    }
+
+    Job job = Job.getInstance(conf, "testStatusLimit");
+
+    job.setMapperClass(StatusLimitMapper.class);
+    job.setNumReduceTasks(0);
+
+    FileInputFormat.addInputPath(job, inDir);
+    FileOutputFormat.setOutputPath(job, outDir);
+
+    job.waitForCompletion(true);
+
+    assertTrue("Job failed", job.isSuccessful());
+  }
+
 }
