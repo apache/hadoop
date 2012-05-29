@@ -117,7 +117,7 @@ public class BookKeeperJournalManager implements JournalManager {
   private final ZooKeeper zkc;
   private final Configuration conf;
   private final BookKeeper bkc;
-  private final WriteLock wl;
+  private final CurrentInprogress ci;
   private final String ledgerPath;
   private final MaxTxId maxTxId;
   private final int ensembleSize;
@@ -155,7 +155,7 @@ public class BookKeeperJournalManager implements JournalManager {
 
     ledgerPath = zkPath + "/ledgers";
     String maxTxIdPath = zkPath + "/maxtxid";
-    String lockPath = zkPath + "/lock";
+    String currentInprogressNodePath = zkPath + "/CurrentInprogress";
     String versionPath = zkPath + "/version";
     digestpw = conf.get(BKJM_BOOKKEEPER_DIGEST_PW,
                         BKJM_BOOKKEEPER_DIGEST_PW_DEFAULT);
@@ -192,7 +192,7 @@ public class BookKeeperJournalManager implements JournalManager {
       throw new IOException("Error initializing zk", e);
     }
 
-    wl = new WriteLock(zkc, lockPath);
+    ci = new CurrentInprogress(zkc, currentInprogressNodePath);
     maxTxId = new MaxTxId(zkc, maxTxIdPath);
   }
 
@@ -207,13 +207,16 @@ public class BookKeeperJournalManager implements JournalManager {
    */
   @Override
   public EditLogOutputStream startLogSegment(long txId) throws IOException {
-    wl.acquire();
-
     if (txId <= maxTxId.get()) {
       throw new IOException("We've already seen " + txId
           + ". A new stream cannot be created with it");
     }
     try {
+      String existingInprogressNode = ci.read();
+      if (null != existingInprogressNode
+          && zkc.exists(existingInprogressNode, false) != null) {
+        throw new IOException("Inprogress node already exists");
+      }
       if (currentLedger != null) {
         // bookkeeper errored on last stream, clean up ledger
         currentLedger.close();
@@ -234,7 +237,8 @@ public class BookKeeperJournalManager implements JournalManager {
       l.write(zkc, znodePath);
 
       maxTxId.store(txId);
-      return new BookKeeperEditLogOutputStream(conf, currentLedger, wl);
+      ci.update(znodePath);
+      return new BookKeeperEditLogOutputStream(conf, currentLedger);
     } catch (Exception e) {
       if (currentLedger != null) {
         try {
@@ -270,7 +274,6 @@ public class BookKeeperJournalManager implements JournalManager {
                               + " doesn't exist");
       }
 
-      wl.checkWriteLock();
       EditLogLedgerMetadata l
         =  EditLogLedgerMetadata.read(zkc, inprogressPath);
 
@@ -307,13 +310,15 @@ public class BookKeeperJournalManager implements JournalManager {
       }
       maxTxId.store(lastTxId);
       zkc.delete(inprogressPath, inprogressStat.getVersion());
+      String inprogressPathFromCI = ci.read();
+      if (inprogressPath.equals(inprogressPathFromCI)) {
+        ci.clear();
+      }
     } catch (KeeperException e) {
       throw new IOException("Error finalising ledger", e);
     } catch (InterruptedException ie) {
       throw new IOException("Error finalising ledger", ie);
-    } finally {
-      wl.release();
-    }
+    } 
   }
 
   EditLogInputStream getInputStream(long fromTxId, boolean inProgressOk)
@@ -417,7 +422,6 @@ public class BookKeeperJournalManager implements JournalManager {
 
   @Override
   public void recoverUnfinalizedSegments() throws IOException {
-    wl.acquire();
     synchronized (this) {
       try {
         List<String> children = zkc.getChildren(ledgerPath, false);
@@ -445,10 +449,6 @@ public class BookKeeperJournalManager implements JournalManager {
       } catch (InterruptedException ie) {
         throw new IOException("Interrupted getting list of inprogress segments",
                               ie);
-      } finally {
-        if (wl.haveLock()) {
-          wl.release();
-        }
       }
     }
   }

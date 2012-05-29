@@ -215,8 +215,7 @@ public class TestBookKeeperAsHASharedDir {
   }
 
   /**
-   * Test that two namenodes can't become primary at the same
-   * time.
+   * Test that two namenodes can't continue as primary
    */
   @Test
   public void testMultiplePrimariesStarted() throws Exception {
@@ -247,18 +246,14 @@ public class TestBookKeeperAsHASharedDir {
       FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
       fs.mkdirs(p1);
       nn1.getRpcServer().rollEditLog();
-      try {
-        cluster.transitionToActive(1);
-        fail("Shouldn't have been able to start two primaries"
-             + " with single shared storage");
-      } catch (ServiceFailedException sfe) {
-        assertTrue("Wrong exception",
-            sfe.getMessage().contains("Failed to start active services"));
-      }
+      cluster.transitionToActive(1);
+      fs = cluster.getFileSystem(0); // get the older active server.
+      // This edit log updation on older active should make older active
+      // shutdown.
+      fs.delete(p1, true);
+      verify(mockRuntime1, atLeastOnce()).exit(anyInt());
+      verify(mockRuntime2, times(0)).exit(anyInt());
     } finally {
-      verify(mockRuntime1, times(0)).exit(anyInt());
-      verify(mockRuntime2, atLeastOnce()).exit(anyInt());
-
       if (cluster != null) {
         cluster.shutdown();
       }

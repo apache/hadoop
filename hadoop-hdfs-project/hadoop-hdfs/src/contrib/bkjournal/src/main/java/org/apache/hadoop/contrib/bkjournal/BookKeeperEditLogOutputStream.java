@@ -56,15 +56,13 @@ class BookKeeperEditLogOutputStream
   private CountDownLatch syncLatch;
   private final AtomicInteger transmitResult
     = new AtomicInteger(BKException.Code.OK);
-  private final WriteLock wl;
   private final Writer writer;
 
   /**
    * Construct an edit log output stream which writes to a ledger.
 
    */
-  protected BookKeeperEditLogOutputStream(Configuration conf,
-                                          LedgerHandle lh, WriteLock wl)
+  protected BookKeeperEditLogOutputStream(Configuration conf, LedgerHandle lh)
       throws IOException {
     super();
 
@@ -72,8 +70,6 @@ class BookKeeperEditLogOutputStream
     outstandingRequests = new AtomicInteger(0);
     syncLatch = null;
     this.lh = lh;
-    this.wl = wl;
-    this.wl.acquire();
     this.writer = new Writer(bufCurrent);
     this.transmissionThreshold
       = conf.getInt(BookKeeperJournalManager.BKJM_OUTPUT_BUFFER_SIZE,
@@ -108,7 +104,6 @@ class BookKeeperEditLogOutputStream
       throw new IOException("BookKeeper error during abort", bke);
     }
 
-    wl.release();
   }
 
   @Override
@@ -118,8 +113,6 @@ class BookKeeperEditLogOutputStream
 
   @Override
   public void write(FSEditLogOp op) throws IOException {
-    wl.checkWriteLock();
-
     writer.writeOp(op);
 
     if (bufCurrent.getLength() > transmissionThreshold) {
@@ -129,19 +122,15 @@ class BookKeeperEditLogOutputStream
 
   @Override
   public void setReadyToFlush() throws IOException {
-    wl.checkWriteLock();
-
     transmit();
 
-    synchronized(this) {
+    synchronized (this) {
       syncLatch = new CountDownLatch(outstandingRequests.get());
     }
   }
 
   @Override
   public void flushAndSync() throws IOException {
-    wl.checkWriteLock();
-
     assert(syncLatch != null);
     try {
       syncLatch.await();
@@ -164,8 +153,6 @@ class BookKeeperEditLogOutputStream
    * are never called at the same time.
    */
   private void transmit() throws IOException {
-    wl.checkWriteLock();
-
     if (!transmitResult.compareAndSet(BKException.Code.OK,
                                      BKException.Code.OK)) {
       throw new IOException("Trying to write to an errored stream;"
