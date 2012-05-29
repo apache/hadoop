@@ -251,6 +251,9 @@ Release 1.1.0 - unreleased
 
     HDFS-3453. HDFS 1.x client is not interoperable with pre 1.x server.
     (Kihwal Lee via suresh)
+
+    HADOOP-5464. DFSClient did not treat write timeout of 0 properly.
+    (Raghu Angadi and Brandon Li via szetszwo)
     
 Release 1.0.3 - 2012.05.07
 
