@@ -121,6 +121,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3452. BKJM:Switch from standby to active fails and NN gets shut down
     due to delay in clearing of lock. (umamahesh)
 
+    HDFS-3398. Client will not retry when primaryDN is down once it's just got pipeline.
+    (Amith D K via umamahesh)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
