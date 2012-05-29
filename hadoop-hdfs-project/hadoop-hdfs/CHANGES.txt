@@ -151,6 +151,9 @@ Trunk (unreleased changes)
 
     HDFS-3368. Missing blocks due to bad DataNodes coming up and down. (shv)
 
+    HDFS-3462. TestDFSClientRetries.busyTest() should restore default
+    xceiver count in the config. (Madhukara Phatak via harsh)
+
 Release 2.0.1-alpha - UNRELEASED
   
   INCOMPATIBLE CHANGES

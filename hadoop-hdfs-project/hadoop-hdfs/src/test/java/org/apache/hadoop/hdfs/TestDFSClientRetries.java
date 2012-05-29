@@ -526,7 +526,7 @@ public class TestDFSClientRetries extends TestCase {
     short replicationFactor = 1;
     long blockSize = 128*1024*1024; // DFS block size
     int bufferSize = 4096;
-    
+    int originalXcievers = conf.getInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,0);
     conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, xcievers);
     conf.setInt(DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, 
                 retries);
@@ -605,6 +605,7 @@ public class TestDFSClientRetries extends TestCase {
       e.printStackTrace();
       ret = false;
     } finally {
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY,originalXcievers);
       fs.delete(file1, false);
       cluster.shutdown();
     }
