@@ -361,6 +361,7 @@ public class TestBookKeeperJournalManager {
 
       assertEquals("New bookie didn't start",
                    numBookies+1, bkutil.checkBookiesUp(numBookies+1, 10));
+      bkjm.recoverUnfinalizedSegments();
       out = bkjm.startLogSegment(txid);
       for (long i = 1 ; i <= 3; i++) {
         FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();

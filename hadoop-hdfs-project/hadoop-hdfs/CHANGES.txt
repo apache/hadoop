@@ -118,6 +118,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3368. Missing blocks due to bad DataNodes coming up and down. (shv)
 
+    HDFS-3452. BKJM:Switch from standby to active fails and NN gets shut down
+    due to delay in clearing of lock. (umamahesh)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
