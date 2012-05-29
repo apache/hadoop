@@ -36,6 +36,9 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4224. TestFifoScheduler throws 
     org.apache.hadoop.metrics2.MetricsException (Devaraj K via tgraves)
 
+    MAPREDUCE-3493. Add the default mapreduce.shuffle.port property
+    to mapred-default.xml (Madhukara Phatak via harsh)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
