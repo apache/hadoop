@@ -507,8 +507,15 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
           }
 
           // write out data to remote datanode
-          blockStream.write(buf.array(), buf.position(), buf.remaining());
-          blockStream.flush();
+          try {            
+            blockStream.write(buf.array(), buf.position(), buf.remaining());
+            blockStream.flush();   
+          } catch (IOException e) {
+            // HDFS-3398 treat primary DN is down since client is unable to 
+            // write to primary DN 
+            errorIndex = 0;
+            throw e;
+          }
           lastPacket = System.currentTimeMillis();
           
           if (one.isHeartbeatPacket()) {  //heartbeat packet
