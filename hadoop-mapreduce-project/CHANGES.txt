@@ -8,6 +8,9 @@ Release 2.0.1-alpha - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4146. Support limits on task status string length and number of
+    block locations in branch-2. (Ahmed Radwan via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

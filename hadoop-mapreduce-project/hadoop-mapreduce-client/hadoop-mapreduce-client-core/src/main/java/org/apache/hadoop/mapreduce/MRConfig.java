@@ -71,4 +71,12 @@ public interface MRConfig {
 
   public static final String TASK_LOCAL_OUTPUT_CLASS =
   "mapreduce.task.local.output.class";
+
+  public static final String PROGRESS_STATUS_LEN_LIMIT_KEY =
+    "mapreduce.task.max.status.length";
+  public static final int PROGRESS_STATUS_LEN_LIMIT_DEFAULT = 512;
+
+  public static final int MAX_BLOCK_LOCATIONS_DEFAULT = 10;
+  public static final String MAX_BLOCK_LOCATIONS_KEY =
+    "mapreduce.job.max.split.locations";
 }
