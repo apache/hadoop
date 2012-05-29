@@ -3342,8 +3342,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       computePacketChunkSize(writePacketSize, bytesPerChecksum);
 
       try {
-        namenode.create(
-            src, masked, clientName, overwrite, createParent, replication, blockSize);
+        // Make sure the regular create() is done through the old create().
+        // This is done to ensure that newer clients (post-1.0) can talk to
+        // older clusters (pre-1.0). Older clusters lack the new  create()
+        // method accepting createParent as one of the arguments.
+        if (createParent) {
+          namenode.create(
+            src, masked, clientName, overwrite, replication, blockSize);
+        } else {
+          namenode.create(
+            src, masked, clientName, overwrite, false, replication, blockSize);
+        }
       } catch(RemoteException re) {
         throw re.unwrapRemoteException(AccessControlException.class,
                                        FileAlreadyExistsException.class,
