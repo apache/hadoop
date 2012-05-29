@@ -52,6 +52,10 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8268. A few pom.xml across Hadoop project
     may fail XML validation. (Radim Kolar via harsh)
 
+    HADOOP-8444. Fix the tests FSMainOperationsBaseTest.java and
+    FileContextMainOperationsBaseTest.java to avoid potential
+    test failure (Madhukara Phatak via harsh)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
