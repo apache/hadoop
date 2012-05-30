@@ -701,8 +701,9 @@ class BlockSender implements java.io.Closeable {
    */
   private void writePacketHeader(ByteBuffer pkt, int dataLen, int packetLen) {
     pkt.clear();
+    // both syncBlock and syncPacket are false
     PacketHeader header = new PacketHeader(packetLen, offset, seqno,
-        (dataLen == 0), dataLen);
+        (dataLen == 0), dataLen, false);
     header.putInBuffer(pkt);
   }
   

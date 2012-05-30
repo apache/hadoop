@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -109,6 +110,8 @@ class BlockReceiver implements Closeable {
   /** pipeline stage */
   private final BlockConstructionStage stage;
   private final boolean isTransfer;
+
+  private boolean syncOnClose;
 
   BlockReceiver(final ExtendedBlock block, final DataInputStream in,
       final String inAddr, final String myAddr,
@@ -245,14 +248,18 @@ class BlockReceiver implements Closeable {
    * close files.
    */
   public void close() throws IOException {
-
     IOException ioe = null;
+    if (syncOnClose && (out != null || checksumOut != null)) {
+      datanode.metrics.incrFsyncCount();      
+    }
     // close checksum file
     try {
       if (checksumOut != null) {
         checksumOut.flush();
-        if (datanode.getDnConf().syncOnClose && (cout instanceof FileOutputStream)) {
+        if (syncOnClose && (cout instanceof FileOutputStream)) {
+          long start = Util.now();
           ((FileOutputStream)cout).getChannel().force(true);
+          datanode.metrics.addFsync(Util.now() - start);
         }
         checksumOut.close();
         checksumOut = null;
@@ -267,8 +274,10 @@ class BlockReceiver implements Closeable {
     try {
       if (out != null) {
         out.flush();
-        if (datanode.getDnConf().syncOnClose && (out instanceof FileOutputStream)) {
+        if (syncOnClose && (out instanceof FileOutputStream)) {
+          long start = Util.now();
           ((FileOutputStream)out).getChannel().force(true);
+          datanode.metrics.addFsync(Util.now() - start);
         }
         out.close();
         out = null;
@@ -290,12 +299,25 @@ class BlockReceiver implements Closeable {
    * Flush block data and metadata files to disk.
    * @throws IOException
    */
-  void flush() throws IOException {
+  void flushOrSync(boolean isSync) throws IOException {
+    if (isSync && (out != null || checksumOut != null)) {
+      datanode.metrics.incrFsyncCount();      
+    }
     if (checksumOut != null) {
       checksumOut.flush();
+      if (isSync && (cout instanceof FileOutputStream)) {
+        long start = Util.now();
+        ((FileOutputStream)cout).getChannel().force(true);
+        datanode.metrics.addFsync(Util.now() - start);
+      }
     }
     if (out != null) {
       out.flush();
+      if (isSync && (out instanceof FileOutputStream)) {
+        long start = Util.now();
+        ((FileOutputStream)out).getChannel().force(true);
+        datanode.metrics.addFsync(Util.now() - start);
+      }
     }
   }
 
@@ -533,7 +555,9 @@ class BlockReceiver implements Closeable {
       header.getOffsetInBlock(),
       header.getSeqno(),
       header.isLastPacketInBlock(),
-      header.getDataLen(), endOfHeader);
+      header.getDataLen(),
+      header.getSyncBlock(),
+      endOfHeader);
   }
 
   /**
@@ -549,15 +573,19 @@ class BlockReceiver implements Closeable {
    * returns the number of data bytes that the packet has.
    */
   private int receivePacket(long offsetInBlock, long seqno,
-      boolean lastPacketInBlock, int len, int endOfHeader) throws IOException {
+      boolean lastPacketInBlock, int len, boolean syncBlock,
+      int endOfHeader) throws IOException {
     if (LOG.isDebugEnabled()){
       LOG.debug("Receiving one packet for block " + block +
                 " of length " + len +
                 " seqno " + seqno +
                 " offsetInBlock " + offsetInBlock +
+                " syncBlock " + syncBlock +
                 " lastPacketInBlock " + lastPacketInBlock);
     }
-    
+    // make sure the block gets sync'ed upon close
+    this.syncOnClose |= syncBlock && lastPacketInBlock;
+
     // update received bytes
     long firstByteInBlock = offsetInBlock;
     offsetInBlock += len;
@@ -586,6 +614,10 @@ class BlockReceiver implements Closeable {
     if (lastPacketInBlock || len == 0) {
       if(LOG.isDebugEnabled()) {
         LOG.debug("Receiving an empty packet or the end of the block " + block);
+      }
+      // flush unless close() would flush anyway
+      if (syncBlock && !lastPacketInBlock) {
+        flushOrSync(true);
       }
     } else {
       int checksumLen = ((len + bytesPerChecksum - 1)/bytesPerChecksum)*
@@ -677,8 +709,8 @@ class BlockReceiver implements Closeable {
             );
             checksumOut.write(pktBuf, checksumOff, checksumLen);
           }
-          /// flush entire packet
-          flush();
+          /// flush entire packet, sync unless close() will sync
+          flushOrSync(syncBlock && !lastPacketInBlock);
           
           replicaInfo.setLastChecksumAndDataLen(
             offsetInBlock, lastChunkChecksum
@@ -730,6 +762,7 @@ class BlockReceiver implements Closeable {
       String mirrAddr, DataTransferThrottler throttlerArg,
       DatanodeInfo[] downstreams) throws IOException {
 
+      syncOnClose = datanode.getDnConf().syncOnClose;
       boolean responderClosed = false;
       mirrorOut = mirrOut;
       mirrorAddr = mirrAddr;
@@ -768,7 +801,7 @@ class BlockReceiver implements Closeable {
           datanode.data.convertTemporaryToRbw(block);
         } else {
           // for isDatnode or TRANSFER_FINALIZED
-          // Finalize the block. Does this fsync()?
+          // Finalize the block.
           datanode.data.finalizeBlock(block);
         }
         datanode.metrics.incrBlocksWritten();

@@ -74,6 +74,11 @@ public class TestFilterFileSystem {
         Progressable progress) throws IOException {
       return null;
     }
+    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+            EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+            Progressable progress) throws IOException {
+      return null;
+    }
     public boolean mkdirs(Path f) { return false; }
     public FSDataInputStream open(Path f) { return null; }
     public FSDataOutputStream create(Path f) { return null; }
@@ -121,6 +126,15 @@ public class TestFilterFileSystem {
         short replication,
         long blockSize,
         Progressable progress) {
+      return null;
+    }
+    public FSDataOutputStream create(Path f,
+        FsPermission permission,
+        EnumSet<CreateFlag> flags,
+        int bufferSize,
+        short replication,
+        long blockSize,
+        Progressable progress) throws IOException {
       return null;
     }
     public String getName() { return null; }

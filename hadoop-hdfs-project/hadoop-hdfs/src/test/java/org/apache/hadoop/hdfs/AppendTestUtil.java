@@ -139,7 +139,7 @@ public class AppendTestUtil {
   /**
    *  create a buffer that contains the entire test file data.
    */
-  static byte[] initBuffer(int size) {
+  public static byte[] initBuffer(int size) {
     if (seed == -1)
       seed = nextLong();
     return randomBytes(seed, size);
