@@ -10,6 +10,9 @@ Release 1.2.0 - unreleased
 
   BUG FIXES
 
+    HADOOP-8445. Token should not print the password in toString
+    (Ravi Prakash via tgraves)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
