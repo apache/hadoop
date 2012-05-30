@@ -68,8 +68,10 @@ class CurrentInprogress {
           }
         }
       }
-    } catch (Exception e) {
+    } catch (KeeperException e) {
       throw new IOException("Exception accessing Zookeeper", e);
+    } catch (InterruptedException ie) {
+      throw new IOException("Interrupted accessing Zookeeper", ie);
     }
   }
 
