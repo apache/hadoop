@@ -82,6 +82,9 @@ Trunk (unreleased changes)
     HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
     (harsh)
 
+    HDFS-3476. Correct the default used in TestDFSClientRetries.busyTest()
+    after HDFS-3462 (harsh)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
