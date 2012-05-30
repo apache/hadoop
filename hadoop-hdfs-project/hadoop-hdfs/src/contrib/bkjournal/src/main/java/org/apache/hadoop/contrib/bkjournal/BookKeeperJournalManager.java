@@ -91,6 +91,10 @@ import org.apache.commons.logging.LogFactory;
  *       Default is 2.</li>
  *   <li><b>dfs.namenode.bookkeeperjournal.digestPw</b>
  *       Password to use when creating ledgers. </li>
+ *   <li><b>dfs.namenode.bookkeeperjournal.zk.session.timeout</b>
+ *       Session timeout for Zookeeper client from BookKeeper Journal Manager.
+ *       Hadoop recommends that, this value should be less than the ZKFC 
+ *       session timeout value. Default value is 3000.</li>
  * </ul>
  */
 public class BookKeeperJournalManager implements JournalManager {
@@ -113,6 +117,10 @@ public class BookKeeperJournalManager implements JournalManager {
   public static final String BKJM_BOOKKEEPER_DIGEST_PW_DEFAULT = "";
 
   private static final int BKJM_LAYOUT_VERSION = -1;
+  
+  public static final String BKJM_ZK_SESSION_TIMEOUT 
+    = "dfs.namenode.bookkeeperjournal.zk.session.timeout";
+  public static final int BKJM_ZK_SESSION_TIMEOUT_DEFAULT = 3000;
 
   private final ZooKeeper zkc;
   private final Configuration conf;
@@ -162,7 +170,8 @@ public class BookKeeperJournalManager implements JournalManager {
 
     try {
       zkConnectLatch = new CountDownLatch(1);
-      zkc = new ZooKeeper(zkConnect, 3000, new ZkConnectionWatcher());
+      zkc = new ZooKeeper(zkConnect, conf.getInt(BKJM_ZK_SESSION_TIMEOUT,
+          BKJM_ZK_SESSION_TIMEOUT_DEFAULT), new ZkConnectionWatcher());
       if (!zkConnectLatch.await(6000, TimeUnit.MILLISECONDS)) {
         throw new IOException("Error connecting to zookeeper");
       }

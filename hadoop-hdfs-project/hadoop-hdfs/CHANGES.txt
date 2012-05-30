@@ -127,6 +127,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3474. Cleanup Exception handling in BookKeeper journal manager.
     (Ivan Kelly via umamahesh)
 
+    HDFS-3468. Make BKJM-ZK session timeout configurable. (umamahesh)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
