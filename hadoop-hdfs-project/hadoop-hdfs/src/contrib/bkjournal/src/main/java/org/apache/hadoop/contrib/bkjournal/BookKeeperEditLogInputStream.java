@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader;
 import org.apache.bookkeeper.client.LedgerHandle;
 import org.apache.bookkeeper.client.LedgerEntry;
+import org.apache.bookkeeper.client.BKException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -104,8 +105,10 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
   public void close() throws IOException {
     try {
       lh.close();
-    } catch (Exception e) {
+    } catch (BKException e) {
       throw new IOException("Exception closing ledger", e);
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted closing ledger", e);
     }
   }
 
@@ -168,11 +171,8 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
         throws IOException {
       this.lh = lh;
       readEntries = firstBookKeeperEntry;
-      try {
-        maxEntry = lh.getLastAddConfirmed();
-      } catch (Exception e) {
-        throw new IOException("Error reading last entry id", e);
-      }
+
+      maxEntry = lh.getLastAddConfirmed();
     }
 
     /**
@@ -193,8 +193,10 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
             assert !entries.hasMoreElements();
             return e.getEntryInputStream();
         }
-      } catch (Exception e) {
+      } catch (BKException e) {
         throw new IOException("Error reading entries from bookkeeper", e);
+      } catch (InterruptedException e) {
+        throw new IOException("Interrupted reading entries from bookkeeper", e);
       }
       return null;
     }

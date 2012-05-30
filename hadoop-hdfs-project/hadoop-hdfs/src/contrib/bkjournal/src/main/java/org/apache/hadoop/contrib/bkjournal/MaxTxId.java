@@ -20,6 +20,7 @@ package org.apache.hadoop.contrib.bkjournal;
 import java.io.IOException;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
@@ -58,8 +59,10 @@ class MaxTxId {
           zkc.create(path, txidStr.getBytes("UTF-8"), 
                      Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
-      } catch (Exception e) {
+      } catch (KeeperException e) {
         throw new IOException("Error writing max tx id", e);
+      } catch (InterruptedException e) {
+        throw new IOException("Interrupted while writing max tx id", e);
       }
     }
   }
@@ -74,8 +77,10 @@ class MaxTxId {
         String txidString = new String(bytes, "UTF-8");
         return Long.valueOf(txidString);
       }
-    } catch (Exception e) {
+    } catch (KeeperException e) {
       throw new IOException("Error reading the max tx id from zk", e);
+    } catch (InterruptedException ie) {
+      throw new IOException("Interrupted while reading thr max tx id", ie);
     }
   }
 }
