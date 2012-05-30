@@ -428,6 +428,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3870. Invalid App Metrics 
     (Bhallamudi Venkata Siva Kamesh via tgraves).
 
+    MAPREDUCE-4152. map task left hanging after AM dies trying to connect to RM
+    (Tom Graves via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
