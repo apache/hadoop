@@ -72,7 +72,7 @@ public class TestHAConfiguration {
   }
 
   @Test
-  public void testGetOtherNNHttpAddress() {
+  public void testGetOtherNNHttpAddress() throws IOException {
     // Use non-local addresses to avoid host address matching
     Configuration conf = getHAConf("ns1", "1.2.3.1", "1.2.3.2");
     conf.set(DFSConfigKeys.DFS_NAMESERVICE_ID, "ns1");

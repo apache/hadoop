@@ -706,9 +706,10 @@ public class DFSUtil {
    * @param httpsAddress -If true, and if security is enabled, returns server 
    *                      https address. If false, returns server http address.
    * @return server http or https address
+   * @throws IOException 
    */
-  public static String getInfoServer(
-      InetSocketAddress namenodeAddr, Configuration conf, boolean httpsAddress) {
+  public static String getInfoServer(InetSocketAddress namenodeAddr,
+      Configuration conf, boolean httpsAddress) throws IOException {
     boolean securityOn = UserGroupInformation.isSecurityEnabled();
     String httpAddressKey = (securityOn && httpsAddress) ? 
         DFS_NAMENODE_HTTPS_ADDRESS_KEY : DFS_NAMENODE_HTTP_ADDRESS_KEY;
@@ -725,8 +726,14 @@ public class DFSUtil {
     } else {
       suffixes = new String[2];
     }
-
-    return getSuffixedConf(conf, httpAddressKey, httpAddressDefault, suffixes);
+    String configuredInfoAddr = getSuffixedConf(conf, httpAddressKey,
+        httpAddressDefault, suffixes);
+    if (namenodeAddr != null) {
+      return substituteForWildcardAddress(configuredInfoAddr,
+          namenodeAddr.getHostName());
+    } else {
+      return configuredInfoAddr;
+    }
   }
   
 
@@ -751,7 +758,7 @@ public class DFSUtil {
       if (UserGroupInformation.isSecurityEnabled() &&
           defaultSockAddr.getAddress().isAnyLocalAddress()) {
         throw new IOException("Cannot use a wildcard address with security. " +
-                              "Must explicitly set bind address for Kerberos");
+            "Must explicitly set bind address for Kerberos");
       }
       return defaultHost + ":" + sockAddr.getPort();
     } else {

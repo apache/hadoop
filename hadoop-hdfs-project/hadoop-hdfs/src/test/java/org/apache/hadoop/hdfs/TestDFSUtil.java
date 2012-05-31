@@ -409,14 +409,20 @@ public class TestDFSUtil {
   }
 
   @Test
-  public void testGetServerInfo() {
+  public void testGetInfoServer() throws IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
+    
     String httpsport = DFSUtil.getInfoServer(null, conf, true);
     assertEquals("0.0.0.0:"+DFS_NAMENODE_HTTPS_PORT_DEFAULT, httpsport);
+    
     String httpport = DFSUtil.getInfoServer(null, conf, false);
     assertEquals("0.0.0.0:"+DFS_NAMENODE_HTTP_PORT_DEFAULT, httpport);
+    
+    String httpAddress = DFSUtil.getInfoServer(new InetSocketAddress(
+        "localhost", 8020), conf, false);
+    assertEquals("localhost:" + DFS_NAMENODE_HTTP_PORT_DEFAULT, httpAddress);
   }
   
   @Test
