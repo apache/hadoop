@@ -56,6 +56,9 @@ Release 2.0.1-alpha - UNRELEASED
     FileContextMainOperationsBaseTest.java to avoid potential
     test failure (Madhukara Phatak via harsh)
 
+    HADOOP-8452. DN logs backtrace when running under jsvc and /jmx is loaded 
+    (Andy Isaacson via bobby)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
