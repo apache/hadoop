@@ -132,6 +132,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3423. BKJM: NN startup is failing, when tries to recoverUnfinalizedSegments()
     a bad inProgress_ ZNodes. (Ivan Kelly and Uma via umamahesh)
 
+    HDFS-3441. Race condition between rolling logs at active NN and purging at standby.
+    (Rakesh R via umamahesh)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
