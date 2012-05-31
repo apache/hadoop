@@ -538,7 +538,8 @@ hadoop jar &lt;gridmix-jar&gt; org.apache.hadoop.mapred.gridmix.Gridmix \
       </source>
       <p>For backward compatibility reasons, each line of users-list file can
       contain username followed by groupnames in the form username[,group]*.
-      The groupnames will be ignored by Gridmix.
+      The groupnames will be ignored by Gridmix. Empty lines will also be 
+      ignored.
       </p>
     </section>
 

@@ -68,15 +68,18 @@ public class RoundRobinUserResolver implements UserResolver {
     try {
       in = new LineReader(fs.open(userloc));
       while (in.readLine(rawUgi) > 0) {//line is of the form username[,group]*
+        if(rawUgi.toString().trim().equals("")) {
+          continue; //Continue on empty line
+        }
         // e is end position of user name in this line
         int e = rawUgi.find(",");
-        if (rawUgi.getLength() == 0 || e == 0) {
+        if (e == 0) {
           throw new IOException("Missing username: " + rawUgi);
         }
         if (e == -1) {
           e = rawUgi.getLength();
         }
-        final String username = Text.decode(rawUgi.getBytes(), 0, e);
+        final String username = Text.decode(rawUgi.getBytes(), 0, e).trim();
         UserGroupInformation ugi = null;
         try {
           ugi = UserGroupInformation.createProxyUser(username,
