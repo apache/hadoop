@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 
 import junit.framework.TestCase;
@@ -155,7 +156,7 @@ public class TestDiskError extends TestCase {
   
   public void testLocalDirs() throws Exception {
     Configuration conf = new Configuration();
-    final String permStr = "755";
+    final String permStr = (Shell.WINDOWS) ? "700" : "755";
     FsPermission expected = new FsPermission(permStr);
     conf.set(DataNode.DATA_DIR_PERMISSION_KEY, permStr);
     MiniDFSCluster cluster = null; 

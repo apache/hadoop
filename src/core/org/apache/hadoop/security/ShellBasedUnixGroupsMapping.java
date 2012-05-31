@@ -60,37 +60,6 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
    */
   private static List<String> getUserGroups(final String user) throws IOException {
     List<String> groups = new LinkedList<String>();
-    if (Shell.WINDOWS) {
-      String result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
-      String[] lines = result.split("\\r\\n");
-        String line = lines[0];
-        if (!line.startsWith("User name")) {
-          throw new IOException(
-              "Command result did not start with \"User name\"");
-        }
-        String[] splits = line.substring(9).split("\\s");
-        if (splits.length == 0 || !splits[splits.length-1].equals(user)) {
-          throw new IOException("Bad user name returned");
-        }
-        for (int i=1; i<lines.length; ++i) {
-          line = lines[i];
-          // not handling global group memberships now
-          // it might be better to handle them via a specific domain controller
-          // plugin
-          if (line.startsWith("Local Group Memberships")) {
-            splits = line.substring(23).split("\\s");
-            for (String group : splits) {
-              if (group.length() > 0) {
-                if (group.charAt(0) == '*') {
-                  group = group.substring(1);
-                }
-                groups.add(group);
-              }
-            }
-          }
-        }
-    }
-    else {
       String result = "";
       try {
         result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
@@ -102,9 +71,7 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
       
       while (tokenizer.hasMoreTokens()) {
         groups.add(tokenizer.nextToken());
-      }
-    }
-    
+      }    
     return groups;
   }
 }

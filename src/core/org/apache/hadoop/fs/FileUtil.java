@@ -520,21 +520,24 @@ public class FileUtil {
     StringBuffer untarCommand = new StringBuffer();
     boolean gzipped = inFile.toString().endsWith("gz");
     if (gzipped) {
-      untarCommand.append(" gzip -dc '");
+      untarCommand.append((Shell.WINDOWS) ? " gzip -dc \"" : " gzip -dc '");
       untarCommand.append(FileUtil.makeShellPath(inFile));
-      untarCommand.append("' | (");
+      untarCommand.append((Shell.WINDOWS) ? "\" | (" : "' | (");
     } 
-    untarCommand.append("cd '");
+    untarCommand.append((Shell.WINDOWS) ? "cd \"" : "cd '");
     untarCommand.append(FileUtil.makeShellPath(untarDir)); 
-    untarCommand.append("' ; ");
-    untarCommand.append("tar -xf ");
-    
+    untarCommand.append((Shell.WINDOWS) ? "\" & " : "' ; ");
+
+    // Force the archive path as local on Windows as it can have a colon
+    untarCommand.append((Shell.WINDOWS) ? "tar --force-local -xf " : "tar -xf ");
+
     if (gzipped) {
       untarCommand.append(" -)");
     } else {
       untarCommand.append(FileUtil.makeShellPath(inFile));
     }
-    String[] shellCmd = {(Path.WINDOWS)?"cmd":"bash", (Path.WINDOWS)?"/c":"-c", untarCommand.toString() };
+    String[] shellCmd = {(Shell.WINDOWS)?"cmd":"bash", (Shell.WINDOWS)?"/c":"-c",
+      untarCommand.toString() };
     ShellCommandExecutor shexec = new ShellCommandExecutor(shellCmd);
     shexec.execute();
     int exitcode = shexec.getExitCode();
@@ -591,6 +594,15 @@ public class FileUtil {
     if (!fromFile.canRead())
       throw new IOException("FileCopy: " + "source file is unreadable: "
                             + fromFileName);
+
+    // Make sure the parent directory exist for the toFileName
+    if (toFile.getParent() != null) {
+      File toFileParentDir = new File(toFile.getParent());
+      if (!toFileParentDir.exists() && !toFileParentDir.mkdirs()) {
+        throw new IOException("FileCopy: failed to create target directory: "
+                              + toFileParentDir.getPath());
+      }
+    }
 
     InputStream from = null;
     OutputStream to = null;
@@ -683,8 +695,10 @@ public class FileUtil {
    */
   public static int chmod(String filename, String perm, boolean recursive)
                             throws IOException {
-    if (Path.WINDOWS)
+    if (Shell.DISABLEWINDOWS_TEMPORARILY) {
       return 0;
+    }
+
     StringBuffer cmdBuf = new StringBuffer();
     cmdBuf.append("chmod ");
     if (recursive) {
@@ -714,16 +728,13 @@ public class FileUtil {
    */
   public static void setPermission(File f, FsPermission permission
                                    ) throws IOException {
-    if (Shell.DISABLEWINDOWS_TEMPORARILY)
-      return;
-
     FsAction user = permission.getUserAction();
     FsAction group = permission.getGroupAction();
     FsAction other = permission.getOtherAction();
 
     // use the native/fork if the group/other permissions are different
-    // or if the native is available    
-    if (group != other || NativeIO.isAvailable()) {
+    // or if the native is available or on Windows
+    if (group != other || NativeIO.isAvailable() || Shell.WINDOWS) {
       execSetPermission(f, permission);
       return;
     }
@@ -771,8 +782,8 @@ public class FileUtil {
     if (NativeIO.isAvailable()) {
       NativeIO.chmod(f.getCanonicalPath(), permission.toShort());
     } else {
-      execCommand(f, Shell.SET_PERMISSION_COMMAND,
-                  String.format("%04o", permission.toShort()));
+      execCommand(f, Shell.getSetPermissionCommand(
+                  String.format("%04o", permission.toShort())));
     }
   }
   

@@ -40,34 +40,53 @@ import org.apache.hadoop.conf.Configuration;
 abstract public class Shell {
   
   public static final Log LOG = LogFactory.getLog(Shell.class);
-  
+
+  /** a Windows utility to emulate Unix commands */
+  public static final String WINUTILS = System.getenv("HADOOP_HOME")
+                                        + "\\bin\\winutils";
+
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
-  /** a Unix command to get the current user's groups list */
+
+  /** a Unix command to set the change user's groups list */
+  public static final String SET_GROUP_COMMAND = "chgrp";
+
+  /** Return a command to get the current user's groups list */
   public static String[] getGroupsCommand() {
-    return (WINDOWS)? new String[]{"cmd", "/c", "groups"}:
-        new String[]{"bash", "-c", "groups"};
+    return (WINDOWS)? new String[]{"cmd", "/c", "groups"}
+                    : new String[]{"bash", "-c", "groups"};
   }
-  /** a Unix command to get a given user's groups list */
+
+  /** Return a command to get a given user's groups list */
   public static String[] getGroupsForUserCommand(final String user) {
     //'groups username' command return is non-consistent across different unixes
-	  return (WINDOWS)? new String[] {"cmd", "/c", "net user " + user}:
-        new String [] {"bash", "-c", "id -Gn " + user};
+    return (WINDOWS)? new String[] { WINUTILS, "groups", user}
+                    : new String [] {"bash", "-c", "id -Gn " + user};
   }
-  /** a Unix command to get a given netgroup's user list */
+
+  /** Return a command to get a given netgroup's user list */
   public static String[] getUsersForNetgroupCommand(final String netgroup) {
     //'groups username' command return is non-consistent across different unixes
-    return (WINDOWS)? new String [] {"cmd", "/c", "getent netgroup " + netgroup}: new String [] {"bash", "-c", "getent netgroup " + netgroup};
+    return (WINDOWS)? new String [] {"cmd", "/c", "getent netgroup " + netgroup}
+                    : new String [] {"bash", "-c", "getent netgroup " + netgroup};
   }
-  /** a Unix command to set permission */
-  public static final String SET_PERMISSION_COMMAND = "chmod";
-  /** a Unix command to set owner */
-  public static final String SET_OWNER_COMMAND = "chown";
-  public static final String SET_GROUP_COMMAND = "chgrp";
-  /** Return a Unix command to get permission information. */
-  public static String[] getGET_PERMISSION_COMMAND() {
-    //force /bin/ls, except on windows.
-    return new String[] {(WINDOWS ? "ls" : "/bin/ls"), "-ld"};
+
+  /** Return a command to get permission information. */
+  public static String[] getGetPermissionCommand() {
+    return (WINDOWS) ? new String[] { WINUTILS, "ls" }
+                     : new String[] { "/bin/ls", "-ld" };
+  }
+
+  /** Return a command to set permission */
+  public static String[] getSetPermissionCommand(String perm) {
+    return (WINDOWS) ? new String[] { WINUTILS, "chmod", perm }
+                     : new String[] { "chmod", perm };
+  }
+
+  /** Return a command to set owner */
+  public static String[] getSetOwnerCommand(String owner) {
+    return (WINDOWS) ? new String[] { WINUTILS, "chown", owner }
+                     : new String[] { "chown", owner };
   }
 
   /**Time after which the executing script would be timedout*/

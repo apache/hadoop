@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.conf.Configuration;
 /**
  * A utility to manage job submission files.<br/>
@@ -113,8 +114,17 @@ public class JobSubmissionFiles {
                       "by " + realUser + " and permissions must be rwx------");
       }
     } else {
-      fs.mkdirs(stagingArea, 
-          new FsPermission(JOB_DIR_PERMISSION));
+      if (fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION))) {
+        if (Shell.WINDOWS) {
+          // On Windows, if a file or directory is created by users in
+          // Administrators group, the file owner will be the Administrators
+          // group as opposed to the actual users. This causes problem
+          // because Hadoop security model assumes whoever created the
+          // file should be the owner. We explicitly set ownership here
+          // to fix the problem on Windows.
+          fs.setOwner(stagingArea, realUser, null);
+        }
+      }
     }
     return stagingArea;
   }

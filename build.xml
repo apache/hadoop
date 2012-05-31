@@ -63,6 +63,7 @@
   <property name="c++.libhdfs.src" value="${c++.src}/libhdfs"/>
   <property name="librecordio.src" value="${c++.src}/librecordio"/>
   <property name="tools.src" value="${basedir}/src/tools"/>
+  <property name="winutils.src.dir" value="${basedir}/src/winutils"/>
 
   <property name="package.prefix" value="/usr"/>
   <property name="package.conf.dir" value="/etc/hadoop"/>
@@ -87,6 +88,7 @@
             value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
   <property name="jvm.arch" 
             value="${sun.arch.data.model}"/>
+  <property name="build.winutils" value="${build.dir}/winutils/${os.arch}"/>
   <property name="build.native" value="${build.dir}/native/${build.platform}"/>
   <property name="build.c++" value="${build.dir}/c++-build/${build.platform}"/>
   <property name="build.c++.utils" value="${build.c++}/utils"/>
@@ -169,6 +171,7 @@
   <property name="grep.cmd" value="grep"/>
   <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
+  <property name="msbuild.cmd" value="msbuild"/>
 
   <property name="jsvc.build.dir" value="${build.dir}/jsvc.${os.arch}" />
   <property name="jsvc.install.dir" value="${dist.dir}/libexec" /> 
@@ -592,6 +595,22 @@
     </copy>
   </target>
 
+  <target name="compile-winutils">
+    <antcall target="compile-ms-winutils">
+      <param name="windows" value="true"/>
+    </antcall>
+  </target>
+
+  <target name="compile-ms-winutils" if="windows">
+    <mkdir dir="${build.winutils}"/>
+
+    <exec dir="${build.winutils}" executable="${msbuild.cmd}" failonerror="true">
+      <arg line="${winutils.src.dir}/winutils.vcxproj /p:Configuration=Release;OutDir=${build.winutils}/"/>
+    </exec>
+
+    <copy file="${build.winutils}/winutils.exe" todir="${basedir}/bin"/>
+  </target>
+
   <target name="compile-native">
     <antcall target="compile-core-native">
       <param name="compile.native" value="true"/>
@@ -665,7 +684,7 @@
 
   <target name="compile-core"
           depends="clover,compile-core-classes,compile-mapred-classes,
-  	compile-hdfs-classes,compile-core-native,compile-c++" 
+  	compile-hdfs-classes,compile-core-native,compile-c++,compile-ms-winutils" 
   	description="Compile core only">
   </target>
 
@@ -1028,6 +1047,7 @@
              timeout="${test.timeout}"
              errorProperty="tests.failed"
              failureProperty="tests.failed">
+        <env key="HADOOP_HOME" value="${basedir}"/>
         <sysproperty key="test.build.data" value="${test.build.data}" />
         <sysproperty key="test.tools.input.dir"
                      value="${test.tools.input.dir}" />
@@ -1619,7 +1639,7 @@
       </fileset>
     </copy>
 
-        <exec dir="${dist.dir}" executable="sh" failonerror="true">
+    <exec dir="${dist.dir}" executable="sh" failonerror="true">
           <env key="BASE_NATIVE_LIB_DIR" value="${lib.dir}/native"/>
           <env key="BUILD_NATIVE_DIR" value="${build.dir}/native"/>
           <env key="DIST_LIB_DIR" value="${dist.dir}/lib/native"/>
@@ -2045,7 +2065,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-sign, clean-fi" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-sign, clean-fi, clean-ms-winutils" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
@@ -2068,6 +2088,24 @@
   <target name="veryclean" depends="clean" description="Delete mvn ant task jar and ivy ant taks jar">
     <delete file="${ant_task.jar}"/>
     <delete file="${ivy.jar}"/>
+  </target>
+
+  <target name="clean-ms-winutils" if="windows" description="Delete ant and editor generated files for wintuils">
+    <delete file="${basedir}/bin/winutils.exe" failonerror="false"/>
+    <delete dir="${build.winutils}" failonerror="false"/>
+    <delete failonerror="false">
+      <fileset dir="${winutils.src.dir}" includes="**/*">
+        <exclude name="**/*.c"/>
+        <exclude name="**/*.cpp"/>
+        <exclude name="**/*.h"/>
+        <exclude name="**/*.sln"/>
+        <exclude name="**/*.vcxproj"/>
+        <exclude name="**/*.vcxproj.user"/>
+      </fileset>
+    </delete>
+    <delete failonerror="false">
+      <dirset dir="${winutils.src.dir}" includes="**/*"/>
+    </delete>
   </target>
 
 

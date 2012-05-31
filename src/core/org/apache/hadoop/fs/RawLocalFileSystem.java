@@ -284,7 +284,33 @@ public class RawLocalFileSystem extends FileSystem {
       return true;
     }
     LOG.debug("Falling through to a copy of " + src + " to " + dst);
-    return FileUtil.copy(this, src, this, dst, true, getConf());
+
+    // TODO: What if src and dst are same or subset of another?
+
+    if (this.exists(dst)) {
+      FileStatus sdst = this.getFileStatus(dst);
+      if (sdst.isDir()) {
+        // If dst exists and is a folder, we have to copy the source content, otherwise
+        // we will copy the src folder into the dst folder what is not the desired
+        // behavior for rename
+
+        FileStatus contents[] = this.listStatus(src);
+        for (int i = 0; i < contents.length; i++) {
+          FileUtil.copy(this, contents[i].getPath(), this,
+            new Path(dst, contents[i].getPath().getName()),
+            true, getConf());
+        }
+
+        // Delete the source folder
+        return this.delete(src, true);
+      }
+      else {
+        return FileUtil.copy(this, src, this, dst, true, getConf());
+      }
+    }
+    else {
+      return FileUtil.copy(this, src, this, dst, true, getConf());
+    }
   }
   
   @Deprecated
@@ -440,17 +466,11 @@ public class RawLocalFileSystem extends FileSystem {
 
     /// loads permissions, owner, and group from `ls -ld`
     private void loadPermissionInfo() {
-      if (Shell.DISABLEWINDOWS_TEMPORARILY){
-        setPermission(null);
-        setOwner(null);
-        setGroup(null);
-        return;
-      }
       IOException e = null;
       try {
         StringTokenizer t = new StringTokenizer(
             FileUtil.execCommand(new File(getPath().toUri()), 
-                                 Shell.getGET_PERMISSION_COMMAND()));
+                                          Shell.getGetPermissionCommand()));
         //expected format
         //-rw-------    1 username groupname ...
         String permission = t.nextToken();
@@ -459,7 +479,18 @@ public class RawLocalFileSystem extends FileSystem {
         }
         setPermission(FsPermission.valueOf(permission));
         t.nextToken();
-        setOwner(t.nextToken());
+        
+        String owner = t.nextToken();
+        // If on windows domain, token format is DOMAIN\\user and we want to
+        // extract only the user name
+        if (Shell.WINDOWS) {
+          int i = owner.indexOf('\\');
+          if (i != -1)
+            owner = owner.substring(i + 1);
+        }
+        setOwner(owner);
+
+        // FIXME: Group names could have spaces on Windows
         setGroup(t.nextToken());
       } catch (Shell.ExitCodeException ioe) {
         if (ioe.getExitCode() != 1) {
@@ -504,7 +535,7 @@ public class RawLocalFileSystem extends FileSystem {
     } else {
       //OWNER[:[GROUP]]
       String s = username + (groupname == null? "": ":" + groupname);
-      FileUtil.execCommand(pathToFile(p), Shell.SET_OWNER_COMMAND, s);
+      FileUtil.execCommand(pathToFile(p), Shell.getSetOwnerCommand(s));
     }
   }
 
@@ -513,8 +544,6 @@ public class RawLocalFileSystem extends FileSystem {
    */
   @Override
   public void setPermission(Path p, FsPermission permission) throws IOException {
-    if (Shell.DISABLEWINDOWS_TEMPORARILY)
-      return;
     FileUtil.setPermission(pathToFile(p), permission);
   }
 }

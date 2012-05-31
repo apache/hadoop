@@ -102,6 +102,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 
@@ -2410,6 +2411,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         fs.delete(systemDir, true);
         if (FileSystem.mkdirs(fs, systemDir, 
             new FsPermission(SYSTEM_DIR_PERMISSION))) {
+          if (Shell.WINDOWS) {
+            // Explicitly set ownership on Windows, as in some scenarios
+            // Administrators group would end up being the owner what is
+            // currently not supported by the Hadoop security model.
+            fs.setOwner(systemDir, getMROwner().getShortUserName(), null);
+          }
           break;
         }
         LOG.error("Mkdirs failed to create " + systemDir);
