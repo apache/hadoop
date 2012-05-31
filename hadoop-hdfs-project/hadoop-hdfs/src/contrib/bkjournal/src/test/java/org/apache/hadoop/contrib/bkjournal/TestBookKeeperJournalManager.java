@@ -18,14 +18,17 @@
 package org.apache.hadoop.contrib.bkjournal;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.spy;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -37,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.JournalManager;
 
 import org.apache.bookkeeper.proto.BookieServer;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 
@@ -614,4 +618,57 @@ public class TestBookKeeperJournalManager {
     bkjm.close();
   }
 
+  /**
+   * Tests that the edit log file meta data reading from ZooKeeper should be
+   * able to handle the NoNodeException. bkjm.getInputStream(fromTxId,
+   * inProgressOk) should suppress the NoNodeException and continue. HDFS-3441.
+   */
+  @Test
+  public void testEditLogFileNotExistsWhenReadingMetadata() throws Exception {
+    URI uri = BKJMUtil.createJournalURI("/hdfsjournal-editlogfile");
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+    try {
+      // start new inprogress log segment with txid=1
+      // and write transactions till txid=50
+      String zkpath1 = startAndFinalizeLogSegment(bkjm, 1, 50);
+
+      // start new inprogress log segment with txid=51
+      // and write transactions till txid=100
+      String zkpath2 = startAndFinalizeLogSegment(bkjm, 51, 100);
+
+      // read the metadata from ZK. Here simulating the situation
+      // when reading,the edit log metadata can be removed by purger thread.
+      ZooKeeper zkspy = spy(BKJMUtil.connectZooKeeper());
+      bkjm.setZooKeeper(zkspy);
+      Mockito.doThrow(
+          new KeeperException.NoNodeException(zkpath2 + " doesn't exists"))
+          .when(zkspy).getData(zkpath2, false, null);
+
+      List<EditLogLedgerMetadata> ledgerList = bkjm.getLedgerList(false);
+      assertEquals("List contains the metadata of non exists path.", 1,
+          ledgerList.size());
+      assertEquals("LogLedgerMetadata contains wrong zk paths.", zkpath1,
+          ledgerList.get(0).getZkPath());
+    } finally {
+      bkjm.close();
+    }
+  }
+
+  private String startAndFinalizeLogSegment(BookKeeperJournalManager bkjm,
+      int startTxid, int endTxid) throws IOException, KeeperException,
+      InterruptedException {
+    EditLogOutputStream out = bkjm.startLogSegment(startTxid);
+    for (long i = startTxid; i <= endTxid; i++) {
+      FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+      op.setTransactionId(i);
+      out.write(op);
+    }
+    out.close();
+    // finalize the inprogress_1 log segment.
+    bkjm.finalizeLogSegment(startTxid, endTxid);
+    String zkpath1 = bkjm.finalizedLedgerZNode(startTxid, endTxid);
+    assertNotNull(zkc.exists(zkpath1, false));
+    assertNull(zkc.exists(bkjm.inprogressZNode(startTxid), false));
+    return zkpath1;
+  }
 }
