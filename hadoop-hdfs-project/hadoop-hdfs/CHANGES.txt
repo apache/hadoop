@@ -135,6 +135,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3441. Race condition between rolling logs at active NN and purging at standby.
     (Rakesh R via umamahesh)
 
+    HDFS-3484. hdfs fsck doesn't work if NN HTTP address is set to
+    0.0.0.0 even if NN RPC address is configured. (atm via eli)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES

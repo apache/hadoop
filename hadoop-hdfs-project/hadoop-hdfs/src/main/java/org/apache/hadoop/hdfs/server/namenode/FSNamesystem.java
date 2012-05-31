@@ -664,8 +664,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
   }
   
-  /** Start services required in standby state */
-  void startStandbyServices(final Configuration conf) {
+  /**
+   * Start services required in standby state 
+   * 
+   * @throws IOException
+   */
+  void startStandbyServices(final Configuration conf) throws IOException {
     LOG.info("Starting services required for standby state");
     if (!dir.fsImage.editLog.isOpenForRead()) {
       // During startup, we're already open for read.
