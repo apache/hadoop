@@ -73,6 +73,11 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
     this.logVersion = metadata.getVersion();
     this.inProgress = metadata.isInProgress();
 
+    if (firstBookKeeperEntry < 0
+        || firstBookKeeperEntry > lh.getLastAddConfirmed()) {
+      throw new IOException("Invalid first bk entry to read: "
+          + firstBookKeeperEntry + ", LAC: " + lh.getLastAddConfirmed());
+    }
     BufferedInputStream bin = new BufferedInputStream(
         new LedgerInputStream(lh, firstBookKeeperEntry));
     tracker = new FSEditLogLoader.PositionTrackingInputStream(bin);

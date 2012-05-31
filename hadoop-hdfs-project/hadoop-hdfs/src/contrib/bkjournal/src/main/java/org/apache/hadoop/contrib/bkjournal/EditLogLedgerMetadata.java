@@ -149,8 +149,8 @@ public class EditLogLedgerMetadata {
           version, ledgerId, firstTxId, lastTxId);
     }
     try {
-      zkc.create(path, finalisedData.getBytes(), 
-                 Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+      zkc.create(path, finalisedData.getBytes(), Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
       throw nee;
     } catch (KeeperException e) {
@@ -167,7 +167,7 @@ public class EditLogLedgerMetadata {
         LOG.trace("Verifying " + this.toString() 
                   + " against " + other);
       }
-      return other == this;
+      return other.equals(this);
     } catch (KeeperException e) {
       LOG.error("Couldn't verify data in " + path, e);
       return false;
@@ -188,12 +188,12 @@ public class EditLogLedgerMetadata {
       && version == ol.version;
   }
 
- public int hashCode() { 
+  public int hashCode() {
     int hash = 1;
-    hash = hash * 31 + (int)ledgerId;
-    hash = hash * 31 + (int)firstTxId;
-    hash = hash * 31 + (int)lastTxId;
-    hash = hash * 31 + (int)version;
+    hash = hash * 31 + (int) ledgerId;
+    hash = hash * 31 + (int) firstTxId;
+    hash = hash * 31 + (int) lastTxId;
+    hash = hash * 31 + (int) version;
     return hash;
   }
     

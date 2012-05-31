@@ -461,17 +461,34 @@ public class BookKeeperJournalManager implements JournalManager {
             continue;
           }
           String znode = ledgerPath + "/" + child;
-          EditLogLedgerMetadata l
-            = EditLogLedgerMetadata.read(zkc, znode);
-          long endTxId = recoverLastTxId(l, true);
-          if (endTxId == HdfsConstants.INVALID_TXID) {
-            LOG.error("Unrecoverable corruption has occurred in segment "
-                      + l.toString() + " at path " + znode
-                      + ". Unable to continue recovery.");
-            throw new IOException("Unrecoverable corruption,"
-                                  + " please check logs.");
+          EditLogLedgerMetadata l = EditLogLedgerMetadata.read(zkc, znode);
+          try {
+            long endTxId = recoverLastTxId(l, true);
+            if (endTxId == HdfsConstants.INVALID_TXID) {
+              LOG.error("Unrecoverable corruption has occurred in segment "
+                  + l.toString() + " at path " + znode
+                  + ". Unable to continue recovery.");
+              throw new IOException("Unrecoverable corruption,"
+                  + " please check logs.");
+            }
+            finalizeLogSegment(l.getFirstTxId(), endTxId);
+          } catch (SegmentEmptyException see) {
+            LOG.warn("Inprogress znode " + child
+                + " refers to a ledger which is empty. This occurs when the NN"
+                + " crashes after opening a segment, but before writing the"
+                + " OP_START_LOG_SEGMENT op. It is safe to delete."
+                + " MetaData [" + l.toString() + "]");
+
+            // If the max seen transaction is the same as what would
+            // have been the first transaction of the failed ledger,
+            // decrement it, as that transaction never happened and as
+            // such, is _not_ the last seen
+            if (maxTxId.get() == l.getFirstTxId()) {
+              maxTxId.reset(maxTxId.get() - 1);
+            }
+
+            zkc.delete(znode, -1);
           }
-          finalizeLogSegment(l.getFirstTxId(), endTxId);
         }
       } catch (KeeperException.NoNodeException nne) {
           // nothing to recover, ignore
@@ -532,9 +549,9 @@ public class BookKeeperJournalManager implements JournalManager {
    * ledger.
    */
   private long recoverLastTxId(EditLogLedgerMetadata l, boolean fence)
-      throws IOException {
+      throws IOException, SegmentEmptyException {
+    LedgerHandle lh = null;
     try {
-      LedgerHandle lh = null;
       if (fence) {
         lh = bkc.openLedger(l.getLedgerId(),
                             BookKeeper.DigestType.MAC,
@@ -544,9 +561,21 @@ public class BookKeeperJournalManager implements JournalManager {
                                       BookKeeper.DigestType.MAC,
                                       digestpw.getBytes());
       }
+    } catch (BKException bke) {
+      throw new IOException("Exception opening ledger for " + l, bke);
+    } catch (InterruptedException ie) {
+      throw new IOException("Interrupted opening ledger for " + l, ie);
+    }
+
+    BookKeeperEditLogInputStream in = null;
+
+    try {
       long lastAddConfirmed = lh.getLastAddConfirmed();
-      BookKeeperEditLogInputStream in
-        = new BookKeeperEditLogInputStream(lh, l, lastAddConfirmed);
+      if (lastAddConfirmed == -1) {
+        throw new SegmentEmptyException();
+      }
+
+      in = new BookKeeperEditLogInputStream(lh, l, lastAddConfirmed);
 
       long endTxId = HdfsConstants.INVALID_TXID;
       FSEditLogOp op = in.readOp();
@@ -558,12 +587,10 @@ public class BookKeeperJournalManager implements JournalManager {
         op = in.readOp();
       }
       return endTxId;
-    } catch (BKException e) {
-      throw new IOException("Exception retreiving last tx id for ledger " + l,
-                            e);
-    } catch (InterruptedException ie) {
-      throw new IOException("Interrupted while retreiving last tx id "
-                            + "for ledger " + l, ie);
+    } finally {
+      if (in != null) {
+        in.close();
+      }
     }
   }
 
@@ -612,5 +639,8 @@ public class BookKeeperJournalManager implements JournalManager {
         zkConnectLatch.countDown();
       }
     }
+  }
+  
+  private static class SegmentEmptyException extends IOException {
   }
 }
