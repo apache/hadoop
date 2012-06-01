@@ -23,6 +23,8 @@ branch-hadoop-1-win - unreleased
     HADOOP-8411 TestStorageDirecotyFailure, TestTaskLogsTruncater, TestWebHdfsUrl and TestSecurityUtil
                 fail on Windows  (Ivan Mitic via Sanjay Radia)
 
+    HADOOP-8440 HarFileSystem.decodeHarURI fails for URIs whose host contains numbers  (Ivan Mitic via Sanjay Radia)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES
