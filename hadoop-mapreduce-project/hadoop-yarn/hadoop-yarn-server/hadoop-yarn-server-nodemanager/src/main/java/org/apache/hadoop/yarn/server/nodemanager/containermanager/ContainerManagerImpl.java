@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -524,8 +525,8 @@ public class ContainerManagerImpl extends CompositeService implements
           (CMgrCompletedAppsEvent) event;
       for (ApplicationId appID : appsFinishedEvent.getAppsToCleanup()) {
         this.dispatcher.getEventHandler().handle(
-            new ApplicationEvent(appID,
-                ApplicationEventType.FINISH_APPLICATION));
+            new ApplicationFinishEvent(appID,
+                "Application Killed by ResourceManager"));
       }
       break;
     case FINISH_CONTAINERS:
