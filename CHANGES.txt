@@ -13,6 +13,9 @@ Release 1.2.0 - unreleased
     HADOOP-8445. Token should not print the password in toString
     (Ravi Prakash via tgraves)
 
+    HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
+    HADOOP_SECURE_DN_PID_DIR (bobby)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

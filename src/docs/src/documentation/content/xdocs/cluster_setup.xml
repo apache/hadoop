@@ -122,6 +122,11 @@
           <p>At the very least you should specify the
           <code>JAVA_HOME</code> so that it is correctly defined on each
           remote node.</p>
+
+          <p>In most cases you should also specify <code>HADOOP_PID_DIR</code>
+          to point a directory that can only be written to by the users that
+          are going to run the hadoop daemons.  Otherwise there is the
+          potential for a symlink attack.</p>
           
           <p>Administrators can configure individual daemons using the
           configuration options <code>HADOOP_*_OPTS</code>. Various options 
