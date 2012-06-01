@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.IOException;
+import java.util.Date;
 
 /**
  * IndentedImageVisitor walks over an FSImage and displays its structure 
@@ -58,6 +59,16 @@ class IndentedImageVisitor extends TextWriterImageVisitor {
     write(element + " = " + value + "\n");
   }
 
+  void visit(ImageElement element, long value) throws IOException {
+    if ((element == ImageElement.DELEGATION_TOKEN_IDENTIFIER_EXPIRY_TIME) || 
+        (element == ImageElement.DELEGATION_TOKEN_IDENTIFIER_ISSUE_DATE) || 
+        (element == ImageElement.DELEGATION_TOKEN_IDENTIFIER_MAX_DATE)) {
+      visit(element, new Date(value).toString());
+    } else {
+      visit(element, Long.toString(value));
+    }
+  }
+  
   @Override
   void visitEnclosingElement(ImageElement element) throws IOException {
     printIndents();

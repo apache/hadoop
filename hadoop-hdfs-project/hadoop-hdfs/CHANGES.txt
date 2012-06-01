@@ -138,6 +138,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3484. hdfs fsck doesn't work if NN HTTP address is set to
     0.0.0.0 even if NN RPC address is configured. (atm via eli)
 
+    HDFS-3486. offlineimageviewer can't read fsimage files that contain
+    persistent delegation tokens. (Colin Patrick McCabe via eli)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
