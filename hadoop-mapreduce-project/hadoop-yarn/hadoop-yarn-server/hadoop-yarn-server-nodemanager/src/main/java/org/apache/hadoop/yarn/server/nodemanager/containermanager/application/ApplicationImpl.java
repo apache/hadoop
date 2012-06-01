@@ -141,6 +141,9 @@ public class ApplicationImpl implements Application {
                    ApplicationState.APPLICATION_RESOURCES_CLEANINGUP),
                ApplicationEventType.FINISH_APPLICATION,
                new AppFinishTriggeredTransition())
+           .addTransition(ApplicationState.INITING, ApplicationState.INITING,
+               ApplicationEventType.APPLICATION_LOG_HANDLING_INITED,
+               new AppLogInitDoneTransition())
            .addTransition(ApplicationState.INITING, ApplicationState.RUNNING,
                ApplicationEventType.APPLICATION_INITED,
                new AppInitDoneTransition())
@@ -192,8 +195,7 @@ public class ApplicationImpl implements Application {
   /**
    * Notify services of new application.
    * 
-   * In particular, this requests that the {@link ResourceLocalizationService}
-   * localize the application-scoped resources.
+   * In particular, this initializes the {@link LogAggregationService}
    */
   @SuppressWarnings("unchecked")
   static class AppInitTransition implements
@@ -203,6 +205,27 @@ public class ApplicationImpl implements Application {
       ApplicationInitEvent initEvent = (ApplicationInitEvent)event;
       app.applicationACLs = initEvent.getApplicationACLs();
       app.aclsManager.addApplication(app.getAppId(), app.applicationACLs);
+      // Inform the logAggregator
+      app.dispatcher.getEventHandler().handle(
+          new LogHandlerAppStartedEvent(app.appId, app.user,
+              app.credentials, ContainerLogsRetentionPolicy.ALL_CONTAINERS,
+              app.applicationACLs)); 
+    }
+  }
+
+  /**
+   * Handles the APPLICATION_LOG_HANDLING_INITED event that occurs after
+   * {@link LogAggregationService} has created the directories for the app
+   * and started the aggregation thread for the app.
+   * 
+   * In particular, this requests that the {@link ResourceLocalizationService}
+   * localize the application-scoped resources.
+   */
+  @SuppressWarnings("unchecked")
+  static class AppLogInitDoneTransition implements
+      SingleArcTransition<ApplicationImpl, ApplicationEvent> {
+    @Override
+    public void transition(ApplicationImpl app, ApplicationEvent event) {
       app.dispatcher.getEventHandler().handle(
           new ApplicationLocalizationEvent(
               LocalizationEventType.INIT_APPLICATION_RESOURCES, app));
@@ -248,13 +271,6 @@ public class ApplicationImpl implements Application {
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
-
-      // Inform the logAggregator
-      app.dispatcher.getEventHandler().handle(
-          new LogHandlerAppStartedEvent(app.appId, app.user,
-              app.credentials, ContainerLogsRetentionPolicy.ALL_CONTAINERS,
-              app.applicationACLs)); 
-
       // Start all the containers waiting for ApplicationInit
       for (Container container : app.containers.values()) {
         app.dispatcher.getEventHandler().handle(new ContainerInitEvent(

@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
 
@@ -32,6 +29,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -47,6 +45,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -61,6 +61,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
+import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -74,6 +75,7 @@ import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationFinishEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppFinishedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerAppStartedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerContainerFinishedEvent;
@@ -81,6 +83,7 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mortbay.util.MultiException;
 
 
 //@Ignore
@@ -112,7 +115,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testLocalFileDeletionAfterUpload() throws IOException {
+  public void testLocalFileDeletionAfterUpload() throws Exception {
     this.delSrvc = new DeletionService(createContainerExecutor());
     this.delSrvc.init(conf);
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
@@ -170,19 +173,23 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         logFilePath.toUri().getPath()).exists());
     
     dispatcher.await();
-    ArgumentCaptor<ApplicationEvent> eventCaptor =
-        ArgumentCaptor.forClass(ApplicationEvent.class);
-    verify(appEventHandler).handle(eventCaptor.capture());
-    assertEquals(ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED,
-        eventCaptor.getValue().getType());
-    assertEquals(appAttemptId.getApplicationId(), eventCaptor.getValue()
-        .getApplicationID());
     
+    ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
+        new ApplicationEvent(
+            appAttemptId.getApplicationId(),
+            ApplicationEventType.APPLICATION_LOG_HANDLING_INITED),
+        new ApplicationEvent(
+            appAttemptId.getApplicationId(),
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED)
+    };
+
+    checkEvents(appEventHandler, expectedEvents, true, "getType", "getApplicationID");
+    dispatcher.stop();
   }
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testNoContainerOnNode() {
+  public void testNoContainerOnNode() throws Exception {
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
@@ -218,19 +225,22 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         .exists());
     
     dispatcher.await();
-    ArgumentCaptor<ApplicationEvent> eventCaptor =
-        ArgumentCaptor.forClass(ApplicationEvent.class);
-    verify(appEventHandler).handle(eventCaptor.capture());
-    assertEquals(ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED,
-        eventCaptor.getValue().getType());
-    verify(appEventHandler).handle(eventCaptor.capture());
-    assertEquals(application1, eventCaptor.getValue()
-        .getApplicationID());
+    
+    ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
+        new ApplicationEvent(
+            application1,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_INITED),
+        new ApplicationEvent(
+            application1,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED)
+    };
+    checkEvents(appEventHandler, expectedEvents, true, "getType", "getApplicationID");
+    dispatcher.stop();
   }
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testMultipleAppsLogAggregation() throws IOException {
+  public void testMultipleAppsLogAggregation() throws Exception {
 
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
@@ -299,9 +309,22 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     app3LogDir.mkdir();
     logAggregationService.handle(new LogHandlerAppStartedEvent(application3,
         this.user, null,
-        ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY, this.acls));
-        
+        ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY, this.acls));        
 
+    ApplicationEvent expectedInitEvents[] = new ApplicationEvent[]{
+        new ApplicationEvent(
+            application1,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_INITED),
+        new ApplicationEvent(
+            application2,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_INITED),
+        new ApplicationEvent(
+            application3,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_INITED)
+    };
+    checkEvents(appEventHandler, expectedInitEvents, false, "getType", "getApplicationID");
+    reset(appEventHandler);
+    
     ContainerId container31 = BuilderUtils.newContainerId(appAttemptId3, 1);
     writeContainerLogs(app3LogDir, container31);
     logAggregationService.handle(
@@ -339,22 +362,59 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         new ContainerId[] { container31, container32 });
     
     dispatcher.await();
-    ArgumentCaptor<ApplicationEvent> eventCaptor =
-        ArgumentCaptor.forClass(ApplicationEvent.class);
-
-    verify(appEventHandler, times(3)).handle(eventCaptor.capture());
-    List<ApplicationEvent> capturedEvents = eventCaptor.getAllValues();
-    Set<ApplicationId> appIds = new HashSet<ApplicationId>();
-    for (ApplicationEvent cap : capturedEvents) {
-      assertEquals(ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED,
-          eventCaptor.getValue().getType());
-      appIds.add(cap.getApplicationID());
-    }
-    assertTrue(appIds.contains(application1));
-    assertTrue(appIds.contains(application2));
-    assertTrue(appIds.contains(application3));
+    
+    ApplicationEvent[] expectedFinishedEvents = new ApplicationEvent[]{
+        new ApplicationEvent(
+            application1,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED),
+        new ApplicationEvent(
+            application2,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED),
+        new ApplicationEvent(
+            application3,
+            ApplicationEventType.APPLICATION_LOG_HANDLING_FINISHED)
+    };
+    checkEvents(appEventHandler, expectedFinishedEvents, false, "getType", "getApplicationID");
+    dispatcher.stop();
   }
-
+  
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testLogAggregationInitFailsWithoutKillingNM() throws Exception {
+    
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        this.remoteRootLogDir.getAbsolutePath());
+    
+    DrainDispatcher dispatcher = createDispatcher();
+    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, appEventHandler);
+    
+    LogAggregationService logAggregationService = spy(
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                                  super.dirsHandler));
+    logAggregationService.init(this.conf);
+    logAggregationService.start();
+    
+    ApplicationId appId = BuilderUtils.newApplicationId(
+        System.currentTimeMillis(), (int)Math.random());
+    doThrow(new YarnException("KABOOM!"))
+      .when(logAggregationService).initAppAggregator(
+          eq(appId), eq(user), any(Credentials.class),
+          any(ContainerLogsRetentionPolicy.class), anyMap());
+    
+    logAggregationService.handle(new LogHandlerAppStartedEvent(appId,
+        this.user, null,
+        ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY, this.acls));        
+    
+    dispatcher.await();
+    ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
+        new ApplicationFinishEvent(appId, "Application failed to init aggregation: KABOOM!")
+    };
+    checkEvents(appEventHandler, expectedEvents, false,
+        "getType", "getApplicationID", "getDiagnostic");    
+  }
+  
   private void writeContainerLogs(File appLogDir, ContainerId containerId)
       throws IOException {
     // ContainerLogDir should be created
@@ -598,5 +658,78 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     }
     Assert.assertEquals("Log aggregator failed to cleanup!", 0,
         logAggregationService.getNumAggregators());
+  }
+  
+  @SuppressWarnings("unchecked")
+  private static <T extends Event<?>>
+  void checkEvents(EventHandler<T> eventHandler,
+                   T expectedEvents[], boolean inOrder,
+                   String... methods) throws Exception {
+    Class<T> genericClass = (Class<T>)expectedEvents.getClass().getComponentType();
+    ArgumentCaptor<T> eventCaptor = ArgumentCaptor.forClass(genericClass);
+    // captor work work unless used via a verify
+    verify(eventHandler, atLeast(0)).handle(eventCaptor.capture());
+    List<T> actualEvents = eventCaptor.getAllValues();
+
+    // batch up exceptions so junit presents them as one
+    MultiException failures = new MultiException();
+    try {
+      assertEquals("expected events", expectedEvents.length, actualEvents.size());
+    } catch (Throwable e) {
+      failures.add(e);
+    }
+    if (inOrder) {
+    	// sequentially verify the events
+      int len = Math.max(expectedEvents.length, actualEvents.size());
+      for (int n=0; n < len; n++) {
+        try {
+          String expect = (n < expectedEvents.length)
+              ? eventToString(expectedEvents[n], methods) : null;
+          String actual = (n < actualEvents.size())
+              ? eventToString(actualEvents.get(n), methods) : null;
+          assertEquals("event#"+n, expect, actual);
+        } catch (Throwable e) {
+          failures.add(e);
+        }
+      }
+    } else {
+    	// verify the actual events were expected
+    	// verify no expected events were not seen
+      Set<String> expectedSet = new HashSet<String>();
+      for (T expectedEvent : expectedEvents) {
+        expectedSet.add(eventToString(expectedEvent, methods));
+      }
+      for (T actualEvent : actualEvents) {
+        try {
+          String actual = eventToString(actualEvent, methods);
+          assertTrue("unexpected event: "+actual, expectedSet.remove(actual));
+        } catch (Throwable e) {
+          failures.add(e);
+        }
+      }
+      for (String expected : expectedSet) {
+        try {
+          Assert.fail("missing event: "+expected);
+        } catch (Throwable e) {
+          failures.add(e);
+        }
+      }
+    }
+    failures.ifExceptionThrow();
+  }
+  
+  private static String eventToString(Event<?> event, String[] methods) throws Exception {
+    StringBuilder sb = new StringBuilder("[ ");
+    for (String m : methods) {
+      try {
+      	Method method = event.getClass().getMethod(m);
+        String value = method.invoke(event).toString();
+        sb.append(method.getName()).append("=").append(value).append(" ");
+      } catch (Exception e) {
+        // ignore, actual event may not implement the method...
+      }
+    }
+    sb.append("]");
+    return sb.toString();
   }
 }
