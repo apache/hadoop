@@ -18,6 +18,10 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.BufferedReader;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.token.Token;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
@@ -29,15 +33,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
-import junit.framework.TestCase;
+import org.junit.*;
+import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
@@ -52,12 +60,15 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
  *   * confirm it correctly bails on malformed image files, in particular, a
  *     file that ends suddenly.
  */
-public class TestOfflineImageViewer extends TestCase {
+public class TestOfflineImageViewer {
+  private static final Log LOG = LogFactory.getLog(OfflineImageViewer.class);
   private static final int NUM_DIRS = 3;
   private static final int FILES_PER_DIR = 4;
+  private static final String TEST_RENEWER = "JobTracker";
+  private static File originalFsimage = null;
 
   // Elements of lines of ls-file output to be compared to FileStatus instance
-  private class LsElements {
+  private static class LsElements {
     public String perms;
     public int replication;
     public String username;
@@ -67,43 +78,28 @@ public class TestOfflineImageViewer extends TestCase {
   }
   
   // namespace as written to dfs, to be compared with viewer's output
-  final HashMap<String, FileStatus> writtenFiles 
-                                           = new HashMap<String, FileStatus>();
-  
+  final static HashMap<String, FileStatus> writtenFiles = 
+      new HashMap<String, FileStatus>();
   
   private static String ROOT = System.getProperty("test.build.data",
                                                   "build/test/data");
   
-  // Main entry point into testing.  Necessary since we only want to generate
-  // the fsimage file once and use it for multiple tests. 
-  public void testOIV() throws Exception {
-    File originalFsimage = null;
-    try {
-    originalFsimage = initFsimage();
-    assertNotNull("originalFsImage shouldn't be null", originalFsimage);
-    
-    // Tests:
-    outputOfLSVisitor(originalFsimage);
-    outputOfFileDistributionVisitor(originalFsimage);
-    
-    unsupportedFSLayoutVersion(originalFsimage);
-    
-    truncatedFSImage(originalFsimage);
-    
-    } finally {
-      if(originalFsimage != null && originalFsimage.exists())
-        originalFsimage.delete();
-    }
-  }
-
   // Create a populated namespace for later testing.  Save its contents to a
   // data structure and store its fsimage location.
-  private File initFsimage() throws IOException {
+  // We only want to generate the fsimage file once and use it for
+  // multiple tests.
+  @BeforeClass
+  public static void createOriginalFSImage() throws IOException {
     MiniDFSCluster cluster = null;
-    File orig = null;
     try {
       Configuration conf = new HdfsConfiguration();
+      conf.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
+      conf.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 5000);
+      conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+      conf.set("hadoop.security.auth_to_local",
+          "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
+      cluster.waitActive();
       FileSystem hdfs = cluster.getFileSystem();
       
       int filesize = 256;
@@ -123,34 +119,49 @@ public class TestOfflineImageViewer extends TestCase {
         }
       }
 
+      // Get delegation tokens so we log the delegation token op
+      List<Token<?>> delegationTokens = 
+          hdfs.getDelegationTokens(TEST_RENEWER);
+      for (Token<?> t : delegationTokens) {
+        LOG.debug("got token " + t);
+      }
+
       // Write results to the fsimage file
       cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.getNameNodeRpc().saveNamespace();
       
       // Determine location of fsimage file
-      orig = FSImageTestUtil.findLatestImageFile(
+      originalFsimage = FSImageTestUtil.findLatestImageFile(
           FSImageTestUtil.getFSImage(
           cluster.getNameNode()).getStorage().getStorageDir(0));
-      if (orig == null) {
-        fail("Didn't generate or can't find fsimage");
+      if (originalFsimage == null) {
+        throw new RuntimeException("Didn't generate or can't find fsimage");
       }
+      LOG.debug("original FS image file is " + originalFsimage);
     } finally {
       if(cluster != null)
         cluster.shutdown();
     }
-    return orig;
+  }
+  
+  @AfterClass
+  public static void deleteOriginalFSImage() throws IOException {
+    if(originalFsimage != null && originalFsimage.exists()) {
+      originalFsimage.delete();
+    }
   }
   
   // Convenience method to generate a file status from file system for 
   // later comparison
-  private FileStatus pathToFileEntry(FileSystem hdfs, String file) 
+  private static FileStatus pathToFileEntry(FileSystem hdfs, String file) 
         throws IOException {
     return hdfs.getFileStatus(new Path(file));
   }
-
+  
   // Verify that we can correctly generate an ls-style output for a valid 
   // fsimage
-  private void outputOfLSVisitor(File originalFsimage) throws IOException {
+  @Test
+  public void outputOfLSVisitor() throws IOException {
     File testFile = new File(ROOT, "/basicCheck");
     File outputFile = new File(ROOT, "/basicCheckOutput");
     
@@ -169,12 +180,13 @@ public class TestOfflineImageViewer extends TestCase {
       if(testFile.exists()) testFile.delete();
       if(outputFile.exists()) outputFile.delete();
     }
-    System.out.println("Correctly generated ls-style output.");
+    LOG.debug("Correctly generated ls-style output.");
   }
   
   // Confirm that attempting to read an fsimage file with an unsupported
   // layout results in an error
-  public void unsupportedFSLayoutVersion(File originalFsimage) throws IOException {
+  @Test
+  public void unsupportedFSLayoutVersion() throws IOException {
     File testFile = new File(ROOT, "/invalidLayoutVersion");
     File outputFile = new File(ROOT, "invalidLayoutVersionOutput");
     
@@ -190,7 +202,7 @@ public class TestOfflineImageViewer extends TestCase {
       } catch(IOException e) {
         if(!e.getMessage().contains(Integer.toString(badVersionNum)))
           throw e; // wasn't error we were expecting
-        System.out.println("Correctly failed at reading bad image version.");
+        LOG.debug("Correctly failed at reading bad image version.");
       }
     } finally {
       if(testFile.exists()) testFile.delete();
@@ -199,7 +211,8 @@ public class TestOfflineImageViewer extends TestCase {
   }
   
   // Verify that image viewer will bail on a file that ends unexpectedly
-  private void truncatedFSImage(File originalFsimage) throws IOException {
+  @Test
+  public void truncatedFSImage() throws IOException {
     File testFile = new File(ROOT, "/truncatedFSImage");
     File outputFile = new File(ROOT, "/trucnatedFSImageOutput");
     try {
@@ -213,7 +226,7 @@ public class TestOfflineImageViewer extends TestCase {
         oiv.go();
         fail("Managed to process a truncated fsimage file");
       } catch (EOFException e) {
-        System.out.println("Correctly handled EOF");
+        LOG.debug("Correctly handled EOF");
       }
 
     } finally {
@@ -365,7 +378,8 @@ public class TestOfflineImageViewer extends TestCase {
     }
   }
 
-  private void outputOfFileDistributionVisitor(File originalFsimage) throws IOException {
+  @Test
+  public void outputOfFileDistributionVisitor() throws IOException {
     File testFile = new File(ROOT, "/basicCheck");
     File outputFile = new File(ROOT, "/fileDistributionCheckOutput");
 
@@ -391,5 +405,67 @@ public class TestOfflineImageViewer extends TestCase {
       if(outputFile.exists()) outputFile.delete();
     }
     assertEquals(totalFiles, NUM_DIRS * FILES_PER_DIR);
+  }
+  
+  private static class TestImageVisitor extends ImageVisitor {
+    private List<String> delegationTokenRenewers = new LinkedList<String>();
+    TestImageVisitor() {
+    }
+    
+    List<String> getDelegationTokenRenewers() {
+      return delegationTokenRenewers;
+    }
+
+    @Override
+    void start() throws IOException {
+    }
+
+    @Override
+    void finish() throws IOException {
+    }
+
+    @Override
+    void finishAbnormally() throws IOException {
+    }
+
+    @Override
+    void visit(ImageElement element, String value) throws IOException {
+      if (element == ImageElement.DELEGATION_TOKEN_IDENTIFIER_RENEWER) {
+        delegationTokenRenewers.add(value);
+      }
+    }
+
+    @Override
+    void visitEnclosingElement(ImageElement element) throws IOException {
+    }
+
+    @Override
+    void visitEnclosingElement(ImageElement element, ImageElement key,
+        String value) throws IOException {
+    }
+
+    @Override
+    void leaveEnclosingElement() throws IOException {
+    }
+  }
+
+  @Test
+  public void outputOfTestVisitor() throws IOException {
+    File testFile = new File(ROOT, "/basicCheck");
+
+    try {
+      copyFile(originalFsimage, testFile);
+      TestImageVisitor v = new TestImageVisitor();
+      OfflineImageViewer oiv = new OfflineImageViewer(testFile.getPath(), v, true);
+      oiv.go();
+
+      // Validated stored delegation token identifiers.
+      List<String> dtrs = v.getDelegationTokenRenewers();
+      assertEquals(1, dtrs.size());
+      assertEquals(TEST_RENEWER, dtrs.get(0));
+    } finally {
+      if(testFile.exists()) testFile.delete();
+    }
+    LOG.debug("Passed TestVisitor validation.");
   }
 }
