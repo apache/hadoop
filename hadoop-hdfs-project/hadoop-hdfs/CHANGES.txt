@@ -141,6 +141,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3486. offlineimageviewer can't read fsimage files that contain
     persistent delegation tokens. (Colin Patrick McCabe via eli)
 
+    HDFS-3487. offlineimageviewer should give byte offset information
+    when it encounters an exception. (Colin Patrick McCabe via eli)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
