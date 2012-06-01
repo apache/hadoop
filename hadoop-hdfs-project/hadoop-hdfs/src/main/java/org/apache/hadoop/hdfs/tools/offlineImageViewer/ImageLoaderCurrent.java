@@ -145,6 +145,7 @@ class ImageLoaderCurrent implements ImageLoader {
   @Override
   public void loadImage(DataInputStream in, ImageVisitor v,
       boolean skipBlocks) throws IOException {
+    boolean done = false;
     try {
       v.start();
       v.visitEnclosingElement(ImageElement.FS_IMAGE);
@@ -189,11 +190,13 @@ class ImageLoaderCurrent implements ImageLoader {
       }
       
       v.leaveEnclosingElement(); // FSImage
-      v.finish();
-    } catch(IOException e) {
-      // Tell the visitor to clean up, then re-throw the exception
-      v.finishAbnormally();
-      throw e;
+      done = true;
+    } finally {
+      if (done) {
+        v.finish();
+      } else {
+        v.finishAbnormally();
+      }
     }
   }
 
