@@ -25,6 +25,8 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8440 HarFileSystem.decodeHarURI fails for URIs whose host contains numbers  (Ivan Mitic via Sanjay Radia)
 
+    HADOOP-8374 Improve support for hard link manipulation on Windows (Bikas Saha via Sanjay)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES
