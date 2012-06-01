@@ -109,10 +109,6 @@
         </exclusion>
         <exclusion>
           <groupId>org.apache.avro</groupId>
-          <artifactId>avro</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.avro</groupId>
           <artifactId>avro-ipc</artifactId>
         </exclusion>
         <exclusion>

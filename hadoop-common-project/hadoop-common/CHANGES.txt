@@ -62,6 +62,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and 
     HADOOP_SECURE_DN_PID_DIR (bobby)
 
+    HADOOP-8466. hadoop-client POM incorrectly excludes avro. (bmahe via tucu)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
