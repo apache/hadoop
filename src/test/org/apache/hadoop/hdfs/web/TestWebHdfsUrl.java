@@ -71,14 +71,14 @@ public class TestWebHdfsUrl {
         fsPath, new TokenArgumentParam(tokenString));
     Assert.assertEquals(
         generateUrlQueryPrefix(PutOpParam.Op.RENEWDELEGATIONTOKEN,
-            ugi.getUserName())
+            ugi.getShortUserName())
             + "&token=" + tokenString, renewTokenUrl.getQuery());
     Token<DelegationTokenIdentifier> delegationToken = new Token<DelegationTokenIdentifier>(
         token);
     delegationToken.setKind(WebHdfsFileSystem.TOKEN_KIND);
     Assert.assertEquals(
         generateUrlQueryPrefix(PutOpParam.Op.CANCELDELEGATIONTOKEN,
-            ugi.getUserName())
+            ugi.getShortUserName())
             + "&token="
             + tokenString
             + "&"

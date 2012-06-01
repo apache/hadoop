@@ -46,6 +46,7 @@ import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapred.TaskLog.LogFileDetail;
 import org.apache.hadoop.mapreduce.server.tasktracker.JVMInfo;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
+import org.apache.hadoop.util.Shell;
 
 /**
  * The class for truncating the user logs. 
@@ -284,7 +285,7 @@ public class TaskLogsTruncater {
       // ////// End of closing the file streams ////////////
 
       // ////// Commit the changes from tmp file to the logFile ////////////
-      if (!tmpFile.renameTo(logFile)) {
+      if (!renameAtomicWithOverride(tmpFile, logFile)) {
         // If the tmpFile cannot be renamed revert back
         // updatedTaskLogFileDetails to maintain the consistency of the
         // original log file
@@ -301,6 +302,43 @@ public class TaskLogsTruncater {
       // Update the index files
       updateIndicesAfterLogTruncation(attemptLogDir.toString(),
           updatedTaskLogFileDetails);
+    }
+  }
+
+  /**
+   * Renames a source file into a target file. Overrides the target file
+   * if it already exists.
+   */
+  private boolean renameAtomicWithOverride(File source, File target) {
+    if (Shell.WINDOWS && target.exists()) {
+      // Rename into the existing file fails on Windows, hence we have to
+      // rename using a temp file to provide some level of atomic behavior
+      // (and revert changes back if something fails)
+      File tmpTargetFile = new File(target.getPath() + ".tmp");
+      if (target.renameTo(tmpTargetFile)) {
+        if (source.renameTo(target)) {
+          // Rename succeeded, try to delete the target backup
+          if (!tmpTargetFile.delete()) {
+            LOG.warn("Cannot delete tmpTargetFile "
+                     + tmpTargetFile.getAbsolutePath());
+            tmpTargetFile.deleteOnExit();
+          }
+          // Return true anyways as we successfully renamed source
+          // into target
+          return true;
+        } else {
+          // Revert back the original
+          if (!tmpTargetFile.renameTo(target)) {
+            LOG.error("Cannot revert back the original log file "
+                     + target.getAbsolutePath());
+          }
+          return false;
+        }
+      } else {
+        return false;
+      }
+    } else {
+      return source.renameTo(target);
     }
   }
 

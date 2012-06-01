@@ -20,6 +20,9 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8235 Support file permissions and ownership on Windows for RawLocalFileSystem  (Chuan Liu via sanjay)
 
+    HADOOP-8411 TestStorageDirecotyFailure, TestTaskLogsTruncater, TestWebHdfsUrl and TestSecurityUtil
+                fail on Windows  (Ivan Mitic via Sanjay Radia)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

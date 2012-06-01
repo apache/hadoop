@@ -95,7 +95,9 @@ public class TestSecurityUtil {
   
   @Test
   public void testLocalHostNameForNullOrWild() throws Exception {
-    String local = SecurityUtil.getLocalHostName();
+    // Get local host name and convert to lower case to be consistent with
+    // SecurityUtil.replacePattern
+    String local = SecurityUtil.getLocalHostName().toLowerCase();
     assertEquals("hdfs/" + local + "@REALM", SecurityUtil.getServerPrincipal(
         "hdfs/_HOST@REALM", (String) null));
     assertEquals("hdfs/" + local + "@REALM", SecurityUtil.getServerPrincipal(

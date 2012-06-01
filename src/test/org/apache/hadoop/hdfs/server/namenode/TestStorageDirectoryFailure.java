@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.util.Shell;
 
 /**
  * Test that the NN stays up as long as it has a valid storage directory and
@@ -125,6 +126,17 @@ public class TestStorageDirectoryFailure {
     assertTrue(Arrays.equals(buff, readFile(name, buff.length)));
   }
 
+  /** Fully delete the storage directory */
+  private void FullyDeleteStorageDir(String name) throws IOException {
+    if (Shell.WINDOWS) {
+      // Files that are currently in use cannot be deleted on Windows, hence
+      // we are closing the log files explicitly.
+      cluster.getNameNode().getFSImage().getEditLog().close();
+      cluster.getNameNode().getFSImage().unlockAll();
+    }
+    FileUtil.fullyDelete(new File(name));
+  }
+
   @Test
   /** Remove storage dirs and checkpoint to trigger detection */
   public void testCheckpointAfterFailingFirstNamedir() throws IOException {
@@ -133,7 +145,7 @@ public class TestStorageDirectoryFailure {
     checkFileCreation("file0");
 
     // Remove the 1st storage dir
-    FileUtil.fullyDelete(new File(nameDirs.get(0)));
+    FullyDeleteStorageDir(nameDirs.get(0));
     secondaryNN.doCheckpoint();
     assertEquals(1, numRemovedDirs());
     assertEquals(nameDirs.get(0), getRemovedDirs().get(0).getRoot().getPath());
@@ -141,7 +153,7 @@ public class TestStorageDirectoryFailure {
     checkFileCreation("file1");
 
     // Remove the 2nd
-    FileUtil.fullyDelete(new File(nameDirs.get(1)));
+    FullyDeleteStorageDir(nameDirs.get(1));
     secondaryNN.doCheckpoint();
     assertEquals(2, numRemovedDirs());
     assertEquals(nameDirs.get(1), getRemovedDirs().get(1).getRoot().getPath());
@@ -156,7 +168,7 @@ public class TestStorageDirectoryFailure {
 
     // After the checkpoint, we should be dead. Verify fatalExit was
     // called and that eg a checkpoint fails.
-    FileUtil.fullyDelete(new File(nameDirs.get(2)));
+    FullyDeleteStorageDir(nameDirs.get(2));
     try {
       secondaryNN.doCheckpoint();
       fail("There's no storage to retrieve an image from");
@@ -183,7 +195,7 @@ public class TestStorageDirectoryFailure {
 
     checkFileCreation("file0");
 
-    FileUtil.fullyDelete(new File(nameDirs.get(0)));
+    FullyDeleteStorageDir(nameDirs.get(0));
     secondaryNN.doCheckpoint();
     assertEquals(1, numRemovedDirs());
     assertEquals(nameDirs.get(0), getRemovedDirs().get(0).getRoot().getPath());
