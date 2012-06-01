@@ -85,6 +85,11 @@ Hadoop MapReduce Next Generation - Cluster Setup
     At the very least you should specify the <<<JAVA_HOME>>> so that it is 
     correctly defined on each remote node.
 
+    In most cases you should also specify <<<HADOOP_PID_DIR>>> and 
+    <<<HADOOP_SECURE_DN_PID_DIR>>> to point to directories that can only be
+    written to by the users that are going to run the hadoop daemons.  
+    Otherwise there is the potential for a symlink attack.
+
     Administrators can configure individual daemons using the configuration 
     options shown below in the table:
 
