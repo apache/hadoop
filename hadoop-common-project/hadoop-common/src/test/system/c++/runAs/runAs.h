@@ -39,13 +39,7 @@ enum errorcodes {
   INVALID_COMMAND_PASSED, //6
 };
 
-#undef HADOOP_PREFIX
-
 #define SSH_COMMAND "ssh"
-
-#define SCRIPT_DIR_PATTERN "%s/bin/hadoop-daemon.sh %s" //%s to be substituded 
-
-#define STRLEN strlen(SCRIPT_DIR_PATTERN) + strlen(HADOOP_PREFIX)
 
 /*
  * Function to get the user details populated given a user name. 

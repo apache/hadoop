@@ -18,6 +18,8 @@
 
 #include "runAs.h"
 
+#include "config.h"
+
 /*
  * Function to get the user details populated given a user name. 
  */
@@ -77,28 +79,22 @@ int switchuser(char *user) {
  * command.
  */
 int process_cluster_command(char * user,  char * node , char *command) {
-  char *finalcommandstr;
+  char cmd[4096];
   int len;
   int errorcode = 0;
   if (strncmp(command, "", strlen(command)) == 0) {
     fprintf(stderr, "Invalid command passed\n");
     return INVALID_COMMAND_PASSED;
   }
-  len = STRLEN + strlen(command);
-  finalcommandstr = (char *) malloc((len + 1) * sizeof(char));
-  snprintf(finalcommandstr, len, SCRIPT_DIR_PATTERN, HADOOP_PREFIX,
-      command);
-  finalcommandstr[len + 1] = '\0';
+  snprintf(cmd, sizeof(cmd), "%s/bin/hadoop-daemon.sh %s",
+      HADOOP_RUNAS_HOME, command);
   errorcode = switchuser(user);
   if (errorcode != 0) {
     fprintf(stderr, "switch user failed\n");
     return errorcode;
   }
-  errno = 0;
-  execlp(SSH_COMMAND, SSH_COMMAND, node, finalcommandstr, NULL);
-  if (errno != 0) {
-    fprintf(stderr, "Excelp failed dude to : %s\n", strerror(errno));
-  }
+  execlp(SSH_COMMAND, SSH_COMMAND, node, cmd, NULL);
+  fprintf(stderr, "Excelp failed dude to : %s\n", strerror(errno));
   return 0;
 }
 
