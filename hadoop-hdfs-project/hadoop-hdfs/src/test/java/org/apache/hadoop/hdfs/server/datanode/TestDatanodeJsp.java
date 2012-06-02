@@ -18,16 +18,20 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspWriter;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -44,9 +48,10 @@ public class TestDatanodeJsp {
   
   private static final String FILE_DATA = "foo bar baz biz buz";
   private static final HdfsConfiguration CONF = new HdfsConfiguration();
+  private static String viewFilePage;
   
-  private static void testViewingFile(MiniDFSCluster cluster, String filePath,
-      boolean doTail) throws IOException {
+  private static void testViewingFile(MiniDFSCluster cluster, String filePath)
+      throws IOException {
     FileSystem fs = cluster.getFileSystem();
     
     Path testPath = new Path(filePath);
@@ -58,23 +63,46 @@ public class TestDatanodeJsp {
     InetSocketAddress nnHttpAddress = cluster.getNameNode().getHttpAddress();
     int dnInfoPort = cluster.getDataNodes().get(0).getInfoPort();
     
-    String jspName = doTail ? "tail.jsp" : "browseDirectory.jsp";
-    String fileParamName = doTail ? "filename" : "dir";
+    URL url = new URL("http://localhost:" + dnInfoPort + "/"
+        + "browseDirectory.jsp" + JspHelper.getUrlParam("dir", 
+            URLEncoder.encode(testPath.toString(), "UTF-8"), true)
+        + JspHelper.getUrlParam("namenodeInfoPort", Integer
+            .toString(nnHttpAddress.getPort())) + JspHelper
+            .getUrlParam("nnaddr", "localhost:" + nnIpcAddress.getPort()));
     
-    URL url = new URL("http://localhost:" + dnInfoPort + "/" + jspName +
-        JspHelper.getUrlParam(fileParamName, URLEncoder.encode(testPath.toString(), "UTF-8"), true) +
-        JspHelper.getUrlParam("namenodeInfoPort", Integer.toString(nnHttpAddress.getPort())) + 
-        JspHelper.getUrlParam("nnaddr", "localhost:" + nnIpcAddress.getPort()));
-    
-    String viewFilePage = DFSTestUtil.urlGet(url);
+    viewFilePage = StringEscapeUtils.unescapeHtml(DFSTestUtil.urlGet(url));
     
     assertTrue("page should show preview of file contents, got: " + viewFilePage,
         viewFilePage.contains(FILE_DATA));
     
-    if (!doTail) {
-      assertTrue("page should show link to download file", viewFilePage
-          .contains("/streamFile" + ServletUtil.encodePath(testPath.toString()) +
-              "?nnaddr=localhost:" + nnIpcAddress.getPort()));
+    assertTrue("page should show link to download file", viewFilePage
+        .contains("/streamFile" + ServletUtil.encodePath(filePath)
+            + "?nnaddr=localhost:" + nnIpcAddress.getPort()));
+    
+    // check whether able to tail the file
+    String regex = "<a.+href=\"(.+?)\">Tail\\s*this\\s*file\\<\\/a\\>";
+    assertFileContents(regex, "Tail this File");
+    
+    // check whether able to 'Go Back to File View' after tailing the file
+    regex = "<a.+href=\"(.+?)\">Go\\s*Back\\s*to\\s*File\\s*View\\<\\/a\\>";
+    assertFileContents(regex, "Go Back to File View");
+  }
+  
+  private static void assertFileContents(String regex, String text)
+      throws IOException {
+    Pattern compile = Pattern.compile(regex);
+    Matcher matcher = compile.matcher(viewFilePage);
+    URL hyperlink = null;
+    if (matcher.find()) {
+      // got hyperlink for Tail this file
+      hyperlink = new URL(matcher.group(1));
+      viewFilePage = StringEscapeUtils.unescapeHtml(DFSTestUtil
+          .urlGet(hyperlink));
+      assertTrue("page should show preview of file contents", viewFilePage
+          .contains(FILE_DATA));
+    } else {
+      fail(text + " hyperlink should be there in the page content : "
+          + viewFilePage);
     }
   }
   
@@ -97,8 +125,8 @@ public class TestDatanodeJsp {
         "/foo\">bar/foo\">bar"
       };
       for (String p : paths) {
-        testViewingFile(cluster, p, false);
-        testViewingFile(cluster, p, true);
+        testViewingFile(cluster, p);
+        testViewingFile(cluster, p);
       }
     } finally {
       if (cluster != null) {

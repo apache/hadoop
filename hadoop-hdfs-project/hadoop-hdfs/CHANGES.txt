@@ -146,6 +146,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3442. Incorrect count for Missing Replicas in FSCK report. (Andrew Wang via atm)
 
+    HDFS-2025. Go Back to File View link is not working in tail.jsp.(Ashish and Sravan via umamahesh)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
