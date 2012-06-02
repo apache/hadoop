@@ -212,7 +212,7 @@ public class TeraInputFormat extends FileInputFormat<Text,Text> {
     }
     FileSystem outFs = partFile.getFileSystem(conf);
     DataOutputStream writer = outFs.create(partFile, true, 64*1024, (short) 10, 
-                                           outFs.getDefaultBlockSize());
+                                           outFs.getDefaultBlockSize(partFile));
     for (int i = 0; i < samples; i++) {
       try {
         samplerReader[i].join();
