@@ -144,6 +144,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3487. offlineimageviewer should give byte offset information
     when it encounters an exception. (Colin Patrick McCabe via eli)
 
+    HDFS-3442. Incorrect count for Missing Replicas in FSCK report. (Andrew Wang via atm)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
