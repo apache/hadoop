@@ -145,9 +145,15 @@ public interface RMAppAttempt extends EventHandler<RMAppAttemptEvent> {
    */
   ApplicationSubmissionContext getSubmissionContext();
 
-  /*
+  /**
    * Get application container and resource usage information.
    * @return an ApplicationResourceUsageReport object.
    */
   ApplicationResourceUsageReport getApplicationResourceUsageReport();
+
+  /**
+   * the start time of the application.
+   * @return the start time of the application.
+   */
+  long getStartTime();
 }

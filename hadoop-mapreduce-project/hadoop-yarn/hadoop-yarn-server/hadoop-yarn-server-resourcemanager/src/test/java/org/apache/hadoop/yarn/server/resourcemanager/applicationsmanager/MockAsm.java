@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.applicationsmanager;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.yarn.MockApps;
@@ -184,6 +185,10 @@ public abstract class MockAsm extends MockApps {
     }
     @Override
     public RMAppAttempt getCurrentAppAttempt() {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+    @Override
+    public Map<ApplicationAttemptId, RMAppAttempt> getAppAttempts() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
     @Override

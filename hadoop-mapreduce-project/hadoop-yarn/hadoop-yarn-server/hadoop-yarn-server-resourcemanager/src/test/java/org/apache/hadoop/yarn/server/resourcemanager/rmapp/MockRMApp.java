@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -107,6 +110,14 @@ public class MockRMApp implements RMApp {
 
   public void setName(String name) {
     this.name = name;
+  }
+
+  @Override
+  public Map<ApplicationAttemptId, RMAppAttempt> getAppAttempts() {
+    Map<ApplicationAttemptId, RMAppAttempt> attempts =
+      new LinkedHashMap<ApplicationAttemptId, RMAppAttempt>();
+    attempts.put(attempt.getAppAttemptId(), attempt);
+    return attempts;
   }
 
   @Override
