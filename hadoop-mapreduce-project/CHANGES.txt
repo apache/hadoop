@@ -42,7 +42,7 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4307. TeraInputFormat calls FileSystem.getDefaultBlockSize()
     without a Path - Failure when using ViewFileSystem. (Ahmed Radwan via eli)
 
-Release 2.0.0-alpha - UNRELEASED
+Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
 

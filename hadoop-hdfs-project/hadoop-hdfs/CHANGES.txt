@@ -153,7 +153,7 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3501. Checkpointing with security enabled will stop working
     after ticket lifetime expires. (atm via eli)
 
-Release 2.0.0-alpha - UNRELEASED
+Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
 
