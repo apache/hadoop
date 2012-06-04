@@ -159,7 +159,8 @@ public class TestDataTransferProtocol extends TestCase {
       block.getNumBytes(), // OffsetInBlock
       100,                 // sequencenumber
       true,                // lastPacketInBlock
-      0);                  // chunk length
+      0,                   // chunk length
+      false);               // sync block
     hdr.write(sendOut);
     sendOut.writeInt(0);           // zero checksum
 
@@ -402,7 +403,8 @@ public class TestDataTransferProtocol extends TestCase {
       0,     // offset in block,
       100,   // seqno
       false, // last packet
-      -1 - random.nextInt(oneMil)); // bad datalen
+      -1 - random.nextInt(oneMil), // bad datalen
+      false);
     hdr.write(sendOut);
 
     sendResponse(Status.SUCCESS, "", null, recvOut);
@@ -424,7 +426,8 @@ public class TestDataTransferProtocol extends TestCase {
       0,     // OffsetInBlock
       100,   // sequencenumber
       true,  // lastPacketInBlock
-      0);    // chunk length
+      0,     // chunk length
+      false);    
     hdr.write(sendOut);
     sendOut.writeInt(0);           // zero checksum
     sendOut.flush();
@@ -508,8 +511,8 @@ public class TestDataTransferProtocol extends TestCase {
       1024,                // OffsetInBlock
       100,                 // sequencenumber
       false,               // lastPacketInBlock
-      4096);               // chunk length
-
+      4096,                // chunk length
+      false);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     hdr.write(new DataOutputStream(baos));
 

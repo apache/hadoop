@@ -113,6 +113,7 @@ message PacketHeaderProto {
   required sfixed64 seqno = 2;
   required bool lastPacketInBlock = 3;
   required sfixed32 dataLen = 4;
+  optional bool syncBlock = 5 [default = false];
 }
 
 enum Status {

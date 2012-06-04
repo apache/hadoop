@@ -6,6 +6,8 @@ Release 2.0.1-alpha - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
+
   IMPROVEMENTS
 
     HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG

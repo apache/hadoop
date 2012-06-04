@@ -40,6 +40,7 @@ public class PacketHeader {
       .setSeqno(0)
       .setLastPacketInBlock(false)
       .setDataLen(0)
+      .setSyncBlock(false)
       .build().getSerializedSize();
   public static final int PKT_HEADER_LEN =
     6 + PROTO_SIZE;
@@ -51,13 +52,14 @@ public class PacketHeader {
   }
 
   public PacketHeader(int packetLen, long offsetInBlock, long seqno,
-                      boolean lastPacketInBlock, int dataLen) {
+                      boolean lastPacketInBlock, int dataLen, boolean syncBlock) {
     this.packetLen = packetLen;
     proto = PacketHeaderProto.newBuilder()
       .setOffsetInBlock(offsetInBlock)
       .setSeqno(seqno)
       .setLastPacketInBlock(lastPacketInBlock)
       .setDataLen(dataLen)
+      .setSyncBlock(syncBlock)
       .build();
   }
 
@@ -79,6 +81,10 @@ public class PacketHeader {
 
   public int getPacketLen() {
     return packetLen;
+  }
+
+  public boolean getSyncBlock() {
+    return proto.getSyncBlock();
   }
 
   @Override
