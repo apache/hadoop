@@ -31,6 +31,8 @@ import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerQueueInfo;
@@ -53,7 +55,8 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
   private final Set<Class> types;
 
   // you have to specify all the dao classes here
-  private final Class[] cTypes = { AppInfo.class, ClusterInfo.class,
+  private final Class[] cTypes = { AppInfo.class, AppAttemptInfo.class,
+      AppAttemptsInfo.class, ClusterInfo.class,
       CapacitySchedulerQueueInfo.class, FifoSchedulerInfo.class,
       SchedulerTypeInfo.class, NodeInfo.class, UserMetricsInfo.class,
       CapacitySchedulerInfo.class, ClusterMetricsInfo.class,

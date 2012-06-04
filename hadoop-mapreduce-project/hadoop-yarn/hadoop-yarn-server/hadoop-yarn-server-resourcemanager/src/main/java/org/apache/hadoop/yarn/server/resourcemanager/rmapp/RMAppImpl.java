@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -306,6 +307,17 @@ public class RMAppImpl implements RMApp {
 
     try {
       return this.currentAttempt;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  @Override
+  public Map<ApplicationAttemptId, RMAppAttempt> getAppAttempts() {
+    this.readLock.lock();
+
+    try {
+      return Collections.unmodifiableMap(this.attempts);
     } finally {
       this.readLock.unlock();
     }

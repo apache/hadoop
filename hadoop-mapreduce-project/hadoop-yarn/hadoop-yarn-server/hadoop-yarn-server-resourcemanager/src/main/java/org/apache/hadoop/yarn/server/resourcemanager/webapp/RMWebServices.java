@@ -45,11 +45,14 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
@@ -385,4 +388,31 @@ public class RMWebServices {
     return new AppInfo(app, hasAccess(app, hsr));
   }
 
+  @GET
+  @Path("/apps/{appid}/appattempts")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public AppAttemptsInfo getAppAttempts(@PathParam("appid") String appId) {
+
+    init();
+    if (appId == null || appId.isEmpty()) {
+      throw new NotFoundException("appId, " + appId + ", is empty or null");
+    }
+    ApplicationId id;
+    id = ConverterUtils.toApplicationId(recordFactory, appId);
+    if (id == null) {
+      throw new NotFoundException("appId is null");
+    }
+    RMApp app = rm.getRMContext().getRMApps().get(id);
+    if (app == null) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    AppAttemptsInfo appAttemptsInfo = new AppAttemptsInfo();
+    for (RMAppAttempt attempt : app.getAppAttempts().values()) {
+      AppAttemptInfo attemptInfo = new AppAttemptInfo(attempt);
+      appAttemptsInfo.add(attemptInfo);
+    }
+
+    return appAttemptsInfo;
+  }
 }

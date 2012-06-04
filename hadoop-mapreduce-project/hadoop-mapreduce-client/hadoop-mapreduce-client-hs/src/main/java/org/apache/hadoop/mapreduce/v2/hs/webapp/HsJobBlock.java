@@ -135,10 +135,11 @@ public class HsJobBlock extends HtmlBlock {
             th(_TH, "Node").
             th(_TH, "Logs").
             _();
+        boolean odd = false;
           for (AMInfo amInfo : amInfos) {
             AMAttemptInfo attempt = new AMAttemptInfo(amInfo,
                 job.getId(), job.getUserName(), "", "");
-            table.tr().
+            table.tr((odd = !odd) ? _ODD : _EVEN).
               td(String.valueOf(attempt.getAttemptId())).
               td(new Date(attempt.getStartTime()).toString()).
               td().a(".nodelink", url("http://", attempt.getNodeHttpAddress()), 
