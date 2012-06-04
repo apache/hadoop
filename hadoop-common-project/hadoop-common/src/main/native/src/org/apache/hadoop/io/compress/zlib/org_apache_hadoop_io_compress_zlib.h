@@ -19,40 +19,13 @@
 #if !defined ORG_APACHE_HADOOP_IO_COMPRESS_ZLIB_ZLIB_H
 #define ORG_APACHE_HADOOP_IO_COMPRESS_ZLIB_ZLIB_H
 
-#if defined HAVE_CONFIG_H
-  #include <config.h>
-#endif
+#include <dlfcn.h>
+#include <jni.h>
+#include <stddef.h>
+#include <zconf.h>
+#include <zlib.h>
 
-#if defined HAVE_STDDEF_H
-  #include <stddef.h>
-#else
-  #error 'stddef.h not found'
-#endif
-    
-#if defined HAVE_ZLIB_H
-  #include <zlib.h>
-#else
-  #error 'Please install zlib-development packages for your platform.'
-#endif
-    
-#if defined HAVE_ZCONF_H
-  #include <zconf.h>
-#else
-  #error 'Please install zlib-development packages for your platform.'
-#endif
-
-#if defined HAVE_DLFCN_H
-  #include <dlfcn.h>
-#else
-  #error "dlfcn.h not found"
-#endif  
-
-#if defined HAVE_JNI_H    
-  #include <jni.h>
-#else
-  #error 'jni.h not found'
-#endif
-
+#include "config.h"
 #include "org_apache_hadoop.h"
 
 /* A helper macro to convert the java 'stream-handle' to a z_stream pointer. */

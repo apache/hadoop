@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 
-// get the autoconf settings
-#include "config.h"
-
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -32,6 +29,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_nativeio_NativeIO.h"
 #include "file_descriptor.h"

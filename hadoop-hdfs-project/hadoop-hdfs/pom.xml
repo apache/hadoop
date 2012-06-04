@@ -377,76 +377,22 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <artifactId>maven-antrun-plugin</artifactId>
             <executions>
               <execution>
-                <id>compile</id>
+                <id>make</id>
                 <phase>compile</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
+                <goals><goal>run</goal></goals>
                 <configuration>
                   <target>
-                    <copy toDir="${project.build.directory}/native">
-                      <fileset dir="${basedir}/src/main/native"/>
-                    </copy>
-                    <mkdir dir="${project.build.directory}/native/m4"/>
+                    <mkdir dir="${project.build.directory}/native"/>
+                    <exec executable="cmake" dir="${project.build.directory}/native" 
+                        failonerror="true">
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
+                    </exec>
+                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
+                      <arg line="VERBOSE=1"/>
+                    </exec>
                   </target>
                 </configuration>
               </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>make-maven-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>compile</id>
-                <phase>compile</phase>
-                <goals>
-                  <goal>autoreconf</goal>
-                  <goal>configure</goal>
-                  <goal>make-install</goal>
-                </goals>
-                <configuration>
-                  <!-- autoreconf settings -->
-                  <workDir>${project.build.directory}/native</workDir>
-                  <arguments>
-                    <argument>-i</argument>
-                    <argument>-f</argument>
-                  </arguments>
-
-                  <!-- configure settings -->
-                  <configureEnvironment>
-                    <property>
-                      <name>ac_cv_func_malloc_0_nonnull</name>
-                      <value>yes</value>
-                    </property>
-                    <property>
-                      <name>JVM_ARCH</name>
-                      <value>${sun.arch.data.model}</value>
-                    </property>
-                  </configureEnvironment>
-                  <configureOptions>
-                  </configureOptions>
-                  <configureWorkDir>${project.build.directory}/native</configureWorkDir>
-                  <prefix>/usr/local</prefix>
-
-                  <!-- make settings -->
-                  <installEnvironment>
-                    <property>
-                      <name>ac_cv_func_malloc_0_nonnull</name>
-                      <value>yes</value>
-                    </property>
-                    <property>
-                      <name>JVM_ARCH</name>
-                      <value>${sun.arch.data.model}</value>
-                    </property>
-                  </installEnvironment>
-
-                  <!-- configure & make settings -->
-                  <destDir>${project.build.directory}/native/target</destDir>
-
-                </configuration>
-              </execution>
-              
               <!-- TODO wire here native testcases
               <execution>
                 <id>test</id>
