@@ -119,7 +119,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
   private int rpcPort;
   private String origTrackingUrl = "N/A";
   private String proxiedTrackingUrl = "N/A";
-  
+  private long startTime = 0;
+
   // Set to null initially. Will eventually get set 
   // if an RMAppAttemptUnregistrationEvent occurs
   private FinalApplicationStatus finalStatus = null;
@@ -543,6 +544,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
     public void transition(RMAppAttemptImpl appAttempt,
         RMAppAttemptEvent event) {
 
+      appAttempt.startTime = System.currentTimeMillis();
+
       // Register with the ApplicationMasterService
       appAttempt.masterService
           .registerAppAttempt(appAttempt.applicationAttemptId);
@@ -910,6 +913,16 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       // Put it in completedcontainers list
       appAttempt.justFinishedContainers.add(containerStatus);
       return RMAppAttemptState.RUNNING;
+    }
+  }
+
+  @Override
+  public long getStartTime() {
+    this.readLock.lock();
+    try {
+      return this.startTime;
+    } finally {
+      this.readLock.unlock();
     }
   }
 }

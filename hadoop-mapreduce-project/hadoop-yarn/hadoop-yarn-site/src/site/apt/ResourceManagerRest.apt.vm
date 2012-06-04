@@ -1236,6 +1236,130 @@ _01_000001</amContainerLogs>
 </app>
 +---+
 
+* Cluster Application Attempts API
+
+  With the application attempts API, you can obtain a collection of resources that represent an application attempt.  When you run a GET operation on this resource, you obtain a collection of App Attempt Objects. 
+
+** URI
+
+------
+  * http://<rm http address:port>/ws/v1/cluster/apps/{appid}/appattempts
+------
+
+** HTTP Operations Supported 
+
+------
+  * GET
+------
+
+** Query Parameters Supported
+
+------
+  None
+------
+
+** Elements of the <appAttempts> object
+
+  When you make a request for the list of app attempts, the information will be returned as an array of app attempt objects. 
+
+  appAttempts:
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| appAttempt | array of app attempt objects(JSON)/zero or more app attempt objects(XML) | The collection of app attempt objects |
+*---------------+--------------+--------------------------------+
+
+** Elements of the <appAttempt> object
+
+*---------------+--------------+-------------------------------+
+|| Item         || Data Type   || Description                  |
+*---------------+--------------+-------------------------------+
+| id | string | The app attempt id |
+*---------------+--------------+--------------------------------+
+| nodeId | string | The node id of the node the attempt ran on|
+*---------------+--------------+--------------------------------+
+| nodeHttpAddress | string | The node http address of the node the attempt ran on|
+*---------------+--------------+--------------------------------+
+| logsLink | string | The http link to the app attempt logs |
+*---------------+--------------+--------------------------------+
+| containerId | string | The id of the container for the app attempt |
+*---------------+--------------+--------------------------------+
+| startTime | long | The start time of the attempt (in ms since epoch)|
+*---------------+--------------+--------------------------------+
+
+** Response Examples
+
+  <<JSON response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005/appattempts
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/json
+  Transfer-Encoding: chunked
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+{
+   "appAttempts" : {
+      "appAttempt" : [
+         {
+            "nodeId" : "host.domain.com:8041",
+            "nodeHttpAddress" : "host.domain.com:8042",
+            "startTime" : 1326381444693,
+            "id" : 1,
+            "logsLink" : "http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1",
+            "containerId" : "container_1326821518301_0005_01_000001"
+         }
+      ]
+   }
+}
++---+
+
+  <<XML response>>
+
+  HTTP Request:
+
+------
+  GET http://<rm http address:port>/ws/v1/cluster/apps/application_1326821518301_0005/appattempts
+  Accept: application/xml
+------
+
+  Response Header:
+
++---+
+  HTTP/1.1 200 OK
+  Content-Type: application/xml
+  Content-Length: 575
+  Server: Jetty(6.1.26)
++---+
+
+  Response Body:
+
++---+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<appAttempts>
+  <appttempt>
+    <nodeHttpAddress>host.domain.com:8042</nodeHttpAddress>
+    <nodeId>host.domain.com:8041</nodeId>
+    <id>1</id>
+    <startTime>1326381444693</startTime>
+    <containerId>container_1326821518301_0005_01_000001</containerId>
+    <logsLink>http://host.domain.com:8042/node/containerlogs/container_1326821518301_0005_01_000001/user1</logsLink>
+  </appAttempt>
+</appAttempts>
++---+
+
 * Cluster Nodes API
 
   With the Nodes API, you can obtain a collection of resources, each of which represents a node. When you run a GET operation on this resource, you obtain a collection of Node Objects. 

@@ -20,6 +20,13 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APPLICATION_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._EVEN;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._ODD;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
+
+
+import java.util.Collection;
 
 import com.google.inject.Inject;
 
@@ -29,19 +36,23 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.Times;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 import org.apache.hadoop.yarn.webapp.view.InfoBlock;
-import org.apache.hadoop.yarn.webapp.ResponseInfo;
 
 public class AppBlock extends HtmlBlock {
 
   private ApplicationACLsManager aclsManager;
-  
+
   @Inject
   AppBlock(ResourceManager rm, ViewContext ctx, ApplicationACLsManager aclsManager) {
     super(ctx);
@@ -88,7 +99,7 @@ public class AppBlock extends HtmlBlock {
 
     setTitle(join("Application ", aid));
 
-    ResponseInfo info = info("Application Overview").
+    info("Application Overview").
       _("User:", app.getUser()).
       _("Name:", app.getName()).
       _("State:", app.getState()).
@@ -99,12 +110,40 @@ public class AppBlock extends HtmlBlock {
       _("Tracking URL:", !app.isTrackingUrlReady() ?
         "#" : app.getTrackingUrlPretty(), app.getTrackingUI()).
       _("Diagnostics:", app.getNote());
-    if (app.amContainerLogsExist()) {
-      info._("AM container logs:", app.getAMContainerLogs(), app.getAMContainerLogs());
-    } else {
-      info._("AM container logs:", "");
+
+    Collection<RMAppAttempt> attempts = rmApp.getAppAttempts().values();
+    String amString =
+        attempts.size() == 1 ? "ApplicationMaster" : "ApplicationMasters";
+
+    DIV<Hamlet> div = html.
+        _(InfoBlock.class).
+        div(_INFO_WRAP);
+    // MRAppMasters Table
+    TABLE<DIV<Hamlet>> table = div.table("#app");
+    table.
+      tr().
+        th(amString).
+      _().
+      tr().
+        th(_TH, "Attempt Number").
+        th(_TH, "Start Time").
+        th(_TH, "Node").
+        th(_TH, "Logs").
+      _();
+
+    boolean odd = false;
+    for (RMAppAttempt attempt : attempts) {
+      AppAttemptInfo attemptInfo = new AppAttemptInfo(attempt);
+      table.tr((odd = !odd) ? _ODD : _EVEN).
+        td(String.valueOf(attemptInfo.getAttemptId())).
+        td(Times.format(attemptInfo.getStartTime())).
+        td().a(".nodelink", url("http://", attemptInfo.getNodeHttpAddress()),
+            attemptInfo.getNodeHttpAddress())._().
+        td().a(".logslink", url(attemptInfo.getLogsLink()), "logs")._().
+      _();
     }
 
-    html._(InfoBlock.class);
+    table._();
+    div._();
   }
 }

@@ -443,6 +443,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4302. NM goes down if error encountered during log aggregation 
     (Daryn Sharp via bobby)
 
+    MAPREDUCE-3350. Per-app RM page should have the list of application-attempts
+    like on the app JHS page (Jonathon Eagles via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
