@@ -47,6 +47,7 @@ public class SplitMetaInfoReader {
     long maxMetaInfoSize = conf.getLong(JTConfig.JT_MAX_JOB_SPLIT_METAINFO_SIZE, 
         10000000L);
     Path metaSplitFile = JobSubmissionFiles.getJobSplitMetaFile(jobSubmitDir);
+    String jobSplitFile = JobSubmissionFiles.getJobSplitFile(jobSubmitDir).toString();
     FileStatus fStatus = fs.getFileStatus(metaSplitFile);
     if (maxMetaInfoSize > 0 && fStatus.getLen() > maxMetaInfoSize) {
       throw new IOException("Split metadata size exceeded " +
@@ -70,7 +71,7 @@ public class SplitMetaInfoReader {
       JobSplit.SplitMetaInfo splitMetaInfo = new JobSplit.SplitMetaInfo();
       splitMetaInfo.readFields(in);
       JobSplit.TaskSplitIndex splitIndex = new JobSplit.TaskSplitIndex(
-          JobSubmissionFiles.getJobSplitFile(jobSubmitDir).toString(), 
+          jobSplitFile, 
           splitMetaInfo.getStartOffset());
       allSplitMetaInfo[i] = new JobSplit.TaskSplitMetaInfo(splitIndex, 
           splitMetaInfo.getLocations(), 
