@@ -323,7 +323,7 @@ public class DFSTestUtil {
    */
   public static void waitCorruptReplicas(FileSystem fs, FSNamesystem ns,
       Path file, ExtendedBlock b, int corruptRepls)
-      throws IOException, TimeoutException {
+      throws IOException, TimeoutException, InterruptedException {
     int count = 0;
     final int ATTEMPTS = 50;
     int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
@@ -337,6 +337,7 @@ public class DFSTestUtil {
       System.out.println("Waiting for "+corruptRepls+" corrupt replicas");
       repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
       count++;
+      Thread.sleep(1000);
     }
     if (count == ATTEMPTS) {
       throw new TimeoutException("Timed out waiting for corrupt replicas."
