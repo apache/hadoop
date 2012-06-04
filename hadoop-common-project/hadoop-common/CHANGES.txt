@@ -66,6 +66,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8466. hadoop-client POM incorrectly excludes avro. (bmahe via tucu)
 
+    HADOOP-8481. update BUILDING.txt to talk about cmake rather than autotools.
+    (Colin Patrick McCabe via eli)
+
 Release 2.0.0-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
