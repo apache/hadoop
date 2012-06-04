@@ -9,7 +9,7 @@ Requirements:
 * Forrest 0.8 (if generating docs)
 * Findbugs 1.3.9 (if running findbugs)
 * ProtocolBuffer 2.4.1+ (for MapReduce and HDFS)
-* Autotools (if compiling native code)
+* CMake 2.6 or newer (if compiling native code)
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 
 ----------------------------------------------------------------------------------
