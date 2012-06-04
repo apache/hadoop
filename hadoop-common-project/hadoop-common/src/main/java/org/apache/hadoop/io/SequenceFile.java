@@ -807,7 +807,7 @@ public class SequenceFile {
   }
   
   /** Write key/value pairs to a sequence-format file. */
-  public static class Writer implements java.io.Closeable {
+  public static class Writer implements java.io.Closeable, Syncable {
     private Configuration conf;
     FSDataOutputStream out;
     boolean ownOutputStream = true;
@@ -1193,13 +1193,31 @@ public class SequenceFile {
       }
     }
 
-    /** flush all currently written data to the file system */
+    /**
+     * flush all currently written data to the file system
+     * @deprecated Use {@link #hsync()} or {@link #hflush()} instead
+     */
+    @Deprecated
     public void syncFs() throws IOException {
       if (out != null) {
         out.sync();                               // flush contents to file system
       }
     }
 
+    @Override
+    public void hsync() throws IOException {
+      if (out != null) {
+        out.hsync();
+      }
+    }
+
+    @Override
+    public void hflush() throws IOException {
+      if (out != null) {
+        out.hflush();
+      }
+    }
+    
     /** Returns the configuration of this file. */
     Configuration getConf() { return conf; }
     

@@ -44,6 +44,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  * else append to an existing file.</li>
  * <li> CREATE|OVERWRITE - to create a file if it does not exist, 
  * else overwrite an existing file.</li>
+ * <li> SYNC_BLOCK - to force closed blocks to the disk device.
+ * In addition {@link Syncable#hsync()} should be called after each write,
+ * if true synchronous behavior is required.</li>
  * </ol>
  * 
  * Following combination is not valid and will result in 
@@ -71,7 +74,12 @@ public enum CreateFlag {
   /**
    * Append to a file. See javadoc for more description.
    */
-  APPEND((short) 0x04);
+  APPEND((short) 0x04),
+
+  /**
+   * Force closed blocks to disk. Similar to POSIX O_SYNC. See javadoc for description.
+   */
+  SYNC_BLOCK((short) 0x08);
 
   private final short mode;
 
