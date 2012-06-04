@@ -160,6 +160,11 @@ public class GetImageServlet extends HttpServlet {
                 return null;
               }
               
+              // We may have lost our ticket since last checkpoint, log in again, just in case
+              if (UserGroupInformation.isSecurityEnabled()) {
+                UserGroupInformation.getCurrentUser().reloginFromKeytab();
+              }
+              
               // issue a HTTP get request to download the new fsimage 
               MD5Hash downloadImageDigest =
                 TransferFsImage.downloadImageToStorage(
