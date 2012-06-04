@@ -261,6 +261,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4162. Correctly set token service (Daryn Sharp via bobby)
 
+    MAPREDUCE-4301. Dedupe some strings in MRAM for memory savings 
+    (bobby via tgraves)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
