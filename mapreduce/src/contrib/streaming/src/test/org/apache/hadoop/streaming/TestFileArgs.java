@@ -45,7 +45,7 @@ public class TestFileArgs extends TestStreaming
   private Configuration conf = null;
 
   private static final String EXPECTED_OUTPUT =
-    "job.jar\t\nsidefile\t\ntmp\t\n";
+    "job.jar\t\norg\t\nsidefile\t\ntmp\t\n";
 
   private static final String LS_PATH = "/bin/ls";
 
