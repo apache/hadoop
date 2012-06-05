@@ -78,9 +78,12 @@ public class RenewDelegationTokenServlet extends DfsServlet {
       os.println(result);
       os.close();
     } catch(Exception e) {
-      LOG.info("Exception while renewing token. Re-throwing. ", e);
-      resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-                     e.getMessage());
+      // transfer exception over the http
+      String exceptionClass = e.getClass().getName();
+      String exceptionMsg = e.getLocalizedMessage();
+      String strException = exceptionClass + ";" + exceptionMsg;
+      LOG.info("Exception while renewing token. Re-throwing. s=" + strException, e);
+      resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, strException);
     }
   }
 }

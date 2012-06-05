@@ -42,6 +42,10 @@ Release 0.22.1 - Unreleased
     HDFS-3403. SecondaryNameNode doesn't start up in secure cluster.
     (Benoy Antony via shv)
 
+    HDFS-1860. when renewing/canceling DelegationToken over http we need to
+    pass exception information back to the caller.
+    (Boris Shkolnik and Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

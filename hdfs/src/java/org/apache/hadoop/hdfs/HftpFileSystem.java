@@ -138,9 +138,18 @@ public class HftpFileSystem extends FileSystem {
     setConf(conf);
     this.ugi = UserGroupInformation.getCurrentUser(); 
     nnAddr = NetUtils.createSocketAddr(name.toString());
-   
-    nnHttpUrl = buildUri("https://", NetUtils.normalizeHostName(name.getHost()), 
-        conf.getInt("dfs.https.port", DEFAULT_PORT));
+
+    // in case we open connection to hftp of a different cluster
+    // we need to know this cluster https port
+    // if it is not set we assume it is the same cluster or same port
+    int urlPort = conf.getInt("dfs.hftp.https.port", -1);
+    if(urlPort == -1)
+      urlPort = conf.getInt(DFSConfigKeys.DFS_HTTPS_PORT_KEY, 
+          DFSConfigKeys.DFS_HTTPS_PORT_DEFAULT);
+
+    nnHttpUrl = 
+      buildUri("https://", NetUtils.normalizeHostName(name.getHost()), urlPort);
+    LOG.debug("using url to get DT:" + nnHttpUrl);
 
     // if one uses RPC port different from the Default one,  
     // one should specify what is the setvice name for this delegation token

@@ -254,10 +254,12 @@ public class DelegationTokenFetcher {
     buf.append("=");
     buf.append(tok.encodeToUrlString());
     BufferedReader in = null;
+    HttpURLConnection connection = null;
+    
     try {
       URL url = new URL(buf.toString());
       SecurityUtil.fetchServiceTicket(url);
-      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+      connection = (HttpURLConnection) url.openConnection();
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error renewing token: " + 
             connection.getResponseMessage());
@@ -268,11 +270,67 @@ public class DelegationTokenFetcher {
       in.close();
       return result;
     } catch (IOException ie) {
+      LOG.info("error in renew over HTTP", ie);
+      IOException e = getExceptionFromResponse(connection);
+
       IOUtils.cleanup(LOG, in);
+      if(e!=null) {
+        LOG.info("rethrowing exception from HTTP request: " + e.getLocalizedMessage());
+        throw e;
+      }
       throw ie;
     }
   }
 
+  // parse the message and extract the name of the exception and the message
+  static private IOException getExceptionFromResponse(HttpURLConnection con) {
+    IOException e = null;
+    String resp;
+    if(con == null) 
+      return null;    
+    
+    try {
+      resp = con.getResponseMessage();
+    } catch (IOException ie) { return null; }
+    if(resp == null || resp.isEmpty())
+      return null;
+
+    String exceptionClass = "", exceptionMsg = "";
+    String[] rs = resp.split(";");
+    if(rs.length < 2)
+      return null;
+    exceptionClass = rs[0];
+    exceptionMsg = rs[1];
+    LOG.info("Error response from HTTP request=" + resp + 
+        ";ec=" + exceptionClass + ";em="+exceptionMsg);
+    
+    if(exceptionClass == null || exceptionClass.isEmpty())
+      return null;
+    
+    // recreate exception objects
+    try {
+      Class<? extends Exception> ec = 
+         Class.forName(exceptionClass).asSubclass(Exception.class);
+      // we are interested in constructor with String arguments
+      java.lang.reflect.Constructor<? extends Exception> constructor =
+        (java.lang.reflect.Constructor<? extends Exception>) 
+        ec.getConstructor (new Class[] {String.class});
+
+      // create an instance
+      e =  (IOException) constructor.newInstance (exceptionMsg);
+
+    } catch (Exception ee)  {
+      LOG.warn("failed to create object of this class", ee);
+    }
+    if(e == null)
+      return null;
+    
+    e.setStackTrace(new StackTraceElement[0]); // local stack is not relevant
+    LOG.info("Exception from HTTP response=" + e.getLocalizedMessage());
+    return e;
+  }
+
+  
   /**
    * Cancel a Delegation Token.
    * @param nnAddr the NameNode's address
@@ -290,16 +348,24 @@ public class DelegationTokenFetcher {
     buf.append("=");
     buf.append(tok.encodeToUrlString());
     BufferedReader in = null;
+    HttpURLConnection connection=null;
     try {
       URL url = new URL(buf.toString());
       SecurityUtil.fetchServiceTicket(url);
-      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+      connection = (HttpURLConnection) url.openConnection();
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error cancelling token: " + 
             connection.getResponseMessage());
       }
     } catch (IOException ie) {
+      LOG.info("error in cancel over HTTP", ie);
+      IOException e = getExceptionFromResponse(connection);
+
       IOUtils.cleanup(LOG, in);
+      if(e!=null) {
+        LOG.info("rethrowing exception from HTTP request: " + e.getLocalizedMessage());
+        throw e;
+      }
       throw ie;
     }
   }
