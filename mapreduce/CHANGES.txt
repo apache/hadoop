@@ -56,6 +56,9 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-2377. task-controller fails to parse configuration if it doesn't
     end in \n. (Todd Lipcon and Benoy Antony via shv)
 
+    MAPREDUCE-2103. Additional changes to task-controller.c
+    (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
