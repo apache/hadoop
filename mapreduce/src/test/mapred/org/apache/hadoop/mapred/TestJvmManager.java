@@ -235,8 +235,6 @@ public class TestJvmManager {
    */
   @Test
   public void testForRaces() throws Exception {
-    fail("TODO: re-enable test after 2178 merge");
-    /*
     JvmManagerForType mapJvmManager = jvmManager
         .getJvmManagerForType(TaskType.MAP);
 
@@ -256,8 +254,9 @@ public class TestJvmManager {
       Task task = new MapTask(null, attemptID, i, null, 1);
       task.setConf(taskConf);
       TaskInProgress tip = tt.new TaskInProgress(task, taskConf);
+      RunningJob rjob = new RunningJob(attemptID.getJobID());
       File pidFile = new File(TEST_DIR, "pid_" + i);
-      final TaskRunner taskRunner = task.createRunner(tt, tip);
+      final TaskRunner taskRunner = task.createRunner(tt, tip,rjob);
       // launch a jvm which sleeps for 60 seconds
       final Vector<String> vargs = new Vector<String>(2);
       vargs.add(writeScript("script_" + i, "echo hi\n", pidFile).getAbsolutePath());
@@ -271,7 +270,7 @@ public class TestJvmManager {
         public void run() {
           try {
             taskRunner.launchJvmAndWait(null, vargs, stdout, stderr, 100,
-                workDir, null);
+                workDir);
           } catch (Throwable t) {
             failed.compareAndSet(null, t);
             exec.shutdownNow();
@@ -287,7 +286,6 @@ public class TestJvmManager {
     if (failed.get() != null) {
       throw new RuntimeException(failed.get());
     }
-  */
   }
 
   /**

@@ -62,6 +62,8 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-2376. test-task-controller fails if run as a userid < 1000.
     (Todd Lipcon and Benoy Antony via shv)
 
+    MAPREDUCE-4314. Synchronization in JvmManager. (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
