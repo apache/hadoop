@@ -16,12 +16,36 @@
  * limitations under the License.
  */
 
-#include <dlfcn.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#if defined HAVE_CONFIG_H
+  #include <config.h>
+#endif
 
-#include "config.h"
+#if defined HADOOP_SNAPPY_LIBRARY
+
+#if defined HAVE_STDIO_H
+  #include <stdio.h>
+#else
+  #error 'stdio.h not found'
+#endif
+
+#if defined HAVE_STDLIB_H
+  #include <stdlib.h>
+#else
+  #error 'stdlib.h not found'
+#endif
+
+#if defined HAVE_STRING_H
+  #include <string.h>
+#else
+  #error 'string.h not found'
+#endif
+
+#if defined HAVE_DLFCN_H
+  #include <dlfcn.h>
+#else
+  #error 'dlfcn.h not found'
+#endif
+
 #include "org_apache_hadoop_io_compress_snappy.h"
 #include "org_apache_hadoop_io_compress_snappy_SnappyCompressor.h"
 
@@ -99,3 +123,5 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyCompresso
 
   return (jint)compressed_direct_buf_len;
 }
+
+#endif //define HADOOP_SNAPPY_LIBRARY

@@ -226,8 +226,6 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8358. Config-related WARN for dfs.web.ugi can be avoided. (harsh)
 
-    HADOOP-8368. Use CMake rather than autotools to build native code (ccccabe via tucu)
-
     HADOOP-8450. Remove src/test/system. (eli)
 
   BUG FIXES
