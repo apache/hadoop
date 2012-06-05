@@ -40,6 +40,10 @@ Release 0.22.1 - Unreleased
     HADOOP-7272. Remove unnecessary security related info logs.
     (Suresh Srinivas and Benoy Antony via shv)
 
+    HADOOP-7215. RPC clients must use network interface corresponding to 
+    the host in the client's kerberos principal key.
+    (Suresh Srinivas and Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
