@@ -69,6 +69,8 @@ Release 0.22.1 - Unreleased
 
     MAPREDUCE-4247. Fix TestTaskTrackerLocalization. (Benoy Antony via shv)
 
+    MAPREDUCE-4248. Fix TestRecoveryManager. (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
