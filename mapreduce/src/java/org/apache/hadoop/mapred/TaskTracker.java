@@ -3710,7 +3710,7 @@ public class TaskTracker
          */
         //open the map-output file
         mapOutputIn = SecureIOUtils.openForRead(
-            new File(mapOutputFileName.toUri().getPath()), runAsUserName, null);
+            new File(mapOutputFileName.toUri().getPath()), runAsUserName);
         //seek to the correct offset for the reduce
         IOUtils.skipFully(mapOutputIn, info.startOffset);
         
