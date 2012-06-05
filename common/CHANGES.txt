@@ -23,6 +23,9 @@ Release 0.22.1 - Unreleased
     HADOOP-7338. LocalDirAllocator improvements for MR-2178.
     (Benoy Antony via shv)
 
+    HADOOP-7119. Add Kerberos HTTP SPNEGO authentication support to Hadoop
+    JT/NN/DN/TT web-consoles. (Alejandro Abdelnur, Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
