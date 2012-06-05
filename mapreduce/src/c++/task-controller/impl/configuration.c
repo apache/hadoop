@@ -155,8 +155,12 @@ void read_config(const char* file_name) {
         break;
       }
     }
-    //trim the ending new line
-    line[strlen(line)-1] = '\0';
+
+    //trim the ending new line if there is one
+    if (line[strlen(line) - 1] == '\n') {
+        line[strlen(line)-1] = '\0';
+    }
+
     //comment line
     if(line[0] == '#') {
       free(line);

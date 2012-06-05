@@ -53,6 +53,9 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-2353. MR changes to reflect the API changes in SecureIO library.
     (Devaraj Das and Benoy Antony via shv)
 
+    MAPREDUCE-2377. task-controller fails to parse configuration if it doesn't
+    end in \n. (Todd Lipcon and Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
