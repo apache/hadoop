@@ -288,7 +288,7 @@ public class TestTokenCache {
     // this token is keyed by hostname:port key.
     String fs_addr = 
       SecurityUtil.buildDTServiceName(p1.toUri(), NameNode.DEFAULT_PORT);
-    Token<DelegationTokenIdentifier> nnt = TokenCache.getDelegationToken(
+    Token<DelegationTokenIdentifier> nnt = (Token<DelegationTokenIdentifier>)TokenCache.getDelegationToken(
         credentials, fs_addr);
     System.out.println("dt for " + p1 + "(" + fs_addr + ")" + " = " +  nnt);
     assertNotNull("Token for nn is null", nnt);
