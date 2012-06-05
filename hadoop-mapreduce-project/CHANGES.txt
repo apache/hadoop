@@ -45,6 +45,9 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4313. TestTokenCache doesn't compile due 
     TokenCache.getDelegationToken compilation error (bobby)
 
+    MAPREDUCE-3873. Fixed NodeManagers' decommissioning at RM to accept IP
+    addresses also. (xieguiming via vinodkv)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
