@@ -67,6 +67,8 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-4246. Failure in deleting user directories in secure Hadoop.
     (Benoy Antony via shv)
 
+    MAPREDUCE-4247. Fix TestTaskTrackerLocalization. (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

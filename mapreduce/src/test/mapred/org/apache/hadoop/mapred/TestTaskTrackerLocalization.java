@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.mapred;
 
+import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -34,6 +39,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.TaskTracker.RunningJob;
+import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.mapred.UtilsForTests.InlineCleanupQueue;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -42,26 +50,20 @@ import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
-
-import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.mapred.TaskTracker.RunningJob;
-import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
-import org.apache.hadoop.mapred.UtilsForTests.InlineCleanupQueue;
-
-import junit.framework.TestCase;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Test to verify localization of a job and localization of a task on a
  * TaskTracker.
  * 
  */
-@Ignore // test relies on deprecated functionality/lifecycle
-public class TestTaskTrackerLocalization extends TestCase {
+public class TestTaskTrackerLocalization  {
 
   private static File TEST_ROOT_DIR = 
     new File(System.getProperty("test.build.data", "/tmp"));
@@ -101,9 +103,8 @@ public class TestTaskTrackerLocalization extends TestCase {
   protected boolean canRun() {
     return true;
   }
-
-  @Override
-  protected void setUp()
+  @Before
+  public void setUp()
       throws Exception {
     if (!canRun()) {
       return;
@@ -182,14 +183,8 @@ public class TestTaskTrackerLocalization extends TestCase {
     // Set up the TaskTracker
     tracker = new TaskTracker();
     tracker.setConf(trackerFConf);
-    // setup task controller
-    taskController = createTaskController();
-    taskController.setConf(trackerFConf);
-    taskController.setup(lDirAlloc);
-    tracker.setTaskController(taskController);
-    tracker.setLocalizer(new Localizer(tracker.getLocalFileSystem(),localDirs));
     tracker.setTaskLogCleanupThread(new UserLogCleaner(trackerFConf, 
-                                        taskController));
+        taskController));
     initializeTracker();
   }
 
@@ -210,7 +205,19 @@ public class TestTaskTrackerLocalization extends TestCase {
     // Set up TaskTracker instrumentation
     tracker.setTaskTrackerInstrumentation(
         TaskTracker.createInstrumentation(tracker, trackerFConf));
-
+    
+    // setup task controller
+    taskController = createTaskController();
+    taskController.setConf(trackerFConf);
+    taskController.setup(lDirAlloc);
+    tracker.setTaskController(taskController);
+    tracker.setLocalizer(new Localizer(tracker.getLocalFileSystem(),localDirs));
+    
+    // Initialize DistributedCache
+    tracker.setTrackerDistributedCacheManager(
+        new TrackerDistributedCacheManager(trackerFConf, taskController,
+            tracker.getAsyncDiskService()));
+    tracker.getTrackerDistributedCacheManager().startCleanupThread();
   }
 
   protected TaskController createTaskController() {
@@ -309,8 +316,8 @@ public class TestTaskTrackerLocalization extends TestCase {
         TokenCache.JOB_TOKEN_HDFS_FILE), new Configuration());
   }
 
-  @Override
-  protected void tearDown()
+  @After
+  public void tearDown()
       throws Exception {
     if (!canRun()) {
       return;
@@ -357,6 +364,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testTaskControllerSetup()
       throws IOException {
     if (!canRun()) {
@@ -383,6 +391,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testUserLocalization()
       throws IOException {
     if (!canRun()) {
@@ -458,6 +467,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testJobLocalization()
       throws Exception {
     if (!canRun()) {
@@ -474,6 +484,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * during localization rather than at the time when the task itself
    * tries to write into it.
    */
+ @Test
   public void testJobLocalizationFailsIfLogDirUnwritable()
       throws Exception {
     if (!canRun()) {
@@ -567,7 +578,7 @@ public class TestTaskTrackerLocalization extends TestCase {
     File jobLogDir = TaskLog.getJobDir(jobId);
     assertTrue("job log directory " + jobLogDir + " does not exist!", jobLogDir
         .exists());
-    checkFilePermissions(jobLogDir.toString(), "drwx------", task.getUser(),
+    checkFilePermissions(jobLogDir.toString(), "drwx--x---", task.getUser(),
         taskTrackerUGI.getGroupNames()[0]);
 
     // Make sure that the job ACLs file job-acls.xml exists in job userlog dir
@@ -577,7 +588,7 @@ public class TestTaskTrackerLocalization extends TestCase {
 
     // With default task controller, the job-acls.xml file is owned by TT and
     // permissions are 700
-    checkFilePermissions(jobACLsFile.getAbsolutePath(), "-rw-------",
+    checkFilePermissions(jobACLsFile.getAbsolutePath(), "-rw-r-----",
         taskTrackerUGI.getShortUserName(), taskTrackerUGI.getGroupNames()[0]);
 
     validateJobACLsFileContent();
@@ -607,6 +618,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
+  @Ignore // test relies on deprecated functionality/lifecycle
   public void testTaskLocalization()
       throws Exception {
     if (!canRun()) {
@@ -796,6 +808,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Validates if task cleanup is done properly for a succeeded task
    * @throws IOException
    */
+  @Ignore // test relies on deprecated functionality/lifecycle
   public void testTaskFilesRemoval()
       throws Exception {
     if (!canRun()) {
@@ -808,6 +821,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Validates if task cleanup is done properly for a task that is not succeeded
    * @throws IOException
    */
+  @Ignore // test relies on deprecated functionality/lifecycle
   public void testFailedTaskFilesRemoval()
   throws Exception {
     if (!canRun()) {
@@ -829,6 +843,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Validates if task cleanup is done properly for a succeeded task
    * @throws IOException
    */
+  @Ignore // test relies on deprecated functionality/lifecycle
   public void testTaskFilesRemovalWithJvmUse()
       throws Exception {
     if (!canRun()) {
@@ -882,6 +897,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    *   - create files with no write permissions to TT under job-work-dir
    *   - create files with no write permissions to TT under task-work-dir
    */
+  @Ignore // test relies on deprecated functionality/lifecycle
   public void testJobFilesRemoval() throws IOException, InterruptedException {
     if (!canRun()) {
       return;
@@ -974,6 +990,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    * @throws InterruptedException
    */
+  @Ignore // test relies on deprecated functionality/lifecycle
   public void testTrackerRestart() throws IOException, InterruptedException {
     if (!canRun()) {
       return;
@@ -1015,6 +1032,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    * @throws InterruptedException
    */
+  @Ignore // test relies on deprecated functionality/lifecycle
   public void testTrackerReinit() throws IOException, InterruptedException {
     if (!canRun()) {
       return;
@@ -1050,6 +1068,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws InterruptedException 
    * @throws IOException 
    */
+  @Ignore // test relies on deprecated functionality/lifecycle
   public void testCleanupTaskLocalization() throws IOException,
       InterruptedException {
     if (!canRun()) {

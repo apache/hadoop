@@ -4070,6 +4070,10 @@ public class TaskTracker
     return distributedCacheManager;
   }
   
+  void setTrackerDistributedCacheManager(TrackerDistributedCacheManager distributedCacheManager) {
+     this.distributedCacheManager = distributedCacheManager;
+  }
+  
   /**
    * Download the job-token file from the FS and save on local fs.
    * @param user
