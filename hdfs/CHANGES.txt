@@ -46,6 +46,9 @@ Release 0.22.1 - Unreleased
     pass exception information back to the caller.
     (Boris Shkolnik and Benoy Antony via shv)
 
+    HDFS-1584. Check TGT and renew if needed when fetching delegation tokens
+    using HFTP. (Kan Zhang and Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
