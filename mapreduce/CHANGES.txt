@@ -64,6 +64,9 @@ Release 0.22.1 - Unreleased
 
     MAPREDUCE-4314. Synchronization in JvmManager. (Benoy Antony via shv)
 
+    MAPREDUCE-4246. Failure in deleting user directories in secure Hadoop.
+    (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

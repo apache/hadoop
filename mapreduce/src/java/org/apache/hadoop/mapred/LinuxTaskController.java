@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -31,10 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
-import static org.apache.hadoop.mapred.TaskController.Signal;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * A {@link TaskController} that runs the task JVMs as the user 
@@ -262,8 +260,10 @@ class LinuxTaskController extends TaskController {
                    user,
                    Integer.toString(Commands.DELETE_AS_USER.getValue()),
                    subDir));
-    for (String baseDir : baseDirs) {
-      command.add(baseDir);
+    if (baseDirs != null){
+      for (String baseDir : baseDirs) {
+        command.add(baseDir);
+      }
     }
     String[] commandArray = command.toArray(new String[0]);
     ShellCommandExecutor shExec = new ShellCommandExecutor(commandArray);

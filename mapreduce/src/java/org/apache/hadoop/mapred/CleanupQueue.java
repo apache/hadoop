@@ -29,7 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 
-class CleanupQueue {
+public class CleanupQueue {
 
   public static final Log LOG =
     LogFactory.getLog(CleanupQueue.class);
@@ -53,7 +53,7 @@ class CleanupQueue {
   /**
    * Contains info related to the path of the file/dir to be deleted
    */
-  static class PathDeletionContext {
+  public static class PathDeletionContext {
     final Path fullPath;// full path of file or dir
     final Configuration conf;
 
