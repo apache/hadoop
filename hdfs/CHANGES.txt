@@ -35,6 +35,10 @@ Release 0.22.1 - Unreleased
 
     HDFS-3368. Missing blocks due to bad DataNodes coming up and down. (shv)
 
+  SUBTASKS OF HADOOP-8357. Restore security in Hadoop 0.22 branch.
+
+    HDFS-3402. Fix hdfs script for secure datanodes. (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
