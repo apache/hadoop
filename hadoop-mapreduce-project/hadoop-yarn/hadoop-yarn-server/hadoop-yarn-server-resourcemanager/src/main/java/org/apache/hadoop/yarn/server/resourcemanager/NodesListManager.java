@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppNodeUpdateEvent.
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.service.AbstractService;
 
+@SuppressWarnings("unchecked")
 public class NodesListManager extends AbstractService implements
     EventHandler<NodesListManagerEvent> {
 
@@ -112,8 +114,10 @@ public class NodesListManager extends AbstractService implements
     synchronized (hostsReader) {
       Set<String> hostsList = hostsReader.getHosts();
       Set<String> excludeList = hostsReader.getExcludedHosts();
-      return ((hostsList.isEmpty() || hostsList.contains(hostName)) && 
-          !excludeList.contains(hostName));
+      String ip = NetUtils.normalizeHostName(hostName);
+      return (hostsList.isEmpty() || hostsList.contains(hostName) || hostsList
+          .contains(ip))
+          && !(excludeList.contains(hostName) || excludeList.contains(ip));
     }
   }
   
