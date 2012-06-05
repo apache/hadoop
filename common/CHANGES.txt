@@ -18,6 +18,11 @@ Release 0.22.1 - Unreleased
     HADOOP-7680 TestHardLink fails on Mac OS X, when gnu stat is in path.
     (Milind Bhandarkar via stevel)
 
+  SUBTASKS OF HADOOP-8357. Restore security in Hadoop 0.22 branch.
+
+    HADOOP-7338. LocalDirAllocator improvements for MR-2178.
+    (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

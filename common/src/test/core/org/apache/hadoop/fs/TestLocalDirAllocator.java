@@ -20,10 +20,11 @@ package org.apache.hadoop.fs;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Shell;
-
 import junit.framework.TestCase;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.Shell;
 
 /** This test LocalDirAllocator works correctly;
  * Every test case uses different buffer dirs to 
@@ -122,6 +123,44 @@ public class TestLocalDirAllocator extends TestCase {
       rmBufferDirs();
     }
   }
+  
+  /** Testing the checkwrite functionality
+   * Create a buffer directory(RW) . get the paths with checkwrite on and off.
+   * Change it READONLY. get the paths with checkwrite on and off. 
+   * With checkWrite on, there should be an exception.
+   * @throws Exception
+   */
+  public void testCheckWrite() throws Exception {
+    if (isWindows) return;
+    try {
+      conf.set(CONTEXT, BUFFER_DIR[0]);
+      assertTrue(localFs.mkdirs(BUFFER_PATH[0]));
+      
+      Path pathFalse = dirAllocator.getLocalPathForWrite("test", -1, conf, false);
+      Path pathTrue = dirAllocator.getLocalPathForWrite("test", -1, conf, true);
+      
+      assertTrue ("The returned paths are different. TruePath = " + pathTrue + " , FalsePath = "+ pathFalse,pathTrue.equals(pathFalse)) ;
+      
+      //set to Read only
+      new File(BUFFER_DIR[0]).setReadOnly();
+      
+      pathFalse = null;
+      pathFalse = dirAllocator.getLocalPathForWrite("test", -1, conf, false);
+      assertTrue ("The returned paths are different after setting to readonly. TruePath = " + pathTrue + " , FalsePath = "+ pathFalse,pathTrue.equals(pathFalse)) ;
+
+      try {
+        pathTrue = dirAllocator.getLocalPathForWrite("test", -1, conf, true);
+        fail ();
+      }
+      catch (DiskErrorException dee){
+        // The exception is expected.
+      }
+    } finally {
+      Shell.execCommand(new String[]{"chmod", "u+w", BUFFER_DIR_ROOT});
+      rmBufferDirs();
+    }
+  }
+  
   /** Two buffer dirs. Both do not exist but on a RW disk.
    * Check if tmp dirs are allocated in a round-robin 
    */
