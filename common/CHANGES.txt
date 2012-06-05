@@ -29,6 +29,8 @@ Release 0.22.1 - Unreleased
     HADOOP-8381. Substitute _HOST with hostname for HTTP principals.
     (Benoy Antony via shv)
 
+    HADOOP-7674. Fix TestKerberosName. (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
