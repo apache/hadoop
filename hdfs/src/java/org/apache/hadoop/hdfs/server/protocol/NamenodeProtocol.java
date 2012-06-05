@@ -34,7 +34,7 @@ import org.apache.hadoop.security.KerberosInfo;
  *****************************************************************************/
 @KerberosInfo(
     serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
-    clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+    clientPrincipal = DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY)
 @InterfaceAudience.Private
 public interface NamenodeProtocol extends VersionedProtocol {
   /**

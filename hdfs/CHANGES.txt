@@ -39,6 +39,9 @@ Release 0.22.1 - Unreleased
 
     HDFS-3402. Fix hdfs script for secure datanodes. (Benoy Antony via shv)
 
+    HDFS-3403. SecondaryNameNode doesn't start up in secure cluster.
+    (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
