@@ -47,6 +47,8 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-2452. Moves the cancellation of delegation tokens to a separate
     thread. (Devaraj Das and Benoy Antony via shv)
 
+    MAPREDUCE-2651. Fix race condition in Linux task controller for
+    job log directory creation. (Bharath Mundlapudi and Benoy Antony via shv)
 
 Release 0.22.0 - 2011-11-29
 
