@@ -41,6 +41,9 @@ Release 0.22.1 - Unreleased
 
     MAPREDUCE-4244. Set supplemental groups correctly. (Benoy Antony via shv)
 
+    MAPREDUCE-2420. JobTracker should be able to renew delegation token 
+    over HTTP. (Boris Shkolnik and Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
