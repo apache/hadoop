@@ -29,6 +29,10 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-3863. 0.22 branch mvn deploy is not publishing hadoop-streaming JAR
     (Benoy Antony via cos)
 
+  SUBTASKS OF HADOOP-8357. Restore security in Hadoop 0.22 branch.
+
+    MAPREDUCE-4240. Revert MAPREDUCE-2767 (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
