@@ -93,6 +93,8 @@ public class TestSecurityUtil {
                  SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", (String)null));
     assertEquals("hdfs/" + local + "@REALM",
                  SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", "0.0.0.0"));
+    assertEquals("hdfs/" + local + "@REALM",
+        SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", ""));
   }
   
   @Test

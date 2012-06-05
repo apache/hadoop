@@ -18,6 +18,7 @@ import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import com.sun.security.auth.module.Krb5LoginModule;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.SecurityUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
@@ -143,6 +144,10 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
       if (principal == null || principal.trim().length() == 0) {
         throw new ServletException("Principal not defined in configuration");
       }
+
+      // replace _HOST with FQDN if present
+      principal = SecurityUtil.getServerPrincipal(principal, "");
+
       keytab = config.getProperty(KEYTAB, keytab);
       if (keytab == null || keytab.trim().length() == 0) {
         throw new ServletException("Keytab not defined in configuration");

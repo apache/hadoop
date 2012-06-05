@@ -26,6 +26,9 @@ Release 0.22.1 - Unreleased
     HADOOP-7119. Add Kerberos HTTP SPNEGO authentication support to Hadoop
     JT/NN/DN/TT web-consoles. (Alejandro Abdelnur, Benoy Antony via shv)
 
+    HADOOP-8381. Substitute _HOST with hostname for HTTP principals.
+    (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
