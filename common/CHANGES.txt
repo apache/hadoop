@@ -31,6 +31,9 @@ Release 0.22.1 - Unreleased
 
     HADOOP-7674. Fix TestKerberosName. (Benoy Antony via shv)
 
+    HADOOP-7645. Disable TestKerberosAuthenticator and
+    TestKerberosAuthenticationHandler. (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
