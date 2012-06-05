@@ -33,6 +33,9 @@ Release 0.22.1 - Unreleased
 
     MAPREDUCE-4240. Revert MAPREDUCE-2767 (Benoy Antony via shv)
 
+    MAPREDUCE-4243. Modify mapreduce build to include task-controller target.
+    (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
