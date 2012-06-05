@@ -265,7 +265,7 @@ public interface JobContext extends MRJobConfig {
    * @return a string array of timestamps 
    * @throws IOException
    */
-  public String[] getArchiveTimestamps();
+  public long[] getArchiveTimestamps();
 
   /**
    * Get the timestamps of the files.  Used by internal
@@ -273,7 +273,7 @@ public interface JobContext extends MRJobConfig {
    * @return a string array of timestamps 
    * @throws IOException
    */
-  public String[] getFileTimestamps();
+  public long[] getFileTimestamps();
 
   /** 
    * Get the configured number of maximum attempts that will be made to run a

@@ -26,9 +26,10 @@ import org.apache.log4j.Level;
 class ReduceTaskRunner extends TaskRunner {
 
   public ReduceTaskRunner(TaskInProgress task, TaskTracker tracker, 
-                          JobConf conf) throws IOException {
+                          JobConf conf, TaskTracker.RunningJob rjob
+                          ) throws IOException {
     
-    super(task, tracker, conf);
+    super(task, tracker, conf, rjob);
   }
 
   public void close() throws IOException {

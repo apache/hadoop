@@ -485,7 +485,7 @@ public class TestTaskTrackerMemoryManager {
       // tree rooted at 100 is over limit immediately, as it is
       // twice over the mem limit.
       ProcfsBasedProcessTree pTree = new ProcfsBasedProcessTree(
-                                          "100", true, 100L, 
+                                          "100", true,
                                           procfsRootDir.getAbsolutePath());
       pTree.getProcessTree();
       assertTrue("tree rooted at 100 should be over limit " +
@@ -493,7 +493,7 @@ public class TestTaskTrackerMemoryManager {
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
       
       // the tree rooted at 200 is initially below limit.
-      pTree = new ProcfsBasedProcessTree("200", true, 100L,
+      pTree = new ProcfsBasedProcessTree("200", true,
                                           procfsRootDir.getAbsolutePath());
       pTree.getProcessTree();
       assertFalse("tree rooted at 200 shouldn't be over limit " +
@@ -506,7 +506,7 @@ public class TestTaskTrackerMemoryManager {
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
       
       // the tree rooted at 600 is never over limit.
-      pTree = new ProcfsBasedProcessTree("600", true, 100L,
+      pTree = new ProcfsBasedProcessTree("600", true,
                                             procfsRootDir.getAbsolutePath());
       pTree.getProcessTree();
       assertFalse("tree rooted at 600 should never be over limit.",

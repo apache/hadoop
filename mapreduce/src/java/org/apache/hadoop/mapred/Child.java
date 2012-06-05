@@ -24,11 +24,14 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -57,6 +60,7 @@ class Child {
 
   static volatile TaskAttemptID taskid = null;
   static volatile boolean isCleanup;
+  static String cwd;
 
   public static void main(String[] args) throws Throwable {
     LOG.debug("Child starting");
@@ -74,7 +78,13 @@ class Child {
     int jvmIdInt = Integer.parseInt(args[4]);
     JVMId jvmId = new JVMId(firstTaskid.getJobID(),
         firstTaskid.getTaskType() == TaskType.MAP,jvmIdInt);
-    
+
+    cwd = System.getenv().get(TaskRunner.HADOOP_WORK_DIR);
+    if (cwd == null) {
+      throw new IOException("Environment variable " +
+                             TaskRunner.HADOOP_WORK_DIR + " is not set");
+    }
+
     //load token cache storage
     String jobTokenFile = 
       System.getenv().get(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
@@ -176,10 +186,6 @@ class Child {
         isCleanup = task.isTaskCleanupTask();
         // reset the statistics for the task
         FileSystem.clearStatistics();
-
-        //create the index file so that the log files 
-        //are viewable immediately
-        TaskLog.syncLogs(logLocation, taskid, isCleanup);
         
         // Create the job-conf and set credentials
         final JobConf job = new JobConf(task.getJobFile());
@@ -192,12 +198,19 @@ class Child {
         // setup the child's Configs.LOCAL_DIR. The child is now sandboxed and
         // can only see files down and under attemtdir only.
         TaskRunner.setupChildMapredLocalDirs(task, job);
+        
+        // setup the child's attempt directories
+        localizeTask(task, job, logLocation);
 
         //setupWorkDir actually sets up the symlinks for the distributed
         //cache. After a task exits we wipe the workdir clean, and hence
         //the symlinks have to be rebuilt.
-        TaskRunner.setupWorkDir(job, new File(".").getAbsoluteFile());
-
+        TaskRunner.setupWorkDir(job, new File(cwd));
+        
+        //create the index file so that the log files 
+        //are viewable immediately
+        TaskLog.syncLogs(logLocation, taskid, isCleanup);
+        
         numTasksToExecute = job.getNumTasksToExecutePerJvm();
         assert(numTasksToExecute != 0);
 
@@ -284,4 +297,19 @@ class Child {
       LogManager.shutdown();
     }
   }
+  static void localizeTask(Task task, JobConf jobConf, String logLocation)
+  throws IOException{
+
+     // Do the task-type specific localization
+     task.localizeConfiguration(jobConf);
+
+     //write the localized task jobconf
+     LocalDirAllocator lDirAlloc =
+       new LocalDirAllocator(JobConf.MAPRED_LOCAL_DIR_PROPERTY);
+     Path localTaskFile =
+       lDirAlloc.getLocalPathForWrite(TaskTracker.JOBFILE, jobConf);
+     JobLocalizer.writeLocalJobFile(localTaskFile, jobConf);
+     task.setJobFile(localTaskFile.toString());
+     task.setConf(jobConf);
+   }
 }

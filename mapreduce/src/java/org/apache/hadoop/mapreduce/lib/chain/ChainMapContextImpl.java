@@ -131,7 +131,7 @@ class ChainMapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
   }
 
   @Override
-  public String[] getArchiveTimestamps() {
+  public long[] getArchiveTimestamps() {
     return base.getArchiveTimestamps();
   }
 
@@ -162,7 +162,7 @@ class ChainMapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
   }
 
   @Override
-  public String[] getFileTimestamps() {
+  public long[] getFileTimestamps() {
     return base.getFileTimestamps();
   }
 

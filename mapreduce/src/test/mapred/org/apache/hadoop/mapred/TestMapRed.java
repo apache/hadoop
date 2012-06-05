@@ -45,8 +45,10 @@ import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -85,6 +87,17 @@ import static org.junit.Assert.assertFalse;
  *
  **********************************************************/
 public class TestMapRed extends Configured implements Tool {
+
+  static final Path TESTDIR =
+    new Path(System.getProperty("test.build.data", "/tmp"),
+        TestMapRed.class.getSimpleName());
+
+  @Before
+  public void removeTestdir() throws IOException {
+    final FileSystem rfs = FileSystem.getLocal(new Configuration()).getRaw();
+    rfs.delete(TESTDIR, true);
+  }
+
   /**
    * Modified to make it a junit test.
    * The RandomGen Job does the actual work of creating
@@ -370,7 +383,8 @@ public class TestMapRed extends Configured implements Tool {
                                 boolean includeCombine
                                 ) throws Exception {
     JobConf conf = new JobConf(TestMapRed.class);
-    Path testdir = new Path("build/test/test.mapred.compress");
+    Path testdir = new Path(System.getProperty("test.build.data", "/tmp"),
+        "test.mapred.compress");
     Path inDir = new Path(testdir, "in");
     Path outDir = new Path(testdir, "out");
     FileSystem fs = FileSystem.get(conf);
@@ -461,7 +475,8 @@ public class TestMapRed extends Configured implements Tool {
     // Write the answer key to a file.  
     //
     FileSystem fs = FileSystem.get(conf);
-    Path testdir = new Path("mapred.loadtest");
+    final Path testdir = new Path(System.getProperty("test.build.data", "/tmp"),
+        "mapred.loadtest");
     if (!fs.mkdirs(testdir)) {
       throw new IOException("Mkdirs failed to create " + testdir.toString());
     }
@@ -723,7 +738,8 @@ public class TestMapRed extends Configured implements Tool {
   public void runJob(int items) {
     try {
       JobConf conf = new JobConf(TestMapRed.class);
-      Path testdir = new Path("build/test/test.mapred.spill");
+      Path testdir = new Path(System.getProperty("build.test.data", "/tmp"),
+          "test.mapred.spill");
       Path inDir = new Path(testdir, "in");
       Path outDir = new Path(testdir, "out");
       FileSystem fs = FileSystem.get(conf);

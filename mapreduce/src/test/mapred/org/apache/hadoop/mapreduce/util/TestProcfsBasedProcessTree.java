@@ -35,9 +35,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.DefaultTaskController;
+import org.apache.hadoop.mapred.TaskController;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import static org.apache.hadoop.mapred.TaskController.Signal;
 
 import junit.framework.TestCase;
 
@@ -60,7 +63,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
     public void run() {
       try {
         Vector<String> args = new Vector<String>();
-        if(ProcessTree.isSetsidAvailable) {
+        if(TaskController.isSetsidAvailable) {
           args.add("setsid");
         }
         args.add("bash");
@@ -95,7 +98,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
     return getPidFromPidFile(pidFile);
   }
 
-  public void testProcessTree() {
+  public void testProcessTree() throws Exception {
 
     try {
       if (!ProcfsBasedProcessTree.isAvailable()) {
@@ -149,8 +152,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
     String pid = getRogueTaskPID();
     LOG.info("Root process pid: " + pid);
     ProcfsBasedProcessTree p = new ProcfsBasedProcessTree(pid,
-                               ProcessTree.isSetsidAvailable,
-                               ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+                               TaskController.isSetsidAvailable);
     p = p.getProcessTree(); // initialize
     LOG.info("ProcessTree: " + p.toString());
 
@@ -171,13 +173,14 @@ public class TestProcfsBasedProcessTree extends TestCase {
     String processTreeDump = p.getProcessTreeDump();
 
     // destroy the process and all its subprocesses
-    p.destroy(true/*in the background*/);
+    TaskController tc = new DefaultTaskController();
+    tc.signalTask(null, Integer.valueOf(pid), Signal.KILL);
 
-    if(ProcessTree.isSetsidAvailable) {// whole processtree should be gone
-      assertEquals(false, p.isAnyProcessInTreeAlive());
-    }
-    else {// process should be gone
-      assertFalse("ProcessTree must have been gone", p.isAlive());
+    if (TaskController.isSetsidAvailable) { // whole processtree should be gone
+      assertFalse("Proceesses in process group live",
+          p.isAnyProcessInTreeAlive(tc));
+    } else {// process should be gone
+      assertFalse("ProcessTree must have been gone", p.isAlive(tc));
     }
 
     LOG.info("Process-tree dump follows: \n" + processTreeDump);
@@ -204,7 +207,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
 
     // ProcessTree is gone now. Any further calls should be sane.
     p = p.getProcessTree();
-    assertFalse("ProcessTree must have been gone", p.isAlive());
+    assertFalse("ProcessTree must have been gone", p.isAlive(tc));
     assertTrue("Cumulative vmem for the gone-process is "
         + p.getCumulativeVmem() + " . It should be zero.", p
         .getCumulativeVmem() == 0);
@@ -333,8 +336,8 @@ public class TestProcfsBasedProcessTree extends TestCase {
       
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree = 
-          new ProcfsBasedProcessTree("100", true, 100L, 
-                                  procfsRootDir.getAbsolutePath());
+          new ProcfsBasedProcessTree("100", true,
+              procfsRootDir.getAbsolutePath());
       // build the process tree.
       processTree.getProcessTree();
       
@@ -406,8 +409,8 @@ public class TestProcfsBasedProcessTree extends TestCase {
       
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree = 
-          new ProcfsBasedProcessTree("100", true, 100L, 
-                                  procfsRootDir.getAbsolutePath());
+          new ProcfsBasedProcessTree("100", true,
+              procfsRootDir.getAbsolutePath());
       // build the process tree.
       processTree.getProcessTree();
       
@@ -498,11 +501,11 @@ public class TestProcfsBasedProcessTree extends TestCase {
       
       // crank up the process tree class.
       ProcfsBasedProcessTree processTree = new ProcfsBasedProcessTree(
-                        pid, true, 100L, procfsRootDir.getAbsolutePath());
+                        pid, true, procfsRootDir.getAbsolutePath());
 
       // Let us not create stat file for pid 100.
       assertTrue(ProcfsBasedProcessTree.checkPidPgrpidForMatch(
-                            pid, procfsRootDir.getAbsolutePath()));
+            Integer.valueOf(pid), procfsRootDir.getAbsolutePath()));
     } finally {
       FileUtil.fullyDelete(procfsRootDir);
     }
@@ -551,9 +554,8 @@ public class TestProcfsBasedProcessTree extends TestCase {
       writeStatFiles(procfsRootDir, pids, procInfos);
       writeCmdLineFiles(procfsRootDir, pids, cmdLines);
 
-      ProcfsBasedProcessTree processTree =
-          new ProcfsBasedProcessTree("100", true, 100L, procfsRootDir
-              .getAbsolutePath());
+      ProcfsBasedProcessTree processTree = new ProcfsBasedProcessTree(
+          "100", true, procfsRootDir.getAbsolutePath());
       // build the process tree.
       processTree.getProcessTree();
 

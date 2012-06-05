@@ -18,6 +18,7 @@
 
 package testshell;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
 
@@ -90,6 +91,10 @@ public class ExternalMapReduce extends Configured implements Tool {
       }
       if (ret != 0) {
         throw new IOException("files_tmp does not exist");
+      }
+      File file = new File("./ziplink/test.txt");
+      if (!file.canExecute()) {
+        throw new IOException("ziplink/test.txt is not executable");
       }
     }
   }

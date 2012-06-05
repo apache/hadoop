@@ -27,7 +27,8 @@ import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
-import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.junit.Assert.*;
 
@@ -47,12 +48,18 @@ public class TestUserLogCleanup {
   private JobID jobid4 = new JobID(jtid, 4);
   private File foo = new File(TaskLog.getUserLogDir(), "foo");
   private File bar = new File(TaskLog.getUserLogDir(), "bar");
+  private TaskController taskController;
 
   public TestUserLogCleanup() throws IOException {
     Configuration conf = new Configuration();
-    localizer = new Localizer(FileSystem.get(conf), conf
-        .getStrings(MRConfig.LOCAL_DIR), new DefaultTaskController());
-    taskLogCleanupThread = new UserLogCleaner(conf);
+    localizer =
+      new Localizer(FileSystem.get(conf), conf.getStrings(MRConfig.LOCAL_DIR));
+    Class<? extends TaskController> taskControllerClass =
+      conf.getClass("mapred.task.tracker.task-controller",
+                     DefaultTaskController.class, TaskController.class);
+    taskController = 
+      (TaskController) ReflectionUtils.newInstance(taskControllerClass, conf);
+    taskLogCleanupThread = new UserLogCleaner(conf, taskController);
     taskLogCleanupThread.setClock(myClock);
     tt = new TaskTracker();
     tt.setConf(new JobConf(conf));
@@ -66,11 +73,10 @@ public class TestUserLogCleanup {
   }
 
   private File localizeJob(JobID jobid) throws IOException {
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    new JobLocalizer(tt.getJobConf(), user, 
+                     jobid.toString()).initializeJobLogDir();
     File jobUserlog = TaskLog.getJobDir(jobid);
-
-    JobConf conf = new JobConf();
-    // localize job log directory
-    tt.initializeJobLogDir(jobid, conf);
     assertTrue(jobUserlog + " directory is not created.", jobUserlog.exists());
     return jobUserlog;
   }
@@ -103,16 +109,17 @@ public class TestUserLogCleanup {
 
     // add the job for deletion with one hour as retain hours
     jobFinished(jobid2, 1);
-
     // remove old logs and see jobid1 is not removed and jobid2 is removed
     myClock.advance(ONE_HOUR);
     taskLogCleanupThread.processCompletedJobs();
+    retry(jobUserlog2);
+      
     assertTrue(jobUserlog1 + " got deleted", jobUserlog1.exists());
-    assertFalse(jobUserlog2 + " still exists.", jobUserlog2.exists());
-
+    assertFalse(jobUserlog2 + " still exists.", jobUserlog2.exists()); 
     myClock.advance(ONE_HOUR);
     // remove old logs and see jobid1 is removed now
     taskLogCleanupThread.processCompletedJobs();
+    retry(jobUserlog1);
     assertFalse(jobUserlog1 + " still exists.", jobUserlog1.exists());
   }
 
@@ -151,18 +158,18 @@ public class TestUserLogCleanup {
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.USER_LOG_RETAIN_HOURS, 3);
     taskLogCleanupThread.clearOldUserLogs(conf);
+    retry(foo, bar);
     assertFalse(foo.exists());
     assertFalse(bar.exists());
     assertTrue(jobUserlog1.exists());
     assertTrue(jobUserlog2.exists());
     assertTrue(jobUserlog3.exists());
     assertTrue(jobUserlog4.exists());
-    assertTrue(new File(TaskLog.getUserLogDir(), MRAsyncDiskService.TOBEDELETED)
-        .exists());
 
     myClock.advance(ONE_HOUR);
     // time is now 2.
     taskLogCleanupThread.processCompletedJobs();
+    retry(jobUserlog1);
     assertFalse(jobUserlog1.exists());
     assertTrue(jobUserlog2.exists());
     assertTrue(jobUserlog3.exists());
@@ -175,29 +182,31 @@ public class TestUserLogCleanup {
     jobFinished(jobid3, 3);
 
     // mimic localizeJob for jobid4
-    jobUserlog4 = localizeJob(jobid4);
+    //jobUserlog4 = localizeJob(jobid4);
 
     // do cleanup
     myClock.advance(2 * ONE_HOUR);
     // time is now 4.
     taskLogCleanupThread.processCompletedJobs();
+    retry(jobUserlog1, jobUserlog2, jobUserlog4);
 
     // jobid2 will be deleted
     assertFalse(jobUserlog1.exists());
     assertFalse(jobUserlog2.exists());
     assertTrue(jobUserlog3.exists());
-    assertTrue(jobUserlog4.exists());
+    assertFalse(jobUserlog4.exists());
 
     myClock.advance(ONE_HOUR);
     // time is now 5.
     // do cleanup again
     taskLogCleanupThread.processCompletedJobs();
+    retry(jobUserlog1, jobUserlog2, jobUserlog3);
 
     // jobid3 will be deleted
     assertFalse(jobUserlog1.exists());
     assertFalse(jobUserlog2.exists());
     assertFalse(jobUserlog3.exists());
-    assertTrue(jobUserlog4.exists());
+    assertFalse(jobUserlog4.exists());
   }
 
   /**
@@ -232,7 +241,7 @@ public class TestUserLogCleanup {
     // job directories will be added with 3 hours as retain hours. 
     Configuration conf = new Configuration();
     conf.setInt(MRJobConfig.USER_LOG_RETAIN_HOURS, 3);
-    taskLogCleanupThread = new UserLogCleaner(conf);
+    taskLogCleanupThread = new UserLogCleaner(conf, taskController);
     myClock = new FakeClock(); // clock is reset.
     taskLogCleanupThread.setClock(myClock);
     taskLogCleanupThread.clearOldUserLogs(conf);
@@ -243,8 +252,6 @@ public class TestUserLogCleanup {
     assertTrue(jobUserlog2.exists());
     assertTrue(jobUserlog3.exists());
     assertTrue(jobUserlog4.exists());
-    assertTrue(new File(TaskLog.getUserLogDir(), MRAsyncDiskService.TOBEDELETED)
-        .exists());
 
     myClock.advance(ONE_HOUR);
     // time is now 1.
@@ -267,22 +274,42 @@ public class TestUserLogCleanup {
     myClock.advance(2 * ONE_HOUR);
     // time is now 3.
     taskLogCleanupThread.processCompletedJobs();
+    retry(jobUserlog1, jobUserlog2, jobUserlog4);
 
     // jobid1 and jobid2 will be deleted
     assertFalse(jobUserlog1.exists());
     assertFalse(jobUserlog2.exists());
     assertTrue(jobUserlog3.exists());
-    assertTrue(jobUserlog4.exists());
+    assertFalse(jobUserlog4.exists());
 
     myClock.advance(ONE_HOUR);
     // time is now 4.
     // do cleanup again
     taskLogCleanupThread.processCompletedJobs();
-
+    retry(jobUserlog1, jobUserlog2, jobUserlog3, jobUserlog4);
+    
     // jobid3 will be deleted
     assertFalse(jobUserlog1.exists());
     assertFalse(jobUserlog2.exists());
     assertFalse(jobUserlog3.exists());
-    assertTrue(jobUserlog4.exists());
+    assertFalse(jobUserlog4.exists());
+  }
+  
+  private void retry(File... jobDirs) {
+    //since the deletion is done by a thread, we poll for sometime
+    short retries = 0;
+    while (retries++ < 20) {
+      boolean exist = false;
+      for (File dir : jobDirs) {
+        if (dir.exists()) {
+          exist = true;
+        }
+      }
+      if (exist) {
+        try {
+          Thread.sleep(500);
+        } catch (InterruptedException ie){}
+      } else return;
+    }
   }
 }

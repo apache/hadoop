@@ -38,7 +38,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.ClusterMetrics;
@@ -79,6 +78,7 @@ public class LocalJobRunner implements ClientProtocol {
   private AtomicInteger map_tasks = new AtomicInteger(0);
   private int reduce_tasks = 0;
   final Random rand = new Random();
+  private final TaskController taskController = new DefaultTaskController();
   
   private JobTrackerInstrumentation myMetrics = null;
 
@@ -116,7 +116,7 @@ public class LocalJobRunner implements ClientProtocol {
     private FileSystem localFs;
     boolean killed = false;
     
-    private TrackerDistributedCacheManager trackerDistributerdCacheManager;
+    private TrackerDistributedCacheManager trackerDistributedCacheManager;
     private TaskDistributedCacheManager taskDistributedCacheManager;
 
     public long getProtocolVersion(String protocol, long clientVersion) {
@@ -134,14 +134,12 @@ public class LocalJobRunner implements ClientProtocol {
 
       // Manage the distributed cache.  If there are files to be copied,
       // this will trigger localFile to be re-written again.
-      this.trackerDistributerdCacheManager =
-          new TrackerDistributedCacheManager(conf, new DefaultTaskController());
+      this.trackerDistributedCacheManager =
+        new TrackerDistributedCacheManager(conf);
       this.taskDistributedCacheManager = 
-          trackerDistributerdCacheManager.newTaskDistributedCacheManager(conf);
-      taskDistributedCacheManager.setup(
-          new LocalDirAllocator(MRConfig.LOCAL_DIR), 
-          new File(systemJobDir.toString()),
-          "archive", "archive");
+        trackerDistributedCacheManager.newTaskDistributedCacheManager(
+            jobid, conf);
+      taskDistributedCacheManager.setupCache(conf, "archive", "archive");
       
       if (DistributedCache.getSymlink(conf)) {
         // This is not supported largely because, 
@@ -458,7 +456,7 @@ public class LocalJobRunner implements ClientProtocol {
           localFs.delete(localJobFile, true);              // delete local copy
           // Cleanup distributed cache
           taskDistributedCacheManager.release();
-          trackerDistributerdCacheManager.purgeCache();
+          trackerDistributedCacheManager.purgeCache();
         } catch (IOException e) {
           LOG.warn("Error cleaning up "+id+": "+e);
         }
@@ -532,6 +530,14 @@ public class LocalJobRunner implements ClientProtocol {
     public boolean ping(TaskAttemptID taskid) throws IOException {
       return true;
     }
+
+    @Override
+    public void updatePrivateDistributedCacheSizes(
+                                                   org.apache.hadoop.mapreduce.JobID jobId,
+                                                   long[] sizes)
+                                                                throws IOException {
+      trackerDistributedCacheManager.setArchiveSizes(jobId, sizes);
+    }
     
     public boolean canCommit(TaskAttemptID taskid) 
     throws IOException {
@@ -578,6 +584,7 @@ public class LocalJobRunner implements ClientProtocol {
     this.fs = FileSystem.getLocal(conf);
     this.conf = conf;
     myMetrics = new JobTrackerMetricsInst(null, new JobConf(conf));
+    taskController.setConf(conf);
   }
 
   // JobSubmissionProtocol methods

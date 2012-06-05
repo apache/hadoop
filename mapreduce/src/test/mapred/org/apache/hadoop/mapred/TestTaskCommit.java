@@ -161,6 +161,13 @@ public class TestTaskCommit extends HadoopTestCase {
         throws IOException {
       return 0;
     }
+
+    @Override
+    public void 
+    updatePrivateDistributedCacheSizes(org.apache.hadoop.mapreduce.JobID jobId,
+                                       long[] sizes) throws IOException {
+      // NOTHING
+    }
   }
   
   /**

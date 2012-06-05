@@ -38,14 +38,20 @@ public class ProcfsBasedProcessTree extends
     super(pid);
   }
 
+  /**
+   * @param sigkillInterval Has no effect
+   */
   public ProcfsBasedProcessTree(String pid, boolean setsidUsed,
       long sigkillInterval) {
-    super(pid, setsidUsed, sigkillInterval);
+    super(pid, setsidUsed);
   }
 
+  /**
+   * @param sigkillInterval Has no effect
+   */
   public ProcfsBasedProcessTree(String pid, boolean setsidUsed,
       long sigkillInterval, String procfsDir) {
-    super(pid, setsidUsed, sigkillInterval, procfsDir);
+    super(pid, setsidUsed, procfsDir);
   }
 
   public ProcfsBasedProcessTree getProcessTree() {

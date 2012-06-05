@@ -18,21 +18,22 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
-
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
-import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.mapreduce.util.ProcessTree;
-import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
+import org.apache.hadoop.util.Shell.ExitCodeException;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
  * The default implementation for controlling tasks.
@@ -42,188 +43,226 @@ import org.apache.hadoop.fs.Path;
  * many of the initializing or cleanup methods are not required here.
  * 
  * <br/>
- * 
+ *  NOTE: This class is internal only class and not intended for users!!
  */
-@InterfaceAudience.Private
 public class DefaultTaskController extends TaskController {
 
   private static final Log LOG = 
       LogFactory.getLog(DefaultTaskController.class);
-  /**
-   * Launch a new JVM for the task.
-   * 
-   * This method launches the new JVM for the task by executing the
-   * the JVM command using the {@link Shell.ShellCommandExecutor}
-   */
-  void launchTaskJVM(TaskController.TaskControllerContext context) 
-                                      throws IOException {
-    initializeTask(context);
-
-    JvmEnv env = context.env;
-    List<String> wrappedCommand = 
-      TaskLog.captureOutAndError(env.setup, env.vargs, env.stdout, env.stderr,
-          env.logSize, true);
-    ShellCommandExecutor shexec = 
-        new ShellCommandExecutor(wrappedCommand.toArray(new String[0]), 
-                                  env.workDir, env.env);
-    // set the ShellCommandExecutor for later use.
-    context.shExec = shexec;
-    shexec.execute();
-  }
-    
-  /**
-   * Initialize the task environment.
-   * 
-   * Since tasks are launched as the tasktracker user itself, this
-   * method has no action to perform.
-   */
-  void initializeTask(TaskController.TaskControllerContext context) {
-    // The default task controller does not need to set up
-    // any permissions for proper execution.
-    // So this is a dummy method.
-    return;
-  }
-
-  /*
-   * No need to do anything as we don't need to do as we dont need anything
-   * extra from what TaskTracker has done.
-   */
-  @Override
-  void initializeJob(JobInitializationContext context) {
-  }
-
-  @Override
-  void terminateTask(TaskControllerContext context) {
-    ShellCommandExecutor shexec = context.shExec;
-    if (shexec != null) {
-      Process process = shexec.getProcess();
-      if (Shell.WINDOWS) {
-        // Currently we don't use setsid on WINDOWS. 
-        //So kill the process alone.
-        if (process != null) {
-          process.destroy();
-        }
-      }
-      else { // In addition to the task JVM, kill its subprocesses also.
-        String pid = context.pid;
-        if (pid != null) {
-          if(ProcessTree.isSetsidAvailable) {
-            ProcessTree.terminateProcessGroup(pid);
-          }else {
-            ProcessTree.terminateProcess(pid);
-          }
-        }
-      }
+  private FileSystem fs;
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    try {
+      fs = FileSystem.getLocal(conf).getRaw();
+    } catch (IOException ie) {
+      throw new RuntimeException("Failed getting LocalFileSystem", ie);
     }
   }
-  
+
+  /**
+   * Create all of the directories for the task and launches the child jvm.
+   * @param user the user name
+   * @param attemptId the attempt id
+   * @throws IOException
+   */
   @Override
-  void killTask(TaskControllerContext context) {
-    ShellCommandExecutor shexec = context.shExec;
-    if (shexec != null) {
-      if (Shell.WINDOWS) {
-        //We don't do send kill process signal in case of windows as 
-        //already we have done a process.destroy() in terminateTaskJVM()
+  public int launchTask(String user, 
+      String jobId,
+      String attemptId,
+      List<String> setup,
+      List<String> jvmArguments,
+      File currentWorkDirectory,
+      String stdout,
+      String stderr) throws IOException {
+
+    ShellCommandExecutor shExec = null;
+    try {
+      FileSystem localFs = FileSystem.getLocal(getConf());
+
+      //create the attempt dirs
+      new Localizer(localFs, 
+          getConf().getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY)).
+          initializeAttemptDirs(user, jobId, attemptId);
+
+      // create the working-directory of the task 
+      if (!currentWorkDirectory.mkdir()) {
+        throw new IOException("Mkdirs failed to create " 
+            + currentWorkDirectory.toString());
+      }
+
+      //mkdir the loglocation
+      String logLocation = TaskLog.getAttemptDir(jobId, attemptId).toString();
+      if (!localFs.mkdirs(new Path(logLocation))) {
+        throw new IOException("Mkdirs failed to create " 
+            + logLocation);
+      }
+      //read the configuration for the job
+      FileSystem rawFs = FileSystem.getLocal(getConf()).getRaw();
+      long logSize = 0; //TODO: Ref BUG:2854624
+      // get the JVM command line.
+      String cmdLine = 
+        TaskLog.buildCommandLine(setup, jvmArguments,
+            new File(stdout), new File(stderr), logSize, true);
+
+      // write the command to a file in the
+      // task specific cache directory
+      // TODO copy to user dir
+      Path p = new Path(allocator.getLocalPathForWrite(
+          TaskTracker.getPrivateDirTaskScriptLocation(user, jobId, attemptId),
+          getConf()), COMMAND_FILE);
+
+      String commandFile = writeCommand(cmdLine, rawFs, p);
+      rawFs.setPermission(p, TaskController.TASK_LAUNCH_SCRIPT_PERMISSION);
+      shExec = new ShellCommandExecutor(new String[]{
+          "bash", "-c", commandFile},
+          currentWorkDirectory);
+      shExec.execute();
+    } catch (Exception e) {
+      if (shExec == null) {
+        return -1;
+      }
+      int exitCode = shExec.getExitCode();
+      LOG.warn("Exit code from task is : " + exitCode);
+      LOG.info("Output from DefaultTaskController's launchTask follows:");
+      logOutput(shExec.getOutput());
+      return exitCode;
+    }
+    return 0;
+  }
+  
+  /**
+   * This routine initializes the local file system for running a job.
+   * Details:
+   * <ul>
+   * <li>Copies the credentials file from the TaskTracker's private space to
+   * the job's private space </li>
+   * <li>Creates the job work directory and set 
+   * {@link TaskTracker#JOB_LOCAL_DIR} in the configuration</li>
+   * <li>Downloads the job.jar, unjars it, and updates the configuration to 
+   * reflect the localized path of the job.jar</li>
+   * <li>Creates a base JobConf in the job's private space</li>
+   * <li>Sets up the distributed cache</li>
+   * <li>Sets up the user logs directory for the job</li>
+   * </ul>
+   * This method must be invoked in the access control context of the job owner 
+   * user. This is because the distributed cache is also setup here and the 
+   * access to the hdfs files requires authentication tokens in case where 
+   * security is enabled.
+   * @param user the user in question (the job owner)
+   * @param jobid the ID of the job in question
+   * @param credentials the path to the credentials file that the TaskTracker
+   * downloaded
+   * @param jobConf the path to the job configuration file that the TaskTracker
+   * downloaded
+   * @param taskTracker the connection to the task tracker
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Override
+  public void initializeJob(String user, String jobid, 
+      Path credentials, Path jobConf, 
+      TaskUmbilicalProtocol taskTracker,
+      InetSocketAddress ttAddr
+  ) throws IOException, InterruptedException {
+    final LocalDirAllocator lDirAlloc = allocator;
+    FileSystem localFs = FileSystem.getLocal(getConf());
+    JobLocalizer localizer = new JobLocalizer((JobConf)getConf(), user, jobid);
+    localizer.createLocalDirs();
+    localizer.createUserDirs();
+    localizer.createJobDirs();
+
+    JobConf jConf = new JobConf(jobConf);
+    localizer.createWorkDir(jConf);
+    //copy the credential file
+    Path localJobTokenFile = lDirAlloc.getLocalPathForWrite(
+        TaskTracker.getLocalJobTokenFile(user, jobid), getConf());
+    FileUtil.copy(
+        localFs, credentials, localFs, localJobTokenFile, false, getConf());
+
+
+    //setup the user logs dir
+    localizer.initializeJobLogDir();
+
+    // Download the job.jar for this job from the system FS
+    // setup the distributed cache
+    // write job acls
+    // write localized config
+    localizer.localizeJobFiles(JobID.forName(jobid), jConf, localJobTokenFile, 
+        taskTracker);
+  }
+  @Override
+  public boolean signalTask(String user, int taskPid, Signal signal)
+  throws IOException {
+    final int sigpid = TaskController.isSetsidAvailable
+    ? -1 * taskPid
+        : taskPid;
+    try {
+      sendSignal(sigpid, Signal.NULL);
+    } catch (ExitCodeException e) {
+      return false;
+    }
+    try {
+      sendSignal(sigpid, signal);
+    } catch (IOException e) {
+      try {
+        sendSignal(sigpid, Signal.NULL);
+      } catch (IOException ignore) {
+        return false;
+      }
+      throw e;
+    }
+    return true;
+  }
+    /**
+     * Send a specified signal to the specified pid
+     *
+     * @param pid the pid of the process [group] to signal.
+     * @param signal signal to send
+     * (for logging).
+     */
+    protected void sendSignal(int pid, Signal signal) throws IOException {
+      ShellCommandExecutor shexec = null;
+      String[] arg = { "kill", "-" + signal.getValue(), Integer.toString(pid) };
+      shexec = new ShellCommandExecutor(arg);
+      shexec.execute();
+    }
+
+    /**
+     * Delete the user's files under all of the task tracker root directories.
+     * @param user the user name
+     * @param subDir the path relative to base directories
+     * @param baseDirs the base directories (absolute paths)
+     * @throws IOException
+     */
+    @Override
+    public void deleteAsUser(String user, 
+        String subDir, 
+        String... baseDirs) throws IOException {
+      if (baseDirs == null || baseDirs.length == 0) {
+        LOG.info("Deleting absolute path : " + subDir);
+        fs.delete(new Path(subDir), true);
         return;
       }
-      String pid = context.pid;
-      if (pid != null) {
-        if(ProcessTree.isSetsidAvailable) {
-          ProcessTree.killProcessGroup(pid);
-        } else {
-          ProcessTree.killProcess(pid);
-        }
+      for (String baseDir : baseDirs) {
+        LOG.info("Deleting path : "+  baseDir + Path.SEPARATOR  +subDir);
+        fs.delete(new Path(baseDir + Path.SEPARATOR + subDir), true);
       }
     }
-  }
 
-  @Override
-  void dumpTaskStack(TaskControllerContext context) {
-    ShellCommandExecutor shexec = context.shExec;
-    if (shexec != null) {
-      if (Shell.WINDOWS) {
-        // We don't use signals in Windows.
-        return;
-      }
-      String pid = context.pid;
-      if (pid != null) {
-        // Send SIGQUIT to get a stack dump
-        if (ProcessTree.isSetsidAvailable) {
-          ProcessTree.sigQuitProcessGroup(pid);
-        } else {
-          ProcessTree.sigQuitProcess(pid);
-        }
-      }
+    /**
+    * Delete the user's files under the userlogs directory.
+    * @param user the user to work as
+    * @param subDir the path under the userlogs directory.
+    * @throws IOException
+     */
+    @Override
+   public void deleteLogAsUser(String user, 
+                               String subDir) throws IOException {
+     Path dir = new Path(TaskLog.getUserLogDir().getAbsolutePath(), subDir);
+     fs.delete(dir, true);
     }
-  }
-
-  @Override
-  public void initializeDistributedCacheFile(DistributedCacheFileContext context)
-      throws IOException {
-    Path localizedUniqueDir = context.getLocalizedUniqueDir();
-    try {
-      // Setting recursive execute permission on localized dir
-      LOG.info("Doing chmod on localdir :" + localizedUniqueDir);
-      FileUtil.chmod(localizedUniqueDir.toString(), "+x", true);
-    } catch (InterruptedException ie) {
-      LOG.warn("Exception in doing chmod on" + localizedUniqueDir, ie);
-      throw new IOException(ie);
-    }
-  }
-
-  @Override
-  public void initializeUser(InitializationContext context) {
-    // Do nothing.
-  }
-  
-  @Override
-  void runDebugScript(DebugScriptContext context) throws IOException {
-    List<String>  wrappedCommand = TaskLog.captureDebugOut(context.args, 
-        context.stdout);
-    // run the script.
-    ShellCommandExecutor shexec = 
-      new ShellCommandExecutor(wrappedCommand.toArray(new String[0]), context.workDir);
-    shexec.execute();
-    int exitCode = shexec.getExitCode();
-    if (exitCode != 0) {
-      throw new IOException("Task debug script exit with nonzero status of " 
-          + exitCode + ".");
-    }
-  }
-
-  /**
-   * Enables the task for cleanup by changing permissions of the specified path
-   * in the local filesystem
-   */
-  @Override
-  void enableTaskForCleanup(PathDeletionContext context)
-         throws IOException {
-    enablePathForCleanup(context);
-  }
-  
-  /**
-   * Enables the job for cleanup by changing permissions of the specified path
-   * in the local filesystem
-   */
-  @Override
-  void enableJobForCleanup(PathDeletionContext context)
-         throws IOException {
-    enablePathForCleanup(context);
-  }
-  
-  /**
-   * Enables the path for cleanup by changing permissions of the specified path
-   * in the local filesystem
-   */
-  private void enablePathForCleanup(PathDeletionContext context)
-         throws IOException {
-    try {
-      FileUtil.chmod(context.fullPath, "u+rwx", true);
-    } catch(InterruptedException e) {
-      LOG.warn("Interrupted while setting permissions for " + context.fullPath +
-          " for deletion.");
-    } catch(IOException ioe) {
-      LOG.warn("Unable to change permissions of " + context.fullPath);
-    }
-  }
+    @Override
+    public void setup(LocalDirAllocator allocator) {
+      this.allocator = allocator;
+     }
 }

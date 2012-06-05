@@ -133,7 +133,7 @@ public class WrappedMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     }
 
     @Override
-    public String[] getArchiveTimestamps() {
+    public long[] getArchiveTimestamps() {
       return mapContext.getArchiveTimestamps();
     }
 
@@ -164,7 +164,7 @@ public class WrappedMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     }
 
     @Override
-    public String[] getFileTimestamps() {
+    public long[] getFileTimestamps() {
       return mapContext.getFileTimestamps();
     }
 

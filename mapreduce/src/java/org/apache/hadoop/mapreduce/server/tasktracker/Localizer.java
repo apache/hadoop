@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.server.tasktracker;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,13 +27,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.TaskController;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskTracker;
-import org.apache.hadoop.mapred.TaskController.InitializationContext;
 import org.apache.hadoop.mapreduce.JobID;
 
 @InterfaceAudience.Private
@@ -45,19 +42,16 @@ public class Localizer {
 
   private FileSystem fs;
   private String[] localDirs;
-  private TaskController taskController;
 
   /**
    * Create a Localizer instance
    * 
    * @param fileSys
    * @param lDirs
-   * @param tc
    */
-  public Localizer(FileSystem fileSys, String[] lDirs, TaskController tc) {
+  public Localizer(FileSystem fileSys, String[] lDirs) {
     fs = fileSys;
     localDirs = lDirs;
-    taskController = tc;
   }
 
   // Data-structure for synchronizing localization of user directories.
@@ -162,13 +156,6 @@ public class Localizer {
                 + user);
       }
 
-      // Now, run the task-controller specific code to initialize the
-      // user-directories.
-      InitializationContext context = new InitializationContext();
-      context.user = user;
-      context.workDir = null;
-      taskController.initializeUser(context);
-
       // Localization of the user is done
       localizedUser.set(true);
     }
@@ -181,7 +168,7 @@ public class Localizer {
    * <br>
    * Here, we set 700 permissions on the job directories created on all disks.
    * This we do so as to avoid any misuse by other users till the time
-   * {@link TaskController#initializeJob(JobInitializationContext)} is run at a
+   * {@link TaskController#initializeJob} is run at a
    * later time to set proper private permissions on the job directories. <br>
    * 
    * @param user
@@ -228,16 +215,15 @@ public class Localizer {
    * @param user
    * @param jobId
    * @param attemptId
-   * @param isCleanupAttempt
    * @throws IOException
    */
   public void initializeAttemptDirs(String user, String jobId,
-      String attemptId, boolean isCleanupAttempt)
+      String attemptId)
       throws IOException {
 
     boolean initStatus = false;
     String attemptDirPath =
-        TaskTracker.getLocalTaskDir(user, jobId, attemptId, isCleanupAttempt);
+        TaskTracker.getLocalTaskDir(user, jobId, attemptId);
 
     for (String localDir : localDirs) {
       Path localAttemptDir = new Path(localDir, attemptDirPath);

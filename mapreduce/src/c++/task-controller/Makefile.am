@@ -14,20 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ACLOCAL_AMFLAGS = -I ../utils/m4 
-AM_CFLAGS = -Wall
+AM_CFLAGS=-I$(srcdir)/impl -Wall -g -Werror
 
-bindir = $(exec_prefix)
-
+# Define the programs that need to be built
 bin_PROGRAMS = task-controller
-check_PROGRAMS = tests/test-task-controller
-TESTS = $(check_PROGRAMS)
+check_PROGRAMS = test-task-controller
 
-task_controller_SOURCES = main.c task-controller.c configuration.c \
-                          task-controller.h
+TESTS = test-task-controller
 
-tests_test_task_controller_SOURCES = tests/test-task-controller.c \
-                                     task-controller.c configuration.c task-controller.h
+# Define the sources for the common files
+common_SOURCES = impl/configuration.c impl/task-controller.c
 
-test:	$(check_PROGRAMS)
-	@echo Done with $<
+# Define the sources for the real executable
+task_controller_SOURCES = $(common_SOURCES) impl/main.c
+
+# Define the sources for the test executable
+test_task_controller_SOURCES = $(common_SOURCES) test/test-task-controller.c

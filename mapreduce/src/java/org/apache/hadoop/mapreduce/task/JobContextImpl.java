@@ -334,7 +334,8 @@ public class JobContextImpl implements JobContext {
    * @return a string array of timestamps 
    * @throws IOException
    */
-  public String[] getArchiveTimestamps() {
+  @Override
+  public long[] getArchiveTimestamps() {
     return DistributedCache.getArchiveTimestamps(conf);
   }
 
@@ -344,7 +345,8 @@ public class JobContextImpl implements JobContext {
    * @return a string array of timestamps 
    * @throws IOException
    */
-  public String[] getFileTimestamps() {
+  @Override
+  public long[] getFileTimestamps() {
     return DistributedCache.getFileTimestamps(conf);
   }
 

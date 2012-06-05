@@ -32,6 +32,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.mapreduce.util.MRAsyncDiskService;
@@ -53,15 +56,19 @@ class UserLogCleaner extends Thread {
   private Map<JobID, Long> completedJobs = Collections
       .synchronizedMap(new HashMap<JobID, Long>());
   private final long threadSleepTime;
-  private MRAsyncDiskService logAsyncDisk;
   private Clock clock;
+  private TaskController taskController;
+  private CleanupQueue cleanupQueue;
+  private FileSystem localFs;
 
-  UserLogCleaner(Configuration conf) throws IOException {
+  UserLogCleaner(Configuration conf, TaskController taskController) 
+  throws IOException {
     threadSleepTime = conf.getLong(TTConfig.TT_USERLOGCLEANUP_SLEEPTIME,
         DEFAULT_THREAD_SLEEP_TIME);
-    logAsyncDisk = new MRAsyncDiskService(FileSystem.getLocal(conf), TaskLog
-        .getUserLogDir().toString());
     setClock(new Clock());
+    localFs = FileSystem.getLocal(conf);
+    this.taskController = taskController;
+    cleanupQueue = CleanupQueue.getInstance();
   }
 
   void setClock(Clock clock) {
@@ -100,7 +107,7 @@ class UserLogCleaner extends Thread {
         // see if the job is old enough
         if (entry.getValue().longValue() <= now) {
           // add the job logs directory to for delete
-          deleteLogPath(TaskLog.getJobDir(entry.getKey()).getAbsolutePath());
+          deleteLogPath(entry.getKey().toString());
           completedJobIter.remove();
         }
       }
@@ -125,16 +132,12 @@ class UserLogCleaner extends Thread {
         // add all the log dirs to taskLogsMnonitor.
         long now = clock.getTime();
         for (String logDir : logDirs) {
-          if (logDir.equals(logAsyncDisk.TOBEDELETED)) {
-            // skip this
-            continue;
-          }
           JobID jobid = null;
           try {
             jobid = JobID.forName(logDir);
           } catch (IllegalArgumentException ie) {
             // if the directory is not a jobid, delete it immediately
-            deleteLogPath(new File(userLogDir, logDir).getAbsolutePath());
+            deleteLogPath(logDir);
             continue;
           }
           // add the job log directory with default retain hours, if it is not
@@ -197,6 +200,11 @@ class UserLogCleaner extends Thread {
    */
   private void deleteLogPath(String logPath) throws IOException {
     LOG.info("Deleting user log path " + logPath);
-    logAsyncDisk.moveAndDeleteAbsolutePath(logPath);
+    String logRoot = TaskLog.getUserLogDir().toString();
+    String user = localFs.getFileStatus(new Path(logRoot, logPath)).getOwner();
+    PathDeletionContext item = 
+      new TaskController.DeletionContext(taskController, true, user, logPath,
+                                         null);
+    cleanupQueue.addToQueue(item);
   }
 }

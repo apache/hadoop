@@ -478,6 +478,11 @@ public class JobInProgress {
       this.submitHostName = conf.getJobSubmitHostName();
       this.submitHostAddress = conf.getJobSubmitHostAddress();
 
+      this.nonLocalMaps = new LinkedList<TaskInProgress>();
+      this.nonLocalRunningMaps = new LinkedHashSet<TaskInProgress>();
+      this.runningMapCache = new IdentityHashMap<Node, Set<TaskInProgress>>();
+      this.nonRunningReduces = new LinkedList<TaskInProgress>();
+      this.runningReduces = new LinkedHashSet<TaskInProgress>();
       this.slowTaskThreshold = Math.max(0.0f, conf.getFloat(
           MRJobConfig.SPECULATIVE_SLOWTASK_THRESHOLD, 1.0f));
       this.speculativeCap = conf.getFloat(MRJobConfig.SPECULATIVECAP, 0.1f);
@@ -3334,8 +3339,8 @@ public class JobInProgress {
          }
 
          Path tempDir = jobtracker.getSystemDirectoryForJob(getJobID());
-         new CleanupQueue().addToQueue(new PathDeletionContext(
-             jobtracker.getFileSystem(), tempDir.toUri().getPath())); 
+         CleanupQueue.getInstance().addToQueue(
+             new PathDeletionContext(tempDir, conf)); 
        } catch (IOException e) {
          LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);
        }

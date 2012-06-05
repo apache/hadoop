@@ -33,10 +33,10 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.TaskController;
 import org.apache.hadoop.mapreduce.util.TestProcfsBasedProcessTree;
 
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -151,6 +151,8 @@ public class TestKillSubProcesses extends TestCase {
         break;
       }
     }
+    final TaskController tc =
+      mr.getTaskTrackerRunner(0).getTaskTracker().getTaskController();
 
     pid = null;
     jobClient = new JobClient(conf);
@@ -195,7 +197,7 @@ public class TestKillSubProcesses extends TestCase {
     }
 
     // Checking if the descendant processes of map task are alive
-    if(ProcessTree.isSetsidAvailable) {
+    if(TaskController.isSetsidAvailable) {
       String childPid = TestProcfsBasedProcessTree.getPidFromPidFile(
                                scriptDirName + "/childPidFile" + 0);
       while(childPid == null) {
@@ -243,11 +245,11 @@ public class TestKillSubProcesses extends TestCase {
     }
 
     // Checking if the map task got killed or not
-    assertTrue(!ProcessTree.isAlive(pid));
+    assertTrue(!isAlive(pid));
     LOG.info("The map task is not alive after Job is completed, as expected.");
 
     // Checking if the descendant processes of map task are killed properly
-    if(ProcessTree.isSetsidAvailable) {
+    if(TaskController.isSetsidAvailable) {
       for(int i=0; i <= numLevelsOfSubProcesses; i++) {
         String childPid = TestProcfsBasedProcessTree.getPidFromPidFile(
                                scriptDirName + "/childPidFile" + i);
@@ -310,9 +312,10 @@ public class TestKillSubProcesses extends TestCase {
       return;
     }
     
-    JobConf conf=null;
     try {
-      mr = new MiniMRCluster(1, "file:///", 1);
+      JobConf conf = new JobConf();
+      conf.setLong(JvmManager.JvmManagerForType.DELAY_BEFORE_KILL_KEY, 0L);
+      mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
 
       // run the TCs
       conf = mr.createJobConf();
@@ -354,7 +357,7 @@ public class TestKillSubProcesses extends TestCase {
    * Runs a recursive shell script to create a chain of subprocesses
    */
   private static void runChildren(JobConf conf) throws IOException {
-    if (ProcessTree.isSetsidAvailable) {
+    if (TaskController.isSetsidAvailable) {
       FileSystem fs = FileSystem.getLocal(conf);
 
       if (fs.exists(scriptDir)) {

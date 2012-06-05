@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -80,40 +81,22 @@ public class ClusterWithLinuxTaskController extends TestCase {
         + "/task-controller";
     
     @Override
-    public void setup() throws IOException {
+    public void setup(LocalDirAllocator allocator) throws IOException {
       getConf().set(TTConfig.TT_GROUP, taskTrackerSpecialGroup);
 
       // write configuration file
       configurationFile = createTaskControllerConf(System
           .getProperty(TASKCONTROLLER_PATH), getConf());
-      super.setup();
+      super.setup(allocator);
     }
 
     @Override
-    protected String getTaskControllerExecutablePath() {
-      return new File(taskControllerExePath).getAbsolutePath();
+    protected String getTaskControllerExecutablePath(Configuration conf) {
+      return taskControllerExePath;
     }
 
     void setTaskControllerExe(String execPath) {
       this.taskControllerExePath = execPath;
-    }
-
-    volatile static int attemptedSigQuits = 0;
-    volatile static int failedSigQuits = 0;
-
-    /** Work like LinuxTaskController, but also count the number of
-      * attempted and failed SIGQUIT sends via the task-controller
-      * executable.
-      */
-    @Override
-    void dumpTaskStack(TaskControllerContext context) {
-      attemptedSigQuits++;
-      try {
-        signalTask(context, TaskControllerCommands.SIGQUIT_TASK_JVM);
-      } catch (Exception e) {
-        LOG.warn("Execution sending SIGQUIT: " + StringUtils.stringifyException(e));
-        failedSigQuits++;
-      }
     }
   }
 
@@ -275,7 +258,7 @@ public class ClusterWithLinuxTaskController extends TestCase {
       if (ugi.indexOf(",") > 1) {
         return true;
       }
-      LOG.info("Invalid taskcontroller-ugi : " + ugi); 
+      LOG.info("Invalid taskcontroller-ugi (requires \"user,group\"): " + ugi); 
       return false;
     }
     LOG.info("Invalid taskcontroller-ugi : " + ugi);

@@ -22,22 +22,27 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
+
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.apache.hadoop.mapred.LinuxTaskController.ResultCode.*;
 
 import junit.framework.TestCase;
 
+@Ignore("Negative test relies on properties fixed during TC compilation")
 public class TestLinuxTaskController extends TestCase {
-  private static int INVALID_TASKCONTROLLER_PERMISSIONS = 24;
   private static File testDir = new File(System.getProperty("test.build.data",
       "/tmp"), TestLinuxTaskController.class.getName());
-  private static String taskControllerPath = System
-      .getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_PATH);
+  private static String taskControllerPath =
+    System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_PATH);
 
   @Before
   protected void setUp() throws Exception {
@@ -51,9 +56,8 @@ public class TestLinuxTaskController extends TestCase {
 
   public static class MyLinuxTaskController extends LinuxTaskController {
     String taskControllerExePath = taskControllerPath + "/task-controller";
-
     @Override
-    protected String getTaskControllerExecutablePath() {
+    protected String getTaskControllerExecutablePath(Configuration conf) {
       return taskControllerExePath;
     }
   }
@@ -64,16 +68,18 @@ public class TestLinuxTaskController extends TestCase {
       // task controller setup should fail validating permissions.
       Throwable th = null;
       try {
-        controller.setup();
+        controller.setup(new LocalDirAllocator("mapred.local.dir"));
       } catch (IOException ie) {
         th = ie;
       }
       assertNotNull("No exception during setup", th);
-      assertTrue("Exception message does not contain exit code"
-          + INVALID_TASKCONTROLLER_PERMISSIONS, th.getMessage().contains(
-          "with exit code " + INVALID_TASKCONTROLLER_PERMISSIONS));
+      assertTrue("Exception message \"" + th.getMessage() +
+            "\" does not contain exit code " +
+            INVALID_TASKCONTROLLER_PERMISSIONS.getValue(),
+          th.getMessage().contains(
+            "with exit code " + INVALID_TASKCONTROLLER_PERMISSIONS.getValue()));
     } else {
-      controller.setup();
+      controller.setup(new LocalDirAllocator("mapred.local.dir"));
     }
 
   }

@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
+
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.log4j.Level;
 
 /** Runs a map task. */
 class MapTaskRunner extends TaskRunner {
   
-  public MapTaskRunner(TaskInProgress task, TaskTracker tracker, JobConf conf) {
-    super(task, tracker, conf);
+  public MapTaskRunner(TaskInProgress task, TaskTracker tracker, JobConf conf,
+      TaskTracker.RunningJob rjob) throws IOException {
+    super(task, tracker, conf, rjob);
   }
   
   @Override

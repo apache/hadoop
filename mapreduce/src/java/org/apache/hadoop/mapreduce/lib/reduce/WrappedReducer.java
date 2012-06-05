@@ -126,7 +126,7 @@ public class WrappedReducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     }
 
     @Override
-    public String[] getArchiveTimestamps() {
+    public long[] getArchiveTimestamps() {
       return reduceContext.getArchiveTimestamps();
     }
 
@@ -157,7 +157,7 @@ public class WrappedReducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     }
 
     @Override
-    public String[] getFileTimestamps() {
+    public long[] getFileTimestamps() {
       return reduceContext.getFileTimestamps();
     }
 

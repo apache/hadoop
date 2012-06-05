@@ -194,7 +194,7 @@ public class TestJobRetire extends TestCase {
     }
     
     @Override
-    public synchronized void shutdown() throws IOException {
+    public synchronized void shutdown() throws IOException, InterruptedException {
       alive = false;
       super.shutdown();
     }

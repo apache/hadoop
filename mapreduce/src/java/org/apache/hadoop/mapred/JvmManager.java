@@ -1,20 +1,20 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 
 package org.apache.hadoop.mapred;
 
@@ -30,280 +30,264 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
+import org.apache.hadoop.mapred.TaskController;
+import org.apache.hadoop.mapred.TaskController.DelayedProcessKiller;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.mapreduce.util.ProcessTree;
+import static org.apache.hadoop.mapred.TaskController.Signal;
 
 class JvmManager {
 
-  public static final Log LOG =
-    LogFactory.getLog(JvmManager.class);
+public static final Log LOG =
+  LogFactory.getLog(JvmManager.class);
 
-  private JvmManagerForType mapJvmManager;
+private JvmManagerForType mapJvmManager;
 
-  private JvmManagerForType reduceJvmManager;
-  
-  public JvmEnv constructJvmEnv(List<String> setup, Vector<String>vargs,
-      File stdout,File stderr,long logSize, File workDir, 
-      Map<String,String> env, JobConf conf) {
-    return new JvmEnv(setup,vargs,stdout,stderr,logSize,workDir,env,conf);
-  }
-  
-  public JvmManager(TaskTracker tracker) {
-    mapJvmManager = new JvmManagerForType(tracker.getMaxCurrentMapTasks(), 
-        true, tracker);
-    reduceJvmManager = new JvmManagerForType(tracker.getMaxCurrentReduceTasks(),
-        false, tracker);
-  }
+private JvmManagerForType reduceJvmManager;
 
-  JvmManagerForType getJvmManagerForType(TaskType type) {
-    if (type.equals(TaskType.MAP)) {
-      return mapJvmManager;
-    } else if (type.equals(TaskType.REDUCE)) {
-      return reduceJvmManager;
-    }
-    return null;
-  }
-  
-  public void stop() {
-    mapJvmManager.stop();
-    reduceJvmManager.stop();
-  }
+public JvmEnv constructJvmEnv(List<String> setup, Vector<String>vargs,
+    File stdout,File stderr,long logSize, File workDir, 
+    JobConf conf) {
+  return new JvmEnv(setup,vargs,stdout,stderr,workDir,conf);
+}
 
-  public boolean isJvmKnown(JVMId jvmId) {
-    if (jvmId.isMapJVM()) {
-      return mapJvmManager.isJvmknown(jvmId);
-    } else {
-      return reduceJvmManager.isJvmknown(jvmId);
-    }
-  }
+public JvmManager(TaskTracker tracker) {
+  mapJvmManager = new JvmManagerForType(tracker.getMaxCurrentMapTasks(), 
+      true, tracker);
+  reduceJvmManager = new JvmManagerForType(tracker.getMaxCurrentReduceTasks(),
+      false, tracker);
+}
 
-  /*
-   * Saves pid of the given taskJvm
-   */
-  void setPidToJvm(JVMId jvmId, String pid) {
-    if (jvmId.isMapJVM()) {
-      mapJvmManager.setPidForJvm(jvmId, pid);
-    }
-    else {
-      reduceJvmManager.setPidForJvm(jvmId, pid);
-    }
+JvmManagerForType getJvmManagerForType(TaskType type) {
+  if (type.equals(TaskType.MAP)) {
+    return mapJvmManager;
+  } else if (type.equals(TaskType.REDUCE)) {
+    return reduceJvmManager;
   }
-  
-  /*
-   * Returns the pid of the task
-   */
-  String getPid(TaskRunner t) {
-    if (t != null && t.getTask() != null) {
-      if (t.getTask().isMapTask()) {
-        return mapJvmManager.getPidByRunningTask(t);
-      } else {
-        return reduceJvmManager.getPidByRunningTask(t);
-      }
-    }
-    return null;
+  return null;
+}
+
+public void stop() throws IOException, InterruptedException {
+  mapJvmManager.stop();
+  reduceJvmManager.stop();
+}
+
+public boolean isJvmKnown(JVMId jvmId) {
+  if (jvmId.isMapJVM()) {
+    return mapJvmManager.isJvmknown(jvmId);
+  } else {
+    return reduceJvmManager.isJvmknown(jvmId);
   }
-  
-  public void launchJvm(TaskRunner t, JvmEnv env) {
+}
+
+/*
+ * Saves pid of the given taskJvm
+ */
+void setPidToJvm(JVMId jvmId, String pid) {
+  if (jvmId.isMapJVM()) {
+    mapJvmManager.setPidForJvm(jvmId, pid);
+  }
+  else {
+    reduceJvmManager.setPidForJvm(jvmId, pid);
+  }
+}
+
+/*
+ * Returns the pid of the task
+ */
+String getPid(TaskRunner t) {
+  if (t != null && t.getTask() != null) {
     if (t.getTask().isMapTask()) {
-      mapJvmManager.reapJvm(t, env);
+      return mapJvmManager.getPidByRunningTask(t);
     } else {
-      reduceJvmManager.reapJvm(t, env);
+      return reduceJvmManager.getPidByRunningTask(t);
     }
   }
+  return null;
+}
 
-  public TaskInProgress getTaskForJvm(JVMId jvmId)
+public void launchJvm(TaskRunner t, JvmEnv env)
+    throws IOException, InterruptedException {
+  if (t.getTask().isMapTask()) {
+    mapJvmManager.reapJvm(t, env);
+  } else {
+    reduceJvmManager.reapJvm(t, env);
+  }
+}
+
+public TaskInProgress getTaskForJvm(JVMId jvmId)
+    throws IOException {
+  if (jvmId.isMapJVM()) {
+    return mapJvmManager.getTaskForJvm(jvmId);
+  } else {
+    return reduceJvmManager.getTaskForJvm(jvmId);
+  }
+}
+public void taskFinished(TaskRunner tr) {
+  if (tr.getTask().isMapTask()) {
+    mapJvmManager.taskFinished(tr);
+  } else {
+    reduceJvmManager.taskFinished(tr);
+  }
+}
+
+public void taskKilled(TaskRunner tr
+                       ) throws IOException, InterruptedException {
+  if (tr.getTask().isMapTask()) {
+    mapJvmManager.taskKilled(tr);
+  } else {
+    reduceJvmManager.taskKilled(tr);
+  }
+}
+
+public void killJvm(JVMId jvmId) throws IOException, InterruptedException {
+  if (jvmId.isMap) {
+    mapJvmManager.killJvm(jvmId);
+  } else {
+    reduceJvmManager.killJvm(jvmId);
+  }
+}  
+
+/**
+ * Adds the task's work dir to the cleanup queue of taskTracker for
+ * asynchronous deletion of work dir.
+ * @param tracker taskTracker
+ * @param task    the task whose work dir needs to be deleted
+ */
+static void deleteWorkDir(TaskTracker tracker, Task task) {
+  String user = task.getUser();
+  String jobid = task.getJobID().toString();
+  String taskid = task.getTaskID().toString();
+  String workDir = TaskTracker.getTaskWorkDir(user, jobid, taskid, 
+                                              task.isTaskCleanupTask());
+  tracker.getCleanupThread().addToQueue(
+   new TaskController.DeletionContext(tracker.getTaskController(), false,
+                                      user, 
+                                      workDir, tracker.getLocalDirs()));
+                                         
+}
+
+static class JvmManagerForType {
+  //Mapping from the JVM IDs to running Tasks
+  Map <JVMId,TaskRunner> jvmToRunningTask = 
+    new HashMap<JVMId, TaskRunner>();
+  //Mapping from the tasks to JVM IDs
+  Map <TaskRunner,JVMId> runningTaskToJvm = 
+    new HashMap<TaskRunner, JVMId>();
+  //Mapping from the JVM IDs to Reduce JVM processes
+  Map <JVMId, JvmRunner> jvmIdToRunner = 
+    new HashMap<JVMId, JvmRunner>();
+  //Mapping from the JVM IDs to process IDs
+  Map <JVMId, String> jvmIdToPid =
+    new HashMap<JVMId, String>();
+  
+  final int maxJvms;
+  final boolean isMap;
+  final TaskTracker tracker;
+  final long sleeptimeBeforeSigkill;
+  final Random rand = new Random();
+
+  static final String DELAY_BEFORE_KILL_KEY =
+    "mapred.tasktracker.tasks.sleeptime-before-sigkill";
+  // number of milliseconds to wait between TERM and KILL.
+  private static final long DEFAULT_SLEEPTIME_BEFORE_SIGKILL = 250;
+
+  public JvmManagerForType(int maxJvms, boolean isMap, 
+      TaskTracker tracker) {
+    this.maxJvms = maxJvms;
+    this.isMap = isMap;
+    this.tracker = tracker;
+    sleeptimeBeforeSigkill =
+      tracker.getJobConf().getLong(DELAY_BEFORE_KILL_KEY,
+                                   DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+  }
+
+  synchronized public void setRunningTaskForJvm(JVMId jvmId, 
+      TaskRunner t) {
+    jvmToRunningTask.put(jvmId, t);
+    runningTaskToJvm.put(t,jvmId);
+    jvmIdToRunner.get(jvmId).setBusy(true);
+  }
+  
+  synchronized public TaskInProgress getTaskForJvm(JVMId jvmId)
       throws IOException {
-    if (jvmId.isMapJVM()) {
-      return mapJvmManager.getTaskForJvm(jvmId);
-    } else {
-      return reduceJvmManager.getTaskForJvm(jvmId);
-    }
-  }
-  public void taskFinished(TaskRunner tr) {
-    if (tr.getTask().isMapTask()) {
-      mapJvmManager.taskFinished(tr);
-    } else {
-      reduceJvmManager.taskFinished(tr);
-    }
-  }
+    final TaskRunner taskRunner = jvmToRunningTask.get(jvmId);
+    return null == taskRunner ? null : taskRunner.getTaskInProgress();
+    //if (jvmToRunningTask.containsKey(jvmId)) {
+    //  //Incase of JVM reuse, tasks are returned to previously launched
+    //  //JVM via this method. However when a new task is launched
+    //  //the task being returned has to be initialized.
+    //  TaskRunner taskRunner = jvmToRunningTask.get(jvmId);
+    //  // TODO retained for MAPREDUCE-1100
+    //  JvmRunner jvmRunner = jvmIdToRunner.get(jvmId);
+    //  Task task = taskRunner.getTaskInProgress().getTask();
 
-  public void taskKilled(TaskRunner tr) {
-    if (tr.getTask().isMapTask()) {
-      mapJvmManager.taskKilled(tr);
-    } else {
-      reduceJvmManager.taskKilled(tr);
-    }
+    //  return taskRunner.getTaskInProgress();
+    //}
+    //return null;
   }
 
-  void dumpStack(TaskRunner tr) {
-    if (tr.getTask().isMapTask()) {
-      mapJvmManager.dumpStack(tr);
-    } else {
-      reduceJvmManager.dumpStack(tr);
+  synchronized String getPidByRunningTask(TaskRunner t) {
+    JVMId id = runningTaskToJvm.get(t);
+    if (id != null) {
+      return jvmIdToPid.get(id);
     }
+    return null;
   }
 
-  public void killJvm(JVMId jvmId) {
-    if (jvmId.isMap) {
-      mapJvmManager.killJvm(jvmId);
-    } else {
-      reduceJvmManager.killJvm(jvmId);
-    }
-  }  
-
-  /**
-   * Adds the task's work dir to the cleanup queue of taskTracker for
-   * asynchronous deletion of work dir.
-   * @param tracker taskTracker
-   * @param task    the task whose work dir needs to be deleted
-   * @throws IOException
-   */
-  static void deleteWorkDir(TaskTracker tracker, Task task) throws IOException {
-    tracker.getCleanupThread().addToQueue(
-        TaskTracker.buildTaskControllerTaskPathDeletionContexts(
-          tracker.getLocalFileSystem(),
-          tracker.getLocalFiles(tracker.getJobConf(), ""),
-          task, true /* workDir */,
-          tracker.getTaskController()));
+  synchronized void setPidForJvm(JVMId jvmId, String pid) {
+    JvmRunner runner = jvmIdToRunner.get(jvmId);
+    assert runner != null : "Task must have a runner to set a pid";
+    jvmIdToPid.put(jvmId, pid);
+  }
+  
+  synchronized public boolean isJvmknown(JVMId jvmId) {
+    return jvmIdToRunner.containsKey(jvmId);
   }
 
-  static class JvmManagerForType {
-    //Mapping from the JVM IDs to running Tasks
-    Map <JVMId,TaskRunner> jvmToRunningTask = 
-      new HashMap<JVMId, TaskRunner>();
-    //Mapping from the tasks to JVM IDs
-    Map <TaskRunner,JVMId> runningTaskToJvm = 
-      new HashMap<TaskRunner, JVMId>();
-    //Mapping from the JVM IDs to Reduce JVM processes
-    Map <JVMId, JvmRunner> jvmIdToRunner = 
-      new HashMap<JVMId, JvmRunner>();
-    
-    int maxJvms;
-    boolean isMap;
-    
-    TaskTracker tracker;
-    
-    Random rand = new Random(System.currentTimeMillis());
-
-    public JvmManagerForType(int maxJvms, boolean isMap, 
-        TaskTracker tracker) {
-      this.maxJvms = maxJvms;
-      this.isMap = isMap;
-      this.tracker = tracker;
-    }
-
-    synchronized public void setRunningTaskForJvm(JVMId jvmId, 
-        TaskRunner t) {
-      jvmToRunningTask.put(jvmId, t);
-      runningTaskToJvm.put(t,jvmId);
-      jvmIdToRunner.get(jvmId).setTaskRunner(t);
-    }
-    
-    synchronized public TaskInProgress getTaskForJvm(JVMId jvmId)
-        throws IOException {
-      if (jvmToRunningTask.containsKey(jvmId)) {
-        //Incase of JVM reuse, tasks are returned to previously launched
-        //JVM via this method. However when a new task is launched
-        //the task being returned has to be initialized.
-        TaskRunner taskRunner = jvmToRunningTask.get(jvmId);
-        JvmRunner jvmRunner = jvmIdToRunner.get(jvmId);
-        Task task = taskRunner.getTaskInProgress().getTask();
-
-        // Initialize task dirs
-        TaskControllerContext context =
-            new TaskController.TaskControllerContext();
-        context.env = jvmRunner.env;
-        context.task = task;
-        // If we are returning the same task as which the JVM was launched
-        // we don't initialize task once again.
-        if (!jvmRunner.env.conf.get(JobContext.TASK_ATTEMPT_ID).equals(
-            task.getTaskID().toString())) {
-          try {
-            tracker.getTaskController().initializeTask(context);
-          } catch (IOException e) {
-            LOG.warn("Failed to initialize the new task "
-                + task.getTaskID().toString() + " to be given to JVM with id "
-                + jvmId);
-            throw e;
-          }
-        }
-
-        return taskRunner.getTaskInProgress();
-      }
-      return null;
-    }
-
-    synchronized String getPidByRunningTask(TaskRunner t) {
-      JVMId id = runningTaskToJvm.get(t);
-      if (id != null) {
-        return jvmIdToRunner.get(id).getPid();
-      }
-      return null;
-    }
-
-    synchronized void setPidForJvm(JVMId jvmId, String pid) {
-      JvmRunner runner = jvmIdToRunner.get(jvmId);
-      assert runner != null : "Task must have a runner to set a pid";
-      runner.setPid(pid);
-    }
-    
-    synchronized public boolean isJvmknown(JVMId jvmId) {
-      return jvmIdToRunner.containsKey(jvmId);
-    }
-
-    synchronized public void taskFinished(TaskRunner tr) {
-      JVMId jvmId = runningTaskToJvm.remove(tr);
-      if (jvmId != null) {
-        jvmToRunningTask.remove(jvmId);
-        JvmRunner jvmRunner;
-        if ((jvmRunner = jvmIdToRunner.get(jvmId)) != null) {
-          jvmRunner.taskRan();
-        }
-      }
-    }
-
-    synchronized public void taskKilled(TaskRunner tr) {
-      JVMId jvmId = runningTaskToJvm.remove(tr);
-      if (jvmId != null) {
-        jvmToRunningTask.remove(jvmId);
-        killJvm(jvmId);
-      }
-    }
-
-    synchronized public void killJvm(JVMId jvmId) {
+  synchronized public void taskFinished(TaskRunner tr) {
+    JVMId jvmId = runningTaskToJvm.remove(tr);
+    if (jvmId != null) {
+      jvmToRunningTask.remove(jvmId);
       JvmRunner jvmRunner;
       if ((jvmRunner = jvmIdToRunner.get(jvmId)) != null) {
-        killJvmRunner(jvmRunner);
+        jvmRunner.taskRan();
       }
     }
-    
-    private synchronized void killJvmRunner(JvmRunner jvmRunner) {
-      jvmRunner.kill();
-      removeJvm(jvmRunner.jvmId);
+  }
+
+  synchronized public void taskKilled(TaskRunner tr
+                                      ) throws IOException,
+                                               InterruptedException {
+    JVMId jvmId = runningTaskToJvm.remove(tr);
+    if (jvmId != null) {
+      jvmToRunningTask.remove(jvmId);
+      killJvm(jvmId);
     }
+  }
 
-    void dumpStack(TaskRunner tr) {
-      JvmRunner jvmRunner = null;
-      synchronized (this) {
-        JVMId jvmId = runningTaskToJvm.get(tr);
-        if (null != jvmId) {
-          jvmRunner = jvmIdToRunner.get(jvmId);
-        }
-      }
-
-      // Don't want to hold JvmManager lock while dumping stacks for one
-      // task.
-      if (null != jvmRunner) {
-        jvmRunner.dumpChildStacks();
-      }
+  synchronized public void killJvm(JVMId jvmId)
+      throws IOException, InterruptedException {
+    JvmRunner jvmRunner;
+    if ((jvmRunner = jvmIdToRunner.get(jvmId)) != null) {
+      killJvmRunner(jvmRunner);
     }
+  }
+  
+  private synchronized void killJvmRunner(JvmRunner jvmRunner)
+      throws IOException, InterruptedException {
+    jvmRunner.kill();
+    removeJvm(jvmRunner.jvmId);
+  }
 
-    synchronized public void stop() {
+
+    synchronized public void stop()
+        throws IOException, InterruptedException {
       //since the kill() method invoked later on would remove
       //an entry from the jvmIdToRunner map, we create a
       //copy of the values and iterate over it (if we don't
@@ -320,7 +304,7 @@ class JvmManager {
       jvmIdToRunner.remove(jvmId);
     }
     private synchronized void reapJvm( 
-        TaskRunner t, JvmEnv env) {
+        TaskRunner t, JvmEnv env) throws IOException, InterruptedException {
       if (t.getTaskInProgress().wasKilled()) {
         //the task was killed in-flight
         //no need to do the rest of the operations
@@ -409,7 +393,7 @@ class JvmManager {
 
     private synchronized void spawnNewJvm(JobID jobId, JvmEnv env,  
         TaskRunner t) {
-      JvmRunner jvmRunner = new JvmRunner(env,jobId);
+      JvmRunner jvmRunner = new JvmRunner(env, jobId, t.getTask());
       jvmIdToRunner.put(jvmRunner.jvmId, jvmRunner);
       //spawn the JVM in a new thread. Note that there will be very little
       //extra overhead of launching the new thread for a new JVM since
@@ -443,83 +427,90 @@ class JvmManager {
       volatile int numTasksRan;
       final int numTasksToRun;
       JVMId jvmId;
-      private ShellCommandExecutor shexec; // shell terminal for running the task
-      //context used for starting JVM
-      private TaskControllerContext initalContext;
+      volatile boolean busy = true;
+      private Task firstTask;
       
-      public JvmRunner(JvmEnv env, JobID jobId) {
+      public JvmRunner(JvmEnv env, JobID jobId, Task firstTask) {
         this.env = env;
         this.jvmId = new JVMId(jobId, isMap, rand.nextInt());
         this.numTasksToRun = env.conf.getNumTasksToExecutePerJvm();
-
-        this.initalContext = new TaskControllerContext();
-        initalContext.sleeptimeBeforeSigkill = tracker.getJobConf()
-          .getLong(TTConfig.TT_SLEEP_TIME_BEFORE_SIG_KILL,
-                   ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+        this.firstTask = firstTask;
         LOG.info("In JvmRunner constructed JVM ID: " + jvmId);
       }
+
+      @Override
       public void run() {
-        runChild(env);
+        try {
+          runChild(env);
+        } catch (InterruptedException ie) {
+          return;
+        } catch (IOException e) {
+          LOG.warn("Caught IOException in JVMRunner", e);
+        } catch (Throwable e) {
+          LOG.error("Caught Throwable in JVMRunner. Aborting TaskTracker.", e);
+          System.exit(1);
+        } finally {
+          // TODO MR-1100
+          //jvmFinished();
+        }
       }
 
-      public void runChild(JvmEnv env) {
+      public void runChild(JvmEnv env)
+          throws IOException, InterruptedException {
+        int exitCode = 0;
         try {
           env.vargs.add(Integer.toString(jvmId.getId()));
-          //Launch the task controller to run task JVM
-          initalContext.env = env;
-          tracker.getTaskController().launchTaskJVM(initalContext);
+          TaskRunner runner = jvmToRunningTask.get(jvmId);
+          if (runner != null) {
+            Task task = runner.getTask();
+            //Launch the task controller to run task JVM
+            String user = task.getUser();
+            TaskAttemptID taskAttemptId = task.getTaskID();
+            String taskAttemptIdStr = task.isTaskCleanupTask() ? 
+                (taskAttemptId.toString() + TaskTracker.TASK_CLEANUP_SUFFIX) :
+                  taskAttemptId.toString(); 
+                exitCode = tracker.getTaskController().launchTask(user,
+                    jvmId.jobId.toString(), taskAttemptIdStr, env.setup,
+                    env.vargs, env.workDir, env.stdout.toString(),
+                    env.stderr.toString());
+          }
         } catch (IOException ioe) {
           // do nothing
           // error and output are appropriately redirected
         } finally { // handle the exit code
-          shexec = initalContext.shExec;
-          if (shexec == null) {
-            return;
-          }
-
+          // although the process has exited before we get here,
+          // make sure the entire process group has also been killed.
           kill();
 
-          int exitCode = shexec.getExitCode();
           updateOnJvmExit(jvmId, exitCode);
           LOG.info("JVM : " + jvmId + " exited with exit code " + exitCode
               + ". Number of tasks it ran: " + numTasksRan);
-          try {
-            // In case of jvm-reuse,
-            //the task jvm cleans up the common workdir for every 
-            //task at the beginning of each task in the task JVM.
-            //For the last task, we do it here.
-            if (env.conf.getNumTasksToExecutePerJvm() != 1) {
-              deleteWorkDir(tracker, initalContext.task);
-            }
-          } catch (IOException ie){}
-        }
-      }
-
-      synchronized void setPid(String pid) {
-        assert initalContext != null;
-        initalContext.pid = pid;
-      }
-
-      synchronized String getPid() {
-        if (initalContext != null) {
-          return initalContext.pid;
-        } else {
-          return null;
+          deleteWorkDir(tracker, firstTask);
         }
       }
 
       /** 
-       * Kills the process. Also kills its subprocesses if the process(root of subtree
-       * of processes) is created using setsid.
+       * Kills the process. Also kills its subprocesses if the process(root of
+       * subtree of processes) is created using setsid.
        */
-      synchronized void kill() {
+      synchronized void kill() throws IOException, InterruptedException {
         if (!killed) {
           TaskController controller = tracker.getTaskController();
           // Check inital context before issuing a kill to prevent situations
           // where kill is issued before task is launched.
-          if (initalContext != null && initalContext.env != null) {
-            // Destroy the task jvm
-            controller.destroyTaskJVM(initalContext);
+          String pidStr = jvmIdToPid.get(jvmId);
+          if (pidStr != null) {
+            String user = env.conf.getUser();
+            int pid = Integer.parseInt(pidStr);
+            // start a thread that will kill the process dead
+            if (sleeptimeBeforeSigkill > 0) {
+              controller.signalTask(user, pid, Signal.QUIT);
+              controller.signalTask(user, pid, Signal.TERM);
+              new DelayedProcessKiller(user, pid, sleeptimeBeforeSigkill,
+                  Signal.KILL, tracker.getTaskController()).start();
+            } else {
+              controller.signalTask(user, pid, Signal.KILL);
+            }
           } else {
             LOG.info(String.format("JVM Not killed %s but just removed", jvmId
                 .toString()));
@@ -528,46 +519,19 @@ class JvmManager {
         }
       }
 
-      /** Send a signal to the JVM requesting that it dump a stack trace,
-       * and wait for a timeout interval to give this signal time to be
-       * processed.
-       */
-      void dumpChildStacks() {
-        if (!killed) {
-          TaskController controller = tracker.getTaskController();
-          // Check inital context before issuing a signal to prevent situations
-          // where signal is issued before task is launched.
-          if (initalContext != null && initalContext.env != null) {
-            // signal the task jvm
-            controller.dumpTaskStack(initalContext);
-
-            // We're going to kill the jvm with SIGKILL after this,
-            // so we should wait for a few seconds first to ensure that
-            // the SIGQUIT has time to be processed.
-            try {
-              Thread.sleep(initalContext.sleeptimeBeforeSigkill);
-            } catch (InterruptedException e) {
-              LOG.warn("Sleep interrupted : " +
-                  StringUtils.stringifyException(e));
-            }
-          }
-        }
-      }
-
-      public synchronized void taskRan() {
-        initalContext.task = null;
+      public void taskRan() {
+        busy = false;
         numTasksRan++;
       }
       
       public boolean ranAll() {
         return(numTasksRan == numTasksToRun);
       }
-      public synchronized void setTaskRunner(TaskRunner runner) {
-        initalContext.task = runner.getTask();
-        assert initalContext.task != null;
+      public void setBusy(boolean busy) {
+        this.busy = busy;
       }
       public synchronized boolean isBusy() {
-        return initalContext.task != null;
+        return busy;
       }
     }
   }  
@@ -577,19 +541,15 @@ class JvmManager {
     File stdout;
     File stderr;
     File workDir;
-    long logSize;
     JobConf conf;
-    Map<String, String> env;
 
-    public JvmEnv(List<String> setup, Vector<String> vargs, File stdout, 
-        File stderr, long logSize, File workDir, Map<String,String> env,
-        JobConf conf) {
+    public JvmEnv(List <String> setup, Vector<String> vargs, File stdout, 
+        File stderr, File workDir, JobConf conf) {
       this.setup = setup;
       this.vargs = vargs;
       this.stdout = stdout;
       this.stderr = stderr;
       this.workDir = workDir;
-      this.env = env;
       this.conf = conf;
     }
   }

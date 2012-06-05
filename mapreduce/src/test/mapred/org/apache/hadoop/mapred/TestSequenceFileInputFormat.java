@@ -20,7 +20,10 @@ package org.apache.hadoop.mapred;
 
 import java.io.*;
 import java.util.*;
-import junit.framework.TestCase;
+
+import org.junit.Before;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
 import org.apache.commons.logging.*;
 
@@ -28,17 +31,26 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.conf.*;
 
-public class TestSequenceFileInputFormat extends TestCase {
+public class TestSequenceFileInputFormat {
   private static final Log LOG = FileInputFormat.LOG;
 
   private static int MAX_LENGTH = 10000;
   private static Configuration conf = new Configuration();
+  static final Path TESTDIR =
+    new Path(System.getProperty("test.build.data", "/tmp"),
+        TestSequenceFileInputFormat.class.getSimpleName());
 
+  @Before
+  public void removeTestdir() throws IOException {
+    final FileSystem rfs = FileSystem.getLocal(new Configuration()).getRaw();
+    rfs.delete(TESTDIR, true);
+  }
+
+  @Test
   public void testFormat() throws Exception {
     JobConf job = new JobConf(conf);
     FileSystem fs = FileSystem.getLocal(conf);
-    Path dir = new Path(System.getProperty("test.build.data",".") + "/mapred");
-    Path file = new Path(dir, "test.seq");
+    Path file = new Path(TESTDIR, "test.seq").makeQualified(fs);
     
     Reporter reporter = Reporter.NULL;
     
@@ -46,9 +58,7 @@ public class TestSequenceFileInputFormat extends TestCase {
     //LOG.info("seed = "+seed);
     Random random = new Random(seed);
 
-    fs.delete(dir, true);
-
-    FileInputFormat.setInputPaths(job, dir);
+    FileInputFormat.setInputPaths(job, TESTDIR);
 
     // for a variety of lengths
     for (int length = 0; length < MAX_LENGTH;
@@ -108,6 +118,7 @@ public class TestSequenceFileInputFormat extends TestCase {
         assertEquals("Some keys in no partition.", length, bits.cardinality());
       }
 
+      fs.delete(TESTDIR, true);
     }
   }
 

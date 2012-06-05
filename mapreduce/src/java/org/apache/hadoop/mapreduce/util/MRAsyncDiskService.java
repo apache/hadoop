@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskController;
 import org.apache.hadoop.util.AsyncDiskService;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -57,6 +58,8 @@ public class MRAsyncDiskService {
   
   AsyncDiskService asyncDiskService;
   
+  TaskController taskController;
+  
   public static final String TOBEDELETED = "toBeDeleted";
   
   /**
@@ -64,14 +67,18 @@ public class MRAsyncDiskService {
    * root directories).
    * 
    * The AsyncDiskServices uses one ThreadPool per volume to do the async disk
-   * operations.
+   * operations. A {@link TaskController} is passed that will be used to do
+   * the deletes
    * 
    * @param localFileSystem The localFileSystem used for deletions.
+   * @param taskController The taskController that should be used for the 
+   * delete operations
    * @param nonCanonicalVols The roots of the file system volumes, which may
    * be absolte paths, or paths relative to the ${user.dir} system property
    * ("cwd").
    */
-  public MRAsyncDiskService(FileSystem localFileSystem,
+  public MRAsyncDiskService(FileSystem localFileSystem, 
+      TaskController taskController,
       String... nonCanonicalVols) throws IOException {
     
     this.localFileSystem = localFileSystem;
@@ -83,6 +90,8 @@ public class MRAsyncDiskService {
     }  
     
     asyncDiskService = new AsyncDiskService(this.volumes);
+    
+    this.taskController = taskController;
     
     // Create one ThreadPool per volume
     for (int v = 0 ; v < volumes.length; v++) {
@@ -109,11 +118,29 @@ public class MRAsyncDiskService {
               + " because it's outside of " + volumes[v]);
         }
         DeleteTask task = new DeleteTask(volumes[v], absoluteFilename,
-            relative);
+            relative, files[f].getOwner());
         execute(volumes[v], task);
       }
     }
   }
+  
+  /**
+   * Create a AsyncDiskServices with a set of volumes (specified by their
+   * root directories).
+   * 
+   * The AsyncDiskServices uses one ThreadPool per volume to do the async disk
+   * operations.
+   * 
+   * @param localFileSystem The localFileSystem used for deletions.
+   * @param nonCanonicalVols The roots of the file system volumes, which may
+   * be absolte paths, or paths relative to the ${user.dir} system property
+   * ("cwd").
+   */ 
+  public MRAsyncDiskService(FileSystem localFileSystem, 
+      String... nonCanonicalVols) throws IOException {
+    this(localFileSystem, null, nonCanonicalVols);
+  }
+  
   
   /**
    * Initialize MRAsyncDiskService based on conf.
@@ -174,6 +201,8 @@ public class MRAsyncDiskService {
     String originalPath;
     /** The file name after the move */
     String pathToBeDeleted;
+    /** The owner of the file */
+    String owner;
     
     /**
      * Delete a file/directory (recursively if needed).
@@ -181,11 +210,14 @@ public class MRAsyncDiskService {
      * @param originalPath  The original name, relative to volume root.
      * @param pathToBeDeleted  The name after the move, relative to volume root,
      *                         containing TOBEDELETED.
+     * @param owner         The owner of the file
      */
-    DeleteTask(String volume, String originalPath, String pathToBeDeleted) {
+    DeleteTask(String volume, String originalPath, String pathToBeDeleted, 
+        String owner) {
       this.volume = volume;
       this.originalPath = originalPath;
       this.pathToBeDeleted = pathToBeDeleted;
+      this.owner = owner;
     }
     
     @Override
@@ -201,7 +233,12 @@ public class MRAsyncDiskService {
       Exception e = null;
       try {
         Path absolutePathToBeDeleted = new Path(volume, pathToBeDeleted);
-        success = localFileSystem.delete(absolutePathToBeDeleted, true);
+        if (taskController != null & owner != null) {
+          taskController.deleteAsUser(owner, 
+                                      absolutePathToBeDeleted.toString());
+        } else {
+          success = localFileSystem.delete(absolutePathToBeDeleted, true);
+        }
       } catch (Exception ex) {
         e = ex;
       }
@@ -262,8 +299,9 @@ public class MRAsyncDiskService {
       // Return false in case that the file is not found.  
       return false;
     }
-
-    DeleteTask task = new DeleteTask(volume, pathName, newPathName);
+    FileStatus status = localFileSystem.getFileStatus(target);
+    DeleteTask task = new DeleteTask(volume, pathName, newPathName, 
+                                     status.getOwner());
     execute(volume, task);
     return true;
   }
@@ -371,5 +409,31 @@ public class MRAsyncDiskService {
     throw new IOException("Cannot delete " + absolutePathName
         + " because it's outside of all volumes.");
   }
-  
+  /**
+   * Move the path name to a temporary location and then delete it.
+   * 
+   * Note that if there is no volume that contains this path, the path
+   * will stay as it is, and the function will return false.
+   *  
+   * This functions returns when the moves are done, but not necessarily all
+   * deletions are done. This is usually good enough because applications 
+   * won't see the path name under the old name anyway after the move. 
+   * 
+   * @param volume              The disk volume
+   * @param absolutePathName    The path name from root "/"
+   * @throws IOException        If the move failed
+   * @return   false if we are unable to move the path name
+   */
+  public boolean moveAndDeleteAbsolutePath(String volume, 
+                                           String absolutePathName)
+  throws IOException {
+    String relative = getRelativePathName(absolutePathName, volume);
+    if (relative == null) {
+      // This should never happen
+      throw new IOException("Cannot delete " + absolutePathName
+          + " because it's outside of " + volume);
+    }
+    return moveAndDeleteRelativePath(volume, relative);
+  }
+
 }

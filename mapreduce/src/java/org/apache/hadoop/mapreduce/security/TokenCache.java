@@ -176,7 +176,7 @@ public class TokenCache {
    * @throws IOException
    */
   @InterfaceAudience.Private
-  public static Credentials loadTokens(String jobTokenFile, JobConf conf) 
+  public static Credentials loadTokens(String jobTokenFile, Configuration conf) 
   throws IOException {
     Path localJobTokenFile = new Path ("file:///" + jobTokenFile);
 

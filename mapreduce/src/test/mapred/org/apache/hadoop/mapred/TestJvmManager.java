@@ -31,12 +31,19 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.mapred.JvmManager.JvmManagerForType;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JvmManager.JvmManagerForType.JvmRunner;
+import org.apache.hadoop.mapred.JvmManager.JvmManagerForType;
+import org.apache.hadoop.mapred.TaskTracker.RunningJob;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.mapred.UtilsForTests.InlineCleanupQueue;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
+import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -52,6 +59,8 @@ public class TestJvmManager {
   private TaskTracker tt;
   private JvmManager jvmManager;
   private JobConf ttConf;
+  private boolean threadCaughtException = false;
+  private String user;
 
   @Before
   public void setUp() {
@@ -64,15 +73,23 @@ public class TestJvmManager {
   }
 
   public TestJvmManager() throws Exception {
+    user = UserGroupInformation.getCurrentUser().getShortUserName();
     tt = new TaskTracker();
     ttConf = new JobConf();
     ttConf.setLong(TTConfig.TT_SLEEP_TIME_BEFORE_SIG_KILL, 2000);
     tt.setConf(ttConf);
     tt.setMaxMapSlots(MAP_SLOTS);
     tt.setMaxReduceSlots(REDUCE_SLOTS);
-    tt.setTaskController(new DefaultTaskController());
+    TaskController dtc;
+    tt.setTaskController((dtc = new DefaultTaskController()));
+    Configuration conf = new Configuration();
+    dtc.setConf(conf);
+    LocalDirAllocator ldirAlloc = new LocalDirAllocator("mapred.local.dir");
+    tt.getTaskController().setup(ldirAlloc);
+    JobID jobId = new JobID("test", 0);
     jvmManager = new JvmManager(tt);
     tt.setJvmManagerInstance(jvmManager);
+    tt.setCleanupThread(new InlineCleanupQueue());
   }
 
   // write a shell script to execute the command.
@@ -107,16 +124,22 @@ public class TestJvmManager {
     // launch a jvm
     JobConf taskConf = new JobConf(ttConf);
     TaskAttemptID attemptID = new TaskAttemptID("test", 0, TaskType.MAP, 0, 0);
-    Task task = new MapTask(null, attemptID, 0, null, 1);
+    Task task = new MapTask(null, attemptID, 0, null, MAP_SLOTS);
+    task.setUser(user);
     task.setConf(taskConf);
     TaskInProgress tip = tt.new TaskInProgress(task, taskConf);
     File pidFile = new File(TEST_DIR, "pid");
-    final TaskRunner taskRunner = task.createRunner(tt, tip);
+    RunningJob rjob = new RunningJob(attemptID.getJobID());
+    TaskController taskController = new DefaultTaskController();
+    taskController.setConf(ttConf);
+    rjob.distCacheMgr = 
+      new TrackerDistributedCacheManager(ttConf).
+      newTaskDistributedCacheManager(attemptID.getJobID(), taskConf);
+    final TaskRunner taskRunner = task.createRunner(tt, tip, rjob);
     // launch a jvm which sleeps for 60 seconds
     final Vector<String> vargs = new Vector<String>(2);
     vargs.add(writeScript("SLEEP", "sleep 60\n", pidFile).getAbsolutePath());
     final File workDir = new File(TEST_DIR, "work");
-    workDir.mkdir();
     final File stdout = new File(TEST_DIR, "stdout");
     final File stderr = new File(TEST_DIR, "stderr");
 
@@ -125,10 +148,13 @@ public class TestJvmManager {
       public void run() {
         try {
           taskRunner.launchJvmAndWait(null, vargs, stdout, stderr, 100,
-              workDir, null);
+              workDir);
         } catch (InterruptedException e) {
           e.printStackTrace();
           return;
+        } catch (IOException e) {
+          e.printStackTrace();
+          setThreadCaughtException();
         }
       }
     };
@@ -156,7 +182,14 @@ public class TestJvmManager {
     final JvmRunner jvmRunner = mapJvmManager.jvmIdToRunner.get(jvmid);
     Thread killer = new Thread() {
       public void run() {
-        jvmRunner.kill();
+        try {
+          jvmRunner.kill();
+        } catch (IOException e) {
+          e.printStackTrace();
+          setThreadCaughtException();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+        }
       }
     };
     killer.start();
@@ -171,23 +204,27 @@ public class TestJvmManager {
 
     // launch another jvm and see it finishes properly
     attemptID = new TaskAttemptID("test", 0, TaskType.MAP, 0, 1);
-    task = new MapTask(null, attemptID, 0, null, 1);
+    task = new MapTask(null, attemptID, 0, null, MAP_SLOTS);
+    task.setUser(user);
     task.setConf(taskConf);
     tip = tt.new TaskInProgress(task, taskConf);
-    TaskRunner taskRunner2 = task.createRunner(tt, tip);
+    TaskRunner taskRunner2 = task.createRunner(tt, tip, rjob);
     // build dummy vargs to call ls
     Vector<String> vargs2 = new Vector<String>(1);
     vargs2.add(writeScript("LS", "ls", pidFile).getAbsolutePath());
     File workDir2 = new File(TEST_DIR, "work2");
-    workDir.mkdir();
     File stdout2 = new File(TEST_DIR, "stdout2");
     File stderr2 = new File(TEST_DIR, "stderr2");
-    taskRunner2.launchJvmAndWait(null, vargs2, stdout2, stderr2, 100, workDir2,
-        null);
+    taskRunner2.launchJvmAndWait(null, vargs2, stdout2, stderr2, 100, workDir2);
     // join all the threads
     killer.join();
     jvmRunner.join();
     launcher.join();
+    assertFalse("Thread caught unexpected IOException", 
+                 threadCaughtException);
+  }
+  private void setThreadCaughtException() {
+    threadCaughtException = true;
   }
 
 
@@ -198,6 +235,8 @@ public class TestJvmManager {
    */
   @Test
   public void testForRaces() throws Exception {
+    fail("TODO: re-enable test after 2178 merge");
+    /*
     JvmManagerForType mapJvmManager = jvmManager
         .getJvmManagerForType(TaskType.MAP);
 
@@ -248,6 +287,7 @@ public class TestJvmManager {
     if (failed.get() != null) {
       throw new RuntimeException(failed.get());
     }
+  */
   }
 
   /**

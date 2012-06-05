@@ -121,6 +121,13 @@ public class IsolationRunner {
         SortedRanges.Range range) throws IOException {
       LOG.info("Task " + taskid + " reportedNextRecordRange " + range);
     }
+
+    @Override
+    public void 
+    updatePrivateDistributedCacheSizes(org.apache.hadoop.mapreduce.JobID jobId,
+                                       long[] sizes){
+      // NOTHING
+    }
   }
   
   private ClassLoader makeClassLoader(JobConf conf, 
@@ -181,9 +188,15 @@ public class IsolationRunner {
     // setup the local and user working directories
     FileSystem local = FileSystem.getLocal(conf);
     LocalDirAllocator lDirAlloc = new LocalDirAllocator(MRConfig.LOCAL_DIR);
+    Path workDirName;
+    boolean workDirExists = lDirAlloc.ifExists(MRConstants.WORKDIR, conf);
+    if (workDirExists) {
+      workDirName = TaskRunner.formWorkDir(lDirAlloc, conf);
+    } else {
+      workDirName = lDirAlloc.getLocalPathForWrite(MRConstants.WORKDIR, conf);
+    }
 
-    File workDirName = TaskRunner.formWorkDir(lDirAlloc, taskId, false, conf);
-    local.setWorkingDirectory(new Path(workDirName.toString()));
+    local.setWorkingDirectory(workDirName);
     FileSystem.get(conf).setWorkingDirectory(conf.getWorkingDirectory());
     
     // set up a classloader with the right classpath

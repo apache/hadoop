@@ -141,9 +141,10 @@ public class ReduceTask extends Task {
   }
 
   @Override
-  public TaskRunner createRunner(TaskTracker tracker, TaskInProgress tip) 
-  throws IOException {
-    return new ReduceTaskRunner(tip, tracker, this.conf);
+  public TaskRunner createRunner(TaskTracker tracker, TaskInProgress tip,
+                                 TaskTracker.RunningJob rjob
+                                 ) throws IOException {
+    return new ReduceTaskRunner(tip, tracker, this.conf, rjob);
   }
 
   @Override

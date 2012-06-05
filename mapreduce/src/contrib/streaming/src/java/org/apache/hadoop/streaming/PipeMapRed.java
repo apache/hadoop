@@ -220,7 +220,7 @@ public abstract class PipeMapRed {
     } catch (IOException e) {
       LOG.error("configuration exception", e);
       throw new RuntimeException("configuration exception", e);
-    } catch (InterruptedException e)  {
+    } catch (InterruptedException e) {
       LOG.error("configuration exception", e);
       throw new RuntimeException("configuration exception", e);
     }

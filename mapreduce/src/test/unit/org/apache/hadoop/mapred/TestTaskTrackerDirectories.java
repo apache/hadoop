@@ -26,11 +26,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
-import org.apache.hadoop.mapreduce.MRConfig;
 import org.junit.Test;
 import org.junit.Before;
+import org.mockito.Mockito;
 
 /**
  * Tests for the correct behavior of the TaskTracker starting up with
@@ -55,8 +56,8 @@ public class TestTaskTrackerDirectories {
         TEST_DIR + "/local2"
     };
     
-    conf.setStrings(MRConfig.LOCAL_DIR, dirs);
-    setupTaskController(conf);
+    conf.setStrings("mapred.local.dir", dirs);
+    setupTaskTracker(conf);
 
     for (String dir : dirs) {
       checkDir(dir);
@@ -73,8 +74,8 @@ public class TestTaskTrackerDirectories {
     new File(dirs[0]).mkdirs();
     FileUtil.chmod(dirs[0], "000");
 
-    conf.setStrings(MRConfig.LOCAL_DIR, dirs);
-    setupTaskController(conf);
+    conf.setStrings("mapred.local.dir", dirs);
+    setupTaskTracker(conf);
     
     for (String dir : dirs) {
       checkDir(dir);
@@ -86,7 +87,7 @@ public class TestTaskTrackerDirectories {
     File dir = TaskLog.getUserLogDir();
     FileUtil.fullyDelete(dir);
     
-    setupTaskController(new Configuration());
+    setupTaskTracker(new Configuration());
     
     checkDir(dir.getAbsolutePath());
   }
@@ -103,7 +104,7 @@ public class TestTaskTrackerDirectories {
         dir.createNewFile());
 
     try {
-      setupTaskController(new Configuration());
+      setupTaskTracker(new Configuration());
       fail("Didn't throw!");
     } catch (IOException ioe) {
       System.err.println("Got expected exception");
@@ -118,15 +119,20 @@ public class TestTaskTrackerDirectories {
     dir.mkdirs();
     FileUtil.chmod(dir.getAbsolutePath(), "000");
     
-    setupTaskController(new Configuration());
+    setupTaskTracker(new Configuration());
     
     checkDir(dir.getAbsolutePath());
   }
   
-  private void setupTaskController(Configuration conf) throws IOException {
-    TaskController tc = new DefaultTaskController();
-    tc.setConf(conf);
-    tc.setup();
+  private void setupTaskTracker(Configuration conf) throws Exception {
+    JobConf ttConf = new JobConf(conf);
+    // Doesn't matter what we give here - we won't actually
+    // connect to it.
+    TaskTracker tt = new TaskTracker();
+    tt.setConf(ttConf);
+    tt.setTaskController(Mockito.mock(TaskController.class));
+    fail("TODO: update this test case after 2178");
+    // tt.initializeDirectories();
   }
 
   private void checkDir(String dir) throws IOException {

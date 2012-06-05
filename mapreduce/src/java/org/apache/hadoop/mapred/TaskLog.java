@@ -43,8 +43,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.mapreduce.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -168,7 +168,14 @@ public class TaskLog {
 
   static File getAttemptDir(TaskAttemptID taskid, boolean isCleanup) {
     String cleanupSuffix = isCleanup ? ".cleanup" : "";
-    return new File(getJobDir(taskid.getJobID()), taskid + cleanupSuffix);
+    return getAttemptDir(taskid.getJobID().toString(), 
+        taskid.toString() + cleanupSuffix);
+  }
+  
+  static File getAttemptDir(String jobid, String taskid) {
+    // taskid should be fully formed and it should have the optional 
+    // .cleanup suffix
+    return new File(getJobDir(jobid), taskid);
   }
   private static long prevOutLength;
   private static long prevErrLength;
@@ -487,21 +494,23 @@ public class TaskLog {
     
     String stdout = FileUtil.makeShellPath(stdoutFilename);
     String stderr = FileUtil.makeShellPath(stderrFilename);    
-    StringBuffer mergedCmd = new StringBuffer();
+    StringBuilder mergedCmd = new StringBuilder();
     
     // Export the pid of taskJvm to env variable JVM_PID.
     // Currently pid is not used on Windows
     if (!Shell.WINDOWS) {
-      mergedCmd.append(" export JVM_PID=`echo $$` ; ");
+      mergedCmd.append("export JVM_PID=`echo $$` ; ");
     }
 
-    if (setup != null && setup.size() > 0) {
-      mergedCmd.append(addCommand(setup, false));
-      mergedCmd.append(";");
+    if (setup != null) {
+      for (String s : setup) {
+        mergedCmd.append(s);
+        mergedCmd.append("\n");
+      }
     }
     if (tailLength > 0) {
       mergedCmd.append("(");
-    } else if(ProcessTree.isSetsidAvailable && useSetsid &&
+    } else if(TaskController.isSetsidAvailable && useSetsid &&
         !Shell.WINDOWS) {
       mergedCmd.append("exec setsid ");
     } else {
@@ -574,7 +583,7 @@ public class TaskLog {
    */
   public static String addCommand(List<String> cmd, boolean isExecutable) 
   throws IOException {
-    StringBuffer command = new StringBuffer();
+    StringBuilder command = new StringBuilder();
     for(String s: cmd) {
     	command.append('\'');
       if (isExecutable) {
@@ -623,11 +632,21 @@ public class TaskLog {
   /**
    * Get the user log directory for the job jobid.
    * 
-   * @param jobid
+   * @param jobid string representation of the jobid
+   * @return user log directory for the job
+   */
+  public static File getJobDir(String jobid) {
+    return new File(getUserLogDir(), jobid);
+  }
+  
+  /**
+   * Get the user log directory for the job jobid.
+   * 
+   * @param jobid the jobid object
    * @return user log directory for the job
    */
   public static File getJobDir(JobID jobid) {
-    return new File(getUserLogDir(), jobid.toString());
+    return getJobDir(jobid.toString());
   }
 
 } // TaskLog
