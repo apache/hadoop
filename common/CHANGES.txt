@@ -44,6 +44,9 @@ Release 0.22.1 - Unreleased
     the host in the client's kerberos principal key.
     (Suresh Srinivas and Benoy Antony via shv)
 
+    HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls.
+    (Devaraj Das and Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

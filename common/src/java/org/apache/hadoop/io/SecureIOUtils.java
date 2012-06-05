@@ -24,14 +24,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.nativeio.Errno;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
-import org.apache.hadoop.io.nativeio.NativeIO.Stat;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -90,7 +88,7 @@ public class SecureIOUtils {
   private final static FileSystem rawFilesystem;
 
   /**
-   * Open the given File for read access, verifying the expected user/group
+   * Open the given File for read access, verifying the expected user
    * constraints if security is enabled.
    *
    * Note that this function provides no additional checks if Hadoop
@@ -98,32 +96,30 @@ public class SecureIOUtils {
    * when native libraries are not available.
    *
    * @param f the file that we are trying to open
-   * @param expectedOwner the expected user owner for the file
-   * @param expectedGroup the expected group owner for the file
+   * @param expectedOwner the expected user owner for the file  
    * @throws IOException if an IO Error occurred, or security is enabled and
-   * the user/group does not match
+   * the user does not match
    */
-  public static FileInputStream openForRead(File f, String expectedOwner, 
-      String expectedGroup) throws IOException {
+  public static FileInputStream openForRead(File f, String expectedOwner)
+  throws IOException {
     if (!UserGroupInformation.isSecurityEnabled()) {
       return new FileInputStream(f);
     }
-    return forceSecureOpenForRead(f, expectedOwner, expectedGroup);
+    return forceSecureOpenForRead(f, expectedOwner);
   }
 
   /**
    * Same as openForRead() except that it will run even if security is off.
    * This is used by unit tests.
    */
-  static FileInputStream forceSecureOpenForRead(File f, String expectedOwner,
-      String expectedGroup) throws IOException {
+  static FileInputStream forceSecureOpenForRead(File f, String expectedOwner)
+  throws IOException {
 
     FileInputStream fis = new FileInputStream(f);
     boolean success = false;
     try {
-      Stat stat = NativeIO.fstat(fis.getFD());
-      checkStat(f, stat.getOwner(), stat.getGroup(), expectedOwner,
-          expectedGroup);
+      String owner = NativeIO.getOwner(fis.getFD());
+      checkStat(f, owner, expectedOwner);
       success = true;
       return fis;
     } finally {
@@ -182,20 +178,12 @@ public class SecureIOUtils {
     }
   }
 
-  private static void checkStat(File f, String owner, String group, 
-      String expectedOwner, 
-      String expectedGroup) throws IOException {
+  private static void checkStat(File f, String owner, String expectedOwner) throws IOException {
     if (expectedOwner != null &&
         !expectedOwner.equals(owner)) {
       throw new IOException(
         "Owner '" + owner + "' for path " + f + " did not match " +
         "expected owner '" + expectedOwner + "'");
-    }
-    if (expectedGroup != null &&
-        !expectedGroup.equals(group)) {
-      throw new IOException(
-        "Group '" + group + "' for path " + f + " did not match " +
-        "expected group '" + expectedGroup + "'");
     }
   }
 
