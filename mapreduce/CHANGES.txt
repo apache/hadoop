@@ -39,6 +39,8 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-2178. Race condition in LinuxTaskController permissions handling.
     (Todd Lipcon, Benoy Antony via shv)
 
+    MAPREDUCE-4244. Set supplemental groups correctly. (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
