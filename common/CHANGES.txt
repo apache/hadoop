@@ -37,6 +37,9 @@ Release 0.22.1 - Unreleased
     HADOOP-7621. Alfredo config should be in a file not readable by users.
     (Aaron T. Myers and Benoy Antony via shv)
 
+    HADOOP-7272. Remove unnecessary security related info logs.
+    (Suresh Srinivas and Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
