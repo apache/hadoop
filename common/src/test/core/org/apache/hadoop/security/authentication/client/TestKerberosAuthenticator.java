@@ -13,16 +13,20 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
-import org.apache.hadoop.security.authentication.KerberosTestUtils;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
-import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
-import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
-import org.junit.Ignore;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Properties;
 import java.util.concurrent.Callable;
+
+import org.apache.hadoop.security.authentication.KerberosTestUtils;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.junit.Ignore;
+import org.junit.Test;
 
 //Disabled because kerberos setup and valid keytabs are required.
 @Ignore("requires kerberos setup")
@@ -37,7 +41,8 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
                       "RULE:[1:$1@$0](.*@" + KerberosTestUtils.getRealm()+")s/@.*//\n");
     return props;
   }
-
+  
+  @Test
   public void testFallbacktoPseudoAuthenticator() throws Exception {
     Properties props = new Properties();
     props.setProperty(AuthenticationFilter.AUTH_TYPE, "simple");
@@ -45,7 +50,8 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
     setAuthenticationHandlerConfig(props);
     _testAuthentication(new KerberosAuthenticator(), false);
   }
-
+  
+  @Test
   public void testNotAuthenticated() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
     start();
@@ -59,8 +65,8 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
       stop();
     }
   }
-
-
+  
+  @Test
   public void testAuthentication() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
     KerberosTestUtils.doAsClient(new Callable<Void>() {
@@ -71,7 +77,8 @@ public class TestKerberosAuthenticator extends AuthenticatorTestCase {
       }
     });
   }
-
+  
+  @Test
   public void testAuthenticationPost() throws Exception {
     setAuthenticationHandlerConfig(getAuthenticationHandlerConfiguration());
     KerberosTestUtils.doAsClient(new Callable<Void>() {

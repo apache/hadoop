@@ -47,6 +47,8 @@ Release 0.22.1 - Unreleased
     HADOOP-7115. Add a cache for getpwuid_r and getpwgid_r calls.
     (Devaraj Das and Benoy Antony via shv)
 
+    HADOOP-8383. Disable TestKerberosAuthenticator. (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
