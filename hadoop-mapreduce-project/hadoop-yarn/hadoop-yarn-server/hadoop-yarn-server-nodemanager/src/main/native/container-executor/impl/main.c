@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "config.h"
 #include "configuration.h"
 #include "container-executor.h"
 
@@ -29,8 +30,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#define _STRINGIFY(X) #X
-#define STRINGIFY(X) _STRINGIFY(X)
 #define CONF_FILENAME "container-executor.cfg"
 
 // When building as part of a Maven build this value gets defined by using
@@ -101,7 +100,7 @@ int main(int argc, char **argv) {
 
   char *executable_file = get_executable();
 
-  char *orig_conf_file = STRINGIFY(HADOOP_CONF_DIR) "/" CONF_FILENAME;
+  char *orig_conf_file = HADOOP_CONF_DIR "/" CONF_FILENAME;
   char *conf_file = resolve_config_path(orig_conf_file, argv[0]);
   char *local_dirs, *log_dirs;
 
