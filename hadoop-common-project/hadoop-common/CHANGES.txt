@@ -69,6 +69,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8481. update BUILDING.txt to talk about cmake rather than autotools.
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8485. Don't hardcode "Apache Hadoop 0.23" in the docs. (eli)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
