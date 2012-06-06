@@ -27,6 +27,8 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8374 Improve support for hard link manipulation on Windows (Bikas Saha via Sanjay)
 
+    HDFS-3424 TestDatanodeBlockScanner and TestReplication fail intermittently on Windows (Bikas Saha via Sanjay)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

@@ -388,26 +388,31 @@ public class TestDatanodeBlockScanner extends TestCase {
     final short REPLICATION_FACTOR = (short)2;
 
     MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION_FACTOR, true, null);
-    cluster.waitActive();
-    FileSystem fs = cluster.getFileSystem();
+    String block = null;
+    final Path fileName = new Path("/file1");
     try {
-      final Path fileName = new Path("/file1");
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
       DFSTestUtil.createFile(fs, fileName, 1, REPLICATION_FACTOR, 0);
       DFSTestUtil.waitReplication(fs, fileName, REPLICATION_FACTOR);
 
-      String block = DFSTestUtil.getFirstBlock(fs, fileName).getBlockName();
+      block = DFSTestUtil.getFirstBlock(fs, fileName).getBlockName();
 
-      // Truncate replica of block
-      changeReplicaLength(block, 0, -1);
-
+    } finally {
       cluster.shutdown();
+    }
 
-      // restart the cluster
-      cluster = new MiniDFSCluster(
-          0, conf, REPLICATION_FACTOR, false, true, null, null, null);
+    // Truncate replica of block
+    changeReplicaLength(block, 0, -1);
+
+    // restart the cluster
+    cluster = new MiniDFSCluster(
+        0, conf, REPLICATION_FACTOR, false, true, null, null, null);
+
+    try {
       cluster.startDataNodes(conf, 1, true, null, null);
       cluster.waitActive();  // now we have 3 datanodes
-
+      
       // wait for truncated block be detected and the block to be replicated
       DFSTestUtil.waitReplication(
           cluster.getFileSystem(), fileName, REPLICATION_FACTOR);
@@ -425,7 +430,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   static boolean changeReplicaLength(String blockName, int dnIndex, int lenDelta) throws IOException {
     File baseDir = new File(System.getProperty("test.build.data"), "dfs/data");
     for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1)+ "/current/" + 
+      File blockFile = new File(baseDir.getAbsolutePath(), "/data" + (i+1)+ "/current/" + 
                                blockName);
       if (blockFile.exists()) {
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");

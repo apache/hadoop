@@ -396,20 +396,22 @@ public class TestReplication extends TestCase {
    * @throws Exception
    */
   public void testReplicateLenMismatchedBlock() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(new Configuration(), 2, true, null);
+    Configuration conf = new Configuration();
+    int numDN = 2;
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDN, true, null);
     try {
       cluster.waitActive();
       // test truncated block
-      changeBlockLen(cluster, -1);
+      changeBlockLen(cluster, -1, conf, numDN);
       // test extended block
-      changeBlockLen(cluster, 1);
+      changeBlockLen(cluster, 1, conf, numDN);
     } finally {
       cluster.shutdown();
     }
   }
   
   private void changeBlockLen(MiniDFSCluster cluster, 
-      int lenDelta) throws IOException, InterruptedException {
+      int lenDelta, Configuration conf, int numDN) throws IOException, InterruptedException {
     final Path fileName = new Path("/file1");
     final short REPLICATION_FACTOR = (short)1;
     final FileSystem fs = cluster.getFileSystem();
@@ -419,13 +421,18 @@ public class TestReplication extends TestCase {
 
     String block = DFSTestUtil.getFirstBlock(fs, fileName).getBlockName();
 
+    cluster.shutdownDataNodes();
+    
     // Change the length of a replica
-    for (int i=0; i<cluster.getDataNodes().size(); i++) {
+    for (int i=0; i<numDN; i++) {
       if (TestDatanodeBlockScanner.changeReplicaLength(block, i, lenDelta)) {
         break;
       }
     }
 
+    cluster.startDataNodes(conf, numDN, true, null, null);
+    cluster.waitActive();
+    
     // increase the file's replication factor
     fs.setReplication(fileName, (short)(REPLICATION_FACTOR+1));
 
