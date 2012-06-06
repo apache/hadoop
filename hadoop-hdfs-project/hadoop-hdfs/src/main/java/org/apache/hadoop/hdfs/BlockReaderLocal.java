@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.util.DirectBufferPool;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -284,24 +285,11 @@ class BlockReaderLocal implements BlockReader {
     //Initially the buffers have nothing to read.
     dataBuff.flip();
     checksumBuff.flip();
-    long toSkip = firstChunkOffset;
-    while (toSkip > 0) {
-      long skipped = dataIn.skip(toSkip);
-      if (skipped == 0) {
-        throw new IOException("Couldn't initialize input stream");
-      }
-      toSkip -= skipped;
-    }
+    IOUtils.skipFully(dataIn, firstChunkOffset);
     if (checksumIn != null) {
       long checkSumOffset = (firstChunkOffset / bytesPerChecksum)
           * checksumSize;
-      while (checkSumOffset > 0) {
-        long skipped = checksumIn.skip(checkSumOffset);
-        if (skipped == 0) {
-          throw new IOException("Couldn't initialize checksum input stream");
-        }
-        checkSumOffset -= skipped;
-      }
+      IOUtils.skipFully(dataIn, checkSumOffset);
     }
   }
 
@@ -407,17 +395,9 @@ class BlockReaderLocal implements BlockReader {
     dataBuff.clear();
     checksumBuff.clear();
   
-    long dataSkipped = dataIn.skip(toskip);
-    if (dataSkipped != toskip) {
-      throw new IOException("skip error in data input stream");
-    }
-    long checkSumOffset = (dataSkipped / bytesPerChecksum) * checksumSize;
-    if (checkSumOffset > 0) {
-      long skipped = checksumIn.skip(checkSumOffset);
-      if (skipped != checkSumOffset) {
-        throw new IOException("skip error in checksum input stream");
-      }
-    }
+    IOUtils.skipFully(dataIn, toskip);
+    long checkSumOffset = (toskip / bytesPerChecksum) * checksumSize;
+    IOUtils.skipFully(checksumIn, checkSumOffset);
 
     // read into the middle of the chunk
     if (skipBuf == null) {

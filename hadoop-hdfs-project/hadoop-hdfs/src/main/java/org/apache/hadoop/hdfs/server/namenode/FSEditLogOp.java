@@ -44,6 +44,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.ArrayWritable;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -2289,9 +2290,11 @@ public abstract class FSEditLogOp {
           // 0xff, we want to skip over that region, because there's nothing
           // interesting there.
           long numSkip = e.getNumAfterTerminator();
-          if (in.skip(numSkip) < numSkip) {
+          try {
+            IOUtils.skipFully(in, numSkip);
+          } catch (IOException t) {
             FSImage.LOG.error("Failed to skip " + numSkip + " bytes of " +
-              "garbage after an OP_INVALID.  Unexpected early EOF.");
+              "garbage after an OP_INVALID.  Unexpected early EOF.", t);
             return null;
           }
         } catch (IOException e) {

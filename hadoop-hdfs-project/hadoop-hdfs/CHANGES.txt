@@ -159,6 +159,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3505. DirectoryScanner does not join all threads in shutdown.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3492. Fix some misuses of InputStream#skip (Colin Patrick McCabe
+    via todd)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
