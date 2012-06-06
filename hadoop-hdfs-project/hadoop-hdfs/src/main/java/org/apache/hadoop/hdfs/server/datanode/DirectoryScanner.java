@@ -302,6 +302,22 @@ public class DirectoryScanner implements Runnable {
     shouldRun = false;
     if (masterThread != null) masterThread.shutdown();
     if (reportCompileThreadPool != null) reportCompileThreadPool.shutdown();
+    if (masterThread != null) {
+      try {
+        masterThread.awaitTermination(1, TimeUnit.MINUTES);
+      } catch (InterruptedException e) {
+        LOG.error("interrupted while waiting for masterThread to " +
+          "terminate", e);
+      }
+    }
+    if (reportCompileThreadPool != null) {
+      try {
+        reportCompileThreadPool.awaitTermination(1, TimeUnit.MINUTES);
+      } catch (InterruptedException e) {
+        LOG.error("interrupted while waiting for reportCompileThreadPool to " +
+          "terminate", e);
+      }
+    }
     if (!retainDiffs) clear();
   }
 

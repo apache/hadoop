@@ -156,6 +156,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3266. DFSTestUtil#waitCorruptReplicas doesn't sleep between checks.
     (Madhukara Phatak via atm)
 
+    HDFS-3505. DirectoryScanner does not join all threads in shutdown.
+    (Colin Patrick McCabe via eli)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
