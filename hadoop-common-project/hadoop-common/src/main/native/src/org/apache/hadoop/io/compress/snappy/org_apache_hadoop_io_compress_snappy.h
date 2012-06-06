@@ -17,42 +17,13 @@
  */
 
 
-#if !defined ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
+#ifndef ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
 #define ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H
 
-
-#if defined HAVE_CONFIG_H
-  #include <config.h>
-#endif
-
-#if defined HADOOP_SNAPPY_LIBRARY
-
-  #if defined HAVE_STDDEF_H
-    #include <stddef.h>
-  #else
-    #error 'stddef.h not found'
-  #endif
-
-  #if defined HAVE_SNAPPY_C_H
-    #include <snappy-c.h>
-  #else
-    #error 'Please install snappy-development packages for your platform.'
-  #endif
-
-  #if defined HAVE_DLFCN_H
-    #include <dlfcn.h>
-  #else
-    #error "dlfcn.h not found"
-  #endif
-
-  #if defined HAVE_JNI_H
-    #include <jni.h>
-  #else
-    #error 'jni.h not found'
-  #endif
-
-  #include "org_apache_hadoop.h"
-
-#endif //define HADOOP_SNAPPY_LIBRARY
+#include "org_apache_hadoop.h"
+#include <dlfcn.h>
+#include <jni.h>
+#include <snappy-c.h>
+#include <stddef.h>
 
 #endif //ORG_APACHE_HADOOP_IO_COMPRESS_SNAPPY_SNAPPY_H

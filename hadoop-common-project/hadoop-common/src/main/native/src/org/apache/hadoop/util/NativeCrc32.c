@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 
-// get the autoconf settings
-#include "config.h"
-
 #include <arpa/inet.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -26,6 +23,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "config.h"
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_util_NativeCrc32.h"
 #include "gcc_optimizations.h"

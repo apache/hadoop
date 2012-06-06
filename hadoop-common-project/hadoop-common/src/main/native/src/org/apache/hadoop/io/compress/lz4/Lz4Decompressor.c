@@ -16,10 +16,7 @@
  * limitations under the License.
  */
 
-#if defined HAVE_CONFIG_H
-  #include <config.h>
-#endif
-
+#include "config.h"
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_compress_lz4_Lz4Decompressor.h"
 
