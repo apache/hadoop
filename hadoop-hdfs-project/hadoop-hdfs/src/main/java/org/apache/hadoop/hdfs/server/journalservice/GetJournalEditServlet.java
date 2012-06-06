@@ -63,9 +63,6 @@ public class GetJournalEditServlet extends HttpServlet {
     }
 
     String[] validRequestors = {
-        SecurityUtil.getServerPrincipal(
-            conf.get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-            NameNode.getAddress(conf).getHostName()),
         SecurityUtil.getServerPrincipal(conf
             .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY), NameNode
             .getAddress(conf).getHostName()),

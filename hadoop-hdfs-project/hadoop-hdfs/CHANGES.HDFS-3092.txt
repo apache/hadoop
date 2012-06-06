@@ -37,3 +37,6 @@ HDFS-3092 branch changes
 
     HDFS-3388. GetJournalEditServlet should close output stream only if the
     stream is used.  (Brandon Li via szetszwo)
+
+    HDFS-3511. Update GetJournalEditServlet and JournalHttpServer for the api
+    changes in SecurityUtil.  (Brandon Li via szetszwo)

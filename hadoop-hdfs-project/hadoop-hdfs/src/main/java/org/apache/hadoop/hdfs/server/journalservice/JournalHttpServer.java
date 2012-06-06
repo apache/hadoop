@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.journalservice;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNAL_HTTPS_PORT_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNAL_HTTPS_PORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNAL_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNAL_KRB_HTTPS_USER_NAME_KEY;
 
@@ -37,9 +35,7 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-
 import org.apache.hadoop.http.HttpServer;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -91,14 +87,7 @@ public class JournalHttpServer {
                   .get(DFS_ADMIN, " ")));
 
           if (UserGroupInformation.isSecurityEnabled()) {
-            SecurityUtil.initKrb5CipherSuites();
-            InetSocketAddress secInfoSocAddr = NetUtils
-                .createSocketAddr(infoBindAddress
-                    + ":"
-                    + conf.getInt(DFS_JOURNAL_HTTPS_PORT_KEY,
-                        DFS_JOURNAL_HTTPS_PORT_DEFAULT));
-            httpsPort = secInfoSocAddr.getPort();
-            httpServer.addSslListener(secInfoSocAddr, conf, false, true);
+            // TODO: implementation 
           }
           httpServer.setAttribute(JOURNAL_ATTRIBUTE_KEY, localJournal);
           httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
