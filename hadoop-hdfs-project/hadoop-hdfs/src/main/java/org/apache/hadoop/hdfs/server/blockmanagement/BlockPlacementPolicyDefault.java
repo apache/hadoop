@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.server.common.Util.now;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -49,13 +52,19 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
+  private static final String enableDebugLogging =
+    "For more information, please enable DEBUG log level on "
+    + ((Log4JLogger)LOG).getLogger().getName();
+
   private boolean considerLoad; 
   private boolean preferLocalNode = true;
   private NetworkTopology clusterMap;
   private FSClusterStats stats;
-  static final String enableDebugLogging = "For more information, please enable"
-    + " DEBUG level logging on the "
-    + "org.apache.hadoop.hdfs.server.namenode.FSNamesystem logger.";
+  private long heartbeatInterval;   // interval for DataNode heartbeats
+  /**
+   * A miss of that many heartbeats is tolerated for replica deletion policy.
+   */
+  private int tolerateHeartbeatMultiplier;
 
   BlockPlacementPolicyDefault(Configuration conf,  FSClusterStats stats,
                            NetworkTopology clusterMap) {
@@ -71,6 +80,12 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.considerLoad = conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, true);
     this.stats = stats;
     this.clusterMap = clusterMap;
+    this.heartbeatInterval = conf.getLong(
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT) * 1000;
+    this.tolerateHeartbeatMultiplier = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_KEY,
+        DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_DEFAULT);
   }
 
   private ThreadLocal<StringBuilder> threadLocalBuilder =
@@ -551,24 +566,33 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                                  short replicationFactor,
                                                  Collection<DatanodeDescriptor> first, 
                                                  Collection<DatanodeDescriptor> second) {
+    long oldestHeartbeat =
+      now() - heartbeatInterval * tolerateHeartbeatMultiplier;
+    DatanodeDescriptor oldestHeartbeatNode = null;
     long minSpace = Long.MAX_VALUE;
-    DatanodeDescriptor cur = null;
+    DatanodeDescriptor minSpaceNode = null;
 
     // pick replica from the first Set. If first is empty, then pick replicas
     // from second set.
     Iterator<DatanodeDescriptor> iter =
           first.isEmpty() ? second.iterator() : first.iterator();
 
-    // pick node with least free space
+    // Pick the node with the oldest heartbeat or with the least free space,
+    // if all hearbeats are within the tolerable heartbeat interval
     while (iter.hasNext() ) {
       DatanodeDescriptor node = iter.next();
       long free = node.getRemaining();
+      long lastHeartbeat = node.getLastUpdate();
+      if(lastHeartbeat < oldestHeartbeat) {
+        oldestHeartbeat = lastHeartbeat;
+        oldestHeartbeatNode = node;
+      }
       if (minSpace > free) {
         minSpace = free;
-        cur = node;
+        minSpaceNode = node;
       }
     }
-    return cur;
+    return oldestHeartbeatNode != null ? oldestHeartbeatNode : minSpaceNode;
   }
   
   @VisibleForTesting

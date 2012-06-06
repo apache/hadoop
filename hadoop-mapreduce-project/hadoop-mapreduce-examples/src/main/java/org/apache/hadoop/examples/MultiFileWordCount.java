@@ -130,8 +130,8 @@ public class MultiFileWordCount extends Configured implements Tool {
     public CombineFileLineRecordReader(CombineFileSplit split,
         TaskAttemptContext context, Integer index) throws IOException {
       
-      fs = FileSystem.get(context.getConfiguration());
       this.path = split.getPath(index);
+      fs = this.path.getFileSystem(context.getConfiguration());
       this.startOffset = split.getOffset(index);
       this.end = startOffset + split.getLength(index);
       boolean skipFirstLine = false;

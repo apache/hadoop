@@ -41,9 +41,9 @@ public class INodeFile extends INode implements BlockCollection {
   //Format: [16 bits for replication][48 bits for PreferredBlockSize]
   static final long HEADERMASK = 0xffffL << BLOCKBITS;
 
-  protected long header;
+  private long header;
 
-  protected BlockInfo blocks[] = null;
+  BlockInfo blocks[] = null;
 
   INodeFile(PermissionStatus permissions,
             int nrBlocks, short replication, long modificationTime,
@@ -52,12 +52,7 @@ public class INodeFile extends INode implements BlockCollection {
         modificationTime, atime, preferredBlockSize);
   }
 
-  protected INodeFile() {
-    blocks = null;
-    header = 0;
-  }
-
-  protected INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
+  INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,
                       long atime, long preferredBlockSize) {
     super(permissions, modificationTime, atime);
@@ -71,47 +66,40 @@ public class INodeFile extends INode implements BlockCollection {
    * Since this is a file,
    * the {@link FsAction#EXECUTE} action, if any, is ignored.
    */
-  protected void setPermission(FsPermission permission) {
+  void setPermission(FsPermission permission) {
     super.setPermission(permission.applyUMask(UMASK));
   }
 
-  public boolean isDirectory() {
+  boolean isDirectory() {
     return false;
   }
 
-  /**
-   * Get block replication for the file 
-   * @return block replication value
-   */
+  /** @return the replication factor of the file. */
+  @Override
   public short getReplication() {
     return (short) ((header & HEADERMASK) >> BLOCKBITS);
   }
 
-  public void setReplication(short replication) {
+  void setReplication(short replication) {
     if(replication <= 0)
        throw new IllegalArgumentException("Unexpected value for the replication");
     header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
   }
 
-  /**
-   * Get preferred block size for the file
-   * @return preferred block size in bytes
-   */
+  /** @return preferred block size (in bytes) of the file. */
+  @Override
   public long getPreferredBlockSize() {
-        return header & ~HEADERMASK;
+    return header & ~HEADERMASK;
   }
 
-  public void setPreferredBlockSize(long preferredBlkSize)
-  {
+  private void setPreferredBlockSize(long preferredBlkSize) {
     if((preferredBlkSize < 0) || (preferredBlkSize > ~HEADERMASK ))
        throw new IllegalArgumentException("Unexpected value for the block size");
     header = (header & HEADERMASK) | (preferredBlkSize & ~HEADERMASK);
   }
 
-  /**
-   * Get file blocks 
-   * @return file blocks
-   */
+  /** @return the blocks of the file. */
+  @Override
   public BlockInfo[] getBlocks() {
     return this.blocks;
   }
@@ -152,9 +140,7 @@ public class INodeFile extends INode implements BlockCollection {
     }
   }
 
-  /**
-   * Set file block
-   */
+  /** Set the block of the file at the given index. */
   public void setBlock(int idx, BlockInfo blk) {
     this.blocks[idx] = blk;
   }
@@ -171,6 +157,7 @@ public class INodeFile extends INode implements BlockCollection {
     return 1;
   }
   
+  @Override
   public String getName() {
     // Get the full path name of this inode.
     return getFullPathName();
@@ -215,7 +202,7 @@ public class INodeFile extends INode implements BlockCollection {
     return diskspaceConsumed(blocks);
   }
   
-  long diskspaceConsumed(Block[] blkArr) {
+  private long diskspaceConsumed(Block[] blkArr) {
     long size = 0;
     if(blkArr == null) 
       return 0;
@@ -245,26 +232,12 @@ public class INodeFile extends INode implements BlockCollection {
     return blocks[blocks.length - 2];
   }
 
-  /**
-   * Get the last block of the file.
-   * Make sure it has the right type.
-   */
-  public <T extends BlockInfo> T getLastBlock() throws IOException {
-    if (blocks == null || blocks.length == 0)
-      return null;
-    T returnBlock = null;
-    try {
-      @SuppressWarnings("unchecked")  // ClassCastException is caught below
-      T tBlock = (T)blocks[blocks.length - 1];
-      returnBlock = tBlock;
-    } catch(ClassCastException cce) {
-      throw new IOException("Unexpected last block type: " 
-          + blocks[blocks.length - 1].getClass().getSimpleName());
-    }
-    return returnBlock;
+  @Override
+  public BlockInfo getLastBlock() throws IOException {
+    return blocks == null || blocks.length == 0? null: blocks[blocks.length-1];
   }
 
-  /** @return the number of blocks */ 
+  @Override
   public int numBlocks() {
     return blocks == null ? 0 : blocks.length;
   }

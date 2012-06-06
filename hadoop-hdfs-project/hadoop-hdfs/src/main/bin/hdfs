@@ -30,6 +30,7 @@ function print_usage(){
   echo "  namenode -format     format the DFS filesystem"
   echo "  secondarynamenode    run the DFS secondary namenode"
   echo "  namenode             run the DFS namenode"
+  echo "  zkfc                 run the ZK Failover Controller daemon"
   echo "  datanode             run a DFS datanode"
   echo "  dfsadmin             run a DFS admin client"
   echo "  haadmin              run a DFS HA admin client"
@@ -56,21 +57,29 @@ shift
 
 # Determine if we're starting a secure datanode, and if so, redefine appropriate variables
 if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
-  if [ -n "$HADOOP_SECURE_DN_PID_DIR" ]; then
-    HADOOP_PID_DIR=$HADOOP_SECURE_DN_PID_DIR
+  if [ -n "$JSVC_HOME" ]; then
+    if [ -n "$HADOOP_SECURE_DN_PID_DIR" ]; then
+      HADOOP_PID_DIR=$HADOOP_SECURE_DN_PID_DIR
+    fi
+  
+    if [ -n "$HADOOP_SECURE_DN_LOG_DIR" ]; then
+      HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
+    fi
+   
+    HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER
+    starting_secure_dn="true"
+  else
+    echo "It looks like you're trying to start a secure DN, but \$JSVC_HOME"\
+      "isn't set. Falling back to starting insecure DN."
   fi
-
-  if [ -n "$HADOOP_SECURE_DN_LOG_DIR" ]; then
-    HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
-  fi
- 
-  HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER
-  starting_secure_dn="true"
 fi
 
 if [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
+elif [ "$COMMAND" = "zkfc" ] ; then
+  CLASS='org.apache.hadoop.hdfs.tools.DFSZKFailoverController'
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_ZKFC_OPTS"
 elif [ "$COMMAND" = "secondarynamenode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
@@ -125,12 +134,12 @@ if [ "$starting_secure_dn" = "true" ]; then
   if [ "$HADOOP_PID_DIR" = "" ]; then
     HADOOP_SECURE_DN_PID="/tmp/hadoop_secure_dn.pid"
   else
-   HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
+    HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
 
   JSVC=$JSVC_HOME/jsvc
   if [ ! -f $JSVC ]; then
-    echo "JSVC_HOME is not set correctly so jsvc can not be found. Jsvc is required to run secure datanodes. "
+    echo "JSVC_HOME is not set correctly so jsvc cannot be found. Jsvc is required to run secure datanodes. "
     echo "Please download and install jsvc from http://archive.apache.org/dist/commons/daemon/binaries/ "\
       "and set JSVC_HOME to the directory containing the jsvc binary."
     exit

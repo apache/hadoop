@@ -34,6 +34,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HAUtil;
@@ -129,7 +131,8 @@ public class TestHASafeMode {
     DFSTestUtil
       .createFile(fs, new Path("/test"), 3 * BLOCK_SIZE, (short) 3, 1L);
     restartActive();
-    nn0.getRpcServer().transitionToActive();
+    nn0.getRpcServer().transitionToActive(
+        new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER));
 
     FSNamesystem namesystem = nn0.getNamesystem();
     String status = namesystem.getSafemode();

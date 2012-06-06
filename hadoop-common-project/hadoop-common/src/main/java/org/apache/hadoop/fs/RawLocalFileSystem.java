@@ -307,6 +307,12 @@ public class RawLocalFileSystem extends FileSystem {
     return FileUtil.fullyDelete(f);
   }
  
+  /**
+   * {@inheritDoc}
+   *
+   * (<b>Note</b>: Returned list is not sorted in any given order,
+   * due to reliance on Java's {@link File#list()} API.)
+   */
   public FileStatus[] listStatus(Path f) throws IOException {
     File localf = pathToFile(f);
     FileStatus[] results;
@@ -316,7 +322,7 @@ public class RawLocalFileSystem extends FileSystem {
     }
     if (localf.isFile()) {
       return new FileStatus[] {
-        new RawLocalFileStatus(localf, getDefaultBlockSize(), this) };
+        new RawLocalFileStatus(localf, getDefaultBlockSize(f), this) };
     }
 
     String[] names = localf.list();
@@ -444,7 +450,7 @@ public class RawLocalFileSystem extends FileSystem {
   public FileStatus getFileStatus(Path f) throws IOException {
     File path = pathToFile(f);
     if (path.exists()) {
-      return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(), this);
+      return new RawLocalFileStatus(pathToFile(f), getDefaultBlockSize(f), this);
     } else {
       throw new FileNotFoundException("File " + f + " does not exist");
     }

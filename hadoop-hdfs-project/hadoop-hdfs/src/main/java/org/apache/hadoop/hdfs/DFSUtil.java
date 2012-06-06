@@ -42,6 +42,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -288,7 +289,7 @@ public class DFSUtil {
    * @return collection of nameservice Ids, or null if not specified
    */
   public static Collection<String> getNameServiceIds(Configuration conf) {
-    return conf.getTrimmedStringCollection(DFS_FEDERATION_NAMESERVICES);
+    return conf.getTrimmedStringCollection(DFS_NAMESERVICES);
   }
 
   /**
@@ -609,6 +610,14 @@ public class DFSUtil {
   public static Collection<URI> getNameServiceUris(Configuration conf,
       String... keys) {
     Set<URI> ret = new HashSet<URI>();
+    
+    // We're passed multiple possible configuration keys for any given NN or HA
+    // nameservice, and search the config in order of these keys. In order to
+    // make sure that a later config lookup (e.g. fs.defaultFS) doesn't add a
+    // URI for a config key for which we've already found a preferred entry, we
+    // keep track of non-preferred keys here.
+    Set<URI> nonPreferredUris = new HashSet<URI>();
+    
     for (String nsId : getNameServiceIds(conf)) {
       if (HAUtil.isHAEnabled(conf, nsId)) {
         // Add the logical URI of the nameservice.
@@ -619,24 +628,46 @@ public class DFSUtil {
         }
       } else {
         // Add the URI corresponding to the address of the NN.
+        boolean uriFound = false;
         for (String key : keys) {
           String addr = conf.get(concatSuffixes(key, nsId));
           if (addr != null) {
-            ret.add(createUri(HdfsConstants.HDFS_URI_SCHEME,
-                NetUtils.createSocketAddr(addr)));
-            break;
+            URI uri = createUri(HdfsConstants.HDFS_URI_SCHEME,
+                NetUtils.createSocketAddr(addr));
+            if (!uriFound) {
+              uriFound = true;
+              ret.add(uri);
+            } else {
+              nonPreferredUris.add(uri);
+            }
           }
         }
       }
     }
+    
     // Add the generic configuration keys.
+    boolean uriFound = false;
     for (String key : keys) {
       String addr = conf.get(key);
       if (addr != null) {
-        ret.add(createUri("hdfs", NetUtils.createSocketAddr(addr)));
-        break;
+        URI uri = createUri("hdfs", NetUtils.createSocketAddr(addr));
+        if (!uriFound) {
+          uriFound = true;
+          ret.add(uri);
+        } else {
+          nonPreferredUris.add(uri);
+        }
       }
     }
+    
+    // Add the default URI if it is an HDFS URI.
+    URI defaultUri = FileSystem.getDefaultUri(conf);
+    if (defaultUri != null &&
+        HdfsConstants.HDFS_URI_SCHEME.equals(defaultUri.getScheme()) &&
+        !nonPreferredUris.contains(defaultUri)) {
+      ret.add(defaultUri);
+    }
+    
     return ret;
   }
 
@@ -676,9 +707,10 @@ public class DFSUtil {
    * @param httpsAddress -If true, and if security is enabled, returns server 
    *                      https address. If false, returns server http address.
    * @return server http or https address
+   * @throws IOException 
    */
-  public static String getInfoServer(
-      InetSocketAddress namenodeAddr, Configuration conf, boolean httpsAddress) {
+  public static String getInfoServer(InetSocketAddress namenodeAddr,
+      Configuration conf, boolean httpsAddress) throws IOException {
     boolean securityOn = UserGroupInformation.isSecurityEnabled();
     String httpAddressKey = (securityOn && httpsAddress) ? 
         DFS_NAMENODE_HTTPS_ADDRESS_KEY : DFS_NAMENODE_HTTP_ADDRESS_KEY;
@@ -695,8 +727,14 @@ public class DFSUtil {
     } else {
       suffixes = new String[2];
     }
-
-    return getSuffixedConf(conf, httpAddressKey, httpAddressDefault, suffixes);
+    String configuredInfoAddr = getSuffixedConf(conf, httpAddressKey,
+        httpAddressDefault, suffixes);
+    if (namenodeAddr != null) {
+      return substituteForWildcardAddress(configuredInfoAddr,
+          namenodeAddr.getHostName());
+    } else {
+      return configuredInfoAddr;
+    }
   }
   
 
@@ -721,7 +759,7 @@ public class DFSUtil {
       if (UserGroupInformation.isSecurityEnabled() &&
           defaultSockAddr.getAddress().isAnyLocalAddress()) {
         throw new IOException("Cannot use a wildcard address with security. " +
-                              "Must explicitly set bind address for Kerberos");
+            "Must explicitly set bind address for Kerberos");
       }
       return defaultHost + ":" + sockAddr.getPort();
     } else {
@@ -843,7 +881,7 @@ public class DFSUtil {
    * Get the nameservice Id by matching the {@code addressKey} with the
    * the address of the local node. 
    * 
-   * If {@link DFSConfigKeys#DFS_FEDERATION_NAMESERVICE_ID} is not specifically
+   * If {@link DFSConfigKeys#DFS_NAMESERVICE_ID} is not specifically
    * configured, and more than one nameservice Id is configured, this method 
    * determines the nameservice Id by matching the local node's address with the
    * configured addresses. When a match is found, it returns the nameservice Id
@@ -855,7 +893,7 @@ public class DFSUtil {
    * @throws HadoopIllegalArgumentException on error
    */
   private static String getNameServiceId(Configuration conf, String addressKey) {
-    String nameserviceId = conf.get(DFS_FEDERATION_NAMESERVICE_ID);
+    String nameserviceId = conf.get(DFS_NAMESERVICE_ID);
     if (nameserviceId != null) {
       return nameserviceId;
     }
@@ -927,7 +965,7 @@ public class DFSUtil {
     if (found > 1) { // Only one address must match the local address
       String msg = "Configuration has multiple addresses that match "
           + "local node's address. Please configure the system with "
-          + DFS_FEDERATION_NAMESERVICE_ID + " and "
+          + DFS_NAMESERVICE_ID + " and "
           + DFS_HA_NAMENODE_ID_KEY;
       throw new HadoopIllegalArgumentException(msg);
     }

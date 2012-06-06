@@ -100,11 +100,7 @@ public class DatanodeManager {
    * with the same storage id; and </li>
    * <li>removed if and only if an existing datanode is restarted to serve a
    * different storage id.</li>
-   * </ul> <br>
-   * The list of the {@link DatanodeDescriptor}s in the map is checkpointed
-   * in the namespace image file. Only the {@link DatanodeInfo} part is 
-   * persistent, the list of blocks is restored from the datanode block
-   * reports. 
+   * </ul> <br> 
    * <p>
    * Mapping: StorageID -> DatanodeDescriptor
    */
@@ -832,7 +828,9 @@ public class DatanodeManager {
 
     if (InetAddresses.isInetAddress(hostStr)) {
       // The IP:port is sufficient for listing in a report
-      dnId = new DatanodeID(hostStr, "", port);
+      dnId = new DatanodeID(hostStr, "", "", port,
+          DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+          DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
     } else {
       String ipAddr = "";
       try {
@@ -840,7 +838,9 @@ public class DatanodeManager {
       } catch (UnknownHostException e) {
         LOG.warn("Invalid hostname " + hostStr + " in hosts file");
       }
-      dnId = new DatanodeID(ipAddr, hostStr, port);
+      dnId = new DatanodeID(ipAddr, hostStr, "", port,
+          DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+          DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
     }
     return dnId;
   }

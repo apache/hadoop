@@ -39,20 +39,23 @@ import org.apache.hadoop.classification.InterfaceStability;
  * <p>Example:</p>
  * <p><blockquote><pre>
  *     public class MyWritable implements Writable {
- *       // Some data     
+ *       // Some data
  *       private int counter;
  *       private long timestamp;
- *       
+ *
+ *       // Default constructor to allow (de)serialization
+ *       MyWritable() { }
+ *
  *       public void write(DataOutput out) throws IOException {
  *         out.writeInt(counter);
  *         out.writeLong(timestamp);
  *       }
- *       
+ *
  *       public void readFields(DataInput in) throws IOException {
  *         counter = in.readInt();
  *         timestamp = in.readLong();
  *       }
- *       
+ *
  *       public static MyWritable read(DataInput in) throws IOException {
  *         MyWritable w = new MyWritable();
  *         w.readFields(in);

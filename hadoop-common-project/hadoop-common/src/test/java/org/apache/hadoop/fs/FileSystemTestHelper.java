@@ -113,7 +113,7 @@ public final class FileSystemTestHelper {
 
   public static long createFile(FileSystem fSys, Path path, int numBlocks,
       int blockSize, boolean createParent) throws IOException {
-      return createFile(fSys, path, numBlocks, blockSize, fSys.getDefaultReplication(), true);
+      return createFile(fSys, path, numBlocks, blockSize, fSys.getDefaultReplication(path), true);
   }
 
   public static long createFile(FileSystem fSys, Path path, int numBlocks,

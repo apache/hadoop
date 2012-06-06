@@ -20,6 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import java.util.Collection;
 
+import java.util.Map;
+
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -92,6 +94,13 @@ public interface RMApp extends EventHandler<RMAppEvent> {
    * @return the current {@link RMAppAttempt}
    */
   RMAppAttempt getCurrentAppAttempt();
+
+  /**
+   * {@link RMApp} can have multiple application attempts {@link RMAppAttempt}.
+   * This method returns the all {@link RMAppAttempt}s for the RMApp.
+   * @return all {@link RMAppAttempt}s for the RMApp.
+   */
+  Map<ApplicationAttemptId, RMAppAttempt> getAppAttempts();
 
   /**
    * To get the status of an application in the RM, this method can be used.

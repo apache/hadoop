@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -911,7 +912,9 @@ class MapTask extends Task {
       maxMemUsage -= maxMemUsage % METASIZE;
       kvbuffer = new byte[maxMemUsage];
       bufvoid = kvbuffer.length;
-      kvmeta = ByteBuffer.wrap(kvbuffer).asIntBuffer();
+      kvmeta = ByteBuffer.wrap(kvbuffer)
+         .order(ByteOrder.nativeOrder())
+         .asIntBuffer();
       setEquator(0);
       bufstart = bufend = bufindex = equator;
       kvstart = kvend = kvindex;

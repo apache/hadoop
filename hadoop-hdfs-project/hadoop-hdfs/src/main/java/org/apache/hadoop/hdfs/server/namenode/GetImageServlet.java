@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 
 import org.apache.commons.logging.Log;
@@ -43,12 +44,14 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.net.InetAddresses;
 
 /**
  * This class is used in Namesystem's jetty to retrieve a file.
@@ -83,11 +86,12 @@ public class GetImageServlet extends HttpServlet {
       final Configuration conf = 
         (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
       
-      if(UserGroupInformation.isSecurityEnabled() && 
-          !isValidRequestor(request.getUserPrincipal().getName(), conf)) {
+      if (UserGroupInformation.isSecurityEnabled() && 
+          !isValidRequestor(context, request.getUserPrincipal().getName(), conf)) {
         response.sendError(HttpServletResponse.SC_FORBIDDEN, 
-            "Only Namenode and Secondary Namenode may access this servlet");
-        LOG.warn("Received non-NN/SNN request for image or edits from " 
+            "Only Namenode, Secondary Namenode, and administrators may access " +
+            "this servlet");
+        LOG.warn("Received non-NN/SNN/administrator request for image or edits from " 
             + request.getUserPrincipal().getName() + " at " + request.getRemoteHost());
         return;
       }
@@ -156,6 +160,11 @@ public class GetImageServlet extends HttpServlet {
                 return null;
               }
               
+              // We may have lost our ticket since last checkpoint, log in again, just in case
+              if (UserGroupInformation.isSecurityEnabled()) {
+                UserGroupInformation.getCurrentUser().reloginFromKeytab();
+              }
+              
               // issue a HTTP get request to download the new fsimage 
               MD5Hash downloadImageDigest =
                 TransferFsImage.downloadImageToStorage(
@@ -207,8 +216,8 @@ public class GetImageServlet extends HttpServlet {
   }
   
   @VisibleForTesting
-  static boolean isValidRequestor(String remoteUser, Configuration conf)
-      throws IOException {
+  static boolean isValidRequestor(ServletContext context, String remoteUser,
+      Configuration conf) throws IOException {
     if(remoteUser == null) { // This really shouldn't happen...
       LOG.warn("Received null remoteUser while authorizing access to getImage servlet");
       return false;
@@ -235,11 +244,17 @@ public class GetImageServlet extends HttpServlet {
 
     for(String v : validRequestors) {
       if(v != null && v.equals(remoteUser)) {
-        if(LOG.isInfoEnabled()) LOG.info("GetImageServlet allowing: " + remoteUser);
+        LOG.info("GetImageServlet allowing checkpointer: " + remoteUser);
         return true;
       }
     }
-    if(LOG.isInfoEnabled()) LOG.info("GetImageServlet rejecting: " + remoteUser);
+    
+    if (HttpServer.userHasAdministratorAccess(context, remoteUser)) {
+      LOG.info("GetImageServlet allowing administrator: " + remoteUser);
+      return true;
+    }
+    
+    LOG.info("GetImageServlet rejecting: " + remoteUser);
     return false;
   }
   
@@ -282,8 +297,7 @@ public class GetImageServlet extends HttpServlet {
     return "putimage=1" +
       "&" + TXID_PARAM + "=" + txid +
       "&port=" + imageListenAddress.getPort() +
-      "&machine=" + imageListenAddress.getHostName()
-      + "&" + STORAGEINFO_PARAM + "=" +
+      "&" + STORAGEINFO_PARAM + "=" +
       storage.toColonSeparatedString();
   }
 
@@ -310,7 +324,10 @@ public class GetImageServlet extends HttpServlet {
       Map<String, String[]> pmap = request.getParameterMap();
       isGetImage = isGetEdit = isPutImage = fetchLatest = false;
       remoteport = 0;
-      machineName = null;
+      machineName = request.getRemoteHost();
+      if (InetAddresses.isInetAddress(machineName)) {
+        machineName = NetUtils.getHostNameOfIP(machineName);
+      }
 
       for (Map.Entry<String, String[]> entry : pmap.entrySet()) {
         String key = entry.getKey();
@@ -335,8 +352,6 @@ public class GetImageServlet extends HttpServlet {
           txId = parseLongParam(request, TXID_PARAM);
         } else if (key.equals("port")) { 
           remoteport = new Integer(val[0]).intValue();
-        } else if (key.equals("machine")) { 
-          machineName = val[0];
         } else if (key.equals(STORAGEINFO_PARAM)) {
           storageInfoString = val[0];
         }

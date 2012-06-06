@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.mortbay.jetty.nio.SelectChannelConnector;
 
 /**
@@ -60,10 +61,7 @@ public class SecureDataNodeStarter implements Daemon {
   @Override
   public void init(DaemonContext context) throws Exception {
     System.err.println("Initializing secure datanode resources");
-    // We should only start up a secure datanode in a Kerberos-secured cluster
-    Configuration conf = new Configuration(); // Skip UGI method to not log in
-    if(!conf.get(HADOOP_SECURITY_AUTHENTICATION).equals("kerberos"))
-      throw new RuntimeException("Cannot start secure datanode in unsecure cluster");
+    Configuration conf = new Configuration();
     
     // Stash command-line arguments for regular datanode
     args = context.getArguments();
@@ -98,7 +96,8 @@ public class SecureDataNodeStarter implements Daemon {
     System.err.println("Successfully obtained privileged resources (streaming port = "
         + ss + " ) (http listener port = " + listener.getConnection() +")");
     
-    if (ss.getLocalPort() >= 1023 || listener.getPort() >= 1023) {
+    if ((ss.getLocalPort() >= 1023 || listener.getPort() >= 1023) &&
+        UserGroupInformation.isSecurityEnabled()) {
       throw new RuntimeException("Cannot start secure datanode with unprivileged ports");
     }
     System.err.println("Opened streaming server at " + streamingAddr);

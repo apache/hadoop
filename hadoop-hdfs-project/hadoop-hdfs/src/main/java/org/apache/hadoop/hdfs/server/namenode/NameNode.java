@@ -36,6 +36,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
@@ -69,6 +70,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
@@ -145,17 +147,25 @@ public class NameNode {
   }
   
   /**
-   * HDFS federation configuration can have two types of parameters:
+   * HDFS configuration can have three types of parameters:
    * <ol>
-   * <li>Parameter that is common for all the name services in the cluster.</li>
-   * <li>Parameters that are specific to a name service. This keys are suffixed
+   * <li>Parameters that are common for all the name services in the cluster.</li>
+   * <li>Parameters that are specific to a name service. These keys are suffixed
    * with nameserviceId in the configuration. For example,
    * "dfs.namenode.rpc-address.nameservice1".</li>
+   * <li>Parameters that are specific to a single name node. These keys are suffixed
+   * with nameserviceId and namenodeId in the configuration. for example,
+   * "dfs.namenode.rpc-address.nameservice1.namenode1"</li>
    * </ol>
    * 
-   * Following are nameservice specific keys.
+   * In the latter cases, operators may specify the configuration without
+   * any suffix, with a nameservice suffix, or with a nameservice and namenode
+   * suffix. The more specific suffix will take precedence.
+   * 
+   * These keys are specific to a given namenode, and thus may be configured
+   * globally, for a nameservice, or for a specific namenode within a nameservice.
    */
-  public static final String[] NAMESERVICE_SPECIFIC_KEYS = {
+  public static final String[] NAMENODE_SPECIFIC_KEYS = {
     DFS_NAMENODE_RPC_ADDRESS_KEY,
     DFS_NAMENODE_NAME_DIR_KEY,
     DFS_NAMENODE_EDITS_DIR_KEY,
@@ -170,8 +180,19 @@ public class NameNode {
     DFS_NAMENODE_BACKUP_ADDRESS_KEY,
     DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
     DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY,
+    DFS_NAMENODE_USER_NAME_KEY,
     DFS_HA_FENCE_METHODS_KEY,
-    DFS_NAMENODE_USER_NAME_KEY
+    DFS_HA_ZKFC_PORT_KEY,
+    DFS_HA_FENCE_METHODS_KEY
+  };
+  
+  /**
+   * @see #NAMENODE_SPECIFIC_KEYS
+   * These keys are specific to a nameservice, but may not be overridden
+   * for a specific namenode.
+   */
+  public static final String[] NAMESERVICE_SPECIFIC_KEYS = {
+    DFS_HA_AUTO_FAILOVER_ENABLED_KEY
   };
   
   public long getProtocolVersion(String protocol, 
@@ -206,6 +227,7 @@ public class NameNode {
   private final boolean haEnabled;
   private final HAContext haContext;
   protected boolean allowStaleStandbyReads;
+  private Runtime runtime = Runtime.getRuntime();
 
   
   /** httpServer */
@@ -481,11 +503,16 @@ public class NameNode {
   }
   
   private void startTrashEmptier(Configuration conf) throws IOException {
-    long trashInterval 
-      = conf.getLong(CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY, 
-                     CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
-    if(trashInterval == 0)
+    long trashInterval = conf.getLong(
+        CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY,
+        CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
+    if (trashInterval == 0) {
       return;
+    } else if (trashInterval < 0) {
+      throw new IOException("Cannot start tresh emptier with negative interval."
+          + " Set " + CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY + " to a"
+          + " positive value.");
+    }
     this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);
     this.emptier.start();
@@ -1132,15 +1159,18 @@ public class NameNode {
     if ((nameserviceId != null && !nameserviceId.isEmpty()) || 
         (namenodeId != null && !namenodeId.isEmpty())) {
       if (nameserviceId != null) {
-        conf.set(DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
+        conf.set(DFS_NAMESERVICE_ID, nameserviceId);
       }
       if (namenodeId != null) {
         conf.set(DFS_HA_NAMENODE_ID_KEY, namenodeId);
       }
       
       DFSUtil.setGenericConf(conf, nameserviceId, namenodeId,
+          NAMENODE_SPECIFIC_KEYS);
+      DFSUtil.setGenericConf(conf, nameserviceId, null,
           NAMESERVICE_SPECIFIC_KEYS);
     }
+    
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
@@ -1235,14 +1265,37 @@ public class NameNode {
     }
     return state.getServiceState();
   }
+  
+  @VisibleForTesting
+  public synchronized void setRuntimeForTesting(Runtime runtime) {
+    this.runtime = runtime;
+  }
 
   /**
-   * Class used as expose {@link NameNode} as context to {@link HAState}
+   * Shutdown the NN immediately in an ungraceful way. Used when it would be
+   * unsafe for the NN to continue operating, e.g. during a failed HA state
+   * transition.
    * 
-   * TODO(HA):
-   * When entering and exiting state, on failing to start services,
-   * appropriate action is needed todo either shutdown the node or recover
-   * from failure.
+   * @param t exception which warrants the shutdown. Printed to the NN log
+   *          before exit.
+   * @throws ServiceFailedException thrown only for testing.
+   */
+  private synchronized void doImmediateShutdown(Throwable t)
+      throws ServiceFailedException {
+    String message = "Error encountered requiring NN shutdown. " +
+        "Shutting down immediately.";
+    try {
+      LOG.fatal(message, t);
+    } catch (Throwable ignored) {
+      // This is unlikely to happen, but there's nothing we can do if it does.
+    }
+    runtime.exit(1);
+    // This code is only reached during testing, when runtime is stubbed out.
+    throw new ServiceFailedException(message, t);
+  }
+  
+  /**
+   * Class used to expose {@link NameNode} as context to {@link HAState}
    */
   protected class NameNodeHAContext implements HAContext {
     @Override
@@ -1257,32 +1310,52 @@ public class NameNode {
 
     @Override
     public void startActiveServices() throws IOException {
-      namesystem.startActiveServices();
-      startTrashEmptier(conf);
+      try {
+        namesystem.startActiveServices();
+        startTrashEmptier(conf);
+      } catch (Throwable t) {
+        doImmediateShutdown(t);
+      }
     }
 
     @Override
     public void stopActiveServices() throws IOException {
-      if (namesystem != null) {
-        namesystem.stopActiveServices();
+      try {
+        if (namesystem != null) {
+          namesystem.stopActiveServices();
+        }
+        stopTrashEmptier();
+      } catch (Throwable t) {
+        doImmediateShutdown(t);
       }
-      stopTrashEmptier();
     }
 
     @Override
     public void startStandbyServices() throws IOException {
-      namesystem.startStandbyServices(conf);
+      try {
+        namesystem.startStandbyServices(conf);
+      } catch (Throwable t) {
+        doImmediateShutdown(t);
+      }
     }
 
     @Override
     public void prepareToStopStandbyServices() throws ServiceFailedException {
-      namesystem.prepareToStopStandbyServices();
+      try {
+        namesystem.prepareToStopStandbyServices();
+      } catch (Throwable t) {
+        doImmediateShutdown(t);
+      }
     }
     
     @Override
     public void stopStandbyServices() throws IOException {
-      if (namesystem != null) {
-        namesystem.stopStandbyServices();
+      try {
+        if (namesystem != null) {
+          namesystem.stopStandbyServices();
+        }
+      } catch (Throwable t) {
+        doImmediateShutdown(t);
       }
     }
     
@@ -1312,5 +1385,44 @@ public class NameNode {
   
   public boolean isStandbyState() {
     return (state.equals(STANDBY_STATE));
+  }
+
+  /**
+   * Check that a request to change this node's HA state is valid.
+   * In particular, verifies that, if auto failover is enabled, non-forced
+   * requests from the HAAdmin CLI are rejected, and vice versa.
+   *
+   * @param req the request to check
+   * @throws AccessControlException if the request is disallowed
+   */
+  void checkHaStateChange(StateChangeRequestInfo req)
+      throws AccessControlException {
+    boolean autoHaEnabled = conf.getBoolean(DFS_HA_AUTO_FAILOVER_ENABLED_KEY,
+        DFS_HA_AUTO_FAILOVER_ENABLED_DEFAULT);
+    switch (req.getSource()) {
+    case REQUEST_BY_USER:
+      if (autoHaEnabled) {
+        throw new AccessControlException(
+            "Manual HA control for this NameNode is disallowed, because " +
+            "automatic HA is enabled.");
+      }
+      break;
+    case REQUEST_BY_USER_FORCED:
+      if (autoHaEnabled) {
+        LOG.warn("Allowing manual HA control from " +
+            Server.getRemoteAddress() +
+            " even though automatic HA is enabled, because the user " +
+            "specified the force flag");
+      }
+      break;
+    case REQUEST_BY_ZKFC:
+      if (!autoHaEnabled) {
+        throw new AccessControlException(
+            "Request from ZK failover controller at " +
+            Server.getRemoteAddress() + " denied since automatic HA " +
+            "is not enabled"); 
+      }
+      break;
+    }
   }
 }

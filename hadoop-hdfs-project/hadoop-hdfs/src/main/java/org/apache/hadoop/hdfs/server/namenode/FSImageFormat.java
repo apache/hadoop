@@ -540,7 +540,6 @@ class FSImageFormat {
     private void saveImage(ByteBuffer currentDirName,
                                   INodeDirectory current,
                                   DataOutputStream out) throws IOException {
-      context.checkCancelled();
       List<INode> children = current.getChildrenRaw();
       if (children == null || children.isEmpty())
         return;
@@ -554,9 +553,13 @@ class FSImageFormat {
         out.write(currentDirName.array(), 0, prefixLen);
       }
       out.writeInt(children.size());
+      int i = 0;
       for(INode child : children) {
         // print all children first
         FSImageSerialization.saveINode2Image(child, out);
+        if (i++ % 50 == 0) {
+          context.checkCancelled();
+        }
       }
       for(INode child : children) {
         if(!child.isDirectory())

@@ -85,12 +85,10 @@ public class FSEditLogLoader {
    */
   long loadFSEdits(EditLogInputStream edits, long expectedStartingTxId,
       MetaRecoveryContext recovery) throws IOException {
-    int logVersion = edits.getVersion();
-
     fsNamesys.writeLock();
     try {
       long startTime = now();
-      long numEdits = loadEditRecords(logVersion, edits, false, 
+      long numEdits = loadEditRecords(edits, false, 
                                  expectedStartingTxId, recovery);
       FSImage.LOG.info("Edits file " + edits.getName() 
           + " of size " + edits.length() + " edits # " + numEdits 
@@ -102,7 +100,7 @@ public class FSEditLogLoader {
     }
   }
 
-  long loadEditRecords(int logVersion, EditLogInputStream in, boolean closeOnExit,
+  long loadEditRecords(EditLogInputStream in, boolean closeOnExit,
                       long expectedStartingTxId, MetaRecoveryContext recovery)
       throws IOException {
     FSDirectory fsDir = fsNamesys.dir;
@@ -141,10 +139,10 @@ public class FSEditLogLoader {
             }
           } catch (Throwable e) {
             // Handle a problem with our input
-            check203UpgradeFailure(logVersion, e);
+            check203UpgradeFailure(in.getVersion(), e);
             String errorMessage =
               formatEditLogReplayError(in, recentOpcodeOffsets, expectedTxId);
-            FSImage.LOG.error(errorMessage);
+            FSImage.LOG.error(errorMessage, e);
             if (recovery == null) {
                // We will only try to skip over problematic opcodes when in
                // recovery mode.
@@ -158,7 +156,7 @@ public class FSEditLogLoader {
           }
           recentOpcodeOffsets[(int)(numEdits % recentOpcodeOffsets.length)] =
             in.getPosition();
-          if (LayoutVersion.supports(Feature.STORED_TXIDS, logVersion)) {
+          if (op.hasTransactionId()) {
             if (op.getTransactionId() > expectedTxId) { 
               MetaRecoveryContext.editLogLoaderPrompt("There appears " +
                   "to be a gap in the edit log.  We expected txid " +
@@ -175,7 +173,7 @@ public class FSEditLogLoader {
             }
           }
           try {
-            applyEditLogOp(op, fsDir, logVersion);
+            applyEditLogOp(op, fsDir, in.getVersion());
           } catch (Throwable e) {
             LOG.error("Encountered exception on operation " + op, e);
             MetaRecoveryContext.editLogLoaderPrompt("Failed to " +
@@ -192,7 +190,7 @@ public class FSEditLogLoader {
             expectedTxId = lastAppliedTxId = expectedStartingTxId;
           }
           // log progress
-          if (LayoutVersion.supports(Feature.STORED_TXIDS, logVersion)) {
+          if (op.hasTransactionId()) {
             long now = now();
             if (now - lastLogTime > REPLAY_TRANSACTION_LOG_INTERVAL) {
               int percent = Math.round((float)lastAppliedTxId / numTxns * 100);
@@ -647,112 +645,119 @@ public class FSEditLogLoader {
   }
   
   /**
-   * Return the number of valid transactions in the stream. If the stream is
-   * truncated during the header, returns a value indicating that there are
-   * 0 valid transactions. This reads through the stream but does not close
-   * it.
+   * Find the last valid transaction ID in the stream.
+   * If there are invalid or corrupt transactions in the middle of the stream,
+   * validateEditLog will skip over them.
+   * This reads through the stream but does not close it.
+   *
    * @throws IOException if the stream cannot be read due to an IO error (eg
    *                     if the log does not exist)
    */
   static EditLogValidation validateEditLog(EditLogInputStream in) {
     long lastPos = 0;
-    long firstTxId = HdfsConstants.INVALID_TXID;
     long lastTxId = HdfsConstants.INVALID_TXID;
     long numValid = 0;
-    try {
-      FSEditLogOp op = null;
-      while (true) {
-        lastPos = in.getPosition();
+    FSEditLogOp op = null;
+    while (true) {
+      lastPos = in.getPosition();
+      try {
         if ((op = in.readOp()) == null) {
           break;
         }
-        if (firstTxId == HdfsConstants.INVALID_TXID) {
-          firstTxId = op.getTransactionId();
-        }
-        if (lastTxId == HdfsConstants.INVALID_TXID
-            || op.getTransactionId() == lastTxId + 1) {
-          lastTxId = op.getTransactionId();
-        } else {
-          FSImage.LOG.error("Out of order txid found. Found " +
-            op.getTransactionId() + ", expected " + (lastTxId + 1));
-          break;
-        }
-        numValid++;
+      } catch (Throwable t) {
+        FSImage.LOG.warn("Caught exception after reading " + numValid +
+            " ops from " + in + " while determining its valid length." +
+            "Position was " + lastPos, t);
+        break;
       }
-    } catch (Throwable t) {
-      // Catch Throwable and not just IOE, since bad edits may generate
-      // NumberFormatExceptions, AssertionErrors, OutOfMemoryErrors, etc.
-      FSImage.LOG.debug("Caught exception after reading " + numValid +
-          " ops from " + in + " while determining its valid length.", t);
+      if (lastTxId == HdfsConstants.INVALID_TXID
+          || op.getTransactionId() > lastTxId) {
+        lastTxId = op.getTransactionId();
+      }
+      numValid++;
     }
-    return new EditLogValidation(lastPos, firstTxId, lastTxId, false);
+    return new EditLogValidation(lastPos, lastTxId, false);
   }
-  
+
   static class EditLogValidation {
     private final long validLength;
-    private final long startTxId;
     private final long endTxId;
-    private final boolean corruptionDetected;
-     
-    EditLogValidation(long validLength, long startTxId, long endTxId,
-        boolean corruptionDetected) {
+    private final boolean hasCorruptHeader;
+
+    EditLogValidation(long validLength, long endTxId,
+        boolean hasCorruptHeader) {
       this.validLength = validLength;
-      this.startTxId = startTxId;
       this.endTxId = endTxId;
-      this.corruptionDetected = corruptionDetected;
+      this.hasCorruptHeader = hasCorruptHeader;
     }
-    
+
     long getValidLength() { return validLength; }
-    
-    long getStartTxId() { return startTxId; }
-    
+
     long getEndTxId() { return endTxId; }
-    
-    long getNumTransactions() { 
-      if (endTxId == HdfsConstants.INVALID_TXID
-          || startTxId == HdfsConstants.INVALID_TXID) {
-        return 0;
-      }
-      return (endTxId - startTxId) + 1;
-    }
-    
-    boolean hasCorruptHeader() { return corruptionDetected; }
+
+    boolean hasCorruptHeader() { return hasCorruptHeader; }
   }
 
   /**
    * Stream wrapper that keeps track of the current stream position.
+   * 
+   * This stream also allows us to set a limit on how many bytes we can read
+   * without getting an exception.
    */
-  public static class PositionTrackingInputStream extends FilterInputStream {
+  public static class PositionTrackingInputStream extends FilterInputStream
+      implements StreamLimiter {
     private long curPos = 0;
     private long markPos = -1;
+    private long limitPos = Long.MAX_VALUE;
 
     public PositionTrackingInputStream(InputStream is) {
       super(is);
     }
 
+    private void checkLimit(long amt) throws IOException {
+      long extra = (curPos + amt) - limitPos;
+      if (extra > 0) {
+        throw new IOException("Tried to read " + amt + " byte(s) past " +
+            "the limit at offset " + limitPos);
+      }
+    }
+    
+    @Override
     public int read() throws IOException {
+      checkLimit(1);
       int ret = super.read();
       if (ret != -1) curPos++;
       return ret;
     }
 
+    @Override
     public int read(byte[] data) throws IOException {
+      checkLimit(data.length);
       int ret = super.read(data);
       if (ret > 0) curPos += ret;
       return ret;
     }
 
+    @Override
     public int read(byte[] data, int offset, int length) throws IOException {
+      checkLimit(length);
       int ret = super.read(data, offset, length);
       if (ret > 0) curPos += ret;
       return ret;
     }
 
+    @Override
+    public void setLimit(long limit) {
+      limitPos = curPos + limit;
+    }
+
+    @Override
     public void mark(int limit) {
       super.mark(limit);
       markPos = curPos;
     }
 
+    @Override
     public void reset() throws IOException {
       if (markPos == -1) {
         throw new IOException("Not marked!");
@@ -764,6 +769,18 @@ public class FSEditLogLoader {
 
     public long getPos() {
       return curPos;
+    }
+    
+    @Override
+    public long skip(long amt) throws IOException {
+      long extra = (curPos + amt) - limitPos;
+      if (extra > 0) {
+        throw new IOException("Tried to skip " + extra + " bytes past " +
+            "the limit at offset " + limitPos);
+      }
+      long ret = super.skip(amt);
+      curPos += ret;
+      return ret;
     }
   }
 

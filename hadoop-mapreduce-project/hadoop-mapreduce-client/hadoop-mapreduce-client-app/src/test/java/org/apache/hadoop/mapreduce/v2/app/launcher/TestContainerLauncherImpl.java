@@ -220,4 +220,58 @@ public class TestContainerLauncherImpl {
       ut.stop();
     }
   }
+
+  @Test
+  public void testMyShutdown() throws Exception {
+    LOG.info("in test Shutdown");
+
+    YarnRPC mockRpc = mock(YarnRPC.class);
+    AppContext mockContext = mock(AppContext.class);
+    @SuppressWarnings("rawtypes")
+    EventHandler mockEventHandler = mock(EventHandler.class);
+    when(mockContext.getEventHandler()).thenReturn(mockEventHandler);
+
+    ContainerManager mockCM = mock(ContainerManager.class);
+    when(mockRpc.getProxy(eq(ContainerManager.class),
+        any(InetSocketAddress.class), any(Configuration.class)))
+        .thenReturn(mockCM);
+
+    ContainerLauncherImplUnderTest ut =
+      new ContainerLauncherImplUnderTest(mockContext, mockRpc);
+
+    Configuration conf = new Configuration();
+    ut.init(conf);
+    ut.start();
+    try {
+      ContainerId contId = makeContainerId(0l, 0, 0, 1);
+      TaskAttemptId taskAttemptId = makeTaskAttemptId(0l, 0, 0, TaskType.MAP, 0);
+      String cmAddress = "127.0.0.1:8000";
+      StartContainerResponse startResp =
+        recordFactory.newRecordInstance(StartContainerResponse.class);
+      startResp.setServiceResponse(ShuffleHandler.MAPREDUCE_SHUFFLE_SERVICEID,
+          ShuffleHandler.serializeMetaData(80));
+
+      LOG.info("inserting launch event");
+      ContainerRemoteLaunchEvent mockLaunchEvent =
+        mock(ContainerRemoteLaunchEvent.class);
+      when(mockLaunchEvent.getType())
+        .thenReturn(EventType.CONTAINER_REMOTE_LAUNCH);
+      when(mockLaunchEvent.getContainerID())
+        .thenReturn(contId);
+      when(mockLaunchEvent.getTaskAttemptID()).thenReturn(taskAttemptId);
+      when(mockLaunchEvent.getContainerMgrAddress()).thenReturn(cmAddress);
+      when(mockCM.startContainer(any(StartContainerRequest.class))).thenReturn(startResp);
+      ut.handle(mockLaunchEvent);
+
+      ut.waitForPoolToIdle();
+
+      verify(mockCM).startContainer(any(StartContainerRequest.class));
+
+      // skip cleanup and make sure stop kills the container
+
+    } finally {
+      ut.stop();
+      verify(mockCM).stopContainer(any(StopContainerRequest.class));
+}
+  }
 }

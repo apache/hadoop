@@ -50,7 +50,6 @@ import org.apache.hadoop.ha.protocolPB.HAServiceProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -712,10 +711,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
 
   @Override // NamenodeProtocol
   public long getTransactionID() throws IOException {
-    namesystem.checkOperation(OperationCategory.CHECKPOINT);
-    return namesystem.getEditLog().getSyncTxId();
+    namesystem.checkOperation(OperationCategory.UNCHECKED);
+    return namesystem.getFSImage().getLastAppliedOrWrittenTxId();
   }
-
+  
+  @Override // NamenodeProtocol
+  public long getMostRecentCheckpointTxId() throws IOException {
+    namesystem.checkOperation(OperationCategory.UNCHECKED);
+    return namesystem.getFSImage().getMostRecentCheckpointTxId();
+  }
+  
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
     return namesystem.rollEditLog();
@@ -972,14 +977,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   @Override // HAServiceProtocol
-  public synchronized void transitionToActive() 
+  public synchronized void transitionToActive(StateChangeRequestInfo req) 
       throws ServiceFailedException, AccessControlException {
+    nn.checkHaStateChange(req);
     nn.transitionToActive();
   }
   
   @Override // HAServiceProtocol
-  public synchronized void transitionToStandby() 
+  public synchronized void transitionToStandby(StateChangeRequestInfo req) 
       throws ServiceFailedException, AccessControlException {
+    nn.checkHaStateChange(req);
     nn.transitionToStandby();
   }
 

@@ -30,8 +30,12 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.PositionTrackingInputStream;
 
 /**
  * OfflineImageViewer to dump the contents of an Hadoop image file to XML
@@ -40,6 +44,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class OfflineImageViewer {
+  public static final Log LOG = LogFactory.getLog(OfflineImageViewer.class);
+  
   private final static String usage = 
     "Usage: bin/hdfs oiv [OPTIONS] -i INPUTFILE -o OUTPUTFILE\n" +
     "Offline Image Viewer\n" + 
@@ -112,24 +118,28 @@ public class OfflineImageViewer {
    */
   public void go() throws IOException  {
     DataInputStream in = null;
-
+    PositionTrackingInputStream tracker = null;
+    ImageLoader fsip = null;
+    boolean done = false;
     try {
-      in = new DataInputStream(new BufferedInputStream(
+      tracker = new PositionTrackingInputStream(new BufferedInputStream(
                new FileInputStream(new File(inputFile))));
+      in = new DataInputStream(tracker);
 
       int imageVersionFile = findImageVersion(in);
 
-      ImageLoader fsip =
-             ImageLoader.LoaderFactory.getLoader(imageVersionFile);
+      fsip = ImageLoader.LoaderFactory.getLoader(imageVersionFile);
 
       if(fsip == null) 
         throw new IOException("No image processor to read version " +
             imageVersionFile + " is available.");
-
       fsip.loadImage(in, processor, skipBlocks);
-
+      done = true;
     } finally {
-      if(in != null) in.close();
+      if (!done) {
+        LOG.error("image loading failed at offset " + tracker.getPos());
+      }
+      IOUtils.cleanup(LOG, in, tracker);
     }
   }
 

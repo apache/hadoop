@@ -185,7 +185,7 @@ public abstract class HATestUtil {
     conf.set(DFSUtil.addKeySuffixes(DFS_NAMENODE_RPC_ADDRESS_KEY,
         logicalName, nameNodeId2), address2);
     
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, logicalName);
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, logicalName);
     conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, logicalName),
         nameNodeId1 + "," + nameNodeId2);
     conf.set(DFS_CLIENT_FAILOVER_PROXY_PROVIDER_KEY_PREFIX + "." + logicalName,

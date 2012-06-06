@@ -18,53 +18,31 @@
 package org.apache.hadoop.contrib.bkjournal;
 
 import static org.junit.Assert.*;
-
-import java.net.URI;
-import java.util.Collections;
-import java.util.Arrays;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.bookkeeper.util.LocalBookKeeper;
-
-import java.io.RandomAccessFile;
-import java.io.File;
-import java.io.FilenameFilter;
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.security.SecurityUtil;
+import static org.mockito.Mockito.spy;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
+import org.mockito.Mockito;
 
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.setupEdits;
+import java.io.IOException;
+import java.net.URI;
+import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.JournalManager;
 
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.WatchedEvent;
+import org.apache.bookkeeper.proto.BookieServer;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.collect.ImmutableList;
-
-import java.util.zip.CheckedInputStream;
-import java.util.zip.Checksum;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.ZooDefs.Ids;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,79 +51,26 @@ public class TestBookKeeperJournalManager {
   static final Log LOG = LogFactory.getLog(TestBookKeeperJournalManager.class);
   
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
-  private static final String zkEnsemble = "localhost:2181";
 
-  private static Thread bkthread;
   protected static Configuration conf = new Configuration();
   private ZooKeeper zkc;
-
-  private static ZooKeeper connectZooKeeper(String ensemble) 
-      throws IOException, KeeperException, InterruptedException {
-    final CountDownLatch latch = new CountDownLatch(1);
-        
-    ZooKeeper zkc = new ZooKeeper(zkEnsemble, 3600, new Watcher() {
-        public void process(WatchedEvent event) {
-          if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {
-            latch.countDown();
-          }
-        }
-      });
-    if (!latch.await(3, TimeUnit.SECONDS)) {
-      throw new IOException("Zookeeper took too long to connect");
-    }
-    return zkc;
-  }
+  private static BKJMUtil bkutil;
+  static int numBookies = 3;
 
   @BeforeClass
   public static void setupBookkeeper() throws Exception {
-    final int numBookies = 5;
-    bkthread = new Thread() {
-        public void run() {
-          try {
-            String[] args = new String[1];
-            args[0] = String.valueOf(numBookies);
-            LOG.info("Starting bk");
-            LocalBookKeeper.main(args);
-          } catch (InterruptedException e) {
-            // go away quietly
-          } catch (Exception e) {
-            LOG.error("Error starting local bk", e);
-          }
-        }
-      };
-    bkthread.start();
-    
-    if (!LocalBookKeeper.waitForServerUp(zkEnsemble, 10000)) {
-      throw new Exception("Error starting zookeeper/bookkeeper");
-    }
-
-    ZooKeeper zkc = connectZooKeeper(zkEnsemble);
-    try {
-      boolean up = false;
-      for (int i = 0; i < 10; i++) {
-        try {
-          List<String> children = zkc.getChildren("/ledgers/available", 
-                                                  false);
-          if (children.size() == numBookies) {
-            up = true;
-            break;
-          }
-        } catch (KeeperException e) {
-          // ignore
-        }
-        Thread.sleep(1000);
-      }
-      if (!up) {
-        throw new IOException("Not enough bookies started");
-      }
-    } finally {
-      zkc.close();
-    }
+    bkutil = new BKJMUtil(numBookies);
+    bkutil.start();
   }
-  
+
+  @AfterClass
+  public static void teardownBookkeeper() throws Exception {
+    bkutil.teardown();
+  }
+
   @Before
   public void setup() throws Exception {
-    zkc = connectZooKeeper(zkEnsemble);
+    zkc = BKJMUtil.connectZooKeeper();
   }
 
   @After
@@ -153,19 +78,10 @@ public class TestBookKeeperJournalManager {
     zkc.close();
   }
 
-  @AfterClass
-  public static void teardownBookkeeper() throws Exception {
-    if (bkthread != null) {
-      bkthread.interrupt();
-      bkthread.join();
-    }
-  }
-
   @Test
   public void testSimpleWrite() throws Exception {
     BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-simplewrite"));
-    long txid = 1;
+        BKJMUtil.createJournalURI("/hdfsjournal-simplewrite"));
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
@@ -178,14 +94,13 @@ public class TestBookKeeperJournalManager {
     String zkpath = bkjm.finalizedLedgerZNode(1, 100);
     
     assertNotNull(zkc.exists(zkpath, false));
-    assertNull(zkc.exists(bkjm.inprogressZNode(), false));
+    assertNull(zkc.exists(bkjm.inprogressZNode(1), false));
   }
 
   @Test
   public void testNumberOfTransactions() throws Exception {
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, 
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-txncount"));
-    long txid = 1;
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+        BKJMUtil.createJournalURI("/hdfsjournal-txncount"));
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
@@ -201,8 +116,8 @@ public class TestBookKeeperJournalManager {
 
   @Test 
   public void testNumberOfTransactionsWithGaps() throws Exception {
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, 
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-gaps"));
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+        BKJMUtil.createJournalURI("/hdfsjournal-gaps"));
     long txid = 1;
     for (long i = 0; i < 3; i++) {
       long start = txid;
@@ -214,9 +129,11 @@ public class TestBookKeeperJournalManager {
       }
       out.close();
       bkjm.finalizeLogSegment(start, txid-1);
-      assertNotNull(zkc.exists(bkjm.finalizedLedgerZNode(start, txid-1), false));
+      assertNotNull(
+          zkc.exists(bkjm.finalizedLedgerZNode(start, txid-1), false));
     }
-    zkc.delete(bkjm.finalizedLedgerZNode(DEFAULT_SEGMENT_SIZE+1, DEFAULT_SEGMENT_SIZE*2), -1);
+    zkc.delete(bkjm.finalizedLedgerZNode(DEFAULT_SEGMENT_SIZE+1,
+                                         DEFAULT_SEGMENT_SIZE*2), -1);
     
     long numTrans = bkjm.getNumberOfTransactions(1, true);
     assertEquals(DEFAULT_SEGMENT_SIZE, numTrans);
@@ -234,8 +151,8 @@ public class TestBookKeeperJournalManager {
 
   @Test
   public void testNumberOfTransactionsWithInprogressAtEnd() throws Exception {
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, 
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-inprogressAtEnd"));
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+        BKJMUtil.createJournalURI("/hdfsjournal-inprogressAtEnd"));
     long txid = 1;
     for (long i = 0; i < 3; i++) {
       long start = txid;
@@ -248,7 +165,8 @@ public class TestBookKeeperJournalManager {
       
       out.close();
       bkjm.finalizeLogSegment(start, (txid-1));
-      assertNotNull(zkc.exists(bkjm.finalizedLedgerZNode(start, (txid-1)), false));
+      assertNotNull(
+          zkc.exists(bkjm.finalizedLedgerZNode(start, (txid-1)), false));
     }
     long start = txid;
     EditLogOutputStream out = bkjm.startLogSegment(start);
@@ -272,8 +190,8 @@ public class TestBookKeeperJournalManager {
    */
   @Test
   public void testWriteRestartFrom1() throws Exception {
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, 
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-restartFrom1"));
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+        BKJMUtil.createJournalURI("/hdfsjournal-restartFrom1"));
     long txid = 1;
     long start = txid;
     EditLogOutputStream out = bkjm.startLogSegment(txid);
@@ -327,25 +245,26 @@ public class TestBookKeeperJournalManager {
   @Test
   public void testTwoWriters() throws Exception {
     long start = 1;
-    BookKeeperJournalManager bkjm1 = new BookKeeperJournalManager(conf, 
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-dualWriter"));
-    BookKeeperJournalManager bkjm2 = new BookKeeperJournalManager(conf, 
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-dualWriter"));
+    BookKeeperJournalManager bkjm1 = new BookKeeperJournalManager(conf,
+        BKJMUtil.createJournalURI("/hdfsjournal-dualWriter"));
+    BookKeeperJournalManager bkjm2 = new BookKeeperJournalManager(conf,
+        BKJMUtil.createJournalURI("/hdfsjournal-dualWriter"));
     
     EditLogOutputStream out1 = bkjm1.startLogSegment(start);
     try {
-      EditLogOutputStream out2 = bkjm2.startLogSegment(start);
+      bkjm2.startLogSegment(start);
       fail("Shouldn't have been able to open the second writer");
     } catch (IOException ioe) {
       LOG.info("Caught exception as expected", ioe);
+    }finally{
+      out1.close();
     }
   }
 
   @Test
   public void testSimpleRead() throws Exception {
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, 
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-simpleread"));
-    long txid = 1;
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+        BKJMUtil.createJournalURI("/hdfsjournal-simpleread"));
     final long numTransactions = 10000;
     EditLogOutputStream out = bkjm.startLogSegment(1);
     for (long i = 1 ; i <= numTransactions; i++) {
@@ -368,10 +287,9 @@ public class TestBookKeeperJournalManager {
 
   @Test
   public void testSimpleRecovery() throws Exception {
-    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, 
-        URI.create("bookkeeper://" + zkEnsemble + "/hdfsjournal-simplerecovery"));
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+        BKJMUtil.createJournalURI("/hdfsjournal-simplerecovery"));
     EditLogOutputStream out = bkjm.startLogSegment(1);
-    long txid = 1;
     for (long i = 1 ; i <= 100; i++) {
       FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
       op.setTransactionId(i);
@@ -385,11 +303,372 @@ public class TestBookKeeperJournalManager {
 
 
     assertNull(zkc.exists(bkjm.finalizedLedgerZNode(1, 100), false));
-    assertNotNull(zkc.exists(bkjm.inprogressZNode(), false));
+    assertNotNull(zkc.exists(bkjm.inprogressZNode(1), false));
 
     bkjm.recoverUnfinalizedSegments();
 
     assertNotNull(zkc.exists(bkjm.finalizedLedgerZNode(1, 100), false));
-    assertNull(zkc.exists(bkjm.inprogressZNode(), false));
+    assertNull(zkc.exists(bkjm.inprogressZNode(1), false));
+  }
+
+  /**
+   * Test that if enough bookies fail to prevent an ensemble,
+   * writes the bookkeeper will fail. Test that when once again
+   * an ensemble is available, it can continue to write.
+   */
+  @Test
+  public void testAllBookieFailure() throws Exception {
+    BookieServer bookieToFail = bkutil.newBookie();
+    BookieServer replacementBookie = null;
+
+    try {
+      int ensembleSize = numBookies + 1;
+      assertEquals("New bookie didn't start",
+                   ensembleSize, bkutil.checkBookiesUp(ensembleSize, 10));
+
+      // ensure that the journal manager has to use all bookies,
+      // so that a failure will fail the journal manager
+      Configuration conf = new Configuration();
+      conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_ENSEMBLE_SIZE,
+                  ensembleSize);
+      conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_QUORUM_SIZE,
+                  ensembleSize);
+      long txid = 1;
+      BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+          BKJMUtil.createJournalURI("/hdfsjournal-allbookiefailure"));
+      EditLogOutputStream out = bkjm.startLogSegment(txid);
+
+      for (long i = 1 ; i <= 3; i++) {
+        FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+        op.setTransactionId(txid++);
+        out.write(op);
+      }
+      out.setReadyToFlush();
+      out.flush();
+      bookieToFail.shutdown();
+      assertEquals("New bookie didn't die",
+                   numBookies, bkutil.checkBookiesUp(numBookies, 10));
+
+      try {
+        for (long i = 1 ; i <= 3; i++) {
+          FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+          op.setTransactionId(txid++);
+          out.write(op);
+        }
+        out.setReadyToFlush();
+        out.flush();
+        fail("should not get to this stage");
+      } catch (IOException ioe) {
+        LOG.debug("Error writing to bookkeeper", ioe);
+        assertTrue("Invalid exception message",
+                   ioe.getMessage().contains("Failed to write to bookkeeper"));
+      }
+      replacementBookie = bkutil.newBookie();
+
+      assertEquals("New bookie didn't start",
+                   numBookies+1, bkutil.checkBookiesUp(numBookies+1, 10));
+      bkjm.recoverUnfinalizedSegments();
+      out = bkjm.startLogSegment(txid);
+      for (long i = 1 ; i <= 3; i++) {
+        FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+        op.setTransactionId(txid++);
+        out.write(op);
+      }
+
+      out.setReadyToFlush();
+      out.flush();
+
+    } catch (Exception e) {
+      LOG.error("Exception in test", e);
+      throw e;
+    } finally {
+      if (replacementBookie != null) {
+        replacementBookie.shutdown();
+      }
+      bookieToFail.shutdown();
+
+      if (bkutil.checkBookiesUp(numBookies, 30) != numBookies) {
+        LOG.warn("Not all bookies from this test shut down, expect errors");
+      }
+    }
+  }
+
+  /**
+   * Test that a BookKeeper JM can continue to work across the
+   * failure of a bookie. This should be handled transparently
+   * by bookkeeper.
+   */
+  @Test
+  public void testOneBookieFailure() throws Exception {
+    BookieServer bookieToFail = bkutil.newBookie();
+    BookieServer replacementBookie = null;
+
+    try {
+      int ensembleSize = numBookies + 1;
+      assertEquals("New bookie didn't start",
+                   ensembleSize, bkutil.checkBookiesUp(ensembleSize, 10));
+
+      // ensure that the journal manager has to use all bookies,
+      // so that a failure will fail the journal manager
+      Configuration conf = new Configuration();
+      conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_ENSEMBLE_SIZE,
+                  ensembleSize);
+      conf.setInt(BookKeeperJournalManager.BKJM_BOOKKEEPER_QUORUM_SIZE,
+                  ensembleSize);
+      long txid = 1;
+      BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf,
+          BKJMUtil.createJournalURI("/hdfsjournal-onebookiefailure"));
+      EditLogOutputStream out = bkjm.startLogSegment(txid);
+      for (long i = 1 ; i <= 3; i++) {
+        FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+        op.setTransactionId(txid++);
+        out.write(op);
+      }
+      out.setReadyToFlush();
+      out.flush();
+
+      replacementBookie = bkutil.newBookie();
+      assertEquals("replacement bookie didn't start",
+                   ensembleSize+1, bkutil.checkBookiesUp(ensembleSize+1, 10));
+      bookieToFail.shutdown();
+      assertEquals("New bookie didn't die",
+                   ensembleSize, bkutil.checkBookiesUp(ensembleSize, 10));
+
+      for (long i = 1 ; i <= 3; i++) {
+        FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+        op.setTransactionId(txid++);
+        out.write(op);
+      }
+      out.setReadyToFlush();
+      out.flush();
+    } catch (Exception e) {
+      LOG.error("Exception in test", e);
+      throw e;
+    } finally {
+      if (replacementBookie != null) {
+        replacementBookie.shutdown();
+      }
+      bookieToFail.shutdown();
+
+      if (bkutil.checkBookiesUp(numBookies, 30) != numBookies) {
+        LOG.warn("Not all bookies from this test shut down, expect errors");
+      }
+    }
+  }
+  
+  /**
+   * If a journal manager has an empty inprogress node, ensure that we throw an
+   * error, as this should not be possible, and some third party has corrupted
+   * the zookeeper state
+   */
+  @Test
+  public void testEmptyInprogressNode() throws Exception {
+    URI uri = BKJMUtil.createJournalURI("/hdfsjournal-emptyInprogress");
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+
+    EditLogOutputStream out = bkjm.startLogSegment(1);
+    for (long i = 1; i <= 100; i++) {
+      FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+      op.setTransactionId(i);
+      out.write(op);
+    }
+    out.close();
+    bkjm.finalizeLogSegment(1, 100);
+
+    out = bkjm.startLogSegment(101);
+    out.close();
+    bkjm.close();
+    String inprogressZNode = bkjm.inprogressZNode(101);
+    zkc.setData(inprogressZNode, new byte[0], -1);
+
+    bkjm = new BookKeeperJournalManager(conf, uri);
+    try {
+      bkjm.recoverUnfinalizedSegments();
+      fail("Should have failed. There should be no way of creating"
+          + " an empty inprogess znode");
+    } catch (IOException e) {
+      // correct behaviour
+      assertTrue("Exception different than expected", e.getMessage().contains(
+          "Invalid ledger entry,"));
+    } finally {
+      bkjm.close();
+    }
+  }
+
+  /**
+   * If a journal manager has an corrupt inprogress node, ensure that we throw
+   * an error, as this should not be possible, and some third party has
+   * corrupted the zookeeper state
+   */
+  @Test
+  public void testCorruptInprogressNode() throws Exception {
+    URI uri = BKJMUtil.createJournalURI("/hdfsjournal-corruptInprogress");
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+
+    EditLogOutputStream out = bkjm.startLogSegment(1);
+    for (long i = 1; i <= 100; i++) {
+      FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+      op.setTransactionId(i);
+      out.write(op);
+    }
+    out.close();
+    bkjm.finalizeLogSegment(1, 100);
+
+    out = bkjm.startLogSegment(101);
+    out.close();
+    bkjm.close();
+
+    String inprogressZNode = bkjm.inprogressZNode(101);
+    zkc.setData(inprogressZNode, "WholeLottaJunk".getBytes(), -1);
+
+    bkjm = new BookKeeperJournalManager(conf, uri);
+    try {
+      bkjm.recoverUnfinalizedSegments();
+      fail("Should have failed. There should be no way of creating"
+          + " an empty inprogess znode");
+    } catch (IOException e) {
+      // correct behaviour
+      assertTrue("Exception different than expected", e.getMessage().contains(
+          "Invalid ledger entry,"));
+
+    } finally {
+      bkjm.close();
+    }
+  }
+
+  /**
+   * Cases can occur where we create a segment but crash before we even have the
+   * chance to write the START_SEGMENT op. If this occurs we should warn, but
+   * load as normal
+   */
+  @Test
+  public void testEmptyInprogressLedger() throws Exception {
+    URI uri = BKJMUtil.createJournalURI("/hdfsjournal-emptyInprogressLedger");
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+
+    EditLogOutputStream out = bkjm.startLogSegment(1);
+    for (long i = 1; i <= 100; i++) {
+      FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+      op.setTransactionId(i);
+      out.write(op);
+    }
+    out.close();
+    bkjm.finalizeLogSegment(1, 100);
+
+    out = bkjm.startLogSegment(101);
+    out.close();
+    bkjm.close();
+
+    bkjm = new BookKeeperJournalManager(conf, uri);
+    bkjm.recoverUnfinalizedSegments();
+    out = bkjm.startLogSegment(101);
+    for (long i = 1; i <= 100; i++) {
+      FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+      op.setTransactionId(i);
+      out.write(op);
+    }
+    out.close();
+    bkjm.finalizeLogSegment(101, 200);
+
+    bkjm.close();
+  }
+
+  /**
+   * Test that if we fail between finalizing an inprogress and deleting the
+   * corresponding inprogress znode.
+   */
+  @Test
+  public void testRefinalizeAlreadyFinalizedInprogress() throws Exception {
+    URI uri = BKJMUtil
+        .createJournalURI("/hdfsjournal-refinalizeInprogressLedger");
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+
+    EditLogOutputStream out = bkjm.startLogSegment(1);
+    for (long i = 1; i <= 100; i++) {
+      FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+      op.setTransactionId(i);
+      out.write(op);
+    }
+    out.close();
+    bkjm.close();
+
+    String inprogressZNode = bkjm.inprogressZNode(1);
+    String finalizedZNode = bkjm.finalizedLedgerZNode(1, 100);
+    assertNotNull("inprogress znode doesn't exist", zkc.exists(inprogressZNode,
+        null));
+    assertNull("finalized znode exists", zkc.exists(finalizedZNode, null));
+
+    byte[] inprogressData = zkc.getData(inprogressZNode, false, null);
+
+    // finalize
+    bkjm = new BookKeeperJournalManager(conf, uri);
+    bkjm.recoverUnfinalizedSegments();
+    bkjm.close();
+
+    assertNull("inprogress znode exists", zkc.exists(inprogressZNode, null));
+    assertNotNull("finalized znode doesn't exist", zkc.exists(finalizedZNode,
+        null));
+
+    zkc.create(inprogressZNode, inprogressData, Ids.OPEN_ACL_UNSAFE,
+        CreateMode.PERSISTENT);
+
+    // should work fine
+    bkjm = new BookKeeperJournalManager(conf, uri);
+    bkjm.recoverUnfinalizedSegments();
+    bkjm.close();
+  }
+
+  /**
+   * Tests that the edit log file meta data reading from ZooKeeper should be
+   * able to handle the NoNodeException. bkjm.getInputStream(fromTxId,
+   * inProgressOk) should suppress the NoNodeException and continue. HDFS-3441.
+   */
+  @Test
+  public void testEditLogFileNotExistsWhenReadingMetadata() throws Exception {
+    URI uri = BKJMUtil.createJournalURI("/hdfsjournal-editlogfile");
+    BookKeeperJournalManager bkjm = new BookKeeperJournalManager(conf, uri);
+    try {
+      // start new inprogress log segment with txid=1
+      // and write transactions till txid=50
+      String zkpath1 = startAndFinalizeLogSegment(bkjm, 1, 50);
+
+      // start new inprogress log segment with txid=51
+      // and write transactions till txid=100
+      String zkpath2 = startAndFinalizeLogSegment(bkjm, 51, 100);
+
+      // read the metadata from ZK. Here simulating the situation
+      // when reading,the edit log metadata can be removed by purger thread.
+      ZooKeeper zkspy = spy(BKJMUtil.connectZooKeeper());
+      bkjm.setZooKeeper(zkspy);
+      Mockito.doThrow(
+          new KeeperException.NoNodeException(zkpath2 + " doesn't exists"))
+          .when(zkspy).getData(zkpath2, false, null);
+
+      List<EditLogLedgerMetadata> ledgerList = bkjm.getLedgerList(false);
+      assertEquals("List contains the metadata of non exists path.", 1,
+          ledgerList.size());
+      assertEquals("LogLedgerMetadata contains wrong zk paths.", zkpath1,
+          ledgerList.get(0).getZkPath());
+    } finally {
+      bkjm.close();
+    }
+  }
+
+  private String startAndFinalizeLogSegment(BookKeeperJournalManager bkjm,
+      int startTxid, int endTxid) throws IOException, KeeperException,
+      InterruptedException {
+    EditLogOutputStream out = bkjm.startLogSegment(startTxid);
+    for (long i = startTxid; i <= endTxid; i++) {
+      FSEditLogOp op = FSEditLogTestUtil.getNoOpInstance();
+      op.setTransactionId(i);
+      out.write(op);
+    }
+    out.close();
+    // finalize the inprogress_1 log segment.
+    bkjm.finalizeLogSegment(startTxid, endTxid);
+    String zkpath1 = bkjm.finalizedLedgerZNode(startTxid, endTxid);
+    assertNotNull(zkc.exists(zkpath1, false));
+    assertNull(zkc.exists(bkjm.inprogressZNode(startTxid), false));
+    return zkpath1;
   }
 }

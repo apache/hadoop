@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.lib.StaticUserWebFilter.StaticUserFilter;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -36,7 +37,7 @@ public class TestStaticUserWebFilter {
   private FilterConfig mockConfig(String username) {
     FilterConfig mock = Mockito.mock(FilterConfig.class);
     Mockito.doReturn(username).when(mock).getInitParameter(
-        StaticUserWebFilter.USERNAME_KEY);
+        CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER);
     return mock;
   }
   
@@ -73,7 +74,7 @@ public class TestStaticUserWebFilter {
   @Test
   public void testConfiguration() {
     Configuration conf = new Configuration();
-    conf.set(StaticUserWebFilter.USERNAME_KEY, "joe");
+    conf.set(CommonConfigurationKeys.HADOOP_HTTP_STATIC_USER, "joe");
     assertEquals("joe", StaticUserWebFilter.getUsernameFromConf(conf));
   }
 

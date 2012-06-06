@@ -591,7 +591,8 @@ class BPOfferService {
       processDistributedUpgradeCommand((UpgradeCommand)cmd);
       break;
     case DatanodeProtocol.DNA_RECOVERBLOCK:
-      dn.recoverBlocks(((BlockRecoveryCommand)cmd).getRecoveringBlocks());
+      String who = "NameNode at " + actor.getNNSocketAddress();
+      dn.recoverBlocks(who, ((BlockRecoveryCommand)cmd).getRecoveringBlocks());
       break;
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
       LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
@@ -608,6 +609,9 @@ class BPOfferService {
       if (bandwidth > 0) {
         DataXceiverServer dxcs =
                      (DataXceiverServer) dn.dataXceiverServer.getRunnable();
+        LOG.info("Updating balance throttler bandwidth from "
+            + dxcs.balanceThrottler.getBandwidth() + " bytes/s "
+            + "to: " + bandwidth + " bytes/s.");
         dxcs.balanceThrottler.setBandwidth(bandwidth);
       }
       break;

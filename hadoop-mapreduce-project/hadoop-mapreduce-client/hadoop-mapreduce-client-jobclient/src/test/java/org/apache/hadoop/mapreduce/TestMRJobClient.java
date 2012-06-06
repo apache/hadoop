@@ -30,7 +30,11 @@ import java.io.PrintStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.tools.CLI;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -63,6 +67,40 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
     } finally {
       System.setOut(oldOut);
     }
+  }
+
+  private static class BadOutputFormat
+    extends TextOutputFormat {
+    @Override
+    public void checkOutputSpecs(JobContext job)
+        throws FileAlreadyExistsException, IOException {
+      throw new IOException();
+    }
+  }
+
+  @Test
+  public void testJobSubmissionSpecsAndFiles() throws Exception {
+    Configuration conf = createJobConf();
+    Job job = MapReduceTestUtil.createJob(conf,
+          getInputDir(), getOutputDir(), 1, 1);
+    job.setOutputFormatClass(BadOutputFormat.class);
+    try {
+      job.submit();
+      fail("Should've thrown an exception while checking output specs.");
+    } catch (Exception e) {
+      assertTrue(e instanceof IOException);
+    }
+    JobID jobId = job.getJobID();
+    Cluster cluster = new Cluster(conf);
+    Path jobStagingArea = JobSubmissionFiles.getStagingDir(
+        cluster,
+        job.getConfiguration());
+    Path submitJobDir = new Path(jobStagingArea, jobId.toString());
+    Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
+    assertFalse(
+        "Shouldn't have created a job file if job specs failed.",
+        FileSystem.get(conf).exists(submitJobFile)
+    );
   }
 
   @Test

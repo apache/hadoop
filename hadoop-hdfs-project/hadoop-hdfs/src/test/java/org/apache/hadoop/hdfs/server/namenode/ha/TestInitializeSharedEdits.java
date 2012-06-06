@@ -27,6 +27,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -111,7 +113,8 @@ public class TestInitializeSharedEdits {
     cluster.restartNameNode(1, true);
     
     // Make sure HA is working.
-    cluster.getNameNode(0).getRpcServer().transitionToActive();
+    cluster.getNameNode(0).getRpcServer().transitionToActive(
+        new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER));
     FileSystem fs = null;
     try {
       Path newPath = new Path(TEST_PATH, pathSuffix);
@@ -160,7 +163,7 @@ public class TestInitializeSharedEdits {
   @Test
   public void testInitializeSharedEditsConfiguresGenericConfKeys() {
     Configuration conf = new Configuration();
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "ns1");
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1");
     conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX,
         "ns1"), "nn1,nn2");
     conf.set(DFSUtil.addKeySuffixes(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY,

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
+import java.util.Collection;
 
 import org.apache.hadoop.hdfs.server.protocol.JournalInfo;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
@@ -60,19 +61,10 @@ class BackupJournalManager implements JournalManager {
   }
 
   @Override
-  public long getNumberOfTransactions(long fromTxnId, boolean inProgressOk)
-      throws IOException, CorruptionException {
+  public void selectInputStreams(Collection<EditLogInputStream> streams,
+      long fromTxnId, boolean inProgressOk) {
     // This JournalManager is never used for input. Therefore it cannot
     // return any transactions
-    return 0;
-  }
-  
-  @Override
-  public EditLogInputStream getInputStream(long fromTxnId, boolean inProgressOk)
-      throws IOException {
-    // This JournalManager is never used for input. Therefore it cannot
-    // return any transactions
-    throw new IOException("Unsupported operation");
   }
 
   @Override

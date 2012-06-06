@@ -177,14 +177,14 @@ abstract class INode implements Comparable<byte[]> {
     return (short)PermissionStatusFormat.MODE.retrieve(permission);
   }
   /** Set the {@link FsPermission} of this {@link INode} */
-  protected void setPermission(FsPermission permission) {
+  void setPermission(FsPermission permission) {
     updatePermissionStatus(PermissionStatusFormat.MODE, permission.toShort());
   }
 
   /**
    * Check whether it's a directory
    */
-  public abstract boolean isDirectory();
+  abstract boolean isDirectory();
 
   /**
    * Collect all the blocks in all children of this INode.

@@ -128,8 +128,8 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <!-- needed for security and runtime -->
       <artifactId>hadoop-hdfs</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.inject</groupId>
@@ -159,6 +159,11 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.hsqldb</groupId>
+      <artifactId>hsqldb</artifactId>
+      <version>2.0.0</version>
+    </dependency>
 
   </dependencies>
 
@@ -179,7 +184,7 @@
                 <!-- Using Unix script to preserve symlinks -->
                 <echo file="${project.build.directory}/dist-maketar.sh">
 
-                  which cygpath 2> /dev/null
+                  which cygpath 2&gt; /dev/null
                   if [ $? = 1 ]; then
                     BUILD_DIR="${project.build.directory}"
                   else

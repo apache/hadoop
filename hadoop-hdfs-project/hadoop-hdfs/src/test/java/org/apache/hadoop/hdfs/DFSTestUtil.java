@@ -67,19 +67,23 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.TestTransferRbw;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.VersionInfo;
 
 import com.google.common.base.Joiner;
 
@@ -319,7 +323,7 @@ public class DFSTestUtil {
    */
   public static void waitCorruptReplicas(FileSystem fs, FSNamesystem ns,
       Path file, ExtendedBlock b, int corruptRepls)
-      throws IOException, TimeoutException {
+      throws IOException, TimeoutException, InterruptedException {
     int count = 0;
     final int ATTEMPTS = 50;
     int repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
@@ -333,6 +337,7 @@ public class DFSTestUtil {
       System.out.println("Waiting for "+corruptRepls+" corrupt replicas");
       repls = ns.getBlockManager().numCorruptReplicas(b.getLocalBlock());
       count++;
+      Thread.sleep(1000);
     }
     if (count == ATTEMPTS) {
       throw new TimeoutException("Timed out waiting for corrupt replicas."
@@ -703,18 +708,19 @@ public class DFSTestUtil {
           info.nameserviceId), DFSUtil.createUri(HdfsConstants.HDFS_URI_SCHEME,
               info.nameNode.getNameNodeAddress()).toString());
     }
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, Joiner.on(",")
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, Joiner.on(",")
         .join(nameservices));
   }
   
   private static DatanodeID getDatanodeID(String ipAddr) {
-    return new DatanodeID(ipAddr, "localhost",
-        DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT);
+    return new DatanodeID(ipAddr, "localhost", "",
+        DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT,
+        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
   }
 
   public static DatanodeID getLocalDatanodeID() {
-    return new DatanodeID("127.0.0.1", "localhost",
-        DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT);
+    return getDatanodeID("127.0.0.1");
   }
 
   public static DatanodeID getLocalDatanodeID(int port) {
@@ -740,12 +746,14 @@ public class DFSTestUtil {
 
   public static DatanodeInfo getDatanodeInfo(String ipAddr, 
       String host, int port) {
-    return new DatanodeInfo(new DatanodeID(ipAddr, host, port));
+    return new DatanodeInfo(new DatanodeID(ipAddr, host, "",
+        port, DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT));
   }
 
   public static DatanodeInfo getLocalDatanodeInfo(String ipAddr,
       String hostname, AdminStates adminState) {
-    return new DatanodeInfo(ipAddr, hostname, "storage",
+    return new DatanodeInfo(ipAddr, hostname, "",
         DFSConfigKeys.DFS_DATANODE_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
         DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT,
@@ -760,6 +768,14 @@ public class DFSTestUtil {
 
   public static DatanodeDescriptor getDatanodeDescriptor(String ipAddr,
       int port, String rackLocation) {
-    return new DatanodeDescriptor(new DatanodeID(ipAddr, port), rackLocation);
+    DatanodeID dnId = new DatanodeID(ipAddr, "host", "", port,
+        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
+        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
+    return new DatanodeDescriptor(dnId, rackLocation);
+  }
+  
+  public static DatanodeRegistration getLocalDatanodeRegistration() {
+    return new DatanodeRegistration(getLocalDatanodeID(),
+        new StorageInfo(), new ExportedBlockKeys(), VersionInfo.getVersion());
   }
 }

@@ -93,6 +93,7 @@ public class NonAggregatingLogHandler extends AbstractService implements
     super.stop();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public void handle(LogHandlerEvent event) {
     switch (event.getType()) {
@@ -101,6 +102,9 @@ public class NonAggregatingLogHandler extends AbstractService implements
             (LogHandlerAppStartedEvent) event;
         this.appOwners.put(appStartedEvent.getApplicationId(),
             appStartedEvent.getUser());
+        this.dispatcher.getEventHandler().handle(
+            new ApplicationEvent(appStartedEvent.getApplicationId(),
+                ApplicationEventType.APPLICATION_LOG_HANDLING_INITED));
         break;
       case CONTAINER_FINISHED:
         // Ignore

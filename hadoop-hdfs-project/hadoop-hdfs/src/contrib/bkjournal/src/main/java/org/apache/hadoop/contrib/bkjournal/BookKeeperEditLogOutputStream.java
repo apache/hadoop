@@ -33,6 +33,9 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.io.DataOutputBuffer;
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * Output stream for BookKeeper Journal.
  * Multiple complete edit log entries are packed into a single bookkeeper
@@ -44,20 +47,22 @@ import java.io.IOException;
  */
 class BookKeeperEditLogOutputStream
   extends EditLogOutputStream implements AddCallback {
+  static final Log LOG = LogFactory.getLog(BookKeeperEditLogOutputStream.class);
+
   private final DataOutputBuffer bufCurrent;
   private final AtomicInteger outstandingRequests;
   private final int transmissionThreshold;
   private final LedgerHandle lh;
   private CountDownLatch syncLatch;
-  private final WriteLock wl;
+  private final AtomicInteger transmitResult
+    = new AtomicInteger(BKException.Code.OK);
   private final Writer writer;
 
   /**
    * Construct an edit log output stream which writes to a ledger.
 
    */
-  protected BookKeeperEditLogOutputStream(Configuration conf,
-                                          LedgerHandle lh, WriteLock wl)
+  protected BookKeeperEditLogOutputStream(Configuration conf, LedgerHandle lh)
       throws IOException {
     super();
 
@@ -65,8 +70,6 @@ class BookKeeperEditLogOutputStream
     outstandingRequests = new AtomicInteger(0);
     syncLatch = null;
     this.lh = lh;
-    this.wl = wl;
-    this.wl.acquire();
     this.writer = new Writer(bufCurrent);
     this.transmissionThreshold
       = conf.getInt(BookKeeperJournalManager.BKJM_OUTPUT_BUFFER_SIZE,
@@ -101,7 +104,6 @@ class BookKeeperEditLogOutputStream
       throw new IOException("BookKeeper error during abort", bke);
     }
 
-    wl.release();
   }
 
   @Override
@@ -111,8 +113,6 @@ class BookKeeperEditLogOutputStream
 
   @Override
   public void write(FSEditLogOp op) throws IOException {
-    wl.checkWriteLock();
-
     writer.writeOp(op);
 
     if (bufCurrent.getLength() > transmissionThreshold) {
@@ -122,24 +122,25 @@ class BookKeeperEditLogOutputStream
 
   @Override
   public void setReadyToFlush() throws IOException {
-    wl.checkWriteLock();
-
     transmit();
 
-    synchronized(this) {
+    synchronized (this) {
       syncLatch = new CountDownLatch(outstandingRequests.get());
     }
   }
 
   @Override
   public void flushAndSync() throws IOException {
-    wl.checkWriteLock();
-
     assert(syncLatch != null);
     try {
       syncLatch.await();
     } catch (InterruptedException ie) {
       throw new IOException("Interrupted waiting on latch", ie);
+    }
+    if (transmitResult.get() != BKException.Code.OK) {
+      throw new IOException("Failed to write to bookkeeper; Error is ("
+                            + transmitResult.get() + ") "
+                            + BKException.getMessage(transmitResult.get()));
     }
 
     syncLatch = null;
@@ -152,8 +153,12 @@ class BookKeeperEditLogOutputStream
    * are never called at the same time.
    */
   private void transmit() throws IOException {
-    wl.checkWriteLock();
-
+    if (!transmitResult.compareAndSet(BKException.Code.OK,
+                                     BKException.Code.OK)) {
+      throw new IOException("Trying to write to an errored stream;"
+          + " Error code : (" + transmitResult.get()
+          + ") " + BKException.getMessage(transmitResult.get()));
+    }
     if (bufCurrent.getLength() > 0) {
       byte[] entry = Arrays.copyOf(bufCurrent.getData(),
                                    bufCurrent.getLength());
@@ -168,6 +173,12 @@ class BookKeeperEditLogOutputStream
                           long entryId, Object ctx) {
     synchronized(this) {
       outstandingRequests.decrementAndGet();
+      if (!transmitResult.compareAndSet(BKException.Code.OK, rc)) {
+        LOG.warn("Tried to set transmit result to (" + rc + ") \""
+            + BKException.getMessage(rc) + "\""
+            + " but is already (" + transmitResult.get() + ") \""
+            + BKException.getMessage(transmitResult.get()) + "\"");
+      }
       CountDownLatch l = syncLatch;
       if (l != null) {
         l.countDown();

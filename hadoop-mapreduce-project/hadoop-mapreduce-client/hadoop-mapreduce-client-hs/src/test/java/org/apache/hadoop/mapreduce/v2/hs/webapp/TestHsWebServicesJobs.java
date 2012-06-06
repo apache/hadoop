@@ -101,18 +101,24 @@ public class TestHsWebServicesJobs extends JerseyTest {
     final Map<JobId, Job> partialJobs;
     final Map<JobId, Job> fullJobs;
     final long startTime = System.currentTimeMillis();
-
-    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
+    
+    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts,
+        boolean hasFailedTasks) {
       appID = MockJobs.newAppID(appid);
       appAttemptID = MockJobs.newAppAttemptID(appID, 0);
       JobsPair jobs;
       try {
-        jobs = MockHistoryJobs.newHistoryJobs(appID, numJobs, numTasks, numAttempts);
+        jobs = MockHistoryJobs.newHistoryJobs(appID, numJobs, numTasks,
+            numAttempts, hasFailedTasks);
       } catch (IOException e) {
         throw new YarnException(e);
       }
       partialJobs = jobs.partial;
       fullJobs = jobs.full;
+    }
+
+    TestAppContext(int appid, int numJobs, int numTasks, int numAttempts) {
+      this(appid, numJobs, numTasks, numAttempts, false);
     }
 
     TestAppContext() {
@@ -626,6 +632,46 @@ public class TestHsWebServicesJobs extends JerseyTest {
       assertEquals("incorrect number of elements", 1, json.length());
       JSONObject info = json.getJSONObject("jobCounters");
       verifyHsJobCounters(info, jobsMap.get(id));
+    }
+  }
+  
+  @Test
+  public void testJobCountersForKilledJob() throws Exception {
+    WebResource r = resource();
+    appContext = new TestAppContext(0, 1, 1, 1, true);
+    injector = Guice.createInjector(new ServletModule() {
+      @Override
+      protected void configureServlets() {
+
+        webApp = mock(HsWebApp.class);
+        when(webApp.name()).thenReturn("hsmockwebapp");
+
+        bind(JAXBContextResolver.class);
+        bind(HsWebServices.class);
+        bind(GenericExceptionHandler.class);
+        bind(WebApp.class).toInstance(webApp);
+        bind(AppContext.class).toInstance(appContext);
+        bind(HistoryContext.class).toInstance(appContext);
+        bind(Configuration.class).toInstance(conf);
+
+        serve("/*").with(GuiceContainer.class);
+      }
+    });
+    
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    for (JobId id : jobsMap.keySet()) {
+      String jobId = MRApps.toString(id);
+
+      ClientResponse response = r.path("ws").path("v1").path("history")
+          .path("mapreduce").path("jobs").path(jobId).path("counters/")
+          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject json = response.getEntity(JSONObject.class);
+      assertEquals("incorrect number of elements", 1, json.length());
+      JSONObject info = json.getJSONObject("jobCounters");
+      WebServicesTestUtils.checkStringMatch("id", MRApps.toString(id),
+          info.getString("id"));
+      assertTrue("Job shouldn't contain any counters", info.length() == 1);
     }
   }
 

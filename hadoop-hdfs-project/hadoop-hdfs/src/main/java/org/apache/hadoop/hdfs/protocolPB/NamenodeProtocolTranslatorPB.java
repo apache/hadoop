@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.ErrorReportR
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlockKeysRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RegisterRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogRequestProto;
@@ -114,6 +115,16 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
     try {
       return rpcProxy.getTransactionId(NULL_CONTROLLER, GET_TRANSACTIONID)
           .getTxId();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public long getMostRecentCheckpointTxId() throws IOException {
+    try {
+      return rpcProxy.getMostRecentCheckpointTxId(NULL_CONTROLLER,
+          GetMostRecentCheckpointTxIdRequestProto.getDefaultInstance()).getTxId();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

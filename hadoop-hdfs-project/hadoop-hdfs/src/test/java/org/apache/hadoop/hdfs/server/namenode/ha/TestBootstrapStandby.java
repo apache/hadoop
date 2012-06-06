@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.junit.After;
@@ -43,6 +45,7 @@ import org.junit.Test;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 
 import static org.junit.Assert.*;
@@ -177,7 +180,7 @@ public class TestBootstrapStandby {
       logs.stopCapturing();
     }
     GenericTestUtils.assertMatches(logs.getOutput(),
-        "FATAL.*Unable to read transaction ids 1-4 from the configured shared");
+        "FATAL.*Unable to read transaction ids 1-3 from the configured shared");
   }
   
   @Test
@@ -195,30 +198,29 @@ public class TestBootstrapStandby {
     assertEquals(0, rc);
   }
   
+  /**
+   * Test that, even if the other node is not active, we are able
+   * to bootstrap standby from it.
+   */
   @Test(timeout=30000)
   public void testOtherNodeNotActive() throws Exception {
     cluster.transitionToStandby(0);
     int rc = BootstrapStandby.run(
-        new String[]{"-nonInteractive"},
-        cluster.getConfiguration(1));
-    assertEquals(BootstrapStandby.ERR_CODE_OTHER_NN_NOT_ACTIVE, rc);
-    
-    // Answer "yes" to the prompt about transition to active
-    System.setIn(new ByteArrayInputStream("yes\n".getBytes()));
-    rc = BootstrapStandby.run(
         new String[]{"-force"},
         cluster.getConfiguration(1));
     assertEquals(0, rc);
-    
-    assertFalse(nn0.getNamesystem().isInStandbyState());
   }
-
+  
   private void assertNNFilesMatch() throws Exception {
     List<File> curDirs = Lists.newArrayList();
     curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0));
     curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
+    
+    // Ignore seen_txid file, since the newly bootstrapped standby
+    // will have a higher seen_txid than the one it bootstrapped from.
+    Set<String> ignoredFiles = ImmutableSet.of("seen_txid");
     FSImageTestUtil.assertParallelFilesAreIdentical(curDirs,
-        Collections.<String>emptySet());
+        ignoredFiles);
   }
 
   private void removeStandbyNameDirs() {

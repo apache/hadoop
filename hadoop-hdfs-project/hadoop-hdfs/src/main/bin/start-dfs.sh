@@ -85,4 +85,15 @@ if [ -n "$SECONDARY_NAMENODES" ]; then
       --script "$bin/hdfs" start secondarynamenode
 fi
 
+#---------------------------------------------------------
+# ZK Failover controllers, if auto-HA is enabled
+AUTOHA_ENABLED=$($HADOOP_PREFIX/bin/hdfs getconf -confKey dfs.ha.automatic-failover.enabled)
+if [ "$(echo "$AUTOHA_ENABLED" | tr A-Z a-z)" = "true" ]; then
+  echo "Starting ZK Failover Controllers on NN hosts [$NAMENODES]"
+  "$HADOOP_PREFIX/sbin/hadoop-daemons.sh" \
+    --config "$HADOOP_CONF_DIR" \
+    --hostnames "$NAMENODES" \
+    --script "$bin/hdfs" start zkfc
+fi
+
 # eof

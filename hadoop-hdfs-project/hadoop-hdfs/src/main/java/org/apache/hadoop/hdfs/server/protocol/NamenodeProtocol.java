@@ -87,10 +87,16 @@ public interface NamenodeProtocol {
 
   /**
    * @return The most recent transaction ID that has been synced to
-   * persistent storage.
+   * persistent storage, or applied from persistent storage in the
+   * case of a non-active node.
    * @throws IOException
    */
   public long getTransactionID() throws IOException;
+
+  /**
+   * Get the transaction ID of the most recent checkpoint.
+   */
+  public long getMostRecentCheckpointTxId() throws IOException;
 
   /**
    * Closes the current edit log and opens a new one. The 

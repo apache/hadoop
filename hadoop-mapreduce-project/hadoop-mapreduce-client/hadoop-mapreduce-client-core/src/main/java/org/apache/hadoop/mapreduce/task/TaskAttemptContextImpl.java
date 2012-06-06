@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.task;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.StatusReporter;
@@ -92,8 +93,9 @@ public class TaskAttemptContextImpl extends JobContextImpl
    */
   @Override
   public void setStatus(String status) {
-    setStatusString(status);
-    reporter.setStatus(status);
+    String normalizedStatus = Task.normalizeStatus(status, conf);
+    setStatusString(normalizedStatus);
+    reporter.setStatus(normalizedStatus);
   }
 
   public static class DummyReporter extends StatusReporter {

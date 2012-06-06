@@ -617,7 +617,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     Matcher match = varPat.matcher("");
     String eval = expr;
+    Set<String> evalSet = new HashSet<String>();
     for(int s=0; s<MAX_SUBST; s++) {
+      if (evalSet.contains(eval)) {
+        // Cyclic resolution pattern detected. Return current expression.
+        return eval;
+      }
+      evalSet.add(eval);
       match.reset(eval);
       if (!match.find()) {
         return eval;
@@ -917,6 +923,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return defaultValue;
     return Float.parseFloat(valueString);
   }
+
   /**
    * Set the value of the <code>name</code> property to a <code>float</code>.
    * 
@@ -925,6 +932,35 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void setFloat(String name, float value) {
     set(name,Float.toString(value));
+  }
+
+  /** 
+   * Get the value of the <code>name</code> property as a <code>double</code>.  
+   * If no such property exists, the provided default value is returned,
+   * or if the specified value is not a valid <code>double</code>,
+   * then an error is thrown.
+   *
+   * @param name property name.
+   * @param defaultValue default value.
+   * @throws NumberFormatException when the value is invalid
+   * @return property value as a <code>double</code>, 
+   *         or <code>defaultValue</code>. 
+   */
+  public double getDouble(String name, double defaultValue) {
+    String valueString = getTrimmed(name);
+    if (valueString == null)
+      return defaultValue;
+    return Double.parseDouble(valueString);
+  }
+
+  /**
+   * Set the value of the <code>name</code> property to a <code>double</code>.
+   * 
+   * @param name property name.
+   * @param value property value.
+   */
+  public void setDouble(String name, double value) {
+    set(name,Double.toString(value));
   }
  
   /** 

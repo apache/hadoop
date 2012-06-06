@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.util.Canceler;
 
 import com.google.common.base.Preconditions;
 
@@ -36,20 +37,17 @@ class SaveNamespaceContext {
   private final long txid;
   private final List<StorageDirectory> errorSDs =
     Collections.synchronizedList(new ArrayList<StorageDirectory>());
-
-  /**
-   * If the operation has been canceled, set to the reason why
-   * it has been canceled (eg standby moving to active)
-   */
-  private volatile String cancelReason = null;
   
+  private final Canceler canceller;
   private CountDownLatch completionLatch = new CountDownLatch(1);
-  
+
   SaveNamespaceContext(
       FSNamesystem sourceNamesystem,
-      long txid) {
+      long txid,
+      Canceler canceller) {
     this.sourceNamesystem = sourceNamesystem;
     this.txid = txid;
+    this.canceller = canceller;
   }
 
   FSNamesystem getSourceNamesystem() {
@@ -68,17 +66,6 @@ class SaveNamespaceContext {
     return errorSDs;
   }
 
-  /**
-   * Requests that the current saveNamespace operation be
-   * canceled if it is still running.
-   * @param reason the reason why cancellation is requested
-   * @throws InterruptedException 
-   */
-  void cancel(String reason) throws InterruptedException {
-    this.cancelReason = reason;
-    completionLatch.await();
-  }
-  
   void markComplete() {
     Preconditions.checkState(completionLatch.getCount() == 1,
         "Context already completed!");
@@ -86,13 +73,9 @@ class SaveNamespaceContext {
   }
 
   void checkCancelled() throws SaveNamespaceCancelledException {
-    if (cancelReason != null) {
+    if (canceller.isCancelled()) {
       throw new SaveNamespaceCancelledException(
-          cancelReason);
+          canceller.getCancellationReason());
     }
-  }
-
-  boolean isCancelled() {
-    return cancelReason != null;
   }
 }

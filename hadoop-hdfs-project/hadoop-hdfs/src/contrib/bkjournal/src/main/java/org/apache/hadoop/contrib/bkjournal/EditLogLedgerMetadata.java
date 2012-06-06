@@ -130,8 +130,10 @@ public class EditLogLedgerMetadata {
       }
     } catch(KeeperException.NoNodeException nne) {
       throw nne;
-    } catch(Exception e) {
-      throw new IOException("Error reading from zookeeper", e);
+    } catch(KeeperException ke) {
+      throw new IOException("Error reading from zookeeper", ke);
+    } catch (InterruptedException ie) {
+      throw new IOException("Interrupted reading from zookeeper", ie);
     }
   }
     
@@ -147,13 +149,15 @@ public class EditLogLedgerMetadata {
           version, ledgerId, firstTxId, lastTxId);
     }
     try {
-      zkc.create(path, finalisedData.getBytes(), 
-                 Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+      zkc.create(path, finalisedData.getBytes(), Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT);
     } catch (KeeperException.NodeExistsException nee) {
       throw nee;
-    } catch (Exception e) {
-      throw new IOException("Error creating ledger znode");
-    } 
+    } catch (KeeperException e) {
+      throw new IOException("Error creating ledger znode", e);
+    } catch (InterruptedException ie) {
+      throw new IOException("Interrupted creating ledger znode", ie);
+    }
   }
   
   boolean verify(ZooKeeper zkc, String path) {
@@ -163,9 +167,12 @@ public class EditLogLedgerMetadata {
         LOG.trace("Verifying " + this.toString() 
                   + " against " + other);
       }
-      return other == this;
-    } catch (Exception e) {
+      return other.equals(this);
+    } catch (KeeperException e) {
       LOG.error("Couldn't verify data in " + path, e);
+      return false;
+    } catch (IOException ie) {
+      LOG.error("Couldn't verify data in " + path, ie);
       return false;
     }
   }
@@ -181,12 +188,12 @@ public class EditLogLedgerMetadata {
       && version == ol.version;
   }
 
- public int hashCode() { 
+  public int hashCode() {
     int hash = 1;
-    hash = hash * 31 + (int)ledgerId;
-    hash = hash * 31 + (int)firstTxId;
-    hash = hash * 31 + (int)lastTxId;
-    hash = hash * 31 + (int)version;
+    hash = hash * 31 + (int) ledgerId;
+    hash = hash * 31 + (int) firstTxId;
+    hash = hash * 31 + (int) lastTxId;
+    hash = hash * 31 + (int) version;
     return hash;
   }
     

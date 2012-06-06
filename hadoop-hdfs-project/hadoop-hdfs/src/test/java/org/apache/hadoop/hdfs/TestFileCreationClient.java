@@ -31,11 +31,13 @@ import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
 
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+
 /**
- * This class tests that a file need not be closed before its
- * data can be read by another client.
+ * This class tests client lease recovery.
  */
-public class TestFileCreationClient extends junit.framework.TestCase {
+public class TestFileCreationClient {
   static final String DIR = "/" + TestFileCreationClient.class.getSimpleName() + "/";
 
   {
@@ -46,6 +48,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
   }
 
   /** Test lease recovery Triggered by DFSClient. */
+  @Test
   public void testClientTriggeredLeaseRecovery() throws Exception {
     final int REPLICATION = 3;
     Configuration conf = new HdfsConfiguration();

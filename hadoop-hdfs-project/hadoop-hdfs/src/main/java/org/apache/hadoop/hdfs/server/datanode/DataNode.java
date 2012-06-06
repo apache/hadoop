@@ -163,6 +163,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
@@ -667,23 +668,16 @@ public class DataNode extends Configured
    * @param nsInfo the namespace info from the first part of the NN handshake
    */
   DatanodeRegistration createBPRegistration(NamespaceInfo nsInfo) {
-    final String xferIp = streamingAddr.getAddress().getHostAddress();
-    DatanodeRegistration bpRegistration = new DatanodeRegistration(xferIp, getXferPort());
-    bpRegistration.setInfoPort(getInfoPort());
-    bpRegistration.setIpcPort(getIpcPort());
-    bpRegistration.setHostName(hostName);
-    bpRegistration.setStorageID(getStorageId());
-    bpRegistration.setSoftwareVersion(VersionInfo.getVersion());
-
     StorageInfo storageInfo = storage.getBPStorage(nsInfo.getBlockPoolID());
     if (storageInfo == null) {
       // it's null in the case of SimulatedDataSet
-      bpRegistration.getStorageInfo().layoutVersion = HdfsConstants.LAYOUT_VERSION;
-      bpRegistration.setStorageInfo(nsInfo);
-    } else {
-      bpRegistration.setStorageInfo(storageInfo);
+      storageInfo = new StorageInfo(nsInfo);
     }
-    return bpRegistration;
+    DatanodeID dnId = new DatanodeID(
+        streamingAddr.getAddress().getHostAddress(), hostName, 
+        getStorageId(), getXferPort(), getInfoPort(), getIpcPort());
+    return new DatanodeRegistration(dnId, storageInfo, 
+        new ExportedBlockKeys(), VersionInfo.getVersion());
   }
 
   /**
@@ -1713,13 +1707,16 @@ public class DataNode extends Configured
     secureMain(args, null);
   }
 
-  public Daemon recoverBlocks(final Collection<RecoveringBlock> blocks) {
+  public Daemon recoverBlocks(
+      final String who,
+      final Collection<RecoveringBlock> blocks) {
+    
     Daemon d = new Daemon(threadGroup, new Runnable() {
       /** Recover a list of blocks. It is run by the primary datanode. */
       public void run() {
         for(RecoveringBlock b : blocks) {
           try {
-            logRecoverBlock("NameNode", b.getBlock(), b.getLocations());
+            logRecoverBlock(who, b);
             recoverBlock(b);
           } catch (IOException e) {
             LOG.warn("recoverBlocks FAILED: " + b, e);
@@ -1980,14 +1977,13 @@ public class DataNode extends Configured
         datanodes, storages);
   }
   
-  private static void logRecoverBlock(String who,
-      ExtendedBlock block, DatanodeID[] targets) {
-    StringBuilder msg = new StringBuilder(targets[0].toString());
-    for (int i = 1; i < targets.length; i++) {
-      msg.append(", " + targets[i]);
-    }
+  private static void logRecoverBlock(String who, RecoveringBlock rb) {
+    ExtendedBlock block = rb.getBlock();
+    DatanodeInfo[] targets = rb.getLocations();
+    
     LOG.info(who + " calls recoverBlock(block=" + block
-        + ", targets=[" + msg + "])");
+        + ", targets=[" + Joiner.on(", ").join(targets) + "]"
+        + ", newGenerationStamp=" + rb.getNewGenerationStamp() + ")");
   }
 
   @Override // ClientDataNodeProtocol
@@ -2032,6 +2028,18 @@ public class DataNode extends Configured
 
     //get replica information
     synchronized(data) {
+      Block storedBlock = data.getStoredBlock(b.getBlockPoolId(),
+          b.getBlockId());
+      if (null == storedBlock) {
+        throw new IOException(b + " not found in datanode.");
+      }
+      storedGS = storedBlock.getGenerationStamp();
+      if (storedGS < b.getGenerationStamp()) {
+        throw new IOException(storedGS
+            + " = storedGS < b.getGenerationStamp(), b=" + b);
+      }
+      // Update the genstamp with storedGS
+      b.setGenerationStamp(storedGS);
       if (data.isValidRbw(b)) {
         stage = BlockConstructionStage.TRANSFER_RBW;
       } else if (data.isValidBlock(b)) {
@@ -2040,18 +2048,9 @@ public class DataNode extends Configured
         final String r = data.getReplicaString(b.getBlockPoolId(), b.getBlockId());
         throw new IOException(b + " is neither a RBW nor a Finalized, r=" + r);
       }
-
-      storedGS = data.getStoredBlock(b.getBlockPoolId(),
-          b.getBlockId()).getGenerationStamp();
-      if (storedGS < b.getGenerationStamp()) {
-        throw new IOException(
-            storedGS + " = storedGS < b.getGenerationStamp(), b=" + b);        
-      }
       visible = data.getReplicaVisibleLength(b);
     }
-
-    //set storedGS and visible length
-    b.setGenerationStamp(storedGS);
+    //set visible length
     b.setNumBytes(visible);
 
     if (targets.length > 0) {

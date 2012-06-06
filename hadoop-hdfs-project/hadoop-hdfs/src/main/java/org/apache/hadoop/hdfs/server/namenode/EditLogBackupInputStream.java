@@ -119,7 +119,7 @@ class EditLogBackupInputStream extends EditLogInputStream {
 
     this.version = version;
 
-    reader = new FSEditLogOp.Reader(in, version);
+    reader = new FSEditLogOp.Reader(in, tracker, version);
   }
 
   void clear() throws IOException {
@@ -129,12 +129,12 @@ class EditLogBackupInputStream extends EditLogInputStream {
   }
 
   @Override
-  public long getFirstTxId() throws IOException {
+  public long getFirstTxId() {
     return HdfsConstants.INVALID_TXID;
   }
 
   @Override
-  public long getLastTxId() throws IOException {
+  public long getLastTxId() {
     return HdfsConstants.INVALID_TXID;
   }
 

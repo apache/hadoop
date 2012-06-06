@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader;
 import org.apache.bookkeeper.client.LedgerHandle;
 import org.apache.bookkeeper.client.LedgerEntry;
+import org.apache.bookkeeper.client.BKException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +42,7 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
   private final long firstTxId;
   private final long lastTxId;
   private final int logVersion;
+  private final boolean inProgress;
   private final LedgerHandle lh;
 
   private final FSEditLogOp.Reader reader;
@@ -69,22 +71,28 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
     this.firstTxId = metadata.getFirstTxId();
     this.lastTxId = metadata.getLastTxId();
     this.logVersion = metadata.getVersion();
+    this.inProgress = metadata.isInProgress();
 
+    if (firstBookKeeperEntry < 0
+        || firstBookKeeperEntry > lh.getLastAddConfirmed()) {
+      throw new IOException("Invalid first bk entry to read: "
+          + firstBookKeeperEntry + ", LAC: " + lh.getLastAddConfirmed());
+    }
     BufferedInputStream bin = new BufferedInputStream(
         new LedgerInputStream(lh, firstBookKeeperEntry));
     tracker = new FSEditLogLoader.PositionTrackingInputStream(bin);
     DataInputStream in = new DataInputStream(tracker);
 
-    reader = new FSEditLogOp.Reader(in, logVersion);
+    reader = new FSEditLogOp.Reader(in, tracker, logVersion);
   }
 
   @Override
-  public long getFirstTxId() throws IOException {
+  public long getFirstTxId() {
     return firstTxId;
   }
 
   @Override
-  public long getLastTxId() throws IOException {
+  public long getLastTxId() {
     return lastTxId;
   }
   
@@ -102,8 +110,10 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
   public void close() throws IOException {
     try {
       lh.close();
-    } catch (Exception e) {
+    } catch (BKException e) {
       throw new IOException("Exception closing ledger", e);
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted closing ledger", e);
     }
   }
 
@@ -123,10 +133,28 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
         lh.toString(), firstTxId, lastTxId);
   }
 
-  // TODO(HA): Test this.
   @Override
   public boolean isInProgress() {
-    return true;
+    return inProgress;
+  }
+
+  /**
+   * Skip forward to specified transaction id.
+   * Currently we do this by just iterating forward.
+   * If this proves to be too expensive, this can be reimplemented
+   * with a binary search over bk entries
+   */
+  public void skipTo(long txId) throws IOException {
+    long numToSkip = getFirstTxId() - txId;
+
+    FSEditLogOp op = null;
+    for (long i = 0; i < numToSkip; i++) {
+      op = readOp();
+    }
+    if (op != null && op.getTransactionId() != txId-1) {
+      throw new IOException("Corrupt stream, expected txid "
+          + (txId-1) + ", got " + op.getTransactionId());
+    }
   }
 
   /**
@@ -148,11 +176,8 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
         throws IOException {
       this.lh = lh;
       readEntries = firstBookKeeperEntry;
-      try {
-        maxEntry = lh.getLastAddConfirmed();
-      } catch (Exception e) {
-        throw new IOException("Error reading last entry id", e);
-      }
+
+      maxEntry = lh.getLastAddConfirmed();
     }
 
     /**
@@ -173,8 +198,10 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
             assert !entries.hasMoreElements();
             return e.getEntryInputStream();
         }
-      } catch (Exception e) {
+      } catch (BKException e) {
         throw new IOException("Error reading entries from bookkeeper", e);
+      } catch (InterruptedException e) {
+        throw new IOException("Interrupted reading entries from bookkeeper", e);
       }
       return null;
     }

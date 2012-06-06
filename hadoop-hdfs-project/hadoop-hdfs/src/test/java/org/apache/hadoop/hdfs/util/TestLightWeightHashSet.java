@@ -421,5 +421,48 @@ public class TestLightWeightHashSet{
 
     LOG.info("Test other - DONE");
   }
+  
+  @Test
+  public void testGetElement() {
+    LightWeightHashSet<TestObject> objSet = new LightWeightHashSet<TestObject>();
+    TestObject objA = new TestObject("object A");
+    TestObject equalToObjA = new TestObject("object A");
+    TestObject objB = new TestObject("object B");
+    objSet.add(objA);
+    objSet.add(objB);
+    
+    assertSame(objA, objSet.getElement(objA));
+    assertSame(objA, objSet.getElement(equalToObjA));
+    assertSame(objB, objSet.getElement(objB));
+    assertNull(objSet.getElement(new TestObject("not in set")));
+  }
+  
+  /**
+   * Wrapper class which is used in
+   * {@link TestLightWeightHashSet#testGetElement()}
+   */
+  private static class TestObject {
+    private final String value;
+
+    public TestObject(String value) {
+      super();
+      this.value = value;
+    }
+
+    @Override
+    public int hashCode() {
+      return value.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) return true;
+      if (obj == null) return false;
+      if (getClass() != obj.getClass())
+        return false;
+      TestObject other = (TestObject) obj;
+      return this.value.equals(other.value);
+    }
+  }
 
 }

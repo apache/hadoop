@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogInputException;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
+import org.apache.hadoop.hdfs.server.namenode.MetaRecoveryContext;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
@@ -256,16 +258,21 @@ public class TestFailureToReadEdits {
     // Shutdown the active NN.
     cluster.shutdownNameNode(0);
     
+    Runtime mockRuntime = mock(Runtime.class);
+    cluster.getNameNode(1).setRuntimeForTesting(mockRuntime);
+    verify(mockRuntime, times(0)).exit(anyInt());
     try {
       // Transition the standby to active.
       cluster.transitionToActive(1);
       fail("Standby transitioned to active, but should not have been able to");
     } catch (ServiceFailedException sfe) {
-      LOG.info("got expected exception: " + sfe.toString(), sfe);
+      Throwable sfeCause = sfe.getCause();
+      LOG.info("got expected exception: " + sfeCause.toString(), sfeCause);
       assertTrue("Standby failed to catch up for some reason other than "
-          + "failure to read logs", sfe.toString().contains(
+          + "failure to read logs", sfeCause.getCause().toString().contains(
               EditLogInputException.class.getName()));
     }
+    verify(mockRuntime, times(1)).exit(anyInt());
   }
   
   private LimitedEditLogAnswer causeFailureOnEditLogRead() throws IOException {
@@ -273,7 +280,7 @@ public class TestFailureToReadEdits {
         .getEditLog());
     LimitedEditLogAnswer answer = new LimitedEditLogAnswer(); 
     doAnswer(answer).when(spyEditLog).selectInputStreams(
-        anyLong(), anyLong(), anyBoolean());
+        anyLong(), anyLong(), (MetaRecoveryContext)anyObject(), anyBoolean());
     nn1.getNamesystem().getEditLogTailer().setEditLog(spyEditLog);
     
     return answer;

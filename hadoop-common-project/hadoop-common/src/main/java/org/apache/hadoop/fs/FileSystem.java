@@ -615,7 +615,9 @@ public abstract class FileSystem extends Configured implements Closeable {
    * Return a set of server default configuration values
    * @return server default configuration values
    * @throws IOException
+   * @deprecated use {@link #getServerDefaults(Path)} instead
    */
+  @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     Configuration conf = getConf();
     return new FsServerDefaults(getDefaultBlockSize(), 
@@ -828,6 +830,30 @@ public abstract class FileSystem extends Configured implements Closeable {
       long blockSize,
       Progressable progress) throws IOException;
   
+  /**
+   * Create an FSDataOutputStream at the indicated Path with write-progress
+   * reporting.
+   * @param f the file name to open
+   * @param permission
+   * @param flags {@link CreateFlag}s to use for this stream.
+   * @param bufferSize the size of the buffer to be used.
+   * @param replication required block replication for the file.
+   * @param blockSize
+   * @param progress
+   * @throws IOException
+   * @see #setPermission(Path, FsPermission)
+   */
+  public FSDataOutputStream create(Path f,
+      FsPermission permission,
+      EnumSet<CreateFlag> flags,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress) throws IOException {
+    // only DFS support this
+    return create(f, permission, flags.contains(CreateFlag.OVERWRITE), bufferSize, replication, blockSize, progress);
+  }
+  
   
   /*.
    * This create has been added to support the FileContext that processes
@@ -952,9 +978,34 @@ public abstract class FileSystem extends Configured implements Closeable {
    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
        boolean overwrite, int bufferSize, short replication, long blockSize,
        Progressable progress) throws IOException {
-     throw new IOException("createNonRecursive unsupported for this filesystem "
-         + this.getClass());
+     return createNonRecursive(f, permission,
+         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
+             : EnumSet.of(CreateFlag.CREATE), bufferSize,
+             replication, blockSize, progress);
    }
+
+   /**
+    * Opens an FSDataOutputStream at the indicated Path with write-progress
+    * reporting. Same as create(), except fails if parent directory doesn't
+    * already exist.
+    * @param f the file name to open
+    * @param permission
+    * @param flags {@link CreateFlag}s to use for this stream.
+    * @param bufferSize the size of the buffer to be used.
+    * @param replication required block replication for the file.
+    * @param blockSize
+    * @param progress
+    * @throws IOException
+    * @see #setPermission(Path, FsPermission)
+    * @deprecated API only for 0.20-append
+    */
+    @Deprecated
+    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+        EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+        Progressable progress) throws IOException {
+      throw new IOException("createNonRecursive unsupported for this filesystem "
+          + this.getClass());
+    }
 
   /**
    * Creates the given Path as a brand-new zero-length file.  If
@@ -1939,8 +1990,12 @@ public abstract class FileSystem extends Configured implements Closeable {
     return getFileStatus(f).getBlockSize();
   }
 
-  /** Return the number of bytes that large input files should be optimally
-   * be split into to minimize i/o time. */
+  /**
+   * Return the number of bytes that large input files should be optimally
+   * be split into to minimize i/o time.
+   * @deprecated use {@link #getDefaultBlockSize(Path)} instead
+   */
+  @Deprecated
   public long getDefaultBlockSize() {
     // default to 32MB: large enough to minimize the impact of seeks
     return getConf().getLong("fs.local.block.size", 32 * 1024 * 1024);
@@ -1958,7 +2013,9 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Get the default replication.
+   * @deprecated use {@link #getDefaultReplication(Path)} instead
    */
+  @Deprecated
   public short getDefaultReplication() { return 1; }
 
   /**

@@ -85,12 +85,52 @@ public class TestPipelinesFailover {
   
   private static final int STRESS_NUM_THREADS = 25;
   private static final int STRESS_RUNTIME = 40000;
+  
+  enum TestScenario {
+    GRACEFUL_FAILOVER {
+      void run(MiniDFSCluster cluster) throws IOException {
+        cluster.transitionToStandby(0);
+        cluster.transitionToActive(1);
+      }
+    },
+    ORIGINAL_ACTIVE_CRASHED {
+      void run(MiniDFSCluster cluster) throws IOException {
+        cluster.restartNameNode(0);
+        cluster.transitionToActive(1);
+      }
+    };
+
+    abstract void run(MiniDFSCluster cluster) throws IOException;
+  }
+  
+  enum MethodToTestIdempotence {
+    ALLOCATE_BLOCK,
+    COMPLETE_FILE;
+  }
 
   /**
    * Tests continuing a write pipeline over a failover.
    */
   @Test(timeout=30000)
-  public void testWriteOverFailover() throws Exception {
+  public void testWriteOverGracefulFailover() throws Exception {
+    doWriteOverFailoverTest(TestScenario.GRACEFUL_FAILOVER,
+        MethodToTestIdempotence.ALLOCATE_BLOCK);
+  }
+  
+  @Test(timeout=30000)
+  public void testAllocateBlockAfterCrashFailover() throws Exception {
+    doWriteOverFailoverTest(TestScenario.ORIGINAL_ACTIVE_CRASHED,
+        MethodToTestIdempotence.ALLOCATE_BLOCK);
+  }
+
+  @Test(timeout=30000)
+  public void testCompleteFileAfterCrashFailover() throws Exception {
+    doWriteOverFailoverTest(TestScenario.ORIGINAL_ACTIVE_CRASHED,
+        MethodToTestIdempotence.COMPLETE_FILE);
+  }
+  
+  private void doWriteOverFailoverTest(TestScenario scenario,
+      MethodToTestIdempotence methodToTest) throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     // Don't check replication periodically.
@@ -102,6 +142,8 @@ public class TestPipelinesFailover {
       .numDataNodes(3)
       .build();
     try {
+      int sizeWritten = 0;
+      
       cluster.waitActive();
       cluster.transitionToActive(0);
       Thread.sleep(500);
@@ -112,28 +154,39 @@ public class TestPipelinesFailover {
       
       // write a block and a half
       AppendTestUtil.write(stm, 0, BLOCK_AND_A_HALF);
+      sizeWritten += BLOCK_AND_A_HALF;
       
       // Make sure all of the blocks are written out before failover.
       stm.hflush();
 
       LOG.info("Failing over to NN 1");
-      cluster.transitionToStandby(0);
-      cluster.transitionToActive(1);
+      scenario.run(cluster);
 
-      assertTrue(fs.exists(TEST_PATH));
+      // NOTE: explicitly do *not* make any further metadata calls
+      // to the NN here. The next IPC call should be to allocate the next
+      // block. Any other call would notice the failover and not test
+      // idempotence of the operation (HDFS-3031)
+      
       FSNamesystem ns1 = cluster.getNameNode(1).getNamesystem();
       BlockManagerTestUtil.updateState(ns1.getBlockManager());
       assertEquals(0, ns1.getPendingReplicationBlocks());
       assertEquals(0, ns1.getCorruptReplicaBlocks());
       assertEquals(0, ns1.getMissingBlocksCount());
 
-      // write another block and a half
-      AppendTestUtil.write(stm, BLOCK_AND_A_HALF, BLOCK_AND_A_HALF);
-
+      // If we're testing allocateBlock()'s idempotence, write another
+      // block and a half, so we have to allocate a new block.
+      // Otherise, don't write anything, so our next RPC will be
+      // completeFile() if we're testing idempotence of that operation.
+      if (methodToTest == MethodToTestIdempotence.ALLOCATE_BLOCK) {
+        // write another block and a half
+        AppendTestUtil.write(stm, sizeWritten, BLOCK_AND_A_HALF);
+        sizeWritten += BLOCK_AND_A_HALF;
+      }
+      
       stm.close();
       stm = null;
       
-      AppendTestUtil.check(fs, TEST_PATH, BLOCK_SIZE * 3);
+      AppendTestUtil.check(fs, TEST_PATH, sizeWritten);
     } finally {
       IOUtils.closeStream(stm);
       cluster.shutdown();
@@ -146,7 +199,18 @@ public class TestPipelinesFailover {
    * even when the pipeline was constructed on a different NN.
    */
   @Test(timeout=30000)
-  public void testWriteOverFailoverWithDnFail() throws Exception {
+  public void testWriteOverGracefulFailoverWithDnFail() throws Exception {
+    doTestWriteOverFailoverWithDnFail(TestScenario.GRACEFUL_FAILOVER);
+  }
+  
+  @Test(timeout=30000)
+  public void testWriteOverCrashFailoverWithDnFail() throws Exception {
+    doTestWriteOverFailoverWithDnFail(TestScenario.ORIGINAL_ACTIVE_CRASHED);
+  }
+
+  
+  private void doTestWriteOverFailoverWithDnFail(TestScenario scenario)
+      throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     
@@ -171,8 +235,7 @@ public class TestPipelinesFailover {
       stm.hflush();
 
       LOG.info("Failing over to NN 1");
-      cluster.transitionToStandby(0);
-      cluster.transitionToActive(1);
+      scenario.run(cluster);
 
       assertTrue(fs.exists(TEST_PATH));
       
@@ -183,8 +246,8 @@ public class TestPipelinesFailover {
       stm.hflush();
       
       LOG.info("Failing back to NN 0");
-      cluster.transitionToStandby(0);
-      cluster.transitionToActive(1);
+      cluster.transitionToStandby(1);
+      cluster.transitionToActive(0);
       
       cluster.stopDataNode(1);
       

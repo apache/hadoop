@@ -53,7 +53,6 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.mapred.IFile.Writer;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.FileSystemCounter;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskCounter;
@@ -569,7 +568,21 @@ abstract public class Task implements Writable, Configurable {
         resourceCalculator.getProcResourceValues().getCumulativeCpuTime();
     }
   }
-  
+
+  public static String normalizeStatus(String status, Configuration conf) {
+    // Check to see if the status string is too long
+    // and truncate it if needed.
+    int progressStatusLength = conf.getInt(
+        MRConfig.PROGRESS_STATUS_LEN_LIMIT_KEY,
+        MRConfig.PROGRESS_STATUS_LEN_LIMIT_DEFAULT);
+    if (status.length() > progressStatusLength) {
+      LOG.warn("Task status: \"" + status + "\" truncated to max limit ("
+          + progressStatusLength + " characters)");
+      status = status.substring(0, progressStatusLength);
+    }
+    return status;
+  }
+
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   protected class TaskReporter 
@@ -603,7 +616,7 @@ abstract public class Task implements Writable, Configurable {
       return progressFlag.getAndSet(false);
     }
     public void setStatus(String status) {
-      taskProgress.setStatus(status);
+      taskProgress.setStatus(normalizeStatus(status, conf));
       // indicate that progress update needs to be sent
       setProgressFlag();
     }

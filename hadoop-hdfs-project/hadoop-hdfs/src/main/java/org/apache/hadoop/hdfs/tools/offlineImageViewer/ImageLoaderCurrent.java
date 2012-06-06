@@ -31,11 +31,13 @@ import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.FSImageSerialization;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
+import org.apache.hadoop.hdfs.util.XMLUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
+import org.xml.sax.helpers.AttributesImpl;
 
 /**
  * ImageLoaderCurrent processes Hadoop FSImage files and walks over
@@ -143,6 +145,7 @@ class ImageLoaderCurrent implements ImageLoader {
   @Override
   public void loadImage(DataInputStream in, ImageVisitor v,
       boolean skipBlocks) throws IOException {
+    boolean done = false;
     try {
       v.start();
       v.visitEnclosingElement(ImageElement.FS_IMAGE);
@@ -187,11 +190,13 @@ class ImageLoaderCurrent implements ImageLoader {
       }
       
       v.leaveEnclosingElement(); // FSImage
-      v.finish();
-    } catch(IOException e) {
-      // Tell the visitor to clean up, then re-throw the exception
-      v.finishAbnormally();
-      throw e;
+      done = true;
+    } finally {
+      if (done) {
+        v.finish();
+      } else {
+        v.finishAbnormally();
+      }
     }
   }
 
@@ -220,9 +225,29 @@ class ImageLoaderCurrent implements ImageLoader {
     for(int i=0; i<numDTokens; i++){
       DelegationTokenIdentifier id = new  DelegationTokenIdentifier();
       id.readFields(in);
-      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER, id.toString());
+      long expiryTime = in.readLong();
+      v.visitEnclosingElement(ImageElement.DELEGATION_TOKEN_IDENTIFIER);
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_KIND,
+          id.getKind().toString());
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_SEQNO,
+          id.getSequenceNumber());
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_OWNER,
+          id.getOwner().toString());
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_RENEWER,
+          id.getRenewer().toString());
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_REALUSER,
+          id.getRealUser().toString());
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_ISSUE_DATE,
+          id.getIssueDate());
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_MAX_DATE,
+          id.getMaxDate());
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_EXPIRY_TIME,
+          expiryTime);
+      v.visit(ImageElement.DELEGATION_TOKEN_IDENTIFIER_MASTER_KEY_ID,
+          id.getMasterKeyId());
+      v.leaveEnclosingElement(); // DELEGATION_TOKEN_IDENTIFIER
     }
-    v.leaveEnclosingElement();
+    v.leaveEnclosingElement(); // DELEGATION_TOKENS
   }
 
   /**

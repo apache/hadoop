@@ -53,6 +53,8 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcPayloadHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcPayloadOperationProto;
+import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcResponseHeaderProto;
+import org.apache.hadoop.ipc.protobuf.RpcPayloadHeaderProtos.RpcStatusProto;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -845,24 +847,24 @@ public class Client {
       touch();
       
       try {
-        int id = in.readInt();                    // try to read an id
-
+        RpcResponseHeaderProto response = 
+            RpcResponseHeaderProto.parseDelimitedFrom(in);
+        int callId = response.getCallId();
         if (LOG.isDebugEnabled())
-          LOG.debug(getName() + " got value #" + id);
+          LOG.debug(getName() + " got value #" + callId);
 
-        Call call = calls.get(id);
-
-        int state = in.readInt();     // read call status
-        if (state == Status.SUCCESS.state) {
+        Call call = calls.get(callId);
+        RpcStatusProto status = response.getStatus();
+        if (status == RpcStatusProto.SUCCESS) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
           call.setRpcResponse(value);
-          calls.remove(id);
-        } else if (state == Status.ERROR.state) {
+          calls.remove(callId);
+        } else if (status == RpcStatusProto.ERROR) {
           call.setException(new RemoteException(WritableUtils.readString(in),
                                                 WritableUtils.readString(in)));
-          calls.remove(id);
-        } else if (state == Status.FATAL.state) {
+          calls.remove(callId);
+        } else if (status == RpcStatusProto.FATAL) {
           // Close the connection
           markClosed(new RemoteException(WritableUtils.readString(in), 
                                          WritableUtils.readString(in)));

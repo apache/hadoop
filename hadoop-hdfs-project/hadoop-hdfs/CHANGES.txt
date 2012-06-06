@@ -13,6 +13,11 @@ Trunk (unreleased changes)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
+    HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
+
+    HDFS-3042. Automatic failover support for NameNode HA (todd)
+    (see dedicated section below for subtask breakdown)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -77,6 +82,14 @@ Trunk (unreleased changes)
     HDFS-3293. Add toString(), equals(..) and hashCode() to JournalInfo.
     (Hari Mankude via szetszwo)
 
+    HDFS-3197. Incorrect class comments in a few tests. (Andy Isaacson via eli)
+
+    HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
+    (harsh)
+
+    HDFS-3476. Correct the default used in TestDFSClientRetries.busyTest()
+    after HDFS-3462 (harsh)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
@@ -109,9 +122,6 @@ Trunk (unreleased changes)
     HDFS-2776. Missing interface annotation on JournalSet. 
     (Brandon Li via jitendra)
 
-    HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
-    (atm)
-
     HDFS-2908. Add apache license header for StorageReport.java. (Brandon Li
     via jitendra)
 
@@ -141,8 +151,163 @@ Trunk (unreleased changes)
     HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
 
     HDFS-3265. PowerPc Build error. (Kumar Ravi via mattf)
+
+    HDFS-2312. FSNamesystem javadoc incorrectly says its for DNs. (harsh)
+
+    HDFS-3163. TestHDFSCLI.testAll fails if the user name is not all lowercase.
+    (Brandon Li via atm)
+
+    HDFS-3368. Missing blocks due to bad DataNodes coming up and down. (shv)
+
+    HDFS-3462. TestDFSClientRetries.busyTest() should restore default
+    xceiver count in the config. (Madhukara Phatak via harsh)
+
+  BREAKDOWN OF HDFS-3042 SUBTASKS
+
+    HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
     
-Release 2.0.0 - UNRELEASED 
+    HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
+    
+    HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
+    
+    HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
+    
+    HDFS-3159. Document NN auto-failover setup and configuration (todd)
+    
+    HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
+    
+    HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
+
+Release 2.0.1-alpha - UNRELEASED
+  
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+    HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
+    logging is enabled. (atm)
+
+    HDFS-3341. Change minimum RPC versions to respective SNAPSHOTs instead of
+    final releases. (todd)
+
+    HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and
+    BlocksMap to {get|set|add}BlockCollection(..).  (John George via szetszwo)
+
+    HDFS-3134. harden edit log loader against malformed or malicious input.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
+
+    HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. (eli)
+
+    HDFS-3400. DNs should be able start with jsvc even if security is disabled.
+    (atm via eli)
+
+    HDFS-3404. Make putImage in GetImageServlet infer remote address to fetch
+    from request. (atm)
+
+    HDFS-3335. check for edit log corruption at the end of the log
+    (Colin Patrick McCabe via todd)
+
+    HDFS-3417. Rename BalancerDatanode#getName to getDisplayName to be
+    consistent with Datanode. (eli)
+
+    HDFS-3416. Cleanup DatanodeID and DatanodeRegistration
+    constructors used by testing. (eli)
+
+    HDFS-3419. Cleanup LocatedBlock. (eli)
+
+    HDFS-3440. More effectively limit stream memory consumption when reading
+    corrupt edit logs (Colin Patrick McCabe via todd)
+
+    HDFS-3438. BootstrapStandby should not require a rollEdits on active node
+    (todd)
+
+    HDFS-2885. Remove "federation" from the nameservice config options.
+    (Tsz Wo (Nicholas) Sze via eli)
+
+    HDFS-3394. Do not use generic in INodeFile.getLastBlock(): the run-time
+    ClassCastException check is useless since generic type information is only
+    available in compile-time.  (szetszwo)
+
+    HDFS-3454. Balancer unconditionally logs InterruptedException at
+    INFO level on shutdown if security is enabled. (eli)
+
+    HDFS-1013. Miscellaneous improvements to HTML markup for web UIs
+    (Eugene Koontz via todd)
+
+  OPTIMIZATIONS
+
+    HDFS-2982. Startup performance suffers when there are many edit log
+    segments. (Colin Patrick McCabe via todd)
+
+  BUG FIXES
+
+    HDFS-3385. The last block of INodeFileUnderConstruction is not
+    necessarily a BlockInfoUnderConstruction, so do not cast it in
+    FSNamesystem.recoverLeaseInternal(..).  (szetszwo)
+
+    HDFS-3414. Balancer does not find NameNode if rpc-address or
+    servicerpc-address are not set in client configs. (atm)
+
+    HDFS-3031. Fix complete() and getAdditionalBlock() RPCs to be idempotent
+    (todd)
+
+    HDFS-2759. Pre-allocate HDFS edit log files after writing version number.
+    (atm)
+
+    HDFS-3413. TestFailureToReadEdits timing out. (atm)
+
+    HDFS-3422. TestStandbyIsHot timeouts too aggressive (todd)
+
+    HDFS-3433. GetImageServlet should allow administrative requestors when
+    security is enabled. (atm)
+
+    HDFS-1153. dfsnodelist.jsp should handle invalid input parameters.
+    (Ravi Phulari via eli)
+
+    HDFS-3434. InvalidProtocolBufferException when visiting DN
+    browseDirectory.jsp (eli)
+
+    HDFS-2800. Fix cancellation of checkpoints in the standby node to be more
+    reliable. (todd)
+
+    HDFS-3391. Fix InvalidateBlocks to compare blocks including their
+    generation stamps. (todd)
+
+    HDFS-3444. hdfs groups command doesn't work with security enabled. (atm)
+
+    HDFS-3415. Make sure all layout versions are the same for all storage
+    directories in the Namenode.  (Brandon Li via szetszwo)
+
+    HDFS-3436. In DataNode.transferReplicaForPipelineRecovery(..), it should
+    use the stored generation stamp to check if the block is valid.  (Vinay
+    via szetszwo)
+
+    HDFS-3460. HttpFS proxyuser validation with Kerberos ON uses full 
+    principal name. (tucu)
+
+    HDFS-3484. hdfs fsck doesn't work if NN HTTP address is set to
+    0.0.0.0 even if NN RPC address is configured. (atm via eli)
+
+    HDFS-3486. offlineimageviewer can't read fsimage files that contain
+    persistent delegation tokens. (Colin Patrick McCabe via eli)
+
+    HDFS-3487. offlineimageviewer should give byte offset information
+    when it encounters an exception. (Colin Patrick McCabe via eli)
+
+    HDFS-3442. Incorrect count for Missing Replicas in FSCK report. (Andrew
+    Wang via atm)
+
+    HDFS-3501. Checkpointing with security enabled will stop working
+    after ticket lifetime expires. (atm via eli)
+
+    HDFS-3266. DFSTestUtil#waitCorruptReplicas doesn't sleep between checks.
+    (Madhukara Phatak via atm)
+
+Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
 
@@ -368,9 +533,6 @@ Release 2.0.0 - UNRELEASED
     HDFS-2505. Add a test to verify getFileChecksum(..) with ViewFS.  (Ravi
     Prakash via szetszwo)
 
-    HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
-    and epoch in JournalProtocol. (suresh via szetszwo)
-
     HDFS-3240. Drop log level of "heartbeat: ..." in BPServiceActor to DEBUG
     (todd)
 
@@ -435,21 +597,11 @@ Release 2.0.0 - UNRELEASED
     so that INodeFile and INodeFileUnderConstruction do not have to be used in
     block management.  (John George via szetszwo)
 
-    HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
-    logging is enabled. (atm)
+    HDFS-3211. Add fence(..) and replace NamenodeRegistration with JournalInfo
+    and epoch in JournalProtocol. (suresh via szetszwo)
 
-    HDFS-3341. Change minimum RPC versions to respective SNAPSHOTs instead of
-    final releases. (todd)
-
-    HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and
-    BlocksMap to {get|set|add}BlockCollection(..).  (John George via szetszwo)
-
-    HDFS-3134. harden edit log loader against malformed or malicious input.
-    (Colin Patrick McCabe via eli)
-
-    HDFS-3230. Cleanup DatanodeID creation in the tests. (eli)
-
-    HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. (eli)
+    HDFS-3418. Rename BlockWithLocationsProto datanodeIDs field to storageIDs.
+    (eli)
 
   OPTIMIZATIONS
 
@@ -644,9 +796,10 @@ Release 2.0.0 - UNRELEASED
     HDFS-3395. NN doesn't start with HA+security enabled and HTTP address
     set to 0.0.0.0. (atm)
 
-    HDFS-3385. The last block of INodeFileUnderConstruction is not
-    necessarily a BlockInfoUnderConstruction, so do not cast it in
-    FSNamesystem.recoverLeaseInternal(..).  (szetszwo)
+    HDFS-3026. HA: Handle failure during HA state transition. (atm)
+
+    HDFS-860. fuse-dfs truncate behavior causes issues with scp.
+    (Brian Bockelman via eli)
 
   BREAKDOWN OF HDFS-1623 SUBTASKS
 

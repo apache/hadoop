@@ -19,7 +19,6 @@ option java_package = "org.apache.hadoop.ipc.protobuf";
 option java_outer_classname = "RpcPayloadHeaderProtos";
 option java_generate_equals_and_hash = true;
 
-
 /**
  * This is the rpc payload header. It is sent with every rpc call.
  * 
@@ -33,8 +32,6 @@ option java_generate_equals_and_hash = true;
  * +-----------------------------------------------------+
  *
  */
-
-
 
 /**
  * RpcKind determine the rpcEngine and the serialization of the rpc payload
@@ -54,5 +51,27 @@ enum RpcPayloadOperationProto {
 message RpcPayloadHeaderProto { // the header for the RpcRequest
   optional RpcKindProto rpcKind = 1;
   optional RpcPayloadOperationProto rpcOp = 2;
-  optional uint32 callId = 3; // each rpc has a callId that is also used in response
+  required uint32 callId = 3; // each rpc has a callId that is also used in response
+}
+
+enum RpcStatusProto {
+ SUCCESS = 0;  // RPC succeeded
+ ERROR = 1;    // RPC Failed
+ FATAL = 2;    // Fatal error - connection is closed
+}
+
+/**
+ * Rpc Response Header
+ *    - If successfull then the Respose follows after this header
+ *        - length (4 byte int), followed by the response
+ *    - If error or fatal - the exception info follow
+ *        - length (4 byte int) Class name of exception - UTF-8 string
+ *        - length (4 byte int) Stacktrace - UTF-8 string
+ *        - if the strings are null then the length is -1
+ * In case of Fatal error then the respose contains the Serverside's IPC version
+ */
+message RpcResponseHeaderProto {
+  required uint32 callId = 1; // callId used in Request
+  required RpcStatusProto status = 2;
+  optional uint32 serverIpcVersionNum = 3; // in case of an fatal IPC error 
 }

@@ -92,7 +92,7 @@ public class TestValidateConfigurationSettings {
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
         "127.0.0.1:0");
     
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "ns1");
+    conf.set(DFSConfigKeys.DFS_NAMESERVICES, "ns1");
     
     // Set a nameservice-specific configuration for name dir
     File dir = new File(MiniDFSCluster.getBaseDirectory(),

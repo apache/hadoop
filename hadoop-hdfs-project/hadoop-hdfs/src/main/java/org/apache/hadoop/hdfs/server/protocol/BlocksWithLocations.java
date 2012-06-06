@@ -21,9 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.Block;
 
-/** A class to implement an array of BlockLocations
- *  It provide efficient customized serialization/deserialization methods
- *  in stead of using the default array (de)serialization provided by RPC
+/**
+ * Maintains an array of blocks and their corresponding storage IDs.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -36,12 +35,12 @@ public class BlocksWithLocations {
   @InterfaceStability.Evolving
   public static class BlockWithLocations {
     Block block;
-    String datanodeIDs[];
+    String storageIDs[];
     
     /** constructor */
-    public BlockWithLocations(Block b, String[] datanodes) {
-      block = b;
-      datanodeIDs = datanodes;
+    public BlockWithLocations(Block block, String[] storageIDs) {
+      this.block = block;
+      this.storageIDs = storageIDs;
     }
     
     /** get the block */
@@ -50,15 +49,15 @@ public class BlocksWithLocations {
     }
     
     /** get the block's locations */
-    public String[] getDatanodes() {
-      return datanodeIDs;
+    public String[] getStorageIDs() {
+      return storageIDs;
     }
   }
 
   private BlockWithLocations[] blocks;
 
   /** Constructor with one parameter */
-  public BlocksWithLocations( BlockWithLocations[] blocks ) {
+  public BlocksWithLocations(BlockWithLocations[] blocks) {
     this.blocks = blocks;
   }
 

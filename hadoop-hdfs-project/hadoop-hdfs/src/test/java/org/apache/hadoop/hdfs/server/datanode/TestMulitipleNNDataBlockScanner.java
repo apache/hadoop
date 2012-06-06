@@ -105,7 +105,7 @@ public class TestMulitipleNNDataBlockScanner {
         namenodesBuilder.append(",");
       }
 
-      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, namenodesBuilder
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES, namenodesBuilder
           .toString());
       DataNode dn = cluster.getDataNodes().get(0);
       dn.refreshNamenodes(conf);
@@ -122,7 +122,7 @@ public class TestMulitipleNNDataBlockScanner {
 
       namenodesBuilder.append(DFSUtil.getNamenodeNameServiceId(cluster
           .getConfiguration(2)));
-      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, namenodesBuilder
+      conf.set(DFSConfigKeys.DFS_NAMESERVICES, namenodesBuilder
           .toString());
       dn.refreshNamenodes(conf);
 

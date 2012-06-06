@@ -53,6 +53,8 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
  * sub-optimal conditions.
@@ -244,7 +246,8 @@ public class NamenodeFsck {
     out.println();
   }
   
-  private void check(String parent, HdfsFileStatus file, Result res) throws IOException {
+  @VisibleForTesting
+  void check(String parent, HdfsFileStatus file, Result res) throws IOException {
     String path = file.getFullName(parent);
     boolean isOpen = false;
 
@@ -313,6 +316,7 @@ public class NamenodeFsck {
       DatanodeInfo[] locs = lBlk.getLocations();
       res.totalReplicas += locs.length;
       short targetFileReplication = file.getReplication();
+      res.numExpectedReplicas += targetFileReplication;
       if (locs.length > targetFileReplication) {
         res.excessiveReplicas += (locs.length - targetFileReplication);
         res.numOverReplicatedBlocks += 1;
@@ -608,29 +612,31 @@ public class NamenodeFsck {
   /**
    * FsckResult of checking, plus overall DFS statistics.
    */
-  private static class Result {
-    private List<String> missingIds = new ArrayList<String>();
-    private long missingSize = 0L;
-    private long corruptFiles = 0L;
-    private long corruptBlocks = 0L;
-    private long excessiveReplicas = 0L;
-    private long missingReplicas = 0L;
-    private long numOverReplicatedBlocks = 0L;
-    private long numUnderReplicatedBlocks = 0L;
-    private long numMisReplicatedBlocks = 0L;  // blocks that do not satisfy block placement policy
-    private long numMinReplicatedBlocks = 0L;  // minimally replicatedblocks
-    private long totalBlocks = 0L;
-    private long totalOpenFilesBlocks = 0L;
-    private long totalFiles = 0L;
-    private long totalOpenFiles = 0L;
-    private long totalDirs = 0L;
-    private long totalSize = 0L;
-    private long totalOpenFilesSize = 0L;
-    private long totalReplicas = 0L;
+  @VisibleForTesting
+  static class Result {
+    List<String> missingIds = new ArrayList<String>();
+    long missingSize = 0L;
+    long corruptFiles = 0L;
+    long corruptBlocks = 0L;
+    long excessiveReplicas = 0L;
+    long missingReplicas = 0L;
+    long numOverReplicatedBlocks = 0L;
+    long numUnderReplicatedBlocks = 0L;
+    long numMisReplicatedBlocks = 0L;  // blocks that do not satisfy block placement policy
+    long numMinReplicatedBlocks = 0L;  // minimally replicatedblocks
+    long totalBlocks = 0L;
+    long numExpectedReplicas = 0L;
+    long totalOpenFilesBlocks = 0L;
+    long totalFiles = 0L;
+    long totalOpenFiles = 0L;
+    long totalDirs = 0L;
+    long totalSize = 0L;
+    long totalOpenFilesSize = 0L;
+    long totalReplicas = 0L;
 
     final short replication;
     
-    private Result(Configuration conf) {
+    Result(Configuration conf) {
       this.replication = (short)conf.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 
                                             DFSConfigKeys.DFS_REPLICATION_DEFAULT);
     }
@@ -726,7 +732,7 @@ public class NamenodeFsck {
               missingReplicas);
       if (totalReplicas > 0) {
         res.append(" (").append(
-            ((float) (missingReplicas * 100) / (float) totalReplicas)).append(
+            ((float) (missingReplicas * 100) / (float) numExpectedReplicas)).append(
             " %)");
       }
       return res.toString();

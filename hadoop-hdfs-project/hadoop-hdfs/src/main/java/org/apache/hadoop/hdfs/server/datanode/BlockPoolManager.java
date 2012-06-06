@@ -145,7 +145,7 @@ class BlockPoolManager {
   void refreshNamenodes(Configuration conf)
       throws IOException {
     LOG.info("Refresh request received for nameservices: "
-        + conf.get(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES));
+        + conf.get(DFSConfigKeys.DFS_NAMESERVICES));
     
     Map<String, Map<String, InetSocketAddress>> newAddressMap = 
       DFSUtil.getNNServiceRpcAddresses(conf);

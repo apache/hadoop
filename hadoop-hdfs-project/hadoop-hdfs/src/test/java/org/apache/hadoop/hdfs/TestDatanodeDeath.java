@@ -39,8 +39,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.log4j.Level;
 
 /**
- * This class tests that a file need not be closed before its
- * data can be read by another client.
+ * This class tests that pipelines survive data node death and recovery.
  */
 public class TestDatanodeDeath extends TestCase {
   {

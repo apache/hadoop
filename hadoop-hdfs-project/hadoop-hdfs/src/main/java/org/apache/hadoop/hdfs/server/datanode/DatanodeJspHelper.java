@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
 import java.text.SimpleDateFormat;
@@ -616,9 +617,12 @@ public class DatanodeJspHelper {
                                         Configuration conf
                                         ) throws IOException,
                                                  InterruptedException {
-    final String referrer = JspHelper.validateURL(req.getParameter("referrer"));
+    String referrer = null;
     boolean noLink = false;
-    if (referrer == null) {
+    try {
+      referrer = new URL(req.getParameter("referrer")).toString();
+    } catch (IOException e) {
+      referrer = null;
       noLink = true;
     }
 

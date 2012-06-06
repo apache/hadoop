@@ -37,6 +37,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -71,6 +73,8 @@ public class TestHAStateTransitions {
   private static final String TEST_FILE_STR = TEST_FILE_PATH.toUri().getPath();
   private static final String TEST_FILE_DATA =
     "Hello state transitioning world";
+  private static final StateChangeRequestInfo REQ_INFO = new StateChangeRequestInfo(
+      RequestSource.REQUEST_BY_USER_FORCED);
   
   static {
     ((Log4JLogger)EditLogTailer.LOG).getLogger().setLevel(Level.ALL);
@@ -481,19 +485,19 @@ public class TestHAStateTransitions {
       assertFalse(isDTRunning(nn));
   
       banner("Transition 1->3. Should not start secret manager.");
-      nn.getRpcServer().transitionToActive();
+      nn.getRpcServer().transitionToActive(REQ_INFO);
       assertFalse(nn.isStandbyState());
       assertTrue(nn.isInSafeMode());
       assertFalse(isDTRunning(nn));
   
       banner("Transition 3->1. Should not start secret manager.");
-      nn.getRpcServer().transitionToStandby();
+      nn.getRpcServer().transitionToStandby(REQ_INFO);
       assertTrue(nn.isStandbyState());
       assertTrue(nn.isInSafeMode());
       assertFalse(isDTRunning(nn));
   
       banner("Transition 1->3->4. Should start secret manager.");
-      nn.getRpcServer().transitionToActive();
+      nn.getRpcServer().transitionToActive(REQ_INFO);
       NameNodeAdapter.leaveSafeMode(nn, false);
       assertFalse(nn.isStandbyState());
       assertFalse(nn.isInSafeMode());
@@ -514,13 +518,13 @@ public class TestHAStateTransitions {
       for (int i = 0; i < 20; i++) {
         // Loop the last check to suss out races.
         banner("Transition 4->2. Should stop secret manager.");
-        nn.getRpcServer().transitionToStandby();
+        nn.getRpcServer().transitionToStandby(REQ_INFO);
         assertTrue(nn.isStandbyState());
         assertFalse(nn.isInSafeMode());
         assertFalse(isDTRunning(nn));
     
         banner("Transition 2->4. Should start secret manager");
-        nn.getRpcServer().transitionToActive();
+        nn.getRpcServer().transitionToActive(REQ_INFO);
         assertFalse(nn.isStandbyState());
         assertFalse(nn.isInSafeMode());
         assertTrue(isDTRunning(nn));

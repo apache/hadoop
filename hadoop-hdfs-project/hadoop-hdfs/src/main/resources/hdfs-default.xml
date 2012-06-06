@@ -239,14 +239,6 @@
   left empty in a non-HA cluster.
   </description>
 </property>
-  
-<property>
-  <name>dfs.web.ugi</name>
-  <value>webuser,webgroup</value>
-  <description>The user account used by the web interface.
-    Syntax: USERNAME,GROUP1,GROUP2, ...
-  </description>
-</property>
 
 <property>
   <name>dfs.permissions.enabled</name>
@@ -778,7 +770,7 @@
 </property>
 
 <property>
-  <name>dfs.federation.nameservices</name>
+  <name>dfs.nameservices</name>
   <value></value>
   <description>
     Comma-separated list of nameservices.
@@ -786,12 +778,12 @@
 </property>
 
 <property>
-  <name>dfs.federation.nameservice.id</name>
+  <name>dfs.nameservice.id</name>
   <value></value>
   <description>
     The ID of this nameservice. If the nameservice ID is not
     configured or more than one nameservice is configured for
-    dfs.federation.nameservices it is determined automatically by
+    dfs.nameservices it is determined automatically by
     matching the local node's address with the configured address.
   </description>
 </property>
@@ -833,6 +825,16 @@
   <description>
     How often, in seconds, the StandbyNode should check for new
     finalized log segments in the shared edits log.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.automatic-failover.enabled</name>
+  <value>false</value>
+  <description>
+    Whether automatic failover is enabled. See the HDFS High
+    Availability documentation for details on automatic HA
+    configuration.
   </description>
 </property>
 

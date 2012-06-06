@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 /**
  * This class represents the primary identifier for a Datanode.
@@ -45,23 +44,6 @@ public class DatanodeID implements Comparable<DatanodeID> {
   protected int infoPort;      // info server port
   protected int ipcPort;       // IPC server port
 
-  public DatanodeID(String ipAddr, int xferPort) {
-    this(ipAddr, "", "", xferPort,
-        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
-        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
-  }
-
-  public DatanodeID(String ipAddr, String hostName, int xferPort) {
-    this(ipAddr, hostName, "", xferPort,
-        DFSConfigKeys.DFS_DATANODE_HTTP_DEFAULT_PORT,
-        DFSConfigKeys.DFS_DATANODE_IPC_DEFAULT_PORT);
-  }
-
-  /**
-   * DatanodeID copy constructor
-   * 
-   * @param from
-   */
   public DatanodeID(DatanodeID from) {
     this(from.getIpAddr(),
         from.getHostName(),
@@ -72,7 +54,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   }
   
   /**
-   * Create DatanodeID
+   * Create a DatanodeID
    * @param ipAddr IP
    * @param hostName hostname
    * @param storageID data storage ID
@@ -92,22 +74,6 @@ public class DatanodeID implements Comparable<DatanodeID> {
   
   public void setIpAddr(String ipAddr) {
     this.ipAddr = ipAddr;
-  }
-
-  public void setHostName(String hostName) {
-    this.hostName = hostName;
-  }
-
-  public void setXferPort(int xferPort) {
-    this.xferPort = xferPort;
-  }
-
-  public void setInfoPort(int infoPort) {
-    this.infoPort = infoPort;
-  }
-  
-  public void setIpcPort(int ipcPort) {
-    this.ipcPort = ipcPort;
   }
 
   public void setStorageID(String storageID) {

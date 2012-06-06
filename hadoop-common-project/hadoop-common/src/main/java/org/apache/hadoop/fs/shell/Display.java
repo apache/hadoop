@@ -34,7 +34,6 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -136,7 +135,7 @@ class Display extends FsCommand {
 
   protected class TextRecordInputStream extends InputStream {
     SequenceFile.Reader r;
-    WritableComparable<?> key;
+    Writable key;
     Writable val;
 
     DataInputBuffer inbuf;
@@ -148,7 +147,7 @@ class Display extends FsCommand {
       r = new SequenceFile.Reader(lconf, 
           SequenceFile.Reader.file(fpath));
       key = ReflectionUtils.newInstance(
-          r.getKeyClass().asSubclass(WritableComparable.class), lconf);
+          r.getKeyClass().asSubclass(Writable.class), lconf);
       val = ReflectionUtils.newInstance(
           r.getValueClass().asSubclass(Writable.class), lconf);
       inbuf = new DataInputBuffer();
