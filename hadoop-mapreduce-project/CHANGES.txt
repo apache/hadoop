@@ -118,7 +118,7 @@ Trunk (unreleased changes)
     MAPREDUCE-3990. MRBench allows Long-sized input-lines value
     but parses CLI argument as an Integer. (harsh)
 
-Release 2.0.1-alpha - UNRELEASED
+Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
 

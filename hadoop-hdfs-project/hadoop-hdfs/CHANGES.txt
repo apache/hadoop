@@ -178,8 +178,8 @@ Trunk (unreleased changes)
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
 
-Release 2.0.1-alpha - UNRELEASED
-  
+Branch-2 ( Unreleased changes )
+ 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES

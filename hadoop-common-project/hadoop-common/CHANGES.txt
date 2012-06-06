@@ -197,7 +197,7 @@ Trunk (unreleased changes)
     
     HADOOP-8405. ZKFC tests leak ZK instances. (todd)
 
-Release 2.0.1-alpha - UNRELEASED
+Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
 
