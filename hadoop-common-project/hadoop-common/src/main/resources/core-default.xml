@@ -955,4 +955,64 @@
   <name>hadoop.http.staticuser.user</name>
   <value>dr.who</value>
 </property>
+
+<property>
+  <name>ha.zookeeper.quorum</name>
+  <description>
+    A list of ZooKeeper server addresses, separated by commas, that are
+    to be used by the ZKFailoverController in automatic failover.
+  </description>
+</property>
+
+<property>
+  <name>ha.zookeeper.session-timeout.ms</name>
+  <value>5000</value>
+  <description>
+    The session timeout to use when the ZKFC connects to ZooKeeper.
+    Setting this value to a lower value implies that server crashes
+    will be detected more quickly, but risks triggering failover too
+    aggressively in the case of a transient error or network blip.
+  </description>
+</property>
+
+<property>
+  <name>ha.zookeeper.parent-znode</name>
+  <value>/hadoop-ha</value>
+  <description>
+    The ZooKeeper znode under which the ZK failover controller stores
+    its information. Note that the nameservice ID is automatically
+    appended to this znode, so it is not normally necessary to
+    configure this, even in a federated environment.
+  </description>
+</property>
+
+<property>
+  <name>ha.zookeeper.acl</name>
+  <value>world:anyone:rwcda</value>
+  <description>
+    A comma-separated list of ZooKeeper ACLs to apply to the znodes
+    used by automatic failover. These ACLs are specified in the same
+    format as used by the ZooKeeper CLI.
+
+    If the ACL itself contains secrets, you may instead specify a
+    path to a file, prefixed with the '@' symbol, and the value of
+    this configuration will be loaded from within.
+  </description>
+</property>
+
+<property>
+  <name>ha.zookeeper.auth</name>
+  <value></value>
+  <description>
+    A comma-separated list of ZooKeeper authentications to add when
+    connecting to ZooKeeper. These are specified in the same format
+    as used by the &quot;addauth&quot; command in the ZK CLI. It is
+    important that the authentications specified here are sufficient
+    to access znodes with the ACL specified in ha.zookeeper.acl.
+
+    If the auths contain secrets, you may instead specify a
+    path to a file, prefixed with the '@' symbol, and the value of
+    this configuration will be loaded from within.
+  </description>
+</property>
 </configuration>

@@ -19,12 +19,17 @@ package org.apache.hadoop.ha.protocolPB;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ha.HAServiceProtocol;
+import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
+import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.GetServiceStatusRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.GetServiceStatusResponseProto;
+import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAStateChangeRequestInfoProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.MonitorHealthRequestProto;
 import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.MonitorHealthResponseProto;
@@ -56,6 +61,8 @@ public class HAServiceProtocolServerSideTranslatorPB implements
       TransitionToActiveResponseProto.newBuilder().build();
   private static final TransitionToStandbyResponseProto TRANSITION_TO_STANDBY_RESP = 
       TransitionToStandbyResponseProto.newBuilder().build();
+  private static final Log LOG = LogFactory.getLog(
+      HAServiceProtocolServerSideTranslatorPB.class);
   
   public HAServiceProtocolServerSideTranslatorPB(HAServiceProtocol server) {
     this.server = server;
@@ -71,13 +78,33 @@ public class HAServiceProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
   }
+  
+  private StateChangeRequestInfo convert(HAStateChangeRequestInfoProto proto) {
+    RequestSource src;
+    switch (proto.getReqSource()) {
+    case REQUEST_BY_USER:
+      src = RequestSource.REQUEST_BY_USER;
+      break;
+    case REQUEST_BY_USER_FORCED:
+      src = RequestSource.REQUEST_BY_USER_FORCED;
+      break;
+    case REQUEST_BY_ZKFC:
+      src = RequestSource.REQUEST_BY_ZKFC;
+      break;
+    default:
+      LOG.warn("Unknown request source: " + proto.getReqSource());
+      src = null;
+    }
+    
+    return new StateChangeRequestInfo(src);
+  }
 
   @Override
   public TransitionToActiveResponseProto transitionToActive(
       RpcController controller, TransitionToActiveRequestProto request)
       throws ServiceException {
     try {
-      server.transitionToActive();
+      server.transitionToActive(convert(request.getReqInfo()));
       return TRANSITION_TO_ACTIVE_RESP;
     } catch(IOException e) {
       throw new ServiceException(e);
@@ -89,7 +116,7 @@ public class HAServiceProtocolServerSideTranslatorPB implements
       RpcController controller, TransitionToStandbyRequestProto request)
       throws ServiceException {
     try {
-      server.transitionToStandby();
+      server.transitionToStandby(convert(request.getReqInfo()));
       return TRANSITION_TO_STANDBY_RESP;
     } catch(IOException e) {
       throw new ServiceException(e);

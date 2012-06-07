@@ -33,7 +33,7 @@ HDFS High Availability
 
 * {Background}
 
-  Prior to Hadoop 0.23.2, the NameNode was a single point of failure (SPOF) in
+  Prior to Hadoop 2.0.0, the NameNode was a single point of failure (SPOF) in
   an HDFS cluster. Each cluster had a single NameNode, and if that machine or
   process became unavailable, the cluster as a whole would be unavailable
   until the NameNode was either restarted or brought up on a separate machine.
@@ -89,12 +89,6 @@ HDFS High Availability
   cutting off the previous Active's access to the shared edits storage. This
   prevents it from making any further edits to the namespace, allowing the new
   Active to safely proceed with failover.
-
-  <<Note:>> Currently, only manual failover is supported. This means the HA
-  NameNodes are incapable of automatically detecting a failure of the Active
-  NameNode, and instead rely on the operator to manually initiate a failover.
-  Automatic failure detection and initiation of a failover will be implemented in
-  future versions.
 
 * {Hardware resources}
 
@@ -459,3 +453,263 @@ Usage: DFSHAAdmin [-ns <nameserviceId>]
 
     <<Note:>> This is not yet implemented, and at present will always return
     success, unless the given NameNode is completely down.
+
+* {Automatic Failover}
+
+** Introduction
+
+  The above sections describe how to configure manual failover. In that mode,
+  the system will not automatically trigger a failover from the active to the
+  standby NameNode, even if the active node has failed. This section describes
+  how to configure and deploy automatic failover.
+
+** Components
+
+  Automatic failover adds two new components to an HDFS deployment: a ZooKeeper
+  quorum, and the ZKFailoverController process (abbreviated as ZKFC).
+
+  Apache ZooKeeper is a highly available service for maintaining small amounts
+  of coordination data, notifying clients of changes in that data, and
+  monitoring clients for failures. The implementation of automatic HDFS failover
+  relies on ZooKeeper for the following things:
+  
+    * <<Failure detection>> - each of the NameNode machines in the cluster
+    maintains a persistent session in ZooKeeper. If the machine crashes, the
+    ZooKeeper session will expire, notifying the other NameNode that a failover
+    should be triggered.
+
+    * <<Active NameNode election>> - ZooKeeper provides a simple mechanism to
+    exclusively elect a node as active. If the current active NameNode crashes,
+    another node may take a special exclusive lock in ZooKeeper indicating that
+    it should become the next active.
+
+  The ZKFailoverController (ZKFC) is a new component which is a ZooKeeper client
+  which also monitors and manages the state of the NameNode.  Each of the
+  machines which runs a NameNode also runs a ZKFC, and that ZKFC is responsible
+  for:
+
+    * <<Health monitoring>> - the ZKFC pings its local NameNode on a periodic
+    basis with a health-check command. So long as the NameNode responds in a
+    timely fashion with a healthy status, the ZKFC considers the node
+    healthy. If the node has crashed, frozen, or otherwise entered an unhealthy
+    state, the health monitor will mark it as unhealthy.
+
+    * <<ZooKeeper session management>> - when the local NameNode is healthy, the
+    ZKFC holds a session open in ZooKeeper. If the local NameNode is active, it
+    also holds a special "lock" znode. This lock uses ZooKeeper's support for
+    "ephemeral" nodes; if the session expires, the lock node will be
+    automatically deleted.
+
+    * <<ZooKeeper-based election>> - if the local NameNode is healthy, and the
+    ZKFC sees that no other node currently holds the lock znode, it will itself
+    try to acquire the lock. If it succeeds, then it has "won the election", and
+    is responsible for running a failover to make its local NameNode active. The
+    failover process is similar to the manual failover described above: first,
+    the previous active is fenced if necessary, and then the local NameNode
+    transitions to active state.
+
+  For more details on the design of automatic failover, refer to the design
+  document attached to HDFS-2185 on the Apache HDFS JIRA.
+
+** Deploying ZooKeeper
+
+  In a typical deployment, ZooKeeper daemons are configured to run on three or
+  five nodes. Since ZooKeeper itself has light resource requirements, it is
+  acceptable to collocate the ZooKeeper nodes on the same hardware as the HDFS
+  NameNode and Standby Node. Many operators choose to deploy the third ZooKeeper
+  process on the same node as the YARN ResourceManager. It is advisable to
+  configure the ZooKeeper nodes to store their data on separate disk drives from
+  the HDFS metadata for best performance and isolation.
+
+  The setup of ZooKeeper is out of scope for this document. We will assume that
+  you have set up a ZooKeeper cluster running on three or more nodes, and have
+  verified its correct operation by connecting using the ZK CLI.
+
+** Before you begin
+
+  Before you begin configuring automatic failover, you should shut down your
+  cluster. It is not currently possible to transition from a manual failover
+  setup to an automatic failover setup while the cluster is running.
+
+** Configuring automatic failover
+
+  The configuration of automatic failover requires the addition of two new
+  parameters to your configuration. In your <<<hdfs-site.xml>>> file, add:
+
+----
+ <property>
+   <name>dfs.ha.automatic-failover.enabled</name>
+   <value>true</value>
+ </property>
+----
+
+  This specifies that the cluster should be set up for automatic failover.
+  In your <<<core-site.xml>>> file, add:
+
+----
+ <property>
+   <name>ha.zookeeper.quorum</name>
+   <value>zk1.example.com:2181,zk2.example.com:2181,zk3.example.com:2181</value>
+ </property>
+----
+
+  This lists the host-port pairs running the ZooKeeper service.
+
+  As with the parameters described earlier in the document, these settings may
+  be configured on a per-nameservice basis by suffixing the configuration key
+  with the nameservice ID. For example, in a cluster with federation enabled,
+  you can explicitly enable automatic failover for only one of the nameservices
+  by setting <<<dfs.ha.automatic-failover.enabled.my-nameservice-id>>>.
+
+  There are also several other configuration parameters which may be set to
+  control the behavior of automatic failover; however, they are not necessary
+  for most installations. Please refer to the configuration key specific
+  documentation for details.
+
+** Initializing HA state in ZooKeeper
+
+  After the configuration keys have been added, the next step is to initialize
+  required state in ZooKeeper. You can do so by running the following command
+  from one of the NameNode hosts.
+
+----
+$ hdfs zkfc -formatZK
+----
+
+  This will create a znode in ZooKeeper inside of which the automatic failover
+  system stores its data.
+
+** Starting the cluster with <<<start-dfs.sh>>>
+
+  Since automatic failover has been enabled in the configuration, the
+  <<<start-dfs.sh>>> script will now automatically start a ZKFC daemon on any
+  machine that runs a NameNode. When the ZKFCs start, they will automatically
+  select one of the NameNodes to become active.
+
+** Starting the cluster manually
+
+  If you manually manage the services on your cluster, you will need to manually
+  start the <<<zkfc>>> daemon on each of the machines that runs a NameNode. You
+  can start the daemon by running:
+
+----
+$ hadoop-daemon.sh start zkfc
+----
+
+** Securing access to ZooKeeper
+
+  If you are running a secure cluster, you will likely want to ensure that the
+  information stored in ZooKeeper is also secured. This prevents malicious
+  clients from modifying the metadata in ZooKeeper or potentially triggering a
+  false failover.
+
+  In order to secure the information in ZooKeeper, first add the following to
+  your <<<core-site.xml>>> file:
+
+----
+ <property>
+   <name>ha.zookeeper.auth</name>
+   <value>@/path/to/zk-auth.txt</value>
+ </property>
+ <property>
+   <name>ha.zookeeper.acl</name>
+   <value>@/path/to/zk-acl.txt</value>
+ </property>
+----
+
+  Please note the '@' character in these values -- this specifies that the
+  configurations are not inline, but rather point to a file on disk.
+
+  The first configured file specifies a list of ZooKeeper authentications, in
+  the same format as used by the ZK CLI. For example, you may specify something
+  like:
+
+----
+digest:hdfs-zkfcs:mypassword
+----
+  ...where <<<hdfs-zkfcs>>> is a unique username for ZooKeeper, and
+  <<<mypassword>>> is some unique string used as a password.
+
+  Next, generate a ZooKeeper ACL that corresponds to this authentication, using
+  a command like the following:
+
+----
+$ java -cp $ZK_HOME/lib/*:$ZK_HOME/zookeeper-3.4.2.jar org.apache.zookeeper.server.auth.DigestAuthenticationProvider hdfs-zkfcs:mypassword
+output: hdfs-zkfcs:mypassword->hdfs-zkfcs:P/OQvnYyU/nF/mGYvB/xurX8dYs=
+----
+
+  Copy and paste the section of this output after the '->' string into the file
+  <<<zk-acls.txt>>>, prefixed by the string "<<<digest:>>>". For example:
+
+----
+digest:hdfs-zkfcs:vlUvLnd8MlacsE80rDuu6ONESbM=:rwcda
+----
+
+  In order for these ACLs to take effect, you should then rerun the
+  <<<zkfc -formatZK>>> command as described above.
+
+  After doing so, you may verify the ACLs from the ZK CLI as follows:
+
+----
+[zk: localhost:2181(CONNECTED) 1] getAcl /hadoop-ha
+'digest,'hdfs-zkfcs:vlUvLnd8MlacsE80rDuu6ONESbM=
+: cdrwa
+----
+
+** Verifying automatic failover
+
+  Once automatic failover has been set up, you should test its operation. To do
+  so, first locate the active NameNode. You can tell which node is active by
+  visiting the NameNode web interfaces -- each node reports its HA state at the
+  top of the page.
+
+  Once you have located your active NameNode, you may cause a failure on that
+  node.  For example, you can use <<<kill -9 <pid of NN>>>> to simulate a JVM
+  crash. Or, you could power cycle the machine or unplug its network interface
+  to simulate a different kind of outage.  After triggering the outage you wish
+  to test, the other NameNode should automatically become active within several
+  seconds. The amount of time required to detect a failure and trigger a
+  fail-over depends on the configuration of
+  <<<ha.zookeeper.session-timeout.ms>>>, but defaults to 5 seconds.
+
+  If the test does not succeed, you may have a misconfiguration. Check the logs
+  for the <<<zkfc>>> daemons as well as the NameNode daemons in order to further
+  diagnose the issue.
+
+
+* Automatic Failover FAQ
+
+  * <<Is it important that I start the ZKFC and NameNode daemons in any
+    particular order?>>
+
+  No. On any given node you may start the ZKFC before or after its corresponding
+  NameNode.
+
+  * <<What additional monitoring should I put in place?>>
+
+  You should add monitoring on each host that runs a NameNode to ensure that the
+  ZKFC remains running. In some types of ZooKeeper failures, for example, the
+  ZKFC may unexpectedly exit, and should be restarted to ensure that the system
+  is ready for automatic failover.
+
+  Additionally, you should monitor each of the servers in the ZooKeeper
+  quorum. If ZooKeeper crashes, then automatic failover will not function.
+
+  * <<What happens if ZooKeeper goes down?>>
+
+  If the ZooKeeper cluster crashes, no automatic failovers will be triggered.
+  However, HDFS will continue to run without any impact. When ZooKeeper is
+  restarted, HDFS will reconnect with no issues.
+
+  * <<Can I designate one of my NameNodes as primary/preferred?>>
+
+  No. Currently, this is not supported. Whichever NameNode is started first will
+  become active. You may choose to start the cluster in a specific order such
+  that your preferred node starts first.
+
+  * <<How can I initiate a manual failover when automatic failover is
+    configured?>>
+
+  Even if automatic failover is configured, you may initiate a manual failover
+  using the same <<<hdfs haadmin>>> command. It will perform a coordinated
+  failover.

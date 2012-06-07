@@ -829,6 +829,16 @@
 </property>
 
 <property>
+  <name>dfs.ha.automatic-failover.enabled</name>
+  <value>false</value>
+  <description>
+    Whether automatic failover is enabled. See the HDFS High
+    Availability documentation for details on automatic HA
+    configuration.
+  </description>
+</property>
+
+<property>
   <name>dfs.support.append</name>
   <value>true</value>
   <description>

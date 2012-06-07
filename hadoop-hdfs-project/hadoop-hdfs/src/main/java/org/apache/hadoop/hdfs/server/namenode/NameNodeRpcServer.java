@@ -979,14 +979,16 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   @Override // HAServiceProtocol
-  public synchronized void transitionToActive() 
+  public synchronized void transitionToActive(StateChangeRequestInfo req) 
       throws ServiceFailedException, AccessControlException {
+    nn.checkHaStateChange(req);
     nn.transitionToActive();
   }
   
   @Override // HAServiceProtocol
-  public synchronized void transitionToStandby() 
+  public synchronized void transitionToStandby(StateChangeRequestInfo req) 
       throws ServiceFailedException, AccessControlException {
+    nn.checkHaStateChange(req);
     nn.transitionToStandby();
   }
 

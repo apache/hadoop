@@ -117,6 +117,8 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
       "security.refresh.user.mappings.protocol.acl";
   public static final String 
   SECURITY_HA_SERVICE_PROTOCOL_ACL = "security.ha.service.protocol.acl";
+  public static final String 
+  SECURITY_ZKFC_PROTOCOL_ACL = "security.zkfc.protocol.acl";
   
   public static final String HADOOP_SECURITY_TOKEN_SERVICE_USE_IP =
       "hadoop.security.token.service.use_ip";

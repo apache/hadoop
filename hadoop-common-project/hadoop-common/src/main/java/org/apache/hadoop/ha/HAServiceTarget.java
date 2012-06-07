@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ha.protocolPB.HAServiceProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ha.protocolPB.ZKFCProtocolClientSideTranslatorPB;
 import org.apache.hadoop.net.NetUtils;
 
 import com.google.common.collect.Maps;
@@ -47,6 +48,11 @@ public abstract class HAServiceTarget {
    * @return the IPC address of the target node.
    */
   public abstract InetSocketAddress getAddress();
+
+  /**
+   * @return the IPC address of the ZKFC on the target node
+   */
+  public abstract InetSocketAddress getZKFCAddress();
 
   /**
    * @return a Fencer implementation configured for this target node
@@ -76,6 +82,20 @@ public abstract class HAServiceTarget {
         confCopy, factory, timeoutMs);
   }
   
+  /**
+   * @return a proxy to the ZKFC which is associated with this HA service.
+   */
+  public ZKFCProtocol getZKFCProxy(Configuration conf, int timeoutMs)
+      throws IOException {
+    Configuration confCopy = new Configuration(conf);
+    // Lower the timeout so we quickly fail to connect
+    confCopy.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
+    SocketFactory factory = NetUtils.getDefaultSocketFactory(confCopy);
+    return new ZKFCProtocolClientSideTranslatorPB(
+        getZKFCAddress(),
+        confCopy, factory, timeoutMs);
+  }
+  
   public final Map<String, String> getFencingParameters() {
     Map<String, String> ret = Maps.newHashMap();
     addFencingParameters(ret);
@@ -98,5 +118,12 @@ public abstract class HAServiceTarget {
     ret.put(ADDRESS_SUBST_KEY, String.valueOf(getAddress()));
     ret.put(HOST_SUBST_KEY, getAddress().getHostName());
     ret.put(PORT_SUBST_KEY, String.valueOf(getAddress().getPort()));
+  }
+
+  /**
+   * @return true if auto failover should be considered enabled
+   */
+  public boolean isAutoFailoverEnabled() {
+    return false;
   }
 }

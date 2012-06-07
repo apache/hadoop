@@ -60,6 +60,31 @@ public interface HAServiceProtocol {
       return name;
     }
   }
+  
+  public static enum RequestSource {
+    REQUEST_BY_USER,
+    REQUEST_BY_USER_FORCED,
+    REQUEST_BY_ZKFC;
+  }
+  
+  /**
+   * Information describing the source for a request to change state.
+   * This is used to differentiate requests from automatic vs CLI
+   * failover controllers, and in the future may include epoch
+   * information.
+   */
+  public static class StateChangeRequestInfo {
+    private final RequestSource source;
+
+    public StateChangeRequestInfo(RequestSource source) {
+      super();
+      this.source = source;
+    }
+
+    public RequestSource getSource() {
+      return source;
+    }
+  }
 
   /**
    * Monitor the health of service. This periodically called by the HA
@@ -95,7 +120,8 @@ public interface HAServiceProtocol {
    * @throws IOException
    *           if other errors happen
    */
-  public void transitionToActive() throws ServiceFailedException,
+  public void transitionToActive(StateChangeRequestInfo reqInfo)
+                                   throws ServiceFailedException,
                                           AccessControlException,
                                           IOException;
 
@@ -110,7 +136,8 @@ public interface HAServiceProtocol {
    * @throws IOException
    *           if other errors happen
    */
-  public void transitionToStandby() throws ServiceFailedException,
+  public void transitionToStandby(StateChangeRequestInfo reqInfo)
+                                    throws ServiceFailedException,
                                            AccessControlException,
                                            IOException;
 

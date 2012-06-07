@@ -1,0 +1,19 @@
+Changes for HDFS-3042 branch.
+
+This change list will be merged into the trunk CHANGES.txt when the HDFS-3042
+branch is merged.
+------------------------------
+
+HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
+
+HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
+
+HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
+
+HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
+
+HDFS-3159. Document NN auto-failover setup and configuration (todd)
+
+HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
+
+HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)

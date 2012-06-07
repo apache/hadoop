@@ -1,0 +1,29 @@
+Changes for HDFS-3042 branch.
+
+This change list will be merged into the trunk CHANGES.txt when the HDFS-3-42
+branch is merged.
+------------------------------
+
+HADOOP-8220. ZKFailoverController doesn't handle failure to become active correctly (todd)
+
+HADOOP-8228. Auto HA: Refactor tests and add stress tests. (todd)
+
+HADOOP-8215. Security support for ZK Failover controller (todd)
+
+HADOOP-8245. Fix flakiness in TestZKFailoverController (todd)
+
+HADOOP-8257. TestZKFailoverControllerStress occasionally fails with Mockito error (todd)
+
+HADOOP-8260. Replace ClientBaseWithFixes with our own modified copy of the class (todd)
+
+HADOOP-8246. Auto-HA: automatically scope znode by nameservice ID (todd)
+
+HADOOP-8247. Add a config to enable auto-HA, which disables manual FailoverController (todd)
+
+HADOOP-8306. ZKFC: improve error message when ZK is not running. (todd)
+
+HADOOP-8279. Allow manual failover to be invoked when auto-failover is enabled. (todd)
+
+HADOOP-8276. Auto-HA: add config for java options to pass to zkfc daemon (todd via eli)
+
+HADOOP-8405. ZKFC tests leak ZK instances. (todd)

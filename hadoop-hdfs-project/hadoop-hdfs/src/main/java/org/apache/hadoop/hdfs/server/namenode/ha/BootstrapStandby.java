@@ -207,7 +207,6 @@ public class BootstrapStandby implements Tool, Configurable {
     return 0;
   }
 
-  
   private boolean checkLogsAvailableForRead(FSImage image, long imageTxId,
       long curTxIdOnOtherNode) {
 
