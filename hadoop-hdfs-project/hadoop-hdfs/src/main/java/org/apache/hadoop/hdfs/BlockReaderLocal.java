@@ -39,7 +39,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.util.DirectBufferPool;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
@@ -316,10 +315,23 @@ class BlockReaderLocal implements BlockReader {
     boolean success = false;
     try {
       // Skip both input streams to beginning of the chunk containing startOffset
-      IOUtils.skipFully(dataIn, firstChunkOffset);
+      long toSkip = firstChunkOffset;
+      while (toSkip > 0) {
+        long skipped = dataIn.skip(toSkip);
+        if (skipped == 0) {
+          throw new IOException("Couldn't initialize input stream");
+        }
+        toSkip -= skipped;
+      }
       if (checksumIn != null) {
         long checkSumOffset = (firstChunkOffset / bytesPerChecksum) * checksumSize;
-        IOUtils.skipFully(dataIn, checkSumOffset);
+        while (checkSumOffset > 0) {
+          long skipped = checksumIn.skip(checkSumOffset);
+          if (skipped == 0) {
+            throw new IOException("Couldn't initialize checksum input stream");
+          }
+          checkSumOffset -= skipped;
+        }
       }
       success = true;
     } finally {
@@ -624,9 +636,17 @@ class BlockReaderLocal implements BlockReader {
     slowReadBuff.position(slowReadBuff.limit());
     checksumBuff.position(checksumBuff.limit());
   
-    IOUtils.skipFully(dataIn, toskip);
-    long checkSumOffset = (toskip / bytesPerChecksum) * checksumSize;
-    IOUtils.skipFully(checksumIn, checkSumOffset);
+    long dataSkipped = dataIn.skip(toskip);
+    if (dataSkipped != toskip) {
+      throw new IOException("skip error in data input stream");
+    }
+    long checkSumOffset = (dataSkipped / bytesPerChecksum) * checksumSize;
+    if (checkSumOffset > 0) {
+      long skipped = checksumIn.skip(checkSumOffset);
+      if (skipped != checkSumOffset) {
+        throw new IOException("skip error in checksum input stream");
+      }
+    }
 
     // read into the middle of the chunk
     if (skipBuf == null) {
