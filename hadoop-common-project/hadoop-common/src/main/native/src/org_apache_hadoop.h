@@ -24,10 +24,21 @@
 #if !defined ORG_APACHE_HADOOP_H
 #define ORG_APACHE_HADOOP_H
 
-#include <dlfcn.h>
-#include <jni.h>
+#if defined HAVE_CONFIG_H
+  #include <config.h>
+#endif
 
-#include "config.h"
+#if defined HAVE_DLFCN_H
+  #include <dlfcn.h>
+#else
+  #error "dlfcn.h not found"
+#endif  
+
+#if defined HAVE_JNI_H    
+  #include <jni.h>
+#else
+  #error 'jni.h not found'
+#endif
 
 /* A helper macro to 'throw' a java exception. */ 
 #define THROW(env, exception_name, message) \
