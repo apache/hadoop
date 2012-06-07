@@ -28,8 +28,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -52,14 +50,21 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.net.NetUtils;
+
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
-public class TestBlockReplacement extends TestCase {
+public class TestBlockReplacement {
   private static final Log LOG = LogFactory.getLog(
   "org.apache.hadoop.hdfs.TestBlockReplacement");
 
   MiniDFSCluster cluster;
+  @Test
   public void testThrottler() throws IOException {
     Configuration conf = new HdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
@@ -83,6 +88,7 @@ public class TestBlockReplacement extends TestCase {
     assertTrue(totalBytes*1000/(end-start)<=bandwidthPerSec);
   }
   
+  @Test
   public void testBlockReplacement() throws IOException, TimeoutException {
     final Configuration CONF = new HdfsConfiguration();
     final String[] INITIAL_RACKS = {"/RACK0", "/RACK1", "/RACK2"};

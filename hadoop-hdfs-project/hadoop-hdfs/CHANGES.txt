@@ -313,6 +313,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3492. Fix some misuses of InputStream#skip (Colin Patrick McCabe
     via todd)
 
+    HDFS-3485. DataTransferThrottler will over-throttle when currentTimeMillis
+    jumps (Andy Isaacson via todd)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES

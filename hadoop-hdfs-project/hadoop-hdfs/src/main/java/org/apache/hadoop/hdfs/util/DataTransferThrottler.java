@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.util;
 
+import static org.apache.hadoop.hdfs.server.common.Util.monotonicNow;
+
 /** 
  * a class to throttle the data transfers.
  * This class is thread safe. It can be shared by multiple threads.
@@ -26,9 +28,9 @@ package org.apache.hadoop.hdfs.util;
 public class DataTransferThrottler {
   private long period;          // period over which bw is imposed
   private long periodExtension; // Max period over which bw accumulates.
-  private long bytesPerPeriod; // total number of bytes can be sent in each period
-  private long curPeriodStart; // current period starting time
-  private long curReserve;     // remaining bytes can be sent in the period
+  private long bytesPerPeriod;  // total number of bytes can be sent in each period
+  private long curPeriodStart;  // current period starting time
+  private long curReserve;      // remaining bytes can be sent in the period
   private long bytesAlreadyUsed;
 
   /** Constructor 
@@ -45,7 +47,7 @@ public class DataTransferThrottler {
    * @param bandwidthPerSec bandwidth allowed in bytes per second. 
    */
   public DataTransferThrottler(long period, long bandwidthPerSec) {
-    this.curPeriodStart = System.currentTimeMillis();
+    this.curPeriodStart = monotonicNow();
     this.period = period;
     this.curReserve = this.bytesPerPeriod = bandwidthPerSec*period/1000;
     this.periodExtension = period*3;
@@ -87,7 +89,7 @@ public class DataTransferThrottler {
     bytesAlreadyUsed += numOfBytes;
 
     while (curReserve <= 0) {
-      long now = System.currentTimeMillis();
+      long now = monotonicNow();
       long curPeriodEnd = curPeriodStart + period;
 
       if ( now < curPeriodEnd ) {
