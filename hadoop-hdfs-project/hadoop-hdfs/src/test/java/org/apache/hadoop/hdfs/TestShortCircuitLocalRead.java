@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
@@ -93,7 +92,8 @@ public class TestShortCircuitLocalRead {
     // Now read using a different API.
     actual = new byte[expected.length-readOffset];
     stm = fs.open(name);
-    IOUtils.skipFully(stm, readOffset);
+    long skipped = stm.skip(readOffset);
+    Assert.assertEquals(skipped, readOffset);
     //Read a small number of bytes first.
     int nread = stm.read(actual, 0, 3);
     nread += stm.read(actual, nread, 2);
