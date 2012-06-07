@@ -8,6 +8,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
 
+    HDFS-3042. Automatic failover support for NameNode HA (todd)
+    (see dedicated section below for breakdown of subtasks)
+
   IMPROVEMENTS
 
     HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
@@ -161,6 +164,22 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3485. DataTransferThrottler will over-throttle when currentTimeMillis
     jumps (Andy Isaacson via todd)
+
+  BREAKDOWN OF HDFS-3042 SUBTASKS
+
+    HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
+    
+    HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
+    
+    HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
+    
+    HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
+    
+    HDFS-3159. Document NN auto-failover setup and configuration (todd)
+    
+    HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
+    
+    HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
 
 Release 2.0.0-alpha - 05-23-2012
 
