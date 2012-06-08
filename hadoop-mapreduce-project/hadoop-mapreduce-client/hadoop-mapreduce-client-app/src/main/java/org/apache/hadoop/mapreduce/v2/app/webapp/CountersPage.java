@@ -28,9 +28,6 @@ public class CountersPage extends AppView {
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
 
-    // Counters page is a summary. Helps to refresh automatically.
-    html.meta_http("refresh", "10");
-
     String tid = $(TASK_ID);
     String activeNav = "3";
     if(tid == null || tid.isEmpty()) {
