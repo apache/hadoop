@@ -173,6 +173,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-2914. HA: Standby should not enter safemode when resources are low. (Vinay via atm)
 
+    HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option.
+    (Henry Robinson via atm)
+    
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
