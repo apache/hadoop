@@ -90,6 +90,8 @@ Trunk (unreleased changes)
     HDFS-3040. TestMulitipleNNDataBlockScanner is misspelled. (Madhukara Phatak
     via atm)
 
+    HDFS-3514. Add missing TestParallelLocalRead. (Henry Robinson via atm)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
