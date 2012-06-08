@@ -572,8 +572,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         !safeMode.isPopulatingReplQueues();
       setBlockTotal();
       blockManager.activate(conf);
-      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
-      nnrmthread.start();
     } finally {
       writeUnlock();
     }
@@ -590,7 +588,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     writeLock();
     try {
       if (blockManager != null) blockManager.close();
-      if (nnrmthread != null) nnrmthread.interrupt();
     } finally {
       writeUnlock();
     }
@@ -644,6 +641,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
       leaseManager.startMonitor();
       startSecretManagerIfNecessary();
+
+      //ResourceMonitor required only at ActiveNN. See HDFS-2914
+      this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
+      nnrmthread.start();
     } finally {
       writeUnlock();
     }
@@ -665,6 +666,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       stopSecretManager();
       if (leaseManager != null) {
         leaseManager.stopMonitor();
+      }
+      if (nnrmthread != null) {
+        ((NameNodeResourceMonitor) nnrmthread.getRunnable()).stopMonitor();
+        nnrmthread.interrupt();
       }
       if (dir != null && dir.fsImage != null) {
         if (dir.fsImage.editLog != null) {
@@ -3193,10 +3198,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * acceptable levels, this daemon will cause the NN to exit safe mode.
    */
   class NameNodeResourceMonitor implements Runnable  {
+    boolean shouldNNRmRun = true;
     @Override
     public void run () {
       try {
-        while (fsRunning) {
+        while (fsRunning && shouldNNRmRun) {
           checkAvailableResources();
           if(!nameNodeHasResourcesAvailable()) {
             String lowResourcesMsg = "NameNode low on available disk space. ";
@@ -3217,7 +3223,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         FSNamesystem.LOG.error("Exception in NameNodeResourceMonitor: ", e);
       }
     }
-  }
+
+    public void stopMonitor() {
+      shouldNNRmRun = false;
+    }
+ }
   
   public FSImage getFSImage() {
     return dir.fsImage;
