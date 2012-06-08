@@ -34,9 +34,9 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.junit.Test;
 
 
-public class TestMulitipleNNDataBlockScanner {
+public class TestMultipleNNDataBlockScanner {
   private static final Log LOG = 
-    LogFactory.getLog(TestMulitipleNNDataBlockScanner.class);
+    LogFactory.getLog(TestMultipleNNDataBlockScanner.class);
   Configuration conf;
   MiniDFSCluster cluster = null;
   String bpids[] = new String[3];

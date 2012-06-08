@@ -87,6 +87,9 @@ Trunk (unreleased changes)
     HDFS-3476. Correct the default used in TestDFSClientRetries.busyTest()
     after HDFS-3462 (harsh)
 
+    HDFS-3040. TestMulitipleNNDataBlockScanner is misspelled. (Madhukara Phatak
+    via atm)
+
   OPTIMIZATIONS
 
     HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
