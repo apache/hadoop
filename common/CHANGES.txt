@@ -8,6 +8,9 @@ Release 0.22.1 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-6995. Allow wildcards to be used in ProxyUsers configurations.
+    (Todd Lipcon and Mayank Bansal via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
