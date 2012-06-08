@@ -126,10 +126,6 @@ public class TaskPage extends AppView {
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
 
-    // This page is a list of all attempts which are limited in number. Okay to
-    // refresh automatically.
-    html.meta_http("refresh", "10");
-
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:3}");
     set(DATATABLES_ID, "attempts");
     set(initID(DATATABLES, "attempts"), attemptsTableInit());

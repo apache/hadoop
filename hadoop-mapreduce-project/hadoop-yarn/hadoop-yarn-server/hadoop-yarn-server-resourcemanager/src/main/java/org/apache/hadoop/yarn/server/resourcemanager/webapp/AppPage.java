@@ -24,8 +24,6 @@ public class AppPage extends RmView {
 
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
-    // App page is per-app information. Helps to refresh automatically.
-    html.meta_http("refresh", "10");
   }
 
   @Override protected Class<? extends SubView> content() {
