@@ -81,12 +81,16 @@ extern  "C" {
     };
 
     
+    // Bit fields for hdfsFile_internal flags
+    #define HDFS_FILE_SUPPORTS_DIRECT_READ (1<<0)
+
     /**
      * The 'file-handle' to a file in hdfs.
      */
     struct hdfsFile_internal {
         void* file;
         enum hdfsStreamType type;
+        uint32_t flags;
     };
     typedef struct hdfsFile_internal* hdfsFile;
       
@@ -202,7 +206,6 @@ extern  "C" {
      * than than length;-1 on error.
      */
     tSize hdfsRead(hdfsFS fs, hdfsFile file, void* buffer, tSize length);
-
 
     /** 
      * hdfsPread - Positional read of data from an open file.
