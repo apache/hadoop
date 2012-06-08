@@ -84,7 +84,7 @@ public class RemoteBlockReader2  implements BlockReader {
   static final Log LOG = LogFactory.getLog(RemoteBlockReader2.class);
   
   Socket dnSock; //for now just sending the status code (e.g. checksumOk) after the read.
-  private ReadableByteChannel in;
+  private final ReadableByteChannel in;
   private DataChecksum checksum;
   
   private PacketHeader curHeader;
@@ -100,11 +100,11 @@ public class RemoteBlockReader2  implements BlockReader {
   private final String filename;
 
   private static DirectBufferPool bufferPool = new DirectBufferPool();
-  private ByteBuffer headerBuf = ByteBuffer.allocate(
+  private final ByteBuffer headerBuf = ByteBuffer.allocate(
       PacketHeader.PKT_HEADER_LEN);
 
-  private int bytesPerChecksum;
-  private int checksumSize;
+  private final int bytesPerChecksum;
+  private final int checksumSize;
 
   /**
    * The total number of bytes we need to transfer from the DN.
@@ -137,6 +137,26 @@ public class RemoteBlockReader2  implements BlockReader {
     int nRead = Math.min(curDataSlice.remaining(), len);
     curDataSlice.get(buf, off, nRead);
     
+    return nRead;
+  }
+
+
+  @Override
+  public int read(ByteBuffer buf) throws IOException {
+    if (curPacketBuf == null || curDataSlice.remaining() == 0 && bytesNeededToFinish > 0) {
+      readNextPacket();
+    }
+    if (curDataSlice.remaining() == 0) {
+      // we're at EOF now
+      return -1;
+    }
+
+    int nRead = Math.min(curDataSlice.remaining(), buf.remaining());
+    ByteBuffer writeSlice = curDataSlice.duplicate();
+    writeSlice.limit(writeSlice.position() + nRead);
+    buf.put(writeSlice);
+    curDataSlice.position(writeSlice.position());
+
     return nRead;
   }
 
@@ -325,6 +345,7 @@ public class RemoteBlockReader2  implements BlockReader {
   /**
    * Take the socket used to talk to the DN.
    */
+  @Override
   public Socket takeSocket() {
     assert hasSentStatusCode() :
       "BlockReader shouldn't give back sockets mid-read";
@@ -337,6 +358,7 @@ public class RemoteBlockReader2  implements BlockReader {
    * Whether the BlockReader has reached the end of its input stream
    * and successfully sent a status code back to the datanode.
    */
+  @Override
   public boolean hasSentStatusCode() {
     return sentStatusCode;
   }

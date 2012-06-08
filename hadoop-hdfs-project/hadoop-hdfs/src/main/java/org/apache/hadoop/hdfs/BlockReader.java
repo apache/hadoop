@@ -20,11 +20,13 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.net.Socket;
 
+import org.apache.hadoop.fs.ByteBufferReadable;
+
 /**
  * A BlockReader is responsible for reading a single block
  * from a single datanode.
  */
-public interface BlockReader {
+public interface BlockReader extends ByteBufferReadable {
 
   /* same interface as inputStream java.io.InputStream#read()
    * used by DFSInputStream#read()

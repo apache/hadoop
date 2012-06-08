@@ -118,20 +118,32 @@ class BlockReaderLocal implements BlockReader {
   private static Map<Integer, LocalDatanodeInfo> localDatanodeInfoMap = new HashMap<Integer, LocalDatanodeInfo>();
 
   private final FileInputStream dataIn; // reader for the data file
-  private FileInputStream checksumIn;   // reader for the checksum file
+  private final FileInputStream checksumIn;   // reader for the checksum file
 
+  /**
+   * Offset from the most recent chunk boundary at which the next read should
+   * take place. Is only set to non-zero at construction time, and is
+   * decremented (usually to 0) by subsequent reads. This avoids having to do a
+   * checksum read at construction to position the read cursor correctly.
+   */
   private int offsetFromChunkBoundary;
   
   private byte[] skipBuf = null;
-  private ByteBuffer dataBuff = null;
+
+  /**
+   * Used for checksummed reads that need to be staged before copying to their
+   * output buffer because they are either a) smaller than the checksum chunk
+   * size or b) issued by the slower read(byte[]...) path
+   */
+  private ByteBuffer slowReadBuff = null;
   private ByteBuffer checksumBuff = null;
   private DataChecksum checksum;
   private final boolean verifyChecksum;
 
   private static DirectBufferPool bufferPool = new DirectBufferPool();
 
-  private int bytesPerChecksum;
-  private int checksumSize;
+  private final int bytesPerChecksum;
+  private final int checksumSize;
 
   /** offset in block where reader wants to actually read */
   private long startOffset;
@@ -170,7 +182,7 @@ class BlockReaderLocal implements BlockReader {
       if (LOG.isDebugEnabled()) {
         LOG.debug("New BlockReaderLocal for file " + blkfile + " of size "
             + blkfile.length() + " startOffset " + startOffset + " length "
-            + length + " short circuit checksum " + skipChecksumCheck);
+            + length + " short circuit checksum " + !skipChecksumCheck);
       }
 
       if (!skipChecksumCheck) {
@@ -254,6 +266,20 @@ class BlockReaderLocal implements BlockReader {
         DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_DEFAULT);
   }
   
+  private static int getSlowReadBufferNumChunks(Configuration conf, int bytesPerChecksum) {
+    int bufferSizeBytes = conf.getInt(DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY,
+        DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_DEFAULT);
+
+    if (bufferSizeBytes < bytesPerChecksum) {
+      throw new IllegalArgumentException("Configured BlockReaderLocal buffer size (" + bufferSizeBytes + ") " +
+          "is not large enough to hold a single chunk (" + bytesPerChecksum +  "). Please configure " +
+          DFSConfigKeys.DFS_CLIENT_READ_SHORTCIRCUIT_BUFFER_SIZE_KEY + " appropriately");
+    }
+
+    // Round down to nearest chunk size
+    return bufferSizeBytes / bytesPerChecksum;
+  }
+
   private BlockReaderLocal(Configuration conf, String hdfsfile,
       ExtendedBlock block, Token<BlockTokenIdentifier> token, long startOffset,
       long length, BlockLocalPathInfo pathinfo, FileInputStream dataIn)
@@ -279,33 +305,47 @@ class BlockReaderLocal implements BlockReader {
     this.dataIn = dataIn;
     this.checksumIn = checksumIn;
     this.offsetFromChunkBoundary = (int) (startOffset-firstChunkOffset);
-    dataBuff = bufferPool.getBuffer(bytesPerChecksum*64);
-    checksumBuff = bufferPool.getBuffer(checksumSize*64);
-    //Initially the buffers have nothing to read.
-    dataBuff.flip();
+
+    int chunksPerChecksumRead = getSlowReadBufferNumChunks(conf, bytesPerChecksum);
+    slowReadBuff = bufferPool.getBuffer(bytesPerChecksum * chunksPerChecksumRead);
+    checksumBuff = bufferPool.getBuffer(checksumSize * chunksPerChecksumRead);
+    // Initially the buffers have nothing to read.
+    slowReadBuff.flip();
     checksumBuff.flip();
-    long toSkip = firstChunkOffset;
-    while (toSkip > 0) {
-      long skipped = dataIn.skip(toSkip);
-      if (skipped == 0) {
-        throw new IOException("Couldn't initialize input stream");
-      }
-      toSkip -= skipped;
-    }
-    if (checksumIn != null) {
-      long checkSumOffset = (firstChunkOffset / bytesPerChecksum)
-          * checksumSize;
-      while (checkSumOffset > 0) {
-        long skipped = checksumIn.skip(checkSumOffset);
+    boolean success = false;
+    try {
+      // Skip both input streams to beginning of the chunk containing startOffset
+      long toSkip = firstChunkOffset;
+      while (toSkip > 0) {
+        long skipped = dataIn.skip(toSkip);
         if (skipped == 0) {
-          throw new IOException("Couldn't initialize checksum input stream");
+          throw new IOException("Couldn't initialize input stream");
         }
-        checkSumOffset -= skipped;
+        toSkip -= skipped;
+      }
+      if (checksumIn != null) {
+        long checkSumOffset = (firstChunkOffset / bytesPerChecksum) * checksumSize;
+        while (checkSumOffset > 0) {
+          long skipped = checksumIn.skip(checkSumOffset);
+          if (skipped == 0) {
+            throw new IOException("Couldn't initialize checksum input stream");
+          }
+          checkSumOffset -= skipped;
+        }
+      }
+      success = true;
+    } finally {
+      if (!success) {
+        bufferPool.returnBuffer(slowReadBuff);
+        bufferPool.returnBuffer(checksumBuff);
       }
     }
   }
 
-  private int readIntoBuffer(FileInputStream stream, ByteBuffer buf)
+  /**
+   * Reads bytes into a buffer until EOF or the buffer's limit is reached
+   */
+  private int fillBuffer(FileInputStream stream, ByteBuffer buf)
       throws IOException {
     int bytesRead = stream.getChannel().read(buf);
     if (bytesRead < 0) {
@@ -323,45 +363,229 @@ class BlockReaderLocal implements BlockReader {
     return bytesRead;
   }
   
+  /**
+   * Utility method used by read(ByteBuffer) to partially copy a ByteBuffer into
+   * another.
+   */
+  private void writeSlice(ByteBuffer from, ByteBuffer to, int length) {
+    int oldLimit = from.limit();
+    from.limit(from.position() + length);
+    try {
+      to.put(from);
+    } finally {
+      from.limit(oldLimit);
+    }
+  }
+
+  @Override
+  public synchronized int read(ByteBuffer buf) throws IOException {
+    int nRead = 0;
+    if (verifyChecksum) {
+      // A 'direct' read actually has three phases. The first drains any
+      // remaining bytes from the slow read buffer. After this the read is
+      // guaranteed to be on a checksum chunk boundary. If there are still bytes
+      // to read, the fast direct path is used for as many remaining bytes as
+      // possible, up to a multiple of the checksum chunk size. Finally, any
+      // 'odd' bytes remaining at the end of the read cause another slow read to
+      // be issued, which involves an extra copy.
+
+      // Every 'slow' read tries to fill the slow read buffer in one go for
+      // efficiency's sake. As described above, all non-checksum-chunk-aligned
+      // reads will be served from the slower read path.
+
+      if (slowReadBuff.hasRemaining()) {
+        // There are remaining bytes from a small read available. This usually
+        // means this read is unaligned, which falls back to the slow path.
+        int fromSlowReadBuff = Math.min(buf.remaining(), slowReadBuff.remaining());
+        writeSlice(slowReadBuff, buf, fromSlowReadBuff);
+        nRead += fromSlowReadBuff;
+      }
+
+      if (buf.remaining() >= bytesPerChecksum && offsetFromChunkBoundary == 0) {
+        // Since we have drained the 'small read' buffer, we are guaranteed to
+        // be chunk-aligned
+        int len = buf.remaining() - (buf.remaining() % bytesPerChecksum);
+
+        // There's only enough checksum buffer space available to checksum one
+        // entire slow read buffer. This saves keeping the number of checksum
+        // chunks around.
+        len = Math.min(len, slowReadBuff.capacity());
+        int oldlimit = buf.limit();
+        buf.limit(buf.position() + len);
+        int readResult = 0;
+        try {
+          readResult = doByteBufferRead(buf);
+        } finally {
+          buf.limit(oldlimit);
+        }
+        if (readResult == -1) {
+          return nRead;
+        } else {
+          nRead += readResult;
+          buf.position(buf.position() + readResult);
+        }
+      }
+
+      // offsetFromChunkBoundary > 0 => unaligned read, use slow path to read
+      // until chunk boundary
+      if ((buf.remaining() > 0 && buf.remaining() < bytesPerChecksum) || offsetFromChunkBoundary > 0) {
+        int toRead = Math.min(buf.remaining(), bytesPerChecksum - offsetFromChunkBoundary);
+        int readResult = fillSlowReadBuffer(toRead);
+        if (readResult == -1) {
+          return nRead;
+        } else {
+          int fromSlowReadBuff = Math.min(readResult, buf.remaining());
+          writeSlice(slowReadBuff, buf, fromSlowReadBuff);
+          nRead += fromSlowReadBuff;
+        }
+      }
+    } else {
+      // Non-checksummed reads are much easier; we can just fill the buffer directly.
+      nRead = doByteBufferRead(buf);
+      if (nRead > 0) {
+        buf.position(buf.position() + nRead);
+      }
+    }
+    return nRead;
+  }
+
+  /**
+   * Tries to read as many bytes as possible into supplied buffer, checksumming
+   * each chunk if needed.
+   *
+   * <b>Preconditions:</b>
+   * <ul>
+   * <li>
+   * If checksumming is enabled, buf.remaining must be a multiple of
+   * bytesPerChecksum. Note that this is not a requirement for clients of
+   * read(ByteBuffer) - in the case of non-checksum-sized read requests,
+   * read(ByteBuffer) will substitute a suitably sized buffer to pass to this
+   * method.
+   * </li>
+   * </ul>
+   * <b>Postconditions:</b>
+   * <ul>
+   * <li>buf.limit and buf.mark are unchanged.</li>
+   * <li>buf.position += min(offsetFromChunkBoundary, totalBytesRead) - so the
+   * requested bytes can be read straight from the buffer</li>
+   * </ul>
+   *
+   * @param buf
+   *          byte buffer to write bytes to. If checksums are not required, buf
+   *          can have any number of bytes remaining, otherwise there must be a
+   *          multiple of the checksum chunk size remaining.
+   * @return <tt>max(min(totalBytesRead, len) - offsetFromChunkBoundary, 0)</tt>
+   *         that is, the the number of useful bytes (up to the amount
+   *         requested) readable from the buffer by the client.
+   */
+  private synchronized int doByteBufferRead(ByteBuffer buf) throws IOException {
+    if (verifyChecksum) {
+      assert buf.remaining() % bytesPerChecksum == 0;
+    }
+    int dataRead = -1;
+
+    int oldpos = buf.position();
+    // Read as much as we can into the buffer.
+    dataRead = fillBuffer(dataIn, buf);
+
+    if (dataRead == -1) {
+      return -1;
+    }
+
+    if (verifyChecksum) {
+      ByteBuffer toChecksum = buf.duplicate();
+      toChecksum.position(oldpos);
+      toChecksum.limit(oldpos + dataRead);
+
+      checksumBuff.clear();
+      // Equivalent to (int)Math.ceil(toChecksum.remaining() * 1.0 / bytesPerChecksum );
+      int numChunks =
+        (toChecksum.remaining() + bytesPerChecksum - 1) / bytesPerChecksum;
+      checksumBuff.limit(checksumSize * numChunks);
+
+      fillBuffer(checksumIn, checksumBuff);
+      checksumBuff.flip();
+
+      checksum.verifyChunkedSums(toChecksum, checksumBuff, filename,
+          this.startOffset);
+    }
+
+    if (dataRead >= 0) {
+      buf.position(oldpos + Math.min(offsetFromChunkBoundary, dataRead));
+    }
+
+    if (dataRead < offsetFromChunkBoundary) {
+      // yikes, didn't even get enough bytes to honour offset. This can happen
+      // even if we are verifying checksums if we are at EOF.
+      offsetFromChunkBoundary -= dataRead;
+      dataRead = 0;
+    } else {
+      dataRead -= offsetFromChunkBoundary;
+      offsetFromChunkBoundary = 0;
+    }
+
+    return dataRead;
+  }
+
+  /**
+   * Ensures that up to len bytes are available and checksummed in the slow read
+   * buffer. The number of bytes available to read is returned. If the buffer is
+   * not already empty, the number of remaining bytes is returned and no actual
+   * read happens.
+   *
+   * @param len
+   *          the maximum number of bytes to make available. After len bytes
+   *          are read, the underlying bytestream <b>must</b> be at a checksum
+   *          boundary, or EOF. That is, (len + currentPosition) %
+   *          bytesPerChecksum == 0.
+   * @return the number of bytes available to read, or -1 if EOF.
+   */
+  private synchronized int fillSlowReadBuffer(int len) throws IOException {
+    int nRead = -1;
+    if (slowReadBuff.hasRemaining()) {
+      // Already got data, good to go.
+      nRead = Math.min(len, slowReadBuff.remaining());
+    } else {
+      // Round a complete read of len bytes (plus any implicit offset) to the
+      // next chunk boundary, since we try and read in multiples of a chunk
+      int nextChunk = len + offsetFromChunkBoundary +
+          (bytesPerChecksum - ((len + offsetFromChunkBoundary) % bytesPerChecksum));
+      int limit = Math.min(nextChunk, slowReadBuff.capacity());
+      assert limit % bytesPerChecksum == 0;
+
+      slowReadBuff.clear();
+      slowReadBuff.limit(limit);
+
+      nRead = doByteBufferRead(slowReadBuff);
+
+      if (nRead > 0) {
+        // So that next time we call slowReadBuff.hasRemaining(), we don't get a
+        // false positive.
+        slowReadBuff.limit(nRead + slowReadBuff.position());
+      }
+    }
+    return nRead;
+  }
+
   @Override
   public synchronized int read(byte[] buf, int off, int len) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.info("read off " + off + " len " + len);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("read off " + off + " len " + len);
     }
     if (!verifyChecksum) {
       return dataIn.read(buf, off, len);
-    } else {
-      int dataRead = -1;
-      if (dataBuff.remaining() == 0) {
-        dataBuff.clear();
-        checksumBuff.clear();
-        dataRead = readIntoBuffer(dataIn, dataBuff);
-        readIntoBuffer(checksumIn, checksumBuff);
-        checksumBuff.flip();
-        dataBuff.flip();
-        checksum.verifyChunkedSums(dataBuff, checksumBuff, filename,
-            this.startOffset);
-      } else {
-        dataRead = dataBuff.remaining();
-      }
-      if (dataRead > 0) {
-        int nRead = Math.min(dataRead - offsetFromChunkBoundary, len);
-        if (offsetFromChunkBoundary > 0) {
-          dataBuff.position(offsetFromChunkBoundary);
-          // Its either end of file or dataRead is greater than the
-          // offsetFromChunkBoundary
-          offsetFromChunkBoundary = 0;
-        }
-        if (nRead > 0) {
-          dataBuff.get(buf, off, nRead);
-          return nRead;
-        } else {
-          return 0;
-        }
-      } else {
-        return -1;
-      }
     }
+
+    int nRead = fillSlowReadBuffer(slowReadBuff.capacity());
+
+    if (nRead > 0) {
+      // Possible that buffer is filled with a larger read than we need, since
+      // we tried to read as much as possible at once
+      nRead = Math.min(len, nRead);
+      slowReadBuff.get(buf, off, nRead);
+    }
+
+    return nRead;
   }
 
   @Override
@@ -377,20 +601,20 @@ class BlockReaderLocal implements BlockReader {
     }
   
     // caller made sure newPosition is not beyond EOF.
-    int remaining = dataBuff.remaining();
-    int position = dataBuff.position();
+    int remaining = slowReadBuff.remaining();
+    int position = slowReadBuff.position();
     int newPosition = position + (int)n;
   
     // if the new offset is already read into dataBuff, just reposition
     if (n <= remaining) {
       assert offsetFromChunkBoundary == 0;
-      dataBuff.position(newPosition);
+      slowReadBuff.position(newPosition);
       return n;
     }
   
     // for small gap, read through to keep the data/checksum in sync
     if (n - remaining <= bytesPerChecksum) {
-      dataBuff.position(position + remaining);
+      slowReadBuff.position(position + remaining);
       if (skipBuf == null) {
         skipBuf = new byte[bytesPerChecksum];
       }
@@ -401,11 +625,16 @@ class BlockReaderLocal implements BlockReader {
     // optimize for big gap: discard the current buffer, skip to
     // the beginning of the appropriate checksum chunk and then
     // read to the middle of that chunk to be in sync with checksums.
-    this.offsetFromChunkBoundary = newPosition % bytesPerChecksum;
-    long toskip = n - remaining - this.offsetFromChunkBoundary;
   
-    dataBuff.clear();
-    checksumBuff.clear();
+    // We can't use this.offsetFromChunkBoundary because we need to know how
+    // many bytes of the offset were really read. Calling read(..) with a
+    // positive this.offsetFromChunkBoundary causes that many bytes to get
+    // silently skipped.
+    int myOffsetFromChunkBoundary = newPosition % bytesPerChecksum;
+    long toskip = n - remaining - myOffsetFromChunkBoundary;
+
+    slowReadBuff.position(slowReadBuff.limit());
+    checksumBuff.position(checksumBuff.limit());
   
     long dataSkipped = dataIn.skip(toskip);
     if (dataSkipped != toskip) {
@@ -424,8 +653,10 @@ class BlockReaderLocal implements BlockReader {
       skipBuf = new byte[bytesPerChecksum];
     }
     assert skipBuf.length == bytesPerChecksum;
-    assert this.offsetFromChunkBoundary < bytesPerChecksum;
-    int ret = read(skipBuf, 0, this.offsetFromChunkBoundary);
+    assert myOffsetFromChunkBoundary < bytesPerChecksum;
+
+    int ret = read(skipBuf, 0, myOffsetFromChunkBoundary);
+
     if (ret == -1) {  // EOS
       return toskip;
     } else {
@@ -439,9 +670,9 @@ class BlockReaderLocal implements BlockReader {
     if (checksumIn != null) {
       checksumIn.close();
     }
-    if (dataBuff != null) {
-      bufferPool.returnBuffer(dataBuff);
-      dataBuff = null;
+    if (slowReadBuff != null) {
+      bufferPool.returnBuffer(slowReadBuff);
+      slowReadBuff = null;
     }
     if (checksumBuff != null) {
       bufferPool.returnBuffer(checksumBuff);
