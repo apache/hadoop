@@ -452,6 +452,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3350. Per-app RM page should have the list of application-attempts
     like on the app JHS page (Jonathon Eagles via tgraves)
 
+    MAPREDUCE-3842. Stop webpages from automatic refreshing (tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

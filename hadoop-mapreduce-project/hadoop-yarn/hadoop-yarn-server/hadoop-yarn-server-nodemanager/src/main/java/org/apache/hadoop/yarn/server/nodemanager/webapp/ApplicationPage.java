@@ -45,9 +45,6 @@ public class ApplicationPage extends NMView implements YarnWebParams {
   @Override protected void preHead(Page.HTML<_> html) {
     commonPreHead(html);
 
-    // Per-app information. Helps to refresh automatically.
-    html.meta_http("refresh", "10");
-
     set(DATATABLES_ID, "containers");
     set(initID(DATATABLES, "containers"), containersTableInit());
     setTableStyles(html, "containers");
