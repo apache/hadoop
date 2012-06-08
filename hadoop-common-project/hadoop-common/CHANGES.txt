@@ -9,9 +9,6 @@ Trunk (unreleased changes)
 
   NEW FEATURES
     
-    HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. (Henry
-    Robinson via atm)
-
     HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
     szetszwo)
 
@@ -54,9 +51,6 @@ Trunk (unreleased changes)
 
     HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the 
     client side translator and server side implementation. (jitendra)
-
-    HADOOP-8244. Improve comments on ByteBufferReadable.read. (Henry Robinson
-    via atm)
 
     HADOOP-7757. Test file reference count is at least 3x actual value (Jon
     Eagles via bobby)
@@ -177,6 +171,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3042. Automatic failover support for NameNode HA (todd)
     (see dedicated section below for breakdown of subtasks)
 
+    HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. (Henry
+    Robinson via atm)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
@@ -198,6 +195,9 @@ Branch-2 ( Unreleased changes )
     HADOOP-8358. Config-related WARN for dfs.web.ugi can be avoided. (harsh)
 
     HADOOP-8450. Remove src/test/system. (eli)
+
+    HADOOP-8244. Improve comments on ByteBufferReadable.read. (Henry Robinson
+    via atm)
 
   BUG FIXES
 
