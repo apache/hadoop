@@ -418,8 +418,8 @@ checkJavacWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
-  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1
+  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Pnative -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
+  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess -Pnative -Ptest-patch > $PATCH_DIR/patchJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
