@@ -12,6 +12,9 @@ Trunk (unreleased changes)
     HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. (Henry
     Robinson via atm)
 
+    HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
+    szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
