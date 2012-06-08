@@ -73,12 +73,11 @@ public class TestRecoveryManager extends TestCase {
     FileSystem fs = FileSystem.get(new Configuration());
     fs.delete(TEST_DIR, true); // cleanup
     
-    conf.set("mapred.jobtracker.job.history.block.size", "1024");
-    conf.set("mapred.jobtracker.job.history.buffer.size", "1024");
+    conf.set(JTConfig.JT_JOBHISTORY_BLOCK_SIZE, "1024");
     
     MiniMRCluster mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
     
-     JobConf job1 = mr.createJobConf();
+    JobConf job1 = mr.createJobConf();
     
     UtilsForTests.configureWaitingJobConf(job1, 
         new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output1"), 2, 0, 
@@ -249,7 +248,8 @@ public class TestRecoveryManager extends TestCase {
     
     mr.getJobTrackerConf().setBoolean(MRConfig.MR_ACLS_ENABLED, true);
 
-    mr.getJobTrackerConf().set("mapred.queue.names", "default");
+    mr.getJobTrackerConf().set(DeprecatedQueueConfigurationParser.MAPRED_QUEUE_NAMES_KEY,
+        "default");
     
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     mr.getJobTrackerConf().set(toFullPropertyName(

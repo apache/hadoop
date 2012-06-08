@@ -75,6 +75,9 @@ Release 0.22.1 - Unreleased
 
     MAPREDUCE-4249. Fix streaming test TestFileArgs. (Benoy Antony via shv)
 
+    MAPREDUCE-4318. TestRecoveryManager should not use raw configuration keys.
+    (Benoy Antony via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES
