@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY;
 import static org.junit.Assert.*;
 
 import java.io.File;
@@ -127,6 +129,7 @@ public class TestFailureOfSharedDir {
   @Test
   public void testFailureOfSharedDir() throws Exception {
     Configuration conf = new Configuration();
+    conf.setLong(DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY, 2000);
     
     // The shared edits dir will automatically be marked required.
     MiniDFSCluster cluster = null;
@@ -150,6 +153,15 @@ public class TestFailureOfSharedDir {
       sharedEditsDir = new File(sharedEditsUri);
       assertEquals(0, FileUtil.chmod(sharedEditsDir.getAbsolutePath(), "-w",
           true));
+
+      Thread.sleep(conf.getLong(DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
+          DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_DEFAULT) * 2);
+
+      NameNode nn1 = cluster.getNameNode(1);
+      assertTrue(nn1.isStandbyState());
+      assertFalse(
+          "StandBy NameNode should not go to SafeMode on resource unavailability",
+          nn1.isInSafeMode());
 
       NameNode nn0 = cluster.getNameNode(0);
       nn0.getNamesystem().getFSImage().getEditLog().getJournalSet()

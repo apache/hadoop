@@ -165,6 +165,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3485. DataTransferThrottler will over-throttle when currentTimeMillis
     jumps (Andy Isaacson via todd)
 
+    HDFS-2914. HA: Standby should not enter safemode when resources are low. (Vinay via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
