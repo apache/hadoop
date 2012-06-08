@@ -175,6 +175,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option.
     (Henry Robinson via atm)
+
+    HDFS-3514. Add missing TestParallelLocalRead. (Henry Robinson via atm)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
