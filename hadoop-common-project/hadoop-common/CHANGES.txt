@@ -12,6 +12,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3042. Automatic failover support for NameNode HA (todd)
     (see dedicated section below for breakdown of subtasks)
 
+    HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. (Henry
+    Robinson via atm)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
