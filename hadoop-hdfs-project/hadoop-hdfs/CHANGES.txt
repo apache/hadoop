@@ -177,6 +177,8 @@ Release 2.0.1-alpha - UNRELEASED
     (Henry Robinson via atm)
 
     HDFS-3514. Add missing TestParallelLocalRead. (Henry Robinson via atm)
+
+    HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
