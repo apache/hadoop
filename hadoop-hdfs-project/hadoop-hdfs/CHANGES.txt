@@ -305,6 +305,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
 
+    HDFS-3490. DatanodeWebHdfsMethods throws NullPointerException if
+    NamenodeRpcAddressParam is not set.  (szetszwo)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
