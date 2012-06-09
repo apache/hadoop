@@ -59,7 +59,7 @@ abstract class LongParam extends Param<Long, LongParam.Domain> {
 
     @Override
     public String getDomain() {
-      return "<" + NULL + " | short in radix " + radix + ">";
+      return "<" + NULL + " | long in radix " + radix + ">";
     }
 
     @Override
@@ -72,7 +72,7 @@ abstract class LongParam extends Param<Long, LongParam.Domain> {
       }
     }
 
-    /** Convert a Short to a String. */ 
+    /** Convert a Long to a String. */ 
     String toString(final Long n) {
       return n == null? NULL: Long.toString(n, radix);
     }

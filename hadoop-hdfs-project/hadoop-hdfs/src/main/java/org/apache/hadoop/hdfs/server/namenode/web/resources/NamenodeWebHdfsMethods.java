@@ -123,7 +123,7 @@ public class NamenodeWebHdfsMethods {
       final DelegationParam delegation,
       final UserParam username, final DoAsParam doAsUser,
       final UriFsPathParam path, final HttpOpParam<?> op,
-      final Param<?, ?>... parameters) throws IOException {
+      final Param<?, ?>... parameters) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("HTTP " + op.getValue().getType() + ": " + op + ", " + path
           + ", ugi=" + ugi + ", " + username + ", " + doAsUser
@@ -532,7 +532,7 @@ public class NamenodeWebHdfsMethods {
           final RenewerParam renewer,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op,
         offset, length, renewer, bufferSize);
   }

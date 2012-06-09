@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
+import org.apache.hadoop.hdfs.web.resources.NamenodeRpcAddressParam;
 import org.apache.hadoop.hdfs.web.resources.PutOpParam;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -350,6 +351,32 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
 
     {//test append.
       AppendTestUtil.testAppend(fs, new Path(dir, "append"));
+    }
+
+    {//test NamenodeRpcAddressParam not set.
+      final HttpOpParam.Op op = PutOpParam.Op.CREATE;
+      final URL url = webhdfs.toUrl(op, dir);
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setDoOutput(false);
+      conn.setInstanceFollowRedirects(false);
+      conn.connect();
+      final String redirect = conn.getHeaderField("Location");
+      conn.disconnect();
+
+      //remove NamenodeRpcAddressParam
+      WebHdfsFileSystem.LOG.info("redirect = " + redirect);
+      final int i = redirect.indexOf(NamenodeRpcAddressParam.NAME);
+      final int j = redirect.indexOf("&", i);
+      String modified = redirect.substring(0, i - 1) + redirect.substring(j);
+      WebHdfsFileSystem.LOG.info("modified = " + modified);
+
+      //connect to datanode
+      conn = (HttpURLConnection)new URL(modified).openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.setDoOutput(op.getDoOutput());
+      conn.connect();
+      assertEquals(HttpServletResponse.SC_BAD_REQUEST, conn.getResponseCode());
     }
   }
 }

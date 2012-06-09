@@ -98,6 +98,10 @@ public class DatanodeWebHdfsMethods {
       LOG.trace("HTTP " + op.getValue().getType() + ": " + op + ", " + path
           + ", ugi=" + ugi + Param.toSortedString(", ", parameters));
     }
+    if (nnRpcAddr == null) {
+      throw new IllegalArgumentException(NamenodeRpcAddressParam.NAME
+          + " is not specified.");
+    }
 
     //clear content type
     response.setContentType(null);
