@@ -80,6 +80,7 @@ public class FSEditLog {
   private static final byte OP_UPDATE_MASTER_KEY = 21; //update master key
 
   private static int sizeFlushBuffer = 512*1024;
+  private static final int PREALLOCATION_LENGTH = 1024 * 1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
   private FSImage fsimage = null;
@@ -127,7 +128,15 @@ public class FSEditLog {
     private FileChannel fc;         // channel of the file stream for sync
     private DataOutputBuffer bufCurrent;  // current buffer for writing
     private DataOutputBuffer bufReady;    // buffer ready for flushing
-    static ByteBuffer fill = ByteBuffer.allocateDirect(512); // preallocation
+    static final ByteBuffer fill =
+        ByteBuffer.allocateDirect(PREALLOCATION_LENGTH);
+
+    static {
+      fill.position(0);
+      for (int i = 0; i < fill.capacity(); i++) {
+        fill.put(OP_INVALID);
+      }
+    }
 
     EditLogFileOutputStream(File name) throws IOException {
       super();
@@ -234,12 +243,11 @@ public class FSEditLog {
       if (position + 4096 >= fc.size()) {
         FSNamesystem.LOG.debug("Preallocating Edit log, current size " +
                                 fc.size());
-        long newsize = position + 1024*1024; // 1MB
         fill.position(0);
-        int written = fc.write(fill, newsize);
+        int written = fc.write(fill, position);
         FSNamesystem.LOG.debug("Edit log size is now " + fc.size() +
                               " written " + written + " bytes " +
-                              " at offset " +  newsize);
+                              " at offset " +  position);
       }
     }
     
@@ -486,6 +494,44 @@ public class FSEditLog {
     return false;
   }
 
+  static void verifyEndOfLog(PositionTrackingInputStream tracker,
+      DataInputStream in, MetaRecoveryContext recovery, long editsLength)
+          throws IOException {
+    /** The end of the edit log should contain only 0x00 or 0xff bytes.
+     * If it contains other bytes, the log itself may be corrupt.
+     * It is important to check this; if we don't, a stray OP_INVALID byte 
+     * could make us stop reading the edit log halfway through, and we'd never
+     * know that we had lost data.
+     *
+     * We don't check the very last part of the edit log, in case the
+     * NameNode crashed while writing to the edit log.
+     */
+    byte[] buf = new byte[4096];
+    while (true) {
+      long amt = (editsLength - PREALLOCATION_LENGTH) - tracker.getPos();
+      if (amt <= 0) {
+        return;
+      } else if (amt > buf.length) {
+        amt = buf.length;
+      }
+      int numRead = in.read(buf, 0, (int)amt);
+      if (numRead <= 0) {
+          MetaRecoveryContext.editLogLoaderPrompt("Unexpected short read " +
+              "at the end of the edit log!  Current position is " + 
+              tracker.getPos(), recovery);
+          break;
+      }
+      for (int i = 0; i < numRead; i++) {
+        if ((buf[i] != (byte)0) && (buf[i] != (byte)-1)) {
+          MetaRecoveryContext.editLogLoaderPrompt("Found garbage at the end " +
+              "of the edit log!  Current position is " + tracker.getPos(),
+              recovery);
+          break;
+        }
+      }
+    }
+  }
+  
   /**
    * Load an edit log, and apply the changes to the in-memory structure
    * This is where we apply edits that we've been writing to disk all
@@ -549,6 +595,7 @@ public class FSEditLog {
         try {
           opcode = in.readByte();
           if (opcode == OP_INVALID) {
+            verifyEndOfLog(tracker, in, recovery, edits.length());
             FSNamesystem.LOG.info("Invalid opcode, reached end of edit log " +
                        "Number of transactions found: " + numEdits + ".  " +
                        "Bytes read: " + tracker.getPos());

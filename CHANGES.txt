@@ -10,6 +10,8 @@ Release 1.2.0 - unreleased
 
     HDFS-3515. Port HDFS-1457 to branch-1. (eli)
 
+    HDFS-3479. Port HDFS-3335 to branch-1. (Colin Patrick McCabe via eli)
+
   BUG FIXES
 
     HADOOP-8445. Token should not print the password in toString
