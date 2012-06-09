@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -125,7 +126,8 @@ class TransferFsImage implements FSConstants {
    * A server-side method to respond to a getfile http request
    * Copies the contents of the local file into the output stream.
    */
-  static void getFileServer(OutputStream outstream, File localfile) 
+  static void getFileServer(OutputStream outstream, File localfile,
+      DataTransferThrottler throttler) 
     throws IOException {
     byte buf[] = new byte[BUFFER_SIZE];
     FileInputStream infile = null;
@@ -144,6 +146,9 @@ class TransferFsImage implements FSConstants {
           break;
         }
         outstream.write(buf, 0, num);
+        if (throttler != null) {
+          throttler.throttle(num);
+        }
       }
     } finally {
       if (infile != null) {

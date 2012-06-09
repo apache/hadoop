@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.balancer.Balancer;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -63,7 +64,7 @@ class DataXceiverServer implements Runnable, FSConstants {
    * It limits the number of block moves for balancing and
    * the total amount of bandwidth they can use.
    */
-  static class BlockBalanceThrottler extends BlockTransferThrottler {
+  static class BlockBalanceThrottler extends DataTransferThrottler {
    private int numThreads;
    
    /**Constructor

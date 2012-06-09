@@ -38,6 +38,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
@@ -82,11 +83,11 @@ public class GetImageServlet extends HttpServlet {
           if (ff.getImage()) {
             // send fsImage
             TransferFsImage.getFileServer(response.getOutputStream(),
-                                          nnImage.getFsImageName()); 
+                nnImage.getFsImageName(), getThrottler(conf)); 
           } else if (ff.getEdit()) {
             // send edits
             TransferFsImage.getFileServer(response.getOutputStream(),
-                                          nnImage.getFsEditName());
+                nnImage.getFsEditName(), getThrottler(conf));
           } else if (ff.putImage()) {
             synchronized (fsImageTransferLock) {
               final MD5Hash expectedChecksum = ff.getNewChecksum();
@@ -133,6 +134,22 @@ public class GetImageServlet extends HttpServlet {
     } finally {
       response.getOutputStream().close();
     }
+  }
+
+  /**
+   * Construct a throttler from conf
+   * @param conf configuration
+   * @return a data transfer throttler
+   */
+  private final DataTransferThrottler getThrottler(Configuration conf) {
+    long transferBandwidth = 
+      conf.getLong(DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_KEY,
+                   DFSConfigKeys.DFS_IMAGE_TRANSFER_RATE_DEFAULT);
+    DataTransferThrottler throttler = null;
+    if (transferBandwidth > 0) {
+      throttler = new DataTransferThrottler(transferBandwidth);
+    }
+    return throttler;
   }
   
   private boolean isValidRequestor(String remoteUser, Configuration conf)
