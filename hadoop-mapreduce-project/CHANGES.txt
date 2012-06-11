@@ -129,6 +129,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4146. Support limits on task status string length and number of
     block locations in branch-2. (Ahmed Radwan via tomwhite)
 
+    MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
+    (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
