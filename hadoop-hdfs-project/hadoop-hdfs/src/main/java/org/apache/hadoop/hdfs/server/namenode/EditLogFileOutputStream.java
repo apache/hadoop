@@ -206,10 +206,10 @@ public class EditLogFileOutputStream extends EditLogOutputStream {
             + fc.size());
       }
       fill.position(0);
-      int written = fc.write(fill, position);
+      IOUtils.writeFully(fc, fill, position);
       if(FSNamesystem.LOG.isDebugEnabled()) {
         FSNamesystem.LOG.debug("Edit log size is now " + fc.size() +
-            " written " + written + " bytes " + " at offset " + position);
+            " written " + fill.capacity() + " bytes " + " at offset " + position);
       }
     }
   }
