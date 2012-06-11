@@ -754,6 +754,11 @@ public class FSEditLogLoader {
     }
 
     @Override
+    public void clearLimit() {
+      limitPos = Long.MAX_VALUE;
+    }
+
+    @Override
     public void mark(int limit) {
       super.mark(limit);
       markPos = curPos;
