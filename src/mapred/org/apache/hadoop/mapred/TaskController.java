@@ -214,7 +214,7 @@ public abstract class TaskController implements Configurable {
   // could potentially contain strings defined by a user. Hence, to
   // prevent special character attacks, we write the command line to
   // a file and execute it.
-  protected static String writeCommand(String cmdLine, FileSystem fs,
+  protected static File writeCommand(String cmdLine, FileSystem fs,
       Path commandFile) throws IOException {
     PrintWriter pw = null;
     LOG.info("Writing commands to " + commandFile);
@@ -230,7 +230,9 @@ public abstract class TaskController implements Configurable {
         pw.close();
       }
     }
-    return commandFile.makeQualified(fs).toUri().getPath();
+    // Convert the result to a File and let Java convert the path to
+    // an appropriate OS shell path
+    return new File(commandFile.makeQualified(fs).toUri().getPath());
   }
   
   protected void logOutput(String output) {

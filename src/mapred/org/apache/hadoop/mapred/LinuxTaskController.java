@@ -218,7 +218,7 @@ class LinuxTaskController extends TaskController {
       Path p = new Path(allocator.getLocalPathForWrite(
           TaskTracker.getPrivateDirTaskScriptLocation(user, jobId, attemptId),
           getConf()), COMMAND_FILE);
-      String commandFile = writeCommand(cmdLine, rawFs, p); 
+      String commandFile = writeCommand(cmdLine, rawFs, p).getAbsolutePath(); 
 
       String[] command = 
         new String[]{taskControllerExe, 

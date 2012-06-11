@@ -124,7 +124,7 @@ public class DefaultTaskController extends TaskController {
           TaskTracker.getPrivateDirTaskScriptLocation(user, jobId, attemptId),
           getConf()), COMMAND_FILE);
 
-      String commandFile = writeCommand(cmdLine, rawFs, p);
+      String commandFile = writeCommand(cmdLine, rawFs, p).getAbsolutePath();
       rawFs.setPermission(p, TaskController.TASK_LAUNCH_SCRIPT_PERMISSION);
       shExec = new ShellCommandExecutor(Shell.WINDOWS? new String[]{"cmd", "/c", commandFile} :
           new String[]{"bash", "-c", commandFile},

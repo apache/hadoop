@@ -28,6 +28,9 @@ branch-hadoop-1-win - unreleased
     HADOOP-8424. Fix classpath so that web-ui works on Windows. (Bikas Saha
     via acmurthy) 
 
+    MAPREDUCE-4321. Fix both DCE & LCE to use File.getAbsolutePath of the
+    taskjvm.(sh,cmd) to ensure it works on Windows. (Ivan Mitic via acmurthy)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

@@ -104,7 +104,7 @@ public class TestSetupWorkDir extends TestCase {
 
     // Make sure that the dir under myWorkDir is tmp
     assertTrue(fs.listStatus(myWorkDir)[0].getPath().toUri().getPath()
-               .toString().equals(myWorkDir.toString() + "/tmp"));
+               .equals(myWorkDir.toUri().getPath() + "/tmp"));
 
     // Make sure that myTargetDir is not changed/deleted
     assertTrue("Dir " + myTargetDir + " seem to be modified.",
