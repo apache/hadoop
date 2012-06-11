@@ -100,6 +100,9 @@ public class TestStartup extends TestCase {
         fileAsURI(new File(hdfsDir, "name")).toString());
     config.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY,
         new File(hdfsDir, "data").getPath());
+    config.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
+    config.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    config.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
     config.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY,
         fileAsURI(new File(hdfsDir, "secondary")).toString());
     config.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,

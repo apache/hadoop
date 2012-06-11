@@ -186,6 +186,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-2797. Fix misuses of InputStream#skip in the edit log code.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3517. TestStartup should bind ephemeral ports. (eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
