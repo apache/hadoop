@@ -527,31 +527,10 @@
         <snappy.prefix>/usr/local</snappy.prefix>
         <snappy.lib>${snappy.prefix}/lib</snappy.lib>
         <snappy.include>${snappy.prefix}/include</snappy.include>
+        <runas.home></runas.home>
       </properties>
       <build>
         <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>compile</id>
-                <phase>compile</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <mkdir dir="${project.build.directory}/native/javah"/>
-                    <copy toDir="${project.build.directory}/native">
-                      <fileset dir="${basedir}/src/main/native"/>
-                    </copy>
-                    <mkdir dir="${project.build.directory}/native/m4"/>
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>native-maven-plugin</artifactId>
@@ -581,73 +560,27 @@
             </executions>
           </plugin>
           <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>make-maven-plugin</artifactId>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
             <executions>
               <execution>
-                <id>compile</id>
+                <id>make</id>
                 <phase>compile</phase>
-                <goals>
-                  <goal>autoreconf</goal>
-                  <goal>configure</goal>
-                  <goal>make-install</goal>
-                </goals>
+                <goals><goal>run</goal></goals>
+                <configuration>
+                  <target>
+                    <exec executable="cmake" dir="${project.build.directory}/native" failonerror="true">
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
+                      <env key="CFLAGS" value="-I${snappy.include}"/>
+                      <env key="LDFLAGS" value="-L${snappy.lib}"/>
+                    </exec>
+                    <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
+                      <arg line="VERBOSE=1"/>
+                    </exec>
+                  </target>
+                </configuration>
               </execution>
             </executions>
-            <configuration>
-              <!-- autoreconf settings -->
-              <workDir>${project.build.directory}/native</workDir>
-              <arguments>
-                <argument>-i</argument>
-                <argument>-f</argument>
-              </arguments>
-
-              <!-- configure settings -->
-              <configureEnvironment>
-                <property>
-                  <name>OS_NAME</name>
-                  <value>${os.name}</value>
-                </property>
-                <property>
-                  <name>OS_ARCH</name>
-                  <value>${os.arch}</value>
-                </property>
-                <property>
-                  <name>JVM_DATA_MODEL</name>
-                  <value>${sun.arch.data.model}</value>
-                </property>
-              </configureEnvironment>
-              <configureOptions>
-                <configureOption>CPPFLAGS=-I${snappy.include}</configureOption>
-                <configureOption>LDFLAGS=-L${snappy.lib}</configureOption>
-              </configureOptions>
-              <configureWorkDir>${project.build.directory}/native</configureWorkDir>
-              <prefix>/usr/local</prefix>
-
-              <!-- make settings -->
-              <installEnvironment>
-                <property>
-                  <name>OS_NAME</name>
-                  <value>${os.name}</value>
-                </property>
-                <property>
-                  <name>OS_ARCH</name>
-                  <value>${os.arch}</value>
-                </property>
-                <property>
-                  <name>JVM_DATA_MODEL</name>
-                  <value>${sun.arch.data.model}</value>
-                </property>
-                <property>
-                  <name>HADOOP_NATIVE_SRCDIR</name>
-                  <value>${project.build.directory}/native</value>
-                </property>
-              </installEnvironment>
-
-              <!-- configure & make settings -->
-              <destDir>${project.build.directory}/native/target</destDir>
-
-            </configuration>
           </plugin>
         </plugins>
       </build>
