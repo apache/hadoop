@@ -18,35 +18,23 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.event;
 
-/**
- * Event types handled by Job.
- */
-public enum JobEventType {
+import java.util.List;
 
-  //Producer:Client
-  JOB_KILL,
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.yarn.api.records.NodeReport;
 
-  //Producer:MRAppMaster
-  JOB_INIT,
-  JOB_START,
 
-  //Producer:Task
-  JOB_TASK_COMPLETED,
-  JOB_MAP_TASK_RESCHEDULED,
-  JOB_TASK_ATTEMPT_COMPLETED,
 
-  //Producer:Job
-  JOB_COMPLETED,
+public class JobUpdatedNodesEvent extends JobEvent {
 
-  //Producer:Any component
-  JOB_DIAGNOSTIC_UPDATE,
-  INTERNAL_ERROR,
-  JOB_COUNTER_UPDATE,
-  
-  //Producer:TaskAttemptListener
-  JOB_TASK_ATTEMPT_FETCH_FAILURE,
-  
-  //Producer:RMContainerAllocator
-  JOB_UPDATED_NODES
-  
+  private final List<NodeReport> updatedNodes;
+  public JobUpdatedNodesEvent(JobId jobId, List<NodeReport> updatedNodes) {
+    super(jobId, JobEventType.JOB_UPDATED_NODES);
+    this.updatedNodes = updatedNodes;
+  }
+
+  public List<NodeReport> getUpdatedNodes() {
+    return updatedNodes;
+  }
+
 }

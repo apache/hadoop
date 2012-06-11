@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.v2.app.rm;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -46,19 +47,27 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobCounterUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.RackResolver;
@@ -583,7 +592,9 @@ public class RMContainerAllocator extends RMContainerRequestor
 
     //Called on each allocation. Will know about newly blacklisted/added hosts.
     computeIgnoreBlacklisting();
-    
+
+    handleUpdatedNodes(response);
+
     for (ContainerStatus cont : finishedContainers) {
       LOG.info("Received completed container " + cont.getContainerId());
       TaskAttemptId attemptID = assignedRequests.get(cont.getContainerId());
@@ -600,9 +611,47 @@ public class RMContainerAllocator extends RMContainerRequestor
         String diagnostics = cont.getDiagnostics();
         eventHandler.handle(new TaskAttemptDiagnosticsUpdateEvent(attemptID,
             diagnostics));
-      }
+      }      
     }
     return newContainers;
+  }
+  
+  @SuppressWarnings("unchecked")
+  private void handleUpdatedNodes(AMResponse response) {
+    // send event to the job about on updated nodes
+    List<NodeReport> updatedNodes = response.getUpdatedNodes();
+    if (!updatedNodes.isEmpty()) {
+
+      // send event to the job to act upon completed tasks
+      eventHandler.handle(new JobUpdatedNodesEvent(getJob().getID(),
+          updatedNodes));
+
+      // act upon running tasks
+      HashSet<NodeId> unusableNodes = new HashSet<NodeId>();
+      for (NodeReport nr : updatedNodes) {
+        NodeState nodeState = nr.getNodeState();
+        if (nodeState.isUnusable()) {
+          unusableNodes.add(nr.getNodeId());
+        }
+      }
+      for (int i = 0; i < 2; ++i) {
+        HashMap<TaskAttemptId, Container> taskSet = i == 0 ? assignedRequests.maps
+            : assignedRequests.reduces;
+        // kill running containers
+        for (Map.Entry<TaskAttemptId, Container> entry : taskSet.entrySet()) {
+          TaskAttemptId tid = entry.getKey();
+          NodeId taskAttemptNodeId = entry.getValue().getNodeId();
+          if (unusableNodes.contains(taskAttemptNodeId)) {
+            LOG.info("Killing taskAttempt:" + tid
+                + " because it is running on unusable node:"
+                + taskAttemptNodeId);
+            eventHandler.handle(new TaskAttemptKillEvent(tid,
+                "TaskAttempt killed because it ran on unusable node"
+                    + taskAttemptNodeId));
+          }
+        }
+      }
+    }
   }
 
   @Private
@@ -743,7 +792,6 @@ public class RMContainerAllocator extends RMContainerRequestor
         boolean blackListed = false;         
         ContainerRequest assigned = null;
         
-        ContainerId allocatedContainerId = allocated.getId();
         if (isAssignable) {
           // do not assign if allocated container is on a  
           // blacklisted host
@@ -790,7 +838,7 @@ public class RMContainerAllocator extends RMContainerRequestor
               eventHandler.handle(new TaskAttemptContainerAssignedEvent(
                   assigned.attemptID, allocated, applicationACLs));
 
-              assignedRequests.add(allocatedContainerId, assigned.attemptID);
+              assignedRequests.add(allocated, assigned.attemptID);
 
               if (LOG.isDebugEnabled()) {
                 LOG.info("Assigned container (" + allocated + ") "
@@ -811,7 +859,7 @@ public class RMContainerAllocator extends RMContainerRequestor
         // or if we could not assign it 
         if (blackListed || assigned == null) {
           containersReleased++;
-          release(allocatedContainerId);
+          release(allocated.getId());
         }
       }
     }
@@ -974,20 +1022,20 @@ public class RMContainerAllocator extends RMContainerRequestor
   private class AssignedRequests {
     private final Map<ContainerId, TaskAttemptId> containerToAttemptMap =
       new HashMap<ContainerId, TaskAttemptId>();
-    private final LinkedHashMap<TaskAttemptId, ContainerId> maps = 
-      new LinkedHashMap<TaskAttemptId, ContainerId>();
-    private final LinkedHashMap<TaskAttemptId, ContainerId> reduces = 
-      new LinkedHashMap<TaskAttemptId, ContainerId>();
+    private final LinkedHashMap<TaskAttemptId, Container> maps = 
+      new LinkedHashMap<TaskAttemptId, Container>();
+    private final LinkedHashMap<TaskAttemptId, Container> reduces = 
+      new LinkedHashMap<TaskAttemptId, Container>();
     private final Set<TaskAttemptId> preemptionWaitingReduces = 
       new HashSet<TaskAttemptId>();
     
-    void add(ContainerId containerId, TaskAttemptId tId) {
-      LOG.info("Assigned container " + containerId.toString() + " to " + tId);
-      containerToAttemptMap.put(containerId, tId);
+    void add(Container container, TaskAttemptId tId) {
+      LOG.info("Assigned container " + container.getId().toString() + " to " + tId);
+      containerToAttemptMap.put(container.getId(), tId);
       if (tId.getTaskId().getTaskType().equals(TaskType.MAP)) {
-        maps.put(tId, containerId);
+        maps.put(tId, container);
       } else {
-        reduces.put(tId, containerId);
+        reduces.put(tId, container);
       }
     }
 
@@ -1017,9 +1065,9 @@ public class RMContainerAllocator extends RMContainerRequestor
     boolean remove(TaskAttemptId tId) {
       ContainerId containerId = null;
       if (tId.getTaskId().getTaskType().equals(TaskType.MAP)) {
-        containerId = maps.remove(tId);
+        containerId = maps.remove(tId).getId();
       } else {
-        containerId = reduces.remove(tId);
+        containerId = reduces.remove(tId).getId();
         if (containerId != null) {
           boolean preempted = preemptionWaitingReduces.remove(tId);
           if (preempted) {
@@ -1038,12 +1086,20 @@ public class RMContainerAllocator extends RMContainerRequestor
     TaskAttemptId get(ContainerId cId) {
       return containerToAttemptMap.get(cId);
     }
+    
+    NodeId getNodeId(TaskAttemptId tId) {
+      if (tId.getTaskId().getTaskType().equals(TaskType.MAP)) {
+        return maps.get(tId).getNodeId();
+      } else {
+        return reduces.get(tId).getNodeId();
+      }
+    }
 
     ContainerId get(TaskAttemptId tId) {
       if (tId.getTaskId().getTaskType().equals(TaskType.MAP)) {
-        return maps.get(tId);
+        return maps.get(tId).getId();
       } else {
-        return reduces.get(tId);
+        return reduces.get(tId).getId();
       }
     }
   }

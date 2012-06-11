@@ -132,6 +132,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
     (tomwhite)
 
+    MAPREDUCE-3921. MR AM should act on node health status changes. 
+    (Bikas Saha via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES

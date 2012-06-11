@@ -22,6 +22,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import junit.framework.Assert;
@@ -29,17 +30,26 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.mapreduce.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.NodeState;
+import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
 
 /**
@@ -160,6 +170,159 @@ public class TestMRApp {
     
     app.waitForState(job, JobState.SUCCEEDED);
   }
+  
+  /**
+   * The test verifies that the AM re-runs maps that have run on bad nodes. It
+   * also verifies that the AM records all success/killed events so that reduces
+   * are notified about map output status changes. It also verifies that the
+   * re-run information is preserved across AM restart
+   */
+  @Test
+  public void testUpdatedNodes() throws Exception {
+    int runCount = 0;
+    MRApp app = new MRAppWithHistory(2, 1, false, this.getClass().getName(),
+        true, ++runCount);
+    Configuration conf = new Configuration();
+    // after half of the map completion, reduce will start
+    conf.setFloat(MRJobConfig.COMPLETED_MAPS_FOR_REDUCE_SLOWSTART, 0.5f);
+    // uberization forces full slowstart (1.0), so disable that
+    conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
+    Job job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    Assert.assertEquals("Num tasks not correct", 3, job.getTasks().size());
+    Iterator<Task> it = job.getTasks().values().iterator();
+    Task mapTask1 = it.next();
+    Task mapTask2 = it.next();
+
+    // all maps must be running
+    app.waitForState(mapTask1, TaskState.RUNNING);
+    app.waitForState(mapTask2, TaskState.RUNNING);
+
+    TaskAttempt task1Attempt = mapTask1.getAttempts().values().iterator()
+        .next();
+    TaskAttempt task2Attempt = mapTask2.getAttempts().values().iterator()
+        .next();
+    NodeId node1 = task1Attempt.getNodeId();
+    NodeId node2 = task2Attempt.getNodeId();
+    Assert.assertEquals(node1, node2);
+
+    // send the done signal to the task
+    app.getContext()
+        .getEventHandler()
+        .handle(
+            new TaskAttemptEvent(task1Attempt.getID(),
+                TaskAttemptEventType.TA_DONE));
+    app.getContext()
+        .getEventHandler()
+        .handle(
+            new TaskAttemptEvent(task2Attempt.getID(),
+                TaskAttemptEventType.TA_DONE));
+
+    // all maps must be succeeded
+    app.waitForState(mapTask1, TaskState.SUCCEEDED);
+    app.waitForState(mapTask2, TaskState.SUCCEEDED);
+
+    TaskAttemptCompletionEvent[] events = job.getTaskAttemptCompletionEvents(0,
+        100);
+    Assert.assertEquals("Expecting 2 completion events for success", 2,
+        events.length);
+
+    // send updated nodes info
+    ArrayList<NodeReport> updatedNodes = new ArrayList<NodeReport>();
+    NodeReport nr = RecordFactoryProvider.getRecordFactory(null)
+        .newRecordInstance(NodeReport.class);
+    nr.setNodeId(node1);
+    nr.setNodeState(NodeState.UNHEALTHY);
+    updatedNodes.add(nr);
+    app.getContext().getEventHandler()
+        .handle(new JobUpdatedNodesEvent(job.getID(), updatedNodes));
+
+    app.waitForState(task1Attempt, TaskAttemptState.KILLED);
+    app.waitForState(task2Attempt, TaskAttemptState.KILLED);
+
+    events = job.getTaskAttemptCompletionEvents(0, 100);
+    Assert.assertEquals("Expecting 2 more completion events for killed", 4,
+        events.length);
+
+    // all maps must be back to running
+    app.waitForState(mapTask1, TaskState.RUNNING);
+    app.waitForState(mapTask2, TaskState.RUNNING);
+
+    Iterator<TaskAttempt> itr = mapTask1.getAttempts().values().iterator();
+    itr.next();
+    task1Attempt = itr.next();
+
+    // send the done signal to the task
+    app.getContext()
+        .getEventHandler()
+        .handle(
+            new TaskAttemptEvent(task1Attempt.getID(),
+                TaskAttemptEventType.TA_DONE));
+
+    // map1 must be succeeded. map2 must be running
+    app.waitForState(mapTask1, TaskState.SUCCEEDED);
+    app.waitForState(mapTask2, TaskState.RUNNING);
+
+    events = job.getTaskAttemptCompletionEvents(0, 100);
+    Assert.assertEquals("Expecting 1 more completion events for success", 5,
+        events.length);
+
+    // Crash the app again.
+    app.stop();
+
+    // rerun
+    // in rerun the 1st map will be recovered from previous run
+    app = new MRAppWithHistory(2, 1, false, this.getClass().getName(), false,
+        ++runCount);
+    conf = new Configuration();
+    conf.setBoolean(MRJobConfig.MR_AM_JOB_RECOVERY_ENABLE, true);
+    conf.setBoolean(MRJobConfig.JOB_UBERTASK_ENABLE, false);
+    job = app.submit(conf);
+    app.waitForState(job, JobState.RUNNING);
+    Assert.assertEquals("No of tasks not correct", 3, job.getTasks().size());
+    it = job.getTasks().values().iterator();
+    mapTask1 = it.next();
+    mapTask2 = it.next();
+    Task reduceTask = it.next();
+
+    // map 1 will be recovered, no need to send done
+    app.waitForState(mapTask1, TaskState.SUCCEEDED);
+    app.waitForState(mapTask2, TaskState.RUNNING);
+
+    events = job.getTaskAttemptCompletionEvents(0, 100);
+    Assert.assertEquals(
+        "Expecting 2 completion events for killed & success of map1", 2,
+        events.length);
+
+    task2Attempt = mapTask2.getAttempts().values().iterator().next();
+    app.getContext()
+        .getEventHandler()
+        .handle(
+            new TaskAttemptEvent(task2Attempt.getID(),
+                TaskAttemptEventType.TA_DONE));
+    app.waitForState(mapTask2, TaskState.SUCCEEDED);
+
+    events = job.getTaskAttemptCompletionEvents(0, 100);
+    Assert.assertEquals("Expecting 1 more completion events for success", 3,
+        events.length);
+
+    app.waitForState(reduceTask, TaskState.RUNNING);
+    TaskAttempt task3Attempt = reduceTask.getAttempts().values().iterator()
+        .next();
+    app.getContext()
+        .getEventHandler()
+        .handle(
+            new TaskAttemptEvent(task3Attempt.getID(),
+                TaskAttemptEventType.TA_DONE));
+    app.waitForState(reduceTask, TaskState.SUCCEEDED);
+
+    events = job.getTaskAttemptCompletionEvents(0, 100);
+    Assert.assertEquals("Expecting 1 more completion events for success", 4,
+        events.length);
+
+    // job succeeds
+    app.waitForState(job, JobState.SUCCEEDED);
+  }
 
   @Test
   public void testJobError() throws Exception {
@@ -194,10 +357,6 @@ public class TestMRApp {
       ((AppContext) getContext()).getAllJobs().put(spiedJob.getID(), spiedJob);
       return spiedJob;
     }
-
-    JobImpl getSpiedJob() {
-      return this.spiedJob;
-    }
   }
 
   @Test
@@ -230,6 +389,21 @@ public class TestMRApp {
     // throwing an exception
     for (TaskState state : TaskState.values()) {
       TypeConverter.fromYarn(state);
+    }
+  }
+  
+  private final class MRAppWithHistory extends MRApp {
+    public MRAppWithHistory(int maps, int reduces, boolean autoComplete,
+        String testName, boolean cleanOnStart, int startCount) {
+      super(maps, reduces, autoComplete, testName, cleanOnStart, startCount);
+    }
+
+    @Override
+    protected EventHandler<JobHistoryEvent> createJobHistoryHandler(
+        AppContext context) {
+      JobHistoryEventHandler eventHandler = new JobHistoryEventHandler(context, 
+          getStartCount());
+      return eventHandler;
     }
   }
 

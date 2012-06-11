@@ -18,35 +18,20 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.event;
 
-/**
- * Event types handled by Job.
- */
-public enum JobEventType {
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 
-  //Producer:Client
-  JOB_KILL,
 
-  //Producer:MRAppMaster
-  JOB_INIT,
-  JOB_START,
+public class TaskAttemptKillEvent extends TaskAttemptEvent {
 
-  //Producer:Task
-  JOB_TASK_COMPLETED,
-  JOB_MAP_TASK_RESCHEDULED,
-  JOB_TASK_ATTEMPT_COMPLETED,
+  private final String message;
 
-  //Producer:Job
-  JOB_COMPLETED,
+  public TaskAttemptKillEvent(TaskAttemptId attemptID,
+      String message) {
+    super(attemptID, TaskAttemptEventType.TA_KILL);
+    this.message = message;
+  }
 
-  //Producer:Any component
-  JOB_DIAGNOSTIC_UPDATE,
-  INTERNAL_ERROR,
-  JOB_COUNTER_UPDATE,
-  
-  //Producer:TaskAttemptListener
-  JOB_TASK_ATTEMPT_FETCH_FAILURE,
-  
-  //Producer:RMContainerAllocator
-  JOB_UPDATED_NODES
-  
+  public String getMessage() {
+    return message;
+  }
 }

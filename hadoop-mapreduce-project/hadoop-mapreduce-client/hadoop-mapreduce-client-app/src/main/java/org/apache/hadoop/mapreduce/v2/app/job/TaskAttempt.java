@@ -25,6 +25,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 
 
 /**
@@ -53,6 +54,11 @@ public interface TaskAttempt {
    * @return container mgr address if a container is assigned, otherwise null.
    */
   String getAssignedContainerMgrAddress();
+  
+  /**
+   * @return node's id if a container is assigned, otherwise null.
+   */
+  NodeId getNodeId();
   
   /**
    * @return node's http address if a container is assigned, otherwise null.
