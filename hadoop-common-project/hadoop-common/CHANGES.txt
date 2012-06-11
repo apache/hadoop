@@ -37,6 +37,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8244. Improve comments on ByteBufferReadable.read. (Henry Robinson
     via atm)
 
+    HADOOP-8368. Use CMake rather than autotools to build native code (ccccabe via tucu)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
