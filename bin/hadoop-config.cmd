@@ -102,17 +102,6 @@ set CLASSPATH=%CLASSPATH%;%JAVA_HOME%\lib\tools.jar
 @rem for developers, add Hadoop classes to CLASSPATH
 @rem
 
-if exist %HADOOP_CORE_HOME%\build (
-  for %%i in (%HADOOP_CORE_HOME%\build\*.jar) do (
-    set CLASSPATH=!CLASSPATH!;%%i
-  )
-  if exist %HADOOP_CORE_HOME%\build\ivy\lib\Hadoop\common (
-    for %%i in (%HADOOP_CORE_HOME%\build\ivy\lib\Hadoop\common\*.jar) do (
-      set CLASSPATH=!CLASSPATH!;%%i
-    )
-  )
-)
-
 if exist %HADOOP_CORE_HOME%\build\classes (
   set CLASSPATH=%CLASSPATH%;%HADOOP_CORE_HOME%\build\classes
 )
@@ -127,6 +116,13 @@ if exist %HADOOP_CORE_HOME%\build\test\classes (
 
 if exist %HADOOP_CORE_HOME%\build\test\core\classes (
   set CLASSPATH=%CLASSPATH%;%HADOOP_CORE_HOME%\build\test\core\classes
+)
+
+for %%i in (%HADOOP_CORE_HOME%\build\*.jar) do (
+  set CLASSPATH=!CLASSPATH!;%%i
+)
+for %%i in (%HADOOP_CORE_HOME%\build\ivy\lib\Hadoop\common\*.jar) do (
+  set CLASSPATH=!CLASSPATH!;%%i
 )
 
 @rem

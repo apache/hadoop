@@ -1,7 +1,3 @@
-
-
-
-
 Hadoop Change Log
 
 branch-hadoop-1-win - unreleased
@@ -28,6 +24,9 @@ branch-hadoop-1-win - unreleased
     HADOOP-8374 Improve support for hard link manipulation on Windows (Bikas Saha via Sanjay)
 
     HDFS-3424 TestDatanodeBlockScanner and TestReplication fail intermittently on Windows (Bikas Saha via Sanjay)
+
+    HADOOP-8424. Fix classpath so that web-ui works on Windows. (Bikas Saha
+    via acmurthy) 
 
 Release 1.1.0 - unreleased
 
