@@ -590,9 +590,9 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       float reduceProgress = 0f;
       for (Task task : this.tasks.values()) {
         if (task.getType() == TaskType.MAP) {
-          mapProgress += task.getProgress();
+          mapProgress += (task.isFinished() ? 1f : task.getProgress());
         } else {
-          reduceProgress += task.getProgress();
+          reduceProgress += (task.isFinished() ? 1f : task.getProgress());
         }
       }
       if (this.numMapTasks != 0) {
