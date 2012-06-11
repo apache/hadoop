@@ -282,9 +282,12 @@ public class JobHistoryParser {
       if(attemptInfo.getAttemptId().equals(taskInfo.getSuccessfulAttemptId()))
       {
         // the failed attempt is the one that made this task successful
-        // so its no longer successful
+        // so its no longer successful. Reset fields set in
+        // handleTaskFinishedEvent()
+        taskInfo.counters = null;
+        taskInfo.finishTime = -1;
         taskInfo.status = null;
-        // not resetting the other fields set in handleTaskFinishedEvent()
+        taskInfo.successfulAttemptId = null;
       }
     }
   }

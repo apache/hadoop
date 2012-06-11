@@ -14,6 +14,9 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
     (tomwhite)
 
+    MAPREDUCE-3921. MR AM should act on node health status changes. 
+    (Bikas Saha via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
