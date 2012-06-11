@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -32,8 +33,8 @@ import com.google.common.base.Joiner;
 /**
  * I-node for file being written.
  */
-public class INodeFileUnderConstruction extends INodeFile 
-                                        implements MutableBlockCollection {
+@InterfaceAudience.Private
+class INodeFileUnderConstruction extends INodeFile implements MutableBlockCollection {
   private  String clientName;         // lease holder
   private final String clientMachine;
   private final DatanodeDescriptor clientNode; // if client is a cluster node too.
@@ -45,7 +46,7 @@ public class INodeFileUnderConstruction extends INodeFile
                              String clientName,
                              String clientMachine,
                              DatanodeDescriptor clientNode) {
-    super(permissions.applyUMask(UMASK), 0, replication,
+    super(permissions.applyUMask(UMASK), BlockInfo.EMPTY_ARRAY, replication,
         modTime, modTime, preferredBlockSize);
     this.clientName = clientName;
     this.clientMachine = clientMachine;
