@@ -454,6 +454,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-3842. Stop webpages from automatic refreshing (tgraves)
 
+    MAPREDUCE-3927. Shuffle hang when set map.failures.percent
+    (Bhallamudi Venkata Siva Kamesh via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

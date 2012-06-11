@@ -137,23 +137,25 @@ class ShuffleScheduler<K,V> {
 
       // update the status
       totalBytesShuffledTillNow += bytes;
-      float mbs = (float) totalBytesShuffledTillNow / (1024 * 1024);
-      int mapsDone = totalMaps - remainingMaps;
-      long secsSinceStart = 
-        (System.currentTimeMillis()-startTime)/1000+1;
-
-      float transferRate = mbs/secsSinceStart;
-      progress.set((float) mapsDone / totalMaps);
-      String statusString = mapsDone + " / " + totalMaps + " copied.";
-      status.setStateString(statusString);
-      progress.setStatus("copy(" + mapsDone + " of " + totalMaps 
-          + " at " +
-          mbpsFormat.format(transferRate) +  " MB/s)");
-      
+      updateStatus();
       reduceShuffleBytes.increment(bytes);
       lastProgressTime = System.currentTimeMillis();
-      LOG.debug("map " + mapId + " done " + statusString);
+      LOG.debug("map " + mapId + " done " + status.getStateString());
     }
+  }
+  
+  private void updateStatus() {
+    float mbs = (float) totalBytesShuffledTillNow / (1024 * 1024);
+    int mapsDone = totalMaps - remainingMaps;
+    long secsSinceStart = (System.currentTimeMillis() - startTime) / 1000 + 1;
+
+    float transferRate = mbs / secsSinceStart;
+    progress.set((float) mapsDone / totalMaps);
+    String statusString = mapsDone + " / " + totalMaps + " copied.";
+    status.setStateString(statusString);
+
+    progress.setStatus("copy(" + mapsDone + " of " + totalMaps + " at "
+        + mbpsFormat.format(transferRate) + " MB/s)");
   }
 
   public synchronized void copyFailed(TaskAttemptID mapId, MapHost host,
@@ -256,7 +258,13 @@ class ShuffleScheduler<K,V> {
   }
   
   public synchronized void tipFailed(TaskID taskId) {
-    finishedMaps[taskId.getId()] = true;
+    if (!finishedMaps[taskId.getId()]) {
+      finishedMaps[taskId.getId()] = true;
+      if (--remainingMaps == 0) {
+        notifyAll();
+      }
+      updateStatus();
+    }
   }
   
   public synchronized void addKnownMapOutput(String hostName, 
