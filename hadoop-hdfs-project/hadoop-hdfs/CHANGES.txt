@@ -202,6 +202,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3408. BKJM : Namenode format fails, if there is no BK root. (Rakesh R via umamahesh)
 
+    HDFS-3389. Document the BKJM usage in Namenode HA. (umamahesh and Ivan Kelly via umamahesh)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
