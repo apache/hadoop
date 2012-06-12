@@ -68,6 +68,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8317. Update maven-assembly-plugin to 2.3 - fix build on FreeBSD
     (Radim Kolar via bobby)
 
+    HADOOP-8501. Gridmix fails to compile on OpenJDK7u4 
+    (Radim Kolar via tgraves)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
