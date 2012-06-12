@@ -200,6 +200,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3522. If a namenode is in safemode, it should throw SafeModeException
     when getBlockLocations has zero locations.  (Brandon Li via szetszwo)
 
+    HDFS-3408. BKJM : Namenode format fails, if there is no BK root. (Rakesh R via umamahesh)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
