@@ -68,6 +68,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3052. Change INodeFile and INodeFileUnderConstruction to package
     private.  (szetszwo)
 
+    HDFS-3520. Add transfer rate logging to TransferFsImage. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

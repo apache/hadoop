@@ -32,11 +32,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.MD5Hash;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.collect.Lists;
 
@@ -207,6 +207,7 @@ public class TransferFsImage {
     //
     // open connection to remote server
     //
+    long startTime = Util.monotonicNow();
     URL url = new URL(str);
 
     HttpURLConnection connection = (HttpURLConnection)
@@ -312,6 +313,11 @@ public class TransferFsImage {
                               advertisedSize);
       }
     }
+    double xferSec = Math.max(
+        ((float)(Util.monotonicNow() - startTime)) / 1000.0, 0.001);
+    long xferKb = received / 1024;
+    LOG.info(String.format("Transfer took %.2fs at %.2f KB/s",
+        xferSec, xferKb / xferSec));
 
     if (digester != null) {
       MD5Hash computedDigest = new MD5Hash(digester.digest());
