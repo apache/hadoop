@@ -341,45 +341,49 @@ public class AuthenticationFilter implements Filter {
         LOG.warn("AuthenticationToken ignored: " + ex.getMessage());
         token = null;
       }
-      if (token == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Request [{}] triggering authentication", getRequestURL(httpRequest));
+      if (authHandler.managementOperation(token, httpRequest, httpResponse)) {
+        if (token == null) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Request [{}] triggering authentication", getRequestURL(httpRequest));
+          }
+          token = authHandler.authenticate(httpRequest, httpResponse);
+          if (token != null && token != AuthenticationToken.ANONYMOUS) {
+            token.setExpires(System.currentTimeMillis() + getValidity() * 1000);
+          }
+          newToken = true;
         }
-        token = authHandler.authenticate(httpRequest, httpResponse);
-        if (token != null && token != AuthenticationToken.ANONYMOUS) {
-          token.setExpires(System.currentTimeMillis() + getValidity() * 1000);
+        if (token != null) {
+          unauthorizedResponse = false;
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Request [{}] user [{}] authenticated", getRequestURL(httpRequest), token.getUserName());
+          }
+          final AuthenticationToken authToken = token;
+          httpRequest = new HttpServletRequestWrapper(httpRequest) {
+
+            @Override
+            public String getAuthType() {
+              return authToken.getType();
+            }
+
+            @Override
+            public String getRemoteUser() {
+              return authToken.getUserName();
+            }
+
+            @Override
+            public Principal getUserPrincipal() {
+              return (authToken != AuthenticationToken.ANONYMOUS) ? authToken : null;
+            }
+          };
+          if (newToken && token != AuthenticationToken.ANONYMOUS) {
+            String signedToken = signer.sign(token.toString());
+            Cookie cookie = createCookie(signedToken);
+            httpResponse.addCookie(cookie);
+          }
+          filterChain.doFilter(httpRequest, httpResponse);
         }
-        newToken = true;
-      }
-      if (token != null) {
+      } else {
         unauthorizedResponse = false;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Request [{}] user [{}] authenticated", getRequestURL(httpRequest), token.getUserName());
-        }
-        final AuthenticationToken authToken = token;
-        httpRequest = new HttpServletRequestWrapper(httpRequest) {
-
-          @Override
-          public String getAuthType() {
-            return authToken.getType();
-          }
-
-          @Override
-          public String getRemoteUser() {
-            return authToken.getUserName();
-          }
-
-          @Override
-          public Principal getUserPrincipal() {
-            return (authToken != AuthenticationToken.ANONYMOUS) ? authToken : null;
-          }
-        };
-        if (newToken && token != AuthenticationToken.ANONYMOUS) {
-          String signedToken = signer.sign(token.toString());
-          Cookie cookie = createCookie(signedToken);
-          httpResponse.addCookie(cookie);
-        }
-        filterChain.doFilter(httpRequest, httpResponse);
       }
     } catch (AuthenticationException ex) {
       unauthorizedMsg = ex.toString();

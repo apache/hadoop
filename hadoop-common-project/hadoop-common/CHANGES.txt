@@ -15,6 +15,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. (Henry
     Robinson via atm)
 
+    HADOOP-8458. Add management hook to AuthenticationHandler to enable 
+    delegation token operations support (tucu)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual

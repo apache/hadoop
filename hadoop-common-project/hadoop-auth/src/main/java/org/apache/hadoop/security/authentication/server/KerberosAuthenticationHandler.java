@@ -233,6 +233,27 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
   }
 
   /**
+   * This is an empty implementation, it always returns <code>TRUE</code>.
+   *
+   *
+   *
+   * @param token the authentication token if any, otherwise <code>NULL</code>.
+   * @param request the HTTP client request.
+   * @param response the HTTP client response.
+   *
+   * @return <code>TRUE</code>
+   * @throws IOException it is never thrown.
+   * @throws AuthenticationException it is never thrown.
+   */
+  @Override
+  public boolean managementOperation(AuthenticationToken token,
+                                     HttpServletRequest request,
+                                     HttpServletResponse response)
+    throws IOException, AuthenticationException {
+    return true;
+  }
+
+  /**
    * It enforces the the Kerberos SPNEGO authentication sequence returning an {@link AuthenticationToken} only
    * after the Kerberos SPNEGO sequence has completed successfully.
    * <p/>
