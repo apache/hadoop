@@ -137,38 +137,38 @@ public class TestText extends TestCase {
     }
   }
   
-  public void doTestLimitedIO(String str, int strLen) throws IOException {
+  public void doTestLimitedIO(String str, int len) throws IOException {
     DataOutputBuffer out = new DataOutputBuffer();
     DataInputBuffer in = new DataInputBuffer();
 
     out.reset();
     try {
-      Text.writeString(out, str, strLen);
+      Text.writeString(out, str, len);
       fail("expected writeString to fail when told to write a string " +
           "that was too long!  The string was '" + str + "'");
     } catch (IOException e) {
     }
-    Text.writeString(out, str, strLen + 1);
+    Text.writeString(out, str, len + 1);
 
     // test that it reads correctly
     in.reset(out.getData(), out.getLength());
-    in.mark(strLen);
+    in.mark(len);
     String after;
     try {
-      after = Text.readString(in, strLen);
+      after = Text.readString(in, len);
       fail("expected readString to fail when told to read a string " +
           "that was too long!  The string was '" + str + "'");
     } catch (IOException e) {
     }
     in.reset();
-    after = Text.readString(in, strLen + 1);
+    after = Text.readString(in, len + 1);
     assertTrue(str.equals(after));
   }
   
   public void testLimitedIO() throws Exception {
-    doTestLimitedIO("abcd", 4);
-    doTestLimitedIO("", 0);
-    doTestLimitedIO("1", 1);
+    doTestLimitedIO("abcd", 3);
+    doTestLimitedIO("foo bar baz", 10);
+    doTestLimitedIO("1", 0);
   }
 
   public void testCompare() throws Exception {

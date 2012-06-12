@@ -287,6 +287,20 @@ public class Text extends BinaryComparable
     in.readFully(bytes, 0, newLength);
     length = newLength;
   }
+  
+  public void readFields(DataInput in, int maxLength) throws IOException {
+    int newLength = WritableUtils.readVInt(in);
+    if (newLength < 0) {
+      throw new IOException("tried to deserialize " + newLength +
+          " bytes of data!  newLength must be non-negative.");
+    } else if (newLength >= maxLength) {
+      throw new IOException("tried to deserialize " + newLength +
+          " bytes of data, but maxLength = " + maxLength);
+    }
+    setCapacity(newLength, false);
+    in.readFully(bytes, 0, newLength);
+    length = newLength;
+  }
 
   /** Skips over one Text in the input. */
   public static void skip(DataInput in) throws IOException {
@@ -300,6 +314,16 @@ public class Text extends BinaryComparable
    * @see Writable#write(DataOutput)
    */
   public void write(DataOutput out) throws IOException {
+    WritableUtils.writeVInt(out, length);
+    out.write(bytes, 0, length);
+  }
+
+  public void write(DataOutput out, int maxLength) throws IOException {
+    if (length > maxLength) {
+      throw new IOException("data was too long to write!  Expected " +
+          "less than or equal to " + maxLength + " bytes, but got " +
+          length + " bytes.");
+    }
     WritableUtils.writeVInt(out, length);
     out.write(bytes, 0, length);
   }
@@ -417,7 +441,7 @@ public class Text extends BinaryComparable
     return bytes;
   }
 
-  static final public int ONE_MEGABYTE = 1024 * 1024;
+  static final public int DEFAULT_MAX_LEN = 1024 * 1024;
 
   /** Read a UTF8 encoded string from in
    */
@@ -432,7 +456,7 @@ public class Text extends BinaryComparable
    */
   public static String readString(DataInput in, int maxLength)
       throws IOException {
-    int length = WritableUtils.readVIntInRange(in, 0, maxLength - 1);
+    int length = WritableUtils.readVIntInRange(in, 0, maxLength);
     byte [] bytes = new byte[length];
     in.readFully(bytes, 0, length);
     return decode(bytes);
@@ -454,9 +478,9 @@ public class Text extends BinaryComparable
       throws IOException {
     ByteBuffer bytes = encode(s);
     int length = bytes.limit();
-    if (length >= maxLength) {
+    if (length > maxLength) {
       throw new IOException("string was too long to write!  Expected " +
-          "less than " + maxLength + " bytes, but got " +
+          "less than or equal to " + maxLength + " bytes, but got " +
           length + " bytes.");
     }
     WritableUtils.writeVInt(out, length);
