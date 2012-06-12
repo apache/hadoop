@@ -90,6 +90,9 @@ Trunk (unreleased changes)
     HDFS-3040. TestMulitipleNNDataBlockScanner is misspelled. (Madhukara Phatak
     via atm)
 
+    HDFS-3049. During the normal NN startup process, fall back on a different
+    edit log if we see one that is corrupt (Colin Patrick McCabe via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
