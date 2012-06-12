@@ -1074,7 +1074,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   LocatedBlocks getBlockLocations(String clientMachine, String src,
       long offset, long length) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
-    LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true);
+    LocatedBlocks blocks = getBlockLocations(src, offset, length, true, true,
+        true);
     if (blocks != null) {
       blockManager.getDatanodeManager().sortLocatedBlocks(
           clientMachine, blocks.getLocatedBlocks());
@@ -1088,8 +1089,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws FileNotFoundException, UnresolvedLinkException, IOException
    */
   LocatedBlocks getBlockLocations(String src, long offset, long length,
-      boolean doAccessTime, boolean needBlockToken) throws FileNotFoundException,
-      UnresolvedLinkException, IOException {
+      boolean doAccessTime, boolean needBlockToken, boolean checkSafeMode)
+      throws FileNotFoundException, UnresolvedLinkException, IOException {
     if (isPermissionEnabled) {
       checkPathAccess(src, FsAction.READ);
     }
@@ -1108,6 +1109,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "open", src, null, null);
+    }
+    if (checkSafeMode && isInSafeMode()) {
+      for (LocatedBlock b : ret.getLocatedBlocks()) {
+        // if safemode & no block locations yet then throw safemodeException
+        if ((b.getLocations() == null) || (b.getLocations().length == 0)) {
+          throw new SafeModeException("Zero blocklocations for " + src,
+              safeMode);
+        }
+      }
     }
     return ret;
   }

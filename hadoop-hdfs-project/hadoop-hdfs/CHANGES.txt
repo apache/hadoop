@@ -191,6 +191,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3517. TestStartup should bind ephemeral ports. (eli)
 
+    HDFS-3522. If a namenode is in safemode, it should throw SafeModeException
+    when getBlockLocations has zero locations.  (Brandon Li via szetszwo)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
