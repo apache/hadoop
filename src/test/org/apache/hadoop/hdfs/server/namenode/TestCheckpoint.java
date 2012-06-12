@@ -17,29 +17,32 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import junit.framework.TestCase;
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
-import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
-import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
+import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.io.MD5Hash;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -589,10 +592,15 @@ public class TestCheckpoint extends TestCase {
       writeFile(fileSys, file1, replication);
       checkFile(fileSys, file1, replication);
 
+      //test edit toleration auto disable
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY, 1024);
+      assertEquals(1024, conf.getInt(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY, 0));
+      SecondaryNameNode secondary = startSecondaryNameNode(conf);
+      assertEquals(-1, conf.getInt(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY, 0));
+
       //
       // Take a checkpoint
       //
-      SecondaryNameNode secondary = startSecondaryNameNode(conf);
       ErrorSimulator.initializeErrorSimulationEvent(3);
       secondary.doCheckpoint();
       secondary.shutdown();

@@ -148,6 +148,18 @@ public class SecondaryNameNode implements Runnable {
    * Initialize SecondaryNameNode.
    */
   private void initialize(final Configuration conf) throws IOException {
+    //SecondaryNameNode should not tolerate any corruption
+    //since edit logs are transferred from a healthy NameNode.
+    final int editsTolerationLength = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_DEFAULT);
+    if (editsTolerationLength >= 0) {
+      LOG.info(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY
+          + " is set to " + editsTolerationLength 
+          + ".  Override it with -1, i.e. disable it.");
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY, -1);
+    }
+
     final InetSocketAddress infoSocAddr = getHttpAddress(conf);
     infoBindAddress = infoSocAddr.getHostName();
     if (UserGroupInformation.isSecurityEnabled()) {

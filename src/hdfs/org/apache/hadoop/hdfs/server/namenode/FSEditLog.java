@@ -26,28 +26,37 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FilterInputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.lang.Math;
-import java.nio.channels.FileChannel;
-import java.nio.ByteBuffer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeInstrumentation;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.io.ArrayWritable;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.UTF8;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 /**
@@ -55,7 +64,9 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
  * 
  */
 public class FSEditLog {
-  private static final byte OP_INVALID = -1;
+  public static final Log LOG = LogFactory.getLog(FSEditLog.class);
+
+  static final byte OP_INVALID = -1;
   private static final byte OP_ADD = 0;
   private static final byte OP_RENAME = 1;  // rename
   private static final byte OP_DELETE = 2;  // delete
@@ -80,7 +91,10 @@ public class FSEditLog {
   private static final byte OP_UPDATE_MASTER_KEY = 21; //update master key
 
   private static int sizeFlushBuffer = 512*1024;
+  /** Preallocation length in bytes for writing edit log. */
   private static final int PREALLOCATION_LENGTH = 1024 * 1024;
+  /** The limit of the length in bytes for each edit log transaction. */
+  private static int TRANSACTION_LENGTH_LIMIT = Integer.MAX_VALUE;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
   private FSImage fsimage = null;
@@ -123,20 +137,21 @@ public class FSEditLog {
    * which stores edits in a local file.
    */
   static private class EditLogFileOutputStream extends EditLogOutputStream {
+    /** Preallocation buffer, padded with OP_INVALID */
+    private static final ByteBuffer PREALLOCATION_BUFFER
+        = ByteBuffer.allocateDirect(PREALLOCATION_LENGTH);
+    static {
+      PREALLOCATION_BUFFER.position(0).limit(PREALLOCATION_LENGTH);
+      for(int i = 0; i < PREALLOCATION_BUFFER.capacity(); i++) {
+        PREALLOCATION_BUFFER.put(OP_INVALID);
+      }
+    }
+
     private File file;
     private FileOutputStream fp;    // file stream for storing edit logs 
     private FileChannel fc;         // channel of the file stream for sync
     private DataOutputBuffer bufCurrent;  // current buffer for writing
     private DataOutputBuffer bufReady;    // buffer ready for flushing
-    static final ByteBuffer fill =
-        ByteBuffer.allocateDirect(PREALLOCATION_LENGTH);
-
-    static {
-      fill.position(0);
-      for (int i = 0; i < fill.capacity(); i++) {
-        fill.put(OP_INVALID);
-      }
-    }
 
     EditLogFileOutputStream(File name) throws IOException {
       super();
@@ -183,6 +198,8 @@ public class FSEditLog {
 
     @Override
     public void close() throws IOException {
+      LOG.info("closing edit log: position=" + fc.position() + ", editlog=" + getName());
+
       // close should have been called after all pending transactions 
       // have been flushed & synced.
       int bufSize = bufCurrent.size();
@@ -199,6 +216,8 @@ public class FSEditLog {
       fp.close();
       
       bufCurrent = bufReady = null;
+
+      LOG.info("close success: truncate to " + file.length() + ", editlog=" + getName());
     }
 
     /**
@@ -239,15 +258,18 @@ public class FSEditLog {
 
     // allocate a big chunk of data
     private void preallocate() throws IOException {
-      long position = fc.position();
-      if (position + 4096 >= fc.size()) {
-        FSNamesystem.LOG.debug("Preallocating Edit log, current size " +
-                                fc.size());
-        fill.position(0);
-        int written = fc.write(fill, position);
-        FSNamesystem.LOG.debug("Edit log size is now " + fc.size() +
-                              " written " + written + " bytes " +
-                              " at offset " +  position);
+      final long oldsize = fc.size();
+      if (fc.position() + 4096 >= oldsize) {
+        final ByteBuffer buffer = PREALLOCATION_BUFFER;
+        buffer.position(0).limit(PREALLOCATION_LENGTH);
+
+        int w = 0;
+        for(; (w += fc.write(buffer, oldsize + w)) < PREALLOCATION_LENGTH; );
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("PREALLOCATE: size is now " + fc.size() + " written " + w
+              + " bytes at offset " + oldsize + "; editlog=" + getName());
+        }
       }
     }
     
@@ -396,7 +418,7 @@ public class FSEditLog {
   }
 
   void fatalExit(String msg) {
-    FSNamesystem.LOG.fatal(msg, new Exception(msg));
+    LOG.fatal(msg, new Exception(msg));
     Runtime.getRuntime().exit(-1);
   }
 
@@ -494,42 +516,93 @@ public class FSEditLog {
     return false;
   }
 
-  static void verifyEndOfLog(PositionTrackingInputStream tracker,
-      DataInputStream in, MetaRecoveryContext recovery, long editsLength)
-          throws IOException {
-    /** The end of the edit log should contain only 0x00 or 0xff bytes.
-     * If it contains other bytes, the log itself may be corrupt.
-     * It is important to check this; if we don't, a stray OP_INVALID byte 
-     * could make us stop reading the edit log halfway through, and we'd never
-     * know that we had lost data.
-     *
-     * We don't check the very last part of the edit log, in case the
-     * NameNode crashed while writing to the edit log.
-     */
-    byte[] buf = new byte[4096];
-    while (true) {
-      long amt = (editsLength - PREALLOCATION_LENGTH) - tracker.getPos();
-      if (amt <= 0) {
-        return;
-      } else if (amt > buf.length) {
-        amt = buf.length;
-      }
-      int numRead = in.read(buf, 0, (int)amt);
-      if (numRead <= 0) {
-          MetaRecoveryContext.editLogLoaderPrompt("Unexpected short read " +
-              "at the end of the edit log!  Current position is " + 
-              tracker.getPos(), recovery);
-          break;
-      }
-      for (int i = 0; i < numRead; i++) {
-        if ((buf[i] != (byte)0) && (buf[i] != (byte)-1)) {
-          MetaRecoveryContext.editLogLoaderPrompt("Found garbage at the end " +
-              "of the edit log!  Current position is " + tracker.getPos(),
-              recovery);
-          break;
+  /**
+   * The end of a edit log should contain padding of either 0x00 or OP_INVALID.
+   * If it contains other bytes, the edit log may be corrupted.
+   * It is important to perform the check; otherwise, a stray OP_INVALID byte 
+   * could be misinterpreted as an end-of-log, and lead to silent data loss.
+   */
+  private static void checkEndOfLog(final EditLogInputStream edits,
+      final DataInputStream in,
+      final PositionTrackingInputStream pin,
+      final int tolerationLength) throws IOException {
+    if (tolerationLength < 0) {
+      //the checking is disabled.
+      return;
+    }
+    LOG.info("Start checking end of edit log (" + edits.getName() + ") ...");
+
+    in.mark(0); //clear the mark
+    final long readLength = pin.getPos();
+
+    long firstPadPos = -1; //first padded byte position 
+    byte pad = 0;          //padded value; must be either 0 or OP_INVALID
+    
+    final byte[] bytes = new byte[4096];
+    for(int n; (n = in.read(bytes)) != -1; ) {
+      for(int i = 0; i < n; i++) {
+        final byte b = bytes[i];
+
+        if (firstPadPos != -1 && b != pad) {
+          //the byte is different from the first padded byte, reset firstPos
+          firstPadPos = -1;
+
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("reset: bytes[%d]=0x%X, pad=0x%02X", i, b, pad));
+          }
         }
+
+        if (firstPadPos == -1) {
+          if (b == 0 || b == OP_INVALID) {
+            //found the first padded byte
+            firstPadPos = pin.getPos() - n + i;
+            pad = b;
+            
+            if (LOG.isDebugEnabled()) {
+              LOG.debug(String.format("found: bytes[%d]=0x%02X=pad, firstPadPos=%d",
+                  i, b, firstPadPos));
+            }
+          }
+        } 
       }
     }
+    
+    final long corruptionLength;
+    final long padLength;
+    if (firstPadPos == -1) { //padding not found
+      corruptionLength = edits.length() - readLength;
+      padLength = 0;
+    } else {
+      corruptionLength = firstPadPos - readLength;
+      padLength = edits.length() - firstPadPos;
+    }
+
+    LOG.info("Checked the bytes after the end of edit log (" + edits.getName() + "):");
+    LOG.info("  Padding position  = " + firstPadPos + " (-1 means padding not found)");
+    LOG.info("  Edit log length   = " + edits.length());
+    LOG.info("  Read length       = " + readLength);
+    LOG.info("  Corruption length = " + corruptionLength);
+    LOG.info("  Toleration length = " + tolerationLength
+        + " (= " + DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY + ")");
+    LOG.info(String.format(
+        "Summary: |---------- Read=%d ----------|-- Corrupt=%d --|-- Pad=%d --|",
+        readLength, corruptionLength, padLength));
+
+    if (pin.getPos() != edits.length()) {
+      throw new IOException("Edit log length mismatched: edits.length() = "
+          + edits.length() + " != input steam position = " + pin.getPos());
+    }
+    if (corruptionLength > 0) {
+      final String err = "Edit log corruption detected: corruption length = " + corruptionLength;
+      if (corruptionLength <= tolerationLength) {
+        LOG.warn(err + " <= toleration length = " + tolerationLength
+            + "; the corruption is tolerable.");
+      } else {
+        throw new IOException(err + " > toleration length = " + tolerationLength
+            + "; the corruption is intolerable.");
+      }
+    }
+    return;
   }
   
   /**
@@ -537,7 +610,7 @@ public class FSEditLog {
    * This is where we apply edits that we've been writing to disk all
    * along.
    */
-  static int loadFSEdits(EditLogInputStream edits,
+  static int loadFSEdits(EditLogInputStream edits, int tolerationLength,
       MetaRecoveryContext recovery) throws IOException {
     FSNamesystem fsNamesys = FSNamesystem.getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
@@ -562,7 +635,9 @@ public class FSEditLog {
     long recentOpcodeOffsets[] = new long[4];
     Arrays.fill(recentOpcodeOffsets, -1);
 
+    final boolean isToterationEnabled = tolerationLength >= 0;
     DataInputStream in = new DataInputStream(tracker);
+    Byte opcode = null;
     try {
       // Read log file version. Could be missing. 
       in.mark(4);
@@ -587,21 +662,26 @@ public class FSEditLog {
                             "Unsupported version " + logVersion;
 
       while (true) {
+        if (isToterationEnabled) {
+          //mark position could be reset in case of exceptions
+          in.mark(TRANSACTION_LENGTH_LIMIT); 
+        }
+
         long timestamp = 0;
         long mtime = 0;
         long atime = 0;
         long blockSize = 0;
-        byte opcode = -1;
+        opcode = null;
         try {
           opcode = in.readByte();
           if (opcode == OP_INVALID) {
-            verifyEndOfLog(tracker, in, recovery, edits.length());
-            FSNamesystem.LOG.info("Invalid opcode, reached end of edit log " +
+            LOG.info("Invalid opcode, reached end of edit log " +
                        "Number of transactions found: " + numEdits + ".  " +
                        "Bytes read: " + tracker.getPos());
             break; // no more transactions
           }
         } catch (EOFException e) {
+          LOG.info("Reading " + edits.getName() + ": " + e);
           break; // no more transactions
         }
         recentOpcodeOffsets[numEdits % recentOpcodeOffsets.length] =
@@ -677,8 +757,8 @@ public class FSEditLog {
 
           // The open lease transaction re-creates a file if necessary.
           // Delete the file if it already exists.
-          if (FSNamesystem.LOG.isDebugEnabled()) {
-            FSNamesystem.LOG.debug(opcode + ": " + path + 
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(opcode + ": " + path + 
                                    " numblocks : " + blocks.length +
                                    " clientHolder " +  clientName +
                                    " clientMachine " + clientMachine);
@@ -915,6 +995,12 @@ public class FSEditLog {
         }
       }
     } catch (Throwable t) {
+      String msg = "Failed to parse edit log (" + edits.getName()
+          + ") at position " + tracker.getPos()
+          + ", edit log length is " + edits.length()
+          + ", opcode=" + opcode
+          + ", isToterationEnabled=" + isToterationEnabled;
+
       // Catch Throwable because in the case of a truly corrupt edits log, any
       // sort of error might be thrown (NumberFormat, NullPointer, EOF, etc.)
       if (Storage.is203LayoutVersion(logVersion) &&
@@ -922,35 +1008,44 @@ public class FSEditLog {
         // Failed to load 0.20.203 version edits during upgrade. This version has
         // conflicting opcodes with the later releases. The editlog must be 
         // emptied by restarting the namenode, before proceeding with the upgrade.
-        String msg = "During upgrade, failed to load the editlog version " + 
+        msg += ": During upgrade, failed to load the editlog version " + 
           logVersion + " from release 0.20.203. Please go back to the old " + 
           " release and restart the namenode. This empties the editlog " +
           " and saves the namespace. Resume the upgrade after this step.";
         throw new IOException(msg, t);
       }
-      StringBuilder sb = new StringBuilder();
-      sb.append("Error replaying edit log at offset " + tracker.getPos());
       if (recentOpcodeOffsets[0] != -1) {
         Arrays.sort(recentOpcodeOffsets);
-        sb.append("\nRecent opcode offsets:");
-        for (long offset : recentOpcodeOffsets) {
-          if (offset != -1) {
-            sb.append(' ').append(offset);
+        StringBuilder sb = new StringBuilder(", Recent opcode offsets=[")
+            .append(recentOpcodeOffsets[0]);
+        for (int i = 1; i < recentOpcodeOffsets.length; i++) {
+          if (recentOpcodeOffsets[i] != -1) {
+            sb.append(' ').append(recentOpcodeOffsets[i]);
           }
         }
+        msg += sb.append("]");
       }
-      String errorMessage = sb.toString();
-      FSImage.LOG.error(errorMessage, t);
-      MetaRecoveryContext.editLogLoaderPrompt(errorMessage, recovery);
+
+      LOG.warn(msg, t);
+      if (isToterationEnabled) {
+        in.reset(); //reset to the beginning position of this transaction
+      } else {
+        //edit log toleration feature is disabled
+        MetaRecoveryContext.editLogLoaderPrompt(msg, recovery);
+      }
     } finally {
-      in.close();
+      try {
+        checkEndOfLog(edits, in, tracker, tolerationLength);
+      } finally {
+        in.close();
+      }
     }
-    FSImage.LOG.info("Edits file " + edits.getName() 
+    LOG.info("Edits file " + edits.getName() 
         + " of size " + edits.length() + " edits # " + numEdits 
         + " loaded in " + (FSNamesystem.now()-startTime)/1000 + " seconds.");
 
-    if (FSImage.LOG.isDebugEnabled()) {
-      FSImage.LOG.debug("numOpAdd = " + numOpAdd + " numOpClose = " + numOpClose 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("numOpAdd = " + numOpAdd + " numOpClose = " + numOpClose 
           + " numOpDelete = " + numOpDelete + " numOpRename = " + numOpRename 
           + " numOpSetRepl = " + numOpSetRepl + " numOpMkDir = " + numOpMkDir
           + " numOpSetPerm = " + numOpSetPerm 
@@ -1075,7 +1170,7 @@ public class FSEditLog {
             eStream.setReadyToFlush();
             streams.add(eStream);
           } catch (IOException ie) {
-            FSNamesystem.LOG.error("Unable to get ready to flush.", ie);
+            LOG.error("Unable to get ready to flush.", ie);
             //
             // remember the streams that encountered an error.
             //
@@ -1093,7 +1188,7 @@ public class FSEditLog {
         try {
           eStream.flush();
         } catch (IOException ie) {
-          FSNamesystem.LOG.error("Unable to sync edit log.", ie);
+          LOG.error("Unable to sync edit log.", ie);
           //
           // remember the streams that encountered an error.
           //
@@ -1150,7 +1245,7 @@ public class FSEditLog {
       buf.append(eStream.getTotalSyncTime());
       buf.append(" ");
     }
-    FSNamesystem.LOG.info(buf);
+    LOG.info(buf);
   }
 
   /** 
@@ -1341,7 +1436,7 @@ public class FSEditLog {
               "Inconsistent existence of edits.new " + editsNew);
         }
       }
-      FSNamesystem.LOG.warn("Cannot roll edit log," +
+      LOG.warn("Cannot roll edit log," +
           " edits.new files already exists in all healthy directories:" + b);
       return;
     }
@@ -1364,7 +1459,7 @@ public class FSEditLog {
         eStream.create();
         editStreams.add(eStream);
       } catch (IOException ioe) {
-        FSImage.LOG.error("error retrying to reopen storage directory '" +
+        LOG.error("error retrying to reopen storage directory '" +
             sd.getRoot().getAbsolutePath() + "'", ioe);
         toRemove.add(sd);
         it.remove();

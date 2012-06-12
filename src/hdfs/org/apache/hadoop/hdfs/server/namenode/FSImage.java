@@ -60,7 +60,6 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
@@ -142,6 +141,8 @@ public class FSImage extends Storage {
 
   /** Flag to restore removed storage directories at checkpointing */
   private boolean restoreRemovedDirs = DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_DEFAULT;
+
+  private int editsTolerationLength = DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_DEFAULT;
 
   /**
    */
@@ -1020,12 +1021,12 @@ public class FSImage extends Storage {
     int numEdits = 0;
     EditLogFileInputStream edits = 
       new EditLogFileInputStream(getImageFile(sd, NameNodeFile.EDITS));
-    numEdits = FSEditLog.loadFSEdits(edits, recovery);
+    numEdits = FSEditLog.loadFSEdits(edits, editsTolerationLength, recovery);
     edits.close();
     File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
     if (editsNew.exists() && editsNew.length() > 0) {
       edits = new EditLogFileInputStream(editsNew);
-      numEdits += FSEditLog.loadFSEdits(edits, recovery);
+      numEdits += FSEditLog.loadFSEdits(edits, editsTolerationLength, recovery);
       edits.close();
     }
     // update the counts.
@@ -1231,6 +1232,12 @@ public class FSImage extends Storage {
   
   void setRestoreRemovedDirs(boolean allow) {
     this.restoreRemovedDirs = allow;
+  }  
+  
+  void setEditsTolerationLength(int editsTolerationLength) {
+    this.editsTolerationLength = editsTolerationLength;
+    FSEditLog.LOG.info(DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY
+        + " = " + editsTolerationLength);
   }  
   
   /** restore a metadata file */

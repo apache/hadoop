@@ -72,6 +72,10 @@ class FSDirectory implements FSConstants, Closeable {
     fsImage.setRestoreRemovedDirs(conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY,
         DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_DEFAULT));
+    fsImage.setEditsTolerationLength(conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_KEY,
+        DFSConfigKeys.DFS_NAMENODE_EDITS_TOLERATION_LENGTH_DEFAULT));
+
     namesystem = ns;
     int configuredLimit = conf.getInt(
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);

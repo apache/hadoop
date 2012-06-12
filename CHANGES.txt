@@ -12,6 +12,9 @@ Release 1.2.0 - unreleased
 
     HDFS-3479. Port HDFS-3335 to branch-1. (Colin Patrick McCabe via eli)
 
+    HDFS-3521. Check every byte at the end of edit log and allow namenode to
+    tolerate corruption.  (szetszwo)
+
   BUG FIXES
 
     HADOOP-8445. Token should not print the password in toString
