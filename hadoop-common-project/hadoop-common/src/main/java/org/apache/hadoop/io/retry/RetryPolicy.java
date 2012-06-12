@@ -60,6 +60,12 @@ public interface RetryPolicy {
       this.reason = reason;
     }
     
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + "(action=" + action
+          + ", delayMillis=" + delayMillis + ", reason=" + reason + ")";
+    }
+    
     public enum RetryDecision {
       FAIL,
       RETRY,

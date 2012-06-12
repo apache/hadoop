@@ -70,6 +70,10 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3520. Add transfer rate logging to TransferFsImage. (eli)
 
+    HDFS-3504. Support configurable retry policy in DFSClient for RPC
+    connections and RPC calls, and add MultipleLinearRandomRetry, a new retry
+    policy.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

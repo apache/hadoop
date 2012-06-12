@@ -41,6 +41,7 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.protobuf.ProtocolInfoProtos.ProtocolInfoService;
 import org.apache.hadoop.net.NetUtils;
@@ -326,7 +327,7 @@ public class RPC {
                              long clientVersion,
                              InetSocketAddress addr, Configuration conf,
                              long connTimeout) throws IOException { 
-    return waitForProtocolProxy(protocol, clientVersion, addr, conf, 0, connTimeout);
+    return waitForProtocolProxy(protocol, clientVersion, addr, conf, 0, null, connTimeout);
   }
   
   /**
@@ -347,7 +348,7 @@ public class RPC {
                              int rpcTimeout,
                              long timeout) throws IOException {
     return waitForProtocolProxy(protocol, clientVersion, addr,
-        conf, rpcTimeout, timeout).getProxy();
+        conf, rpcTimeout, null, timeout).getProxy();
   }
 
   /**
@@ -367,6 +368,7 @@ public class RPC {
                                long clientVersion,
                                InetSocketAddress addr, Configuration conf,
                                int rpcTimeout,
+                               RetryPolicy connectionRetryPolicy,
                                long timeout) throws IOException { 
     long startTime = System.currentTimeMillis();
     IOException ioe;
@@ -374,7 +376,7 @@ public class RPC {
       try {
         return getProtocolProxy(protocol, clientVersion, addr, 
             UserGroupInformation.getCurrentUser(), conf, NetUtils
-            .getDefaultSocketFactory(conf), rpcTimeout);
+            .getDefaultSocketFactory(conf), rpcTimeout, connectionRetryPolicy);
       } catch(ConnectException se) {  // namenode has not been started
         LOG.info("Server at " + addr + " not available yet, Zzzzz...");
         ioe = se;
@@ -463,7 +465,7 @@ public class RPC {
                                 Configuration conf,
                                 SocketFactory factory) throws IOException {
     return getProtocolProxy(
-        protocol, clientVersion, addr, ticket, conf, factory, 0);
+        protocol, clientVersion, addr, ticket, conf, factory, 0, null);
   }
   
   /**
@@ -489,7 +491,7 @@ public class RPC {
                                 SocketFactory factory,
                                 int rpcTimeout) throws IOException {
     return getProtocolProxy(protocol, clientVersion, addr, ticket,
-             conf, factory, rpcTimeout).getProxy();
+             conf, factory, rpcTimeout, null).getProxy();
   }
   
   /**
@@ -512,12 +514,13 @@ public class RPC {
                                 UserGroupInformation ticket,
                                 Configuration conf,
                                 SocketFactory factory,
-                                int rpcTimeout) throws IOException {    
+                                int rpcTimeout,
+                                RetryPolicy connectionRetryPolicy) throws IOException {    
     if (UserGroupInformation.isSecurityEnabled()) {
       SaslRpcServer.init(conf);
     }
-    return getProtocolEngine(protocol,conf).getProxy(protocol,
-        clientVersion, addr, ticket, conf, factory, rpcTimeout);
+    return getProtocolEngine(protocol,conf).getProxy(protocol, clientVersion,
+        addr, ticket, conf, factory, rpcTimeout, connectionRetryPolicy);
   }
 
    /**

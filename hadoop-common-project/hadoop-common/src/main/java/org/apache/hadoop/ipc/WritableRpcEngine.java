@@ -31,6 +31,7 @@ import javax.net.SocketFactory;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -259,8 +260,13 @@ public class WritableRpcEngine implements RpcEngine {
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
                          InetSocketAddress addr, UserGroupInformation ticket,
                          Configuration conf, SocketFactory factory,
-                         int rpcTimeout)
+                         int rpcTimeout, RetryPolicy connectionRetryPolicy)
     throws IOException {    
+
+    if (connectionRetryPolicy != null) {
+      throw new UnsupportedOperationException(
+          "Not supported: connectionRetryPolicy=" + connectionRetryPolicy);
+    }
 
     T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
         new Class[] { protocol }, new Invoker(protocol, addr, ticket, conf,

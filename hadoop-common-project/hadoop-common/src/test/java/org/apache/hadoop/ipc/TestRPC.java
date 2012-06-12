@@ -18,49 +18,54 @@
 
 package org.apache.hadoop.ipc;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import javax.net.SocketFactory;
 
-import org.apache.commons.logging.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
-import org.apache.hadoop.ipc.TestSaslRPC.TestSaslImpl;
-import org.apache.hadoop.ipc.TestSaslRPC.TestSaslProtocol;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.MockitoUtil;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.DescriptorProtos.EnumDescriptorProto;
-
-import static org.apache.hadoop.test.MetricsAsserts.*;
 
 /** Unit tests for RPC. */
 @SuppressWarnings("deprecation")
@@ -250,7 +255,8 @@ public class TestRPC {
     @Override
     public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
         InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
-        SocketFactory factory, int rpcTimeout) throws IOException {
+        SocketFactory factory, int rpcTimeout, RetryPolicy connectionRetryPolicy
+        ) throws IOException {
       T proxy = (T) Proxy.newProxyInstance(protocol.getClassLoader(),
               new Class[] { protocol }, new StoppedInvocationHandler());
       return new ProtocolProxy<T>(protocol, proxy, false);
