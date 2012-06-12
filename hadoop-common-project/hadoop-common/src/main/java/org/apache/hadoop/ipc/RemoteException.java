@@ -97,8 +97,9 @@ public class RemoteException extends IOException {
     return new RemoteException(attrs.getValue("class"),
         attrs.getValue("message")); 
   }
-  
+
+  @Override
   public String toString() {
-    return className + ": " + getMessage();
+    return getClass().getName() + "(" + className + "): " + getMessage();
   }
 }

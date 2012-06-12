@@ -75,9 +75,10 @@ public class RetryProxy {
    */
   public static Object create(Class<?> iface, Object implementation,
                               Map<String,RetryPolicy> methodNameToPolicyMap) {
-    return RetryProxy.create(iface,
+    return create(iface,
         new DefaultFailoverProxyProvider(iface, implementation),
-        methodNameToPolicyMap);
+        methodNameToPolicyMap,
+        RetryPolicies.TRY_ONCE_THEN_FAIL);
   }
 
   /**
@@ -92,11 +93,13 @@ public class RetryProxy {
    * @return the retry proxy
    */
   public static Object create(Class<?> iface, FailoverProxyProvider proxyProvider,
-      Map<String,RetryPolicy> methodNameToPolicyMap) {
+      Map<String,RetryPolicy> methodNameToPolicyMap,
+      RetryPolicy defaultPolicy) {
     return Proxy.newProxyInstance(
         proxyProvider.getInterface().getClassLoader(),
         new Class<?>[] { iface },
-        new RetryInvocationHandler(proxyProvider, methodNameToPolicyMap)
+        new RetryInvocationHandler(proxyProvider, defaultPolicy,
+            methodNameToPolicyMap)
         );
   }
 }

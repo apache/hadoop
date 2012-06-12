@@ -36,9 +36,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataOutputOutputStream;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.RPC.RpcInvoker;
-
 import org.apache.hadoop.ipc.protobuf.HadoopRpcProtos.HadoopRpcRequestProto;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -66,15 +66,24 @@ public class ProtobufRpcEngine implements RpcEngine {
 
   private static final ClientCache CLIENTS = new ClientCache();
 
+  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
+      InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
+      SocketFactory factory, int rpcTimeout) throws IOException {
+    return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
+        rpcTimeout, null);
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
-      SocketFactory factory, int rpcTimeout) throws IOException {
+      SocketFactory factory, int rpcTimeout, RetryPolicy connectionRetryPolicy
+      ) throws IOException {
 
-    return new ProtocolProxy<T>(protocol, (T) Proxy.newProxyInstance(protocol
-        .getClassLoader(), new Class[] { protocol }, new Invoker(protocol,
-        addr, ticket, conf, factory, rpcTimeout)), false);
+    final Invoker invoker = new Invoker(protocol, addr, ticket, conf, factory,
+        rpcTimeout, connectionRetryPolicy);
+    return new ProtocolProxy<T>(protocol, (T) Proxy.newProxyInstance(
+        protocol.getClassLoader(), new Class[]{protocol}, invoker), false);
   }
   
   @Override
@@ -97,11 +106,12 @@ public class ProtobufRpcEngine implements RpcEngine {
     private final long clientProtocolVersion;
     private final String protocolName;
 
-    public Invoker(Class<?> protocol, InetSocketAddress addr,
+    private Invoker(Class<?> protocol, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
-        int rpcTimeout) throws IOException {
-      this(protocol, Client.ConnectionId.getConnectionId(addr, protocol,
-          ticket, rpcTimeout, conf), conf, factory);
+        int rpcTimeout, RetryPolicy connectionRetryPolicy) throws IOException {
+      this(protocol, Client.ConnectionId.getConnectionId(
+          addr, protocol, ticket, rpcTimeout, connectionRetryPolicy, conf),
+          conf, factory);
     }
     
     /**
