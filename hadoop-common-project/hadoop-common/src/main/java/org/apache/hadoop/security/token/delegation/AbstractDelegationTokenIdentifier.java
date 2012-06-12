@@ -31,6 +31,8 @@ import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
+import com.google.common.annotations.VisibleForTesting;
+
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public abstract class AbstractDelegationTokenIdentifier 
@@ -173,16 +175,17 @@ extends TokenIdentifier {
 	throw new IOException("Unknown version of delegation token " + 
                               version);
     }
-    owner.readFields(in);
-    renewer.readFields(in);
-    realUser.readFields(in);
+    owner.readFields(in, Text.DEFAULT_MAX_LEN);
+    renewer.readFields(in, Text.DEFAULT_MAX_LEN);
+    realUser.readFields(in, Text.DEFAULT_MAX_LEN);
     issueDate = WritableUtils.readVLong(in);
     maxDate = WritableUtils.readVLong(in);
     sequenceNumber = WritableUtils.readVInt(in);
     masterKeyId = WritableUtils.readVInt(in);
   }
 
-  public void write(DataOutput out) throws IOException {
+  @VisibleForTesting
+  void writeImpl(DataOutput out) throws IOException {
     out.writeByte(VERSION);
     owner.write(out);
     renewer.write(out);
@@ -191,6 +194,19 @@ extends TokenIdentifier {
     WritableUtils.writeVLong(out, maxDate);
     WritableUtils.writeVInt(out, sequenceNumber);
     WritableUtils.writeVInt(out, masterKeyId);
+  }
+  
+  public void write(DataOutput out) throws IOException {
+    if (owner.getLength() > Text.DEFAULT_MAX_LEN) {
+      throw new IOException("owner is too long to be serialized!");
+    }
+    if (renewer.getLength() > Text.DEFAULT_MAX_LEN) {
+      throw new IOException("renewer is too long to be serialized!");
+    }
+    if (realUser.getLength() > Text.DEFAULT_MAX_LEN) {
+      throw new IOException("realuser is too long to be serialized!");
+    }
+    writeImpl(out);
   }
   
   public String toString() {

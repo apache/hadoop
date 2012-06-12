@@ -19,6 +19,7 @@
 package org.apache.hadoop.security.token.delegation;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -387,4 +388,46 @@ public class TestDelegationToken {
     }
   }
 
+  private boolean testDelegationTokenIdentiferSerializationRoundTrip(Text owner,
+      Text renewer, Text realUser) throws IOException {
+    TestDelegationTokenIdentifier dtid = new TestDelegationTokenIdentifier(
+        owner, renewer, realUser);
+    DataOutputBuffer out = new DataOutputBuffer();
+    dtid.writeImpl(out);
+    DataInputBuffer in = new DataInputBuffer();
+    in.reset(out.getData(), out.getLength());
+    try {
+      TestDelegationTokenIdentifier dtid2 =
+          new TestDelegationTokenIdentifier();
+      dtid2.readFields(in);
+      assertTrue(dtid.equals(dtid2));
+      return true;
+    } catch(IOException e){
+      return false;
+    }
+  }
+      
+  @Test
+  public void testSimpleDtidSerialization() throws IOException {
+    assertTrue(testDelegationTokenIdentiferSerializationRoundTrip(
+        new Text("owner"), new Text("renewer"), new Text("realUser")));
+    assertTrue(testDelegationTokenIdentiferSerializationRoundTrip(
+        new Text(""), new Text(""), new Text("")));
+    assertTrue(testDelegationTokenIdentiferSerializationRoundTrip(
+        new Text(""), new Text("b"), new Text("")));
+  }
+  
+  @Test
+  public void testOverlongDtidSerialization() throws IOException {
+    byte[] bigBuf = new byte[Text.DEFAULT_MAX_LEN + 1];
+    for (int i = 0; i < bigBuf.length; i++) {
+      bigBuf[i] = 0;
+    }
+    assertFalse(testDelegationTokenIdentiferSerializationRoundTrip(
+        new Text(bigBuf), new Text("renewer"), new Text("realUser")));
+    assertFalse(testDelegationTokenIdentiferSerializationRoundTrip(
+        new Text("owner"), new Text(bigBuf), new Text("realUser")));
+    assertFalse(testDelegationTokenIdentiferSerializationRoundTrip(
+        new Text("owner"), new Text("renewer"), new Text(bigBuf)));
+  }
 }
