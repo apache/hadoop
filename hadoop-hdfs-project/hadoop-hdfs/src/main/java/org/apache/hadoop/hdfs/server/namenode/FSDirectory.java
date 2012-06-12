@@ -277,7 +277,7 @@ public class FSDirectory implements Closeable {
           preferredBlockSize, modificationTime, clientName, 
           clientMachine, null);
     } else {
-      newNode = new INodeFile(permissions, 0, replication,
+      newNode = new INodeFile(permissions, BlockInfo.EMPTY_ARRAY, replication,
                               modificationTime, atime, preferredBlockSize);
     }
 

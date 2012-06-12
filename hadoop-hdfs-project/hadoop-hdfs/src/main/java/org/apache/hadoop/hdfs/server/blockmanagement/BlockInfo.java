@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.util.LightWeightGSet;
@@ -27,7 +28,10 @@ import org.apache.hadoop.hdfs.util.LightWeightGSet;
  * the {@link BlockCollection} it is part of and datanodes where the replicas of 
  * the block are stored.
  */
+@InterfaceAudience.Private
 public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
+  public static final BlockInfo[] EMPTY_ARRAY = {}; 
+
   private BlockCollection bc;
 
   /** For implementing {@link LightWeightGSet.LinkedElement} interface */

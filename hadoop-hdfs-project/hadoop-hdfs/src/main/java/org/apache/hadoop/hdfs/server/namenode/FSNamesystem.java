@@ -1590,7 +1590,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     try {
-      INode myFile = dir.getFileINode(src);
+      INodeFile myFile = dir.getFileINode(src);
       recoverLeaseInternal(myFile, src, holder, clientMachine, false);
 
       try {
@@ -1666,22 +1666,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws UnresolvedLinkException
    * @throws IOException
    */
-  public LocatedBlock prepareFileForWrite(String src, INode file,
+  LocatedBlock prepareFileForWrite(String src, INodeFile file,
       String leaseHolder, String clientMachine, DatanodeDescriptor clientNode,
-      boolean writeToEditLog)
-      throws UnresolvedLinkException, IOException {
-    INodeFile node = (INodeFile) file;
+      boolean writeToEditLog) throws IOException {
     INodeFileUnderConstruction cons = new INodeFileUnderConstruction(
-                                    node.getLocalNameBytes(),
-                                    node.getReplication(),
-                                    node.getModificationTime(),
-                                    node.getPreferredBlockSize(),
-                                    node.getBlocks(),
-                                    node.getPermissionStatus(),
+                                    file.getLocalNameBytes(),
+                                    file.getReplication(),
+                                    file.getModificationTime(),
+                                    file.getPreferredBlockSize(),
+                                    file.getBlocks(),
+                                    file.getPermissionStatus(),
                                     leaseHolder,
                                     clientMachine,
                                     clientNode);
-    dir.replaceNode(src, node, cons);
+    dir.replaceNode(src, file, cons);
     leaseManager.addLease(cons.getClientName(), src);
     
     LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);

@@ -65,6 +65,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-1013. Miscellaneous improvements to HTML markup for web UIs
     (Eugene Koontz via todd)
 
+    HDFS-3052. Change INodeFile and INodeFileUnderConstruction to package
+    private.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
