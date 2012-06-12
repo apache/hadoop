@@ -20,9 +20,6 @@ package org.apache.hadoop.io;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.WritableByteChannel;
 
 import org.apache.commons.logging.Log;
 
@@ -248,35 +245,4 @@ public class IOUtils {
     public void write(int b) throws IOException {
     }
   }  
-  
-  /**
-   * Write a ByteBuffer to a WritableByteChannel, handling short writes.
-   * 
-   * @param bc               The WritableByteChannel to write to.
-   * @param buf              The input buffer
-   * @param offset           The offset in the file to start writing at.
-   * @throws IOException     On I/O error.
-   */
-  public static void writeFully(WritableByteChannel bc, ByteBuffer buf)
-      throws IOException {
-    do {
-      bc.write(buf);
-    } while (buf.remaining() > 0);
-  }
-
-  /**
-   * Write a ByteBuffer to a FileChannel at a given offset, 
-   * handling short writes.
-   * 
-   * @param fc               The FileChannel to write to.
-   * @param buf              The input buffer
-   * @param offset           The offset in the file to start writing at.
-   * @throws IOException     On I/O error.
-   */
-  public static void writeFully(FileChannel fc, ByteBuffer buf,
-      long offset) throws IOException {
-    do {
-      offset += fc.write(buf, offset);
-    } while (buf.remaining() > 0);
-  }
 }

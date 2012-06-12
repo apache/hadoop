@@ -80,12 +80,6 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8485. Don't hardcode "Apache Hadoop 0.23" in the docs. (eli)
 
-    HADOOP-8488. test-patch.sh gives +1 even if the native build fails.
-    (Colin Patrick McCabe via eli)
-
-    HADOOP-8491. Check for short writes when using FileChannel#write
-    and related methods. (Colin Patrick McCabe via eli)
-
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
@@ -117,6 +111,9 @@ Release 2.0.1-alpha - UNRELEASED
     (todd via eli)
     
     HADOOP-8405. ZKFC tests leak ZK instances. (todd)
+
+    HADOOP-8488. test-patch.sh gives +1 even if the native build
+    fails. (Colin Patrick McCabe via eli)
 
 Release 2.0.0-alpha - 05-23-2012
 
