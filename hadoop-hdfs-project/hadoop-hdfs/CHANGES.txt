@@ -210,6 +210,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3531. EditLogFileOutputStream#preallocate should check for
     incomplete writes. (Colin Patrick McCabe via eli)
 
+    HDFS-766. Error message not clear for set space quota out of boundary
+    values. (Jon Zuanich via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
