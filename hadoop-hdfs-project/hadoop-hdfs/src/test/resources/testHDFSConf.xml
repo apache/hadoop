@@ -15470,7 +15470,7 @@
       <comparators>
         <comparator>
           <type>SubstringComparator</type>
-          <expected-output>For input string: "a5"</expected-output>
+          <expected-output>setSpaceQuota: "a5" is not a valid value for a quota.</expected-output>
         </comparator>
       </comparators>
     </test>
