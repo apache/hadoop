@@ -909,6 +909,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
             FileSystem.create(fs, submitJobFile,
                 new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
 
+          // removing jobtoken referrals before copying the jobconf to HDFS
+          // as the tasks don't need this setting, actually they may break
+          // because of it if present as the referral will point to a
+          // different job.
+          TokenCache.cleanUpTokenReferral(jobCopy);
+
           try {
             jobCopy.writeXml(out);
           } finally {

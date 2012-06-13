@@ -19,6 +19,7 @@ package org.apache.hadoop.mapreduce.security;
 
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -311,4 +312,15 @@ public class TestTokenCache {
     TokenCache.obtainTokensForNamenodesInternal(
       credentials, new Path [] {finalPath}, jConf);
   }
+
+
+  @Test
+  public void testCleanUpTokenReferral() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(TokenCache.MAPREDUCE_JOB_CREDENTIALS_BINARY, "foo");
+    TokenCache.cleanUpTokenReferral(conf);
+    assertNull(conf.get(TokenCache.MAPREDUCE_JOB_CREDENTIALS_BINARY));
+  }
+
+
 }

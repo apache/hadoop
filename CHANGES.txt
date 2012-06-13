@@ -28,6 +28,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4195. With invalid queueName request param, jobqueue_details.jsp 
     shows NPE (jira.shegalov via tucu)
 
+    MAPREDUCE-3727. jobtoken location property in jobconf refers to wrong 
+    jobtoken file (tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

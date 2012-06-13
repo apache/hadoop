@@ -52,6 +52,9 @@ public class TokenCache {
   
   private static final Log LOG = LogFactory.getLog(TokenCache.class);
 
+  static final String MAPREDUCE_JOB_CREDENTIALS_BINARY = 
+    "mapreduce.job.credentials.binary";
+
   /**
    * auxiliary method to get user's secret keys..
    * @param alias
@@ -79,6 +82,16 @@ public class TokenCache {
     obtainTokensForNamenodesInternal(credentials, ps, conf);
   }
 
+  /**
+   * Remove jobtoken referrals which don't make sense in the context
+   * of the task execution.
+   *
+   * @param conf configuration object.
+   */
+  public static void cleanUpTokenReferral(Configuration conf) {
+    conf.unset(MAPREDUCE_JOB_CREDENTIALS_BINARY);
+  }
+
   static void obtainTokensForNamenodesInternal(Credentials credentials,
                                                Path [] ps, 
                                                Configuration conf
@@ -99,7 +112,7 @@ public class TokenCache {
         if (readFile) {
           readFile = false;
           String binaryTokenFilename =
-            conf.get("mapreduce.job.credentials.binary");
+            conf.get(MAPREDUCE_JOB_CREDENTIALS_BINARY);
           if (binaryTokenFilename != null) {
             Credentials binary;
             try {
