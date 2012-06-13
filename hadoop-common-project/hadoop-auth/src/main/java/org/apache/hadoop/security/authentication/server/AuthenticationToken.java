@@ -115,10 +115,10 @@ public class AuthenticationToken implements Principal {
    */
   private void generateToken() {
     StringBuffer sb = new StringBuffer();
-    sb.append(USER_NAME).append("=").append(userName).append(ATTR_SEPARATOR);
-    sb.append(PRINCIPAL).append("=").append(principal).append(ATTR_SEPARATOR);
-    sb.append(TYPE).append("=").append(type).append(ATTR_SEPARATOR);
-    sb.append(EXPIRES).append("=").append(expires);
+    sb.append(USER_NAME).append("=").append(getUserName()).append(ATTR_SEPARATOR);
+    sb.append(PRINCIPAL).append("=").append(getName()).append(ATTR_SEPARATOR);
+    sb.append(TYPE).append("=").append(getType()).append(ATTR_SEPARATOR);
+    sb.append(EXPIRES).append("=").append(getExpires());
     token = sb.toString();
   }
 
@@ -165,7 +165,7 @@ public class AuthenticationToken implements Principal {
    * @return if the token has expired.
    */
   public boolean isExpired() {
-    return expires != -1 && System.currentTimeMillis() > expires;
+    return getExpires() != -1 && System.currentTimeMillis() > getExpires();
   }
 
   /**

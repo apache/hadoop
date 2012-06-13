@@ -347,7 +347,8 @@ public class AuthenticationFilter implements Filter {
             LOG.debug("Request [{}] triggering authentication", getRequestURL(httpRequest));
           }
           token = authHandler.authenticate(httpRequest, httpResponse);
-          if (token != null && token != AuthenticationToken.ANONYMOUS) {
+          if (token != null && token.getExpires() != 0 &&
+              token != AuthenticationToken.ANONYMOUS) {
             token.setExpires(System.currentTimeMillis() + getValidity() * 1000);
           }
           newToken = true;
@@ -375,7 +376,7 @@ public class AuthenticationFilter implements Filter {
               return (authToken != AuthenticationToken.ANONYMOUS) ? authToken : null;
             }
           };
-          if (newToken && token != AuthenticationToken.ANONYMOUS) {
+          if (newToken && !token.isExpired() && token != AuthenticationToken.ANONYMOUS) {
             String signedToken = signer.sign(token.toString());
             Cookie cookie = createCookie(signedToken);
             httpResponse.addCookie(cookie);

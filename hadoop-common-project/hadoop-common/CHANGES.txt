@@ -177,6 +177,8 @@ Branch-2 ( Unreleased changes )
     HADOOP-8458. Add management hook to AuthenticationHandler to enable 
     delegation token operations support (tucu)
 
+    HADOOP-8465. hadoop-auth should support ephemeral authentication (tucu)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual

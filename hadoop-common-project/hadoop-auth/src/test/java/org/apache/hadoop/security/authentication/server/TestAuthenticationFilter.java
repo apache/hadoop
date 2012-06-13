@@ -73,6 +73,7 @@ public class TestAuthenticationFilter extends TestCase {
     public static boolean init;
     public static boolean managementOperationReturn;
     public static boolean destroy;
+    public static boolean expired;
 
     public static final String TYPE = "dummy";
 
@@ -86,6 +87,7 @@ public class TestAuthenticationFilter extends TestCase {
       init = true;
       managementOperationReturn =
         config.getProperty("management.operation.return", "true").equals("true");
+      expired = config.getProperty("expired.token", "false").equals("true");
     }
 
     @Override
@@ -116,7 +118,7 @@ public class TestAuthenticationFilter extends TestCase {
       String param = request.getParameter("authenticated");
       if (param != null && param.equals("true")) {
         token = new AuthenticationToken("u", "p", "t");
-        token.setExpires(System.currentTimeMillis() + 1000);
+        token.setExpires((expired) ? 0 : System.currentTimeMillis() + 1000);
       } else {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
       }
@@ -386,12 +388,16 @@ public class TestAuthenticationFilter extends TestCase {
     }
   }
 
-  private void _testDoFilterAuthentication(boolean withDomainPath, boolean invalidToken) throws Exception {
+  private void _testDoFilterAuthentication(boolean withDomainPath,
+                                           boolean invalidToken,
+                                           boolean expired) throws Exception {
     AuthenticationFilter filter = new AuthenticationFilter();
     try {
       FilterConfig config = Mockito.mock(FilterConfig.class);
       Mockito.when(config.getInitParameter("management.operation.return")).
         thenReturn("true");
+      Mockito.when(config.getInitParameter("expired.token")).
+        thenReturn(Boolean.toString(expired));
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TYPE)).thenReturn(
         DummyAuthenticationHandler.class.getName());
       Mockito.when(config.getInitParameter(AuthenticationFilter.AUTH_TOKEN_VALIDITY)).thenReturn("1000");
@@ -400,7 +406,8 @@ public class TestAuthenticationFilter extends TestCase {
         new Vector<String>(Arrays.asList(AuthenticationFilter.AUTH_TYPE,
                                  AuthenticationFilter.AUTH_TOKEN_VALIDITY,
                                  AuthenticationFilter.SIGNATURE_SECRET,
-                                 "management.operation.return")).elements());
+                                 "management.operation.return",
+                                 "expired.token")).elements());
 
       if (withDomainPath) {
         Mockito.when(config.getInitParameter(AuthenticationFilter.COOKIE_DOMAIN)).thenReturn(".foo.com");
@@ -457,26 +464,32 @@ public class TestAuthenticationFilter extends TestCase {
 
       filter.doFilter(request, response, chain);
 
-      assertNotNull(setCookie[0]);
-      assertEquals(AuthenticatedURL.AUTH_COOKIE, setCookie[0].getName());
-      assertTrue(setCookie[0].getValue().contains("u="));
-      assertTrue(setCookie[0].getValue().contains("p="));
-      assertTrue(setCookie[0].getValue().contains("t="));
-      assertTrue(setCookie[0].getValue().contains("e="));
-      assertTrue(setCookie[0].getValue().contains("s="));
-      assertTrue(calledDoFilter[0]);
-
-      Signer signer = new Signer("secret".getBytes());
-      String value = signer.verifyAndExtract(setCookie[0].getValue());
-      AuthenticationToken token = AuthenticationToken.parse(value);
-      assertEquals(System.currentTimeMillis() + 1000 * 1000, token.getExpires(), 100);
-
-      if (withDomainPath) {
-        assertEquals(".foo.com", setCookie[0].getDomain());
-        assertEquals("/bar", setCookie[0].getPath());
+      if (expired) {
+        Mockito.verify(response, Mockito.never()).
+          addCookie(Mockito.any(Cookie.class));
       } else {
-        assertNull(setCookie[0].getDomain());
-        assertNull(setCookie[0].getPath());
+        assertNotNull(setCookie[0]);
+        assertEquals(AuthenticatedURL.AUTH_COOKIE, setCookie[0].getName());
+        assertTrue(setCookie[0].getValue().contains("u="));
+        assertTrue(setCookie[0].getValue().contains("p="));
+        assertTrue(setCookie[0].getValue().contains("t="));
+        assertTrue(setCookie[0].getValue().contains("e="));
+        assertTrue(setCookie[0].getValue().contains("s="));
+        assertTrue(calledDoFilter[0]);
+
+        Signer signer = new Signer("secret".getBytes());
+        String value = signer.verifyAndExtract(setCookie[0].getValue());
+        AuthenticationToken token = AuthenticationToken.parse(value);
+        assertEquals(System.currentTimeMillis() + 1000 * 1000,
+                     token.getExpires(), 100);
+
+        if (withDomainPath) {
+          assertEquals(".foo.com", setCookie[0].getDomain());
+          assertEquals("/bar", setCookie[0].getPath());
+        } else {
+          assertNull(setCookie[0].getDomain());
+          assertNull(setCookie[0].getPath());
+        }
       }
     } finally {
       filter.destroy();
@@ -484,15 +497,19 @@ public class TestAuthenticationFilter extends TestCase {
   }
 
   public void testDoFilterAuthentication() throws Exception {
-    _testDoFilterAuthentication(false, false);
+    _testDoFilterAuthentication(false, false, false);
+  }
+
+  public void testDoFilterAuthenticationImmediateExpiration() throws Exception {
+    _testDoFilterAuthentication(false, false, true);
   }
 
   public void testDoFilterAuthenticationWithInvalidToken() throws Exception {
-    _testDoFilterAuthentication(false, true);
+    _testDoFilterAuthentication(false, true, false);
   }
 
   public void testDoFilterAuthenticationWithDomainPath() throws Exception {
-    _testDoFilterAuthentication(true, false);
+    _testDoFilterAuthentication(true, false, false);
   }
 
   public void testDoFilterAuthenticated() throws Exception {
