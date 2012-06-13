@@ -204,6 +204,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3389. Document the BKJM usage in Namenode HA. (umamahesh and Ivan Kelly via umamahesh)
 
+    HDFS-3531. EditLogFileOutputStream#preallocate should check for
+    incomplete writes. (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
