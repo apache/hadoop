@@ -29,7 +29,7 @@ import org.apache.hadoop.hdfs.util.XMLUtils.InvalidXmlException;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOpCodes;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
-
+import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
 import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
@@ -46,9 +46,9 @@ import org.xml.sax.helpers.XMLReaderFactory;
 @InterfaceStability.Unstable
 class OfflineEditsXmlLoader 
     extends DefaultHandler implements OfflineEditsLoader {
-  private boolean fixTxIds;
-  private OfflineEditsVisitor visitor;
-  private FileReader fileReader;
+  private final boolean fixTxIds;
+  private final OfflineEditsVisitor visitor;
+  private final FileReader fileReader;
   private ParseState state;
   private Stanza stanza;
   private Stack<Stanza> stanzaStack;
@@ -68,9 +68,10 @@ class OfflineEditsXmlLoader
   }
   
   public OfflineEditsXmlLoader(OfflineEditsVisitor visitor,
-        File inputFile) throws FileNotFoundException {
+        File inputFile, OfflineEditsViewer.Flags flags) throws FileNotFoundException {
     this.visitor = visitor;
     this.fileReader = new FileReader(inputFile);
+    this.fixTxIds = flags.getFixTxIds();
   }
 
   /**
@@ -249,10 +250,5 @@ class OfflineEditsXmlLoader
   
   public void characters (char ch[], int start, int length) {
     cbuf.append(ch, start, length);
-  }
-
-  @Override
-  public void setFixTxIds() {
-    fixTxIds = true;
   }
 }

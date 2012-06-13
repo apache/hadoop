@@ -17,16 +17,10 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import java.io.EOFException;
-import java.io.File;
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
-import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsLoader.OfflineEditsLoaderFactory;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -37,7 +31,6 @@ import org.apache.commons.cli.OptionBuilder;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
-import org.xml.sax.SAXParseException;
 
 /**
  * This class implements an offline edits viewer, tool that
@@ -78,6 +71,9 @@ public class OfflineEditsViewer extends Configured implements Tool {
       "-f,--fix-txids         Renumber the transaction IDs in the input,\n" +
       "                       so that there are no gaps or invalid " +
       "                       transaction IDs.\n" +
+      "-r,--recover           When reading binary edit logs, use recovery \n" +
+      "                       mode.  This will give you the chance to skip \n" +
+      "                       corrupt parts of the edit log.\n" +
       "-v,--verbose           More verbose output, prints the input and\n" +
       "                       output filenames, for processors that write\n" +
       "                       to a file, also output to screen. On large\n" +
@@ -113,6 +109,7 @@ public class OfflineEditsViewer extends Configured implements Tool {
     options.addOption("p", "processor", true, "");
     options.addOption("v", "verbose", false, "");
     options.addOption("f", "fix-txids", false, "");
+    options.addOption("r", "recover", false, "");
     options.addOption("h", "help", false, "");
 
     return options;
@@ -128,23 +125,20 @@ public class OfflineEditsViewer extends Configured implements Tool {
    * @return                0 on success; error code otherwise
    */
   public int go(String inputFileName, String outputFileName, String processor,
-      boolean printToScreen, boolean fixTxIds, OfflineEditsVisitor visitor)
+      Flags flags, OfflineEditsVisitor visitor)
   {
-    if (printToScreen) {
+    if (flags.getPrintToScreen()) {
       System.out.println("input  [" + inputFileName  + "]");
       System.out.println("output [" + outputFileName + "]");
     }
     try {
       if (visitor == null) {
         visitor = OfflineEditsVisitorFactory.getEditsVisitor(
-            outputFileName, processor, printToScreen);
+            outputFileName, processor, flags.getPrintToScreen());
       }
       boolean xmlInput = inputFileName.endsWith(".xml");
       OfflineEditsLoader loader = OfflineEditsLoaderFactory.
-          createLoader(visitor, inputFileName, xmlInput);
-      if (fixTxIds) {
-        loader.setFixTxIds();
-      }
+          createLoader(visitor, inputFileName, xmlInput, flags);
       loader.loadEdits();
     } catch(Exception e) {
       System.err.println("Encountered exception. Exiting: " + e.getMessage());
@@ -154,6 +148,39 @@ public class OfflineEditsViewer extends Configured implements Tool {
     return 0;
   }
 
+  public static class Flags {
+    private boolean printToScreen = false;
+    private boolean fixTxIds = false;
+    private boolean recoveryMode = false;
+    
+    public Flags() {
+    }
+    
+    public boolean getPrintToScreen() {
+      return printToScreen;
+    }
+    
+    public void setPrintToScreen() {
+      printToScreen = true;
+    }
+    
+    public boolean getFixTxIds() {
+      return fixTxIds;
+    }
+    
+    public void setFixTxIds() {
+      fixTxIds = true;
+    }
+    
+    public boolean getRecoveryMode() {
+      return recoveryMode;
+    }
+    
+    public void setRecoveryMode() {
+      recoveryMode = true;
+    }
+  }
+  
   /**
    * Main entry point for ToolRunner (see ToolRunner docs)
    *
@@ -177,6 +204,7 @@ public class OfflineEditsViewer extends Configured implements Tool {
       printHelp();
       return -1;
     }
+    
     if(cmd.hasOption("h")) { // print help and exit
       printHelp();
       return -1;
@@ -187,10 +215,17 @@ public class OfflineEditsViewer extends Configured implements Tool {
     if(processor == null) {
       processor = defaultProcessor;
     }
-    boolean printToScreen = cmd.hasOption("v");
-    boolean fixTxIds = cmd.hasOption("f");
-    return go(inputFileName, outputFileName, processor,
-        printToScreen, fixTxIds, null);
+    Flags flags = new Flags();
+    if (cmd.hasOption("r")) {
+      flags.setRecoveryMode();
+    }
+    if (cmd.hasOption("f")) {
+      flags.setFixTxIds();
+    }
+    if (cmd.hasOption("v")) {
+      flags.setPrintToScreen();
+    }
+    return go(inputFileName, outputFileName, processor, flags, null);
   }
 
   /**
