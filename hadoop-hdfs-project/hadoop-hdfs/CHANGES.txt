@@ -226,6 +226,9 @@ Branch-2 ( Unreleased changes )
     connections and RPC calls, and add MultipleLinearRandomRetry, a new retry
     policy.  (szetszwo)
 
+    HDFS-3372. offlineEditsViewer should be able to read a binary
+    edits file with recovery mode. (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
