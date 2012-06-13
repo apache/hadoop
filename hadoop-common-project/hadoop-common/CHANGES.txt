@@ -256,6 +256,8 @@ Branch-2 ( Unreleased changes )
     HADOOP-8433. Don't set HADOOP_LOG_DIR in hadoop-env.sh.
     (Brahma Reddy Battula via eli)
 
+    HADOOP-8509. JarFinder duplicate entry: META-INF/MANIFEST.MF exception (tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
