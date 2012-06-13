@@ -328,6 +328,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3522. If a namenode is in safemode, it should throw SafeModeException
     when getBlockLocations has zero locations.  (Brandon Li via szetszwo)
 
+    HDFS-3531. EditLogFileOutputStream#preallocate should check for
+    incomplete writes. (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
