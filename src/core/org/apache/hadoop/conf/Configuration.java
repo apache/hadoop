@@ -438,7 +438,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     getOverlay().setProperty(name, value);
     getProps().setProperty(name, value);
   }
-  
+ 
+  /**
+   * Unset a previously set property.
+   */
+  public synchronized void unset(String name) {
+    getOverlay().remove(name);
+    getProps().remove(name);
+  }
+ 
   /**
    * Sets a property if it is currently unset.
    * @param name the property name
