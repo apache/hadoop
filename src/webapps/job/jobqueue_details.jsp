@@ -21,6 +21,10 @@ private static final long serialVersionUID = 526456771152222127L;
   TaskScheduler scheduler = tracker.getTaskScheduler();
   Collection<JobInProgress> jobs = scheduler.getJobs(queueName);
   JobQueueInfo schedInfo = tracker.getQueueInfo(queueName);
+  if (schedInfo == null) {
+    queueName = "INVALID_QUEUE_NAME (" + queueName + ")";
+    schedInfo = new JobQueueInfo(queueName, "INVALID_SCHEDULING_INFO");
+  }
 %>
 <html>
 <head>

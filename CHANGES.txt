@@ -23,6 +23,9 @@ Release 1.2.0 - unreleased
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
     HADOOP_SECURE_DN_PID_DIR (bobby)
 
+    MAPREDUCE-4195. With invalid queueName request param, jobqueue_details.jsp 
+    shows NPE (jira.shegalov via tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
