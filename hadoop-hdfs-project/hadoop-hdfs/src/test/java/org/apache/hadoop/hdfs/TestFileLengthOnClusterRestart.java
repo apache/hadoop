@@ -65,8 +65,8 @@ public class TestFileLengthOnClusterRestart {
         in = (HdfsDataInputStream) dfs.open(path);
         Assert.fail("Expected IOException");
       } catch (IOException e) {
-        Assert.assertEquals("Could not obtain the last block locations.", e
-            .getLocalizedMessage());
+        Assert.assertTrue(e.getLocalizedMessage().indexOf(
+            "Name node is in safe mode") >= 0);
       }
     } finally {
       if (null != in) {

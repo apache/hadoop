@@ -341,6 +341,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3480. Multiple SLF4J binding warning. (Vinay via eli)
 
+    HDFS-3524. Update TestFileLengthOnClusterRestart for HDFS-3522.  (Brandon
+    Li via szetszwo)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
