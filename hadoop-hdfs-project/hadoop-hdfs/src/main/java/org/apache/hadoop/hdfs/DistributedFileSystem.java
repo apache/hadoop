@@ -96,7 +96,7 @@ public class DistributedFileSystem extends FileSystem {
    */
   @Override
   public String getScheme() {
-    return "hdfs";
+    return HdfsConstants.HDFS_URI_SCHEME;
   }
 
   @Deprecated
