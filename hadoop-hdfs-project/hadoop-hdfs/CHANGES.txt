@@ -13,8 +13,6 @@ Trunk (unreleased changes)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
-
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -162,8 +160,13 @@ Branch-2 ( Unreleased changes )
 
   NEW FEATURES
 
+    HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
+
     HDFS-3042. Automatic failover support for NameNode HA (todd)
     (see dedicated section below for breakdown of subtasks)
+
+    HDFS-3518. Add a utility method HdfsUtils.isHealthy(uri) for checking if
+    the given HDFS is healthy. (szetszwo)
 
   IMPROVEMENTS
 
