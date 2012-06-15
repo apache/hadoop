@@ -332,6 +332,10 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3522. If a namenode is in safemode, it should throw SafeModeException
     when getBlockLocations has zero locations.  (Brandon Li via szetszwo)
+    
+    HDFS-3408. BKJM : Namenode format fails, if there is no BK root. (Rakesh R via umamahesh)
+
+    HDFS-3389. Document the BKJM usage in Namenode HA. (umamahesh and Ivan Kelly via umamahesh)
 
     HDFS-3531. EditLogFileOutputStream#preallocate should check for
     incomplete writes. (Colin Patrick McCabe via eli)
