@@ -161,16 +161,16 @@ class Child {
     t.start();
     
     String pid = "";
-    if (!Shell.WINDOWS) {
-      pid = System.getenv().get("JVM_PID");
-    }
-    else {
+    pid = System.getenv().get("JVM_PID");
+    if(pid == null || pid.length() == 0) {
+      pid = "";
+      // fallback to using JVM bean if PID is not set in env
       final String jvmName = ManagementFactory.getRuntimeMXBean().getName();
       String[] parts = jvmName.split("@");
       try {
         pid = Long.toString(Long.parseLong(parts[0]));
       } catch (NumberFormatException nfe) {
-        LOG.equals("Failed to get pid for jvmId:" + jvmId);
+        LOG.info("Failed to get pid for jvmId:" + jvmId);
       }
     }
     JvmContext context = new JvmContext(jvmId, pid);

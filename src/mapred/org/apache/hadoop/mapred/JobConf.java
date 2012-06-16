@@ -165,6 +165,8 @@ public class JobConf extends Configuration {
   static final String MR_ACLS_ENABLED = "mapred.acls.enabled";
 
   static final String MR_ADMINS = "mapreduce.cluster.administrators";
+  
+  static final String MAPRED_PROCESSGROUP_ENABLED = "mapred.processgroup.enabled";
 
   /**
    * Configuration key to set the java command line options for the child
@@ -474,6 +476,22 @@ public class JobConf extends Configuration {
   }
 
 
+  /**
+   * Get if Jobobject should be used for tasks on Windows
+   * 
+   * @return use Windows Jobobject or not
+   */
+  public boolean processGroupEnabled() {
+    return getBoolean(MAPRED_PROCESSGROUP_ENABLED, true);
+  }
+
+  /**
+   * Set whether to use Windows Jobobjects for tasks 
+   * @param value <code>true</code> to use Windows Jobobjects
+   */
+  public void setProcessGroupEnabled(boolean value) {
+    setBoolean(MAPRED_PROCESSGROUP_ENABLED, value);
+  }
   
   /**
    * Set whether the framework should keep the intermediate files for 

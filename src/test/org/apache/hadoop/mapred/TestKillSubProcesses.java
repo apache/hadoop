@@ -143,8 +143,14 @@ public class TestKillSubProcesses extends TestCase {
   private static RunningJob runJobAndSetProcessHandle(JobTracker jt, JobConf conf)
                      throws IOException {
     RunningJob job = runJob(conf);
+    long startTime = System.currentTimeMillis();
     while (job.getJobState() != JobStatus.RUNNING) {
       try {
+        // without this assert junit eventually times out without showing 
+        // any logs in the test output file and that makes debugging hard
+        if(System.currentTimeMillis() - startTime > 60000) {
+          assertTrue("job did not change to running state", false);
+        }
         Thread.sleep(100);
       } catch (InterruptedException e) {
         break;
@@ -195,33 +201,50 @@ public class TestKillSubProcesses extends TestCase {
 
     // Checking if the descendant processes of map task are alive
     if(ProcessTree.isSetsidAvailable) {
-      String childPid = UtilsForTests.getPidFromPidFile(
-                               scriptDirName + "/childPidFile" + 0);
-      while(childPid == null) {
-        LOG.warn(scriptDirName + "/childPidFile" + 0 + " is null; Sleeping...");
+      if(Shell.WINDOWS) {
         try {
-          Thread.sleep(500);
+          Thread.sleep(1000);
+          String result = Shell.execCommand("cmd", "/c", Shell.WINUTILS
+              + " task isAlive " + pid);
+          assertTrue("Map process tree not alive", result.contains("IsAlive"));
+          String[] parts = result.split("[,\r\n]");
+          assertTrue(parts.length >= 2);
+          // > numLevelsOfSubProcesses because of winutils etc are also part of 
+          // the task job object along with the spawned scripts
+          assertTrue(Integer.parseInt(parts[1]) > numLevelsOfSubProcesses);
         } catch (InterruptedException ie) {
-          LOG.warn("sleep is interrupted:" + ie);
-          break;
+          // ignore
         }
-        childPid = UtilsForTests.getPidFromPidFile(
-                               scriptDirName + "/childPidFile" + 0);
       }
-
-      // As childPidFile0(leaf process in the subtree of processes with
-      // map task as root) is created, all other child pid files should
-      // have been created already(See the script for details).
-      // Now check if the descendants of map task are alive.
-      for(int i=0; i <= numLevelsOfSubProcesses; i++) {
-        childPid = UtilsForTests.getPidFromPidFile(
-                               scriptDirName + "/childPidFile" + i);
-        LOG.info("pid of the descendant process at level " + i +
-                 "in the subtree of processes(with the map task as the root)" +
-                 " is " + childPid);
-        assertTrue("Unexpected: The subprocess at level " + i +
-                   " in the subtree is not alive before Job completion",
-                   isAlive(childPid));
+      else {
+        String childPid = UtilsForTests.getPidFromPidFile(
+                                 scriptDirName + "/childPidFile" + 0);
+        while(childPid == null) {
+          LOG.warn(scriptDirName + "/childPidFile" + 0 + " is null; Sleeping...");
+          try {
+            Thread.sleep(500);
+          } catch (InterruptedException ie) {
+            LOG.warn("sleep is interrupted:" + ie);
+            break;
+          }
+          childPid = UtilsForTests.getPidFromPidFile(
+                                 scriptDirName + "/childPidFile" + 0);
+        }
+  
+        // As childPidFile0(leaf process in the subtree of processes with
+        // map task as root) is created, all other child pid files should
+        // have been created already(See the script for details).
+        // Now check if the descendants of map task are alive.
+        for(int i=0; i <= numLevelsOfSubProcesses; i++) {
+          childPid = UtilsForTests.getPidFromPidFile(
+                                 scriptDirName + "/childPidFile" + i);
+          LOG.info("pid of the descendant process at level " + i +
+                   "in the subtree of processes(with the map task as the root)" +
+                   " is " + childPid);
+          assertTrue("Unexpected: The subprocess at level " + i +
+                     " in the subtree is not alive before Job completion",
+                     isAlive(childPid));
+        }
       }
     }
     return job;
@@ -233,8 +256,14 @@ public class TestKillSubProcesses extends TestCase {
   private static void validateKillingSubprocesses(RunningJob job, JobConf conf)
                    throws IOException {
     // wait till the the job finishes
+    long startTime = System.currentTimeMillis();
     while (!job.isComplete()) {
       try {
+        // without this assert junit eventually times out without showing 
+        // any logs in the test output file and that makes debugging hard
+        if(System.currentTimeMillis() - startTime > 60000) {
+          assertTrue("job did not complete", false);
+        }
         Thread.sleep(500);
       } catch (InterruptedException e) {
         break;
@@ -242,20 +271,26 @@ public class TestKillSubProcesses extends TestCase {
     }
 
     // Checking if the map task got killed or not
-    assertTrue(!ProcessTree.isAlive(pid));
+    assertTrue(!isAlive(pid));
     LOG.info("The map task is not alive after Job is completed, as expected.");
 
     // Checking if the descendant processes of map task are killed properly
     if(ProcessTree.isSetsidAvailable) {
-      for(int i=0; i <= numLevelsOfSubProcesses; i++) {
-        String childPid = UtilsForTests.getPidFromPidFile(
-                               scriptDirName + "/childPidFile" + i);
-        LOG.info("pid of the descendant process at level " + i +
-                 "in the subtree of processes(with the map task as the root)" +
-                 " is " + childPid);
-        assertTrue("Unexpected: The subprocess at level " + i +
-                   " in the subtree is alive after Job completion",
-                   !isAlive(childPid));
+      if(Shell.WINDOWS) {
+        String result = Shell.execCommand("cmd", "/c", Shell.WINUTILS
+            + " task isAlive " + pid);
+        assertTrue("Map process tree not alive", !result.contains("IsAlive"));
+      } else {
+        for(int i=0; i <= numLevelsOfSubProcesses; i++) {
+          String childPid = UtilsForTests.getPidFromPidFile(
+                                 scriptDirName + "/childPidFile" + i);
+          LOG.info("pid of the descendant process at level " + i +
+                   "in the subtree of processes(with the map task as the root)" +
+                   " is " + childPid);
+          assertTrue("Unexpected: The subprocess at level " + i +
+                     " in the subtree is alive after Job completion",
+                     !isAlive(childPid));
+        }
       }
     }
     FileSystem fs = FileSystem.getLocal(mr.createJobConf());
@@ -302,14 +337,7 @@ public class TestKillSubProcesses extends TestCase {
     return UtilsForTests.runJob(conf, inDir, outDir);
   }
   
-  public void testJobKillFailAndSucceed() throws IOException {
-    if (Shell.DISABLEWINDOWS_TEMPORARILY) {
-      System.out
-          .println("setsid doesn't work on WINDOWS as expected. Not testing."
-              + "There also seem to be issues related to file permissions");
-      return;
-    }
-    
+  public void testJobKillFailAndSucceed() throws IOException {    
     try {
       JobConf conf = new JobConf();
       conf.setLong(JvmManager.JvmManagerForType.DELAY_BEFORE_KILL_KEY, 0L);
@@ -368,26 +396,38 @@ public class TestKillSubProcesses extends TestCase {
       fs.setPermission(scriptDir, new FsPermission(FsAction.ALL, FsAction.ALL,
           FsAction.ALL));
 
+     String script = null;
+     
      // create shell script
      Random rm = new Random();
       Path scriptPath = new Path(scriptDirName, "_shellScript_" + rm.nextInt()
-        + ".sh");
+        + (Shell.WINDOWS?".cmd":".sh"));
       String shellScript = scriptPath.toString();
 
-      // Construct the script. Set umask to 0000 so that TT can access all the
-      // files.
-      String script =
-        "umask 000\n" + 
-        "echo $$ > " + scriptDirName + "/childPidFile" + "$1\n" +
-        "echo hello\n" +
-        "trap 'echo got SIGTERM' 15 \n" +
-        "if [ $1 != 0 ]\nthen\n" +
-        " sh " + shellScript + " $(($1-1))\n" +
-        "else\n" +
-        " while true\n do\n" +
-        "  sleep 2\n" +
-        " done\n" +
-        "fi";
+     if(Shell.WINDOWS) {
+       script = 
+           "SETLOCAL ENABLEDELAYEDEXPANSION\n" +
+           ":while\n" +
+           "timeout 2 /NOBREAK\n" +
+           "goto :while\n";
+     } else {
+       // Construct the script. Set umask to 0000 so that TT can access all the
+       // files.
+       script =
+         "umask 000\n" + 
+         "echo $$ > " + scriptDirName + "/childPidFile" + "$1\n" +
+         "echo hello\n" +
+         "trap 'echo got SIGTERM' 15 \n" +
+         "if [ $1 != 0 ]\nthen\n" +
+         " sh " + shellScript + " $(($1-1))\n" +
+         "else\n" +
+         " while true\n do\n" +
+         "  sleep 2\n" +
+         " done\n" +
+         "fi";
+     }
+     
+
       DataOutputStream file = fs.create(scriptPath);
       file.writeBytes(script);
       file.close();
@@ -396,21 +436,30 @@ public class TestKillSubProcesses extends TestCase {
       new File(scriptPath.toUri().getPath()).setExecutable(true);
 
       LOG.info("Calling script from map task : " + shellScript);
-      Runtime.getRuntime()
-          .exec(shellScript + " " + numLevelsOfSubProcesses);
-    
-      String childPid = UtilsForTests.getPidFromPidFile(scriptDirName
-          + "/childPidFile" + 0);
-      while (childPid == null) {
-        LOG.warn(scriptDirName + "/childPidFile" + 0 + " is null; Sleeping...");
-        try {
-          Thread.sleep(500);
-        } catch (InterruptedException ie) {
-          LOG.warn("sleep is interrupted:" + ie);
-          break;
-        }
-        childPid = UtilsForTests.getPidFromPidFile(scriptDirName
+      
+      if(Shell.WINDOWS) {
+        for(int i=0; i<numLevelsOfSubProcesses; ++i) {
+          // recursive batch script is not working inside the JVM on windows
+          // so creating copies of it
+          Runtime.getRuntime().exec(shellScript);
+        }  
+      } else {
+        Runtime.getRuntime()
+        .exec(shellScript + " " + numLevelsOfSubProcesses);        
+
+        String childPid = UtilsForTests.getPidFromPidFile(scriptDirName
             + "/childPidFile" + 0);
+        while (childPid == null) {
+          LOG.warn(scriptDirName + "/childPidFile" + 0 + " is null; Sleeping...");
+          try {
+            Thread.sleep(500);
+          } catch (InterruptedException ie) {
+            LOG.warn("sleep is interrupted:" + ie);
+            break;
+          }
+          childPid = UtilsForTests.getPidFromPidFile(scriptDirName
+              + "/childPidFile" + 0);
+        }
       }
     }
   }
@@ -507,6 +556,14 @@ public class TestKillSubProcesses extends TestCase {
    * @return if a process is alive or not.
    */
   private static boolean isAlive(String pid) throws IOException {
+    if(Shell.WINDOWS) {
+      if(ProcessTree.isSetsidAvailable) {
+        return ProcessTree.isProcessGroupAlive(pid);
+      }
+      else {
+        return ProcessTree.isAlive(pid);
+      }
+    }
     String commandString ="ps -o pid,command -e";
     String args[] = new String[] {"bash", "-c" , commandString};
     ShellCommandExecutor shExec = new ShellCommandExecutor(args);

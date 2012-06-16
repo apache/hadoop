@@ -49,23 +49,49 @@ public class ProcessTree {
     }
   }
 
-  public static final boolean isSetsidAvailable = isSetsidSupported();
-  private static boolean isSetsidSupported() {
-    if (Shell.DISABLEWINDOWS_TEMPORARILY)
-      return false;
-    ShellCommandExecutor shexec = null;
-    boolean setsidSupported = true;
-    try {
-      String[] args = {"setsid", "bash", "-c", "echo $$"};
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (IOException ioe) {
-      LOG.warn("setsid is not available on this machine. So not using it.");
-      setsidSupported = false;
-    } finally { // handle the exit code
-      LOG.info("setsid exited with exit code " + shexec.getExitCode());
+  // TODO rename isSetsidAvailable after merge of branch-1-win (MAPREDUCE-4325)
+  public static boolean isSetsidAvailable = isProcessGroupSupported();
+  private static boolean isProcessGroupSupported() {
+    boolean processGroupSupported = true;
+    if (Shell.WINDOWS) {
+      ShellCommandExecutor shexec = null;
+      try {
+        String args[] = {Shell.WINUTILS};
+        shexec = new ShellCommandExecutor(args);
+        shexec.execute();
+      } catch (IOException e) {
+      } finally {
+        String result = shexec.getOutput();
+        if (result == null
+            || !result.contains("Creates a new task jobobject with taskname")) {
+          processGroupSupported = false;
+        }
+      }
     }
-    return setsidSupported;
+    else {
+      ShellCommandExecutor shexec = null;
+      try {
+        String[] args = {"setsid", "bash", "-c", "echo $$"};
+        shexec = new ShellCommandExecutor(args);
+        shexec.execute();
+      } catch (IOException ioe) {
+        LOG.warn("setsid is not available on this machine. So not using it.");
+        processGroupSupported = false;
+      } finally { // handle the exit code
+        LOG.info("setsid exited with exit code " + shexec.getExitCode());
+      }
+    }
+    if(processGroupSupported) {
+      LOG.info("Platform supports process groups");
+    }
+    else {
+      LOG.info("Platform does not support process groups");
+    }
+    return processGroupSupported;
+  }
+  
+  public static void disableProcessGroups() {
+    isSetsidAvailable = false;
   }
 
   /**
@@ -110,15 +136,12 @@ public class ProcessTree {
     String[] args = null;
     if(Shell.WINDOWS){
       if (signal == Signal.KILL) {
-        String[] wargs = { "taskkill", "/F", "/PID", pid };
-        args = wargs;
+        args = new String[] { "taskkill", "/T", "/F", "/PID", pid };
       } else {
-        String[] wargs = { "taskkill", "/PID", pid };
-        args = wargs;
+        args = new String[] { "taskkill", "/T", "/PID", pid };
       }
     } else {
-     String[] uargs = { "kill", "-" + signal.getValue(), pid };
-     args = uargs;
+      args = new String[] { "kill", "-" + signal.getValue(), pid };
     }
     ShellCommandExecutor shexec = new ShellCommandExecutor(args);
     try {
@@ -146,7 +169,12 @@ public class ProcessTree {
       return;
     }
 
-    String[] args = { "kill", "-" + signal.getValue() , "-"+pgrpId };
+    String[] args = null;
+    if(Shell.WINDOWS){
+      args = new String[] {Shell.WINUTILS, "task", "kill", pgrpId};
+    } else {
+      args = new String[] { "kill", "-" + signal.getValue() , "-"+pgrpId };
+    }
     ShellCommandExecutor shexec = new ShellCommandExecutor(args);
     try {
       shexec.execute();
@@ -197,26 +225,38 @@ public class ProcessTree {
   /**
    * Is the process group with  still alive?
    * 
-   * This method assumes that isAlive is called on a pid that was alive not
+   * On Linux, this method assumes that isAlive is called on a pid that was alive not
    * too long ago, and hence assumes no chance of pid-wrapping-around.
+   * On Windows, this uses jobobjects
    * 
    * @param pgrpId process group id
    * @return true if any of process in group is alive.
    */
   public static boolean isProcessGroupAlive(String pgrpId) {
-    ShellCommandExecutor shexec = null;
-    try {
-      String[] args = { "kill", "-0", "-"+pgrpId };
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (ExitCodeException ee) {
-      return false;
-    } catch (IOException ioe) {
-      LOG.warn("Error executing shell command "
-          + Arrays.toString(shexec.getExecString()) + ioe);
-      return false;
+    if (Shell.WINDOWS) {
+      try {
+        String result = Shell.execCommand("cmd", "/c", Shell.WINUTILS
+            + " task isAlive " + pgrpId);
+        return (result.contains("IsAlive"));
+      } catch (IOException ioe) {
+        LOG.warn("Error executing shell command", ioe);
+        return false;
+      }
+    } else {
+      ShellCommandExecutor shexec = null;
+      try {
+        String[] args = { "kill", "-0", "-"+pgrpId };
+        shexec = new ShellCommandExecutor(args);
+        shexec.execute();
+      } catch (ExitCodeException ee) {
+        return false;
+      } catch (IOException ioe) {
+        LOG.warn("Error executing shell command "
+            + Arrays.toString(shexec.getExecString()) + ioe);
+        return false;
+      }
+      return (shexec.getExitCode() == 0 ? true : false);
     }
-    return (shexec.getExitCode() == 0 ? true : false);
   }
   
 

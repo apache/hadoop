@@ -26,6 +26,7 @@
 #include <windows.h>
 #include <aclapi.h>
 #include <accctrl.h>
+#include <tchar.h>
 #include <strsafe.h>
 
 /*
@@ -81,6 +82,9 @@ void GroupsUsage(LPCWSTR program);
 
 int Hardlink(int argc, wchar_t *argv[]);
 void HardlinkUsage();
+
+int Task(int argc, wchar_t *argv[]);
+void TaskUsage();
 
 DWORD GetFileInformationByName(__in LPCWSTR pathName,
   __out LPBY_HANDLE_FILE_INFORMATION lpFileInformation);

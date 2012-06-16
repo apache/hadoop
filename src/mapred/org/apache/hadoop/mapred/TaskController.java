@@ -132,7 +132,7 @@ public abstract class TaskController implements Configurable {
    * @param taskPid the pid of the task
    * @param signal the id of the signal to send
    */
-  public abstract void signalTask(String user, int taskPid, 
+  public abstract void signalTask(String user, String taskPid, 
                                   Signal signal) throws IOException;
   
   /**

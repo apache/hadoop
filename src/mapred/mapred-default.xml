@@ -416,6 +416,15 @@
 -->
 
 <property>
+  <name>mapred.processgroup.enabled</name>
+  <value>true</value>
+  <description>Use process groups for task management.
+  Ability to use process groups is determined by the system. It can only be 
+  disabled via config.
+  </description>
+</property>
+
+<property>
   <name>mapred.child.java.opts</name>
   <value>-Xmx200m</value>
   <description>Java opts for the task tracker child processes.  

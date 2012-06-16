@@ -31,6 +31,8 @@ branch-hadoop-1-win - unreleased
     MAPREDUCE-4321. Fix both DCE & LCE to use File.getAbsolutePath of the
     taskjvm.(sh,cmd) to ensure it works on Windows. (Ivan Mitic via acmurthy)
 
+    MAPREDUCE-4260 Use JobObject to spawn tasks on Windows (Bikas Saha via Sanjay)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

@@ -296,14 +296,14 @@ class LinuxTaskController extends TaskController {
   }
 
   @Override
-  public void signalTask(String user, int taskPid, 
+  public void signalTask(String user, String taskPid, 
                          Signal signal) throws IOException {
     String[] command = 
       new String[]{taskControllerExe, 
                    user,
                    localStorage.getDirsString(),
                    Integer.toString(Commands.SIGNAL_TASK.getValue()),
-                   Integer.toString(taskPid),
+                   taskPid,
                    Integer.toString(signal.getValue())};
     ShellCommandExecutor shExec = new ShellCommandExecutor(command);
     if (LOG.isDebugEnabled()) {

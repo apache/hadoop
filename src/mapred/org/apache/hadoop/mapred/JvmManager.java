@@ -516,10 +516,10 @@ class JvmManager {
 
       private class DelayedProcessKiller extends Thread {
         private final String user;
-        private final int pid;
+        private final String pid;
         private final long delay;
         private final Signal signal;
-        DelayedProcessKiller(String user, int pid, long delay, Signal signal) {
+        DelayedProcessKiller(String user, String pid, long delay, Signal signal) {
           this.user = user;
           this.pid = pid;
           this.delay = delay;
@@ -548,14 +548,13 @@ class JvmManager {
           String pidStr = jvmIdToPid.get(jvmId);
           if (pidStr != null && !pidStr.equals("")){ 
             String user = env.conf.getUser();
-            int pid = Integer.parseInt(pidStr);
             // start a thread that will kill the process dead
             if (sleeptimeBeforeSigkill > 0) {
-              new DelayedProcessKiller(user, pid, sleeptimeBeforeSigkill, 
+              new DelayedProcessKiller(user, pidStr, sleeptimeBeforeSigkill, 
                                        Signal.KILL).start();
-              controller.signalTask(user, pid, Signal.TERM);
+              controller.signalTask(user, pidStr, Signal.TERM);
             } else {
-              controller.signalTask(user, pid, Signal.KILL);
+              controller.signalTask(user, pidStr, Signal.KILL);
             }
           } else {
             LOG.info(String.format("JVM Not killed %s but just removed", jvmId

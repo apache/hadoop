@@ -51,6 +51,10 @@ int wmain(int argc, wchar_t* argv[])
   {
     return Hardlink(argc - 1, argv + 1);
   }
+  else if (wcscmp(L"task", cmd) == 0)
+  {
+    return Task(argc - 1, argv + 1);
+  }
   else
   {
     Usage(argv[0]);
@@ -85,5 +89,9 @@ The available commands and their usages are:\n\n", program);
 
   fwprintf(stdout, L"%-10s%s\n\n", L"hardlink", L"Hard link operations.");
   HardlinkUsage();
+  fwprintf(stdout, L"\n\n");
+
+  fwprintf(stdout, L"%-10s%s\n\n", L"task", L"Task operations.");
+  TaskUsage();
   fwprintf(stdout, L"\n\n");
 }

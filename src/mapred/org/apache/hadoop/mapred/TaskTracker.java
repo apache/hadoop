@@ -94,6 +94,7 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.MemoryCalculatorPlugin;
+import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.security.token.Token;
@@ -697,6 +698,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     LOG.info("Starting tasktracker with owner as "
         + getMROwner().getShortUserName());
 
+    if(!fConf.processGroupEnabled()) {
+      // override system determined usage of process groups
+      ProcessTree.disableProcessGroups();
+    }
+    
     localFs = FileSystem.getLocal(fConf);
     if (fConf.get("slave.host.name") != null) {
       this.localHostname = fConf.get("slave.host.name");

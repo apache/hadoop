@@ -126,9 +126,19 @@ public class DefaultTaskController extends TaskController {
 
       String commandFile = writeCommand(cmdLine, rawFs, p).getAbsolutePath();
       rawFs.setPermission(p, TaskController.TASK_LAUNCH_SCRIPT_PERMISSION);
-      shExec = new ShellCommandExecutor(Shell.WINDOWS? new String[]{"cmd", "/c", commandFile} :
-          new String[]{"bash", "-c", commandFile},
-          currentWorkDirectory);
+      String[] commandArray = null;
+      if(Shell.WINDOWS) {
+        if(ProcessTree.isSetsidAvailable) {
+          commandArray = new String[] { Shell.WINUTILS, "task", "create",
+              attemptId, "cmd /c " + commandFile };
+        }
+        else {
+          commandArray = new String[]{ "cmd", "/c", commandFile};
+        }
+      } else {
+        commandArray = new String[] { "bash", "-c", commandFile };
+      }
+      shExec = new ShellCommandExecutor(commandArray, currentWorkDirectory);
       shExec.execute();
     } catch (Exception e) {
       if (shExec == null) {
@@ -205,11 +215,11 @@ public class DefaultTaskController extends TaskController {
   }
 
   @Override
-  public void signalTask(String user, int taskPid, Signal signal) {
+  public void signalTask(String user, String taskPid, Signal signal) {
     if (ProcessTree.isSetsidAvailable) {
-      ProcessTree.killProcessGroup(Integer.toString(taskPid), signal);
+      ProcessTree.killProcessGroup(taskPid, signal);
     } else {
-      ProcessTree.killProcess(Integer.toString(taskPid), signal);      
+      ProcessTree.killProcess(taskPid, signal);      
     }
   }
 

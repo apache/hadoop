@@ -140,6 +140,7 @@
     <ClCompile Include="common.c" />
     <ClCompile Include="groups.c" />
     <ClCompile Include="hardlink.c" />
+    <ClCompile Include="task.c" />
     <ClCompile Include="ls.c" />
     <ClCompile Include="main.c" />
   </ItemGroup>
