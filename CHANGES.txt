@@ -31,6 +31,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-3727. jobtoken location property in jobconf refers to wrong 
     jobtoken file (tucu)
 
+    HADOOP-8512. AuthenticatedURL should reset the Token when the server 
+    returns other than OK on authentication (tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
