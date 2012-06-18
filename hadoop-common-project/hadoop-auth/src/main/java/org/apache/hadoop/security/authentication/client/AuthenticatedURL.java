@@ -266,6 +266,7 @@ public class AuthenticatedURL {
         }
       }
     } else {
+      token.set(null);
       throw new AuthenticationException("Authentication failed, status: " + conn.getResponseCode() +
                                         ", message: " + conn.getResponseMessage());
     }

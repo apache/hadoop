@@ -96,6 +96,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8509. JarFinder duplicate entry: META-INF/MANIFEST.MF exception (tucu)
 
+    HADOOP-8512. AuthenticatedURL should reset the Token when the server returns 
+    other than OK on authentication (tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
