@@ -71,6 +71,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8501. Gridmix fails to compile on OpenJDK7u4 
     (Radim Kolar via tgraves)
 
+    HADOOP-8495. Update Netty to avoid leaking file descriptors during shuffle
+    (Jason Lowe via tgraves)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
