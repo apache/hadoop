@@ -276,6 +276,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4301. Dedupe some strings in MRAM for memory savings 
     (bobby via tgraves)
 
+    MAPREDUCE-4267. mavenize pipes (tgraves via bobby)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn

@@ -1,16 +1,16 @@
 To run the examples, first compile them:
 
-% ant -Dcompile.c++=yes examples
+% mvn install 
 
 and then copy the binaries to dfs:
 
-% bin/hadoop fs -put build/c++-examples/Linux-i386-32/bin /examples/bin
+% hadoop fs -put target/native/wordcount-simple /examples/bin/
 
 create an input directory with text files:
 
-% bin/hadoop fs -put my-data in-dir
+% hadoop fs -put my-data in-dir
 
 and run the word count example:
 
-% bin/hadoop pipes -conf src/examples/pipes/conf/word.xml \
+% hadoop pipes -conf src/main/native/examples/conf/word.xml \
                    -input in-dir -output out-dir
