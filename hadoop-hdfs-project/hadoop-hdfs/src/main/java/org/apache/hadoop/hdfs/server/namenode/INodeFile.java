@@ -31,7 +31,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
-class INodeFile extends INode implements BlockCollection {
+public class INodeFile extends INode implements BlockCollection {
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
   //Number of bits for Block size

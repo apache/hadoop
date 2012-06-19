@@ -118,6 +118,8 @@ Trunk (unreleased changes)
     MAPREDUCE-3990. MRBench allows Long-sized input-lines value
     but parses CLI argument as an Integer. (harsh)
 
+    MAPREDUCE-3868. Make Raid Compile. (Weiyan Wang via schen)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
