@@ -110,7 +110,7 @@ public class ParentQueue implements CSQueue {
         QueueMetrics.forQueue(getQueuePath(), parent,
         cs.getConfiguration().getEnableUserMetrics());
 
-    int rawCapacity = cs.getConfiguration().getCapacity(getQueuePath());
+    float rawCapacity = cs.getConfiguration().getCapacity(getQueuePath());
 
     if (rootQueue &&
         (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
