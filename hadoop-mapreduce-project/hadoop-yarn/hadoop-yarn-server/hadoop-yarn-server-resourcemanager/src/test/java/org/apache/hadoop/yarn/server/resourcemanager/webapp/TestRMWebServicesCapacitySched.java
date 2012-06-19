@@ -124,11 +124,11 @@ public class TestRMWebServicesCapacitySched extends JerseyTest {
     conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
 
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    conf.setCapacity(A, 10);
+    conf.setCapacity(A, 10.5f);
     conf.setMaximumCapacity(A, 50);
 
     final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-    conf.setCapacity(B, 90);
+    conf.setCapacity(B, 89.5f);
 
     // Define 2nd-level queues
     final String A1 = A + ".a1";

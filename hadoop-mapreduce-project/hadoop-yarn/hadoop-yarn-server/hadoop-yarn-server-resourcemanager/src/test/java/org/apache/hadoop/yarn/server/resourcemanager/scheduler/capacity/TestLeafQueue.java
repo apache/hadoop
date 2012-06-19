@@ -135,7 +135,7 @@ public class TestLeafQueue {
     conf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
-    conf.setCapacity(Q_A, 9);
+    conf.setCapacity(Q_A, 8.5f);
     conf.setMaximumCapacity(Q_A, 20);
     conf.setAcl(Q_A, QueueACL.SUBMIT_APPLICATIONS, "*");
     
@@ -145,7 +145,7 @@ public class TestLeafQueue {
     conf.setAcl(Q_B, QueueACL.SUBMIT_APPLICATIONS, "*");
 
     final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
-    conf.setCapacity(Q_C, 1);
+    conf.setCapacity(Q_C, 1.5f);
     conf.setMaximumCapacity(Q_C, 10);
     conf.setAcl(Q_C, QueueACL.SUBMIT_APPLICATIONS, " ");
     
@@ -208,8 +208,8 @@ public class TestLeafQueue {
 	  //can add more sturdy test with 3-layer queues 
 	  //once MAPREDUCE:3410 is resolved
 	  LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
-	  assertEquals(0.09, a.getCapacity(), epsilon);
-	  assertEquals(0.09, a.getAbsoluteCapacity(), epsilon);
+	  assertEquals(0.085, a.getCapacity(), epsilon);
+	  assertEquals(0.085, a.getAbsoluteCapacity(), epsilon);
 	  assertEquals(0.2, a.getMaximumCapacity(), epsilon);
 	  assertEquals(0.2, a.getAbsoluteMaximumCapacity(), epsilon);
 	  
@@ -220,8 +220,8 @@ public class TestLeafQueue {
 	  assertEquals(0.99, b.getAbsoluteMaximumCapacity(), epsilon);
 
 	  ParentQueue c = (ParentQueue)queues.get(C);
-	  assertEquals(0.01, c.getCapacity(), epsilon);
-	  assertEquals(0.01, c.getAbsoluteCapacity(), epsilon);
+	  assertEquals(0.015, c.getCapacity(), epsilon);
+	  assertEquals(0.015, c.getAbsoluteCapacity(), epsilon);
 	  assertEquals(0.1, c.getMaximumCapacity(), epsilon);
 	  assertEquals(0.1, c.getAbsoluteMaximumCapacity(), epsilon);
   }

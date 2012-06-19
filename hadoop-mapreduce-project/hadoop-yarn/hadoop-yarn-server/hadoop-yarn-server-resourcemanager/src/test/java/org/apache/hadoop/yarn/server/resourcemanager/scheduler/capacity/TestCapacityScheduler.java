@@ -59,13 +59,13 @@ public class TestCapacityScheduler {
   private static final String B1 = B + ".b1";
   private static final String B2 = B + ".b2";
   private static final String B3 = B + ".b3";
-  private static int A_CAPACITY = 10;
-  private static int B_CAPACITY = 90;
-  private static int A1_CAPACITY = 30;
-  private static int A2_CAPACITY = 70;
-  private static int B1_CAPACITY = 50;
-  private static int B2_CAPACITY = 30;
-  private static int B3_CAPACITY = 20;
+  private static float A_CAPACITY = 10.5f;
+  private static float B_CAPACITY = 89.5f;
+  private static float A1_CAPACITY = 30;
+  private static float A2_CAPACITY = 70;
+  private static float B1_CAPACITY = 50;
+  private static float B2_CAPACITY = 30;
+  private static float B3_CAPACITY = 20;
 
   private ResourceManager resourceManager = null;
   
@@ -250,14 +250,14 @@ public class TestCapacityScheduler {
     cs.reinitialize(conf, null, null);
     checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
-    conf.setCapacity(A, 80);
-    conf.setCapacity(B, 20);
+    conf.setCapacity(A, 80f);
+    conf.setCapacity(B, 20f);
     cs.reinitialize(conf, null,null);
-    checkQueueCapacities(cs, 80, 20);
+    checkQueueCapacities(cs, 80f, 20f);
   }
 
   private void checkQueueCapacities(CapacityScheduler cs,
-      int capacityA, int capacityB) {
+      float capacityA, float capacityB) {
     CSQueue rootQueue = cs.getRootQueue();
     CSQueue queueA = findQueue(rootQueue, A);
     CSQueue queueB = findQueue(rootQueue, B);
@@ -274,13 +274,13 @@ public class TestCapacityScheduler {
     checkQueueCapacity(queueB, capB, capB, 1.0f, 1.0f);
     checkQueueCapacity(queueA1, A1_CAPACITY / 100.0f,
         (A1_CAPACITY/100.0f) * capA, 1.0f, 1.0f);
-    checkQueueCapacity(queueA2, (float)A2_CAPACITY / 100.0f,
+    checkQueueCapacity(queueA2, A2_CAPACITY / 100.0f,
         (A2_CAPACITY/100.0f) * capA, 1.0f, 1.0f);
-    checkQueueCapacity(queueB1, (float)B1_CAPACITY / 100.0f,
+    checkQueueCapacity(queueB1, B1_CAPACITY / 100.0f,
         (B1_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
-    checkQueueCapacity(queueB2, (float)B2_CAPACITY / 100.0f,
+    checkQueueCapacity(queueB2, B2_CAPACITY / 100.0f,
         (B2_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
-    checkQueueCapacity(queueB3, (float)B3_CAPACITY / 100.0f,
+    checkQueueCapacity(queueB3, B3_CAPACITY / 100.0f,
         (B3_CAPACITY/100.0f) * capB, 1.0f, 1.0f);
   }
 
@@ -340,7 +340,7 @@ public class TestCapacityScheduler {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
     conf.setQueues(CapacitySchedulerConfiguration.ROOT + ".a.a1", new String[] {"b1"} );
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100);
+    conf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
     conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".a.a1.b1", 100.0f);
 
     cs.reinitialize(conf, null, null);
