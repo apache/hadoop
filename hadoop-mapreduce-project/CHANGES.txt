@@ -471,6 +471,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4341. add types to capacity scheduler properties documentation
     (Karthik Kambatla via tgraves)
 
+    MAPREDUCE-4270. Move the data_join test classes to the correct path.
+    (Thomas Graves via sseth)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
