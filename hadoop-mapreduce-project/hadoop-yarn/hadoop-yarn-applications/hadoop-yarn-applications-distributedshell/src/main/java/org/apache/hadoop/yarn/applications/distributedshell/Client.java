@@ -95,7 +95,7 @@ import org.apache.hadoop.yarn.util.Records;
  * 
  * <p> For the actual job submission, the client first has to create an {@link ApplicationSubmissionContext}. 
  * The {@link ApplicationSubmissionContext} defines the application details such as {@link ApplicationId} 
- * and application name, user submitting the application, the priority assigned to the application and the queue 
+ * and application name, the priority assigned to the application and the queue
  * to which this application needs to be assigned. In addition to this, the {@link ApplicationSubmissionContext}
  * also defines the {@link ContainerLaunchContext} which describes the <code>Container</code> with which 
  * the {@link ApplicationMaster} is launched. </p>
@@ -132,8 +132,6 @@ public class Client {
   private int amPriority = 0;
   // Queue for App master
   private String amQueue = "";
-  // User to run app master as
-  private String amUser = "";
   // Amt. of memory resource to request for to run the App Master
   private int amMemory = 10; 
 
@@ -221,6 +219,7 @@ public class Client {
    * Parse command line options
    * @param args Parsed command line options 
    * @return Whether the init was successful to run the client
+   * @throws ParseException
    */
   public boolean init(String[] args) throws ParseException {
 
@@ -228,7 +227,6 @@ public class Client {
     opts.addOption("appname", true, "Application Name. Default value - DistributedShell");
     opts.addOption("priority", true, "Application Priority. Default 0");
     opts.addOption("queue", true, "RM Queue in which this application is to be submitted");
-    opts.addOption("user", true, "User to run the application as");
     opts.addOption("timeout", true, "Application timeout in milliseconds");
     opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
     opts.addOption("jar", true, "Jar file containing the application master");
@@ -263,7 +261,6 @@ public class Client {
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "");
-    amUser = cliParser.getOptionValue("user", "");
     amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "10"));		
 
     if (amMemory < 0) {
@@ -567,10 +564,6 @@ public class Client {
     commands.add(command.toString());		
     amContainer.setCommands(commands);
 
-    // For launching an AM Container, setting user here is not needed
-    // Set user in ApplicationSubmissionContext
-    // amContainer.setUser(amUser);
-
     // Set up resource type requirements
     // For now, only memory is supported so we set memory requirements
     Resource capability = Records.newRecord(Resource.class);
@@ -594,9 +587,6 @@ public class Client {
 
     // Set the queue to which this application is to be submitted in the RM
     appContext.setQueue(amQueue);
-    // Set the user submitting this application 
-    // TODO can it be empty? 
-    appContext.setUser(amUser);
 
     // Create the request to send to the applications manager 
     SubmitApplicationRequest appRequest = Records.newRecord(SubmitApplicationRequest.class);
