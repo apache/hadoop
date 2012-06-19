@@ -463,6 +463,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3927. Shuffle hang when set map.failures.percent
     (Bhallamudi Venkata Siva Kamesh via tgraves)
 
+    MAPREDUCE-4311. Capacity scheduler.xml does not accept decimal values for
+    capacity and maximum-capacity settings (Karthik Kambatla via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
