@@ -466,6 +466,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4311. Capacity scheduler.xml does not accept decimal values for
     capacity and maximum-capacity settings (Karthik Kambatla via tgraves)
 
+    MAPREDUCE-4341. add types to capacity scheduler properties documentation
+    (Karthik Kambatla via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
