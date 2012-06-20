@@ -477,6 +477,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4270. Move the data_join test classes to the correct path.
     (Thomas Graves via sseth)
 
+    MAPREDUCE-3889. job client tries to use /tasklog interface, but that
+    doesn't exist anymore (Devaraj K via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
