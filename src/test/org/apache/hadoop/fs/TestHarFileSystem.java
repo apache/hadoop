@@ -170,7 +170,29 @@ public class TestHarFileSystem extends TestCase {
       assertTrue(status.getBlockSize() == blockSize);
     }
   }
-  
+
+  public void testHarUri() {
+    final Configuration conf = new Configuration();
+    checkInvalidPath("har://hdfs-/foo.har", conf);
+    checkInvalidPath("har://hdfs/foo.har", conf);
+    checkInvalidPath("har://-hdfs/foo.har", conf);
+    checkInvalidPath("har://-/foo.har", conf);
+    checkInvalidPath("har://127.0.0.1-/foo.har", conf);
+    checkInvalidPath("har://127.0.0.1/foo.har", conf);
+  }
+
+  static void checkInvalidPath(String s, Configuration conf) {
+    System.out.println("\ncheckInvalidPath: " + s);
+    final Path p = new Path(s);
+    try {
+      p.getFileSystem(conf);
+      assertTrue(p + " is an invalid path.", false);
+    } catch (IOException e) {
+      System.out.println("GOOD: Got an exception.");
+      e.printStackTrace(System.out);
+    }
+  }
+
   // test archives with a -p option
   public void testRelativeArchives() throws Exception {
     fs.delete(archivePath, true);

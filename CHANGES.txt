@@ -33,6 +33,9 @@ branch-hadoop-1-win - unreleased
 
     MAPREDUCE-4260 Use JobObject to spawn tasks on Windows (Bikas Saha via Sanjay)
 
+    HADOOP-8440 HarFileSystem.decodeHarURI 2nd patch (HADOOP-8440-branch-1-win.2.patch) (Ivan Mitic via Sanjay Radia)
+
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

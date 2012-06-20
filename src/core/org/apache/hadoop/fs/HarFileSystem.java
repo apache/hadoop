@@ -213,7 +213,8 @@ public class HarFileSystem extends FilterFileSystem {
       tmp = new URI(baseUri.getScheme(), baseUri.getAuthority(),
             rawURI.getPath(), rawURI.getQuery(), rawURI.getFragment());
     } catch (URISyntaxException e) {
-        // do nothing should not happen
+      throw new IOException("URI: " + rawURI
+          + " is an invalid Har URI. Expecting har://<scheme>-<host>/<path>.");
     }
     return tmp;
   }
