@@ -56,7 +56,7 @@ public class TestSequenceFile extends TestCase {
         new Path(System.getProperty("test.build.data",".")+"/nonSequenceFile.seq");
     SequenceFile.Reader reader = null;
     FileSystem fs = FileSystem.getLocal(conf);
-    File f = new File(nonSeqFile.getUriPath());
+    File f = new File(nonSeqFile.toUri().getPath());
     if(!f.exists()) {
       fs.createNewFile(nonSeqFile);
     }

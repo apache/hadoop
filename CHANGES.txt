@@ -44,6 +44,8 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8486 Resource leak ... SequenceFile  (Kanna Karanam via Sanjay)
 
+    HADOOP-8486 Resource leak ... SequenceFile  (Fix with HADOOP-8486-branch-1-win-(5).patch) (Kanna Karanam via Sanjay)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES
