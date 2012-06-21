@@ -57,7 +57,11 @@ public class TestCommandLineJobSubmission extends TestCase {
       stream.close();
       mr = new MiniMRCluster(2, fs.getUri().toString(), 1);
       File thisbuildDir = new File(buildDir, "jobCommand");
-      assertTrue("create build dir", thisbuildDir.mkdirs()); 
+      // Create the build dir only if it does not exist as mkdirs
+      // fails on Windows otherwise
+      if (!thisbuildDir.exists()) {
+        assertTrue("create build dir", thisbuildDir.mkdirs());
+      }
       File f = new File(thisbuildDir, "files_tmp");
       FileOutputStream fstream = new FileOutputStream(f);
       fstream.write("somestrings".getBytes());
@@ -85,20 +89,21 @@ public class TestCommandLineJobSubmission extends TestCase {
 
       // construct options for -files
       String[] files = new String[3];
-      files[0] = f.toString();
-      files[1] = f1.toString() + "#localfilelink";
+      files[0] = f.toURI().toString();
+      files[1] = f1.toURI().toString() + "#localfilelink";
       files[2] = 
         fs.getUri().resolve(cachePath + "/test.txt#dfsfilelink").toString();
 
       // construct options for -libjars
       String[] libjars = new String[2];
-      libjars[0] = "build/test/testjar/testjob.jar";
+      libjars[0] = new File(System.getProperty("test.build.dir", "build/test"),
+                            "testjar/testjob.jar").toURI().toString();
       libjars[1] = fs.getUri().resolve(cachePath + "/test.jar").toString();
       
       // construct options for -archives
       String[] archives = new String[4];
-      archives[0] = tgzPath.toString();
-      archives[1] = tarPath + "#tarlink";
+      archives[0] = tgzPath.toUri().toString();
+      archives[1] = tarPath.toUri().toString() + "#tarlink";
       archives[2] = 
         fs.getUri().resolve(cachePath + "/test.zip#ziplink").toString();
       archives[3] = 
@@ -142,7 +147,10 @@ public class TestCommandLineJobSubmission extends TestCase {
     Configuration jobConf = mr.createJobConf();
     FileSystem fs = dfs.getFileSystem();
     Path dfsPath = new Path("/test/testjob.jar");
-    fs.copyFromLocalFile(new Path("build/test/testjar/testjob.jar"), dfsPath);
+    fs.copyFromLocalFile(
+        new Path(System.getProperty("test.build.dir", "build/test"),
+                 "testjar/testjob.jar"),
+        dfsPath);
     String url = fs.getDefaultUri(jobConf).toString() + dfsPath.toString();
     String[] args = new String[6];
     args[0] = "-files";

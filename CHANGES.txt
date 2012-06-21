@@ -35,6 +35,8 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8440 HarFileSystem.decodeHarURI 2nd patch (HADOOP-8440-branch-1-win.2.patch) (Ivan Mitic via Sanjay Radia)
 
+    HADOOP-8409 Fix TestCommandLineJobSubmission and TestGenericOptionsParser to work for windows (Ivan Mitic via Sanjay Radia) 
+
 
 Release 1.1.0 - unreleased
 

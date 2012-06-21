@@ -95,7 +95,9 @@ public class TestGenericOptionsParser extends TestCase {
     String[] args = new String[2];
     // pass a files option 
     args[0] = "-files";
-    args[1] = tmpFile.toString();
+    // Convert a file to a URI as File.toString() is not a valid URI on
+    // all platforms and GenericOptionsParser accepts only valid URIs
+    args[1] = tmpFile.toURI().toString();
     new GenericOptionsParser(conf, args);
     String files = conf.get("tmpfiles");
     assertNotNull("files is null", files);
@@ -104,7 +106,7 @@ public class TestGenericOptionsParser extends TestCase {
     
     // pass file as uri
     Configuration conf1 = new Configuration();
-    URI tmpURI = new URI(tmpFile.toString() + "#link");
+    URI tmpURI = new URI(tmpFile.toURI().toString() + "#link");
     args[0] = "-files";
     args[1] = tmpURI.toString();
     new GenericOptionsParser(conf1, args);
