@@ -533,6 +533,7 @@ abstract public class Task implements Writable, Configurable {
             .getResourceCalculatorPlugin(clazz, conf);
     LOG.info(" Using ResourceCalculatorPlugin : " + resourceCalculator);
     if (resourceCalculator != null) {
+      resourceCalculator.setProcessPid(jvmContext.pid);
       initCpuCumulativeTime =
         resourceCalculator.getProcResourceValues().getCumulativeCpuTime();
     }

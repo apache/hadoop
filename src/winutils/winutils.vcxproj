@@ -135,6 +135,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="systeminfo.c" />
     <ClCompile Include="chmod.c" />
     <ClCompile Include="chown.c" />
     <ClCompile Include="common.c" />

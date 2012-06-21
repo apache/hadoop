@@ -56,7 +56,7 @@ public class TestTaskTrackerMemoryManager extends TestCase {
   private MiniMRCluster miniMRCluster;
 
   private String taskOverLimitPatternString =
-      "TaskTree \\[pid=[0-9]*,tipID=.*\\] is running beyond memory-limits. "
+      "TaskTree \\[pid=.*,tipID=.*\\] is running beyond memory-limits. "
           + "Current usage : [0-9]*bytes. Limit : %sbytes. Killing task.";
 
   private void startCluster(JobConf conf)

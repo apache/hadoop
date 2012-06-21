@@ -86,6 +86,9 @@ void HardlinkUsage();
 int Task(int argc, wchar_t *argv[]);
 void TaskUsage();
 
+int SystemInfo();
+void SystemInfoUsage();
+
 DWORD GetFileInformationByName(__in LPCWSTR pathName,
   __out LPBY_HANDLE_FILE_INFORMATION lpFileInformation);
 

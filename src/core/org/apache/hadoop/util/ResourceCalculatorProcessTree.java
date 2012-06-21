@@ -112,6 +112,8 @@ public abstract class ResourceCalculatorProcessTree {
   public static boolean isAvailable() {
     if(ProcfsBasedProcessTree.isAvailable())
       return true;
+    if(WindowsBasedProcessTree.isAvailable())
+      return true;
     
     return false;
   }
@@ -130,6 +132,8 @@ public abstract class ResourceCalculatorProcessTree {
       String pid, Configuration conf) {
     if(ProcfsBasedProcessTree.isAvailable())
       return new ProcfsBasedProcessTree(pid);
+    if(WindowsBasedProcessTree.isAvailable())
+      return new WindowsBasedProcessTree(pid);
 
     // Not supported on this system.
     return null;

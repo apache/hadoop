@@ -39,6 +39,9 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8454 Fix the ‘chmod =[perm]’ bug in winutils (Chuan Liu via sanjay)
 
+    MAPREDUCE-4203. Added an implementation of the process tree for Windows.
+    (Bikas Saha via acmurthy) 
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

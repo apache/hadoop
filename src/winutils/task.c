@@ -17,15 +17,20 @@
 
 #include "common.h"
 #include <errno.h>
+#include <psapi.h>
 
-// List of different hardlink related command line options supported by
+#define PSAPI_VERSION 1
+#pragma comment(lib, "psapi.lib")
+
+// List of different task related command line options supported by
 // winutils.
 typedef enum TaskCommandOptionType
 {
   TaskInvalid,
   TaskCreate,
   TaskIsAlive,
-  TaskKill
+  TaskKill,
+  TaskProcessList
 } TaskCommandOption;
 
 //----------------------------------------------------------------------------
@@ -58,6 +63,11 @@ static BOOL ParseCommandLine(__in int argc,
     if (wcscmp(argv[1], L"kill") == 0)
     {
       *command = TaskKill;
+      return TRUE;
+    }
+    if (wcscmp(argv[1], L"processList") == 0)
+    {
+      *command = TaskProcessList;
       return TRUE;
     }
   }
@@ -247,10 +257,89 @@ DWORD killTask(_TCHAR* jobObjName)
     return err;
   }
 
-  if(TerminateJobObject(jobObject, -1) == 0)
+  if(TerminateJobObject(jobObject, 1) == 0)
   {
     return GetLastError();
   }
+  CloseHandle(jobObject);
+
+  return ERROR_SUCCESS;
+}
+
+//----------------------------------------------------------------------------
+// Function: printTaskProcessList
+//
+// Description:
+// Prints resource usage of all processes in the task jobobject
+//
+// Returns:
+// ERROR_SUCCESS: On success
+// GetLastError: otherwise
+DWORD printTaskProcessList(const _TCHAR* jobObjName)
+{
+  DWORD i;
+  PJOBOBJECT_BASIC_PROCESS_ID_LIST procList;
+  int numProcs = 100;
+  HANDLE jobObject = OpenJobObject(JOB_OBJECT_QUERY, FALSE, jobObjName);
+  if(jobObject == NULL)
+  {
+    DWORD err = GetLastError();
+    return err;
+  }
+
+  procList = (PJOBOBJECT_BASIC_PROCESS_ID_LIST) LocalAlloc(LPTR, sizeof (JOBOBJECT_BASIC_PROCESS_ID_LIST) + numProcs*32);
+  if (!procList)
+  {
+    DWORD err = GetLastError();
+    CloseHandle(jobObject);
+    return err;
+  }
+  while(QueryInformationJobObject(jobObject, JobObjectBasicProcessIdList, procList, sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST)+numProcs*32, NULL) == 0)
+  {
+    DWORD err = GetLastError();
+    if(err != ERROR_MORE_DATA) 
+    {
+      CloseHandle(jobObject);
+      LocalFree(procList);
+      return err;
+    }
+    numProcs = procList->NumberOfAssignedProcesses;
+    LocalFree(procList);
+    procList = (PJOBOBJECT_BASIC_PROCESS_ID_LIST) LocalAlloc(LPTR, sizeof (JOBOBJECT_BASIC_PROCESS_ID_LIST) + numProcs*32);
+    if (!procList)
+    {
+      DWORD err = GetLastError();
+      CloseHandle(jobObject);
+      return err;
+    }
+  }
+
+  for(i=0; i<procList->NumberOfProcessIdsInList; ++i)
+  {
+    HANDLE hProcess = OpenProcess( PROCESS_QUERY_INFORMATION, FALSE, (DWORD)procList->ProcessIdList[i] );
+    if( hProcess != NULL )
+    {
+      PROCESS_MEMORY_COUNTERS_EX pmc;
+      if ( GetProcessMemoryInfo( hProcess, (PPROCESS_MEMORY_COUNTERS)&pmc, sizeof(pmc)) )
+      {
+        FILETIME create, exit, kernel, user;
+        if( GetProcessTimes( hProcess, &create, &exit, &kernel, &user) )
+        {
+          ULARGE_INTEGER kernelTime, userTime;
+          ULONGLONG cpuTimeMs;
+          kernelTime.HighPart = kernel.dwHighDateTime;
+          kernelTime.LowPart = kernel.dwLowDateTime;
+          userTime.HighPart = user.dwHighDateTime;
+          userTime.LowPart = user.dwLowDateTime;
+          cpuTimeMs = (kernelTime.QuadPart+userTime.QuadPart)/10000;
+          _ftprintf_s(stdout, TEXT("%u,%Iu,%Iu,%Iu\n"), procList->ProcessIdList[i], pmc.PrivateUsage, pmc.WorkingSetSize, cpuTimeMs);
+        }
+      }
+      CloseHandle( hProcess );
+    }
+  }
+
+  LocalFree(procList);
   CloseHandle(jobObject);
 
   return ERROR_SUCCESS;
@@ -317,6 +406,16 @@ int Task(int argc, wchar_t *argv[])
       ReportErrorCode(L"killTask", dwErrorCode);
       goto TaskExit;
     }
+  } else if (command == TaskProcessList)
+  {
+    // Check if task jobobject
+    //
+    dwErrorCode = printTaskProcessList(argv[2]);
+    if (dwErrorCode != ERROR_SUCCESS)
+    {
+      ReportErrorCode(L"printTaskProcessList", dwErrorCode);
+      goto TaskExit;
+    }
   } else
   {
     // Should not happen
@@ -337,7 +436,13 @@ void TaskUsage()
     Usage: task create [TASKNAME] [COMMAND_LINE] |\n\
           task isAlive [TASKNAME] |\n\
           task kill [TASKNAME]\n\
+          task processList [TASKNAME]\n\
     Creates a new task jobobject with taskname\n\
     Checks if task jobobject is alive\n\
-    Kills task jobobject\n");
+    Kills task jobobject\n\
+    Prints to stdout a list of processes in the task\n\
+    along with their resource usage. One process per line\n\
+    and comma separated info per process\n\
+    ProcessId,VirtualMemoryCommitted(bytes),\n\
+    WorkingSetSize(bytes),CpuTime(Millisec,Kernel+User)\n");
 }
