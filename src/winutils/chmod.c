@@ -102,10 +102,10 @@ static USHORT ComputeNewMode(__in USHORT oldMode, __in USHORT who,
 // Function: Chmod
 //
 // Description:
-//	The main method for chmod command
+//  The main method for chmod command
 //
 // Returns:
-//	0: on success
+//  0: on success
 //
 // Notes:
 //
@@ -169,11 +169,11 @@ ChmodEnd:
 // Function: ChangeFileMode
 //
 // Description:
-//	Wrapper function for change file mode. Choose either change by action or by
+//  Wrapper function for change file mode. Choose either change by action or by
 //  access mask.
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
@@ -191,10 +191,10 @@ static BOOL ChangeFileMode(__in LPCWSTR path, __in_opt USHORT unixAccessMask,
 // Function: ChangeFileModeRecursively
 //
 // Description:
-//	Travel the directory recursively to change the permissions.
+//  Travel the directory recursively to change the permissions.
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
@@ -235,10 +235,7 @@ static BOOL ChangeFileModeRecursively(__in LPCWSTR path, __in_opt USHORT mode,
      }
   }
 
-  // MAX_PATH is used here, because we use relative path, and relative
-  // paths are always limited to a total of MAX_PATH characters.
-  //
-  if (FAILED(StringCchLengthW(path, MAX_PATH - 3, &pathSize)))
+  if (FAILED(StringCchLengthW(path, STRSAFE_MAX_CCH - 3, &pathSize)))
   {
     return FALSE;
   }
@@ -315,10 +312,10 @@ ChangeFileModeRecursivelyEnd:
 // Function: ChangeFileModeByMask
 //
 // Description:
-//	Change a file or direcotry at the path to Unix mode
+//  Change a file or direcotry at the path to Unix mode
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
@@ -466,10 +463,10 @@ ChangeFileMode:
 // Function: ParseCommandLineArguments
 //
 // Description:
-//	Parse command line arguments for chmod.
+//  Parse command line arguments for chmod.
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
@@ -539,14 +536,14 @@ static BOOL ParseCommandLineArguments(__in int argc, __in wchar_t *argv[],
 // Function: FreeActions
 //
 // Description:
-//	Free a linked list of mode change actions given the head node.
+//  Free a linked list of mode change actions given the head node.
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
-//	none
+//  none
 //
 static BOOL FreeActions(PMODE_CHANGE_ACTION actions)
 {
@@ -576,13 +573,13 @@ static BOOL FreeActions(PMODE_CHANGE_ACTION actions)
 // Function: ComputeNewMode
 //
 // Description:
-//	Compute a new mode based on the old mode and a mode change action.
+//  Compute a new mode based on the old mode and a mode change action.
 //
 // Returns:
-//	The newly computed mode
+//  The newly computed mode
 //
 // Notes:
-//	Apply 'rwx' permission mask or reference permission mode according to the
+//  Apply 'rwx' permission mask or reference permission mode according to the
 //  '+', '-', or '=' operator.
 //
 static USHORT ComputeNewMode(__in USHORT oldMode,
@@ -596,11 +593,14 @@ static USHORT ComputeNewMode(__in USHORT oldMode,
   USHORT mask = 0;
   USHORT mode = 0;
 
-  // Operation and reference mode are exclusive
+  // Operations are exclusive
   //
   assert(op == CHMOD_OP_EQUAL || op == CHMOD_OP_PLUS || op == CHMOD_OP_MINUS);
-  assert(ref == CHMOD_WHO_GROUP || ref == CHMOD_WHO_USER ||
-    ref == CHMOD_WHO_OTHER);
+
+  // We should have only permissions or a reference target, not both.
+  //
+  assert((perm != CHMOD_PERM_NA && ref == CHMOD_WHO_NONE) ||
+    (perm == CHMOD_PERM_NA && ref != CHMOD_WHO_NONE));
 
   if(perm == CHMOD_PERM_NA && ref == CHMOD_WHO_NONE)
   {
@@ -631,14 +631,34 @@ static USHORT ComputeNewMode(__in USHORT oldMode,
         mask |= exeMask;
     }
   }
-
-  mask |= oldMode & ref;
+  else if (ref != CHMOD_WHO_NONE)
+  {
+    mask |= oldMode & ref;
+    switch(ref)
+    {
+    case CHMOD_WHO_GROUP:
+      mask |= mask >> 3;
+      mask |= mask << 3;
+      break;
+    case CHMOD_WHO_OTHER:
+      mask |= mask << 3;
+      mask |= mask << 6;
+      break;
+    case CHMOD_WHO_USER:
+      mask |= mask >> 3;
+      mask |= mask >> 6;
+      break;
+    default:
+      // Reference modes can only be U/G/O and are exclusive
+      assert(FALSE);
+    }
+  }
 
   mask &= who;
 
   if (op == CHMOD_OP_EQUAL)
   {
-    mode = mask;
+    mode = (oldMode & (~who)) | mask;
   }
   else if (op == CHMOD_OP_MINUS)
   {
@@ -656,15 +676,15 @@ static USHORT ComputeNewMode(__in USHORT oldMode,
 // Function: ConvertActionsToMask
 //
 // Description:
-//	Convert a linked list of mode change actions to the Unix permission mask
+//  Convert a linked list of mode change actions to the Unix permission mask
 //  given the head node.
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
-//	none
+//  none
 //
 static BOOL ConvertActionsToMask(__in LPCWSTR path,
   __in PMODE_CHANGE_ACTION actions, __out PUSHORT puMask)
@@ -712,14 +732,14 @@ static BOOL ConvertActionsToMask(__in LPCWSTR path,
 // Function: ChangeFileModeByActions
 //
 // Description:
-//	Change a file mode through a list of actions.
+//  Change a file mode through a list of actions.
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
-//	none
+//  none
 //
 static BOOL ChangeFileModeByActions(__in LPCWSTR path,
   PMODE_CHANGE_ACTION actions)
@@ -736,14 +756,14 @@ static BOOL ChangeFileModeByActions(__in LPCWSTR path,
 // Function: ParseMode
 //
 // Description:
-//	Convert a mode string into a linked list of actions
+//  Convert a mode string into a linked list of actions
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
-//	Take a state machine approach to parse the mode. Each mode change action
+//  Take a state machine approach to parse the mode. Each mode change action
 //  will be a node in the output linked list. The state machine has five state,
 //  and each will only transit to the next; the end state can transit back to
 //  the first state, and thus form a circle. In each state, if we see a
@@ -929,13 +949,13 @@ static BOOL ParseMode(LPCWSTR modeString, PMODE_CHANGE_ACTION *pActions)
 // Function: ParseOctalMode
 //
 // Description:
-//	Convert the 3 or 4 digits Unix mask string into the binary representation
+//  Convert the 3 or 4 digits Unix mask string into the binary representation
 //  of the Unix access mask, i.e. 9 bits each an indicator of the permission
 //  of 'rwxrwxrwx', i.e. user's, group's, and owner's read, write, and
 //  execute/search permissions.
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
@@ -954,7 +974,7 @@ static BOOL ParseOctalMode(LPCWSTR tsMask, USHORT *uMask)
   if (FAILED(StringCchLengthW(tsMask, STRSAFE_MAX_CCH, &tsMaskLen)))
     return FALSE;
 
-  if (tsMaskLen != 4 && tsMaskLen != 3)
+  if (tsMaskLen == 0 || tsMaskLen > 4)
   {
     return FALSE;
   }
@@ -989,14 +1009,14 @@ static BOOL ParseOctalMode(LPCWSTR tsMask, USHORT *uMask)
 // Function: GetWindowsAccessMask
 //
 // Description:
-//	Get the Windows AccessMask for user, group and everyone based on the Unix
+//  Get the Windows AccessMask for user, group and everyone based on the Unix
 //  permission mask
 //
 // Returns:
-//	none
+//  none
 //
 // Notes:
-//	none
+//  none
 //
 static void GetWindowsAccessMask(USHORT unixMask,
   ACCESS_MASK *userAllow,
@@ -1073,14 +1093,14 @@ static void GetWindowsAccessMask(USHORT unixMask,
 // Function: GetWindowsDACLs
 //
 // Description:
-//	Get the Windows DACs based the Unix access mask
+//  Get the Windows DACs based the Unix access mask
 //
 // Returns:
-//	TRUE: on success
+//  TRUE: on success
 //  FALSE: otherwise
 //
 // Notes:
-//	none
+//  none
 //
 static BOOL GetWindowsDACLs(__in USHORT unixMask,
   __in PSID pOwnerSid, __in PSID pGroupSid, __out PACL *ppNewDACL)

@@ -37,6 +37,7 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8409 Fix TestCommandLineJobSubmission and TestGenericOptionsParser to work for windows (Ivan Mitic via Sanjay Radia) 
 
+    HADOOP-8454 Fix the ‘chmod =[perm]’ bug in winutils (Chuan Liu via sanjay)
 
 Release 1.1.0 - unreleased
 
