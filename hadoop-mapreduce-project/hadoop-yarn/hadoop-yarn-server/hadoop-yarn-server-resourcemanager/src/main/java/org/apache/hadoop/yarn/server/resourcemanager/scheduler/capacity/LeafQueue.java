@@ -1180,9 +1180,16 @@ public class LeafQueue implements CSQueue {
     if (UserGroupInformation.isSecurityEnabled()) {
       ContainerTokenIdentifier tokenIdentifier = new ContainerTokenIdentifier(
           containerId, nodeId.toString(), capability);
-      containerToken = BuilderUtils.newContainerToken(nodeId, ByteBuffer
-          .wrap(containerTokenSecretManager
-              .createPassword(tokenIdentifier)), tokenIdentifier);
+      try {
+        containerToken = BuilderUtils.newContainerToken(nodeId, ByteBuffer
+            .wrap(containerTokenSecretManager
+                .createPassword(tokenIdentifier)), tokenIdentifier);
+      } catch (IllegalArgumentException e) {
+         // this could be because DNS is down - in which case we just want
+         // to retry and not bring RM down
+         LOG.error("Error trying to create new container", e);
+         return null;
+      }
     }
 
     // Create the container
@@ -1211,6 +1218,11 @@ public class LeafQueue implements CSQueue {
     // Create the container if necessary
     Container container = 
         getContainer(rmContainer, application, node, capability, priority);
+  
+    // something went wrong getting/creating the container 
+    if (container == null) {
+      return Resources.none();
+    }
 
     // Can we allocate a container on this node?
     int availableContainers = 

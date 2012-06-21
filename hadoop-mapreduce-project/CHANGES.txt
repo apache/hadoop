@@ -482,6 +482,8 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4320. gridmix mainClass wrong in pom.xml (tgraves)
 
+    MAPREDUCE-4295. RM crashes due to DNS issue (tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
