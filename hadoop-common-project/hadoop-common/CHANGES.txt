@@ -44,6 +44,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8368. Use CMake rather than autotools to build native code (ccccabe via tucu)
 
+    HADOOP-8524. Allow users to get source of a Configuration
+    parameter (harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname

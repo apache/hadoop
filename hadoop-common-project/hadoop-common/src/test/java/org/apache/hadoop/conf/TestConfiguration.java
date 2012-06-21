@@ -640,6 +640,26 @@ public class TestConfiguration extends TestCase {
                  conf.getPattern("test.pattern3", defaultPattern).pattern());
   }
 
+  public void testPropertySource() throws IOException {
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.foo", "bar");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    conf.set("fs.defaultFS", "value");
+    assertEquals(
+        "Resource string returned for a file-loaded property" +
+        " must be a proper absolute path",
+        fileResource,
+        new Path(conf.getPropertySource("test.foo")));
+    assertEquals("Resource string returned for a set() property must be null",
+        null,
+        conf.getPropertySource("fs.defaultFS"));
+    assertEquals("Resource string returned for an unset property must be null",
+        null, conf.getPropertySource("fs.defaultFoo"));
+  }
+
   public void testSocketAddress() throws IOException {
     Configuration conf = new Configuration();
     final String defaultAddr = "host:1";

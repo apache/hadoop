@@ -1035,6 +1035,38 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Gets the absolute path to the resource object (file, URL, etc.), for a given
+   * property name.
+   *
+   * @param name - The property name to get the source of.
+   * @return null - If the property or its source wasn't found or if the property
+   * was defined in code (i.e. in a Configuration instance, not from a physical
+   * resource). Otherwise, returns the absolute path of the resource that loaded
+   * the property name, as a String.
+   */
+  @InterfaceStability.Unstable
+  public synchronized String getPropertySource(String name) {
+    if (properties == null) {
+      // If properties is null, it means a resource was newly added
+      // but the props were cleared so as to load it upon future
+      // requests. So lets force a load by asking a properties list.
+      getProps();
+    }
+    // Return a null right away if our properties still
+    // haven't loaded or the resource mapping isn't defined
+    if (properties == null || updatingResource == null) {
+      return null;
+    } else {
+      String source = updatingResource.get(name);
+      if (source == null || source.equals(UNKNOWN_RESOURCE)) {
+        return null;
+      } else {
+        return source;
+      }
+    }
+  }
+
+  /**
    * A class that represents a set of positive integer ranges. It parses 
    * strings of the form: "2-3,5,7-" where ranges are separated by comma and 
    * the lower/upper bounds are separated by dash. Either the lower or upper 
