@@ -480,6 +480,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3889. job client tries to use /tasklog interface, but that
     doesn't exist anymore (Devaraj K via bobby)
 
+    MAPREDUCE-4320. gridmix mainClass wrong in pom.xml (tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
