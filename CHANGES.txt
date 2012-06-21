@@ -42,6 +42,8 @@ branch-hadoop-1-win - unreleased
     MAPREDUCE-4203. Added an implementation of the process tree for Windows.
     (Bikas Saha via acmurthy) 
 
+    HADOOP-8486 Resource leak ... SequenceFile  (Kanna Karanam via Sanjay)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

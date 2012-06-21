@@ -1414,7 +1414,7 @@ public class SequenceFile {
   /** Reads key/value pairs from a sequence-format file. */
   public static class Reader implements java.io.Closeable {
     private Path file;
-    private FSDataInputStream in;
+    private FSDataInputStream in = null;
     private DataOutputBuffer outBuf = new DataOutputBuffer();
 
     private byte version;
@@ -1465,8 +1465,8 @@ public class SequenceFile {
     private DataInputStream valIn = null;
     private Decompressor valDecompressor = null;
     
-    private Deserializer keyDeserializer;
-    private Deserializer valDeserializer;
+    private Deserializer keyDeserializer = null;
+    private Deserializer valDeserializer = null;
 
     /** Open the named file. */
     public Reader(FileSystem fs, Path file, Configuration conf)
@@ -1482,12 +1482,19 @@ public class SequenceFile {
     private Reader(FileSystem fs, Path file, int bufferSize, long start,
                    long length, Configuration conf, boolean tempReader) 
     throws IOException {
-      this.file = file;
-      this.in = openFile(fs, file, bufferSize, length);
-      this.conf = conf;
-      seek(start);
-      this.end = in.getPos() + length;
-      init(tempReader);
+      try {
+        this.file = file;
+        this.in = openFile(fs, file, bufferSize, length);
+        this.conf = conf;
+        seek(start);
+        this.end = in.getPos() + length;
+        init(tempReader);
+      } catch(IOException e) {
+        // Close if there are any open resources before throwing exceptions
+        // from constructor.
+        close();
+        throw e;
+      }
     }
 
     /**
@@ -1636,14 +1643,19 @@ public class SequenceFile {
       valLenDecompressor = valDecompressor = null;
       
       if (keyDeserializer != null) {
-    	keyDeserializer.close();
+        keyDeserializer.close();
+        keyDeserializer = null;
       }
       if (valDeserializer != null) {
         valDeserializer.close();
+        valDeserializer = null;
       }
       
       // Close the input-stream
-      in.close();
+      if(in != null) {
+        in.close();
+        in = null;
+      }
     }
 
     /** Returns the name of the key class. */

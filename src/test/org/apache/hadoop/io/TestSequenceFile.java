@@ -47,7 +47,34 @@ public class TestSequenceFile extends TestCase {
     compressedSeqFileTest(new DefaultCodec());
     LOG.info("Successfully tested SequenceFile with DefaultCodec");
   }
-  
+
+  /* Test to ensure that file handle is closed properly when the 
+   * SequenceFile.Reader throws an exception from the constructor.*/
+  public void testReadNonSequenceFile() throws Exception {
+    LOG.info("Testing SequenceFile Reader with non-sequence file");
+    Path nonSeqFile =
+        new Path(System.getProperty("test.build.data",".")+"/nonSequenceFile.seq");
+    SequenceFile.Reader reader = null;
+    FileSystem fs = FileSystem.getLocal(conf);
+    File f = new File(nonSeqFile.getUriPath());
+    if(!f.exists()) {
+      fs.createNewFile(nonSeqFile);
+    }
+    try {
+      reader = new SequenceFile.Reader(fs, nonSeqFile, conf);
+      // expecting an exception for a invalid sequence file format
+      fail("Expecting an IOException while reading the data from non-sequence file");
+    } catch (IOException e) {
+      // Ensure that we are able to delete the file in Windows.
+      // Note: Didn't find a way to detect the file handle leaks on UNIX
+      // so it always passes on UNIX
+      assertEquals(true, fs.delete(nonSeqFile, true));
+    } finally {
+      IOUtils.closeStream(reader);
+    }
+    LOG.info("Successfully tested SequenceFile Reader with non-sequence file");
+  }
+
   public void compressedSeqFileTest(CompressionCodec codec) throws Exception {
     int count = 1024 * 10;
     int megabytes = 1;
