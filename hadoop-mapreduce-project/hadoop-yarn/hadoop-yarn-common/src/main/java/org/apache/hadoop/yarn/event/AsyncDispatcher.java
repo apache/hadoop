@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.AbstractService;
 
@@ -127,7 +128,8 @@ public class AsyncDispatcher extends AbstractService implements Dispatcher {
     catch (Throwable t) {
       //TODO Maybe log the state of the queue
       LOG.fatal("Error in dispatcher thread", t);
-      if (exitOnDispatchException) {
+      if (exitOnDispatchException
+          && (ShutdownHookManager.get().isShutdownInProgress()) == false) {
         LOG.info("Exiting, bbye..");
         System.exit(-1);
       }
