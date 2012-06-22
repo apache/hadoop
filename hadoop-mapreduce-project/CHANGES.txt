@@ -180,6 +180,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4306. Fix distributed shell to work with users other than the one
     running the daemons. (Ahmed Radwan via sseth)
 
+    MAPREDUCE-4031. Prevent a Node Manager hang during shutdown. 
+    (Devaraj K via sseth)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
@@ -604,9 +607,6 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4320. gridmix mainClass wrong in pom.xml (tgraves)
 
     MAPREDUCE-4295. RM crashes due to DNS issue (tgraves)
-
-    MAPREDUCE-4031. Prevent a Node Manager hang during shutdown. 
-    (Devaraj K via sseth)
 
 Release 0.23.2 - UNRELEASED
 
