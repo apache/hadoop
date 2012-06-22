@@ -57,6 +57,9 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4306. Fix distributed shell to work with users other than the one
     running the daemons. (Ahmed Radwan via sseth)
 
+    MAPREDUCE-4031. Prevent a Node Manager hang during shutdown. 
+    (Devaraj K via sseth)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
