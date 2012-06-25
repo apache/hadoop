@@ -97,7 +97,7 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
         <configuration>
-          <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
+          <excludeFilterFile combine.self="override"></excludeFilterFile>
         </configuration>
       </plugin>
     </plugins>
@@ -148,7 +148,7 @@
             <executions>
               <execution>
                 <id>dist</id>
-                <phase>package</phase>
+                <phase>prepare-package</phase>
                 <goals>
                   <goal>single</goal>
                 </goals>
@@ -159,38 +159,6 @@
                   <descriptorRefs>
                     <descriptorRef>hadoop-raid-dist</descriptorRef>
                   </descriptorRefs>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>tar</id>
-                <phase>package</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target if="tar">
-                    <!-- Using Unix script to preserve symlinks -->
-                    <echo file="${project.build.directory}/dist-maketar.sh">
-
-                      which cygpath 2> /dev/null
-                      if [ $? = 1 ]; then
-                      BUILD_DIR="${project.build.directory}"
-                      else
-                      BUILD_DIR=`cygpath --unix '${project.build.directory}'`
-                      fi
-                      cd $BUILD_DIR
-                      tar czf ${project.artifactId}-${project.version}.tar.gz ${project.artifactId}-${project.version}
-                    </echo>
-                    <exec executable="sh" dir="${project.build.directory}" failonerror="true">
-                      <arg line="./dist-maketar.sh"/>
-                    </exec>
-                  </target>
                 </configuration>
               </execution>
             </executions>
