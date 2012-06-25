@@ -19,13 +19,26 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetAllApplicationsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.util.Records;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -35,7 +48,7 @@ public class TestResourceMgrDelegate {
   /**
    * Tests that getRootQueues makes a request for the (recursive) child queues
    */
-@Test
+  @Test
   public void testGetRootQueues() throws IOException, InterruptedException {
     ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
     GetQueueInfoResponse response = Mockito.mock(GetQueueInfoResponse.class);
@@ -60,4 +73,56 @@ public class TestResourceMgrDelegate {
       argument.getValue().getRecursive());
   }
 
+  @Test
+  public void tesAllJobs() throws Exception {
+    ClientRMProtocol applicationsManager = Mockito.mock(ClientRMProtocol.class);
+    GetAllApplicationsResponse allApplicationsResponse = Records
+        .newRecord(GetAllApplicationsResponse.class);
+    List<ApplicationReport> applications = new ArrayList<ApplicationReport>();
+    applications.add(getApplicationReport(YarnApplicationState.FINISHED,
+        FinalApplicationStatus.FAILED));
+    applications.add(getApplicationReport(YarnApplicationState.FINISHED,
+        FinalApplicationStatus.SUCCEEDED));
+    applications.add(getApplicationReport(YarnApplicationState.FINISHED,
+        FinalApplicationStatus.KILLED));
+    applications.add(getApplicationReport(YarnApplicationState.FAILED,
+        FinalApplicationStatus.FAILED));
+    allApplicationsResponse.setApplicationList(applications);
+    Mockito.when(
+        applicationsManager.getAllApplications(Mockito
+            .any(GetAllApplicationsRequest.class))).thenReturn(
+        allApplicationsResponse);
+    ResourceMgrDelegate resourceMgrDelegate = new ResourceMgrDelegate(
+        new YarnConfiguration(), applicationsManager);
+    JobStatus[] allJobs = resourceMgrDelegate.getAllJobs();
+
+    Assert.assertEquals(State.FAILED, allJobs[0].getState());
+    Assert.assertEquals(State.SUCCEEDED, allJobs[1].getState());
+    Assert.assertEquals(State.KILLED, allJobs[2].getState());
+    Assert.assertEquals(State.FAILED, allJobs[3].getState());
+  }
+
+  private ApplicationReport getApplicationReport(
+      YarnApplicationState yarnApplicationState,
+      FinalApplicationStatus finalApplicationStatus) {
+    ApplicationReport appReport = Mockito.mock(ApplicationReport.class);
+    ApplicationResourceUsageReport appResources = Mockito
+        .mock(ApplicationResourceUsageReport.class);
+    Mockito.when(appReport.getApplicationId()).thenReturn(
+        Records.newRecord(ApplicationId.class));
+    Mockito.when(appResources.getNeededResources()).thenReturn(
+        Records.newRecord(Resource.class));
+    Mockito.when(appResources.getReservedResources()).thenReturn(
+        Records.newRecord(Resource.class));
+    Mockito.when(appResources.getUsedResources()).thenReturn(
+        Records.newRecord(Resource.class));
+    Mockito.when(appReport.getApplicationResourceUsageReport()).thenReturn(
+        appResources);
+    Mockito.when(appReport.getYarnApplicationState()).thenReturn(
+        yarnApplicationState);
+    Mockito.when(appReport.getFinalApplicationStatus()).thenReturn(
+        finalApplicationStatus);
+
+    return appReport;
+  }
 }

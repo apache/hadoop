@@ -186,6 +186,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4336. Distributed Shell fails when used with the CapacityScheduler
     (ahmed via tucu)
 
+    MAPREDUCE-4290. Fix Yarn Applicaiton Status to MR JobState conversion. 
+    (Devaraj K via sseth)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
