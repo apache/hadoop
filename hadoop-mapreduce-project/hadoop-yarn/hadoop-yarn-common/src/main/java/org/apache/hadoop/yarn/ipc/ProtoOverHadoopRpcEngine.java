@@ -349,7 +349,19 @@ public class ProtoOverHadoopRpcEngine implements RpcEngine {
           .mergeFrom(rpcRequest.getRequestProto()).build();
       Message result;
       try {
+        long startTime = System.currentTimeMillis();
         result = service.callBlockingMethod(methodDescriptor, null, param);
+        int processingTime = (int) (System.currentTimeMillis() - startTime);
+        int qTime = (int) (startTime-receiveTime);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Served: " + methodName +
+                    " queueTime= " + qTime +
+                    " procesingTime= " + processingTime);
+        }
+        rpcMetrics.addRpcQueueTime(qTime);
+        rpcMetrics.addRpcProcessingTime(processingTime);
+        rpcDetailedMetrics.addProcessingTime(methodName,
+                                             processingTime);
       } catch (ServiceException e) {
         e.printStackTrace();
         return handleException(e);

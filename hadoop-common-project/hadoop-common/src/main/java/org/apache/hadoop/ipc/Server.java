@@ -271,6 +271,14 @@ public abstract class Server {
   }
 
   /**
+   * Returns a handle to the rpcDetailedMetrics (required in tests)
+   * @return rpc detailed metrics
+   */
+  public RpcDetailedMetrics getRpcDetailedMetrics() {
+    return rpcDetailedMetrics;
+  }
+
+  /**
    * Refresh the service authorization ACL for the service handled by this server.
    */
   public void refreshServiceAcl(Configuration conf, PolicyProvider provider) {

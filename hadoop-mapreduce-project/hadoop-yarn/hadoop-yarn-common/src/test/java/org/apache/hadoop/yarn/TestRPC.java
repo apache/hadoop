@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn;
 
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
+
 import java.net.InetSocketAddress;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
 import org.apache.hadoop.yarn.api.ContainerManager;
@@ -161,6 +165,15 @@ public class TestRPC {
     }
     Assert.assertTrue(exception);
     
+    //test metrics
+    MetricsRecordBuilder rpcMetrics =
+        getMetrics(server.getRpcMetrics().name());
+    assertCounterGt("RpcQueueTimeNumOps", 0L, rpcMetrics);
+    assertCounterGt("RpcProcessingTimeNumOps", 0L, rpcMetrics);
+    MetricsRecordBuilder rpcDetailedMetrics =
+        getMetrics(server.getRpcDetailedMetrics().name());
+    assertCounterGt("StartContainerNumOps", 0L, rpcDetailedMetrics);
+
     server.stop();
     Assert.assertNotNull(status);
     Assert.assertEquals(ContainerState.RUNNING, status.getState());
