@@ -27,11 +27,17 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * A utility to manage job submission files.
  */
 @InterfaceAudience.Private
 public class JobSubmissionFiles {
+
+  private final static Log LOG = LogFactory.getLog(JobSubmissionFiles.class);
 
   // job submission directory is private!
   final public static FsPermission JOB_DIR_PERMISSION =
@@ -102,14 +108,18 @@ public class JobSubmissionFiles {
     if (fs.exists(stagingArea)) {
       FileStatus fsStatus = fs.getFileStatus(stagingArea);
       String owner = fsStatus.getOwner();
-      if (!(owner.equals(currentUser) || owner.equals(realUser)) || 
-          !fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
-         throw new IOException("The ownership/permissions on the staging " +
-                      "directory " + stagingArea + " is not as expected. " + 
-                      "It is owned by " + owner + " and permissions are "+ 
-                      fsStatus.getPermission() + ". The directory must " +
+      if (!(owner.equals(currentUser) || owner.equals(realUser))) {
+         throw new IOException("The ownership on the staging directory " +
+                      stagingArea + " is not as expected. " +
+                      "It is owned by " + owner + ". The directory must " +
                       "be owned by the submitter " + currentUser + " or " +
-                      "by " + realUser + " and permissions must be rwx------");
+                      "by " + realUser);
+      }
+      if (!fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
+        LOG.info("Permissions on staging directory " + stagingArea + " are " +
+          "incorrect: " + fsStatus.getPermission() + ". Fixing permissions " +
+          "to correct value " + JOB_DIR_PERMISSION);
+        fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
       }
     } else {
       fs.mkdirs(stagingArea, 
