@@ -260,7 +260,7 @@ public class Client {
 
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
-    amQueue = cliParser.getOptionValue("queue", "");
+    amQueue = cliParser.getOptionValue("queue", "default");
     amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "10"));		
 
     if (amMemory < 0) {
@@ -353,6 +353,7 @@ public class Client {
     }
 
     GetQueueInfoRequest queueInfoReq = Records.newRecord(GetQueueInfoRequest.class);
+    queueInfoReq.setQueueName(this.amQueue);
     GetQueueInfoResponse queueInfoResp = applicationsManager.getQueueInfo(queueInfoReq);		
     QueueInfo queueInfo = queueInfoResp.getQueueInfo();
     LOG.info("Queue info"
