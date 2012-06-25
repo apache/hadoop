@@ -37,6 +37,9 @@ Release 1.2.0 - unreleased
     HADOOP-7868. Hadoop native fails to compile when default linker
     option is -Wl,--as-needed. (Trevor Robinson via eli)
 
+    MAPREDUCE-2289. Permissions race can make getStagingDir fail on local filesystem 
+    (ahmed via tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
