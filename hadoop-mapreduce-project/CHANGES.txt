@@ -66,6 +66,9 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4290. Fix Yarn Applicaiton Status to MR JobState conversion. 
     (Devaraj K via sseth)
 
+    MAPREDUCE-2289. Permissions race can make getStagingDir fail on local filesystem 
+    (ahmed via tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
