@@ -34,6 +34,9 @@ Release 1.2.0 - unreleased
     HADOOP-8512. AuthenticatedURL should reset the Token when the server 
     returns other than OK on authentication (tucu)
 
+    HADOOP-7868. Hadoop native fails to compile when default linker
+    option is -Wl,--as-needed. (Trevor Robinson via eli)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
