@@ -154,6 +154,8 @@ Trunk (unreleased changes)
     HDFS-3462. TestDFSClientRetries.busyTest() should restore default
     xceiver count in the config. (Madhukara Phatak via harsh)
 
+    HDFS-3550. Fix raid javadoc warnings. (Jason Lowe via daryn)
+
 Branch-2 ( Unreleased changes )
  
   INCOMPATIBLE CHANGES

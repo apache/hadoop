@@ -331,7 +331,6 @@ public abstract class Encoder {
    * The implementation of generating parity data for a stripe.
    *
    * @param blocks The streams to blocks in the stripe.
-   * @param srcFile The source file.
    * @param stripeStartOffset The start offset of the stripe
    * @param blockSize The maximum size of a block.
    * @param outs output streams to the parity blocks.

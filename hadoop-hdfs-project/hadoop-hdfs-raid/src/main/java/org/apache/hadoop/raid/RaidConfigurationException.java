@@ -19,7 +19,7 @@
 package org.apache.hadoop.raid;
 
 /**
- * Thrown when the config file for {@link CronNode} is malformed.  
+ * Thrown when the config file for {@link RaidNode} is malformed.
  */
 public class RaidConfigurationException extends Exception {
   private static final long serialVersionUID = 4046516718965587999L;

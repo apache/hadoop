@@ -52,7 +52,7 @@ public class DistRaidNode extends RaidNode {
   }
 
   /**
-   * {@inheritDocs}
+   * {@inheritDoc}
    */
   @Override
   public void join() {
@@ -65,7 +65,7 @@ public class DistRaidNode extends RaidNode {
   }
   
   /**
-   * {@inheritDocs}
+   * {@inheritDoc}
    */
   @Override
   public void stop() {
@@ -79,7 +79,7 @@ public class DistRaidNode extends RaidNode {
 
 
   /**
-   * {@inheritDocs}
+   * {@inheritDoc}
    */
   @Override
   void raidFiles(PolicyInfo info, List<FileStatus> paths) throws IOException {
@@ -95,7 +95,7 @@ public class DistRaidNode extends RaidNode {
   }
 
   /**
-   * {@inheritDocs}
+   * {@inheritDoc}
    */
   @Override
   int getRunningJobsForPolicy(String policyName) {

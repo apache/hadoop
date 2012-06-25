@@ -166,9 +166,9 @@ public abstract class Decoder {
    *
    * @param srcFs The filesystem containing the source file.
    * @param srcPath The damaged source file.
-   * @param parityPath The filesystem containing the parity file. This could be
+   * @param parityFs The filesystem containing the parity file. This could be
    *        different from fs in case the parity file is part of a HAR archive.
-   * @param parityFile The parity file.
+   * @param parityPath The parity file.
    * @param blockSize The block size of the file.
    * @param blockOffset Known location of error in the source file. There could
    *        be additional errors in the source file that are discovered during
