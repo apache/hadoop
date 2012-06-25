@@ -6,6 +6,8 @@ Release 2.0.1-alpha - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-4355. Add JobStatus getJobStatus(JobID) to JobClient. (kkambatl via tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-4146. Support limits on task status string length and number of

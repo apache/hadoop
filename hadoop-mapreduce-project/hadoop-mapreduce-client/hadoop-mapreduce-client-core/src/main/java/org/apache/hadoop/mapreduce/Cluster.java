@@ -173,6 +173,19 @@ public class Cluster {
   }
 
   /**
+   * Get JobStatus corresponding to jobId.
+   * 
+   * @param jobId
+   * @return object of {@link JobStatus}
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public JobStatus getJobStatus(JobID jobId) throws IOException,
+      InterruptedException {
+    return client.getJobStatus(jobId);
+  }
+
+  /**
    * Get job corresponding to jobid.
    * 
    * @param jobId
@@ -181,7 +194,7 @@ public class Cluster {
    * @throws InterruptedException
    */
   public Job getJob(JobID jobId) throws IOException, InterruptedException {
-    JobStatus status = client.getJobStatus(jobId);
+    JobStatus status = getJobStatus(jobId);
     if (status != null) {
       return Job.getInstance(this, status, new JobConf(status.getJobFile()));
     }
