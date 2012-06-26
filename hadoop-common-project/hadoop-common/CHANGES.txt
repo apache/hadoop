@@ -573,6 +573,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8495. Update Netty to avoid leaking file descriptors during shuffle
     (Jason Lowe via tgraves)
 
+    HADOOP-8129. ViewFileSystemTestSetup setupForViewFileSystem is erring
+    (Ahmed Radwan and Ravi Prakash via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
