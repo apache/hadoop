@@ -80,6 +80,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3372. offlineEditsViewer should be able to read a binary
     edits file with recovery mode. (Colin Patrick McCabe via eli)
 
+    HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
