@@ -244,6 +244,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
 
+    HDFS-3535. Audit logging should log denied accesses. (Andy Isaacson via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
