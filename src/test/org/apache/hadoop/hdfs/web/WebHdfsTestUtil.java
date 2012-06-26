@@ -48,7 +48,7 @@ public class WebHdfsTestUtil {
 
   public static WebHdfsFileSystem getWebHdfsFileSystemAs(
       final UserGroupInformation ugi, final Configuration conf
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
     return ugi.doAs(new PrivilegedExceptionAction<WebHdfsFileSystem>() {
       @Override
       public WebHdfsFileSystem run() throws Exception {
@@ -69,7 +69,7 @@ public class WebHdfsTestUtil {
       final int expectedResponseCode) throws IOException {
     conn.connect();
     Assert.assertEquals(expectedResponseCode, conn.getResponseCode());
-    return WebHdfsFileSystem.jsonParse(conn.getInputStream());
+    return WebHdfsFileSystem.jsonParse(conn, false);
   }
   
   public static HttpURLConnection twoStepWrite(HttpURLConnection conn,

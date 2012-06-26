@@ -293,6 +293,10 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     final Path root = new Path("/");
     final Path dir = new Path("/test/testUrl");
     assertTrue(webhdfs.mkdirs(dir));
+    final Path file = new Path("/test/file");
+    final FSDataOutputStream out = webhdfs.create(file);
+    out.write(1);
+    out.close();
 
     {//test GETHOMEDIRECTORY
       final URL url = webhdfs.toUrl(GetOpParam.Op.GETHOMEDIRECTORY, root);
@@ -352,6 +356,22 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       assertEquals(0, conn.getContentLength());
       assertEquals(MediaType.APPLICATION_OCTET_STREAM, conn.getContentType());
       assertEquals((short)0755, webhdfs.getFileStatus(dir).getPermission().toShort());
+      conn.disconnect();
+    }
+
+    {//test jsonParse with non-json type.
+      final HttpOpParam.Op op = GetOpParam.Op.OPEN;
+      final URL url = webhdfs.toUrl(op, file);
+      final HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.setRequestMethod(op.getType().toString());
+      conn.connect();
+
+      try {
+        WebHdfsFileSystem.jsonParse(conn, false);
+        fail();
+      } catch(IOException ioe) {
+        WebHdfsFileSystem.LOG.info("GOOD", ioe);
+      }
       conn.disconnect();
     }
   }
