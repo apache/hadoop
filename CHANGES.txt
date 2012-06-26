@@ -107,6 +107,8 @@ Release 1.1.0 - unreleased
     connections and RPC calls, and add MultipleLinearRandomRetry, a new retry
     policy.  (szetszwo)
 
+    HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
