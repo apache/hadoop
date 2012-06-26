@@ -82,6 +82,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
 
+    HDFS-3535. Audit logging should log denied accesses. (Andy Isaacson via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

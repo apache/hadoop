@@ -76,8 +76,9 @@ public class TestFsck {
       "build/test") + "/audit.log";
   
   // Pattern for: 
-  // ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
+  // allowed=true ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
   static final Pattern fsckPattern = Pattern.compile(
+      "allowed=.*?\\s" +
       "ugi=.*?\\s" + 
       "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
       "cmd=fsck\\ssrc=\\/\\sdst=null\\s" + 

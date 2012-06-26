@@ -225,8 +225,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private static final void logAuditEvent(UserGroupInformation ugi,
       InetAddress addr, String cmd, String src, String dst,
       HdfsFileStatus stat) {
+    logAuditEvent(true, ugi, addr, cmd, src, dst, stat);
+  }
+
+  private static final void logAuditEvent(boolean succeeded,
+      UserGroupInformation ugi, InetAddress addr, String cmd, String src,
+      String dst, HdfsFileStatus stat) {
     final StringBuilder sb = auditBuffer.get();
     sb.setLength(0);
+    sb.append("allowed=").append(succeeded).append("\t");
     sb.append("ugi=").append(ugi).append("\t");
     sb.append("ip=").append(addr).append("\t");
     sb.append("cmd=").append(cmd).append("\t");
@@ -1003,6 +1010,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   void setPermission(String src, FsPermission permission)
       throws AccessControlException, FileNotFoundException, SafeModeException,
       UnresolvedLinkException, IOException {
+    try {
+      setPermissionInt(src, permission);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "setPermission", src, null, null);
+      }
+      throw e;
+    }
+  }
+
+  private void setPermissionInt(String src, FsPermission permission)
+      throws AccessControlException, FileNotFoundException, SafeModeException,
+      UnresolvedLinkException, IOException {
     HdfsFileStatus resultingStat = null;
     writeLock();
     try {
@@ -1032,6 +1054,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   void setOwner(String src, String username, String group)
+      throws AccessControlException, FileNotFoundException, SafeModeException,
+      UnresolvedLinkException, IOException {
+    try {
+      setOwnerInt(src, username, group);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "setOwner", src, null, null);
+      }
+      throw e;
+    } 
+  }
+
+  private void setOwnerInt(String src, String username, String group)
       throws AccessControlException, FileNotFoundException, SafeModeException,
       UnresolvedLinkException, IOException {
     HdfsFileStatus resultingStat = null;
@@ -1089,6 +1126,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws FileNotFoundException, UnresolvedLinkException, IOException
    */
   LocatedBlocks getBlockLocations(String src, long offset, long length,
+      boolean doAccessTime, boolean needBlockToken, boolean checkSafeMode)
+      throws FileNotFoundException, UnresolvedLinkException, IOException {
+    try {
+      return getBlockLocationsInt(src, offset, length, doAccessTime,
+                                  needBlockToken, checkSafeMode);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "open", src, null, null);
+      }
+      throw e;
+    }
+  }
+
+  private LocatedBlocks getBlockLocationsInt(String src, long offset, long length,
       boolean doAccessTime, boolean needBlockToken, boolean checkSafeMode)
       throws FileNotFoundException, UnresolvedLinkException, IOException {
     if (isPermissionEnabled) {
@@ -1186,6 +1239,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException
    */
   void concat(String target, String [] srcs) 
+      throws IOException, UnresolvedLinkException {
+    try {
+      concatInt(target, srcs);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getLoginUser(),
+                      Server.getRemoteIp(),
+                      "concat", Arrays.toString(srcs), target, null);
+      }
+      throw e;
+    }
+  }
+
+  private void concatInt(String target, String [] srcs) 
       throws IOException, UnresolvedLinkException {
     if(FSNamesystem.LOG.isDebugEnabled()) {
       FSNamesystem.LOG.debug("concat " + Arrays.toString(srcs) +
@@ -1339,6 +1406,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * written to the edits log but is not flushed.
    */
   void setTimes(String src, long mtime, long atime) 
+      throws IOException, UnresolvedLinkException {
+    try {
+      setTimesInt(src, mtime, atime);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "setTimes", src, null, null);
+      }
+      throw e;
+    }
+  }
+
+  private void setTimesInt(String src, long mtime, long atime) 
     throws IOException, UnresolvedLinkException {
     if (!isAccessTimeSupported() && atime != -1) {
       throw new IOException("Access time for hdfs is not configured. " +
@@ -1373,6 +1454,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create a symbolic link.
    */
   void createSymlink(String target, String link,
+      PermissionStatus dirPerms, boolean createParent) 
+      throws IOException, UnresolvedLinkException {
+    try {
+      createSymlinkInt(target, link, dirPerms, createParent);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "createSymlink", link, target, null);
+      }
+      throw e;
+    }
+  }
+
+  private void createSymlinkInt(String target, String link,
       PermissionStatus dirPerms, boolean createParent) 
       throws IOException, UnresolvedLinkException {
     HdfsFileStatus resultingStat = null;
@@ -1442,8 +1538,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @return true if successful; 
    *         false if file does not exist or is a directory
    */
-  boolean setReplication(final String src, final short replication
-      ) throws IOException {
+  boolean setReplication(final String src, final short replication)
+      throws IOException {
+    try {
+      return setReplicationInt(src, replication);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "setReplication", src, null, null);
+      }
+      throw e;
+    }
+  }
+
+  private boolean setReplicationInt(final String src, final short replication)
+      throws IOException {
     blockManager.verifyReplication(src, replication, null);
 
     final boolean isFile;
@@ -1476,7 +1586,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
     return isFile;
   }
-    
+
   long getPreferredBlockSize(String filename) 
       throws IOException, UnresolvedLinkException {
     readLock();
@@ -1518,6 +1628,24 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * {@link ClientProtocol#create()}
    */
   void startFile(String src, PermissionStatus permissions, String holder,
+      String clientMachine, EnumSet<CreateFlag> flag, boolean createParent,
+      short replication, long blockSize) throws AccessControlException,
+      SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
+      FileNotFoundException, ParentNotDirectoryException, IOException {
+    try {
+      startFileInt(src, permissions, holder, clientMachine, flag, createParent,
+                   replication, blockSize);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "create", src, null, null);
+      }
+      throw e;
+    }
+  }
+
+  private void startFileInt(String src, PermissionStatus permissions, String holder,
       String clientMachine, EnumSet<CreateFlag> flag, boolean createParent,
       short replication, long blockSize) throws AccessControlException,
       SafeModeException, FileAlreadyExistsException, UnresolvedLinkException,
@@ -1822,6 +1950,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Append to an existing file in the namespace.
    */
   LocatedBlock appendFile(String src, String holder, String clientMachine)
+      throws AccessControlException, SafeModeException,
+      FileAlreadyExistsException, FileNotFoundException,
+      ParentNotDirectoryException, IOException {
+    try {
+      return appendFileInt(src, holder, clientMachine);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "append", src, null, null);
+      }
+      throw e;
+    }
+  }
+
+  private LocatedBlock appendFileInt(String src, String holder, String clientMachine)
       throws AccessControlException, SafeModeException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, IOException {
@@ -2311,6 +2455,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   @Deprecated
   boolean renameTo(String src, String dst) 
+      throws IOException, UnresolvedLinkException {
+    try {
+      return renameToInt(src, dst);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "rename", src, dst, null);
+      }
+      throw e;
+    }
+  }
+
+  private boolean renameToInt(String src, String dst) 
     throws IOException, UnresolvedLinkException {
     boolean status = false;
     HdfsFileStatus resultingStat = null;
@@ -2422,20 +2580,35 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @see ClientProtocol#delete(String, boolean) for detailed descriptoin and 
    * description of exceptions
    */
-    boolean delete(String src, boolean recursive)
-        throws AccessControlException, SafeModeException,
-               UnresolvedLinkException, IOException {
-      if (NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
-      }
-      boolean status = deleteInternal(src, recursive, true);
-      if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
-        logAuditEvent(UserGroupInformation.getCurrentUser(),
+  boolean delete(String src, boolean recursive)
+      throws AccessControlException, SafeModeException,
+      UnresolvedLinkException, IOException {
+    try {
+      return deleteInt(src, recursive);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
                       Server.getRemoteIp(),
                       "delete", src, null, null);
       }
-      return status;
+      throw e;
     }
+  }
+      
+  private boolean deleteInt(String src, boolean recursive)
+      throws AccessControlException, SafeModeException,
+      UnresolvedLinkException, IOException {
+    if (NameNode.stateChangeLog.isDebugEnabled()) {
+      NameNode.stateChangeLog.debug("DIR* NameSystem.delete: " + src);
+    }
+    boolean status = deleteInternal(src, recursive, true);
+    if (status && auditLog.isInfoEnabled() && isExternalInvocation()) {
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
+                    Server.getRemoteIp(),
+                    "delete", src, null, null);
+    }
+    return status;
+  }
     
   /**
    * Remove a file/directory from the namespace.
@@ -2590,6 +2763,20 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Create all the necessary directories
    */
   boolean mkdirs(String src, PermissionStatus permissions,
+      boolean createParent) throws IOException, UnresolvedLinkException {
+    try {
+      return mkdirsInt(src, permissions, createParent);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "mkdirs", src, null, null);
+      }
+      throw e;
+    }
+  }
+
+  private boolean mkdirsInt(String src, PermissionStatus permissions,
       boolean createParent) throws IOException, UnresolvedLinkException {
     boolean status = false;
     if(NameNode.stateChangeLog.isDebugEnabled()) {
@@ -3041,6 +3228,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException if other I/O error occurred
    */
   DirectoryListing getListing(String src, byte[] startAfter,
+      boolean needLocation) 
+      throws AccessControlException, UnresolvedLinkException, IOException {
+    try {
+      return getListingInt(src, startAfter, needLocation);
+    } catch (AccessControlException e) {
+      if (auditLog.isInfoEnabled() && isExternalInvocation()) {
+        logAuditEvent(false, UserGroupInformation.getCurrentUser(),
+                      Server.getRemoteIp(),
+                      "listStatus", src, null, null);
+      }
+      throw e;
+    }
+  }
+
+  private DirectoryListing getListingInt(String src, byte[] startAfter,
       boolean needLocation) 
     throws AccessControlException, UnresolvedLinkException, IOException {
     DirectoryListing dl;
