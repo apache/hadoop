@@ -103,6 +103,10 @@ Release 1.1.0 - unreleased
 
     HADOOP-8430. Backport new FileSystem methods introduced by HADOOP-8014. (eli)
 
+    HDFS-3504. Support configurable retry policy in DFSClient for RPC
+    connections and RPC calls, and add MultipleLinearRandomRetry, a new retry
+    policy.  (szetszwo)
+
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can

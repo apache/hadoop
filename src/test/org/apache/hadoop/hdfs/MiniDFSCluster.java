@@ -583,27 +583,35 @@ public class MiniDFSCluster {
     }
   }
 
-  /**
-   * Restart namenode. Waits for exit from safemode.
-   */
-  public synchronized void restartNameNode()
-      throws IOException {
-    restartNameNode(true);
+  /** Same as restartNameNode(true, true). */
+  public synchronized void restartNameNode() throws IOException {
+    restartNameNode(true, true);
   }
   
+  /** Same as restartNameNode(waitSafemodeExit, true). */
+  public synchronized void restartNameNode(boolean waitSafemodeExit
+      ) throws IOException {
+    restartNameNode(waitSafemodeExit, true);
+  }
+
   /**
    * Restart namenode.
+   * 
+   * @param waitSafemodeExit Should it wait for safe mode to turn off?
+   * @param waitClusterActive Should it wait for cluster to be active?
+   * @throws IOException
    */
-  public synchronized void restartNameNode(boolean waitSafemodeExit)
-      throws IOException {
+  public synchronized void restartNameNode(boolean waitSafemodeExit,
+      boolean waitClusterActive) throws IOException {
     shutdownNameNode();
     nameNode = NameNode.createNameNode(new String[] {}, conf);
     if (waitSafemodeExit) {
       waitClusterUp();
     }
     System.out.println("Restarted the namenode");
+
     int failedCount = 0;
-    while (true) {
+    while(waitClusterActive) {
       try {
         waitActive();
         break;
@@ -618,7 +626,6 @@ public class MiniDFSCluster {
         }
       }
     }
-    System.out.println("Cluster is active");
   }
 
   /*
@@ -860,6 +867,7 @@ public class MiniDFSCluster {
     }
 
     client.close();
+    System.out.println("Cluster is active");
   }
 
   private synchronized boolean shouldWait(DatanodeInfo[] dnInfo) {
