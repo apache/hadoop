@@ -35,14 +35,17 @@ class RetryInvocationHandler implements InvocationHandler {
   private Map<String,RetryPolicy> methodNameToPolicyMap;
   
   public RetryInvocationHandler(Object implementation, RetryPolicy retryPolicy) {
-    this.implementation = implementation;
-    this.defaultPolicy = retryPolicy;
-    this.methodNameToPolicyMap = Collections.emptyMap();
+    this(implementation, retryPolicy, Collections.<String, RetryPolicy>emptyMap());
   }
   
   public RetryInvocationHandler(Object implementation, Map<String, RetryPolicy> methodNameToPolicyMap) {
+    this(implementation, RetryPolicies.TRY_ONCE_THEN_FAIL, methodNameToPolicyMap);
+  }
+
+  public RetryInvocationHandler(Object implementation,
+      RetryPolicy defaultPolicy, Map<String, RetryPolicy> methodNameToPolicyMap) {
     this.implementation = implementation;
-    this.defaultPolicy = RetryPolicies.TRY_ONCE_THEN_FAIL;
+    this.defaultPolicy = defaultPolicy;
     this.methodNameToPolicyMap = methodNameToPolicyMap;
   }
 
