@@ -417,15 +417,6 @@ public class RMContainerAllocator extends RMContainerRequestor
     
     LOG.info("Recalculating schedule...");
     
-    //if all maps are assigned, then ramp up all reduces irrespective of the 
-    //headroom
-    if (scheduledMaps == 0 && numPendingReduces > 0) {
-      LOG.info("All maps assigned. " +
-      		"Ramping up all remaining reduces:" + numPendingReduces);
-      scheduleAllReduces();
-      return;
-    }
-    
     //check for slow start
     if (!getIsReduceStarted()) {//not set yet
       int completedMapsForReduceSlowstart = (int)Math.ceil(reduceSlowStart * 
@@ -441,6 +432,15 @@ public class RMContainerAllocator extends RMContainerRequestor
       }
     }
     
+    //if all maps are assigned, then ramp up all reduces irrespective of the
+    //headroom
+    if (scheduledMaps == 0 && numPendingReduces > 0) {
+      LOG.info("All maps assigned. " +
+          "Ramping up all remaining reduces:" + numPendingReduces);
+      scheduleAllReduces();
+      return;
+    }
+
     float completedMapPercent = 0f;
     if (totalMaps != 0) {//support for 0 maps
       completedMapPercent = (float)completedMaps/totalMaps;
@@ -498,7 +498,8 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
   }
 
-  private void scheduleAllReduces() {
+  @Private
+  public void scheduleAllReduces() {
     for (ContainerRequest req : pendingReduces) {
       scheduledRequests.addReduce(req);
     }

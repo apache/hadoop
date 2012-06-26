@@ -498,6 +498,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4295. RM crashes due to DNS issue (tgraves)
 
+    MAPREDUCE-4228. mapreduce.job.reduce.slowstart.completedmaps is not working
+    properly (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
