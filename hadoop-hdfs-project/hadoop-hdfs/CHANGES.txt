@@ -93,6 +93,10 @@ Trunk (unreleased changes)
 
     HDFS-3478. Test quotas with Long.Max_Value. (Sujay Rau via eli)
 
+    HDFS-3498. Support replica removal in BlockPlacementPolicy and make
+    BlockPlacementPolicyDefault extensible for reusing code in subclasses.
+    (Junping Du via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
