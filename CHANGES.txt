@@ -256,6 +256,9 @@ Release 1.1.0 - unreleased
     HADOOP-6947.  Kerberos relogin should set refreshKrb5Config to true.
     (Todd Lipcon via ddas)
     
+    HDFS-3522. If a namenode is in safemode, it should throw SafeModeException
+    when getBlockLocations has zero locations.  (Brandon Li via szetszwo)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
