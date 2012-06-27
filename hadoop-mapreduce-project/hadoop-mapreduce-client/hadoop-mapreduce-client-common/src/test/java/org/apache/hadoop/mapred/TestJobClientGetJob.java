@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import static junit.framework.Assert.assertNotNull;
-import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 
@@ -29,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
-public class TestJobClient {
+public class TestJobClientGetJob {
   
   private static Path TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"));
@@ -46,7 +45,7 @@ public class TestJobClient {
   
   @SuppressWarnings("deprecation")
   @Test
-  public void testGetRunningJob() throws Exception {
+  public void testGetRunningJobFromJobClient() throws Exception {
     JobConf conf = new JobConf();
     conf.set("mapreduce.framework.name", "local");
     FileInputFormat.addInputPath(conf, createTempFile("in", "hello"));
@@ -61,21 +60,4 @@ public class TestJobClient {
     assertNotNull("New running job", newRunningJob);
   }
 
-  @SuppressWarnings("deprecation")
-  @Test
-  public void testGetJobStatus() throws Exception {
-    JobConf conf = new JobConf();
-    conf.set("mapreduce.framework.name", "local");
-    FileInputFormat.addInputPath(conf, createTempFile("in", "hello"));
-    Path outputDir = new Path(TEST_ROOT_DIR, getClass().getSimpleName());
-    outputDir.getFileSystem(conf).delete(outputDir, true);
-    FileOutputFormat.setOutputPath(conf, outputDir);
-    JobClient jc = new JobClient(conf);
-    RunningJob runningJob = jc.submitJob(conf);
-    assertNotNull("Running job", runningJob);
-    JobID jobid = runningJob.getID();
-    JobStatus jobStatus = jc.getJobStatus(jobid);
-    assertNotNull("New running job", jobStatus);
-    assertEquals("Equal JobIDs", jobid, jobStatus.getJobID());
-  }
 }
