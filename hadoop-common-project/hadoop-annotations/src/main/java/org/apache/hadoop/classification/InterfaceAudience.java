@@ -23,6 +23,24 @@ import java.lang.annotation.RetentionPolicy;
 
 /**
  * Annotation to inform users of a package, class or method's intended audience.
+ * Currently the audience can be {@link Public}, {@link LimitedPrivate} or
+ * {@link Private}. <br>
+ * All public classes must have InterfaceAudience annotation. <br>
+ * <ul>
+ * <li>Public classes that are not marked with this annotation must be
+ * considered by default as {@link Private}.</li> 
+ * 
+ * <li>External applications must only use classes that are marked
+ * {@link Public}. Avoid using non public classes as these classes
+ * could be removed or change in incompatible ways.</li>
+ * 
+ * <li>Hadoop projects must only use classes that are marked
+ * {@link LimitedPrivate} or {@link Public}</li>
+ * 
+ * <li> Methods may have a different annotation that it is more restrictive
+ * compared to the audience classification of the class. Example: A class 
+ * might be {@link Public}, but a method may be {@link LimitedPrivate}
+ * </li></ul>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
