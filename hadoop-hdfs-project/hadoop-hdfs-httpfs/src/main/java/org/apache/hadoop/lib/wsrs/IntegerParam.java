@@ -20,8 +20,8 @@ package org.apache.hadoop.lib.wsrs;
 
 public abstract class IntegerParam extends Param<Integer> {
 
-  public IntegerParam(String name, String str) {
-    value = parseParam(name, str);
+  public IntegerParam(String name, Integer defaultValue) {
+    super(name, defaultValue);
   }
 
   protected Integer parse(String str) throws Exception {

@@ -22,15 +22,14 @@ import java.text.MessageFormat;
 
 public abstract class BooleanParam extends Param<Boolean> {
 
-  public BooleanParam(String name, String str) {
-    value = parseParam(name, str);
+  public BooleanParam(String name, Boolean defaultValue) {
+    super(name, defaultValue);
   }
 
   protected Boolean parse(String str) throws Exception {
     if (str.equalsIgnoreCase("true")) {
       return true;
-    }
-    if (str.equalsIgnoreCase("false")) {
+    } else if (str.equalsIgnoreCase("false")) {
       return false;
     }
     throw new IllegalArgumentException(MessageFormat.format("Invalid value [{0}], must be a boolean", str));

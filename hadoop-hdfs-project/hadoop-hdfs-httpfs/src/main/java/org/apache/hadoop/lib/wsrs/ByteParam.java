@@ -20,8 +20,8 @@ package org.apache.hadoop.lib.wsrs;
 
 public abstract class ByteParam extends Param<Byte> {
 
-  public ByteParam(String name, String str) {
-    value = parseParam(name, str);
+  public ByteParam(String name, Byte defaultValue) {
+    super(name, defaultValue);
   }
 
   protected Byte parse(String str) throws Exception {

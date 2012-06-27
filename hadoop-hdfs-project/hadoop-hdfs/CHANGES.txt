@@ -246,6 +246,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3535. Audit logging should log denied accesses. (Andy Isaacson via eli)
 
+    HDFS-3481. Refactor HttpFS handling of JAX-RS query string parameters (tucu)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

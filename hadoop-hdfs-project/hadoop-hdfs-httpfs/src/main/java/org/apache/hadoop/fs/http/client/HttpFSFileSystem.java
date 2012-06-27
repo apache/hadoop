@@ -154,41 +154,33 @@ public class HttpFSFileSystem extends FileSystem {
 
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
-
-  /**
-   * Get operations.
-   */
-  public enum GetOpValues {
-    OPEN, GETFILESTATUS, LISTSTATUS, GETHOMEDIRECTORY, GETCONTENTSUMMARY, GETFILECHECKSUM,
-    GETDELEGATIONTOKEN, GETFILEBLOCKLOCATIONS, INSTRUMENTATION
-  }
-
-  /**
-   * Post operations.
-   */
-  public static enum PostOpValues {
-    APPEND
-  }
-
-  /**
-   * Put operations.
-   */
-  public static enum PutOpValues {
-    CREATE, MKDIRS, RENAME, SETOWNER, SETPERMISSION, SETREPLICATION, SETTIMES,
-    RENEWDELEGATIONTOKEN, CANCELDELEGATIONTOKEN
-  }
-
-  /**
-   * Delete operations.
-   */
-  public static enum DeleteOpValues {
-    DELETE
-  }
-
   private static final String HTTP_GET = "GET";
   private static final String HTTP_PUT = "PUT";
   private static final String HTTP_POST = "POST";
   private static final String HTTP_DELETE = "DELETE";
+
+  public enum Operation {
+    OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
+    GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
+    GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
+    INSTRUMENTATION(HTTP_GET),
+    APPEND(HTTP_POST),
+    CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
+    SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
+    DELETE(HTTP_DELETE);
+
+    private String httpMethod;
+
+    Operation(String httpMethod) {
+      this.httpMethod = httpMethod;
+    }
+
+    public String getMethod() {
+      return httpMethod;
+    }
+
+  }
+
 
   private AuthenticatedURL.Token authToken = new AuthenticatedURL.Token();
   private URI uri;
@@ -402,10 +394,12 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, GetOpValues.OPEN.toString());
-    HttpURLConnection conn = getConnection(HTTP_GET, params, f, true);
+    params.put(OP_PARAM, Operation.OPEN.toString());
+    HttpURLConnection conn = getConnection(Operation.OPEN.getMethod(), params,
+                                           f, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
-    return new FSDataInputStream(new HttpFSDataInputStream(conn.getInputStream(), bufferSize));
+    return new FSDataInputStream(
+      new HttpFSDataInputStream(conn.getInputStream(), bufferSize));
   }
 
   /**
@@ -508,15 +502,18 @@ public class HttpFSFileSystem extends FileSystem {
    * @see #setPermission(Path, FsPermission)
    */
   @Override
-  public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, int bufferSize,
-                                   short replication, long blockSize, Progressable progress) throws IOException {
+  public FSDataOutputStream create(Path f, FsPermission permission,
+                                   boolean overwrite, int bufferSize,
+                                   short replication, long blockSize,
+                                   Progressable progress) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, PutOpValues.CREATE.toString());
+    params.put(OP_PARAM, Operation.CREATE.toString());
     params.put(OVERWRITE_PARAM, Boolean.toString(overwrite));
     params.put(REPLICATION_PARAM, Short.toString(replication));
     params.put(BLOCKSIZE_PARAM, Long.toString(blockSize));
     params.put(PERMISSION_PARAM, permissionToString(permission));
-    return uploadData(HTTP_PUT, f, params, bufferSize, HttpURLConnection.HTTP_CREATED);
+    return uploadData(Operation.CREATE.getMethod(), f, params, bufferSize,
+                      HttpURLConnection.HTTP_CREATED);
   }
 
 
@@ -532,10 +529,12 @@ public class HttpFSFileSystem extends FileSystem {
    * @throws IOException
    */
   @Override
-  public FSDataOutputStream append(Path f, int bufferSize, Progressable progress) throws IOException {
+  public FSDataOutputStream append(Path f, int bufferSize,
+                                   Progressable progress) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, PostOpValues.APPEND.toString());
-    return uploadData(HTTP_POST, f, params, bufferSize, HttpURLConnection.HTTP_OK);
+    params.put(OP_PARAM, Operation.APPEND.toString());
+    return uploadData(Operation.APPEND.getMethod(), f, params, bufferSize,
+                      HttpURLConnection.HTTP_OK);
   }
 
   /**
@@ -545,9 +544,10 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public boolean rename(Path src, Path dst) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, PutOpValues.RENAME.toString());
+    params.put(OP_PARAM, Operation.RENAME.toString());
     params.put(DESTINATION_PARAM, dst.toString());
-    HttpURLConnection conn = getConnection(HTTP_PUT, params, src, true);
+    HttpURLConnection conn = getConnection(Operation.RENAME.getMethod(),
+                                           params, src, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) jsonParse(conn);
     return (Boolean) json.get(RENAME_JSON);
@@ -580,9 +580,10 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public boolean delete(Path f, boolean recursive) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, DeleteOpValues.DELETE.toString());
+    params.put(OP_PARAM, Operation.DELETE.toString());
     params.put(RECURSIVE_PARAM, Boolean.toString(recursive));
-    HttpURLConnection conn = getConnection(HTTP_DELETE, params, f, true);
+    HttpURLConnection conn = getConnection(Operation.DELETE.getMethod(),
+                                           params, f, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) jsonParse(conn);
     return (Boolean) json.get(DELETE_JSON);
@@ -601,8 +602,9 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, GetOpValues.LISTSTATUS.toString());
-    HttpURLConnection conn = getConnection(HTTP_GET, params, f, true);
+    params.put(OP_PARAM, Operation.LISTSTATUS.toString());
+    HttpURLConnection conn = getConnection(Operation.LISTSTATUS.getMethod(),
+                                           params, f, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) jsonParse(conn);
     json = (JSONObject) json.get(FILE_STATUSES_JSON);
@@ -647,9 +649,10 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, PutOpValues.MKDIRS.toString());
+    params.put(OP_PARAM, Operation.MKDIRS.toString());
     params.put(PERMISSION_PARAM, permissionToString(permission));
-    HttpURLConnection conn = getConnection(HTTP_PUT, params, f, true);
+    HttpURLConnection conn = getConnection(Operation.MKDIRS.getMethod(),
+                                           params, f, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) jsonParse(conn);
     return (Boolean) json.get(MKDIRS_JSON);
@@ -668,8 +671,9 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public FileStatus getFileStatus(Path f) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, GetOpValues.GETFILESTATUS.toString());
-    HttpURLConnection conn = getConnection(HTTP_GET, params, f, true);
+    params.put(OP_PARAM, Operation.GETFILESTATUS.toString());
+    HttpURLConnection conn = getConnection(Operation.GETFILESTATUS.getMethod(),
+                                           params, f, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) jsonParse(conn);
     json = (JSONObject) json.get(FILE_STATUS_JSON);
@@ -684,9 +688,11 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public Path getHomeDirectory() {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, GetOpValues.GETHOMEDIRECTORY.toString());
+    params.put(OP_PARAM, Operation.GETHOMEDIRECTORY.toString());
     try {
-      HttpURLConnection conn = getConnection(HTTP_GET, params, new Path(getUri().toString(), "/"), false);
+      HttpURLConnection conn =
+        getConnection(Operation.GETHOMEDIRECTORY.getMethod(), params,
+                      new Path(getUri().toString(), "/"), false);
       validateResponse(conn, HttpURLConnection.HTTP_OK);
       JSONObject json = (JSONObject) jsonParse(conn);
       return new Path((String) json.get(HOME_DIR_JSON));
@@ -704,12 +710,14 @@ public class HttpFSFileSystem extends FileSystem {
    * @param groupname If it is null, the original groupname remains unchanged.
    */
   @Override
-  public void setOwner(Path p, String username, String groupname) throws IOException {
+  public void setOwner(Path p, String username, String groupname)
+    throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, PutOpValues.SETOWNER.toString());
+    params.put(OP_PARAM, Operation.SETOWNER.toString());
     params.put(OWNER_PARAM, username);
     params.put(GROUP_PARAM, groupname);
-    HttpURLConnection conn = getConnection(HTTP_PUT, params, p, true);
+    HttpURLConnection conn = getConnection(Operation.SETOWNER.getMethod(),
+                                           params, p, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
@@ -722,9 +730,9 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public void setPermission(Path p, FsPermission permission) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, PutOpValues.SETPERMISSION.toString());
+    params.put(OP_PARAM, Operation.SETPERMISSION.toString());
     params.put(PERMISSION_PARAM, permissionToString(permission));
-    HttpURLConnection conn = getConnection(HTTP_PUT, params, p, true);
+    HttpURLConnection conn = getConnection(Operation.SETPERMISSION.getMethod(), params, p, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
@@ -742,10 +750,11 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public void setTimes(Path p, long mtime, long atime) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, PutOpValues.SETTIMES.toString());
+    params.put(OP_PARAM, Operation.SETTIMES.toString());
     params.put(MODIFICATION_TIME_PARAM, Long.toString(mtime));
     params.put(ACCESS_TIME_PARAM, Long.toString(atime));
-    HttpURLConnection conn = getConnection(HTTP_PUT, params, p, true);
+    HttpURLConnection conn = getConnection(Operation.SETTIMES.getMethod(),
+                                           params, p, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
 
@@ -761,11 +770,13 @@ public class HttpFSFileSystem extends FileSystem {
    * @throws IOException
    */
   @Override
-  public boolean setReplication(Path src, short replication) throws IOException {
+  public boolean setReplication(Path src, short replication)
+    throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, PutOpValues.SETREPLICATION.toString());
+    params.put(OP_PARAM, Operation.SETREPLICATION.toString());
     params.put(REPLICATION_PARAM, Short.toString(replication));
-    HttpURLConnection conn = getConnection(HTTP_PUT, params, src, true);
+    HttpURLConnection conn =
+      getConnection(Operation.SETREPLICATION.getMethod(), params, src, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) jsonParse(conn);
     return (Boolean) json.get(SET_REPLICATION_JSON);
@@ -814,10 +825,12 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public ContentSummary getContentSummary(Path f) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, GetOpValues.GETCONTENTSUMMARY.toString());
-    HttpURLConnection conn = getConnection(HTTP_GET, params, f, true);
+    params.put(OP_PARAM, Operation.GETCONTENTSUMMARY.toString());
+    HttpURLConnection conn =
+      getConnection(Operation.GETCONTENTSUMMARY.getMethod(), params, f, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
-    JSONObject json = (JSONObject) ((JSONObject) jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
+    JSONObject json =
+      (JSONObject) ((JSONObject) jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
     return new ContentSummary((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON),
                               (Long) json.get(CONTENT_SUMMARY_FILE_COUNT_JSON),
                               (Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON),
@@ -830,10 +843,12 @@ public class HttpFSFileSystem extends FileSystem {
   @Override
   public FileChecksum getFileChecksum(Path f) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
-    params.put(OP_PARAM, GetOpValues.GETFILECHECKSUM.toString());
-    HttpURLConnection conn = getConnection(HTTP_GET, params, f, true);
+    params.put(OP_PARAM, Operation.GETFILECHECKSUM.toString());
+    HttpURLConnection conn =
+      getConnection(Operation.GETFILECHECKSUM.getMethod(), params, f, true);
     validateResponse(conn, HttpURLConnection.HTTP_OK);
-    final JSONObject json = (JSONObject) ((JSONObject) jsonParse(conn)).get(FILE_CHECKSUM_JSON);
+    final JSONObject json =
+      (JSONObject) ((JSONObject) jsonParse(conn)).get(FILE_CHECKSUM_JSON);
     return new FileChecksum() {
       @Override
       public String getAlgorithmName() {
