@@ -3100,6 +3100,20 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     return true;
   }
 
+  /** Choose a datanode near to the given address. */ 
+  public DatanodeInfo chooseDatanode(String address, long blocksize) {
+    final DatanodeDescriptor clientNode = host2DataNodeMap.getDatanodeByHost(
+        address);
+    if (clientNode != null) {
+      final DatanodeDescriptor[] datanodes = replicator.chooseTarget(
+          1, clientNode, null, blocksize);
+      if (datanodes.length > 0) {
+        return datanodes[0];
+      }
+    }
+    return null;
+  }
+
   /**
    * Parse the data-nodes the block belongs to and choose one,
    * which will be the replication source.
@@ -5928,5 +5942,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         it.remove();
       } 
     }
+  }
+
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + ": " + host2DataNodeMap;
   }
 }
