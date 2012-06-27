@@ -40,6 +40,12 @@ import org.junit.Assert;
 public class WebHdfsTestUtil {
   public static final Log LOG = LogFactory.getLog(WebHdfsTestUtil.class);
 
+  public static Configuration createConf() {
+    final Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
+    return conf;
+  }
+
   public static WebHdfsFileSystem getWebHdfsFileSystem(final Configuration conf
       ) throws IOException, URISyntaxException {
     final String uri = WebHdfsFileSystem.SCHEME  + "://"

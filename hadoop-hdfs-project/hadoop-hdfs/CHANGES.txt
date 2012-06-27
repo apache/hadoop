@@ -243,6 +243,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3428. Move DelegationTokenRenewer to common (tucu)
 
+    HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
+    (szetszwo)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES

@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -155,5 +157,15 @@ class Host2NodesMap {
     } finally {
       hostmapLock.readLock().unlock();
     }
+  }
+  
+  @Override
+  public String toString() {
+    final StringBuilder b = new StringBuilder(getClass().getSimpleName())
+        .append("[");
+    for(Map.Entry<String, DatanodeDescriptor[]> e : map.entrySet()) {
+      b.append("\n  " + e.getKey() + " => " + Arrays.asList(e.getValue()));
+    }
+    return b.append("\n]").toString();
   }
 }
