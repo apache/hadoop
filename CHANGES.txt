@@ -42,6 +42,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-2289. Permissions race can make getStagingDir fail on local filesystem 
     (ahmed via tucu)
 
+    HADOOP-8249. invalid hadoop-auth cookies should trigger authentication if info 
+    is avail before returning HTTP 401 (tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
