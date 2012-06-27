@@ -620,15 +620,6 @@ public class JobClient extends CLI {
     }
   }
 
-  private JobStatus getJobStatusUsingCluster(final JobID jobId)
-      throws IOException, InterruptedException {
-    return clientUgi.doAs(new PrivilegedExceptionAction<JobStatus>() {
-      public JobStatus run() throws IOException, InterruptedException {
-        return JobStatus.downgrade(cluster.getJobStatus(jobId));
-      }
-    });
-  }
-
   private Job getJobUsingCluster(final JobID jobid) throws IOException,
   InterruptedException {
     return clientUgi.doAs(new PrivilegedExceptionAction<Job>() {
@@ -637,39 +628,27 @@ public class JobClient extends CLI {
       }
     });
   }
-
   /**
-   * Get {@link JobStatus} of a job. Returns null if the id does not correspond
-   * to any known job.
+   * Get an {@link RunningJob} object to track an ongoing job.  Returns
+   * null if the id does not correspond to any known job.
    * 
-   * @param jobid
-   *          the jobid of the job.
-   * @return the {@link JobStatus} object to retrieve the job stats, null if the
+   * @param jobid the jobid of the job.
+   * @return the {@link RunningJob} handle to track the job, null if the 
    *         <code>jobid</code> doesn't correspond to any known job.
    * @throws IOException
    */
-  public JobStatus getJobStatus(JobID jobId) throws IOException {
+  public RunningJob getJob(final JobID jobid) throws IOException {
     try {
-      return getJobStatusUsingCluster(jobId);
+      
+      Job job = getJobUsingCluster(jobid);
+      if (job != null) {
+        JobStatus status = JobStatus.downgrade(job.getStatus());
+        if (status != null) {
+          return new NetworkedJob(status, cluster);
+        } 
+      }
     } catch (InterruptedException ie) {
       throw new IOException(ie);
-    }
-  }
-
-  /**
-   * Get an {@link RunningJob} object to track an ongoing job. Returns null if
-   * the id does not correspond to any known job.
-   * 
-   * @param jobid
-   *          the jobid of the job.
-   * @return the {@link RunningJob} handle to track the job, null if the
-   *         <code>jobid</code> doesn't correspond to any known job.
-   * @throws IOException
-   */
-  public RunningJob getJob(JobID jobId) throws IOException {
-    JobStatus status = getJobStatus(jobId);
-    if (status != null) {
-      return new NetworkedJob(status, cluster);
     }
     return null;
   }
