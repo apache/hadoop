@@ -51,7 +51,9 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.metrics.MetricsServlet;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.mortbay.io.Buffer;
@@ -604,6 +606,24 @@ public class HttpServer implements FilterContainer {
     sslListener.setKeystoreType(sslConf.get("ssl.server.keystore.type", "jks"));
     sslListener.setNeedClientAuth(needCertsAuth);
     webServer.addConnector(sslListener);
+  }
+  
+  protected void initSpnego(Configuration conf,
+      String usernameConfKey, String keytabConfKey) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    String principalInConf = conf.get(usernameConfKey);
+    if (principalInConf != null && !principalInConf.isEmpty()) {
+      params.put("kerberos.principal",
+                 SecurityUtil.getServerPrincipal(principalInConf, listener.getHost()));
+    }
+    String httpKeytab = conf.get(keytabConfKey);
+    if (httpKeytab != null && !httpKeytab.isEmpty()) {
+      params.put("kerberos.keytab", httpKeytab);
+    }
+    params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
+  
+    defineFilter(webAppContext, SPNEGO_FILTER,
+                 AuthenticationFilter.class.getName(), params, null);
   }
 
   /**

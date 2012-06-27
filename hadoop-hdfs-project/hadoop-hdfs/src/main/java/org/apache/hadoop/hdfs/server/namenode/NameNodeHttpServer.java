@@ -44,7 +44,6 @@ import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
 /**
@@ -91,22 +90,9 @@ public class NameNodeHttpServer {
       {
         // Add SPNEGO support to NameNode
         if (UserGroupInformation.isSecurityEnabled()) {
-          Map<String, String> params = new HashMap<String, String>();
-          String principalInConf = conf.get(
-            DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPENGO_USER_NAME_KEY);
-          if (principalInConf != null && !principalInConf.isEmpty()) {
-            params.put("kerberos.principal",
-                       SecurityUtil.getServerPrincipal(principalInConf, infoHost));
-            String httpKeytab = conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
-            if (httpKeytab != null && !httpKeytab.isEmpty()) {
-              params.put("kerberos.keytab", httpKeytab);
-            }
-
-            params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
-
-            defineFilter(webAppContext, SPNEGO_FILTER,
-                         AuthenticationFilter.class.getName(), params, null);
-          }
+          initSpnego(conf,
+              DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
+              DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
         }
         if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
           //add SPNEGO authentication filter for webhdfs
