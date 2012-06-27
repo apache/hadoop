@@ -79,6 +79,9 @@ Trunk (unreleased changes)
     HADOOP-7659. fs -getmerge isn't guaranteed to work well over non-HDFS
     filesystems (harsh)
 
+    HADOOP-8059. Add javadoc to InterfaceAudience and InterfaceStability.
+    (Brandon Li via suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
