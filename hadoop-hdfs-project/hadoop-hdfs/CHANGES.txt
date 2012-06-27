@@ -84,7 +84,7 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3535. Audit logging should log denied accesses. (Andy Isaacson via eli)
 
-    HDFS-3113. Refactor HttpFS handling of JAX-RS query string parameters (tucu)
+    HDFS-3481. Refactor HttpFS handling of JAX-RS query string parameters (tucu)
 
   OPTIMIZATIONS
 
