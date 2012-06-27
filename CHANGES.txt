@@ -302,6 +302,9 @@ Release 1.1.0 - unreleased
     HDFS-3522. If a namenode is in safemode, it should throw SafeModeException
     when getBlockLocations has zero locations.  (Brandon Li via szetszwo)
 
+    HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
+    (szetszwo)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES

@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.web.resources.HttpOpParam;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -38,6 +39,12 @@ import org.junit.Assert;
 
 public class WebHdfsTestUtil {
   public static final Log LOG = LogFactory.getLog(WebHdfsTestUtil.class);
+
+  public static Configuration createConf() {
+    final Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
+    return conf;
+  }
 
   public static WebHdfsFileSystem getWebHdfsFileSystem(final Configuration conf
       ) throws IOException, URISyntaxException {
