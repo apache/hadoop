@@ -248,6 +248,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3481. Refactor HttpFS handling of JAX-RS query string parameters (tucu)
 
+    HDFS-3572. Cleanup code which inits SPNEGO in HttpServer (todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
