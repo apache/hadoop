@@ -15,33 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.lib.wsrs;
 
-import junit.framework.Assert;
-import org.junit.Test;
+import java.util.Map;
 
-public class TestLongParam {
+/**
+ * Class that contains all parsed JAX-RS parameters.
+ * <p/>
+ * Instances are created by the {@link ParametersProvider} class.
+ */
+public class Parameters {
+  private Map<String, Param<?>> params;
 
-  @Test
-  public void param() throws Exception {
-    LongParam param = new LongParam("p", "1") {
-    };
-    Assert.assertEquals(param.getDomain(), "a long");
-    Assert.assertEquals(param.value(), new Long(1));
-    Assert.assertEquals(param.toString(), "1");
-    param = new LongParam("p", null) {
-    };
-    Assert.assertEquals(param.value(), null);
-    param = new LongParam("p", "") {
-    };
-    Assert.assertEquals(param.value(), null);
+  /**
+   * Constructor that receives the request parsed parameters.
+   *
+   * @param params the request parsed parameters.
+   */
+  public Parameters(Map<String, Param<?>> params) {
+    this.params = params;
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void invalid1() throws Exception {
-    new LongParam("p", "x") {
-    };
+  /**
+   * Returns the value of a request parsed parameter.
+   *
+   * @param name parameter name.
+   * @param klass class of the parameter, used for value casting.
+  * @return the value of the parameter.
+   */
+  @SuppressWarnings("unchecked")
+  public <V, T extends Param<V>> V get(String name, Class<T> klass) {
+    return ((T)params.get(name)).value();
   }
-
+  
 }

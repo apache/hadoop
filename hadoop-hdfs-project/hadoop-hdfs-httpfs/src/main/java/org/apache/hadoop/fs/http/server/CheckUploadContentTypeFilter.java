@@ -30,7 +30,6 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -43,8 +42,8 @@ public class CheckUploadContentTypeFilter implements Filter {
   private static final Set<String> UPLOAD_OPERATIONS = new HashSet<String>();
 
   static {
-    UPLOAD_OPERATIONS.add(HttpFSFileSystem.PostOpValues.APPEND.toString());
-    UPLOAD_OPERATIONS.add(HttpFSFileSystem.PutOpValues.CREATE.toString());
+    UPLOAD_OPERATIONS.add(HttpFSFileSystem.Operation.APPEND.toString());
+    UPLOAD_OPERATIONS.add(HttpFSFileSystem.Operation.CREATE.toString());
   }
 
   /**
@@ -82,7 +81,7 @@ public class CheckUploadContentTypeFilter implements Filter {
     if (method.equals("PUT") || method.equals("POST")) {
       String op = httpReq.getParameter(HttpFSFileSystem.OP_PARAM);
       if (op != null && UPLOAD_OPERATIONS.contains(op.toUpperCase())) {
-        if ("true".equalsIgnoreCase(httpReq.getParameter(HttpFSParams.DataParam.NAME))) {
+        if ("true".equalsIgnoreCase(httpReq.getParameter(HttpFSParametersProvider.DataParam.NAME))) {
           String contentType = httpReq.getContentType();
           contentTypeOK =
             HttpFSFileSystem.UPLOAD_CONTENT_TYPE.equalsIgnoreCase(contentType);

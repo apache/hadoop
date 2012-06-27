@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.http.server;
 
+import com.sun.jersey.api.container.ContainerException;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.wsrs.ExceptionProvider;
 import org.slf4j.Logger;
@@ -59,6 +60,9 @@ public class HttpFSExceptionProvider extends ExceptionProvider {
     if (throwable instanceof FileSystemAccessException) {
       throwable = throwable.getCause();
     }
+    if (throwable instanceof ContainerException) {
+      throwable = throwable.getCause();
+    }
     if (throwable instanceof SecurityException) {
       status = Response.Status.UNAUTHORIZED;
     } else if (throwable instanceof FileNotFoundException) {
@@ -66,6 +70,8 @@ public class HttpFSExceptionProvider extends ExceptionProvider {
     } else if (throwable instanceof IOException) {
       status = Response.Status.INTERNAL_SERVER_ERROR;
     } else if (throwable instanceof UnsupportedOperationException) {
+      status = Response.Status.BAD_REQUEST;
+    } else if (throwable instanceof IllegalArgumentException) {
       status = Response.Status.BAD_REQUEST;
     } else {
       status = Response.Status.INTERNAL_SERVER_ERROR;
