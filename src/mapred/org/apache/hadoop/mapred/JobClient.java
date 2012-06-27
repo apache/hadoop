@@ -1063,28 +1063,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
     return false;
   }
-
+    
   /**
-   * Get {@link JobStatus} of a job. Returns null if the id does not correspond
-   * to any known job.
+   * Get an {@link RunningJob} object to track an ongoing job.  Returns
+   * null if the id does not correspond to any known job.
    * 
-   * @param jobid
-   *          the jobid of the job.
-   * @return the {@link JobStatus} object to retrieve the job stats, null if the
-   *         <code>jobid</code> doesn't correspond to any known job.
-   * @throws IOException
-   */
-  public JobStatus getJobStatus(final JobID jobid) throws IOException {
-    return jobSubmitClient.getJobStatus(jobid);
-  }
-
-  /**
-   * Get an {@link RunningJob} object to track an ongoing job. Returns null if
-   * the id does not correspond to any known job.
-   * 
-   * @param jobid
-   *          the jobid of the job.
-   * @return the {@link RunningJob} handle to track the job, null if the
+   * @param jobid the jobid of the job.
+   * @return the {@link RunningJob} handle to track the job, null if the 
    *         <code>jobid</code> doesn't correspond to any known job.
    * @throws IOException
    */

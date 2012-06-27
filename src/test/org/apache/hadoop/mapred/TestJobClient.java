@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -40,8 +41,6 @@ public class TestJobClient extends ClusterMapReduceTestCase {
   
   private static final Log LOG = LogFactory.getLog(TestJobClient.class);
   
-  private JobConf conf;
-
   private String runJob() throws Exception {
     OutputStream os = getFileSystem().create(new Path(getInputDir(), "text.txt"));
     Writer wr = new OutputStreamWriter(os);
@@ -50,7 +49,7 @@ public class TestJobClient extends ClusterMapReduceTestCase {
     wr.write("hello3\n");
     wr.close();
 
-    conf = createJobConf();
+    JobConf conf = createJobConf();
     conf.setJobName("mr");
     conf.setJobPriority(JobPriority.HIGH);
     
@@ -127,16 +126,5 @@ public class TestJobClient extends ClusterMapReduceTestCase {
         new ByteArrayOutputStream());
     assertEquals("Exit code", 0, exitCode);
     verifyJobPriority(jobId, "VERY_LOW");
-  }
-
-  public void testGetJobStatus() throws Exception {
-    String jobIdString = runJob();
-    JobID jobid = JobID.forName(jobIdString);
-
-    JobClient client = new JobClient(conf);
-    assertEquals("JobClient intialization", conf, client.getConf());
-    JobStatus jobStatus = client.getJobStatus(jobid);
-    assertNotNull("Fetch JobStatus", jobStatus);
-    assertEquals("JobId check", jobid, jobStatus.getJobID());
   }
 }
