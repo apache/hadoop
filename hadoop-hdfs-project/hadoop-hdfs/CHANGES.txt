@@ -88,6 +88,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3572. Cleanup code which inits SPNEGO in HttpServer (todd)
 
+    HDFS-3475. Make the replication monitor multipliers configurable.
+    (harsh via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
