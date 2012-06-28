@@ -49,7 +49,8 @@ public class TestParallelImageWrite extends TestCase {
     MiniDFSCluster cluster = null;
     FSNamesystem fsn = null;
     int numNamenodeDirs;
-    DFSTestUtil files = new DFSTestUtil("TestRestartDFS", 200, 3, 8*1024);
+    DFSTestUtil files = new DFSTestUtil.Builder().setName("TestRestartDFS").
+        setNumFiles(200).build();
 
     final String dir = "/srcdat";
     final Path rootpath = new Path("/");

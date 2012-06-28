@@ -59,7 +59,8 @@ public class TestDatanodeRestart {
     try {
       // test finalized replicas
       final String TopDir = "/test";
-      DFSTestUtil util = new DFSTestUtil("TestCrcCorruption", 2, 3, 8*1024);
+      DFSTestUtil util = new DFSTestUtil.Builder().
+          setName("TestDatanodeRestart").setNumFiles(2).build();
       util.createFiles(fs, TopDir, (short)3);
       util.waitReplication(fs, TopDir, (short)3);
       util.checkFiles(fs, TopDir);

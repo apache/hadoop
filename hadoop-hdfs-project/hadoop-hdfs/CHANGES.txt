@@ -232,6 +232,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3524. Update TestFileLengthOnClusterRestart for HDFS-3522.  (Brandon
     Li via szetszwo)
 
+    HDFS-3559. DFSTestUtil: use Builder class to construct DFSTestUtil
+    instances. (Colin Patrick McCabe via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
