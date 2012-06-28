@@ -101,7 +101,8 @@ public class TestFsck {
   /** do fsck */
   @Test
   public void testFsck() throws Exception {
-    DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
+    DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFsck").
+        setNumFiles(20).build();
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
@@ -174,7 +175,8 @@ public class TestFsck {
   
   @Test
   public void testFsckNonExistent() throws Exception {
-    DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
+    DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFsck").
+        setNumFiles(20).build();
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
@@ -197,7 +199,8 @@ public class TestFsck {
   /** Test fsck with permission set on inodes */
   @Test
   public void testFsckPermission() throws Exception {
-    final DFSTestUtil util = new DFSTestUtil(getClass().getSimpleName(), 20, 3, 8*1024);
+    final DFSTestUtil util = new DFSTestUtil.Builder().
+        setName(getClass().getSimpleName()).setNumFiles(20).build();
     final Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
 
@@ -246,7 +249,8 @@ public class TestFsck {
   @Test
   public void testFsckMoveAndDelete() throws Exception {
     final int MAX_MOVE_TRIES = 5;
-    DFSTestUtil util = new DFSTestUtil("TestFsck", 5, 3, 8*1024);
+    DFSTestUtil util = new DFSTestUtil.Builder().
+        setName("TestFsckMoveAndDelete").setNumFiles(5).build();
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
@@ -319,7 +323,8 @@ public class TestFsck {
   
   @Test
   public void testFsckOpenFiles() throws Exception {
-    DFSTestUtil util = new DFSTestUtil("TestFsck", 4, 3, 8*1024); 
+    DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFsck").
+        setNumFiles(4).build();
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
@@ -492,7 +497,9 @@ public class TestFsck {
       cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
-      DFSTestUtil util = new DFSTestUtil("testGetCorruptFiles", 3, 1, 1024);
+      DFSTestUtil util = new DFSTestUtil.Builder().
+          setName("testGetCorruptFiles").setNumFiles(3).setMaxLevels(1).
+          setMaxSize(1024).build();
       util.createFiles(fs, "/corruptData", (short) 1);
       util.waitReplication(fs, "/corruptData", (short) 1);
 

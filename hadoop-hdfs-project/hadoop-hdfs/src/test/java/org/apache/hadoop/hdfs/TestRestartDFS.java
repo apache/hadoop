@@ -31,7 +31,8 @@ import org.apache.hadoop.fs.Path;
 public class TestRestartDFS extends TestCase {
   public void runTests(Configuration conf, boolean serviceTest) throws Exception {
     MiniDFSCluster cluster = null;
-    DFSTestUtil files = new DFSTestUtil("TestRestartDFS", 20, 3, 8*1024);
+    DFSTestUtil files = new DFSTestUtil.Builder().setName("TestRestartDFS").
+        setNumFiles(20).build();
 
     final String dir = "/srcdat";
     final Path rootpath = new Path("/");

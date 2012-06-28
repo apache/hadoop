@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil.Builder;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -95,10 +96,10 @@ public class DFSTestUtil {
     "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"
   };
   
-  private int maxLevels;// = 3;
-  private int maxSize;// = 8*1024;
-  private int minSize = 1;
-  private int nFiles;
+  private final int maxLevels;
+  private final int maxSize;
+  private final int minSize;
+  private final int nFiles;
   private MyFile[] files;
   
   /** Creates a new instance of DFSTestUtil
@@ -108,10 +109,11 @@ public class DFSTestUtil {
    * @param maxLevels Maximum number of directory levels
    * @param maxSize Maximum size for file
    */
-  public DFSTestUtil(String testName, int nFiles, int maxLevels, int maxSize) {
+  private DFSTestUtil(int nFiles, int maxLevels, int maxSize, int minSize) {
     this.nFiles = nFiles;
     this.maxLevels = maxLevels;
     this.maxSize = maxSize;
+    this.minSize = minSize;
   }
   
   /**
@@ -777,5 +779,43 @@ public class DFSTestUtil {
   public static DatanodeRegistration getLocalDatanodeRegistration() {
     return new DatanodeRegistration(getLocalDatanodeID(),
         new StorageInfo(), new ExportedBlockKeys(), VersionInfo.getVersion());
+  }
+
+  public static class Builder {
+    private int maxLevels = 3;
+    private int maxSize = 8*1024;
+    private int minSize = 1;
+    private int nFiles = 1;
+    
+    public Builder() {
+    }
+    
+    public Builder setName(String string) {
+      return this;
+    }
+
+    public Builder setNumFiles(int nFiles) {
+      this.nFiles = nFiles;
+      return this;
+    }
+    
+    public Builder setMaxLevels(int maxLevels) {
+      this.maxLevels = maxLevels;
+      return this;
+    }
+
+    public Builder setMaxSize(int maxSize) {
+      this.maxSize = maxSize;
+      return this;
+    }
+
+    public Builder setMinSize(int minSize) {
+      this.minSize = minSize;
+      return this;
+    }
+    
+    public DFSTestUtil build() {
+      return new DFSTestUtil(nFiles, maxLevels, maxSize, minSize);
+    }
   }
 }

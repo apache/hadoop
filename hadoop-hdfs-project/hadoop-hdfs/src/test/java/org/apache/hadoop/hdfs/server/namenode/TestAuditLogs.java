@@ -80,7 +80,8 @@ public class TestAuditLogs {
     final long precision = 1L;
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY, precision);
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 10000L);
-    util = new DFSTestUtil("TestAuditAllowed", 20, 3, 8*1024);
+    util = new DFSTestUtil.Builder().setName("TestAuditAllowed").
+        setNumFiles(20).build();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
     fs = cluster.getFileSystem();
     util.createFiles(fs, fileName);

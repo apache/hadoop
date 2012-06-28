@@ -58,7 +58,8 @@ public class TestFileCorruption extends TestCase {
   /** check if DFS can handle corrupted blocks properly */
   public void testFileCorruption() throws Exception {
     MiniDFSCluster cluster = null;
-    DFSTestUtil util = new DFSTestUtil("TestFileCorruption", 20, 3, 8*1024);
+    DFSTestUtil util = new DFSTestUtil.Builder().setName("TestFileCorruption").
+        setNumFiles(20).build();
     try {
       Configuration conf = new HdfsConfiguration();
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
