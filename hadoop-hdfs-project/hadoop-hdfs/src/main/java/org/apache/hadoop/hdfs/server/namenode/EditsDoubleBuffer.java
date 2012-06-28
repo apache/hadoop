@@ -89,6 +89,10 @@ class EditsDoubleBuffer {
     return bufCurrent.size() >= initBufferSize;
   }
 
+  DataOutputBuffer getReadyBuf() {
+    return bufReady;
+  }
+  
   DataOutputBuffer getCurrentBuf() {
     return bufCurrent;
   }

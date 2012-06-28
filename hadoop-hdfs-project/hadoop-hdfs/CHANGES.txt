@@ -99,6 +99,9 @@ Trunk (unreleased changes)
 
     HDFS-3571. Allow EditLogFileInputStream to read from a remote URL (todd)
 
+    HDFS-3510.  Editlog pre-allocation is performed prior to writing edits
+    to avoid partial edits case disk out of space.(Collin McCabe via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
