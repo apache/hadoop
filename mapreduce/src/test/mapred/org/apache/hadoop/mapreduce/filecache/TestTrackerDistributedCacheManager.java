@@ -218,6 +218,80 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     manager.purgeCache();
     assertFalse(pathToFile(cachedFirstFile).exists());
   }
+  
+  /**
+   * This is when somebody deletes the cache
+   * 
+   * @throws IOException
+   * @throws LoginException
+   * @throws InterruptedException
+   */
+  @SuppressWarnings("deprecation")
+  public void testCacheConsistency() throws IOException, LoginException, InterruptedException {
+    if (!canRun()) {
+      return;
+    }
+    // ****** Imitate JobClient code
+    // Configures a task/job with both a regular file and a "classpath" file.
+    Configuration subConf = new Configuration(conf);
+    String userName = getJobOwnerName();
+    subConf.set(MRJobConfig.USER_NAME, userName);
+    JobID jobid = new JobID("jt", 1);
+    DistributedCache.addCacheFile(firstCacheFile.toUri(), subConf);
+    TrackerDistributedCacheManager.determineTimestamps(subConf);
+    TrackerDistributedCacheManager.determineCacheVisibilities(subConf);
+    // ****** End of imitating JobClient code
+
+    Path jobFile = new Path(TEST_ROOT_DIR, "job.xml");
+    FileOutputStream os = new FileOutputStream(new File(jobFile.toString()));
+    subConf.writeXml(os);
+    os.close();
+
+    // ****** Imitate TaskRunner code.
+    TrackerDistributedCacheManager manager = new TrackerDistributedCacheManager(
+        conf);
+    TaskDistributedCacheManager handle = manager
+        .newTaskDistributedCacheManager(jobid, subConf);
+    assertNull(null, DistributedCache.getLocalCacheFiles(subConf));
+    handle.setupCache(subConf, TaskTracker.getPublicDistributedCacheDir(),
+        TaskTracker.getPrivateDistributedCacheDir(userName));
+    JobLocalizer.downloadPrivateCache(subConf);
+    // ****** End of imitating TaskRunner code
+
+    Path[] localCacheFiles = DistributedCache.getLocalCacheFiles(subConf);
+    assertNotNull(null, localCacheFiles);
+    assertEquals(1, localCacheFiles.length);
+    Path cachedFirstFile = localCacheFiles[0];
+    assertFileLengthEquals(firstCacheFile, cachedFirstFile);
+    assertFalse("Paths should be different.",
+        firstCacheFile.equals(cachedFirstFile));
+
+    File f1 = new File(cachedFirstFile.toString());
+    assertTrue(f1.delete());
+
+    // ****** Imitate JobClient code
+    // Configures a task/job with both a regular file and a "classpath" file.
+    subConf = new Configuration(conf);
+    userName = getJobOwnerName();
+    subConf.set(MRJobConfig.USER_NAME, userName);
+    DistributedCache.addCacheFile(firstCacheFile.toUri(), subConf);
+    TrackerDistributedCacheManager.determineTimestamps(subConf);
+    TrackerDistributedCacheManager.determineCacheVisibilities(subConf);
+    JobID jobidnew = new JobID("jt", 2);
+    handle = manager.newTaskDistributedCacheManager(jobidnew, subConf);
+    assertNull(null, DistributedCache.getLocalCacheFiles(subConf));
+    handle.setupCache(subConf, TaskTracker.getPublicDistributedCacheDir(),
+        TaskTracker.getPrivateDistributedCacheDir(userName));
+    JobLocalizer.downloadPrivateCache(subConf);
+    // ****** End of imitating TaskRunner code
+    Path[] localCacheFilesagain = DistributedCache.getLocalCacheFiles(subConf);
+    assertNotNull(null, localCacheFilesagain);
+    assertEquals(1, localCacheFilesagain.length);
+    Path cachedFirstFileAgain = localCacheFilesagain[0];
+    assertFileLengthEquals(firstCacheFile, cachedFirstFileAgain);
+    assertFalse("Paths should be different.",
+        firstCacheFile.equals(cachedFirstFileAgain));
+  }
 
   /**
    * This DistributedCacheManager fails in localizing firstCacheFile.

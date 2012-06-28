@@ -78,6 +78,11 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-4318. TestRecoveryManager should not use raw configuration keys.
     (Benoy Antony via shv)
 
+  END OF HADOOP-8357 SUBTASKS
+
+    MAPREDUCE-4342. Distributed Cache gives inconsistent result if cache files
+    get deleted from task tracker. (Mayank Bansal via shv)
+
 Release 0.22.0 - 2011-11-29
 
   INCOMPATIBLE CHANGES

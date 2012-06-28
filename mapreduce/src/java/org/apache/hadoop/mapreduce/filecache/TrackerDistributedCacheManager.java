@@ -163,7 +163,13 @@ public class TrackerDistributedCacheManager {
     Path localPath = null;
     synchronized (cachedArchives) {
       lcacheStatus = cachedArchives.get(key);
-      if (lcacheStatus == null) {
+      if (lcacheStatus == null
+          || !checkPathExists(lcacheStatus.localizedLoadPath, conf)) {
+        if (lcacheStatus != null) {
+          LOG.warn("Key: " + key + " is not valid removing it from the cache");
+          LOG.warn("Local Cache has been deleted... Downloading the cache again");
+          cachedArchives.remove(key);
+        }
         // was never localized
         String uniqueString = String.valueOf(random.nextLong());
         String cachePath = new Path (subDir, 
@@ -222,7 +228,25 @@ public class TrackerDistributedCacheManager {
     }
     return localizedPath;
   }
-
+  
+  /**
+   * This module checks whether file is present or not.
+   * 
+   * @param cachePath
+   * @param conf
+   * @return
+   * @throws IOException
+   */
+  boolean checkPathExists(Path cachePath, Configuration conf)
+      throws IOException {
+    FileSystem localFs = FileSystem.getLocal(conf);
+    boolean isPresent = true;
+    if (!localFs.exists(cachePath)) {
+      isPresent = false;
+    }
+    return isPresent;
+  }
+ 
   /**
    * This is the opposite of getlocalcache. When you are done with
    * using the cache, you need to release the cache
