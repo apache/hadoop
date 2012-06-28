@@ -870,5 +870,35 @@
   <value>${dfs.web.authentication.kerberos.principal}</value>
 </property>
 
+<property>
+  <name>dfs.namenode.invalidate.work.pct.per.iteration</name>
+  <value>0.32f</value>
+  <description>
+    *Note*: Advanced property. Change with caution.
+    This determines the percentage amount of block
+    invalidations (deletes) to do over a single DN heartbeat
+    deletion command. The final deletion count is determined by applying this
+    percentage to the number of live nodes in the system.
+    The resultant number is the number of blocks from the deletion list
+    chosen for proper invalidation over a single heartbeat of a single DN.
+    Value should be a positive, non-zero percentage in float notation (X.Yf),
+    with 1.0f meaning 100%.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.replication.work.multiplier.per.iteration</name>
+  <value>2</value>
+  <description>
+    *Note*: Advanced property. Change with caution.
+    This determines the total amount of block transfers to begin in
+    parallel at a DN, for replication, when such a command list is being
+    sent over a DN heartbeat by the NN. The actual number is obtained by
+    multiplying this multiplier with the total number of live nodes in the
+    cluster. The result number is the number of blocks to begin transfers
+    immediately for, per DN heartbeat. This number can be any positive,
+    non-zero integer.
+  </description>
+</property>
 
 </configuration>

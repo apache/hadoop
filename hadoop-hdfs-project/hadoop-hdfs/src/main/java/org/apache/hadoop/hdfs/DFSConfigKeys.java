@@ -165,6 +165,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY = "dfs.datanode.socket.reuse.keepalive";
   public static final int     DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT = 1000;
 
+  // Replication monitoring related keys
+  public static final String DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION =
+      "dfs.namenode.invalidate.work.pct.per.iteration";
+  public static final int DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION_DEFAULT = 32;
+  public static final String DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION =
+      "dfs.namenode.replication.work.multiplier.per.iteration";
+  public static final int DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT = 2;
+
   //Delegation token related keys
   public static final String  DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY = "dfs.namenode.delegation.key.update-interval";
   public static final long    DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT = 24*60*60*1000; // 1 day
