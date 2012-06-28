@@ -123,6 +123,9 @@ Trunk (unreleased changes)
 
     MAPREDUCE-3868. Make Raid Compile. (Weiyan Wang via schen)
 
+    MAPREDUCE-4371. Check for cyclic dependencies in Jobcontrol job DAG
+    (madhukara phatak via bobby)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
