@@ -16,6 +16,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8373. Port RPC.getServerAddress to 0.23 (Daryn Sharp via bobby)
 
+    HADOOP-8535. Cut hadoop build times in half (Job Eagles via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
