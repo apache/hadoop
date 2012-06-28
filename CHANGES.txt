@@ -68,6 +68,9 @@ Release 1.1.0 - unreleased
 
     HADOOP-8209. Add option to relax build-version check for branch-1. (eli)
 
+    HDFS-3518. Add a utility method DistributedFileSystem.isHealthy(uri) for
+    checking if the given HDFS is healthy. (szetszwo)
+
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
