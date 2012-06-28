@@ -402,7 +402,7 @@ public class NameNodeProxies {
         // If we found a proxy provider, then this URI should be a logical NN.
         // Given that, it shouldn't have a non-default port number.
         int port = nameNodeUri.getPort();
-        if (port > 0 && port != DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT) {
+        if (port > 0 && port != NameNode.DEFAULT_PORT) {
           throw new IOException("Port " + port + " specified in URI "
               + nameNodeUri + " but host '" + host
               + "' is a logical (HA) namenode"

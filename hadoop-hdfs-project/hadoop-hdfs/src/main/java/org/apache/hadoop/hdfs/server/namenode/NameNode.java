@@ -214,6 +214,7 @@ public class NameNode {
     }
   }
     
+  public static final int DEFAULT_PORT = 8020;
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
   public static final HAState ACTIVE_STATE = new ActiveState();
@@ -269,7 +270,7 @@ public class NameNode {
   }
   
   public static InetSocketAddress getAddress(String address) {
-    return NetUtils.createSocketAddr(address, DFS_NAMENODE_RPC_PORT_DEFAULT);
+    return NetUtils.createSocketAddr(address, DEFAULT_PORT);
   }
   
   /**
@@ -328,8 +329,7 @@ public class NameNode {
 
   public static URI getUri(InetSocketAddress namenode) {
     int port = namenode.getPort();
-    String portString = (port == DFS_NAMENODE_RPC_PORT_DEFAULT) ?
-        "" : (":"+port);
+    String portString = port == DEFAULT_PORT ? "" : (":"+port);
     return URI.create(HdfsConstants.HDFS_URI_SCHEME + "://" 
         + namenode.getHostName()+portString);
   }

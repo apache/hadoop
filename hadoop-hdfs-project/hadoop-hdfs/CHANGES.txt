@@ -250,9 +250,6 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3572. Cleanup code which inits SPNEGO in HttpServer (todd)
 
-    HDFS-3576. Move the constant NameNode.DEFAULT_PORT to
-    DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT.  (Brandon Li via szetszwo)
-
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

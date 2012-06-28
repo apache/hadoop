@@ -77,7 +77,7 @@ public class NNHAServiceTarget extends HAServiceTarget {
           "Unable to determine service address for namenode '" + nnId + "'");
     }
     this.addr = NetUtils.createSocketAddr(serviceAddr,
-        DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
+        NameNode.DEFAULT_PORT);
 
     this.autoFailoverEnabled = targetConf.getBoolean(
         DFSConfigKeys.DFS_HA_AUTO_FAILOVER_ENABLED_KEY,

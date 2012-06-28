@@ -39,7 +39,6 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -510,10 +509,10 @@ public class TestFileSystem extends TestCase {
     
     {
       try {
-        runTestCache(DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
+        runTestCache(NameNode.DEFAULT_PORT);
       } catch(java.net.BindException be) {
-        LOG.warn("Cannot test NameNode's default RPC port (="
-            + DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT + ")", be);
+        LOG.warn("Cannot test NameNode.DEFAULT_PORT (="
+            + NameNode.DEFAULT_PORT + ")", be);
       }
 
       runTestCache(0);
@@ -536,11 +535,11 @@ public class TestFileSystem extends TestCase {
         }
       }
       
-      if (port == DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT) {
+      if (port == NameNode.DEFAULT_PORT) {
         //test explicit default port
-        URI uri2 = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(),
-            DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT, uri.getPath(),
-            uri.getQuery(), uri.getFragment());
+        URI uri2 = new URI(uri.getScheme(), uri.getUserInfo(),
+            uri.getHost(), NameNode.DEFAULT_PORT, uri.getPath(),
+            uri.getQuery(), uri.getFragment());  
         LOG.info("uri2=" + uri2);
         FileSystem fs = FileSystem.get(uri2, conf);
         checkPath(cluster, fs);
