@@ -71,6 +71,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     MAPREDUCE-4372. Deadlock in Resource Manager (Devaraj K via bobby)
 
+    MAPREDUCE-4376. TestClusterMRNotification times out (Kihwal Lee via bobby)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
