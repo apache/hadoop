@@ -1097,10 +1097,17 @@ public class RMContainerAllocator extends RMContainerRequestor
     }
 
     ContainerId get(TaskAttemptId tId) {
+      Container taskContainer;
       if (tId.getTaskId().getTaskType().equals(TaskType.MAP)) {
-        return maps.get(tId).getId();
+        taskContainer = maps.get(tId);
       } else {
-        return reduces.get(tId).getId();
+        taskContainer = reduces.get(tId);
+      }
+
+      if (taskContainer == null) {
+        return null;
+      } else {
+        return taskContainer.getId();
       }
     }
   }
