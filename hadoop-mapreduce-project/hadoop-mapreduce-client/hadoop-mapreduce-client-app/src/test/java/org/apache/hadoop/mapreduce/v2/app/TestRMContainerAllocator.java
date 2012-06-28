@@ -18,15 +18,24 @@
 
 package org.apache.hadoop.mapreduce.v2.app;
 
+import static org.mockito.Matchers.anyFloat;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.isA;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import junit.framework.Assert;
@@ -46,9 +55,11 @@ import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobUpdatedNodesEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
@@ -63,9 +74,10 @@ import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
+import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.Event;
@@ -74,13 +86,11 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
-import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Test;
@@ -426,29 +436,21 @@ public class TestRMContainerAllocator {
 
     // Finish off 1 map.
     Iterator<Task> it = job.getTasks().values().iterator();
-    finishNextNTasks(mrApp, it, 1);
+    finishNextNTasks(rmDispatcher, amNodeManager, mrApp, it, 1);
     allocator.schedule();
     rmDispatcher.await();
     Assert.assertEquals(0.095f, job.getProgress(), 0.001f);
     Assert.assertEquals(0.095f, rmApp.getProgress(), 0.001f);
 
     // Finish off 7 more so that map-progress is 80%
-    finishNextNTasks(mrApp, it, 7);
+    finishNextNTasks(rmDispatcher, amNodeManager, mrApp, it, 7);
     allocator.schedule();
     rmDispatcher.await();
     Assert.assertEquals(0.41f, job.getProgress(), 0.001f);
     Assert.assertEquals(0.41f, rmApp.getProgress(), 0.001f);
 
     // Finish off the 2 remaining maps
-    finishNextNTasks(mrApp, it, 2);
-
-    // Wait till all reduce-attempts request for containers
-    for (Task t : job.getTasks().values()) {
-      if (t.getType() == TaskType.REDUCE) {
-        mrApp.waitForState(t.getAttempts().values().iterator().next(),
-          TaskAttemptState.UNASSIGNED);
-      }
-    }
+    finishNextNTasks(rmDispatcher, amNodeManager, mrApp, it, 2);
 
     allocator.schedule();
     rmDispatcher.await();
@@ -465,7 +467,7 @@ public class TestRMContainerAllocator {
     }
 
     // Finish off 2 reduces
-    finishNextNTasks(mrApp, it, 2);
+    finishNextNTasks(rmDispatcher, amNodeManager, mrApp, it, 2);
 
     allocator.schedule();
     rmDispatcher.await();
@@ -473,7 +475,7 @@ public class TestRMContainerAllocator {
     Assert.assertEquals(0.59f, rmApp.getProgress(), 0.001f);
 
     // Finish off the remaining 8 reduces.
-    finishNextNTasks(mrApp, it, 8);
+    finishNextNTasks(rmDispatcher, amNodeManager, mrApp, it, 8);
     allocator.schedule();
     rmDispatcher.await();
     // Remaining is JobCleanup
@@ -481,19 +483,28 @@ public class TestRMContainerAllocator {
     Assert.assertEquals(0.95f, rmApp.getProgress(), 0.001f);
   }
 
-  private void finishNextNTasks(MRApp mrApp, Iterator<Task> it, int nextN)
-      throws Exception {
+  private void finishNextNTasks(DrainDispatcher rmDispatcher, MockNM node,
+      MRApp mrApp, Iterator<Task> it, int nextN) throws Exception {
     Task task;
     for (int i=0; i<nextN; i++) {
       task = it.next();
-      finishTask(mrApp, task);
+      finishTask(rmDispatcher, node, mrApp, task);
     }
   }
 
-  private void finishTask(MRApp mrApp, Task task) throws Exception {
+  private void finishTask(DrainDispatcher rmDispatcher, MockNM node,
+      MRApp mrApp, Task task) throws Exception {
     TaskAttempt attempt = task.getAttempts().values().iterator().next();
+    List<ContainerStatus> contStatus = new ArrayList<ContainerStatus>(1);
+    contStatus.add(BuilderUtils.newContainerStatus(attempt.getAssignedContainerID(),
+        ContainerState.COMPLETE, "", 0));
+    Map<ApplicationId,List<ContainerStatus>> statusUpdate =
+        new HashMap<ApplicationId,List<ContainerStatus>>(1);
+    statusUpdate.put(mrApp.getAppID(), contStatus);
+    node.nodeHeartbeat(statusUpdate, true);
+    rmDispatcher.await();
     mrApp.getContext().getEventHandler().handle(
-        new TaskAttemptEvent(attempt.getID(), TaskAttemptEventType.TA_DONE));
+          new TaskAttemptEvent(attempt.getID(), TaskAttemptEventType.TA_DONE));
     mrApp.waitForState(task, TaskState.SUCCEEDED);
   }
 
@@ -574,25 +585,107 @@ public class TestRMContainerAllocator {
     Iterator<Task> it = job.getTasks().values().iterator();
 
     // Finish off 1 map so that map-progress is 10%
-    finishNextNTasks(mrApp, it, 1);
+    finishNextNTasks(rmDispatcher, amNodeManager, mrApp, it, 1);
     allocator.schedule();
     rmDispatcher.await();
     Assert.assertEquals(0.14f, job.getProgress(), 0.001f);
     Assert.assertEquals(0.14f, rmApp.getProgress(), 0.001f);
 
     // Finish off 5 more map so that map-progress is 60%
-    finishNextNTasks(mrApp, it, 5);
+    finishNextNTasks(rmDispatcher, amNodeManager, mrApp, it, 5);
     allocator.schedule();
     rmDispatcher.await();
     Assert.assertEquals(0.59f, job.getProgress(), 0.001f);
     Assert.assertEquals(0.59f, rmApp.getProgress(), 0.001f);
 
     // Finish off remaining map so that map-progress is 100%
-    finishNextNTasks(mrApp, it, 4);
+    finishNextNTasks(rmDispatcher, amNodeManager, mrApp, it, 4);
     allocator.schedule();
     rmDispatcher.await();
     Assert.assertEquals(0.95f, job.getProgress(), 0.001f);
     Assert.assertEquals(0.95f, rmApp.getProgress(), 0.001f);
+  }
+  
+  @Test
+  public void testUpdatedNodes() throws Exception {
+    Configuration conf = new Configuration();
+    MyResourceManager rm = new MyResourceManager(conf);
+    rm.start();
+    DrainDispatcher dispatcher = (DrainDispatcher) rm.getRMContext()
+        .getDispatcher();
+
+    // Submit the application
+    RMApp app = rm.submitApp(1024);
+    dispatcher.await();
+    MockNM amNodeManager = rm.registerNode("amNM:1234", 2048);
+    amNodeManager.nodeHeartbeat(true);
+    dispatcher.await();
+
+    ApplicationAttemptId appAttemptId = app.getCurrentAppAttempt()
+        .getAppAttemptId();
+    rm.sendAMLaunched(appAttemptId);
+    dispatcher.await();
+    
+    JobId jobId = MRBuilderUtils.newJobId(appAttemptId.getApplicationId(), 0);
+    Job mockJob = mock(Job.class);
+    MyContainerAllocator allocator = new MyContainerAllocator(rm, conf,
+        appAttemptId, mockJob);
+
+    // add resources to scheduler
+    MockNM nm1 = rm.registerNode("h1:1234", 10240);
+    MockNM nm2 = rm.registerNode("h2:1234", 10240);
+    dispatcher.await();
+
+    // create the map container request
+    ContainerRequestEvent event = createReq(jobId, 1, 1024,
+        new String[] { "h1" });
+    allocator.sendRequest(event);
+    TaskAttemptId attemptId = event.getAttemptID();
+    
+    TaskAttempt mockTaskAttempt = mock(TaskAttempt.class);
+    when(mockTaskAttempt.getNodeId()).thenReturn(nm1.getNodeId());
+    Task mockTask = mock(Task.class);
+    when(mockTask.getAttempt(attemptId)).thenReturn(mockTaskAttempt);
+    when(mockJob.getTask(attemptId.getTaskId())).thenReturn(mockTask);
+
+    // this tells the scheduler about the requests
+    List<TaskAttemptContainerAssignedEvent> assigned = allocator.schedule();
+    dispatcher.await();
+
+    nm1.nodeHeartbeat(true);
+    dispatcher.await();
+    // get the assignment
+    assigned = allocator.schedule();
+    dispatcher.await();
+    Assert.assertEquals(1, assigned.size());
+    Assert.assertEquals(nm1.getNodeId(), assigned.get(0).getContainer().getNodeId());
+    // no updated nodes reported
+    Assert.assertTrue(allocator.getJobUpdatedNodeEvents().isEmpty());
+    Assert.assertTrue(allocator.getTaskAttemptKillEvents().isEmpty());
+    
+    // mark nodes bad
+    nm1.nodeHeartbeat(false);
+    nm2.nodeHeartbeat(false);
+    dispatcher.await();
+    
+    // schedule response returns updated nodes
+    assigned = allocator.schedule();
+    dispatcher.await();
+    Assert.assertEquals(0, assigned.size());
+    // updated nodes are reported
+    Assert.assertEquals(1, allocator.getJobUpdatedNodeEvents().size());
+    Assert.assertEquals(1, allocator.getTaskAttemptKillEvents().size());
+    Assert.assertEquals(2, allocator.getJobUpdatedNodeEvents().get(0).getUpdatedNodes().size());
+    Assert.assertEquals(attemptId, allocator.getTaskAttemptKillEvents().get(0).getTaskAttemptID());
+    allocator.getJobUpdatedNodeEvents().clear();
+    allocator.getTaskAttemptKillEvents().clear();
+    
+    assigned = allocator.schedule();
+    dispatcher.await();
+    Assert.assertEquals(0, assigned.size());
+    // no updated nodes reported
+    Assert.assertTrue(allocator.getJobUpdatedNodeEvents().isEmpty());
+    Assert.assertTrue(allocator.getTaskAttemptKillEvents().isEmpty());
   }
 
   @Test
@@ -1100,7 +1193,10 @@ public class TestRMContainerAllocator {
   private static class MyContainerAllocator extends RMContainerAllocator {
     static final List<TaskAttemptContainerAssignedEvent> events
       = new ArrayList<TaskAttemptContainerAssignedEvent>();
-
+    static final List<TaskAttemptKillEvent> taskAttemptKillEvents 
+      = new ArrayList<TaskAttemptKillEvent>();
+    static final List<JobUpdatedNodesEvent> jobUpdatedNodeEvents 
+    = new ArrayList<JobUpdatedNodesEvent>();
     private MyResourceManager rm;
 
     private static AppContext createAppContext(
@@ -1119,6 +1215,10 @@ public class TestRMContainerAllocator {
           // Only capture interesting events.
           if (event instanceof TaskAttemptContainerAssignedEvent) {
             events.add((TaskAttemptContainerAssignedEvent) event);
+          } else if (event instanceof TaskAttemptKillEvent) {
+            taskAttemptKillEvents.add((TaskAttemptKillEvent)event);
+          } else if (event instanceof JobUpdatedNodesEvent) {
+            jobUpdatedNodeEvents.add((JobUpdatedNodesEvent)event);
           }
         }
       });
@@ -1202,6 +1302,14 @@ public class TestRMContainerAllocator {
       events.clear();
       return result;
     }
+    
+    List<TaskAttemptKillEvent> getTaskAttemptKillEvents() {
+      return taskAttemptKillEvents;
+    }
+    
+    List<JobUpdatedNodesEvent> getJobUpdatedNodeEvents() {
+      return jobUpdatedNodeEvents;
+    }
 
     @Override
     protected void startAllocatorThread() {
@@ -1239,6 +1347,18 @@ public class TestRMContainerAllocator {
         maxReduceRampupLimit, reduceSlowStart);
     verify(allocator, never()).setIsReduceStarted(true);
     
+    // verify slow-start still in effect when no more maps need to
+    // be scheduled but some have yet to complete
+    allocator.scheduleReduces(
+        totalMaps, succeededMaps,
+        0, scheduledReduces,
+        totalMaps - succeededMaps, assignedReduces,
+        mapResourceReqt, reduceResourceReqt,
+        numPendingReduces,
+        maxReduceRampupLimit, reduceSlowStart);
+    verify(allocator, never()).setIsReduceStarted(true);
+    verify(allocator, never()).scheduleAllReduces();
+
     succeededMaps = 3;
     allocator.scheduleReduces(
         totalMaps, succeededMaps, 

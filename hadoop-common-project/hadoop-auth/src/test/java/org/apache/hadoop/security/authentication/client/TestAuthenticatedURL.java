@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import junit.framework.Assert;
 import junit.framework.TestCase;
 import org.mockito.Mockito;
 
@@ -100,11 +101,14 @@ public class TestAuthenticatedURL extends TestCase {
     headers.put("Set-Cookie", cookies);
     Mockito.when(conn.getHeaderFields()).thenReturn(headers);
 
+    AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+    token.set("bar");
     try {
-      AuthenticatedURL.extractToken(conn, new AuthenticatedURL.Token());
+      AuthenticatedURL.extractToken(conn, token);
       fail();
     } catch (AuthenticationException ex) {
       // Expected
+      Assert.assertFalse(token.isSet());
     } catch (Exception ex) {
       fail();
     }

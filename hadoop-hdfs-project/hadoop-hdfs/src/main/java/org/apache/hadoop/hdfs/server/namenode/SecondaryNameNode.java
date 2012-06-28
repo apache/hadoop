@@ -25,10 +25,8 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -68,7 +66,6 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
 import org.apache.hadoop.util.Daemon;
@@ -239,20 +236,8 @@ public class SecondaryNameNode implements Runnable {
                                 new AccessControlList(conf.get(DFS_ADMIN, " "))) {
       {
         if (UserGroupInformation.isSecurityEnabled()) {
-          Map<String, String> params = new HashMap<String, String>();
-          String principalInConf = conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_INTERNAL_SPENGO_USER_NAME_KEY);
-          if (principalInConf != null && !principalInConf.isEmpty()) {
-            params.put("kerberos.principal",
-                       SecurityUtil.getServerPrincipal(principalInConf, infoSocAddr.getHostName()));
-          }
-          String httpKeytab = conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
-          if (httpKeytab != null && !httpKeytab.isEmpty()) {
-            params.put("kerberos.keytab", httpKeytab);
-          }
-          params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
-
-          defineFilter(webAppContext, SPNEGO_FILTER, AuthenticationFilter.class.getName(),
-                       params, null);
+          initSpnego(conf, DFSConfigKeys.DFS_SECONDARY_NAMENODE_INTERNAL_SPNEGO_USER_NAME_KEY,
+              DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY);
         }
       }
     };

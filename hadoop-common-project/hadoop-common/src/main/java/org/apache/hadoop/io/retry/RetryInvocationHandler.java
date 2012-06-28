@@ -33,7 +33,7 @@ import org.apache.hadoop.ipc.RpcInvocationHandler;
 
 class RetryInvocationHandler implements RpcInvocationHandler {
   public static final Log LOG = LogFactory.getLog(RetryInvocationHandler.class);
-  private FailoverProxyProvider proxyProvider;
+  private final FailoverProxyProvider proxyProvider;
 
   /**
    * The number of times the associated proxyProvider has ever been failed over.
@@ -41,26 +41,25 @@ class RetryInvocationHandler implements RpcInvocationHandler {
   private long proxyProviderFailoverCount = 0;
   private volatile boolean hasMadeASuccessfulCall = false;
   
-  private RetryPolicy defaultPolicy;
-  private Map<String,RetryPolicy> methodNameToPolicyMap;
+  private final RetryPolicy defaultPolicy;
+  private final Map<String,RetryPolicy> methodNameToPolicyMap;
   private Object currentProxy;
   
   public RetryInvocationHandler(FailoverProxyProvider proxyProvider,
       RetryPolicy retryPolicy) {
-    this.proxyProvider = proxyProvider;
-    this.defaultPolicy = retryPolicy;
-    this.methodNameToPolicyMap = Collections.emptyMap();
-    this.currentProxy = proxyProvider.getProxy();
+    this(proxyProvider, retryPolicy, Collections.<String, RetryPolicy>emptyMap());
   }
-  
+
   public RetryInvocationHandler(FailoverProxyProvider proxyProvider,
+      RetryPolicy defaultPolicy,
       Map<String, RetryPolicy> methodNameToPolicyMap) {
     this.proxyProvider = proxyProvider;
-    this.defaultPolicy = RetryPolicies.TRY_ONCE_THEN_FAIL;
+    this.defaultPolicy = defaultPolicy;
     this.methodNameToPolicyMap = methodNameToPolicyMap;
     this.currentProxy = proxyProvider.getProxy();
   }
 
+  @Override
   public Object invoke(Object proxy, Method method, Object[] args)
     throws Throwable {
     RetryPolicy policy = methodNameToPolicyMap.get(method.getName());

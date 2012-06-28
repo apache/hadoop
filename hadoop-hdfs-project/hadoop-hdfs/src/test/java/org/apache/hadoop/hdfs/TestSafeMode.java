@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -31,9 +32,11 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.junit.Assert.*;
@@ -371,5 +374,77 @@ public class TestSafeMode {
     // Exit safemode.
     dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
     assertFalse("State was expected to be out of safemode.", dfs.isInSafeMode());
+  }
+  
+  @Test
+  public void testSafeModeWhenZeroBlockLocations() throws IOException {
+
+    try {
+      Path file1 = new Path("/tmp/testManualSafeMode/file1");
+      Path file2 = new Path("/tmp/testManualSafeMode/file2");
+      
+      System.out.println("Created file1 and file2.");
+      
+      // create two files with one block each.
+      DFSTestUtil.createFile(fs, file1, 1000, (short)1, 0);
+      DFSTestUtil.createFile(fs, file2, 2000, (short)1, 0);
+      checkGetBlockLocationsWorks(fs, file1);
+      
+      NameNode namenode = cluster.getNameNode();
+
+      // manually set safemode.
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      assertTrue("should still be in SafeMode", namenode.isInSafeMode());
+      // getBlock locations should still work since block locations exists
+      checkGetBlockLocationsWorks(fs, file1);
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      assertFalse("should not be in SafeMode", namenode.isInSafeMode());
+      
+      
+      // Now 2nd part of the tests where there aren't block locations
+      cluster.shutdownDataNodes();
+      cluster.shutdownNameNode(0);
+      
+      // now bring up just the NameNode.
+      cluster.restartNameNode();
+      cluster.waitActive();
+      
+      System.out.println("Restarted cluster with just the NameNode");
+      
+      namenode = cluster.getNameNode();
+      
+      assertTrue("No datanode is started. Should be in SafeMode", 
+                 namenode.isInSafeMode());
+      FileStatus stat = fs.getFileStatus(file1);
+      try {
+        fs.getFileBlockLocations(stat, 0, 1000);
+        assertTrue("Should have got safemode exception", false);
+      } catch (SafeModeException e) {
+        // as expected 
+      } catch (RemoteException re) {
+        if (!re.getClassName().equals(SafeModeException.class.getName()))
+          assertTrue("Should have got safemode exception", false);   
+      }
+
+
+      dfs.setSafeMode(SafeModeAction.SAFEMODE_LEAVE);      
+      assertFalse("Should not be in safemode", namenode.isInSafeMode());
+      checkGetBlockLocationsWorks(fs, file1);
+
+    } finally {
+      if(fs != null) fs.close();
+      if(cluster!= null) cluster.shutdown();
+    }
+  }
+  
+  void checkGetBlockLocationsWorks(FileSystem fs, Path fileName) throws IOException {
+    FileStatus stat = fs.getFileStatus(fileName);
+    try {  
+      fs.getFileBlockLocations(stat, 0, 1000);
+    } catch (SafeModeException e) {
+      assertTrue("Should have not got safemode exception", false);
+    } catch (RemoteException re) {
+      assertTrue("Should have not got safemode exception", false);   
+    }    
   }
 }

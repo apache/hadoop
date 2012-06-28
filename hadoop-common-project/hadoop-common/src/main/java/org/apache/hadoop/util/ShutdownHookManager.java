@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The <code>ShutdownHookManager</code> enables running shutdownHook
- * in a determistic order, higher priority first.
+ * in a deterministic order, higher priority first.
  * <p/>
  * The JVM runs ShutdownHooks in a non-deterministic order or in parallel.
  * This class registers a single JVM shutdownHook and run all the
@@ -169,13 +169,22 @@ public class ShutdownHookManager {
   }
 
   /**
-   * Indicates if a shutdownHook is registered or nt.
+   * Indicates if a shutdownHook is registered or not.
    *
    * @param shutdownHook shutdownHook to check if registered.
    * @return TRUE/FALSE depending if the shutdownHook is is registered.
    */
   public boolean hasShutdownHook(Runnable shutdownHook) {
     return hooks.contains(new HookEntry(shutdownHook, 0));
+  }
+  
+  /**
+   * Indicates if shutdown is in progress or not.
+   * 
+   * @return TRUE if the shutdown is in progress, otherwise FALSE.
+   */
+  public boolean isShutdownInProgress() {
+    return shutdownInProgress.get();
   }
 
 }

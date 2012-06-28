@@ -121,7 +121,7 @@
          <configuration>
           <archive>
            <manifest>
-            <mainClass>org.apache.hadoop.tools.HadoopArchives</mainClass>
+            <mainClass>org.apache.hadoop.mapred.gridmix.Gridmix</mainClass>
            </manifest>
          </archive>
         </configuration>

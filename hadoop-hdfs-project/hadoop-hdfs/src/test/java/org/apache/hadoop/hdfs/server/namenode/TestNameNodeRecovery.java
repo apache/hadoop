@@ -343,7 +343,7 @@ public class TestNameNodeRecovery {
     StorageDirectory sd = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .build();
+          .enableManagedDfsDirsRedundancy(false).build();
       cluster.waitActive();
       if (!finalize) {
         // Normally, the in-progress edit log would be finalized by
@@ -379,7 +379,7 @@ public class TestNameNodeRecovery {
     try {
       LOG.debug("trying to start normally (this should fail)...");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .format(false).build();
+          .enableManagedDfsDirsRedundancy(false).format(false).build();
       cluster.waitActive();
       cluster.shutdown();
       if (needRecovery) {
@@ -404,7 +404,8 @@ public class TestNameNodeRecovery {
     try {
       LOG.debug("running recovery...");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .format(false).startupOption(recoverStartOpt).build();
+          .enableManagedDfsDirsRedundancy(false).format(false)
+          .startupOption(recoverStartOpt).build();
     } catch (IOException e) {
       fail("caught IOException while trying to recover. " +
           "message was " + e.getMessage() +
@@ -420,7 +421,7 @@ public class TestNameNodeRecovery {
     try {
       LOG.debug("starting cluster normally after recovery...");
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-          .format(false).build();
+          .enableManagedDfsDirsRedundancy(false).format(false).build();
       LOG.debug("successfully recovered the " + corruptor.getName() +
           " corrupted edit log");
       cluster.waitActive();

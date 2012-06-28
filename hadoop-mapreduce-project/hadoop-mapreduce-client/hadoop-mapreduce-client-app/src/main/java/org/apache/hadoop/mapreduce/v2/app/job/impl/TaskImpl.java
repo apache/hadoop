@@ -191,13 +191,14 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     .addTransition(TaskState.SUCCEEDED, //only possible for map tasks
         EnumSet.of(TaskState.SCHEDULED, TaskState.FAILED),
         TaskEventType.T_ATTEMPT_FAILED, new MapRetroactiveFailureTransition())
+    .addTransition(TaskState.SUCCEEDED, //only possible for map tasks
+        EnumSet.of(TaskState.SCHEDULED, TaskState.SUCCEEDED),
+        TaskEventType.T_ATTEMPT_KILLED, new MapRetroactiveKilledTransition())
     // Ignore-able transitions.
     .addTransition(
         TaskState.SUCCEEDED, TaskState.SUCCEEDED,
-        EnumSet.of(TaskEventType.T_KILL,
-            TaskEventType.T_ADD_SPEC_ATTEMPT,
-            TaskEventType.T_ATTEMPT_LAUNCHED,
-            TaskEventType.T_ATTEMPT_KILLED))
+        EnumSet.of(TaskEventType.T_ADD_SPEC_ATTEMPT,
+            TaskEventType.T_ATTEMPT_LAUNCHED))
 
     // Transitions from FAILED state        
     .addTransition(TaskState.FAILED, TaskState.FAILED,
@@ -629,7 +630,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
   // always called inside a transition, in turn inside the Write Lock
   private void handleTaskAttemptCompletion(TaskAttemptId attemptId,
       TaskAttemptCompletionEventStatus status) {
-    finishedAttempts++;
     TaskAttempt attempt = attempts.get(attemptId);
     //raise the completion event only if the container is assigned
     // to nextAttemptNumber
@@ -680,6 +680,11 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
         taskState.toString(),
         taId == null ? null : TypeConverter.fromYarn(taId));
     return taskFailedEvent;
+  }
+  
+  private static void unSucceed(TaskImpl task) {
+    task.commitAttempt = null;
+    task.successfulAttempt = null;
   }
 
   /**
@@ -755,6 +760,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.handleTaskAttemptCompletion(
           ((TaskTAttemptEvent) event).getTaskAttemptID(), 
           TaskAttemptCompletionEventStatus.SUCCEEDED);
+      task.finishedAttempts++;
       --task.numberUncompletedAttempts;
       task.successfulAttempt = ((TaskTAttemptEvent) event).getTaskAttemptID();
       task.eventHandler.handle(new JobTaskEvent(
@@ -790,6 +796,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.handleTaskAttemptCompletion(
           ((TaskTAttemptEvent) event).getTaskAttemptID(), 
           TaskAttemptCompletionEventStatus.KILLED);
+      task.finishedAttempts++;
       --task.numberUncompletedAttempts;
       if (task.successfulAttempt == null) {
         task.addAndScheduleAttempt();
@@ -808,6 +815,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       task.handleTaskAttemptCompletion(
           ((TaskTAttemptEvent) event).getTaskAttemptID(), 
           TaskAttemptCompletionEventStatus.KILLED);
+      task.finishedAttempts++;
       // check whether all attempts are finished
       if (task.finishedAttempts == task.attempts.size()) {
         if (task.historyTaskStartGenerated) {
@@ -845,6 +853,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
             attempt.getAssignedContainerMgrAddress()));
       }
       
+      task.finishedAttempts++;
       if (task.failedAttempts < task.maxAttempts) {
         task.handleTaskAttemptCompletion(
             ((TaskTAttemptEvent) event).getTaskAttemptID(), 
@@ -880,12 +889,6 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     protected TaskState getDefaultState(Task task) {
       return task.getState();
     }
-
-    protected void unSucceed(TaskImpl task) {
-      ++task.numberUncompletedAttempts;
-      task.commitAttempt = null;
-      task.successfulAttempt = null;
-    }
   }
 
   private static class MapRetroactiveFailureTransition
@@ -908,12 +911,53 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       //  fails, we have to let AttemptFailedTransition.transition
       //  believe that there's no redundancy.
       unSucceed(task);
+      // fake increase in Uncomplete attempts for super.transition
+      ++task.numberUncompletedAttempts;
       return super.transition(task, event);
     }
 
     @Override
     protected TaskState getDefaultState(Task task) {
       return TaskState.SCHEDULED;
+    }
+  }
+
+  private static class MapRetroactiveKilledTransition implements
+    MultipleArcTransition<TaskImpl, TaskEvent, TaskState> {
+
+    @Override
+    public TaskState transition(TaskImpl task, TaskEvent event) {
+      // verify that this occurs only for map task
+      // TODO: consider moving it to MapTaskImpl
+      if (!TaskType.MAP.equals(task.getType())) {
+        LOG.error("Unexpected event for REDUCE task " + event.getType());
+        task.internalError(event.getType());
+      }
+
+      TaskTAttemptEvent attemptEvent = (TaskTAttemptEvent) event;
+      TaskAttemptId attemptId = attemptEvent.getTaskAttemptID();
+      if(task.successfulAttempt == attemptId) {
+        // successful attempt is now killed. reschedule
+        // tell the job about the rescheduling
+        unSucceed(task);
+        task.handleTaskAttemptCompletion(
+            attemptId, 
+            TaskAttemptCompletionEventStatus.KILLED);
+        task.eventHandler.handle(new JobMapTaskRescheduledEvent(task.taskId));
+        // typically we are here because this map task was run on a bad node and 
+        // we want to reschedule it on a different node.
+        // Depending on whether there are previous failed attempts or not this 
+        // can SCHEDULE or RESCHEDULE the container allocate request. If this
+        // SCHEDULE's then the dataLocal hosts of this taskAttempt will be used
+        // from the map splitInfo. So the bad node might be sent as a location 
+        // to the RM. But the RM would ignore that just like it would ignore 
+        // currently pending container requests affinitized to bad nodes.
+        task.addAndScheduleAttempt();
+        return TaskState.SCHEDULED;
+      } else {
+        // nothing to do
+        return TaskState.SUCCEEDED;
+      }
     }
   }
 
@@ -966,6 +1010,7 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
     public void transition(TaskImpl task, TaskEvent event) {
       task.metrics.launchedTask(task);
       task.metrics.runningTask(task);
+      
     }
   }
 }

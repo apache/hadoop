@@ -44,7 +44,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManager;
@@ -635,12 +634,10 @@ public class ApplicationMaster {
       ctx.setContainerId(container.getId());
       ctx.setResource(container.getResource());
 
-      try {
-        ctx.setUser(UserGroupInformation.getCurrentUser().getShortUserName());
-      } catch (IOException e) {
-        LOG.info("Getting current user info failed when trying to launch the container"
-            + e.getMessage());
-      }
+      String jobUserName = System.getenv(ApplicationConstants.Environment.USER
+          .name());
+      ctx.setUser(jobUserName);
+      LOG.info("Setting user in ContainerLaunchContext to: " + jobUserName);
 
       // Set the environment 
       ctx.setEnvironment(shellEnv);

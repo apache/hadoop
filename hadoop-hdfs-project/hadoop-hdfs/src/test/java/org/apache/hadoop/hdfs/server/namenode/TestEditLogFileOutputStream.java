@@ -51,6 +51,16 @@ public class TestEditLogFileOutputStream {
   }
 
   @Test
+  public void testConstants() {
+    // Each call to FSEditLogOp#Reader#readOp can read at most MAX_OP_SIZE bytes
+    // before getting an exception.  So we don't want to preallocate a longer
+    // region than MAX_OP_SIZE, because then we'd get an IOException when reading
+    // through the padding at the end of the file.
+    assertTrue(EditLogFileOutputStream.PREALLOCATION_LENGTH <
+        FSEditLogOp.MAX_OP_SIZE);
+  }
+
+  @Test
   public void testPreallocation() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)

@@ -13,11 +13,6 @@ Trunk (unreleased changes)
 
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
-    HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
-
-    HDFS-3042. Automatic failover support for NameNode HA (todd)
-    (see dedicated section below for subtask breakdown)
-
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -90,13 +85,19 @@ Trunk (unreleased changes)
     HDFS-3476. Correct the default used in TestDFSClientRetries.busyTest()
     after HDFS-3462 (harsh)
 
+    HDFS-3040. TestMulitipleNNDataBlockScanner is misspelled. (Madhukara Phatak
+    via atm)
+
+    HDFS-3049. During the normal NN startup process, fall back on a different
+    edit log if we see one that is corrupt (Colin Patrick McCabe via todd)
+
+    HDFS-3478. Test quotas with Long.Max_Value. (Sujay Rau via eli)
+
+    HDFS-3498. Support replica removal in BlockPlacementPolicy and make
+    BlockPlacementPolicyDefault extensible for reusing code in subclasses.
+    (Junping Du via szetszwo)
+
   OPTIMIZATIONS
-
-    HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
-    (Henry Robinson via todd)
-
-    HDFS-3110. Use directRead API to reduce the number of buffer copies in
-    libhdfs (Henry Robinson via todd)
 
   BUG FIXES
 
@@ -145,11 +146,6 @@ Trunk (unreleased changes)
     factor is reduced after sync follwed by closing that file. (Ashish Singhi 
     via umamahesh)
 
-    HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option.
-    (Henry Robinson via atm)
-
-    HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
-
     HDFS-3265. PowerPc Build error. (Kumar Ravi via mattf)
 
     HDFS-2312. FSNamesystem javadoc incorrectly says its for DNs. (harsh)
@@ -162,27 +158,23 @@ Trunk (unreleased changes)
     HDFS-3462. TestDFSClientRetries.busyTest() should restore default
     xceiver count in the config. (Madhukara Phatak via harsh)
 
-  BREAKDOWN OF HDFS-3042 SUBTASKS
+    HDFS-3550. Fix raid javadoc warnings. (Jason Lowe via daryn)
 
-    HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
-    
-    HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
-    
-    HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
-    
-    HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
-    
-    HDFS-3159. Document NN auto-failover setup and configuration (todd)
-    
-    HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
-    
-    HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
+    HDFS-3549. Fix dist tar build fails in hadoop-hdfs-raid project. (Jason Lowe via daryn)
 
-Release 2.0.1-alpha - UNRELEASED
-  
+Branch-2 ( Unreleased changes )
+ 
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+
+    HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
+
+    HDFS-3042. Automatic failover support for NameNode HA (todd)
+    (see dedicated section below for breakdown of subtasks)
+
+    HDFS-3518. Add a utility method HdfsUtils.isHealthy(uri) for checking if
+    the given HDFS is healthy. (szetszwo)
 
   IMPROVEMENTS
 
@@ -238,10 +230,36 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-1013. Miscellaneous improvements to HTML markup for web UIs
     (Eugene Koontz via todd)
 
+    HDFS-3052. Change INodeFile and INodeFileUnderConstruction to package
+    private.  (szetszwo)
+
+    HDFS-3520. Add transfer rate logging to TransferFsImage. (eli)
+
+    HDFS-3504. Support configurable retry policy in DFSClient for RPC
+    connections and RPC calls, and add MultipleLinearRandomRetry, a new retry
+    policy.  (szetszwo)
+
+    HDFS-3372. offlineEditsViewer should be able to read a binary
+    edits file with recovery mode. (Colin Patrick McCabe via eli)
+
+    HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
+
+    HDFS-3535. Audit logging should log denied accesses. (Andy Isaacson via eli)
+
+    HDFS-3481. Refactor HttpFS handling of JAX-RS query string parameters (tucu)
+
+    HDFS-3572. Cleanup code which inits SPNEGO in HttpServer (todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
     segments. (Colin Patrick McCabe via todd)
+
+    HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream.
+    (Henry Robinson via todd)
+
+    HDFS-3110. Use directRead API to reduce the number of buffer copies in
+    libhdfs (Henry Robinson via todd)
 
   BUG FIXES
 
@@ -306,6 +324,69 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3266. DFSTestUtil#waitCorruptReplicas doesn't sleep between checks.
     (Madhukara Phatak via atm)
+
+    HDFS-3505. DirectoryScanner does not join all threads in shutdown.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3485. DataTransferThrottler will over-throttle when currentTimeMillis
+    jumps (Andy Isaacson via todd)
+
+    HDFS-2914. HA: Standby should not enter safemode when resources are low.
+    (Vinay via atm)
+
+    HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option.
+    (Henry Robinson via atm)
+
+    HDFS-3514. Add missing TestParallelLocalRead. (Henry Robinson via atm)
+
+    HDFS-3243. TestParallelRead timing out on jenkins. (Henry Robinson via todd)
+
+    HDFS-3490. DatanodeWebHdfsMethods throws NullPointerException if
+    NamenodeRpcAddressParam is not set.  (szetszwo)
+
+    HDFS-2797. Fix misuses of InputStream#skip in the edit log code.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3517. TestStartup should bind ephemeral ports. (eli)
+
+    HDFS-3522. If a namenode is in safemode, it should throw SafeModeException
+    when getBlockLocations has zero locations.  (Brandon Li via szetszwo)
+    
+    HDFS-3408. BKJM : Namenode format fails, if there is no BK root. (Rakesh R via umamahesh)
+
+    HDFS-3389. Document the BKJM usage in Namenode HA. (umamahesh and Ivan Kelly via umamahesh)
+
+    HDFS-3531. EditLogFileOutputStream#preallocate should check for
+    incomplete writes. (Colin Patrick McCabe via eli)
+
+    HDFS-766. Error message not clear for set space quota out of boundary
+    values. (Jon Zuanich via atm)
+
+    HDFS-3480. Multiple SLF4J binding warning. (Vinay via eli)
+
+    HDFS-3524. Update TestFileLengthOnClusterRestart for HDFS-3522.  (Brandon
+    Li via szetszwo)
+
+  BREAKDOWN OF HDFS-3042 SUBTASKS
+
+    HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
+    
+    HDFS-3200. Scope all ZKFC configurations by nameservice (todd)
+    
+    HDFS-3223. add zkfc to hadoop-daemon.sh script (todd)
+    
+    HDFS-3261. TestHASafeMode fails on HDFS-3042 branch (todd)
+    
+    HDFS-3159. Document NN auto-failover setup and configuration (todd)
+    
+    HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
+    
+    HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
+
+    HDFS-3428. Move DelegationTokenRenewer to common (tucu)
+
+    HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
+    (szetszwo)
 
 Release 2.0.0-alpha - 05-23-2012
 

@@ -40,6 +40,12 @@ import org.junit.Assert;
 public class WebHdfsTestUtil {
   public static final Log LOG = LogFactory.getLog(WebHdfsTestUtil.class);
 
+  public static Configuration createConf() {
+    final Configuration conf = new Configuration();
+    conf.setBoolean(DFSConfigKeys.DFS_WEBHDFS_ENABLED_KEY, true);
+    return conf;
+  }
+
   public static WebHdfsFileSystem getWebHdfsFileSystem(final Configuration conf
       ) throws IOException, URISyntaxException {
     final String uri = WebHdfsFileSystem.SCHEME  + "://"
@@ -49,7 +55,7 @@ public class WebHdfsTestUtil {
 
   public static WebHdfsFileSystem getWebHdfsFileSystemAs(
       final UserGroupInformation ugi, final Configuration conf
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
     return ugi.doAs(new PrivilegedExceptionAction<WebHdfsFileSystem>() {
       @Override
       public WebHdfsFileSystem run() throws Exception {
@@ -70,7 +76,7 @@ public class WebHdfsTestUtil {
       final int expectedResponseCode) throws IOException {
     conn.connect();
     Assert.assertEquals(expectedResponseCode, conn.getResponseCode());
-    return WebHdfsFileSystem.jsonParse(conn.getInputStream());
+    return WebHdfsFileSystem.jsonParse(conn, false);
   }
   
   public static HttpURLConnection twoStepWrite(HttpURLConnection conn,

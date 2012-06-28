@@ -31,34 +31,34 @@ public class TestCheckUploadContentTypeFilter {
 
   @Test
   public void putUpload() throws Exception {
-    test("PUT", HttpFSFileSystem.PutOpValues.CREATE.toString(), "application/octet-stream", true, false);
+    test("PUT", HttpFSFileSystem.Operation.CREATE.toString(), "application/octet-stream", true, false);
   }
 
   @Test
   public void postUpload() throws Exception {
-    test("POST", HttpFSFileSystem.PostOpValues.APPEND.toString(), "APPLICATION/OCTET-STREAM", true, false);
+    test("POST", HttpFSFileSystem.Operation.APPEND.toString(), "APPLICATION/OCTET-STREAM", true, false);
   }
 
   @Test
   public void putUploadWrong() throws Exception {
-    test("PUT", HttpFSFileSystem.PutOpValues.CREATE.toString(), "plain/text", false, false);
-    test("PUT", HttpFSFileSystem.PutOpValues.CREATE.toString(), "plain/text", true, true);
+    test("PUT", HttpFSFileSystem.Operation.CREATE.toString(), "plain/text", false, false);
+    test("PUT", HttpFSFileSystem.Operation.CREATE.toString(), "plain/text", true, true);
   }
 
   @Test
   public void postUploadWrong() throws Exception {
-    test("POST", HttpFSFileSystem.PostOpValues.APPEND.toString(), "plain/text", false, false);
-    test("POST", HttpFSFileSystem.PostOpValues.APPEND.toString(), "plain/text", true, true);
+    test("POST", HttpFSFileSystem.Operation.APPEND.toString(), "plain/text", false, false);
+    test("POST", HttpFSFileSystem.Operation.APPEND.toString(), "plain/text", true, true);
   }
 
   @Test
   public void getOther() throws Exception {
-    test("GET", HttpFSFileSystem.GetOpValues.GETHOMEDIRECTORY.toString(), "plain/text", false, false);
+    test("GET", HttpFSFileSystem.Operation.GETHOMEDIRECTORY.toString(), "plain/text", false, false);
   }
 
   @Test
   public void putOther() throws Exception {
-    test("PUT", HttpFSFileSystem.PutOpValues.MKDIRS.toString(), "plain/text", false, false);
+    test("PUT", HttpFSFileSystem.Operation.MKDIRS.toString(), "plain/text", false, false);
   }
 
   private void test(String method, String operation, String contentType,
@@ -68,7 +68,7 @@ public class TestCheckUploadContentTypeFilter {
     Mockito.reset(request);
     Mockito.when(request.getMethod()).thenReturn(method);
     Mockito.when(request.getParameter(HttpFSFileSystem.OP_PARAM)).thenReturn(operation);
-    Mockito.when(request.getParameter(HttpFSParams.DataParam.NAME)).
+    Mockito.when(request.getParameter(HttpFSParametersProvider.DataParam.NAME)).
       thenReturn(Boolean.toString(upload));
     Mockito.when(request.getContentType()).thenReturn(contentType);
 

@@ -56,6 +56,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -115,6 +116,11 @@ public class NamenodeWebHdfsMethods {
     return REMOTE_ADDRESS.get();
   }
 
+  /** Set the remote client address. */
+  static void setRemoteAddress(String remoteAddress) {
+    REMOTE_ADDRESS.set(remoteAddress);
+  }
+
   private @Context ServletContext context;
   private @Context HttpServletRequest request;
   private @Context HttpServletResponse response;
@@ -123,7 +129,7 @@ public class NamenodeWebHdfsMethods {
       final DelegationParam delegation,
       final UserParam username, final DoAsParam doAsUser,
       final UriFsPathParam path, final HttpOpParam<?> op,
-      final Param<?, ?>... parameters) throws IOException {
+      final Param<?, ?>... parameters) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("HTTP " + op.getValue().getType() + ": " + op + ", " + path
           + ", ugi=" + ugi + ", " + username + ", " + doAsUser
@@ -134,12 +140,26 @@ public class NamenodeWebHdfsMethods {
     response.setContentType(null);
   }
 
-  private static DatanodeInfo chooseDatanode(final NameNode namenode,
+  static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset,
-      Configuration conf) throws IOException {
-    if (op == GetOpParam.Op.OPEN
+      final long blocksize, Configuration conf) throws IOException {
+    final BlockManager bm = namenode.getNamesystem().getBlockManager();
+
+    if (op == PutOpParam.Op.CREATE) {
+      //choose a datanode near to client 
+      final DatanodeDescriptor clientNode = bm.getDatanodeManager(
+          ).getDatanodeByHost(getRemoteAddress());
+      if (clientNode != null) {
+        final DatanodeDescriptor[] datanodes = bm.getBlockPlacementPolicy(
+            ).chooseTarget(path, 1, clientNode, null, blocksize);
+        if (datanodes.length > 0) {
+          return datanodes[0];
+        }
+      }
+    } else if (op == GetOpParam.Op.OPEN
         || op == GetOpParam.Op.GETFILECHECKSUM
         || op == PostOpParam.Op.APPEND) {
+      //choose a datanode containing a replica 
       final NamenodeProtocols np = namenode.getRpcServer();
       final HdfsFileStatus status = np.getFileInfo(path);
       if (status == null) {
@@ -158,14 +178,13 @@ public class NamenodeWebHdfsMethods {
         final LocatedBlocks locations = np.getBlockLocations(path, offset, 1);
         final int count = locations.locatedBlockCount();
         if (count > 0) {
-          return JspHelper.bestNode(locations.get(0), conf);
+          return JspHelper.bestNode(locations.get(0).getLocations(), false, conf);
         }
       }
     } 
 
-    return (DatanodeDescriptor)namenode.getNamesystem().getBlockManager(
-        ).getDatanodeManager().getNetworkTopology().chooseRandom(
-        NodeBase.ROOT);
+    return (DatanodeDescriptor)bm.getDatanodeManager().getNetworkTopology(
+        ).chooseRandom(NodeBase.ROOT);
   }
 
   private Token<? extends TokenIdentifier> generateDelegationToken(
@@ -183,9 +202,11 @@ public class NamenodeWebHdfsMethods {
       final UserGroupInformation ugi, final DelegationParam delegation,
       final UserParam username, final DoAsParam doAsUser,
       final String path, final HttpOpParam.Op op, final long openOffset,
+      final long blocksize,
       final Param<?, ?>... parameters) throws URISyntaxException, IOException {
     final Configuration conf = (Configuration)context.getAttribute(JspHelper.CURRENT_CONF);
-    final DatanodeInfo dn = chooseDatanode(namenode, path, op, openOffset, conf);
+    final DatanodeInfo dn = chooseDatanode(namenode, path, op, openOffset,
+        blocksize, conf);
 
     final String delegationQuery;
     if (!UserGroupInformation.isSecurityEnabled()) {
@@ -356,7 +377,7 @@ public class NamenodeWebHdfsMethods {
     case CREATE:
     {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
-          fullpath, op.getValue(), -1L,
+          fullpath, op.getValue(), -1L, blockSize.getValue(conf),
           permission, overwrite, bufferSize, replication, blockSize);
       return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     } 
@@ -502,7 +523,7 @@ public class NamenodeWebHdfsMethods {
     case APPEND:
     {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
-          fullpath, op.getValue(), -1L, bufferSize);
+          fullpath, op.getValue(), -1L, -1L, bufferSize);
       return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     default:
@@ -532,7 +553,7 @@ public class NamenodeWebHdfsMethods {
           final RenewerParam renewer,
       @QueryParam(BufferSizeParam.NAME) @DefaultValue(BufferSizeParam.DEFAULT)
           final BufferSizeParam bufferSize
-      ) throws IOException, URISyntaxException, InterruptedException {
+      ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op,
         offset, length, renewer, bufferSize);
   }
@@ -598,7 +619,7 @@ public class NamenodeWebHdfsMethods {
     case OPEN:
     {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
-          fullpath, op.getValue(), offset.getValue(), offset, length, bufferSize);
+          fullpath, op.getValue(), offset.getValue(), -1L, offset, length, bufferSize);
       return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case GET_BLOCK_LOCATIONS:
@@ -634,7 +655,7 @@ public class NamenodeWebHdfsMethods {
     case GETFILECHECKSUM:
     {
       final URI uri = redirectURI(namenode, ugi, delegation, username, doAsUser,
-          fullpath, op.getValue(), -1L);
+          fullpath, op.getValue(), -1L, -1L);
       return Response.temporaryRedirect(uri).type(MediaType.APPLICATION_OCTET_STREAM).build();
     }
     case GETDELEGATIONTOKEN:

@@ -42,9 +42,6 @@ public class NodePage extends NMView {
   protected void commonPreHead(HTML<_> html) {
     super.commonPreHead(html);
 
-    // Node summary page. Helps to refresh automatically.
-    html.meta_http("refresh", "10");
-
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
   }
 

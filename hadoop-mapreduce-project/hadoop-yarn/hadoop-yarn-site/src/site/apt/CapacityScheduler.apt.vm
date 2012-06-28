@@ -197,14 +197,14 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
 || Property                            || Description                         |
 *--------------------------------------+--------------------------------------+
 | <<<yarn.scheduler.capacity.<queue-path>.capacity>>> | |
-| | Queue <capacity> in percentage (%). | 
+| | Queue <capacity> in percentage (%) as a float (e.g. 12.5).| 
 | | The sum of capacities for all queues, at each level, must be equal |
 | | to 100. | 
 | | Applications in the queue may consume more resources than the queue's | 
 | | capacity if there are free resources, providing elasticity. |
 *--------------------------------------+--------------------------------------+
 | <<<yarn.scheduler.capacity.<queue-path>.maximum-capacity>>> |   | 
-| | Maximum queue capacity in percentage (%). |
+| | Maximum queue capacity in percentage (%) as a float. |
 | | This limits the <elasticity> for applications in the queue. |
 | | Defaults to -1 which disables it. |
 *--------------------------------------+--------------------------------------+

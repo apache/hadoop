@@ -239,7 +239,12 @@ public class DFSAdmin extends FsShell {
       CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
       String str = parameters.remove(0).trim();
-      quota = StringUtils.TraditionalBinaryPrefix.string2long(str);
+      try {
+        quota = StringUtils.TraditionalBinaryPrefix.string2long(str);
+      } catch (NumberFormatException nfe) {
+        throw new IllegalArgumentException("\"" + str + "\" is not a valid value for a quota.");
+      }
+      
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     

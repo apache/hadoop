@@ -51,7 +51,19 @@ public class ViewFileSystemTestSetup {
     /**
      * create the test root on local_fs - the  mount table will point here
      */
-    fsTarget.mkdirs(FileSystemTestHelper.getTestRootPath(fsTarget));
+    Path targetOfTests = FileSystemTestHelper.getTestRootPath(fsTarget);
+    // In case previous test was killed before cleanup
+    fsTarget.delete(targetOfTests, true);
+    fsTarget.mkdirs(targetOfTests);
+
+    // Setup a link from viewfs to targetfs for the first component of
+    // path of testdir.
+    String testDir = FileSystemTestHelper.getTestRootPath(fsTarget).toUri()
+        .getPath();
+    int indexOf2ndSlash = testDir.indexOf('/', 1);
+    String testDirFirstComponent = testDir.substring(0, indexOf2ndSlash);
+    ConfigUtil.addLink(conf, testDirFirstComponent, fsTarget.makeQualified(
+        new Path(testDirFirstComponent)).toUri());
 
     // viewFs://home => fsTarget://home
     String homeDirRoot = fsTarget.getHomeDirectory()

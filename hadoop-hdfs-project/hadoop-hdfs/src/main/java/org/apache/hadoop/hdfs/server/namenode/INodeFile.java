@@ -25,9 +25,9 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
@@ -44,13 +44,6 @@ public class INodeFile extends INode implements BlockCollection {
   private long header;
 
   BlockInfo blocks[] = null;
-
-  INodeFile(PermissionStatus permissions,
-            int nrBlocks, short replication, long modificationTime,
-            long atime, long preferredBlockSize) {
-    this(permissions, new BlockInfo[nrBlocks], replication,
-        modificationTime, atime, preferredBlockSize);
-  }
 
   INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,

@@ -20,10 +20,10 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.*;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Iterator;
+import java.util.PriorityQueue;
 
 import java.io.RandomAccessFile;
 import java.io.File;
@@ -33,7 +33,6 @@ import org.junit.Test;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.JournalManager.CorruptionException;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -45,7 +44,6 @@ import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_ROLL;
 import static org.apache.hadoop.hdfs.server.namenode.TestEditLog.TXNS_PER_FAIL;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.TreeMultiset;
 import com.google.common.base.Joiner;
 
 public class TestFileJournalManager {
@@ -64,12 +62,13 @@ public class TestFileJournalManager {
   static long getNumberOfTransactions(FileJournalManager jm, long fromTxId,
       boolean inProgressOk, boolean abortOnGap) throws IOException {
     long numTransactions = 0, txId = fromTxId;
-    final TreeMultiset<EditLogInputStream> allStreams =
-        TreeMultiset.create(JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
+    final PriorityQueue<EditLogInputStream> allStreams = 
+        new PriorityQueue<EditLogInputStream>(64,
+            JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
     jm.selectInputStreams(allStreams, fromTxId, inProgressOk);
-
+    EditLogInputStream elis = null;
     try {
-      for (EditLogInputStream elis : allStreams) {
+      while ((elis = allStreams.poll()) != null) {
         elis.skipUntil(txId);
         while (true) {
           FSEditLogOp op = elis.readOp();
@@ -87,6 +86,7 @@ public class TestFileJournalManager {
       }
     } finally {
       IOUtils.cleanup(LOG, allStreams.toArray(new EditLogInputStream[0]));
+      IOUtils.cleanup(LOG, elis);
     }
     return numTransactions;
   }
@@ -379,27 +379,28 @@ public class TestFileJournalManager {
   
   private static EditLogInputStream getJournalInputStream(JournalManager jm,
       long txId, boolean inProgressOk) throws IOException {
-    final TreeMultiset<EditLogInputStream> allStreams =
-        TreeMultiset.create(JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
+    final PriorityQueue<EditLogInputStream> allStreams = 
+        new PriorityQueue<EditLogInputStream>(64,
+            JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
     jm.selectInputStreams(allStreams, txId, inProgressOk);
+    EditLogInputStream elis = null, ret;
     try {
-      for (Iterator<EditLogInputStream> iter = allStreams.iterator();
-          iter.hasNext();) {
-        EditLogInputStream elis = iter.next();
+      while ((elis = allStreams.poll()) != null) {
         if (elis.getFirstTxId() > txId) {
           break;
         }
         if (elis.getLastTxId() < txId) {
-          iter.remove();
           elis.close();
           continue;
         }
         elis.skipUntil(txId);
-        iter.remove();
-        return elis;
+        ret = elis;
+        elis = null;
+        return ret;
       }
     } finally {
       IOUtils.cleanup(LOG,  allStreams.toArray(new EditLogInputStream[0]));
+      IOUtils.cleanup(LOG,  elis);
     }
     return null;
   }

@@ -60,6 +60,9 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    MAPREDUCE-4356. [Rumen] Provide access to the method
+                    ParsedTask.obtainTaskAttempts(). (ravigummadi)
+
     MAPREDUCE-4100. [Gridmix] Bug fixed in compression emulation feature for 
                     map only jobs. (amarrk)
 
@@ -118,7 +121,9 @@ Trunk (unreleased changes)
     MAPREDUCE-3990. MRBench allows Long-sized input-lines value
     but parses CLI argument as an Integer. (harsh)
 
-Release 2.0.1-alpha - UNRELEASED
+    MAPREDUCE-3868. Make Raid Compile. (Weiyan Wang via schen)
+
+Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
 
@@ -128,6 +133,12 @@ Release 2.0.1-alpha - UNRELEASED
 
     MAPREDUCE-4146. Support limits on task status string length and number of
     block locations in branch-2. (Ahmed Radwan via tomwhite)
+
+    MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
+    (tomwhite)
+
+    MAPREDUCE-3921. MR AM should act on node health status changes. 
+    (Bikas Saha via sseth)
 
   OPTIMIZATIONS
 
@@ -165,6 +176,23 @@ Release 2.0.1-alpha - UNRELEASED
 
     MAPREDUCE-3873. Fixed NodeManagers' decommissioning at RM to accept IP
     addresses also. (xieguiming via vinodkv)
+
+    MAPREDUCE-4306. Fix distributed shell to work with users other than the one
+    running the daemons. (Ahmed Radwan via sseth)
+
+    MAPREDUCE-4031. Prevent a Node Manager hang during shutdown. 
+    (Devaraj K via sseth)
+
+    MAPREDUCE-4336. Distributed Shell fails when used with the CapacityScheduler
+    (ahmed via tucu)
+
+    MAPREDUCE-4290. Fix Yarn Applicaiton Status to MR JobState conversion. 
+    (Devaraj K via sseth)
+
+    MAPREDUCE-2289. Permissions race can make getStagingDir fail on local filesystem 
+    (ahmed via tucu)
+
+    MAPREDUCE-4372. Deadlock in Resource Manager (Devaraj K via bobby)
 
 Release 2.0.0-alpha - 05-23-2012
 
@@ -386,6 +414,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4301. Dedupe some strings in MRAM for memory savings 
     (bobby via tgraves)
 
+    MAPREDUCE-4267. mavenize pipes (tgraves via bobby)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
@@ -567,6 +597,30 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-3350. Per-app RM page should have the list of application-attempts
     like on the app JHS page (Jonathon Eagles via tgraves)
+
+    MAPREDUCE-3842. Stop webpages from automatic refreshing (tgraves)
+
+    MAPREDUCE-3927. Shuffle hang when set map.failures.percent
+    (Bhallamudi Venkata Siva Kamesh via tgraves)
+
+    MAPREDUCE-4311. Capacity scheduler.xml does not accept decimal values for
+    capacity and maximum-capacity settings (Karthik Kambatla via tgraves)
+
+    MAPREDUCE-4341. add types to capacity scheduler properties documentation
+    (Karthik Kambatla via tgraves)
+
+    MAPREDUCE-4270. Move the data_join test classes to the correct path.
+    (Thomas Graves via sseth)
+
+    MAPREDUCE-3889. job client tries to use /tasklog interface, but that
+    doesn't exist anymore (Devaraj K via bobby)
+
+    MAPREDUCE-4320. gridmix mainClass wrong in pom.xml (tgraves)
+
+    MAPREDUCE-4295. RM crashes due to DNS issue (tgraves)
+
+    MAPREDUCE-4228. mapreduce.job.reduce.slowstart.completedmaps is not working
+    properly (Jason Lowe via bobby)
 
 Release 0.23.2 - UNRELEASED
 

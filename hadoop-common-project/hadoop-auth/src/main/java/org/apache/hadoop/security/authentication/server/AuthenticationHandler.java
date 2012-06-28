@@ -59,6 +59,34 @@ public interface AuthenticationHandler {
   public void destroy();
 
   /**
+   * Performs an authentication management operation.
+   * <p/>
+   * This is useful for handling operations like get/renew/cancel
+   * delegation tokens which are being handled as operations of the
+   * service end-point.
+   * <p/>
+   * If the method returns <code>TRUE</code> the request will continue normal
+   * processing, this means the method has not produced any HTTP response.
+   * <p/>
+   * If the method returns <code>FALSE</code> the request will end, this means 
+   * the method has produced the corresponding HTTP response.
+   *
+   * @param token the authentication token if any, otherwise <code>NULL</code>.
+   * @param request the HTTP client request.
+   * @param response the HTTP client response.
+   * @return <code>TRUE</code> if the request should be processed as a regular
+   * request,
+   * <code>FALSE</code> otherwise.
+   *
+   * @throws IOException thrown if an IO error occurred.
+   * @throws AuthenticationException thrown if an Authentication error occurred.
+   */
+  public boolean managementOperation(AuthenticationToken token,
+                                     HttpServletRequest request,
+                                     HttpServletResponse response)
+    throws IOException, AuthenticationException;
+
+  /**
    * Performs an authentication step for the given HTTP client request.
    * <p/>
    * This method is invoked by the {@link AuthenticationFilter} only if the HTTP client request is

@@ -9,11 +9,11 @@ Trunk (unreleased changes)
 
   NEW FEATURES
     
-    HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. (Henry
-    Robinson via atm)
+    HADOOP-8469. Make NetworkTopology class pluggable.  (Junping Du via
+    szetszwo)
 
-    HDFS-3042. Automatic failover support for NameNode HA (todd)
-    (see dedicated section below for breakdown of subtasks)
+    HADOOP-8470. Add NetworkTopologyWithNodeGroup, a 4-layer implementation
+    of NetworkTopology.  (Junping Du via szetszwo)
 
   IMPROVEMENTS
 
@@ -55,9 +55,6 @@ Trunk (unreleased changes)
     HADOOP-7994. Remove getProtocolVersion and getProtocolSignature from the 
     client side translator and server side implementation. (jitendra)
 
-    HADOOP-8244. Improve comments on ByteBufferReadable.read. (Henry Robinson
-    via atm)
-
     HADOOP-7757. Test file reference count is at least 3x actual value (Jon
     Eagles via bobby)
 
@@ -81,6 +78,9 @@ Trunk (unreleased changes)
 
     HADOOP-7659. fs -getmerge isn't guaranteed to work well over non-HDFS
     filesystems (harsh)
+
+    HADOOP-8059. Add javadoc to InterfaceAudience and InterfaceStability.
+    (Brandon Li via suresh)
 
   BUG FIXES
 
@@ -165,39 +165,7 @@ Trunk (unreleased changes)
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
 
-  BREAKDOWN OF HDFS-3042 SUBTASKS
-
-    HADOOP-8220. ZKFailoverController doesn't handle failure to become active
-    correctly (todd)
-    
-    HADOOP-8228. Auto HA: Refactor tests and add stress tests. (todd)
-    
-    HADOOP-8215. Security support for ZK Failover controller (todd)
-    
-    HADOOP-8245. Fix flakiness in TestZKFailoverController (todd)
-    
-    HADOOP-8257. TestZKFailoverControllerStress occasionally fails with Mockito
-    error (todd)
-    
-    HADOOP-8260. Replace ClientBaseWithFixes with our own modified copy of the
-    class (todd)
-    
-    HADOOP-8246. Auto-HA: automatically scope znode by nameservice ID (todd)
-    
-    HADOOP-8247. Add a config to enable auto-HA, which disables manual
-    FailoverController (todd)
-    
-    HADOOP-8306. ZKFC: improve error message when ZK is not running. (todd)
-    
-    HADOOP-8279. Allow manual failover to be invoked when auto-failover is
-    enabled. (todd)
-    
-    HADOOP-8276. Auto-HA: add config for java options to pass to zkfc daemon
-    (todd via eli)
-    
-    HADOOP-8405. ZKFC tests leak ZK instances. (todd)
-
-Release 2.0.1-alpha - UNRELEASED
+Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
 
@@ -206,6 +174,17 @@ Release 2.0.1-alpha - UNRELEASED
 
   NEW FEATURES
  
+    HDFS-3042. Automatic failover support for NameNode HA (todd)
+    (see dedicated section below for breakdown of subtasks)
+
+    HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. (Henry
+    Robinson via atm)
+
+    HADOOP-8458. Add management hook to AuthenticationHandler to enable 
+    delegation token operations support (tucu)
+
+    HADOOP-8465. hadoop-auth should support ephemeral authentication (tucu)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
@@ -227,6 +206,14 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8358. Config-related WARN for dfs.web.ugi can be avoided. (harsh)
 
     HADOOP-8450. Remove src/test/system. (eli)
+
+    HADOOP-8244. Improve comments on ByteBufferReadable.read. (Henry Robinson
+    via atm)
+
+    HADOOP-8368. Use CMake rather than autotools to build native code (ccccabe via tucu)
+
+    HADOOP-8524. Allow users to get source of a Configuration
+    parameter (harsh)
 
   BUG FIXES
 
@@ -266,6 +253,54 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8481. update BUILDING.txt to talk about cmake rather than autotools.
     (Colin Patrick McCabe via eli)
+
+    HADOOP-8485. Don't hardcode "Apache Hadoop 0.23" in the docs. (eli)
+
+    HADOOP-8488. test-patch.sh gives +1 even if the native build fails.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8507. Avoid OOM while deserializing DelegationTokenIdentifer.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8433. Don't set HADOOP_LOG_DIR in hadoop-env.sh.
+    (Brahma Reddy Battula via eli)
+
+    HADOOP-8509. JarFinder duplicate entry: META-INF/MANIFEST.MF exception (tucu)
+
+    HADOOP-8512. AuthenticatedURL should reset the Token when the server returns 
+    other than OK on authentication (tucu)
+
+  BREAKDOWN OF HDFS-3042 SUBTASKS
+
+    HADOOP-8220. ZKFailoverController doesn't handle failure to become active
+    correctly (todd)
+
+    HADOOP-8228. Auto HA: Refactor tests and add stress tests. (todd)
+    
+    HADOOP-8215. Security support for ZK Failover controller (todd)
+    
+    HADOOP-8245. Fix flakiness in TestZKFailoverController (todd)
+    
+    HADOOP-8257. TestZKFailoverControllerStress occasionally fails with Mockito
+    error (todd)
+    
+    HADOOP-8260. Replace ClientBaseWithFixes with our own modified copy of the
+    class (todd)
+    
+    HADOOP-8246. Auto-HA: automatically scope znode by nameservice ID (todd)
+    
+    HADOOP-8247. Add a config to enable auto-HA, which disables manual
+    FailoverController (todd)
+    
+    HADOOP-8306. ZKFC: improve error message when ZK is not running. (todd)
+    
+    HADOOP-8279. Allow manual failover to be invoked when auto-failover is
+    enabled. (todd)
+    
+    HADOOP-8276. Auto-HA: add config for java options to pass to zkfc daemon
+    (todd via eli)
+    
+    HADOOP-8405. ZKFC tests leak ZK instances. (todd)
 
 Release 2.0.0-alpha - 05-23-2012
 
@@ -695,6 +730,12 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8341. Fix or filter findbugs issues in hadoop-tools (bobby)
 
     HADOOP-8373. Port RPC.getServerAddress to 0.23 (Daryn Sharp via bobby)
+
+    HADOOP-8495. Update Netty to avoid leaking file descriptors during shuffle
+    (Jason Lowe via tgraves)
+
+    HADOOP-8129. ViewFileSystemTestSetup setupForViewFileSystem is erring
+    (Ahmed Radwan and Ravi Prakash via bobby)
 
 Release 0.23.2 - UNRELEASED 
 

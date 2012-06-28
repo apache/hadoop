@@ -20,8 +20,8 @@ package org.apache.hadoop.lib.wsrs;
 
 public abstract class LongParam extends Param<Long> {
 
-  public LongParam(String name, String str) {
-    value = parseParam(name, str);
+  public LongParam(String name, Long defaultValue) {
+    super(name, defaultValue);
   }
 
   protected Long parse(String str) throws Exception {

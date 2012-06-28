@@ -475,6 +475,7 @@ public class TestHttpFSFileSystem extends HFSTestCase {
       ops[i] = new Object[]{Operation.values()[i]};
     }
     return Arrays.asList(ops);
+//    return Arrays.asList(new Object[][]{ new Object[]{Operation.CREATE}});
   }
 
   private Operation operation;

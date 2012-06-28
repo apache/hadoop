@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueState;
@@ -376,22 +377,27 @@ public class TypeConverter {
     }
     return reports;
   }
-
-  public static JobStatus.State fromYarn(YarnApplicationState state) {
-    switch (state) {
+  
+  public static State fromYarn(YarnApplicationState yarnApplicationState,
+      FinalApplicationStatus finalApplicationStatus) {
+    switch (yarnApplicationState) {
     case NEW:
     case SUBMITTED:
       return State.PREP;
     case RUNNING:
       return State.RUNNING;
     case FINISHED:
-      return State.SUCCEEDED;
+      if (finalApplicationStatus == FinalApplicationStatus.SUCCEEDED) {
+        return State.SUCCEEDED;
+      } else if (finalApplicationStatus == FinalApplicationStatus.KILLED) {
+        return State.KILLED;
+      }
     case FAILED:
       return State.FAILED;
     case KILLED:
       return State.KILLED;
     }
-    throw new YarnException("Unrecognized application state: " + state);
+    throw new YarnException("Unrecognized application state: " + yarnApplicationState);
   }
 
   private static final String TT_NAME_PREFIX = "tracker_";
@@ -417,7 +423,7 @@ public class TypeConverter {
       new JobStatus(
           TypeConverter.fromYarn(application.getApplicationId()),
           0.0f, 0.0f, 0.0f, 0.0f,
-          TypeConverter.fromYarn(application.getYarnApplicationState()),
+          TypeConverter.fromYarn(application.getYarnApplicationState(), application.getFinalApplicationStatus()),
           org.apache.hadoop.mapreduce.JobPriority.NORMAL,
           application.getUser(), application.getName(),
           application.getQueue(), jobFile, trackingUrl, false

@@ -31,13 +31,9 @@
 #include <fuse.h>
 #include <fuse/fuse_opt.h>
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
-#endif
+
+#include "config.h"
 
 //
 // Check if a path is in the mount option supplied protected paths.

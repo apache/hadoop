@@ -44,6 +44,10 @@ abstract class InetSocketAddressParam
 
     @Override
     InetSocketAddress parse(final String str) {
+      if (str == null) {
+        throw new IllegalArgumentException("The input string is null: expect "
+            + getDomain());
+      }
       final int i = str.indexOf(':');
       if (i < 0) {
         throw new IllegalArgumentException("Failed to parse \"" + str

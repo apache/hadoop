@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.Records;
 
 public class CompletedTaskAttempt implements TaskAttempt {
@@ -57,6 +58,11 @@ public class CompletedTaskAttempt implements TaskAttempt {
     }
   }
 
+  @Override
+  public NodeId getNodeId() throws UnsupportedOperationException{
+    throw new UnsupportedOperationException();
+  }
+  
   @Override
   public ContainerId getAssignedContainerID() {
     return attemptInfo.getContainerId();

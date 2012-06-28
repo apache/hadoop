@@ -80,13 +80,13 @@ public class CapacitySchedulerConfiguration extends Configuration {
   DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT = 0.1f;
   
   @Private
-  public static final int UNDEFINED = -1;
+  public static final float UNDEFINED = -1;
   
   @Private
-  public static final int MINIMUM_CAPACITY_VALUE = 1;
+  public static final float MINIMUM_CAPACITY_VALUE = 1;
   
   @Private
-  public static final int MAXIMUM_CAPACITY_VALUE = 100;
+  public static final float MAXIMUM_CAPACITY_VALUE = 100;
   
   @Private
   public static final int DEFAULT_USER_LIMIT = 100;
@@ -132,8 +132,8 @@ public class CapacitySchedulerConfiguration extends Configuration {
         DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT);
   }
   
-  public int getCapacity(String queue) {
-    int capacity = getInt(getQueuePrefix(queue) + CAPACITY, UNDEFINED);
+  public float getCapacity(String queue) {
+    float capacity = getFloat(getQueuePrefix(queue) + CAPACITY, UNDEFINED);
     if (capacity < MINIMUM_CAPACITY_VALUE || capacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException("Illegal " +
       		"capacity of " + capacity + " for queue " + queue);
@@ -143,31 +143,31 @@ public class CapacitySchedulerConfiguration extends Configuration {
     return capacity;
   }
   
-  public void setCapacity(String queue, int capacity) {
-    setInt(getQueuePrefix(queue) + CAPACITY, capacity);
+  public void setCapacity(String queue, float capacity) {
+    setFloat(getQueuePrefix(queue) + CAPACITY, capacity);
     LOG.debug("CSConf - setCapacity: queuePrefix=" + getQueuePrefix(queue) + 
         ", capacity=" + capacity);
   }
 
-  public int getMaximumCapacity(String queue) {
-    int maxCapacity = 
-      getInt(getQueuePrefix(queue) + MAXIMUM_CAPACITY, MAXIMUM_CAPACITY_VALUE);
+  public float getMaximumCapacity(String queue) {
+    float maxCapacity = getFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY,
+        MAXIMUM_CAPACITY_VALUE);
     return maxCapacity;
   }
   
-  public void setMaximumCapacity(String queue, int maxCapacity) {
+  public void setMaximumCapacity(String queue, float maxCapacity) {
     if (maxCapacity > MAXIMUM_CAPACITY_VALUE) {
       throw new IllegalArgumentException("Illegal " +
           "maximum-capacity of " + maxCapacity + " for queue " + queue);
     }
-    setInt(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
+    setFloat(getQueuePrefix(queue) + MAXIMUM_CAPACITY, maxCapacity);
     LOG.debug("CSConf - setMaxCapacity: queuePrefix=" + getQueuePrefix(queue) + 
         ", maxCapacity=" + maxCapacity);
   }
   
   public int getUserLimit(String queue) {
-    int userLimit = 
-      getInt(getQueuePrefix(queue) + USER_LIMIT, DEFAULT_USER_LIMIT);
+    int userLimit = getInt(getQueuePrefix(queue) + USER_LIMIT,
+        DEFAULT_USER_LIMIT);
     return userLimit;
   }
 

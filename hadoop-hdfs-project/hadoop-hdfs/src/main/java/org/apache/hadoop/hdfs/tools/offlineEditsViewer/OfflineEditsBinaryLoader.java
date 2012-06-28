@@ -18,9 +18,12 @@
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
 import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
+import org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
@@ -33,17 +36,21 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 class OfflineEditsBinaryLoader implements OfflineEditsLoader {
   private OfflineEditsVisitor visitor;
   private EditLogInputStream inputStream;
-  private boolean fixTxIds;
+  private final boolean fixTxIds;
+  private final boolean recoveryMode;
   private long nextTxId;
+  public static final Log LOG =
+      LogFactory.getLog(OfflineEditsBinaryLoader.class.getName());
   
   /**
    * Constructor
    */
   public OfflineEditsBinaryLoader(OfflineEditsVisitor visitor,
-        EditLogInputStream inputStream) {
+        EditLogInputStream inputStream, OfflineEditsViewer.Flags flags) {
     this.visitor = visitor;
     this.inputStream = inputStream;
-    this.fixTxIds = false;
+    this.fixTxIds = flags.getFixTxIds();
+    this.recoveryMode = flags.getRecoveryMode();
     this.nextTxId = -1;
   }
 
@@ -51,9 +58,9 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
    * Loads edits file, uses visitor to process all elements
    */
   public void loadEdits() throws IOException {
-    try {
-      visitor.start(inputStream.getVersion());
-      while (true) {
+    visitor.start(inputStream.getVersion());
+    while (true) {
+      try {
         FSEditLogOp op = inputStream.readOp();
         if (op == null)
           break;
@@ -68,16 +75,24 @@ class OfflineEditsBinaryLoader implements OfflineEditsLoader {
           nextTxId++;
         }
         visitor.visitOp(op);
+      } catch (IOException e) {
+        if (!recoveryMode) {
+          // Tell the visitor to clean up, then re-throw the exception
+          visitor.close(e);
+          throw e;
+        }
+        LOG.error("Got IOException while reading stream!  Resyncing.", e);
+        inputStream.resync();
+      } catch (RuntimeException e) {
+        if (!recoveryMode) {
+          // Tell the visitor to clean up, then re-throw the exception
+          visitor.close(e);
+          throw e;
+        }
+        LOG.error("Got RuntimeException while reading stream!  Resyncing.", e);
+        inputStream.resync();
       }
-      visitor.close(null);
-    } catch(IOException e) {
-      // Tell the visitor to clean up, then re-throw the exception
-      visitor.close(e);
-      throw e;
     }
-  }
-  
-  public void setFixTxIds() {
-    fixTxIds = true;
+    visitor.close(null);
   }
 }

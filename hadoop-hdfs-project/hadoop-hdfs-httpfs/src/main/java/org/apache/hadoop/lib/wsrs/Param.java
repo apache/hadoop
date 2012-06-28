@@ -23,25 +23,31 @@ import org.apache.hadoop.lib.util.Check;
 import java.text.MessageFormat;
 
 public abstract class Param<T> {
+  private String name;
   protected T value;
 
-  public T parseParam(String name, String str) {
-    Check.notNull(name, "name");
+  public Param(String name, T defaultValue) {
+    this.name = name;
+    this.value = defaultValue;
+  }
+
+  public String getName() {
+    return name;
+  }
+
+  public T parseParam(String str) {
     try {
-      return (str != null && str.trim().length() > 0) ? parse(str) : null;
+      value = (str != null && str.trim().length() > 0) ? parse(str) : value;
     } catch (Exception ex) {
       throw new IllegalArgumentException(
         MessageFormat.format("Parameter [{0}], invalid value [{1}], value must be [{2}]",
                              name, str, getDomain()));
     }
+    return value;
   }
 
   public T value() {
     return value;
-  }
-
-  protected void setValue(T value) {
-    this.value = value;
   }
 
   protected abstract String getDomain();
@@ -49,6 +55,7 @@ public abstract class Param<T> {
   protected abstract T parse(String str) throws Exception;
 
   public String toString() {
-    return value.toString();
+    return (value != null) ? value.toString() : "NULL";
   }
+
 }
