@@ -97,6 +97,8 @@ Trunk (unreleased changes)
     BlockPlacementPolicyDefault extensible for reusing code in subclasses.
     (Junping Du via szetszwo)
 
+    HDFS-3571. Allow EditLogFileInputStream to read from a remote URL (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
