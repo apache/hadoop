@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -71,7 +71,8 @@ public class Hdfs extends AbstractFileSystem {
    * @throws IOException
    */
   Hdfs(final URI theUri, final Configuration conf) throws IOException, URISyntaxException {
-    super(theUri, HdfsConstants.HDFS_URI_SCHEME, true, NameNode.DEFAULT_PORT);
+    super(theUri, HdfsConstants.HDFS_URI_SCHEME, true,
+        DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT);
 
     if (!theUri.getScheme().equalsIgnoreCase(HdfsConstants.HDFS_URI_SCHEME)) {
       throw new IllegalArgumentException("Passed URI's scheme is not for Hdfs");
@@ -86,7 +87,7 @@ public class Hdfs extends AbstractFileSystem {
 
   @Override
   public int getUriDefaultPort() {
-    return NameNode.DEFAULT_PORT;
+    return DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
   }
 
   @Override

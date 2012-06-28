@@ -734,7 +734,7 @@ public class DistributedFileSystem extends FileSystem {
 
   @Override
   protected int getDefaultPort() {
-    return NameNode.DEFAULT_PORT;
+    return DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
   }
 
   @Override

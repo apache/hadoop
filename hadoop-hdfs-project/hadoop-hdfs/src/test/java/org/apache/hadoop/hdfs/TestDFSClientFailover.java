@@ -31,7 +31,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -82,9 +81,9 @@ public class TestDFSClientFailover {
     
     // Check that it functions even if the URL becomes canonicalized
     // to include a port number.
-    Path withPort = new Path("hdfs://" +
-        HATestUtil.getLogicalHostname(cluster) + ":" +
-        NameNode.DEFAULT_PORT + "/" + TEST_FILE.toUri().getPath());
+    Path withPort = new Path("hdfs://" + HATestUtil.getLogicalHostname(cluster)
+        + ":" + DFSConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT + "/"
+        + TEST_FILE.toUri().getPath());
     FileSystem fs2 = withPort.getFileSystem(fs.getConf());
     assertTrue(fs2.exists(withPort));
 
