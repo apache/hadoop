@@ -134,8 +134,11 @@ class Ls extends FsCommand {
     StringBuilder fmt = new StringBuilder();
     fmt.append("%s%s "); // permission string
     fmt.append("%"  + maxRepl  + "s ");
-    fmt.append("%-" + maxOwner + "s ");
-    fmt.append("%-" + maxGroup + "s ");
+    // Do not use '%-0s' as a formatting conversion, since it will throw a
+    // a MissingFormatWidthException if it is used in String.format().
+    // http://docs.oracle.com/javase/1.5.0/docs/api/java/util/Formatter.html#intFlags
+    fmt.append((maxOwner > 0) ? "%-" + maxOwner + "s " : "%s");
+    fmt.append((maxGroup > 0) ? "%-" + maxGroup + "s " : "%s");
     fmt.append("%"  + maxLen   + "s ");
     fmt.append("%s %s"); // mod time & path
     lineFormat = fmt.toString();

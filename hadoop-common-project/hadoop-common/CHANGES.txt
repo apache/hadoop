@@ -102,6 +102,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8512. AuthenticatedURL should reset the Token when the server returns 
     other than OK on authentication (tucu)
 
+    HADOOP-8168. empty-string owners or groups causes {{MissingFormatWidthException}} 
+    in o.a.h.fs.shell.Ls.ProcessPath() (ekoontz via tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
