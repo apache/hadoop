@@ -522,6 +522,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8288. Remove references of mapred.child.ulimit etc. since they are
     not being used any more (Ravi Prakash via bobby)
 
+    HADOOP-8535. Cut hadoop build times in half (Job Eagles via bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
