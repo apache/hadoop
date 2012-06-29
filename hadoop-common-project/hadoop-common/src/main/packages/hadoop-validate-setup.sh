@@ -94,12 +94,12 @@ HADOOP_CMD="${HADOOP_PREFIX}/bin/hadoop --config $HADOOP_CONF_DIR"
 HADOOP_EXAMPLES_JAR=''
 
 #find under HADOOP_PREFIX (tar ball install)
-HADOOP_EXAMPLES_JAR=`find ${HADOOP_PREFIX} -name 'hadoop-examples-*.jar' | head -n1`
+HADOOP_EXAMPLES_JAR=`find ${HADOOP_PREFIX} -name 'hadoop-mapreduce-examples-*.jar' | head -n1`
 
 #if its not found look under /usr/share/hadoop (rpm/deb installs)
 if [ "$HADOOP_EXAMPLES_JAR" == '' ]
 then
-  HADOOP_EXAMPLES_JAR=`find /usr/share/hadoop -name 'hadoop-examples-*.jar' | head -n1`
+  HADOOP_EXAMPLES_JAR=`find /usr/share/hadoop -name 'hadoop-mapreduce-examples-*.jar' | head -n1`
 fi
 
 #if it is still empty then dont run the tests
