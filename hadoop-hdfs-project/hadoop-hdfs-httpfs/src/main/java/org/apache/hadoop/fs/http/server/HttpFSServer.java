@@ -404,7 +404,7 @@ public class HttpFSServer {
     String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case APPEND: {
-        boolean hasData = params.get(DataParam.NAME, DataParam.class);
+        Boolean hasData = params.get(DataParam.NAME, DataParam.class);
         if (!hasData) {
           response = Response.temporaryRedirect(
             createUploadRedirectionURL(uriInfo,
@@ -478,7 +478,7 @@ public class HttpFSServer {
     String doAs = params.get(DoAsParam.NAME, DoAsParam.class);
     switch (op.value()) {
       case CREATE: {
-        boolean hasData = params.get(DataParam.NAME, DataParam.class);
+        Boolean hasData = params.get(DataParam.NAME, DataParam.class);
         if (!hasData) {
           response = Response.temporaryRedirect(
             createUploadRedirectionURL(uriInfo,
@@ -486,11 +486,11 @@ public class HttpFSServer {
         } else {
           Short permission = params.get(PermissionParam.NAME,
                                          PermissionParam.class);
-          boolean override = params.get(OverwriteParam.NAME,
+          Boolean override = params.get(OverwriteParam.NAME,
                                         OverwriteParam.class);
-          short replication = params.get(ReplicationParam.NAME,
+          Short replication = params.get(ReplicationParam.NAME,
                                          ReplicationParam.class);
-          long blockSize = params.get(BlockSizeParam.NAME,
+          Long blockSize = params.get(BlockSizeParam.NAME,
                                       BlockSizeParam.class);
           FSOperations.FSCreate command =
             new FSOperations.FSCreate(is, path, permission, override,
@@ -543,7 +543,7 @@ public class HttpFSServer {
         break;
       }
       case SETREPLICATION: {
-        short replication = params.get(ReplicationParam.NAME,
+        Short replication = params.get(ReplicationParam.NAME,
                                        ReplicationParam.class);
         FSOperations.FSSetReplication command =
           new FSOperations.FSSetReplication(path, replication);
@@ -553,9 +553,9 @@ public class HttpFSServer {
         break;
       }
       case SETTIMES: {
-        long modifiedTime = params.get(ModifiedTimeParam.NAME,
+        Long modifiedTime = params.get(ModifiedTimeParam.NAME,
                                        ModifiedTimeParam.class);
-        long accessTime = params.get(AccessTimeParam.NAME,
+        Long accessTime = params.get(AccessTimeParam.NAME,
                                      AccessTimeParam.class);
         FSOperations.FSSetTimes command =
           new FSOperations.FSSetTimes(path, modifiedTime, accessTime);

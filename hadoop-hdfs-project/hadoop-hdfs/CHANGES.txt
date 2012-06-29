@@ -261,6 +261,10 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3491. HttpFs does not set permissions correctly (tucu)
 
+    HDFS-3580. incompatible types; no instance(s) of type variable(s) V exist 
+    so that V conforms to boolean compiling HttpFSServer.java with OpenJDK 
+    (adi2 via tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
