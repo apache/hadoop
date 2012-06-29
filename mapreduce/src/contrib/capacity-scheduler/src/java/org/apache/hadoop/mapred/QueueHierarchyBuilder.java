@@ -102,9 +102,8 @@ class QueueHierarchyBuilder {
         if (childQueues != null && childQueues.size() > 0) {
           //generate a new ContainerQueue and recursively
           //create hierarchy.
-          AbstractQueue cq =
-              new ContainerQueue(parent, loadContext(qs.getProperties(),
-                  qs.getQueueName(), schedConfig));
+          AbstractQueue cq = new ContainerQueue(parent, loadContext(
+              qs.getProperties(), qs.getQueueName(), schedConfig, parent));
           //update totalCapacity
           totalCapacity += cq.qsc.getCapacityPercent();
           LOG.info("Created a ContainerQueue " + qs.getQueueName()
@@ -115,9 +114,8 @@ class QueueHierarchyBuilder {
           //if not this is a JobQueue.
 
           //create a JobQueue.
-          AbstractQueue jq =
-              new JobQueue(parent, loadContext(qs.getProperties(),
-                  qs.getQueueName(), schedConfig));
+          AbstractQueue jq = new JobQueue(parent, loadContext(
+              qs.getProperties(), qs.getQueueName(), schedConfig, parent));
           totalCapacity += jq.qsc.getCapacityPercent();
           LOG.info("Created a jobQueue " + qs.getQueueName()
               + " and added it as a child to " + parent.getName());
@@ -151,7 +149,7 @@ class QueueHierarchyBuilder {
    * @return the generated {@link QueueSchedulingContext} object
    */
   private QueueSchedulingContext loadContext(Properties props,
-      String queueName, CapacitySchedulerConf schedConf) {
+      String queueName, CapacitySchedulerConf schedConf, AbstractQueue parent) {
     schedConf.setProperties(queueName,props);
     float capacity = schedConf.getCapacity(queueName);
     float stretchCapacity = schedConf.getMaxCapacity(queueName);
@@ -160,8 +158,8 @@ class QueueHierarchyBuilder {
     }
     int ulMin = schedConf.getMinimumUserLimitPercent(queueName);
     // create our QSC and add to our hashmap
-    QueueSchedulingContext qsi = new QueueSchedulingContext(
-      queueName, capacity, stretchCapacity, ulMin
+    QueueSchedulingContext qsi = new QueueSchedulingContext(queueName,
+        capacity, stretchCapacity, ulMin, parent.qsc
     );
     qsi.setSupportsPriorities(
       schedConf.isPrioritySupported(
@@ -178,7 +176,7 @@ class QueueHierarchyBuilder {
    */
   static AbstractQueue createRootAbstractQueue() {
     QueueSchedulingContext rootContext =
-        new QueueSchedulingContext("", 100, -1, -1);
+        new QueueSchedulingContext("", 100, -1, -1, null);
     AbstractQueue root = new ContainerQueue(null, rootContext);
     return root;
   }

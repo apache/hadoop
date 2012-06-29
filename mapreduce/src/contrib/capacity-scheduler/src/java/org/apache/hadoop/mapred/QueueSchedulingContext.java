@@ -97,6 +97,12 @@ public class QueueSchedulingContext {
      */
     private TaskSchedulingContext mapTSC;
     private TaskSchedulingContext reduceTSC;
+    
+  /**
+   * For Hierarchical queues we need to have the parent context for the child
+   * queue.
+   */
+  private QueueSchedulingContext parentQSC;
 
   QueueSchedulingContext(
     String queueName, float capacityPercent, float maxCapacityPercent,
@@ -108,7 +114,18 @@ public class QueueSchedulingContext {
     this.setMapTSC(new TaskSchedulingContext());
     this.setReduceTSC(new TaskSchedulingContext());
   }
-
+  
+  QueueSchedulingContext(String queueName, float capacityPercent,
+      float maxCapacityPercent, int ulMin, QueueSchedulingContext parentQSC) {
+    this.setQueueName(queueName);
+    this.setCapacityPercent(capacityPercent);
+    this.setMaxCapacityPercent(maxCapacityPercent);
+    this.setUlMin(ulMin);
+    this.setMapTSC(new TaskSchedulingContext());
+    this.setReduceTSC(new TaskSchedulingContext());
+    this.setParentQSC(parentQSC);
+  }
+  
   /**
      * return information about the queue
      *
@@ -281,5 +298,24 @@ public class QueueSchedulingContext {
     // update stats on running jobs
     prevMapCapacity = getMapCapacity();
     prevReduceCapacity = getReduceCapacity();
+  }
+
+  /**
+   * This method returns the parent QSC object.
+   * 
+   * @return parent QSC for this queue
+   */
+  public QueueSchedulingContext getParentQSC() {
+    return parentQSC;
+  }
+
+  /**
+   * Setting the parent QSC object for this queue.
+   * 
+   * @param parentQSC
+   *          Setting the parent QSC object
+   */
+  public void setParentQSC(QueueSchedulingContext parentQSC) {
+    this.parentQSC = parentQSC;
   }
 }

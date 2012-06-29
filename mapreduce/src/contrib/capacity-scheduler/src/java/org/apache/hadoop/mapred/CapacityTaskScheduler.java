@@ -540,10 +540,30 @@ class CapacityTaskScheduler extends TaskScheduler {
           }
           return true;
         }
+      } else {
+        QueueSchedulingContext qscParent = qsc.getParentQSC();
+        while (qscParent != null) {
+          if (getTSC(qscParent).getMaxCapacity() < 0) {
+            qscParent = qscParent.getParentQSC();
+          } else {
+            break;
+          }
+        }
+        if (qscParent != null) {
+          TaskSchedulingContext tsiParent = getTSC(qscParent);
+          if ((tsiParent.getNumSlotsOccupied() + noOfSlotsPerTask) > tsiParent
+              .getMaxCapacity()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Queue " + qscParent.getQueueName() + " "
+                  + "has reached its  max " + type + "Capacity");
+              LOG.debug("Current running tasks " + tsiParent.getCapacity());
+            }
+            return true;
+          }
+        }
       }
       return false;
     }
-
 
     // for debugging.
     private void printQSCs() {
