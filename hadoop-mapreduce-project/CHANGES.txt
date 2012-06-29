@@ -73,6 +73,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     MAPREDUCE-4376. TestClusterMRNotification times out (Kihwal Lee via bobby)
 
+    MAPREDUCE-4383. HadoopPipes.cc needs to include unistd.h.
+    (Andy Isaacson via eli)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
