@@ -74,14 +74,16 @@ public class TestDecommissioningStatus {
     assertTrue(localFileSys.mkdirs(dir));
     excludeFile = new Path(dir, "exclude");
     conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
-    conf
-        .setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
+    Path includeFile = new Path(dir, "include");
+    conf.set(DFSConfigKeys.DFS_HOSTS, includeFile.toUri().getPath());
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
         4);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1000);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
     writeConfigFile(localFileSys, excludeFile, null);
+    writeConfigFile(localFileSys, includeFile, null);
 
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
     cluster.waitActive();

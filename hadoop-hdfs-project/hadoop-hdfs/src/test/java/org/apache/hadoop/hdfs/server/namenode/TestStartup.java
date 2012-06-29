@@ -507,7 +507,7 @@ public class TestStartup extends TestCase {
 
     // Setup conf
     conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
-    writeConfigFile(localFileSys, excludeFile, null);    
+    writeConfigFile(localFileSys, excludeFile, null);
     conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     // write into hosts file
     ArrayList<String>list = new ArrayList<String>();
@@ -553,15 +553,15 @@ public class TestStartup extends TestCase {
       localFileSys.delete(name, true);
     }
 
+    FSDataOutputStream stm = localFileSys.create(name);
     if (nodes != null) {
-      FSDataOutputStream stm = localFileSys.create(name);
       for (Iterator<String> it = nodes.iterator(); it.hasNext();) {
         String node = it.next();
         stm.writeBytes(node);
         stm.writeBytes("\n");
       }
-      stm.close();
     }
+    stm.close();
   }
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {

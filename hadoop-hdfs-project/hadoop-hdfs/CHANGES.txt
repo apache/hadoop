@@ -4,6 +4,9 @@ Release 2.0.1-alpha - UNRELEASED
   
   INCOMPATIBLE CHANGES
 
+    HDFS-3446. HostsFileReader silently ignores bad includes/excludes
+    (Matthew Jacobs via todd)
+
   NEW FEATURES
 
     HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)

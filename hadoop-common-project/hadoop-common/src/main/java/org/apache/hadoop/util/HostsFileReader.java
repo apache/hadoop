@@ -50,9 +50,6 @@ public class HostsFileReader {
 
   private void readFileToSet(String filename, Set<String> set) throws IOException {
     File file = new File(filename);
-    if (!file.exists()) {
-      return;
-    }
     FileInputStream fis = new FileInputStream(file);
     BufferedReader reader = null;
     try {
