@@ -18,8 +18,8 @@
 package org.apache.hadoop.util;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
-import java.util.Set;
 
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -37,8 +37,6 @@ public class TestHostsFileReader {
   File INCLUDES_FILE = new File(HOSTS_TEST_DIR, "dfs.include");
   String excludesFile = HOSTS_TEST_DIR + "/dfs.exclude";
   String includesFile = HOSTS_TEST_DIR + "/dfs.include";
-  private Set<String> includes;
-  private Set<String> excludes;
 
   @Before
   public void setUp() throws Exception {
@@ -98,6 +96,43 @@ public class TestHostsFileReader {
     assertTrue(hfp.getExcludedHosts().contains("somehost5"));
     assertFalse(hfp.getExcludedHosts().contains("host4"));
 
+  }
+
+  /*
+   * Test creating a new HostsFileReader with nonexistent files
+   */
+  @Test
+  public void testCreateHostFileReaderWithNonexistentFile() throws Exception {
+    try {
+      new HostsFileReader(
+          HOSTS_TEST_DIR + "/doesnt-exist",
+          HOSTS_TEST_DIR + "/doesnt-exist");
+      Assert.fail("Should throw FileNotFoundException");
+    } catch (FileNotFoundException ex) {
+      // Exception as expected
+    }
+  }
+
+  /*
+   * Test refreshing an existing HostsFileReader with an includes file that no longer exists
+   */
+  @Test
+  public void testRefreshHostFileReaderWithNonexistentFile() throws Exception {
+    FileWriter efw = new FileWriter(excludesFile);
+    FileWriter ifw = new FileWriter(includesFile);
+
+    efw.close();
+
+    ifw.close();
+
+    HostsFileReader hfp = new HostsFileReader(includesFile, excludesFile);
+    assertTrue(INCLUDES_FILE.delete());
+    try {
+      hfp.refresh();
+      Assert.fail("Should throw FileNotFoundException");
+    } catch (FileNotFoundException ex) {
+      // Exception as expected
+    }
   }
 
   /*

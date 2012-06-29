@@ -78,6 +78,7 @@ public class TestDecommission {
     
     // Setup conf
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
+    conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, HEARTBEAT_INTERVAL);
@@ -85,6 +86,7 @@ public class TestDecommission {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 4);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, NAMENODE_REPLICATION_INTERVAL);
   
+    writeConfigFile(hostsFile, null);
     writeConfigFile(excludeFile, null);
   }
   
@@ -508,7 +510,6 @@ public class TestDecommission {
   
   public void testHostsFile(int numNameNodes) throws IOException,
       InterruptedException {
-    conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     int numDatanodes = 1;
     cluster = new MiniDFSCluster.Builder(conf)
         .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(numNameNodes))

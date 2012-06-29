@@ -119,11 +119,15 @@ public class NNThroughputBenchmark {
       "${hadoop.tmp.dir}/dfs/hosts/exclude");
     File excludeFile = new File(config.get(DFSConfigKeys.DFS_HOSTS_EXCLUDE,
       "exclude"));
-    if(! excludeFile.exists()) {
+    if(!excludeFile.exists()) {
       if(!excludeFile.getParentFile().mkdirs())
         throw new IOException("NNThroughputBenchmark: cannot mkdir " + excludeFile);
     }
     new FileOutputStream(excludeFile).close();
+    // set include file
+    config.set(DFSConfigKeys.DFS_HOSTS, "${hadoop.tmp.dir}/dfs/hosts/include");
+    File includeFile = new File(config.get(DFSConfigKeys.DFS_HOSTS, "include"));
+    new FileOutputStream(includeFile).close();
     // Start the NameNode
     String[] argv = new String[] {};
     nameNode = NameNode.createNameNode(argv, config);
