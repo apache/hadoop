@@ -256,6 +256,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
     (szetszwo)
 
+    HDFS-3491. HttpFs does not set permissions correctly (tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES

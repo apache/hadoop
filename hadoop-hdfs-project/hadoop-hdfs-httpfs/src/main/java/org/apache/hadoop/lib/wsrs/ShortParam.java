@@ -20,12 +20,19 @@ package org.apache.hadoop.lib.wsrs;
 
 public abstract class ShortParam extends Param<Short> {
 
-  public ShortParam(String name, Short defaultValue) {
+  private int radix;
+
+  public ShortParam(String name, Short defaultValue, int radix) {
     super(name, defaultValue);
+    this.radix = radix;
+  }
+
+  public ShortParam(String name, Short defaultValue) {
+    this(name, defaultValue, 10);
   }
 
   protected Short parse(String str) throws Exception {
-    return Short.parseShort(str);
+    return Short.parseShort(str, radix);
   }
 
   @Override

@@ -77,6 +77,11 @@ public class TestParam {
     };
     test(param, "S", "a short", (short) 1, (short) 2, "x",
          "" + ((int)Short.MAX_VALUE + 1));
+
+    param = new ShortParam("S", (short) 1, 8) {
+    };
+
+    Assert.assertEquals(new Short((short)01777), param.parse("01777"));
   }
 
   @Test

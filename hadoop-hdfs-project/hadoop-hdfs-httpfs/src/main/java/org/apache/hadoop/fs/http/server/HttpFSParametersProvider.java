@@ -337,25 +337,19 @@ public class HttpFSParametersProvider extends ParametersProvider {
   /**
    * Class for permission parameter.
    */
-  public static class PermissionParam extends StringParam {
+  public static class PermissionParam extends ShortParam {
 
     /**
      * Parameter name.
      */
     public static final String NAME = HttpFSFileSystem.PERMISSION_PARAM;
 
-    /**
-     * Symbolic Unix permissions regular expression pattern.
-     */
-    private static final Pattern PERMISSION_PATTERN =
-      Pattern.compile(HttpFSFileSystem.DEFAULT_PERMISSION +
-                      "|[0-1]?[0-7][0-7][0-7]");
 
     /**
      * Constructor.
      */
     public PermissionParam() {
-      super(NAME, HttpFSFileSystem.DEFAULT_PERMISSION, PERMISSION_PATTERN);
+      super(NAME, HttpFSFileSystem.DEFAULT_PERMISSION, 8);
     }
 
   }
