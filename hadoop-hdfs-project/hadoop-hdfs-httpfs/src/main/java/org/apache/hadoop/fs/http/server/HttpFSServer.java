@@ -484,7 +484,7 @@ public class HttpFSServer {
             createUploadRedirectionURL(uriInfo,
               HttpFSFileSystem.Operation.CREATE)).build();
         } else {
-          String permission = params.get(PermissionParam.NAME,
+          Short permission = params.get(PermissionParam.NAME,
                                          PermissionParam.class);
           boolean override = params.get(OverwriteParam.NAME,
                                         OverwriteParam.class);
@@ -504,7 +504,7 @@ public class HttpFSServer {
         break;
       }
       case MKDIRS: {
-        String permission = params.get(PermissionParam.NAME,
+        Short permission = params.get(PermissionParam.NAME,
                                        PermissionParam.class);
         FSOperations.FSMkdirs command =
           new FSOperations.FSMkdirs(path, permission);
@@ -533,8 +533,8 @@ public class HttpFSServer {
         break;
       }
       case SETPERMISSION: {
-        String permission = params.get(PermissionParam.NAME,
-                                       PermissionParam.class);
+        Short permission = params.get(PermissionParam.NAME,
+                                      PermissionParam.class);
         FSOperations.FSSetPermission command =
           new FSOperations.FSSetPermission(path, permission);
         fsExecute(user, doAs, command);

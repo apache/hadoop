@@ -86,7 +86,7 @@ public class HttpFSFileSystem extends FileSystem {
   public static final String ACCESS_TIME_PARAM = "accesstime";
   public static final String RENEWER_PARAM = "renewer";
 
-  public static final String DEFAULT_PERMISSION = "default";
+  public static final Short DEFAULT_PERMISSION = 0755;
 
   public static final String RENAME_JSON = "boolean";
 
@@ -438,7 +438,7 @@ public class HttpFSFileSystem extends FileSystem {
    * @return the Unix string symbolic reprentation.
    */
   public static String permissionToString(FsPermission p) {
-    return (p == null) ? DEFAULT_PERMISSION : Integer.toString(p.toShort(), 8);
+    return  Integer.toString((p == null) ? DEFAULT_PERMISSION : p.toShort(), 8);
   }
 
   /*
