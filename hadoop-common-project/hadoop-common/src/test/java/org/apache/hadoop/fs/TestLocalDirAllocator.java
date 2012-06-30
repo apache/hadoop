@@ -72,8 +72,11 @@ public class TestLocalDirAllocator {
       System.exit(-1);
     }
 
+    // absolute path in test environment
+    // /home/testuser/src/hadoop-common-project/hadoop-common/build/test/temp
     ABSOLUTE_DIR_ROOT = new Path(localFs.getWorkingDirectory(),
         BUFFER_DIR_ROOT).toUri().getPath();
+    // file:/home/testuser/src/hadoop-common-project/hadoop-common/build/test/temp
     QUALIFIED_DIR_ROOT = new Path(localFs.getWorkingDirectory(),
         BUFFER_DIR_ROOT).toUri().toString();
   }
@@ -145,7 +148,7 @@ public class TestLocalDirAllocator {
    * @throws Exception
    */
   @Test
-  public void test1() throws Exception {
+  public void testROBufferDirAndRWBufferDir() throws Exception {
     if (isWindows) return;
     String dir1 = buildBufferDir(ROOT, 1);
     String dir2 = buildBufferDir(ROOT, 2);
@@ -164,7 +167,7 @@ public class TestLocalDirAllocator {
    * Check if tmp dirs are allocated in a round-robin
    */
   @Test
-  public void test2() throws Exception {
+  public void testDirsNotExist() throws Exception {
     if (isWindows) return;
     String dir2 = buildBufferDir(ROOT, 2);
     String dir3 = buildBufferDir(ROOT, 3);
@@ -190,7 +193,7 @@ public class TestLocalDirAllocator {
    * @throws Exception
    */
   @Test
-  public void test3() throws Exception {
+  public void testRWBufferDirBecomesRO() throws Exception {
     if (isWindows) return;
     String dir3 = buildBufferDir(ROOT, 3);
     String dir4 = buildBufferDir(ROOT, 4);
@@ -228,7 +231,7 @@ public class TestLocalDirAllocator {
    */
   static final int TRIALS = 100;
   @Test
-  public void test4() throws Exception {
+  public void testCreateManyFiles() throws Exception {
     if (isWindows) return;
     String dir5 = buildBufferDir(ROOT, 5);
     String dir6 = buildBufferDir(ROOT, 6);
@@ -311,4 +314,30 @@ public class TestLocalDirAllocator {
       rmBufferDirs();
     }
   }
+
+  /**
+   * Test getLocalPathToRead() returns correct filename and "file" schema.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testGetLocalPathToRead() throws IOException {
+    if (isWindows)
+      return;
+    String dir = buildBufferDir(ROOT, 0);
+    try {
+      conf.set(CONTEXT, dir);
+      assertTrue(localFs.mkdirs(new Path(dir)));
+      File f1 = dirAllocator.createTmpFileForWrite(FILENAME, SMALL_FILE_SIZE,
+          conf);
+      Path p1 = dirAllocator.getLocalPathToRead(f1.getName(), conf);
+      assertEquals(f1.getName(), p1.getName());
+      assertEquals("file", p1.getFileSystem(conf).getUri().getScheme());
+    } finally {
+      Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
+      rmBufferDirs();
+    }
+
+  }
+
 }
