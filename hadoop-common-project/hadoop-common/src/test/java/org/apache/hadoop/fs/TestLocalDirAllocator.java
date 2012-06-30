@@ -48,7 +48,7 @@ public class TestLocalDirAllocator {
   final static private String QUALIFIED_DIR_ROOT;
   final static private Path BUFFER_PATH_ROOT = new Path(BUFFER_DIR_ROOT);
   final static private File BUFFER_ROOT = new File(BUFFER_DIR_ROOT);
-  final static private String CONTEXT = "fs.client.buffer.dir";
+  final static private String CONTEXT = "mapred.local.dir";
   final static private String FILENAME = "block";
   final static private LocalDirAllocator dirAllocator =
     new LocalDirAllocator(CONTEXT);
