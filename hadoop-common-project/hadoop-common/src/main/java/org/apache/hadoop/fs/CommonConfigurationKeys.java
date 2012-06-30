@@ -44,11 +44,6 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "fs.permissions.umask-mode";
   /** Default value for FS_PERMISSIONS_UMASK_KEY */
   public static final int     FS_PERMISSIONS_UMASK_DEFAULT = 0022;
-  /** @deprecated not used, jira was created to remove this constant:
-   * https://issues.apache.org/jira/browse/HADOOP-6802
-   */
-  public static final String  FS_CLIENT_BUFFER_DIR_KEY =
-    "fs.client.buffer.dir";
   /** How often does RPC client send pings to RPC server */
   public static final String  IPC_PING_INTERVAL_KEY = "ipc.ping.interval";
   /** Default value for IPC_PING_INTERVAL_KEY */

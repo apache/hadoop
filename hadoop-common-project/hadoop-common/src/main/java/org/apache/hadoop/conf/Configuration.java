@@ -114,8 +114,8 @@ import org.xml.sax.SAXException;
  * For example, one might define a final parameter with:
  * <tt><pre>
  *  &lt;property&gt;
- *    &lt;name&gt;dfs.client.buffer.dir&lt;/name&gt;
- *    &lt;value&gt;/tmp/hadoop/dfs/client&lt;/value&gt;
+ *    &lt;name&gt;dfs.hosts.include&lt;/name&gt;
+ *    &lt;value&gt;/etc/hadoop/conf/hosts.include&lt;/value&gt;
  *    <b>&lt;final&gt;true&lt;/final&gt;</b>
  *  &lt;/property&gt;</pre></tt>
  *
@@ -2116,8 +2116,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                new String[]{CommonConfigurationKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY});
     Configuration.addDeprecation("dfs.df.interval", 
                new String[]{CommonConfigurationKeys.FS_DF_INTERVAL_KEY});
-    Configuration.addDeprecation("dfs.client.buffer.dir", 
-               new String[]{CommonConfigurationKeys.FS_CLIENT_BUFFER_DIR_KEY});
     Configuration.addDeprecation("hadoop.native.lib", 
                new String[]{CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY});
     Configuration.addDeprecation("fs.default.name", 

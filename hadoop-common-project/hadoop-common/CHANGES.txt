@@ -50,6 +50,10 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8449. hadoop fs -text fails with compressed sequence files
     with the codec file extension (harsh)
 
+    HADOOP-6802. Remove FS_CLIENT_BUFFER_DIR_KEY = "fs.client.buffer.dir"
+    from CommonConfigurationKeys.java (not used, deprecated)
+    (Sho Shimauchi via harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
