@@ -17,6 +17,9 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-3921. MR AM should act on node health status changes. 
     (Bikas Saha via sseth)
 
+    MAPREDUCE-4253. Tests for mapreduce-client-core are lying under
+    mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
