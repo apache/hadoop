@@ -48,6 +48,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -545,7 +547,7 @@ public class TestDFSShell extends TestCase {
       textTest(new Path("/texttest").makeQualified(dfs.getUri(),
             dfs.getWorkingDirectory()), conf);
 
-      conf.set("fs.default.name", dfs.getUri().toString());
+      conf.set("fs.defaultFS", dfs.getUri().toString());
       final FileSystem lfs = FileSystem.getLocal(conf);
       textTest(new Path(TEST_ROOT_DIR, "texttest").makeQualified(lfs.getUri(),
             lfs.getWorkingDirectory()), conf);
@@ -564,6 +566,7 @@ public class TestDFSShell extends TestCase {
       OutputStream zout = new GZIPOutputStream(
           fs.create(new Path(root, "file.gz")));
       Random r = new Random();
+      bak = System.out;
       ByteArrayOutputStream file = new ByteArrayOutputStream();
       for (int i = 0; i < 1024; ++i) {
         char c = Character.forDigit(r.nextInt(26) + 10, 36);
@@ -572,7 +575,6 @@ public class TestDFSShell extends TestCase {
       }
       zout.close();
 
-      bak = System.out;
       ByteArrayOutputStream out = new ByteArrayOutputStream();
       System.setOut(new PrintStream(out));
 
@@ -581,10 +583,28 @@ public class TestDFSShell extends TestCase {
       argv[1] = new Path(root, "file.gz").toString();
       int ret = ToolRunner.run(new FsShell(conf), argv);
       assertEquals("'-text " + argv[1] + " returned " + ret, 0, ret);
-      file.reset();
-      out.reset();
       assertTrue("Output doesn't match input",
           Arrays.equals(file.toByteArray(), out.toByteArray()));
+
+      // Create a sequence file with a gz extension, to test proper
+      // container detection
+      SequenceFile.Writer writer = SequenceFile.createWriter(
+          conf,
+          SequenceFile.Writer.file(new Path(root, "file.gz")),
+          SequenceFile.Writer.keyClass(Text.class),
+          SequenceFile.Writer.valueClass(Text.class));
+      writer.append(new Text("Foo"), new Text("Bar"));
+      writer.close();
+      out = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(out));
+      argv = new String[2];
+      argv[0] = "-text";
+      argv[1] = new Path(root, "file.gz").toString();
+      ret = ToolRunner.run(new FsShell(conf), argv);
+      assertEquals("'-text " + argv[1] + " returned " + ret, 0, ret);
+      assertTrue("Output doesn't match input",
+          Arrays.equals("Foo\tBar\n".getBytes(), out.toByteArray()));
+      out.reset();
     } finally {
       if (null != bak) {
         System.setOut(bak);

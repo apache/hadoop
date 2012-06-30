@@ -108,30 +108,37 @@ class Display extends FsCommand {
     @Override
     protected InputStream getInputStream(PathData item) throws IOException {
       FSDataInputStream i = (FSDataInputStream)super.getInputStream(item);
-      
-      // check codecs
-      CompressionCodecFactory cf = new CompressionCodecFactory(getConf());
-      CompressionCodec codec = cf.getCodec(item.path);
-      if (codec != null) {
-        return codec.createInputStream(i);
-      }
 
+      // Check type of stream first
       switch(i.readShort()) {
         case 0x1f8b: { // RFC 1952
+          // Must be gzip
           i.seek(0);
           return new GZIPInputStream(i);
         }
         case 0x5345: { // 'S' 'E'
+          // Might be a SequenceFile
           if (i.readByte() == 'Q') {
             i.close();
             return new TextRecordInputStream(item.stat);
           }
+        }
+        default: {
+          // Check the type of compression instead, depending on Codec class's
+          // own detection methods, based on the provided path.
+          CompressionCodecFactory cf = new CompressionCodecFactory(getConf());
+          CompressionCodec codec = cf.getCodec(item.path);
+          if (codec != null) {
+            return codec.createInputStream(i);
+          }
           break;
         }
       }
+
+      // File is non-compressed, or not a file container we know.
       i.seek(0);
       return i;
-    }    
+    }
   }
 
   protected class TextRecordInputStream extends InputStream {
