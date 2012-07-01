@@ -118,6 +118,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8438. hadoop-validate-setup.sh refers to examples jar file which doesn't exist
     (Devaraj K via umamahesh)
 
+    HADOOP-8538. CMake builds fail on ARM. (Trevor Robinson via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
