@@ -24,8 +24,11 @@ set(CMAKE_BUILD_TYPE, Release)
 # If JVM_ARCH_DATA_MODEL is 32, compile all binaries as 32-bit.
 # This variable is set by maven.
 if (JVM_ARCH_DATA_MODEL EQUAL 32)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-    set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -m32")
+    # force 32-bit code generation on amd64/x86_64, ppc64, sparc64
+    if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_SYSTEM_PROCESSOR MATCHES ".*64")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+        set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -m32")
+    endif ()
     if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
         set(CMAKE_SYSTEM_PROCESSOR "i686")
     endif ()
