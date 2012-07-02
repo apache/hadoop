@@ -37,6 +37,12 @@ public class FsDatasetTestUtil {
     return ((FsDatasetImpl)fsd).getBlockFile(bpid, b);
   }
 
+  public static File getMetaFile(FsDatasetSpi<?> fsd, String bpid, Block b)
+      throws IOException {
+    return FsDatasetUtil.getMetaFile(getBlockFile(fsd, bpid, b), b
+        .getGenerationStamp());
+  }
+  
   public static boolean unlinkBlock(FsDatasetSpi<?> fsd,
       ExtendedBlock block, int numLinks) throws IOException {
     final ReplicaInfo info = ((FsDatasetImpl)fsd).getReplicaInfo(block);
