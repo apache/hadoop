@@ -161,6 +161,9 @@ Trunk (unreleased changes)
     Configuration.get() stating that substitution depth is too large.
     (Arvind Prabhakar via harsh)
 
+    HADOOP-8548. test-patch.sh shows an incorrect link in Jekins builds
+    (Kihwal Lee via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

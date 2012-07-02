@@ -440,7 +440,7 @@ checkJavacWarnings () {
     -1 javac.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
 
     $DIFF $PATCH_DIR/filteredTrunkJavacWarnings.txt $PATCH_DIR/filteredPatchJavacWarnings.txt > $PATCH_DIR/diffJavacWarnings.txt 
-        JIRA_COMMENT_FOOTER="Javac warnings: $BUILD_URL/artifact/trunk/$(basename $BASEDIR)/patchprocess/diffJavacWarnings.txt
+        JIRA_COMMENT_FOOTER="Javac warnings: $BUILD_URL/artifact/trunk/patchprocess/diffJavacWarnings.txt
 $JIRA_COMMENT_FOOTER"
 
         return 1
