@@ -40,6 +40,7 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import static org.apache.hadoop.test.MetricsAsserts.*;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 public class TestUserGroupInformation {
   final private static String USER_NAME = "user1@HADOOP.APACHE.ORG";
@@ -68,7 +69,7 @@ public class TestUserGroupInformation {
   @BeforeClass
   public static void setup() {
     Configuration conf = new Configuration();
-    conf.set("hadoop.security.auth_to_local",
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
         "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
         "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
         + "DEFAULT");
