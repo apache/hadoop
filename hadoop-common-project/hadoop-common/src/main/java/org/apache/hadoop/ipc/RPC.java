@@ -21,7 +21,6 @@ package org.apache.hadoop.ipc;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
-import java.lang.reflect.Method;
 
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -625,27 +624,6 @@ public class RPC {
         "Cannot close proxy - is not Closeable or "
             + "does not provide closeable invocation handler "
             + proxy.getClass());
-  }
-
-  /** 
-   * Expert: Make multiple, parallel calls to a set of servers.
-   * @deprecated Use {@link #call(Method, Object[][], InetSocketAddress[], UserGroupInformation, Configuration)} instead 
-   */
-  @Deprecated
-  public static Object[] call(Method method, Object[][] params,
-                              InetSocketAddress[] addrs, Configuration conf)
-    throws IOException, InterruptedException {
-    return call(method, params, addrs, null, conf);
-  }
-  
-  /** Expert: Make multiple, parallel calls to a set of servers. */
-  public static Object[] call(Method method, Object[][] params,
-                              InetSocketAddress[] addrs, 
-                              UserGroupInformation ticket, Configuration conf)
-    throws IOException, InterruptedException {
-
-    return getProtocolEngine(method.getDeclaringClass(), conf)
-      .call(method, params, addrs, ticket, conf);
   }
 
   /** Construct a server for a protocol implementation instance listening on a

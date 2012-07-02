@@ -971,43 +971,6 @@ public class Client {
     }
   }
 
-  /** Call implementation used for parallel calls. */
-  private class ParallelCall extends Call {
-    private ParallelResults results;
-    private int index;
-    
-    public ParallelCall(Writable param, ParallelResults results, int index) {
-      super(RPC.RpcKind.RPC_WRITABLE, param);
-      this.results = results;
-      this.index = index;
-    }
-
-    /** Deliver result to result collector. */
-    protected void callComplete() {
-      results.callComplete(this);
-    }
-  }
-
-  /** Result collector for parallel calls. */
-  private static class ParallelResults {
-    private Writable[] values;
-    private int size;
-    private int count;
-
-    public ParallelResults(int size) {
-      this.values = new Writable[size];
-      this.size = size;
-    }
-
-    /** Collect a result. */
-    public synchronized void callComplete(ParallelCall call) {
-      values[call.index] = call.getRpcResult();       // store the value
-      count++;                                    // count it
-      if (count == size)                          // if all values are in
-        notify();                                 // then notify waiting caller
-    }
-  }
-
   /** Construct an IPC client whose values are of the given {@link Writable}
    * class. */
   public Client(Class<? extends Writable> valueClass, Configuration conf, 
@@ -1206,63 +1169,6 @@ public class Client {
       } else {
         return call.rpcResponse;
       }
-    }
-  }
-
-  /**
-   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], 
-   * Class, UserGroupInformation, Configuration)} instead 
-   */
-  @Deprecated
-  public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
-    throws IOException, InterruptedException {
-    return call(params, addresses, null, null, conf);
-  }
-  
-  /**  
-   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], 
-   * Class, UserGroupInformation, Configuration)} instead 
-   */
-  @Deprecated
-  public Writable[] call(Writable[] params, InetSocketAddress[] addresses, 
-                         Class<?> protocol, UserGroupInformation ticket)
-    throws IOException, InterruptedException {
-    return call(params, addresses, protocol, ticket, conf);
-  }
-  
-
-  /** Makes a set of calls in parallel.  Each parameter is sent to the
-   * corresponding address.  When all values are available, or have timed out
-   * or errored, the collected results are returned in an array.  The array
-   * contains nulls for calls that timed out or errored.  */
-  public Writable[] call(Writable[] params, InetSocketAddress[] addresses,
-      Class<?> protocol, UserGroupInformation ticket, Configuration conf)
-      throws IOException, InterruptedException {
-    if (addresses.length == 0) return new Writable[0];
-
-    ParallelResults results = new ParallelResults(params.length);
-    synchronized (results) {
-      for (int i = 0; i < params.length; i++) {
-        ParallelCall call = new ParallelCall(params[i], results, i);
-        try {
-          ConnectionId remoteId = ConnectionId.getConnectionId(addresses[i],
-              protocol, ticket, 0, conf);
-          Connection connection = getConnection(remoteId, call);
-          connection.sendParam(call);             // send each parameter
-        } catch (IOException e) {
-          // log errors
-          LOG.info("Calling "+addresses[i]+" caught: " + 
-                   e.getMessage(),e);
-          results.size--;                         //  wait for one fewer result
-        }
-      }
-      while (results.count != results.size) {
-        try {
-          results.wait();                    // wait for all results
-        } catch (InterruptedException e) {}
-      }
-
-      return results.values;
     }
   }
 
