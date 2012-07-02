@@ -244,13 +244,6 @@ public class TestRPC {
    */
   private static class StoppedRpcEngine implements RpcEngine {
 
-    @Override
-    public Object[] call(Method method, Object[][] params, InetSocketAddress[] addrs,
-        UserGroupInformation ticket, Configuration conf)
-        throws IOException, InterruptedException {
-      return null;
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
@@ -491,17 +484,6 @@ public class TestRPC {
       }
     }
 
-    // try some multi-calls
-    Method echo =
-      TestProtocol.class.getMethod("echo", new Class[] { String.class });
-    String[] strings = (String[])RPC.call(echo, new String[][]{{"a"},{"b"}},
-                                          new InetSocketAddress[] {addr, addr}, conf);
-    assertTrue(Arrays.equals(strings, new String[]{"a","b"}));
-
-    Method ping = TestProtocol.class.getMethod("ping", new Class[] {});
-    Object[] voids = RPC.call(ping, new Object[][]{{},{}},
-                              new InetSocketAddress[] {addr, addr}, conf);
-    assertEquals(voids, null);
     } finally {
       server.stop();
       if(proxy!=null) RPC.stopProxy(proxy);

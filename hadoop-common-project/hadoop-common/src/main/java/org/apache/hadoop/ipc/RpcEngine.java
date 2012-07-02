@@ -19,7 +19,6 @@
 package org.apache.hadoop.ipc;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 
 import javax.net.SocketFactory;
@@ -43,11 +42,6 @@ public interface RpcEngine {
                   UserGroupInformation ticket, Configuration conf,
                   SocketFactory factory, int rpcTimeout,
                   RetryPolicy connectionRetryPolicy) throws IOException;
-
-  /** Expert: Make multiple, parallel calls to a set of servers. */
-  Object[] call(Method method, Object[][] params, InetSocketAddress[] addrs,
-                UserGroupInformation ticket, Configuration conf)
-    throws IOException, InterruptedException;
 
   /** 
    * Construct a server for a protocol implementation instance.
