@@ -930,78 +930,71 @@ public class BlockManager {
           + blk + " not found.");
       return;
     }
-    markBlockAsCorrupt(storedBlock, dn, reason);
+    markBlockAsCorrupt(new BlockToMarkCorrupt(storedBlock, reason), dn);
   }
 
-  private void markBlockAsCorrupt(BlockInfo storedBlock,
-                                  DatanodeInfo dn,
-                                  String reason) throws IOException {
-    assert storedBlock != null : "storedBlock should not be null";
+  private void markBlockAsCorrupt(BlockToMarkCorrupt b,
+                                  DatanodeInfo dn) throws IOException {
     DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
-      throw new IOException("Cannot mark block " + 
-                            storedBlock.getBlockName() +
-                            " as corrupt because datanode " + dn +
-                            " does not exist. ");
+      throw new IOException("Cannot mark " + b
+          + " as corrupt because datanode " + dn + " does not exist");
     }
 
-    BlockCollection bc = storedBlock.getBlockCollection();
+    BlockCollection bc = b.corrupted.getBlockCollection();
     if (bc == null) {
-      NameNode.stateChangeLog.info("BLOCK markBlockAsCorrupt: " +
-                                   "block " + storedBlock +
-                                   " could not be marked as corrupt as it" +
-                                   " does not belong to any file");
-      addToInvalidates(storedBlock, node);
+      NameNode.stateChangeLog.info("BLOCK markBlockAsCorrupt: " + b
+          + " cannot be marked as corrupt as it does not belong to any file");
+      addToInvalidates(b.corrupted, node);
       return;
     } 
 
     // Add replica to the data-node if it is not already there
-    node.addBlock(storedBlock);
+    node.addBlock(b.stored);
 
     // Add this replica to corruptReplicas Map
-    corruptReplicas.addToCorruptReplicasMap(storedBlock, node, reason);
-    if (countNodes(storedBlock).liveReplicas() >= bc.getReplication()) {
+    corruptReplicas.addToCorruptReplicasMap(b.corrupted, node, b.reason);
+    if (countNodes(b.stored).liveReplicas() >= bc.getReplication()) {
       // the block is over-replicated so invalidate the replicas immediately
-      invalidateBlock(storedBlock, node);
+      invalidateBlock(b, node);
     } else if (namesystem.isPopulatingReplQueues()) {
       // add the block to neededReplication
-      updateNeededReplications(storedBlock, -1, 0);
+      updateNeededReplications(b.stored, -1, 0);
     }
   }
 
   /**
    * Invalidates the given block on the given datanode.
    */
-  private void invalidateBlock(Block blk, DatanodeInfo dn)
-      throws IOException {
-    NameNode.stateChangeLog.info("BLOCK* invalidateBlock: "
-                                 + blk + " on " + dn);
+  private void invalidateBlock(BlockToMarkCorrupt b, DatanodeInfo dn
+      ) throws IOException {
+    NameNode.stateChangeLog.info("BLOCK* invalidateBlock: " + b + " on " + dn);
     DatanodeDescriptor node = getDatanodeManager().getDatanode(dn);
     if (node == null) {
-      throw new IOException("Cannot invalidate block " + blk
+      throw new IOException("Cannot invalidate " + b
           + " because datanode " + dn + " does not exist.");
     }
 
     // Check how many copies we have of the block
-    NumberReplicas nr = countNodes(blk);
+    NumberReplicas nr = countNodes(b.stored);
     if (nr.replicasOnStaleNodes() > 0) {
       NameNode.stateChangeLog.info("BLOCK* invalidateBlocks: postponing " +
-          "invalidation of block " + blk + " on " + dn + " because " +
+          "invalidation of " + b + " on " + dn + " because " +
           nr.replicasOnStaleNodes() + " replica(s) are located on nodes " +
           "with potentially out-of-date block reports.");
-      postponeBlock(blk);
+      postponeBlock(b.corrupted);
 
     } else if (nr.liveReplicas() >= 1) {
       // If we have at least one copy on a live node, then we can delete it.
-      addToInvalidates(blk, dn);
-      removeStoredBlock(blk, node);
+      addToInvalidates(b.corrupted, dn);
+      removeStoredBlock(b.stored, node);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
         NameNode.stateChangeLog.debug("BLOCK* invalidateBlocks: "
-            + blk + " on " + dn + " listed for deletion.");
+            + b + " on " + dn + " listed for deletion.");
       }
     } else {
-      NameNode.stateChangeLog.info("BLOCK* invalidateBlocks: " + blk + " on "
-          + dn + " is the only copy and was not deleted.");
+      NameNode.stateChangeLog.info("BLOCK* invalidateBlocks: " + b
+          + " on " + dn + " is the only copy and was not deleted.");
     }
   }
 
@@ -1408,13 +1401,36 @@ public class BlockManager {
    * list of blocks that should be considered corrupt due to a block report.
    */
   private static class BlockToMarkCorrupt {
-    final BlockInfo blockInfo;
+    /** The corrupted block in a datanode. */
+    final BlockInfo corrupted;
+    /** The corresponding block stored in the BlockManager. */
+    final BlockInfo stored;
+    /** The reason to mark corrupt. */
     final String reason;
     
-    BlockToMarkCorrupt(BlockInfo blockInfo, String reason) {
-      super();
-      this.blockInfo = blockInfo;
+    BlockToMarkCorrupt(BlockInfo corrupted, BlockInfo stored, String reason) {
+      Preconditions.checkNotNull(corrupted, "corrupted is null");
+      Preconditions.checkNotNull(stored, "stored is null");
+
+      this.corrupted = corrupted;
+      this.stored = stored;
       this.reason = reason;
+    }
+
+    BlockToMarkCorrupt(BlockInfo stored, String reason) {
+      this(stored, stored, reason);
+    }
+
+    BlockToMarkCorrupt(BlockInfo stored, long gs, String reason) {
+      this(new BlockInfo(stored), stored, reason);
+      //the corrupted block in datanode has a different generation stamp
+      corrupted.setGenerationStamp(gs);
+    }
+
+    @Override
+    public String toString() {
+      return corrupted + "("
+          + (corrupted == stored? "same as stored": "stored=" + stored) + ")";
     }
   }
 
@@ -1536,7 +1552,7 @@ public class BlockManager {
       addToInvalidates(b, node);
     }
     for (BlockToMarkCorrupt b : toCorrupt) {
-      markBlockAsCorrupt(b.blockInfo, node, b.reason);
+      markBlockAsCorrupt(b, node);
     }
   }
 
@@ -1586,7 +1602,7 @@ public class BlockManager {
           queueReportedBlock(node, iblk, reportedState,
               QUEUE_REASON_CORRUPT_STATE);
         } else {
-          markBlockAsCorrupt(c.blockInfo, node, c.reason);
+          markBlockAsCorrupt(c, node);
         }
         continue;
       }
@@ -1807,7 +1823,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     assert pendingDNMessages.count() == 0;
   }
 
-  /*
+  /**
    * The next two methods test the various cases under which we must conclude
    * the replica is corrupt, or under construction.  These are laid out
    * as switch statements, on the theory that it is easier to understand
@@ -1817,7 +1833,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    * @return a BlockToMarkCorrupt object, or null if the replica is not corrupt
    */
   private BlockToMarkCorrupt checkReplicaCorrupt(
-      Block iblk, ReplicaState reportedState, 
+      Block reported, ReplicaState reportedState, 
       BlockInfo storedBlock, BlockUCState ucState, 
       DatanodeDescriptor dn) {
     switch(reportedState) {
@@ -1825,15 +1841,16 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       switch(ucState) {
       case COMPLETE:
       case COMMITTED:
-        if (storedBlock.getGenerationStamp() != iblk.getGenerationStamp()) {
-          return new BlockToMarkCorrupt(storedBlock,
-              "block is " + ucState + " and reported genstamp " +
-              iblk.getGenerationStamp() + " does not match " +
-              "genstamp in block map " + storedBlock.getGenerationStamp());
-        } else if (storedBlock.getNumBytes() != iblk.getNumBytes()) {
+        if (storedBlock.getGenerationStamp() != reported.getGenerationStamp()) {
+          final long reportedGS = reported.getGenerationStamp();
+          return new BlockToMarkCorrupt(storedBlock, reportedGS,
+              "block is " + ucState + " and reported genstamp " + reportedGS
+              + " does not match genstamp in block map "
+              + storedBlock.getGenerationStamp());
+        } else if (storedBlock.getNumBytes() != reported.getNumBytes()) {
           return new BlockToMarkCorrupt(storedBlock,
               "block is " + ucState + " and reported length " +
-              iblk.getNumBytes() + " does not match " +
+              reported.getNumBytes() + " does not match " +
               "length in block map " + storedBlock.getNumBytes());
         } else {
           return null; // not corrupt
@@ -1845,11 +1862,12 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     case RWR:
       if (!storedBlock.isComplete()) {
         return null; // not corrupt
-      } else if (storedBlock.getGenerationStamp() != iblk.getGenerationStamp()) {
-        return new BlockToMarkCorrupt(storedBlock,
-            "reported " + reportedState + " replica with genstamp " +
-            iblk.getGenerationStamp() + " does not match COMPLETE block's " +
-            "genstamp in block map " + storedBlock.getGenerationStamp());
+      } else if (storedBlock.getGenerationStamp() != reported.getGenerationStamp()) {
+        final long reportedGS = reported.getGenerationStamp();
+        return new BlockToMarkCorrupt(storedBlock, reportedGS,
+            "reported " + reportedState + " replica with genstamp " + reportedGS
+            + " does not match COMPLETE block's genstamp in block map "
+            + storedBlock.getGenerationStamp());
       } else { // COMPLETE block, same genstamp
         if (reportedState == ReplicaState.RBW) {
           // If it's a RBW report for a COMPLETE block, it may just be that
@@ -1871,8 +1889,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       String msg = "Unexpected replica state " + reportedState
       + " for block: " + storedBlock + 
       " on " + dn + " size " + storedBlock.getNumBytes();
-      // log here at WARN level since this is really a broken HDFS
-      // invariant
+      // log here at WARN level since this is really a broken HDFS invariant
       LOG.warn(msg);
       return new BlockToMarkCorrupt(storedBlock, msg);
     }
@@ -2075,7 +2092,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
    *
    * @param blk Block whose corrupt replicas need to be invalidated
    */
-  private void invalidateCorruptReplicas(Block blk) {
+  private void invalidateCorruptReplicas(BlockInfo blk) {
     Collection<DatanodeDescriptor> nodes = corruptReplicas.getNodes(blk);
     boolean gotException = false;
     if (nodes == null)
@@ -2085,7 +2102,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
     DatanodeDescriptor[] nodesCopy = nodes.toArray(new DatanodeDescriptor[0]);
     for (DatanodeDescriptor node : nodesCopy) {
       try {
-        invalidateBlock(blk, node);
+        invalidateBlock(new BlockToMarkCorrupt(blk, null), node);
       } catch (IOException e) {
         NameNode.stateChangeLog.info("NameNode.invalidateCorruptReplicas " +
                                       "error in deleting bad block " + blk +
@@ -2501,7 +2518,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
       addToInvalidates(b, node);
     }
     for (BlockToMarkCorrupt b : toCorrupt) {
-      markBlockAsCorrupt(b.blockInfo, node, b.reason);
+      markBlockAsCorrupt(b, node);
     }
   }
 

@@ -238,6 +238,13 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3559. DFSTestUtil: use Builder class to construct DFSTestUtil
     instances. (Colin Patrick McCabe via atm)
 
+    HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
+    (szetszwo)
+
+    HDFS-3157. Fix a bug in the case that the generation stamps of the stored
+    block in a namenode and the reported block from a datanode do not match.
+    (Ashish Singhi via szetszwo)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
@@ -255,9 +262,6 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
 
     HDFS-3428. Move DelegationTokenRenewer to common (tucu)
-
-    HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
-    (szetszwo)
 
     HDFS-3491. HttpFs does not set permissions correctly (tucu)
 
