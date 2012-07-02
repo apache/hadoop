@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
@@ -53,7 +54,7 @@ class FileJournalManager implements JournalManager {
   private static final Log LOG = LogFactory.getLog(FileJournalManager.class);
 
   private final StorageDirectory sd;
-  private final NNStorage storage;
+  private final StorageErrorReporter errorReporter;
   private int outputBufferCapacity = 512*1024;
 
   private static final Pattern EDITS_REGEX = Pattern.compile(
@@ -67,9 +68,10 @@ class FileJournalManager implements JournalManager {
   StoragePurger purger
     = new NNStorageRetentionManager.DeletionStoragePurger();
 
-  public FileJournalManager(StorageDirectory sd, NNStorage storage) {
+  public FileJournalManager(StorageDirectory sd,
+      StorageErrorReporter errorReporter) {
     this.sd = sd;
-    this.storage = storage;
+    this.errorReporter = errorReporter;
   }
 
   @Override 
@@ -85,7 +87,10 @@ class FileJournalManager implements JournalManager {
       stm.create();
       return stm;
     } catch (IOException e) {
-      storage.reportErrorsOnDirectory(sd);
+      LOG.warn("Unable to start log segment " + txid +
+          " at " + currentInProgress + ": " +
+          e.getLocalizedMessage());
+      errorReporter.reportErrorOnFile(currentInProgress);
       throw e;
     }
   }
@@ -103,7 +108,7 @@ class FileJournalManager implements JournalManager {
         "Can't finalize edits file " + inprogressFile + " since finalized file " +
         "already exists");
     if (!inprogressFile.renameTo(dstFile)) {
-      storage.reportErrorsOnDirectory(sd);
+      errorReporter.reportErrorOnFile(dstFile);
       throw new IllegalStateException("Unable to finalize edits file " + inprogressFile);
     }
     if (inprogressFile.equals(currentInProgress)) {

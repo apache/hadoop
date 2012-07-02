@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -292,7 +293,7 @@ public class GetImageServlet extends HttpServlet {
   }
   
   static String getParamStringToPutImage(long txid,
-      InetSocketAddress imageListenAddress, NNStorage storage) {
+      InetSocketAddress imageListenAddress, Storage storage) {
     
     return "putimage=1" +
       "&" + TXID_PARAM + "=" + txid +

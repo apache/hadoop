@@ -104,6 +104,9 @@ Trunk (unreleased changes)
 
     HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
 
+    HDFS-3190. Simple refactors in existing NN code to assist
+    QuorumJournalManager extension. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

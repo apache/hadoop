@@ -32,6 +32,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
@@ -60,7 +62,7 @@ public class TransferFsImage {
   }
 
   public static MD5Hash downloadImageToStorage(
-      String fsName, long imageTxId, NNStorage dstStorage, boolean needDigest)
+      String fsName, long imageTxId, Storage dstStorage, boolean needDigest)
       throws IOException {
     String fileid = GetImageServlet.getParamStringForImage(
         imageTxId, dstStorage);
@@ -116,7 +118,7 @@ public class TransferFsImage {
    */
   public static void uploadImageFromStorage(String fsName,
       InetSocketAddress imageListenAddress,
-      NNStorage storage, long txid) throws IOException {
+      Storage storage, long txid) throws IOException {
     
     String fileid = GetImageServlet.getParamStringToPutImage(
         txid, imageListenAddress, storage);
@@ -199,17 +201,20 @@ public class TransferFsImage {
    */
   static MD5Hash getFileClient(String nnHostPort,
       String queryString, List<File> localPaths,
-      NNStorage dstStorage, boolean getChecksum) throws IOException {
-    byte[] buf = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
+      Storage dstStorage, boolean getChecksum) throws IOException {
 
     String str = "http://" + nnHostPort + "/getimage?" + queryString;
     LOG.info("Opening connection to " + str);
     //
     // open connection to remote server
     //
-    long startTime = Util.monotonicNow();
     URL url = new URL(str);
-
+    return doGetUrl(url, localPaths, dstStorage, getChecksum);
+  }
+  
+  public static MD5Hash doGetUrl(URL url, List<File> localPaths,
+      Storage dstStorage, boolean getChecksum) throws IOException {
+    long startTime = Util.monotonicNow();
     HttpURLConnection connection = (HttpURLConnection)
       SecurityUtil.openSecureHttpConnection(url);
 
@@ -227,7 +232,7 @@ public class TransferFsImage {
       advertisedSize = Long.parseLong(contentLength);
     } else {
       throw new IOException(CONTENT_LENGTH + " header is not provided " +
-                            "by the namenode when trying to fetch " + str);
+                            "by the namenode when trying to fetch " + url);
     }
     
     if (localPaths != null) {
@@ -268,15 +273,16 @@ public class TransferFsImage {
           try {
             if (f.exists()) {
               LOG.warn("Overwriting existing file " + f
-                  + " with file downloaded from " + str);
+                  + " with file downloaded from " + url);
             }
             outputStreams.add(new FileOutputStream(f));
           } catch (IOException ioe) {
             LOG.warn("Unable to download file " + f, ioe);
             // This will be null if we're downloading the fsimage to a file
             // outside of an NNStorage directory.
-            if (dstStorage != null) {
-              dstStorage.reportErrorOnFile(f);
+            if (dstStorage != null &&
+                (dstStorage instanceof StorageErrorReporter)) {
+              ((StorageErrorReporter)dstStorage).reportErrorOnFile(f);
             }
           }
         }
@@ -288,6 +294,7 @@ public class TransferFsImage {
       }
       
       int num = 1;
+      byte[] buf = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
       while (num > 0) {
         num = stream.read(buf);
         if (num > 0) {
@@ -308,7 +315,7 @@ public class TransferFsImage {
         // only throw this exception if we think we read all of it on our end
         // -- otherwise a client-side IOException would be masked by this
         // exception that makes it look like a server-side problem!
-        throw new IOException("File " + str + " received length " + received +
+        throw new IOException("File " + url + " received length " + received +
                               " is not of the advertised size " +
                               advertisedSize);
       }
@@ -324,7 +331,7 @@ public class TransferFsImage {
       
       if (advertisedDigest != null &&
           !computedDigest.equals(advertisedDigest)) {
-        throw new IOException("File " + str + " computed digest " +
+        throw new IOException("File " + url + " computed digest " +
             computedDigest + " does not match advertised digest " + 
             advertisedDigest);
       }
