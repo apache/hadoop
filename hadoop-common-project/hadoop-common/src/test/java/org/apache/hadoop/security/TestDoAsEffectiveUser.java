@@ -44,6 +44,7 @@ import org.apache.hadoop.ipc.TestSaslRPC.TestTokenSecretManager;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenIdentifier;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenSelector;
 import org.apache.commons.logging.*;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  *
@@ -66,7 +67,7 @@ public class TestDoAsEffectiveUser {
   
   
   static {
-    masterConf.set("hadoop.security.auth_to_local",
+    masterConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
         "RULE:[2:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//" +
         "RULE:[1:$1@$0](.*@HADOOP.APACHE.ORG)s/@.*//"
         + "DEFAULT");

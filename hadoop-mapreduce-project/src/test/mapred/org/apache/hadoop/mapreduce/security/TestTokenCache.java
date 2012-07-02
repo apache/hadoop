@@ -73,7 +73,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 public class TestTokenCache {
   private static final int NUM_OF_KEYS = 10;
 
@@ -157,7 +157,7 @@ public class TestTokenCache {
   public static void setUp() throws Exception {
     
     Configuration conf = new Configuration();
-    conf.set("hadoop.security.auth_to_local", "RULE:[2:$1]");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL, "RULE:[2:$1]");
     dfsCluster = new MiniDFSCluster(conf, numSlaves, true, null);
     jConf = new JobConf(conf);
     mrCluster = new MiniMRCluster(0, 0, numSlaves, 

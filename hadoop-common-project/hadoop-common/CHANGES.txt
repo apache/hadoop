@@ -57,6 +57,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-3450. Add tests to Local Directory Allocator for
     asserting their URI-returning capability (Sho Shimauchi via harsh)
 
+    HADOOP-8463. hadoop.security.auth_to_local needs a key definition and doc.
+    (Madhukara Phatak via eli)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname

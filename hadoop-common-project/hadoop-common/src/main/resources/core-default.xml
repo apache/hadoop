@@ -250,6 +250,12 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.security.auth_to_local</name>
+  <value></value>
+  <description>Maps kerberos principals to local user names</description>
+</property>
+
 <!-- i/o properties -->
 <property>
   <name>io.file.buffer.size</name>

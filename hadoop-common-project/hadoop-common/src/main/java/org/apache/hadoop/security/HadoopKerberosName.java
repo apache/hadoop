@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
-
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 /**
  * This class implements parsing and handling of Kerberos principal names. In 
  * particular, it splits them apart and translates them down into local
@@ -63,7 +63,7 @@ public class HadoopKerberosName extends KerberosName {
    * @throws IOException
    */
   public static void setConfiguration(Configuration conf) throws IOException {
-    String ruleString = conf.get("hadoop.security.auth_to_local", "DEFAULT");
+    String ruleString = conf.get(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL, "DEFAULT");
     setRules(ruleString);
   }
 

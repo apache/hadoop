@@ -56,6 +56,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 /**
  * Test case for client support of delegation tokens in an HA cluster.
@@ -76,7 +77,7 @@ public class TestDelegationTokensWithHA {
   public static void setupCluster() throws Exception {
     conf.setBoolean(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
-    conf.set("hadoop.security.auth_to_local",
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
         "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
 
     cluster = new MiniDFSCluster.Builder(conf)
