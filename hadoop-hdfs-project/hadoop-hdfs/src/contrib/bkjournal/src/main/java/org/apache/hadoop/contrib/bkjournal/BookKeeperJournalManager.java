@@ -22,6 +22,7 @@ import org.apache.hadoop.hdfs.server.namenode.JournalManager;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.bookkeeper.conf.ClientConfiguration;
@@ -158,11 +159,19 @@ public class BookKeeperJournalManager implements JournalManager {
       (byte)(i) };
   }
 
+  BookKeeperJournalManager(Configuration conf, URI uri) throws IOException {
+    this(conf, uri, null);
+    // TODO(ivank): update BookKeeperJournalManager to do something
+    // with the NamespaceInfo. This constructor has been added
+    // for compatibility with the old tests, and may be removed
+    // when the tests are updated.
+  }
+
   /**
    * Construct a Bookkeeper journal manager.
    */
-  public BookKeeperJournalManager(Configuration conf, URI uri)
-      throws IOException {
+  public BookKeeperJournalManager(Configuration conf, URI uri,
+      NamespaceInfo nsInfo) throws IOException {
     this.conf = conf;
     String zkConnect = uri.getAuthority().replace(";", ",");
     String zkPath = uri.getPath();

@@ -102,6 +102,8 @@ Trunk (unreleased changes)
     HDFS-3510.  Editlog pre-allocation is performed prior to writing edits
     to avoid partial edits case disk out of space.(Colin McCabe via suresh)
 
+    HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

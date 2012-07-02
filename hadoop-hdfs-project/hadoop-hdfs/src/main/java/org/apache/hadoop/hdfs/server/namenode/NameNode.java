@@ -67,7 +67,6 @@ import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Server;
@@ -830,12 +829,7 @@ public class NameNode {
           Lists.<URI>newArrayList(),
           sharedEditsDirs);
       
-      newSharedStorage.format(new NamespaceInfo(
-          existingStorage.getNamespaceID(),
-          existingStorage.getClusterID(),
-          existingStorage.getBlockPoolID(),
-          existingStorage.getCTime(),
-          existingStorage.getDistributedUpgradeVersion()));
+      newSharedStorage.format(existingStorage.getNamespaceInfo());
       
       // Need to make sure the edit log segments are in good shape to initialize
       // the shared edits dir.

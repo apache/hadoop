@@ -188,6 +188,8 @@ public class BootstrapStandby implements Tool, Configurable {
     // Load the newly formatted image, using all of the directories (including shared
     // edits)
     FSImage image = new FSImage(conf);
+    image.getStorage().setStorageInfo(storage);
+    image.initEditLog();
     assert image.getEditLog().isOpenForRead() :
         "Expected edit log to be open for read";
     
