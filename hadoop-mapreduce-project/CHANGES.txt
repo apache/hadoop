@@ -58,6 +58,9 @@ Trunk (unreleased changes)
     MAPREDUCE-2384. The job submitter should make sure to validate
     jobs before creation of necessary files. (harsh)
 
+    MAPREDUCE-4371. Check for cyclic dependencies in Jobcontrol job DAG
+    (madhukara phatak via bobby)
+
   BUG FIXES
 
     MAPREDUCE-4356. [Rumen] Provide access to the method
