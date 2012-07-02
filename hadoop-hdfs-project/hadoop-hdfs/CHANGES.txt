@@ -245,6 +245,8 @@ Release 2.0.1-alpha - UNRELEASED
     block in a namenode and the reported block from a datanode do not match.
     (Ashish Singhi via szetszwo)
 
+    HDFS-3575. HttpFS does not log Exception Stacktraces (brocknoland via tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
