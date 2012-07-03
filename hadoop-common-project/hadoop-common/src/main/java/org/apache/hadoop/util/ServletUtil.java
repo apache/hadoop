@@ -60,6 +60,20 @@ public class ServletUtil {
     s = s.trim();
     return s.length() == 0? null: s;
   }
+  
+  /**
+   * @return a long value as passed in the given parameter, throwing
+   * an exception if it is not present or if it is not a valid number.
+   */
+  public static long parseLongParam(ServletRequest request, String param)
+      throws IOException {
+    String paramStr = request.getParameter(param);
+    if (paramStr == null) {
+      throw new IOException("Invalid request has no " + param + " parameter");
+    }
+    
+    return Long.valueOf(paramStr);
+  }
 
   public static final String HTML_TAIL = "<hr />\n"
     + "<a href='http://hadoop.apache.org/core'>Hadoop</a>, " 
