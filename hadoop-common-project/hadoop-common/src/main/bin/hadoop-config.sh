@@ -172,7 +172,7 @@ IFS=
 
 if [ "$HADOOP_COMMON_HOME" = "" ]; then
   if [ -d "${HADOOP_PREFIX}/$HADOOP_COMMON_DIR" ]; then
-    HADOOP_COMMON_HOME=$HADOOP_PREFIX
+    export HADOOP_COMMON_HOME=$HADOOP_PREFIX
   fi
 fi
 
@@ -252,7 +252,7 @@ HADOOP_OPTS="$HADOOP_OPTS -Djava.net.preferIPv4Stack=true"
 # put hdfs in classpath if present
 if [ "$HADOOP_HDFS_HOME" = "" ]; then
   if [ -d "${HADOOP_PREFIX}/$HDFS_DIR" ]; then
-    HADOOP_HDFS_HOME=$HADOOP_PREFIX
+    export HADOOP_HDFS_HOME=$HADOOP_PREFIX
   fi
 fi
 
@@ -269,7 +269,7 @@ CLASSPATH=${CLASSPATH}:$HADOOP_HDFS_HOME/$HDFS_DIR'/*'
 # put yarn in classpath if present
 if [ "$YARN_HOME" = "" ]; then
   if [ -d "${HADOOP_PREFIX}/$YARN_DIR" ]; then
-    YARN_HOME=$HADOOP_PREFIX
+    export YARN_HOME=$HADOOP_PREFIX
   fi
 fi
 
@@ -286,7 +286,7 @@ CLASSPATH=${CLASSPATH}:$YARN_HOME/$YARN_DIR'/*'
 # put mapred in classpath if present AND different from YARN
 if [ "$HADOOP_MAPRED_HOME" = "" ]; then
   if [ -d "${HADOOP_PREFIX}/$MAPRED_DIR" ]; then
-    HADOOP_MAPRED_HOME=$HADOOP_PREFIX
+    export HADOOP_MAPRED_HOME=$HADOOP_PREFIX
   fi
 fi
 
