@@ -258,6 +258,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn 
     jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
 
+    MAPREDUCE-4307. TeraInputFormat calls FileSystem.getDefaultBlockSize()
+    without a Path - Failure when using ViewFileSystem. (Ahmed Radwan via eli)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
