@@ -47,7 +47,6 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
     (tomwhite)
 
-
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
@@ -267,6 +266,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4290. Fix Yarn Applicaiton Status to MR JobState conversion. 
     (Devaraj K via sseth)
+
+    MAPREDUCE-4205. retrofit all JVM shutdown hooks to use ShutdownHookManager 
+    (tucu)
 
 Release 0.23.2 - UNRELEASED
 

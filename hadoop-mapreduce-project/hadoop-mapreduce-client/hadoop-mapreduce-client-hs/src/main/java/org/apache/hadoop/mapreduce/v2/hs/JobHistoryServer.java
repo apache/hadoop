@@ -28,6 +28,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -40,6 +41,12 @@ import org.apache.hadoop.yarn.service.CompositeService;
  *
  *****************************************************************/
 public class JobHistoryServer extends CompositeService {
+
+  /**
+   * Priority of the JobHistoryServer shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
+
   private static final Log LOG = LogFactory.getLog(JobHistoryServer.class);
   private HistoryContext historyContext;
   private HistoryClientService clientService;
@@ -118,8 +125,9 @@ public class JobHistoryServer extends CompositeService {
     StringUtils.startupShutdownMessage(JobHistoryServer.class, args, LOG);
     try {
       JobHistoryServer jobHistoryServer = new JobHistoryServer();
-      Runtime.getRuntime().addShutdownHook(
-          new CompositeServiceShutdownHook(jobHistoryServer));
+      ShutdownHookManager.get().addShutdownHook(
+          new CompositeServiceShutdownHook(jobHistoryServer),
+          SHUTDOWN_HOOK_PRIORITY);
       YarnConfiguration conf = new YarnConfiguration(new JobConf());
       jobHistoryServer.init(conf);
       jobHistoryServer.start();

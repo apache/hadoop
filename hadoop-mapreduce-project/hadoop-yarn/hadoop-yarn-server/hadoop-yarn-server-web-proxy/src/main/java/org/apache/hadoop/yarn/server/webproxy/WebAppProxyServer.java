@@ -24,6 +24,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -34,6 +35,12 @@ import org.apache.hadoop.yarn.service.CompositeService;
  * web interfaces. 
  */
 public class WebAppProxyServer extends CompositeService {
+
+  /**
+   * Priority of the ResourceManager shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 30;
+
   private static final Log LOG = LogFactory.getLog(WebAppProxyServer.class);
   
   private WebAppProxy proxy = null;
@@ -69,8 +76,9 @@ public class WebAppProxyServer extends CompositeService {
     StringUtils.startupShutdownMessage(WebAppProxyServer.class, args, LOG);
     try {
       WebAppProxyServer proxy = new WebAppProxyServer();
-      Runtime.getRuntime().addShutdownHook(
-          new CompositeServiceShutdownHook(proxy));
+      ShutdownHookManager.get().addShutdownHook(
+        new CompositeServiceShutdownHook(proxy),
+        SHUTDOWN_HOOK_PRIORITY);
       YarnConfiguration conf = new YarnConfiguration();
       proxy.init(conf);
       proxy.start();

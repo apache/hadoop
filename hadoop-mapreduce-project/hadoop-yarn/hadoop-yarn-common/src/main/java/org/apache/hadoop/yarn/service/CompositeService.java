@@ -107,12 +107,11 @@ public class CompositeService extends AbstractService {
    * JVM Shutdown hook for CompositeService which will stop the give
    * CompositeService gracefully in case of JVM shutdown.
    */
-  public static class CompositeServiceShutdownHook extends Thread {
+  public static class CompositeServiceShutdownHook implements Runnable {
 
     private CompositeService compositeService;
 
     public CompositeServiceShutdownHook(CompositeService compositeService) {
-      super("CompositeServiceShutdownHook for " + compositeService.getName());
       this.compositeService = compositeService;
     }
 
