@@ -249,6 +249,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3575. HttpFS does not log Exception Stacktraces (brocknoland via tucu)
 
+    HDFS-3574. Fix small race and do some cleanup in GetImageServlet (todd)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)

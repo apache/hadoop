@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.lang.Math;
 
+import javax.servlet.ServletOutputStream;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
@@ -145,16 +147,16 @@ public class TransferFsImage {
    * A server-side method to respond to a getfile http request
    * Copies the contents of the local file into the output stream.
    */
-  static void getFileServer(OutputStream outstream, File localfile,
+  public static void getFileServer(ServletResponse response, File localfile,
+      FileInputStream infile,
       DataTransferThrottler throttler) 
     throws IOException {
     byte buf[] = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
-    FileInputStream infile = null;
+    ServletOutputStream out = null;
     try {
-      infile = new FileInputStream(localfile);
       CheckpointFaultInjector.getInstance()
           .aboutToSendFile(localfile);
-      
+      out = response.getOutputStream();
 
       if (CheckpointFaultInjector.getInstance().
             shouldSendShortFile(localfile)) {
@@ -178,14 +180,14 @@ public class TransferFsImage {
           buf[0]++;
         }
         
-        outstream.write(buf, 0, num);
+        out.write(buf, 0, num);
         if (throttler != null) {
           throttler.throttle(num);
         }
       }
     } finally {
-      if (infile != null) {
-        infile.close();
+      if (out != null) {
+        out.close();
       }
     }
   }
