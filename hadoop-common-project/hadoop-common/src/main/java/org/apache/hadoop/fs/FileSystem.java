@@ -2150,10 +2150,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       if (map.containsKey(key) && fs == map.get(key)) {
         map.remove(key);
         toAutoClose.remove(key);
-        if (map.isEmpty()) {
-          ShutdownHookManager.get().removeShutdownHook(clientFinalizer);
         }
-      }
     }
 
     synchronized void closeAll() throws IOException {
