@@ -42,6 +42,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3359. DFSClient.close should close cached sockets. (todd)
 
+    HDFS-3442. Incorrect count for Missing Replicas in FSCK report. (Andrew
+    Wang via atm)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
