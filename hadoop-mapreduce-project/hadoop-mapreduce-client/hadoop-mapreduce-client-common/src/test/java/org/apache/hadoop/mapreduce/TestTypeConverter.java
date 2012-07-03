@@ -27,6 +27,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
@@ -45,7 +46,7 @@ public class TestTypeConverter {
   @Test
   public void testEnums() throws Exception {
     for (YarnApplicationState applicationState : YarnApplicationState.values()) {
-      TypeConverter.fromYarn(applicationState);
+      TypeConverter.fromYarn(applicationState, FinalApplicationStatus.FAILED);
     }
     
     for (TaskType taskType : TaskType.values()) {
@@ -63,8 +64,6 @@ public class TestTypeConverter {
     for (TaskState taskState : TaskState.values()) {
       TypeConverter.fromYarn(taskState);
     }
-    
-    
   }
   
   @Test

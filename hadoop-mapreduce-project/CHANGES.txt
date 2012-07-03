@@ -265,6 +265,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4307. TeraInputFormat calls FileSystem.getDefaultBlockSize()
     without a Path - Failure when using ViewFileSystem. (Ahmed Radwan via eli)
 
+    MAPREDUCE-4290. Fix Yarn Applicaiton Status to MR JobState conversion. 
+    (Devaraj K via sseth)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
