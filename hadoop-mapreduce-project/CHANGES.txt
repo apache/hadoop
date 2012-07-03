@@ -270,6 +270,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4205. retrofit all JVM shutdown hooks to use ShutdownHookManager 
     (tucu)
 
+    MAPREDUCE-4031. Prevent a Node Manager hang during shutdown. 
+    (Devaraj K via sseth)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
