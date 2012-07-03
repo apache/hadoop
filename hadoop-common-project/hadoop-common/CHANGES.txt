@@ -82,6 +82,9 @@ Trunk (unreleased changes)
     HADOOP-8059. Add javadoc to InterfaceAudience and InterfaceStability.
     (Brandon Li via suresh)
 
+    HADOOP-8434. Add tests for Configuration setter methods.
+    (Madhukara Phatak via suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
