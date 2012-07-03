@@ -399,6 +399,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3574. Fix small race and do some cleanup in GetImageServlet (todd)
 
+    HDFS-3581. FSPermissionChecker#checkPermission sticky bit check
+    missing range check. (eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
