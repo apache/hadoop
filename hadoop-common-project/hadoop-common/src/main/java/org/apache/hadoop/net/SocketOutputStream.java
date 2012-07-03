@@ -31,6 +31,8 @@ import java.nio.channels.WritableByteChannel;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.metrics2.lib.MutableRate;
+import org.apache.hadoop.util.Progressable;
 
 /**
  * This implements an output stream that can have a timeout while writing.
@@ -166,7 +168,10 @@ public class SocketOutputStream extends OutputStream
   
   /**
    * Transfers data from FileChannel using 
-   * {@link FileChannel#transferTo(long, long, WritableByteChannel)}. 
+   * {@link FileChannel#transferTo(long, long, WritableByteChannel)}.
+   * Updates <code>waitForWritableTime</code> and <code>transferToTime</code>
+   * with the time spent blocked on the network and the time spent transferring
+   * data from disk to network respectively.
    * 
    * Similar to readFully(), this waits till requested amount of 
    * data is transfered.
@@ -174,6 +179,9 @@ public class SocketOutputStream extends OutputStream
    * @param fileCh FileChannel to transfer data from.
    * @param position position within the channel where the transfer begins
    * @param count number of bytes to transfer.
+   * @param waitForWritableTime updated by the nanoseconds spent waiting for 
+   * the socket to become writable
+   * @param transferTime updated by the nanoseconds spent transferring data
    * 
    * @throws EOFException 
    *         If end of input file is reached before requested number of 
@@ -186,9 +194,11 @@ public class SocketOutputStream extends OutputStream
    * @throws IOException Includes any exception thrown by 
    *         {@link FileChannel#transferTo(long, long, WritableByteChannel)}. 
    */
-  public void transferToFully(FileChannel fileCh, long position, int count) 
-                              throws IOException {
-    
+  public void transferToFully(FileChannel fileCh, long position, int count,
+      MutableRate waitForWritableTime,
+      MutableRate transferToTime) throws IOException {
+    long waitTime = 0;
+    long transferTime = 0;
     while (count > 0) {
       /* 
        * Ideally we should wait after transferTo returns 0. But because of
@@ -200,7 +210,10 @@ public class SocketOutputStream extends OutputStream
        * 
        * Once we move to JAVA SE 7, wait should be moved to correct place.
        */
+      long start = System.nanoTime();
       waitForWritable();
+      long wait = System.nanoTime();
+
       int nTransfered = (int) fileCh.transferTo(position, count, getChannel());
       
       if (nTransfered == 0) {
@@ -219,6 +232,26 @@ public class SocketOutputStream extends OutputStream
         position += nTransfered;
         count -= nTransfered;
       }
+      long transfer = System.nanoTime();
+      waitTime += wait - start;
+      transferTime += transfer - wait;
     }
-  }  
+
+    if (waitForWritableTime != null) {
+      waitForWritableTime.add(waitTime);
+    }
+    if (transferToTime != null) {
+      transferToTime.add(transferTime);
+    }
+  }
+
+  /**
+   * Call
+   * {@link #transferToFully(FileChannel, long, int, MutableRate, MutableRate)}
+   * with null <code>waitForWritableTime</code> and <code>transferToTime</code>
+   */
+  public void transferToFully(FileChannel fileCh, long position, int count)
+      throws IOException {
+    transferToFully(fileCh, position, count, null, null);
+  }
 }
