@@ -44,6 +44,10 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4267. mavenize pipes (tgraves via bobby)
 
+    MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
+    (tomwhite)
+
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn

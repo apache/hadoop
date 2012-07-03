@@ -23,6 +23,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
 
@@ -61,6 +62,9 @@ import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 public class TestMRWithDistributedCache extends TestCase {
   private static Path TEST_ROOT_DIR =
     new Path(System.getProperty("test.build.data","/tmp"));
+  private static File symlinkFile = new File("distributed.first.symlink");
+  private static File expectedAbsentSymlinkFile =
+    new File("distributed.second.jar");
   private static Configuration conf = new Configuration();
   private static FileSystem localFs;
   static {
@@ -107,20 +111,17 @@ public class TestMRWithDistributedCache extends TestCase {
       TestCase.assertNotNull(cl.getResource("distributed.jar.inside3"));
       TestCase.assertNull(cl.getResource("distributed.jar.inside4"));
 
-
       // Check that the symlink for the renaming was created in the cwd;
-      // This only happens for real for non-local jobtrackers.
-      // (The symlinks exist in "localRunner/" for local Jobtrackers,
-      // but the user has no way to get at them.
-      if (!"local".equals(
-          context.getConfiguration().get(JTConfig.JT_IPC_ADDRESS))) {
-        File symlinkFile = new File("distributed.first.symlink");
-        TestCase.assertTrue("symlink distributed.first.symlink doesn't exist", symlinkFile.exists());
-        TestCase.assertEquals("symlink distributed.first.symlink length not 1", 1, symlinkFile.length());
-      }
+      TestCase.assertTrue("symlink distributed.first.symlink doesn't exist",
+          symlinkFile.exists());
+      TestCase.assertEquals("symlink distributed.first.symlink length not 1", 1,
+          symlinkFile.length());
+      
+      TestCase.assertFalse("second file should not be symlinked",
+          expectedAbsentSymlinkFile.exists());
     }
   }
-
+  
   private void testWithConf(Configuration conf) throws IOException,
       InterruptedException, ClassNotFoundException, URISyntaxException {
     // Create a temporary file of length 1.
@@ -144,11 +145,7 @@ public class TestMRWithDistributedCache extends TestCase {
     job.addFileToClassPath(second);
     job.addArchiveToClassPath(third);
     job.addCacheArchive(fourth.toUri());
-    
-    // don't create symlink for LocalJobRunner
-    if (!"local".equals(conf.get(JTConfig.JT_IPC_ADDRESS))) {
-      job.createSymlink();
-    }
+    job.createSymlink();
     job.setMaxMapAttempts(1); // speed up failures
 
     job.submit();
@@ -157,10 +154,17 @@ public class TestMRWithDistributedCache extends TestCase {
 
   /** Tests using the local job runner. */
   public void testLocalJobRunner() throws Exception {
+    symlinkFile.delete(); // ensure symlink is not present (e.g. if test is
+                          // killed part way through)
+    
     Configuration c = new Configuration();
     c.set(JTConfig.JT_IPC_ADDRESS, "local");
     c.set("fs.defaultFS", "file:///");
     testWithConf(c);
+    
+    assertFalse("Symlink not removed by local job runner",
+            // Symlink target will have gone so can't use File.exists()
+            Arrays.asList(new File(".").list()).contains(symlinkFile.getName()));
   }
 
   private Path createTempFile(String filename, String contents)

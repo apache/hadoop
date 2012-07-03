@@ -23,6 +23,7 @@ import com.google.common.collect.Maps;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -45,6 +46,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRConfig;
@@ -71,6 +73,8 @@ class LocalDistributedCacheManager {
   private List<String> localArchives = new ArrayList<String>();
   private List<String> localFiles = new ArrayList<String>();
   private List<String> localClasspaths = new ArrayList<String>();
+  
+  private List<File> symlinksCreated = new ArrayList<File>();
   
   private boolean setupCalled = false;
   
@@ -172,16 +176,49 @@ class LocalDistributedCacheManager {
               .size()])));
     }
     if (DistributedCache.getSymlink(conf)) {
-      // This is not supported largely because, 
-      // for a Child subprocess, the cwd in LocalJobRunner
-      // is not a fresh slate, but rather the user's working directory.
-      // This is further complicated because the logic in
-      // setupWorkDir only creates symlinks if there's a jarfile
-      // in the configuration.
-      LOG.warn("LocalJobRunner does not support " +
-          "symlinking into current working dir.");
+      File workDir = new File(System.getProperty("user.dir"));
+      URI[] archives = DistributedCache.getCacheArchives(conf);
+      URI[] files = DistributedCache.getCacheFiles(conf);
+      Path[] localArchives = DistributedCache.getLocalCacheArchives(conf);
+      Path[] localFiles = DistributedCache.getLocalCacheFiles(conf);
+      if (archives != null) {
+        for (int i = 0; i < archives.length; i++) {
+          String link = archives[i].getFragment();
+          String target = new File(localArchives[i].toUri()).getPath();
+          symlink(workDir, target, link);
+        }
+      }
+      if (files != null) {
+        for (int i = 0; i < files.length; i++) {
+          String link = files[i].getFragment();
+          String target = new File(localFiles[i].toUri()).getPath();
+          symlink(workDir, target, link);
+        }
+      }
     }
     setupCalled = true;
+  }
+  
+  /**
+   * Utility method for creating a symlink and warning on errors.
+   *
+   * If link is null, does nothing.
+   */
+  private void symlink(File workDir, String target, String link)
+      throws IOException {
+    if (link != null) {
+      link = workDir.toString() + Path.SEPARATOR + link;
+      File flink = new File(link);
+      if (!flink.exists()) {
+        LOG.info(String.format("Creating symlink: %s <- %s", target, link));
+        if (0 != FileUtil.symLink(target, link)) {
+          LOG.warn(String.format("Failed to create symlink: %s <- %s", target,
+              link));
+        } else {
+          symlinksCreated.add(new File(link));
+        }
+      }
+    }
   }
   
   /** 
@@ -217,6 +254,12 @@ class LocalDistributedCacheManager {
   }
 
   public void close() throws IOException {
+    for (File symlink : symlinksCreated) {
+      if (!symlink.delete()) {
+        LOG.warn("Failed to delete symlink created by the local job runner: " +
+            symlink);
+      }
+    }
     FileContext localFSFileContext = FileContext.getLocalFSFileContext();
     for (String archive : localArchives) {
       localFSFileContext.delete(new Path(archive), true);
