@@ -550,6 +550,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8535. Cut hadoop build times in half (Job Eagles via bobby)
 
+    HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
+
   OPTIMIZATIONS
 
   BUG FIXES
