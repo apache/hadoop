@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
+import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ReadaheadPool;
@@ -142,6 +144,7 @@ class BlockSender implements java.io.Closeable {
   /** Format used to print client trace log messages */
   private final String clientTraceFmt;
   private volatile ChunkChecksum lastChunkChecksum = null;
+  private DataNode datanode;
   
   /** The file descriptor of the block being sent */
   private FileDescriptor blockInFd;
@@ -184,6 +187,7 @@ class BlockSender implements java.io.Closeable {
       this.clientTraceFmt = clientTraceFmt;
       this.readaheadLength = datanode.getDnConf().readaheadLength;
       this.shouldDropCacheBehindRead = datanode.getDnConf().dropCacheBehindReads;
+      this.datanode = datanode;
       
       final Replica replica;
       final long replicaVisibleLength;
@@ -478,9 +482,11 @@ class BlockSender implements java.io.Closeable {
         SocketOutputStream sockOut = (SocketOutputStream)out;
         sockOut.write(buf, 0, dataOff); // First write checksum
         
-        // no need to flush. since we know out is not a buffered stream. 
-        sockOut.transferToFully(((FileInputStream)blockIn).getChannel(), 
-                                blockInPosition, dataLen);
+        // no need to flush since we know out is not a buffered stream
+        FileChannel fileCh = ((FileInputStream)blockIn).getChannel();
+        sockOut.transferToFully(fileCh, blockInPosition, dataLen, 
+            datanode.metrics.getSendDataPacketBlockedOnNetworkNanos(),
+            datanode.metrics.getSendDataPacketTransferNanos());
         blockInPosition += dataLen;
       } else { 
         // normal transfer

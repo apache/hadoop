@@ -17,21 +17,28 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.*;
+
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import static org.apache.hadoop.test.MetricsAsserts.*;
+import org.junit.Test;
 
-import junit.framework.TestCase;
-
-public class TestDataNodeMetrics extends TestCase {
+public class TestDataNodeMetrics {
   
+  MiniDFSCluster cluster = null;
+  FileSystem fs = null;
+  
+  @Test
   public void testDataNodeMetrics() throws Exception {
     Configuration conf = new HdfsConfiguration();
     SimulatedFSDataset.setFactory(conf);
@@ -46,6 +53,31 @@ public class TestDataNodeMetrics extends TestCase {
       DataNode datanode = datanodes.get(0);
       MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
       assertCounter("BytesWritten", LONG_FILE_LEN, rb);
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  @Test
+  public void testSendDataPacket() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      // Create and read a 1 byte file
+      Path tmpfile = new Path("/tmp.txt");
+      DFSTestUtil.createFile(fs, tmpfile,
+          (long)1, (short)1, 1L);
+      DFSTestUtil.readFile(fs, tmpfile);
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(datanodes.size(), 1);
+      DataNode datanode = datanodes.get(0);
+      MetricsRecordBuilder rb = getMetrics(datanode.getMetrics().name());
+
+      // Expect 2 packets, 1 for the 1 byte read, 1 for the empty packet
+      // signaling the end of the block
+      assertCounter("SendDataPacketTransferNanosNumOps", (long)2, rb);
+      assertCounter("SendDataPacketBlockedOnNetworkNanosNumOps", (long)2, rb);
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
