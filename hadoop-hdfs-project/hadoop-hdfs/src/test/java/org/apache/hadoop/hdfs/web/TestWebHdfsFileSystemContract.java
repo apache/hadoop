@@ -259,8 +259,8 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     assertTrue(status != null);
     assertEquals(0777, status.getPermission().toShort());
 
-    //delete root - disabled due to a sticky bit bug 
-    //assertFalse(fs.delete(root, true));
+    //delete root
+    assertFalse(fs.delete(root, true));
 
     //create file using root path 
     try {
