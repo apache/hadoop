@@ -88,6 +88,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8543. Invalid pom.xml files on 0.23 branch (Radim Kolar via bobby)
 
+    HADOOP-8325. Add a ShutdownHookManager to be used by different
+    components instead of the JVM shutdownhook (tucu)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES

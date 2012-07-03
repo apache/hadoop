@@ -54,6 +54,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.ShutdownHookManager;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -82,6 +83,11 @@ public abstract class FileSystem extends Configured implements Closeable {
                    CommonConfigurationKeys.FS_DEFAULT_NAME_DEFAULT;
 
   public static final Log LOG = LogFactory.getLog(FileSystem.class);
+
+  /**
+   * Priority of the FileSystem shutdown hook.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 10;
 
   /** FileSystem cache */
   static final Cache CACHE = new Cache();
@@ -2128,8 +2134,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         }
         
         // now insert the new file system into the map
-        if (map.isEmpty() && !clientFinalizer.isAlive()) {
-          Runtime.getRuntime().addShutdownHook(clientFinalizer);
+        if (map.isEmpty() ) {
+          ShutdownHookManager.get().addShutdownHook(clientFinalizer, SHUTDOWN_HOOK_PRIORITY);
         }
         fs.key = key;
         map.put(key, fs);
@@ -2144,11 +2150,8 @@ public abstract class FileSystem extends Configured implements Closeable {
       if (map.containsKey(key) && fs == map.get(key)) {
         map.remove(key);
         toAutoClose.remove(key);
-        if (map.isEmpty() && !clientFinalizer.isAlive()) {
-          if (!Runtime.getRuntime().removeShutdownHook(clientFinalizer)) {
-            LOG.info("Could not cancel cleanup thread, though no " +
-                     "FileSystems are open");
-          }
+        if (map.isEmpty()) {
+          ShutdownHookManager.get().removeShutdownHook(clientFinalizer);
         }
       }
     }
@@ -2194,7 +2197,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       }
     }
 
-    private class ClientFinalizer extends Thread {
+    private class ClientFinalizer implements Runnable {
       public synchronized void run() {
         try {
           closeAll(true);
