@@ -1157,7 +1157,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           if (!quiet) {
             LOG.info("parsing " + url);
           }
-          doc = builder.parse(url.toString());
+          // Do not pass url directly to DocumentBuilder.parse() since it
+          // will keep the file open after SAXException
+          InputStream in = new BufferedInputStream(url.openStream());
+          try {
+            doc = builder.parse(in);
+          } finally {
+            in.close();
+          }
         }
       } else if (name instanceof String) {        // a CLASSPATH resource
         URL url = getResource((String)name);
@@ -1165,7 +1172,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           if (!quiet) {
             LOG.info("parsing " + url);
           }
-          doc = builder.parse(url.toString());
+          InputStream in = new BufferedInputStream(url.openStream());
+          try {
+            doc = builder.parse(in);
+          } finally {
+            in.close();
+          }
         }
       } else if (name instanceof Path) {          // a file resource
         // Can't use FileSystem API or we get an infinite loop
