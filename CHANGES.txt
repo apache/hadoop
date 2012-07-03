@@ -43,6 +43,9 @@ Release 1.2.0 - unreleased
     HADOOP-8249. invalid hadoop-auth cookies should trigger authentication if info 
     is avail before returning HTTP 401 (tucu)
 
+    MAPREDUCE-3837. Job tracker is not able to recover job in case of crash
+    and after that no user can submit job. (Mayank Bansal via tomwhite)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

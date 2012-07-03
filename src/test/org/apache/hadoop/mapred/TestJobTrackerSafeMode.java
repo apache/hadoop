@@ -34,9 +34,7 @@ import org.junit.*;
  * restart doesnt schedule any new tasks and waits for the (old) trackers to 
  * join back.
  */
-/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
- */
-@Ignore
+
 public class TestJobTrackerSafeMode extends TestCase {
   final Path testDir = 
     new Path(System.getProperty("test.build.data", "/tmp"), "jt-safemode");
@@ -153,6 +151,7 @@ public class TestJobTrackerSafeMode extends TestCase {
     mr.getTaskTrackerRunner(trackerToKill).getTaskTracker().shutdown();
     mr.stopTaskTracker(trackerToKill);
 
+    LOG.info("Starting the jobtracker...");
     // Restart the jobtracker
     mr.startJobTracker();
 
@@ -169,8 +168,6 @@ public class TestJobTrackerSafeMode extends TestCase {
     LOG.info("Start a new tracker");
     mr.startTaskTracker(null, null, ++numTracker, numDir);
 
-    // Check if the jobs are still running
-    
     // Wait for the tracker to be lost
     boolean shouldSchedule = jobtracker.recoveryManager.shouldSchedule();
     while (!checkTrackers(jobtracker, trackers, lostTrackers)) {
@@ -181,20 +178,55 @@ public class TestJobTrackerSafeMode extends TestCase {
       // snapshot jobtracker's scheduling status
       shouldSchedule = jobtracker.recoveryManager.shouldSchedule();
     }
+    
+    assertTrue("JobTracker has not opened up scheduling after all the"
+        + " trackers were recovered", shouldSchedule);
 
-    assertTrue("JobTracker hasnt opened up scheduling even all the" 
-               + " trackers were recovered", 
-               jobtracker.recoveryManager.shouldSchedule());
-    
-    assertEquals("Recovery manager is in inconsistent state", 
-                 0, jobtracker.recoveryManager.recoveredTrackers.size());
-    
+    assertEquals("Recovery manager is in inconsistent state", 0,
+        jobtracker.recoveryManager.recoveredTrackers.size());
+
+    // Signal the maps to complete
+    UtilsForTests.signalTasks(dfs, fileSys, true, mapSignalFile, redSignalFile);
+
+    // Signal the reducers to complete
+    UtilsForTests
+        .signalTasks(dfs, fileSys, false, mapSignalFile, redSignalFile);
     // wait for the job to be complete
     UtilsForTests.waitTillDone(jobClient);
   }
 
   private boolean checkTrackers(JobTracker jobtracker, Set<String> present, 
                                 Set<String> absent) {
+    while (jobtracker.getClusterStatus(true).getActiveTrackerNames().size() != 2) {
+      LOG.info("Waiting for Initialize all Task Trackers");
+      UtilsForTests.waitFor(1000);
+    }
+    // Checking if the task tracker been initiated again
+    boolean found = false;
+    String strNewTrackerName = (String) (present.toArray()[0]);
+    LOG.info("Number of Trackers: "
+        + jobtracker.getClusterStatus(true).getActiveTrackerNames().size());
+    for (String trackername : jobtracker.getClusterStatus(true)
+        .getActiveTrackerNames()) {
+      if (trackername.equalsIgnoreCase((String) (present.toArray()[0]))) {
+        found = true;
+      } else {
+        String[] trackerhostnames = trackername.split(":");
+        CharSequence cseq = new String(trackerhostnames[0]);
+        if (((String) (present.toArray()[0])).contains(cseq)) {
+          strNewTrackerName = trackername;
+          found = false;
+          break;
+        }
+      }
+    }
+    if (!found) {
+      present.remove(((String) (present.toArray()[0])));
+      LOG.info("Old tracker on this machine got reinited, "
+          + "Tracker added with new port " + strNewTrackerName);
+      present.add(strNewTrackerName);
+    }
+    
     long jobtrackerRecoveryFinishTime = 
       jobtracker.getStartTime() + jobtracker.getRecoveryDuration();
     for (String trackerName : present) {

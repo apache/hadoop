@@ -30,9 +30,7 @@ import org.junit.*;
  * This test checks if the jobtracker can detect and recover a tracker that was
  * lost while the jobtracker was down.
  */
-/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
- */
-@Ignore
+
 public class TestJobTrackerRestartWithLostTracker extends TestCase {
   final Path testDir = new Path("/jt-restart-lost-tt-testing");
   final Path inDir = new Path(testDir, "input");
@@ -53,11 +51,14 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
   throws IOException {
     FileSystem fileSys = dfs.getFileSystem();
     JobConf jobConf = mr.createJobConf();
-    int numMaps = 50;
+    int numMaps = 2;
     int numReds = 1;
     String mapSignalFile = UtilsForTests.getMapSignalFile(shareDir);
     String redSignalFile = UtilsForTests.getReduceSignalFile(shareDir);
-    
+
+    // Enable recovery on restart
+    mr.getJobTrackerConf()
+        .setBoolean("mapred.jobtracker.restart.recover", true);
     // Configure the jobs
     JobConf job = configureJob(jobConf, numMaps, numReds, 
                                mapSignalFile, redSignalFile);
@@ -84,10 +85,6 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     // Signal the maps to complete
     UtilsForTests.signalTasks(dfs, fileSys, true, mapSignalFile, redSignalFile);
     
-    // Enable recovery on restart
-    mr.getJobTrackerConf().setBoolean("mapred.jobtracker.restart.recover", 
-                                      true);
-    
     // Kill the 2nd tasktracker
     mr.stopTaskTracker(1);
     
@@ -102,6 +99,8 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
     // Wait for the JT to be ready
     UtilsForTests.waitForJobTracker(jobClient);
 
+    // Signal the maps to complete
+    UtilsForTests.signalTasks(dfs, fileSys, true, mapSignalFile, redSignalFile);
     // Signal the reducers to complete
     UtilsForTests.signalTasks(dfs, fileSys, false, mapSignalFile, 
                               redSignalFile);
@@ -113,9 +112,7 @@ public class TestJobTrackerRestartWithLostTracker extends TestCase {
                  + "upon restart", 
                  jobClient.getClusterStatus().getTaskTrackers(), 1);
 
-    // validate the history file
-    TestJobHistory.validateJobHistoryFileFormat(id, job, "SUCCESS", true);
-    TestJobHistory.validateJobHistoryFileContent(mr, rJob, job);
+    assertTrue("Job should be successful", rJob.isSuccessful());
   }
   
   public void testRestartWithLostTracker() throws IOException {

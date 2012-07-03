@@ -41,15 +41,37 @@ import org.junit.*;
  * failures and the jobtracker is able to tolerate {@link RecoveryManager}
  * failure.
  */
-/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
- */
-@Ignore
+
 public class TestRecoveryManager extends TestCase {
   private static final Log LOG = 
     LogFactory.getLog(TestRecoveryManager.class);
   private static final Path TEST_DIR = 
     new Path(System.getProperty("test.build.data", "/tmp"), 
              "test-recovery-manager");
+  private FileSystem fs;
+  private JobConf conf;
+  private MiniMRCluster mr;
+
+  protected void setUp() {
+    JobConf conf = new JobConf();
+    try {
+      fs = FileSystem.get(new Configuration());
+      fs.delete(TEST_DIR, true);
+      conf.set("mapred.jobtracker.job.history.block.size", "1024");
+      conf.set("mapred.jobtracker.job.history.buffer.size", "1024");
+      mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  protected void tearDown() {
+    ClusterStatus status = mr.getJobTrackerRunner().getJobTracker()
+        .getClusterStatus(false);
+    if (status.getJobTrackerState() == JobTracker.State.RUNNING) {
+      mr.shutdown();
+    }
+  }
   
   /**
    * Tests the {@link JobTracker} against the exceptions thrown in 
@@ -60,21 +82,12 @@ public class TestRecoveryManager extends TestCase {
    *  - restarts the jobtracker
    *  - checks if the jobtraker starts normally
    */
-  public void testJobTracker() throws Exception {
+  public void testJobTrackerRestartsWithMissingJobFile() throws Exception {
     LOG.info("Testing jobtracker restart with faulty job");
     String signalFile = new Path(TEST_DIR, "signal").toString();
-    JobConf conf = new JobConf();
-    
-    FileSystem fs = FileSystem.get(new Configuration());
-    fs.delete(TEST_DIR, true); // cleanup
-    
-    conf.set("mapred.jobtracker.job.history.block.size", "1024");
-    conf.set("mapred.jobtracker.job.history.buffer.size", "1024");
-    
-    MiniMRCluster mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
-    
+
     JobConf job1 = mr.createJobConf();
-    
+
     UtilsForTests.configureWaitingJobConf(job1, 
         new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output1"), 2, 0, 
         "test-recovery-manager", signalFile, signalFile);
@@ -131,10 +144,62 @@ public class TestRecoveryManager extends TestCase {
     // check if the jobtracker came up or not
     assertEquals("JobTracker crashed!", 
                  JobTracker.State.RUNNING, status.getJobTrackerState());
-    
-    mr.shutdown();
   }
   
+  /**
+   * Tests the re-submission of the job in case of jobtracker died/restart  
+   *  - submits a job and let it be inited.
+   *  - kills the jobtracker
+   *  - checks if the jobtraker starts normally and job is recovered while 
+   */
+
+  public void testJobResubmission() throws Exception {
+    LOG.info("Testing Job Resubmission");
+    String signalFile = new Path(TEST_DIR, "signal").toString();
+
+    // make sure that the jobtracker is in recovery mode
+    mr.getJobTrackerConf()
+        .setBoolean("mapred.jobtracker.restart.recover", true);
+
+    JobTracker jobtracker = mr.getJobTrackerRunner().getJobTracker();
+
+    JobConf job1 = mr.createJobConf();
+    UtilsForTests.configureWaitingJobConf(job1, new Path(TEST_DIR, "input"),
+        new Path(TEST_DIR, "output3"), 2, 0, "test-resubmission", signalFile,
+        signalFile);
+
+    JobClient jc = new JobClient(job1);
+    RunningJob rJob1 = jc.submitJob(job1);
+    LOG.info("Submitted first job " + rJob1.getID());
+
+    while (rJob1.mapProgress() < 0.5f) {
+      LOG.info("Waiting for job " + rJob1.getID() + " to be 50% done");
+      UtilsForTests.waitFor(100);
+    }
+
+    // kill the jobtracker
+    LOG.info("Stopping jobtracker");
+    mr.stopJobTracker();
+
+    // start the jobtracker
+    LOG.info("Starting jobtracker");
+    mr.startJobTracker();
+    UtilsForTests.waitForJobTracker(jc);
+
+    jobtracker = mr.getJobTrackerRunner().getJobTracker();
+
+    // assert that job is recovered by the jobtracker
+    assertEquals("Resubmission failed ", 1, jobtracker.getAllJobs().length);
+    JobInProgress jip = jobtracker.getJob(rJob1.getID());
+    while (!jip.isComplete()) {
+      LOG.info("Waiting for job " + rJob1.getID() + " to be successful");
+      // Signaling Map task to complete
+      fs.create(new Path(TEST_DIR, "signal"));
+      UtilsForTests.waitFor(100);
+    }
+    assertTrue("Task should be successful", rJob1.isSuccessful());
+  }
+
   /**
    * Tests the {@link JobTracker.RecoveryManager} against the exceptions thrown 
    * during recovery. It does the following :
@@ -147,19 +212,13 @@ public class TestRecoveryManager extends TestCase {
    *  - checks if the jobtraker starts normally and job#2 is recovered while 
    *    job#1 is failed.
    */
-  public void testRecoveryManager() throws Exception {
+  public void testJobTrackerRestartWithBadJobs() throws Exception {
     LOG.info("Testing recovery-manager");
     String signalFile = new Path(TEST_DIR, "signal").toString();
+    // make sure that the jobtracker is in recovery mode
+    mr.getJobTrackerConf()
+        .setBoolean("mapred.jobtracker.restart.recover", true);
     
-    // clean up
-    FileSystem fs = FileSystem.get(new Configuration());
-    fs.delete(TEST_DIR, true);
-    
-    JobConf conf = new JobConf();
-    conf.set("mapred.jobtracker.job.history.block.size", "1024");
-    conf.set("mapred.jobtracker.job.history.buffer.size", "1024");
-    
-    MiniMRCluster mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
     JobTracker jobtracker = mr.getJobTrackerRunner().getJobTracker();
     
     JobConf job1 = mr.createJobConf();
@@ -179,7 +238,7 @@ public class TestRecoveryManager extends TestCase {
       LOG.info("Waiting for job " + rJob1.getID() + " to be 50% done");
       UtilsForTests.waitFor(100);
     }
-    
+
     // now submit job2
     JobConf job2 = mr.createJobConf();
 
@@ -224,7 +283,7 @@ public class TestRecoveryManager extends TestCase {
       LOG.info("Waiting for job " + jip.getJobID() + " to be inited");
       UtilsForTests.waitFor(100);
     }
-
+    
     // kill the jobtracker
     LOG.info("Stopping jobtracker");
     mr.stopJobTracker();
@@ -247,21 +306,18 @@ public class TestRecoveryManager extends TestCase {
     jobtracker = mr.getJobTrackerRunner().getJobTracker();
     
     // assert that job2 is recovered by the jobtracker as job1 would fail
-    assertEquals("Recovery manager failed to tolerate job failures",
-                 2, jobtracker.getAllJobs().length);
+    assertEquals("Recovery manager failed to tolerate job failures", 1,
+        jobtracker.getAllJobs().length);
     
     // check if the job#1 has failed
     JobStatus status = jobtracker.getJobStatus(rJob1.getID());
-    assertEquals("Faulty job not failed", 
-                 JobStatus.FAILED, status.getRunState());
+    assertNull("Faulty job should not be resubmitted", status);
     
     jip = jobtracker.getJob(rJob2.getID());
     assertFalse("Job should be running", jip.isComplete());
     
     status = jobtracker.getJobStatus(rJob3.getID());
-    assertNull("Job should be missing", status);
-    
-    mr.shutdown();
+    assertNull("Job should be missing because of ACL changed", status);
   }
   
   /**
@@ -278,113 +334,76 @@ public class TestRecoveryManager extends TestCase {
    *     jobtracker should crash.
    */
   public void testRestartCount() throws Exception {
-    LOG.info("Testing restart-count");
+    LOG.info("Testing Job Restart Count");
     String signalFile = new Path(TEST_DIR, "signal").toString();
-    
-    // clean up
-    FileSystem fs = FileSystem.get(new Configuration());
-    fs.delete(TEST_DIR, true);
-    
-    JobConf conf = new JobConf();
-    conf.set("mapred.jobtracker.job.history.block.size", "1024");
-    conf.set("mapred.jobtracker.job.history.buffer.size", "1024");
-    conf.setBoolean("mapred.jobtracker.restart.recover", true);
-    // since there is no need for initing
-    conf.setClass("mapred.jobtracker.taskScheduler", MyScheduler.class,
-                  TaskScheduler.class);
-    
-    MiniMRCluster mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
+    // make sure that the jobtracker is in recovery mode
+    mr.getJobTrackerConf()
+        .setBoolean("mapred.jobtracker.restart.recover", true);
+
     JobTracker jobtracker = mr.getJobTrackerRunner().getJobTracker();
-    JobClient jc = new JobClient(mr.createJobConf());
 
-    // check if the jobtracker info file exists
-    Path infoFile = jobtracker.recoveryManager.getRestartCountFile();
-    assertTrue("Jobtracker infomation is missing", fs.exists(infoFile));
+    JobConf job1 = mr.createJobConf();
+    // set the high priority
+    job1.setJobPriority(JobPriority.HIGH);
 
-    // check if garbling the system files disables the recovery process
-    LOG.info("Stopping jobtracker for testing with system files deleted");
-    mr.stopJobTracker();
-    
-    // delete the info file
-    Path rFile = jobtracker.recoveryManager.getRestartCountFile();
-    fs.delete(rFile,false);
-    
-    // start the jobtracker
-    LOG.info("Starting jobtracker with system files deleted");
-    mr.startJobTracker();
-    
-    UtilsForTests.waitForJobTracker(jc);
-    jobtracker = mr.getJobTrackerRunner().getJobTracker();
+    UtilsForTests.configureWaitingJobConf(job1, new Path(TEST_DIR, "input"),
+        new Path(TEST_DIR, "output3"), 30, 0, "test-restart", signalFile,
+        signalFile);
 
-    // check if the recovey is disabled
-    assertFalse("Recovery is not disabled upon missing system files", 
-                jobtracker.recoveryManager.shouldRecover());
-
-    // check if the system dir is sane
-    assertTrue("Recovery file is missing upon restart", fs.exists(rFile));
-    Path tFile = jobtracker.recoveryManager.getTempRestartCountFile();
-    assertFalse("Temp recovery file exists upon restart", fs.exists(tFile));
-
-    // submit a job
-    JobConf job = mr.createJobConf();
-    
-    UtilsForTests.configureWaitingJobConf(job, 
-        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output6"), 2, 0, 
-        "test-recovery-manager", signalFile, signalFile);
-    
     // submit the faulty job
-    RunningJob rJob = jc.submitJob(job);
-    LOG.info("Submitted first job " + rJob.getID());
+    JobClient jc = new JobClient(job1);
+    RunningJob rJob1 = jc.submitJob(job1);
+    LOG.info("Submitted first job " + rJob1.getID());
 
-    // wait for 1 min
-    UtilsForTests.waitFor(60000);
+    JobInProgress jip = jobtracker.getJob(rJob1.getID());
 
-    // kill the jobtracker multiple times and check if the count is correct
-    for (int i = 1; i <= 5; ++i) {
+    while (!jip.inited()) {
+      LOG.info("Waiting for job " + jip.getJobID() + " to be inited");
+      UtilsForTests.waitFor(100);
+    }
+
+    for (int i = 1; i <= 2; ++i) {
       LOG.info("Stopping jobtracker for " + i + " time");
       mr.stopJobTracker();
-      
+
       // start the jobtracker
       LOG.info("Starting jobtracker for " + i + " time");
       mr.startJobTracker();
-      
+
       UtilsForTests.waitForJobTracker(jc);
-      
-      // check if the system dir is sane
-      assertTrue("Recovery file is missing upon restart", fs.exists(rFile));
-      assertFalse("Temp recovery file exists upon restart", fs.exists(tFile));
-      
+
       jobtracker = mr.getJobTrackerRunner().getJobTracker();
-      JobInProgress jip = jobtracker.getJob(rJob.getID());
-      
+
       // assert if restart count is correct
-      assertEquals("Recovery manager failed to recover restart count",
-                   i, jip.getNumRestarts());
+      // It should always be 0 now as its resubmit everytime then restart.
+      assertEquals("Recovery manager failed to recover restart count", 0, jip
+          .getNumRestarts());
     }
-    
+
     // kill the old job
-    rJob.killJob();
+    rJob1.killJob();
 
     // II. Submit a new job and check if the restart count is 0
-    JobConf job1 = mr.createJobConf();
-    
-    UtilsForTests.configureWaitingJobConf(job1, 
-        new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output7"), 50, 0, 
-        "test-recovery-manager", signalFile, signalFile);
+    JobConf job2 = mr.createJobConf();
+
+    UtilsForTests.configureWaitingJobConf(job2, new Path(TEST_DIR, "input"),
+        new Path(TEST_DIR, "output7"), 50, 0, "test-restart-manager",
+        signalFile, signalFile);
 
     // submit a new job
-    rJob = jc.submitJob(job1);
-    LOG.info("Submitted first job after restart" + rJob.getID());
+    RunningJob rJob2 = jc.submitJob(job2);
+    LOG.info("Submitted first job after restart" + rJob2.getID());
 
     // assert if restart count is correct
-    JobInProgress jip = jobtracker.getJob(rJob.getID());
-    assertEquals("Restart count for new job is incorrect",
-                 0, jip.getNumRestarts());
+    jip = jobtracker.getJob(rJob2.getID());
+    assertEquals("Restart count for new job is incorrect", 0, jip
+        .getNumRestarts());
 
     LOG.info("Stopping jobtracker for testing the fs errors");
     mr.stopJobTracker();
 
     // check if system.dir problems in recovery kills the jobtracker
+    Path rFile = jobtracker.recoveryManager.getRestartCountFile();
     fs.delete(rFile, false);
     FSDataOutputStream out = fs.create(rFile);
     out.writeBoolean(true);
@@ -396,8 +415,7 @@ public class TestRecoveryManager extends TestCase {
     JobTrackerRunner runner = mr.getJobTrackerRunner();
     assertFalse("JobTracker is still alive", runner.isActive());
 
-    mr.shutdown();
-  } 
+  }
 
   /**
    * Test if the jobtracker waits for the info file to be created before 
