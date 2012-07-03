@@ -84,6 +84,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8393. hadoop-config.sh missing variable exports, causes Yarn jobs to
     fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
 
+    HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
