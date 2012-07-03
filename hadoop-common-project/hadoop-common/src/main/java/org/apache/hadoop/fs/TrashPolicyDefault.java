@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
@@ -148,21 +149,32 @@ public class TrashPolicyDefault extends TrashPolicy {
       new IOException("Failed to move to trash: "+path).initCause(cause);
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void createCheckpoint() throws IOException {
     if (!fs.exists(current))                     // no trash, no checkpoint
       return;
 
-    Path checkpoint;
+    Path checkpointBase;
     synchronized (CHECKPOINT) {
-      checkpoint = new Path(trash, CHECKPOINT.format(new Date()));
+      checkpointBase = new Path(trash, CHECKPOINT.format(new Date()));
+    }
+    Path checkpoint = checkpointBase;
+
+    int attempt = 0;
+    while (true) {
+      try {
+        fs.rename(current, checkpoint, Rename.NONE);
+        break;
+      } catch (FileAlreadyExistsException e) {
+        if (++attempt > 1000) {
+          throw new IOException("Failed to checkpoint trash: "+checkpoint);
+        }
+        checkpoint = checkpointBase.suffix("-" + attempt);
+      }
     }
 
-    if (fs.rename(current, checkpoint)) {
-      LOG.info("Created trash checkpoint: "+checkpoint.toUri().getPath());
-    } else {
-      throw new IOException("Failed to checkpoint trash: "+checkpoint);
-    }
+    LOG.info("Created trash checkpoint: "+checkpoint.toUri().getPath());
   }
 
   @Override

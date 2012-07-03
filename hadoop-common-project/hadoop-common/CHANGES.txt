@@ -167,6 +167,8 @@ Trunk (unreleased changes)
     HADOOP-8548. test-patch.sh shows an incorrect link in Jekins builds
     (Kihwal Lee via bobby)
 
+    HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
