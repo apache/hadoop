@@ -255,6 +255,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4228. mapreduce.job.reduce.slowstart.completedmaps is not working
     properly (Jason Lowe via bobby)
 
+    MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn 
+    jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
