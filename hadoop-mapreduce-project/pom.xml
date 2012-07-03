@@ -187,7 +187,7 @@
                 <!-- Using Unix script to preserve symlinks -->
                 <echo file="${project.build.directory}/dist-maketar.sh">
 
-                  which cygpath 2> /dev/null
+                  which cygpath &gt;> /dev/null
                   if [ $? = 1 ]; then
                     BUILD_DIR="${project.build.directory}"
                   else
