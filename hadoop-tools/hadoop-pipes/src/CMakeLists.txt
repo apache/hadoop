@@ -57,32 +57,24 @@ include_directories(
 # Example programs
 add_executable(wordcount-simple main/native/examples/impl/wordcount-simple.cc)
 target_link_libraries(wordcount-simple hadooppipes hadooputils)
+output_directory(wordcount-simple examples)
 
 add_executable(wordcount-part main/native/examples/impl/wordcount-part.cc)
 target_link_libraries(wordcount-part hadooppipes hadooputils)
+output_directory(wordcount-part examples)
 
 add_executable(wordcount-nopipe main/native/examples/impl/wordcount-nopipe.cc)
 target_link_libraries(wordcount-nopipe hadooppipes hadooputils)
+output_directory(wordcount-nopipe examples)
 
 add_executable(pipes-sort main/native/examples/impl/sort.cc)
 target_link_libraries(pipes-sort hadooppipes hadooputils)
-
-install(TARGETS wordcount-simple wordcount-part wordcount-nopipe pipes-sort 
-    RUNTIME DESTINATION bin
-)
+output_directory(pipes-sort examples)
 
 add_library(hadooputils STATIC
     main/native/utils/impl/StringUtils.cc
     main/native/utils/impl/SerialUtils.cc
 )
-
-install(FILES
-    main/native/utils/api/hadoop/SerialUtils.hh
-    main/native/utils/api/hadoop/StringUtils.hh
-    DESTINATION api/hadoop
-    COMPONENT headers
-)
-install(TARGETS hadooputils DESTINATION lib)
 
 add_library(hadooppipes STATIC
     main/native/pipes/impl/HadoopPipes.cc
@@ -92,11 +84,3 @@ target_link_libraries(hadooppipes
     ${OPENSSL_LIBRARIES}
     pthread
 )
-
-install(FILES
-    main/native/pipes/api/hadoop/Pipes.hh
-    main/native/pipes/api/hadoop/TemplateFactory.hh
-    DESTINATION api/hadoop
-    COMPONENT headers
-)
-install(TARGETS hadooppipes DESTINATION lib)

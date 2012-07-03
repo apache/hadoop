@@ -128,6 +128,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8538. CMake builds fail on ARM. (Trevor Robinson via eli)
 
+    HADOOP-8547. Package hadoop-pipes examples/bin directory (again).
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
