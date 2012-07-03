@@ -65,8 +65,8 @@ public class TestEditLogLoading {
     }
     rwf.close();
 
-    String expectedErrorMessage = "^Error replaying edit log at offset \\d+\n";
-    expectedErrorMessage += "Recent opcode offsets: (\\d+\\s*){4}$";
+    String expectedErrorMessage = "^Failed to parse edit log.*";
+    expectedErrorMessage += ", Recent opcode offsets=\\[(\\d+\\s*){4}\\]$";
     try {
       cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, null, null);
       cluster.waitActive();

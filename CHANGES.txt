@@ -46,6 +46,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-3837. Job tracker is not able to recover job in case of crash
     and after that no user can submit job. (Mayank Bansal via tomwhite)
 
+    HDFS-3595. Update the regular expression in TestEditLogLoading for the
+    error message change by HDFS-3521.  (Colin Patrick McCabe via szetszwo)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
