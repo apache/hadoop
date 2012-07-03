@@ -82,9 +82,6 @@ Trunk (unreleased changes)
     HADOOP-8059. Add javadoc to InterfaceAudience and InterfaceStability.
     (Brandon Li via suresh)
 
-    HADOOP-8533. Remove parallel call ununsed capability in RPC.
-    (Brandon Li via suresh)
-
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -234,16 +231,21 @@ Branch-2 ( Unreleased changes )
     HADOOP-8463. hadoop.security.auth_to_local needs a key definition and doc.
     (Madhukara Phatak via eli)
 
+    HADOOP-8533. Remove parallel call ununsed capability in RPC.
+    (Brandon Li via suresh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
     starting with a numeric character. (Junping Du via suresh)
 
-    HADOOP-8393. hadoop-config.sh missing variable exports, causes Yarn jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+    HADOOP-8393. hadoop-config.sh missing variable exports, causes Yarn jobs 
+    to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
 
     HADOOP-8316. Audit logging should be disabled by default. (eli)
 
-    HADOOP-8400. All commands warn "Kerberos krb5 configuration not found" when security is not enabled. (tucu)
+    HADOOP-8400. All commands warn "Kerberos krb5 configuration not found" 
+    when security is not enabled. (tucu)
 
     HADOOP-8406. CompressionCodecFactory.CODEC_PROVIDERS iteration is
     thread-unsafe (todd)
