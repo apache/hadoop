@@ -47,8 +47,7 @@ public class TestSubmitJob extends TestCase {
   private JobTracker jt;
   private FileSystem fs;
   private static Path TEST_DIR =
-    new Path(System.getProperty("test.build.data","/tmp"),
-             "job-submission-testing");
+    new Path("/tmp/TestSubmitJob", "job-submission-testing");
   private static int numSlaves = 1;
 
   private void startCluster() throws Exception {

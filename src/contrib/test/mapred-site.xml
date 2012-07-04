@@ -10,4 +10,9 @@
   <value>build/contrib/${contrib.name}/test/system</value>
 </property>
 
+<property>
+  <name>mapreduce.jobtracker.staging.root.dir</name>
+  <value>build/contrib/${contrib.name}/test/staging</value>
+</property>
+
 </configuration>

@@ -46,8 +46,7 @@ public class TestJobQueueInformation extends TestCase {
   private JobConf jc;
   private static final String JOB_SCHEDULING_INFO = "TESTSCHEDULINGINFO";
   private static final Path TEST_DIR = 
-    new Path(System.getProperty("test.build.data","/tmp"), 
-             "job-queue-info-testing");
+    new Path("/tmp/TestJobQueueInformation", "job-queue-info-testing");
   private static final Path IN_DIR = new Path(TEST_DIR, "input");
   private static final Path SHARE_DIR = new Path(TEST_DIR, "share");
   private static final Path OUTPUT_DIR = new Path(TEST_DIR, "output");

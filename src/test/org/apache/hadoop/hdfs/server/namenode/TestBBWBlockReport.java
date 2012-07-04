@@ -33,9 +33,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestBBWBlockReport {
-
-  private final Path src = new Path(System.getProperty("test.build.data",
-      "/tmp"), "testfile");
+  private final Path src =
+    new Path("/tmp/TestBBWBlockReport", "testfile");
 
   private Configuration conf = null;
 

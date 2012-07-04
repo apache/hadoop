@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.junit.After;
 import org.junit.Before;
 
 public class TestFSMainOperationsLocalFileSystem extends
@@ -32,6 +33,11 @@ public class TestFSMainOperationsLocalFileSystem extends
     super.setUp();
   }
   
+  @After
+  public void tearDown() throws Exception {
+    super.tearDown();
+  }
+
   static Path wd = null;
   protected Path getDefaultWorkingDirectory() throws IOException {
     if (wd == null)

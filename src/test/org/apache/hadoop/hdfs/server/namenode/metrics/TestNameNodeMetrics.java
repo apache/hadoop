@@ -44,8 +44,8 @@ import static org.apache.hadoop.test.MetricsAsserts.*;
 public class TestNameNodeMetrics extends TestCase {
   private static final Configuration CONF = new Configuration();
   private static final int DFS_REPLICATION_INTERVAL = 1;
-  private static final Path TEST_ROOT_DIR_PATH = 
-    new Path(System.getProperty("test.build.data", "build/test/data"));
+  private static final Path TEST_ROOT_DIR_PATH =
+    new Path("/tmp/TestNameNodeMetrics");
   
   // Number of datanodes in the cluster
   private static final int DATANODE_COUNT = 3; 

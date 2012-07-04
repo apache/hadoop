@@ -31,7 +31,7 @@ import org.junit.Assert;
  */
 public final class FileSystemTestHelper {
   // The test root is relative to the <wd>/build/test/data by default
-  public static final String TEST_ROOT_DIR = 
+  public static String TEST_ROOT_DIR = 
     System.getProperty("test.build.data", "build/test/data") + "/test";
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private static final int DEFAULT_NUM_BLOCKS = 2;
@@ -67,7 +67,7 @@ public final class FileSystemTestHelper {
   public static String getAbsoluteTestRootDir(FileSystem fSys)
       throws IOException {
     if (absTestRootDir == null) {
-      if (TEST_ROOT_DIR.startsWith("/")) {
+      if (new Path(TEST_ROOT_DIR).isAbsolute()) {
         absTestRootDir = TEST_ROOT_DIR;
       } else {
         absTestRootDir = fSys.getWorkingDirectory().toString() + "/"
