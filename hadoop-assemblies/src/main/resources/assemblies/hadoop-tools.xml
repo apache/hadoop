@@ -44,11 +44,6 @@
       </includes>
       <outputDirectory>lib/native</outputDirectory>
     </fileSet>
-    <fileSet>
-      <directory>../hadoop-pipes/target/native/examples</directory>
-      <outputDirectory>examples/bin</outputDirectory>
-      <fileMode>0755</fileMode>
-    </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>
