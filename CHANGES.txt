@@ -53,6 +53,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4317. Job view ACL checks are too permissive (kkambatl via tucu)
 
+    MAPREDUCE-4385. FairScheduler.maxTasksToAssign() should check for 
+    fairscheduler.assignmultiple.maps < TaskTracker.availableSlots (kkambatl via tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
