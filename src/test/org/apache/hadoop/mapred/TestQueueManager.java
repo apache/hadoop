@@ -48,19 +48,8 @@ public class TestQueueManager extends TestCase {
 
   MiniDFSCluster miniDFSCluster;
   MiniMRCluster miniMRCluster = null;
-  
-  /**
-   * For some tests it is necessary to sandbox them in a doAs with a fake user
-   * due to bug HADOOP-6527, which wipes out real group mappings. It's also
-   * necessary to then add the real user running the test to the fake users
-   * so that child processes can write to the DFS.
-   */
+
   UserGroupInformation createNecessaryUsers() throws IOException {
-    // Add real user to fake groups mapping so that child processes (tasks)
-    // will have permissions on the dfs
-    String j = UserGroupInformation.getCurrentUser().getShortUserName();
-    UserGroupInformation.createUserForTesting(j, new String [] { "myGroup"});
-    
     // Create a fake user for all processes to execute within
     UserGroupInformation ugi = UserGroupInformation.createUserForTesting("Zork",
                                                  new String [] {"ZorkGroup"});
@@ -130,12 +119,10 @@ public class TestQueueManager extends TestCase {
       verifyJobSubmissionToDefaultQueue(conf, true, userName + "," + groupName);
       verifyJobSubmissionToDefaultQueue(conf, true, user2 + "," + group2);
     
-      // Check if MROwner(user who started the mapreduce cluster) can submit job
-      UserGroupInformation mrOwner = UserGroupInformation.getCurrentUser();
-      userName = mrOwner.getShortUserName();
-      String[] groups = mrOwner.getGroupNames();
-      groupName = groups[groups.length - 1];
-      verifyJobSubmissionToDefaultQueue(conf, true, userName + "," + groupName);
+      // Check if MROwner (user who started the mapreduce cluster) can submit
+      // job. By passing null as userInfo we fallback to using the
+      // UserGroupInformation.getCurrentUser() what is the intent of the test.
+      verifyJobSubmissionToDefaultQueue(conf, true, null);
     } finally {
       tearDownCluster();
     }

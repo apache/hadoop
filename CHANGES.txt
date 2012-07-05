@@ -323,6 +323,9 @@ Release 1.1.0 - unreleased
     HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
     (szetszwo)
 
+    HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
+    subsequent tests to fail.  (Ivan Mitic via szetszwo)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
