@@ -42,14 +42,25 @@ public class PipelineAck {
   }
   
   /**
-   * Constructor
+   * Constructor assuming no next DN in pipeline
    * @param seqno sequence number
    * @param replies an array of replies
    */
   public PipelineAck(long seqno, Status[] replies) {
+    this(seqno, replies, 0L);
+  }
+
+  /**
+   * Constructor
+   * @param seqno sequence number
+   * @param replies an array of replies
+   * @param downstreamAckTimeNanos ack RTT in nanoseconds, 0 if no next DN in pipeline
+   */
+  public PipelineAck(long seqno, Status[] replies, long downstreamAckTimeNanos) {
     proto = PipelineAckProto.newBuilder()
       .setSeqno(seqno)
       .addAllStatus(Arrays.asList(replies))
+      .setDownstreamAckTimeNanos(downstreamAckTimeNanos)
       .build();
   }
   
@@ -76,7 +87,15 @@ public class PipelineAck {
   public Status getReply(int i) {
     return proto.getStatus(i);
   }
-  
+
+  /**
+   * Get the time elapsed for downstream ack RTT in nanoseconds
+   * @return time elapsed for downstream ack in nanoseconds, 0 if no next DN in pipeline
+   */
+  public long getDownstreamAckTimeNanos() {
+    return proto.getDownstreamAckTimeNanos();
+  }
+
   /**
    * Check if this ack contains error status
    * @return true if all statuses are SUCCESS

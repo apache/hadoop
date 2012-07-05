@@ -18,26 +18,25 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
-import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
+import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.*;
 
 import java.util.List;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.junit.Test;
 
 public class TestDataNodeMetrics {
-  
-  MiniDFSCluster cluster = null;
-  FileSystem fs = null;
-  
+
   @Test
   public void testDataNodeMetrics() throws Exception {
     Configuration conf = new HdfsConfiguration();
@@ -78,6 +77,57 @@ public class TestDataNodeMetrics {
       // signaling the end of the block
       assertCounter("SendDataPacketTransferNanosNumOps", (long)2, rb);
       assertCounter("SendDataPacketBlockedOnNetworkNanosNumOps", (long)2, rb);
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  @Test
+  public void testFlushMetric() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+
+      Path testFile = new Path("/testFlushNanosMetric.txt");
+      DFSTestUtil.createFile(fs, testFile, 1, (short)1, new Random().nextLong());
+
+      List<DataNode> datanodes = cluster.getDataNodes();
+      DataNode datanode = datanodes.get(0);
+      MetricsRecordBuilder dnMetrics = getMetrics(datanode.getMetrics().name());
+      // Expect 2 flushes, 1 for the flush that occurs after writing, 1 that occurs
+      // on closing the data and metadata files.
+      assertCounter("FlushNanosNumOps", 2L, dnMetrics);
+    } finally {
+      if (cluster != null) {cluster.shutdown();}
+    }
+  }
+
+  @Test
+  public void testRoundTripAckMetric() throws Exception {
+    final int DATANODE_COUNT = 2;
+
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_COUNT).build();
+    try {
+      cluster.waitActive();
+      DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+
+      Path testFile = new Path("/testRoundTripAckMetric.txt");
+      DFSTestUtil.createFile(fs, testFile, 1, (short)DATANODE_COUNT,
+          new Random().nextLong());
+
+      boolean foundNonzeroPacketAckNumOps = false;
+      for (DataNode datanode : cluster.getDataNodes()) {
+        MetricsRecordBuilder dnMetrics = getMetrics(datanode.getMetrics().name());
+        if (getLongCounter("PacketAckRoundTripTimeNanosNumOps", dnMetrics) > 0) {
+          foundNonzeroPacketAckNumOps = true;
+        }
+      }
+      assertTrue(
+          "Expected at least one datanode to have reported PacketAckRoundTripTimeNanos metric",
+          foundNonzeroPacketAckNumOps);
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }

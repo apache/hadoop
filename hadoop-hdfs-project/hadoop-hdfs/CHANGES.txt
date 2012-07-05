@@ -96,6 +96,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3343. Improve metrics for DN read latency (Andrew Wang via todd)
 
+    HDFS-3170. Add more useful metrics for write latency (Matthew Jacobs via
+    todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
