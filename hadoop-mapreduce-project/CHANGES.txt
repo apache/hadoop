@@ -514,6 +514,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4392. Counters.makeCompactString() changed behavior from 0.20
     (Jason Lowe via bobby)
 
+    MAPREDUCE-4384. Race conditions in IndexCache (Kihwal Lee via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
