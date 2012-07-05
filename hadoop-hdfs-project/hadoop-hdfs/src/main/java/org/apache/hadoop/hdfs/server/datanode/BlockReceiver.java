@@ -42,7 +42,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaInputStreams;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.ReplicaOutputStreams;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -252,15 +251,21 @@ class BlockReceiver implements Closeable {
     if (syncOnClose && (out != null || checksumOut != null)) {
       datanode.metrics.incrFsyncCount();      
     }
+    long flushTotalNanos = 0;
+    boolean measuredFlushTime = false;
     // close checksum file
     try {
       if (checksumOut != null) {
+        long flushStartNanos = System.nanoTime();
         checksumOut.flush();
+        long flushEndNanos = System.nanoTime();
         if (syncOnClose && (cout instanceof FileOutputStream)) {
-          long start = Util.now();
+          long fsyncStartNanos = flushEndNanos;
           ((FileOutputStream)cout).getChannel().force(true);
-          datanode.metrics.addFsync(Util.now() - start);
+          datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
         }
+        flushTotalNanos += flushEndNanos - flushStartNanos;
+        measuredFlushTime = true;
         checksumOut.close();
         checksumOut = null;
       }
@@ -273,12 +278,16 @@ class BlockReceiver implements Closeable {
     // close block file
     try {
       if (out != null) {
+        long flushStartNanos = System.nanoTime();
         out.flush();
+        long flushEndNanos = System.nanoTime();
         if (syncOnClose && (out instanceof FileOutputStream)) {
-          long start = Util.now();
+          long fsyncStartNanos = flushEndNanos;
           ((FileOutputStream)out).getChannel().force(true);
-          datanode.metrics.addFsync(Util.now() - start);
+          datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
         }
+        flushTotalNanos += flushEndNanos - flushStartNanos;
+        measuredFlushTime = true;
         out.close();
         out = null;
       }
@@ -287,6 +296,9 @@ class BlockReceiver implements Closeable {
     }
     finally{
       IOUtils.closeStream(out);
+    }
+    if (measuredFlushTime) {
+      datanode.metrics.addFlushNanos(flushTotalNanos);
     }
     // disk check
     if(ioe != null) {
@@ -303,21 +315,31 @@ class BlockReceiver implements Closeable {
     if (isSync && (out != null || checksumOut != null)) {
       datanode.metrics.incrFsyncCount();      
     }
+    long flushTotalNanos = 0;
     if (checksumOut != null) {
+      long flushStartNanos = System.nanoTime();
       checksumOut.flush();
+      long flushEndNanos = System.nanoTime();
       if (isSync && (cout instanceof FileOutputStream)) {
-        long start = Util.now();
+        long fsyncStartNanos = flushEndNanos;
         ((FileOutputStream)cout).getChannel().force(true);
-        datanode.metrics.addFsync(Util.now() - start);
+        datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
       }
+      flushTotalNanos += flushEndNanos - flushStartNanos;
     }
     if (out != null) {
+      long flushStartNanos = System.nanoTime();
       out.flush();
+      long flushEndNanos = System.nanoTime();
       if (isSync && (out instanceof FileOutputStream)) {
-        long start = Util.now();
+        long fsyncStartNanos = flushEndNanos;
         ((FileOutputStream)out).getChannel().force(true);
-        datanode.metrics.addFsync(Util.now() - start);
+        datanode.metrics.addFsyncNanos(System.nanoTime() - fsyncStartNanos);
       }
+      flushTotalNanos += flushEndNanos - flushStartNanos;
+    }
+    if (checksumOut != null || out != null) {
+      datanode.metrics.addFlushNanos(flushTotalNanos);
     }
   }
 
@@ -446,7 +468,7 @@ class BlockReceiver implements Closeable {
    */
   private void readNextPacket() throws IOException {
     /* This dances around buf a little bit, mainly to read 
-     * full packet with single read and to accept arbitarary size  
+     * full packet with single read and to accept arbitrary size  
      * for next packet at the same time.
      */
     if (buf == null) {
@@ -715,7 +737,7 @@ class BlockReceiver implements Closeable {
           replicaInfo.setLastChecksumAndDataLen(
             offsetInBlock, lastChunkChecksum
           );
-          
+
           datanode.metrics.incrBytesWritten(len);
 
           dropOsCacheBehindWriter(offsetInBlock);
@@ -976,7 +998,8 @@ class BlockReceiver implements Closeable {
     synchronized void enqueue(final long seqno,
         final boolean lastPacketInBlock, final long offsetInBlock) {
       if (running) {
-        final Packet p = new Packet(seqno, lastPacketInBlock, offsetInBlock);
+        final Packet p = new Packet(seqno, lastPacketInBlock, offsetInBlock,
+            System.nanoTime());
         if(LOG.isDebugEnabled()) {
           LOG.debug(myString + ": enqueue " + p);
         }
@@ -1013,17 +1036,20 @@ class BlockReceiver implements Closeable {
       final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
+        long totalAckTimeNanos = 0;
         boolean isInterrupted = false;
         try {
             Packet pkt = null;
             long expected = -2;
             PipelineAck ack = new PipelineAck();
             long seqno = PipelineAck.UNKOWN_SEQNO;
+            long ackRecvNanoTime = 0;
             try {
               if (type != PacketResponderType.LAST_IN_PIPELINE
                   && !mirrorError) {
                 // read an ack from downstream datanode
                 ack.readFields(downstreamIn);
+                ackRecvNanoTime = System.nanoTime();
                 if (LOG.isDebugEnabled()) {
                   LOG.debug(myString + " got " + ack);
                 }
@@ -1048,6 +1074,22 @@ class BlockReceiver implements Closeable {
                       && seqno != expected) {
                     throw new IOException(myString + "seqno: expected="
                         + expected + ", received=" + seqno);
+                  }
+                  if (type == PacketResponderType.HAS_DOWNSTREAM_IN_PIPELINE) {
+                    // The total ack time includes the ack times of downstream nodes.
+                    // The value is 0 if this responder doesn't have a downstream
+                    // DN in the pipeline.
+                    totalAckTimeNanos = ackRecvNanoTime - pkt.ackEnqueueNanoTime;
+                    // Report the elapsed time from ack send to ack receive minus
+                    // the downstream ack time.
+                    long ackTimeNanos = totalAckTimeNanos - ack.getDownstreamAckTimeNanos();
+                    if (ackTimeNanos < 0) {
+                      if (LOG.isDebugEnabled()) {
+                        LOG.debug("Calculated invalid ack time: " + ackTimeNanos + "ns.");
+                      }
+                    } else {
+                      datanode.metrics.addPacketAckRoundTripTimeNanos(ackTimeNanos);
+                    }
                   }
                   lastPacketInBlock = pkt.lastPacketInBlock;
                 }
@@ -1116,7 +1158,7 @@ class BlockReceiver implements Closeable {
                 replies[i+1] = ack.getReply(i);
               }
             }
-            PipelineAck replyAck = new PipelineAck(expected, replies);
+            PipelineAck replyAck = new PipelineAck(expected, replies, totalAckTimeNanos);
             
             if (replyAck.isSuccess() && 
                  pkt.offsetInBlock > replicaInfo.getBytesAcked())
@@ -1176,11 +1218,14 @@ class BlockReceiver implements Closeable {
     final long seqno;
     final boolean lastPacketInBlock;
     final long offsetInBlock;
+    final long ackEnqueueNanoTime;
 
-    Packet(long seqno, boolean lastPacketInBlock, long offsetInBlock) {
+    Packet(long seqno, boolean lastPacketInBlock, long offsetInBlock,
+        long ackEnqueueNanoTime) {
       this.seqno = seqno;
       this.lastPacketInBlock = lastPacketInBlock;
       this.offsetInBlock = offsetInBlock;
+      this.ackEnqueueNanoTime = ackEnqueueNanoTime;
     }
 
     @Override
@@ -1188,6 +1233,7 @@ class BlockReceiver implements Closeable {
       return getClass().getSimpleName() + "(seqno=" + seqno
         + ", lastPacketInBlock=" + lastPacketInBlock
         + ", offsetInBlock=" + offsetInBlock
+        + ", ackEnqueueNanoTime=" + ackEnqueueNanoTime
         + ")";
     }
   }

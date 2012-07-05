@@ -73,8 +73,10 @@ public class DataNodeMetrics {
   @Metric MutableRate replaceBlockOp;
   @Metric MutableRate heartbeats;
   @Metric MutableRate blockReports;
+  @Metric MutableRate packetAckRoundTripTimeNanos;
 
-  @Metric MutableRate fsync;
+  @Metric MutableRate flushNanos;
+  @Metric MutableRate fsyncNanos;
   
   @Metric MutableRate sendDataPacketBlockedOnNetworkNanos;
   @Metric MutableRate sendDataPacketTransferNanos;
@@ -162,8 +164,16 @@ public class DataNodeMetrics {
     fsyncCount.incr();
   }
 
-  public void addFsync(long latency) {
-    fsync.add(latency);
+  public void addPacketAckRoundTripTimeNanos(long latencyNanos) {
+    packetAckRoundTripTimeNanos.add(latencyNanos);
+  }
+
+  public void addFlushNanos(long latencyNanos) {
+    flushNanos.add(latencyNanos);
+  }
+
+  public void addFsyncNanos(long latencyNanos) {
+    fsyncNanos.add(latencyNanos);
   }
 
   public void shutdown() {
