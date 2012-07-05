@@ -224,6 +224,19 @@ public class TestCounters {
     iterator.next();
   }
   
+  @Test
+  public void testMakeCompactString() {
+    final String GC1 = "group1.counter1:1";
+    final String GC2 = "group2.counter2:3";
+    Counters counters = new Counters();
+    counters.incrCounter("group1", "counter1", 1);
+    assertEquals("group1.counter1:1", counters.makeCompactString());
+    counters.incrCounter("group2", "counter2", 3);
+    String cs = counters.makeCompactString();
+    assertTrue("Bad compact string",
+        cs.equals(GC1 + ',' + GC2) || cs.equals(GC2 + ',' + GC1));
+  }
+
   public static void main(String[] args) throws IOException {
     new TestCounters().testCounters();
   }
