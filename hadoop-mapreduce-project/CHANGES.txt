@@ -132,6 +132,8 @@ Branch-2 ( Unreleased changes )
 
   NEW FEATURES
 
+    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-4146. Support limits on task status string length and number of

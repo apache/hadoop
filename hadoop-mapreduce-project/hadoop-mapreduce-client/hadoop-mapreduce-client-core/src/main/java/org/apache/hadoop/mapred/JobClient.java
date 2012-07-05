@@ -441,6 +441,14 @@ public class JobClient extends CLI {
       }
     }
 
+    @Override
+    public JobStatus getJobStatus() throws IOException {
+      try {
+        return JobStatus.downgrade(job.getStatus());
+      } catch (InterruptedException ie) {
+        throw new IOException(ie);
+      }
+    }
   }
 
   /**
