@@ -149,8 +149,16 @@ public interface RunningJob {
   public int getJobState() throws IOException;
   
   /**
-   * Kill the running job.  Blocks until all job tasks have been
-   * killed as well.  If the job is no longer running, it simply returns.
+   * Returns a snapshot of the current status, {@link JobStatus}, of the Job.
+   * Need to call again for latest information.
+   * 
+   * @throws IOException
+   */
+  public JobStatus getJobStatus() throws IOException;
+
+  /**
+   * Kill the running job. Blocks until all job tasks have been killed as well.
+   * If the job is no longer running, it simply returns.
    * 
    * @throws IOException
    */

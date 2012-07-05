@@ -20,6 +20,8 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4253. Tests for mapreduce-client-core are lying under
     mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
 
+    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+
   OPTIMIZATIONS
 
   BUG FIXES
