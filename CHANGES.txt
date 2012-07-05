@@ -56,6 +56,8 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4385. FairScheduler.maxTasksToAssign() should check for 
     fairscheduler.assignmultiple.maps < TaskTracker.availableSlots (kkambatl via tucu)
 
+    MAPREDUCE-4359. Potential deadlock in Counters. (tomwhite)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

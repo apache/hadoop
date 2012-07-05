@@ -295,7 +295,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * @deprecated use {@link #getCounter(String)} instead
      */
     @Deprecated
-    public synchronized Counter getCounter(int id, String name) {
+    public Counter getCounter(int id, String name) {
       return getCounterForName(name);
     }
     
@@ -304,23 +304,27 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * @param name the internal counter name
      * @return the counter
      */
-    public synchronized Counter getCounterForName(String name) {
-      String shortName = getShortName(name, COUNTER_NAME_LIMIT);
-      Counter result = subcounters.get(shortName);
-      if (result == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding " + shortName);
+    public Counter getCounterForName(String name) {
+      synchronized(Counters.this) { // lock ordering: Counters then Group
+        synchronized (this) {
+          String shortName = getShortName(name, COUNTER_NAME_LIMIT);
+          Counter result = subcounters.get(shortName);
+          if (result == null) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Adding " + shortName);
+            }
+            numCounters = (numCounters == 0) ? Counters.this.size(): numCounters; 
+            if (numCounters >= MAX_COUNTER_LIMIT) {
+              throw new CountersExceededException("Error: Exceeded limits on number of counters - " 
+                  + "Counters=" + numCounters + " Limit=" + MAX_COUNTER_LIMIT);
+            }
+            result = new Counter(shortName, localize(shortName + ".name", shortName), 0L);
+            subcounters.put(shortName, result);
+            numCounters++;
+          }
+          return result;
         }
-        numCounters = (numCounters == 0) ? Counters.this.size(): numCounters; 
-        if (numCounters >= MAX_COUNTER_LIMIT) {
-          throw new CountersExceededException("Error: Exceeded limits on number of counters - " 
-              + "Counters=" + numCounters + " Limit=" + MAX_COUNTER_LIMIT);
-        }
-        result = new Counter(shortName, localize(shortName + ".name", shortName), 0L);
-        subcounters.put(shortName, result);
-        numCounters++;
       }
-      return result;
     }
     
     /**
