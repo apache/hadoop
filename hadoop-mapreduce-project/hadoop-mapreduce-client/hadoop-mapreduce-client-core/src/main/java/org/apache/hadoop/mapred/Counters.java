@@ -90,7 +90,23 @@ public class Counters
   }
 
   public synchronized String makeCompactString() {
-    return CountersStrings.toEscapedCompactString(this);
+    StringBuilder builder = new StringBuilder();
+    boolean first = true;
+    for(Group group: this){
+      for(Counter counter: group) {
+        if (first) {
+          first = false;
+        } else {
+          builder.append(',');
+        }
+        builder.append(group.getDisplayName());
+        builder.append('.');
+        builder.append(counter.getDisplayName());
+        builder.append(':');
+        builder.append(counter.getCounter());
+      }
+    }
+    return builder.toString();
   }
   
   /**
