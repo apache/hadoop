@@ -396,10 +396,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   @Override
   public ProcResourceValues getProcResourceValues() {
     if(pTree == null) {
-      if(processPid == null) {
-        // process pid not set. try to obtain on our own
-        processPid = System.getenv().get("JVM_PID");
-      }
       pTree = new ProcfsBasedProcessTree(processPid);
     }
     pTree.getProcessTree();

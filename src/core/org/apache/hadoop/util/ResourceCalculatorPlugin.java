@@ -100,6 +100,8 @@ public abstract class ResourceCalculatorPlugin extends Configured {
 
   /**
    * Obtain resource status used by current process tree.
+   * Must call {@link #setProcessPid(String)} to set the process id before 
+   * calling this method
    */
   public abstract ProcResourceValues getProcResourceValues();
 

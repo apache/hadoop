@@ -185,6 +185,10 @@ class LoadJob extends GridmixJob {
       ResourceCalculatorPlugin plugin = 
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, conf);
       
+      if(plugin != null) {
+        plugin.setProcessPid(System.getenv("JVM_PID"));
+      }
+      
       // set the other parameters
       this.sleepTime = conf.getLong(SLEEP_CONFIG, DEFAULT_SLEEP_TIME);
       progress = new BoostingProgress(context);

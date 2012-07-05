@@ -101,30 +101,33 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   
   @Override
   public ResourceCalculatorProcessTree getProcessTree() {
-    String processesInfoStr = getAllProcessInfoFromShell();
-    if (processesInfoStr != null && processesInfoStr.length() > 0) {
-      Map<String, ProcessInfo> allProcessInfo = createProcessInfo(processesInfoStr);
-      
-      for (Map.Entry<String, ProcessInfo> entry : allProcessInfo.entrySet()) {
-        String pid = entry.getKey();
-        ProcessInfo pInfo = entry.getValue();
-        ProcessInfo oldInfo = processTree.get(pid);
-        if (oldInfo != null) {
-          // existing process, update age and replace value
-          pInfo.age += oldInfo.age;
-          // calculate the delta since the last refresh. totals are being kept
-          // in the WindowsBasedProcessTree object
-          pInfo.cpuTimeMsDelta = pInfo.cpuTimeMs - oldInfo.cpuTimeMs;
-        } else {
-          // new process. delta cpu == total cpu
-          pInfo.cpuTimeMsDelta = pInfo.cpuTimeMs;
+    if(taskProcessId != null) {
+      // taskProcessId can be null in some tests
+      String processesInfoStr = getAllProcessInfoFromShell();
+      if (processesInfoStr != null && processesInfoStr.length() > 0) {
+        Map<String, ProcessInfo> allProcessInfo = createProcessInfo(processesInfoStr);
+
+        for (Map.Entry<String, ProcessInfo> entry : allProcessInfo.entrySet()) {
+          String pid = entry.getKey();
+          ProcessInfo pInfo = entry.getValue();
+          ProcessInfo oldInfo = processTree.get(pid);
+          if (oldInfo != null) {
+            // existing process, update age and replace value
+            pInfo.age += oldInfo.age;
+            // calculate the delta since the last refresh. totals are being kept
+            // in the WindowsBasedProcessTree object
+            pInfo.cpuTimeMsDelta = pInfo.cpuTimeMs - oldInfo.cpuTimeMs;
+          } else {
+            // new process. delta cpu == total cpu
+            pInfo.cpuTimeMsDelta = pInfo.cpuTimeMs;
+          }
         }
+        processTree.clear();
+        processTree = allProcessInfo;
+      } else {
+        // clearing process tree to mimic semantics of existing Procfs impl
+        processTree.clear();
       }
-      processTree.clear();
-      processTree = allProcessInfo;
-    }
-    else {
-      processTree.clear();
     }
 
     return this;

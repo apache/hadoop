@@ -53,6 +53,9 @@ branch-hadoop-1-win - unreleased
     MAPREDUCE-4332 Fix command-length abort issues on Windows. (Ivan Mitic via
     acmurthy)
 
+    MAPREDUCE-4369. Fix streaming test failures caused by
+    WindowsResourceCalculatorPlugin. (Bikas Saha via acmurthy) 
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES
