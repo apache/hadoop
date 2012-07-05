@@ -307,6 +307,9 @@ Branch-2 ( Unreleased changes )
     HADOOP-8547. Package hadoop-pipes examples/bin directory (again).
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8563. don't package hadoop-pipes examples/bin
+    (Colin Patrick McCabe via tgraves)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
