@@ -142,6 +142,7 @@ public class DefaultTaskController extends TaskController {
       shExec.execute();
     } catch (Exception e) {
       if (shExec == null) {
+        LOG.warn("Failed to launch the task with: " + e);
         return -1;
       }
       int exitCode = shExec.getExitCode();

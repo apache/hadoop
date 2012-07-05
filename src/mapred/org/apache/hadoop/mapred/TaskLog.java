@@ -65,7 +65,16 @@ public class TaskLog {
     LogFactory.getLog(TaskLog.class);
 
   static final String USERLOGS_DIR_NAME = "userlogs";
-
+  
+  // Windows has relatively small hard limit on the command line length.
+  // On non-Windows platforms, we don't enforce any limits as command
+  // line usually supports over 200k (or even million) characters
+  // and it is very unlikely that we can hit this limit. Another option is
+  // to use "getconf ARG_MAX" to extract this value, however, since this has
+  // perf impact that we'd pay for scenario that is likely not
+  // to happen, we are staying out of it (until proved otherwise).
+  static int MAX_CMD_LINE_LENGTH = Shell.WINDOWS ? 8192 : Integer.MAX_VALUE;
+  
   private static final File LOG_DIR = 
     new File(getBaseLogDir(), USERLOGS_DIR_NAME).getAbsoluteFile();
   
@@ -481,7 +490,10 @@ public class TaskLog {
     }
   }
 
-  private static final String bashCommand = (Shell.WINDOWS)? "cmd": "bash";
+  private static final String shellCommand = (Shell.WINDOWS)? "cmd": "bash";
+  private static final String shellCommandSufix = (Shell.WINDOWS) ? "/c" : "-c";
+  private static final String shellCommandNullOutput =
+      (Shell.WINDOWS) ? "< nul" : "< /dev/null";
   private static final String tailCommand = "tail";
   
   /**
@@ -609,8 +621,8 @@ public class TaskLog {
       boolean useSetsid
      ) throws IOException {
     List<String> result = new ArrayList<String>(3);
-    result.add(bashCommand);
-    result.add((Shell.WINDOWS)? "/c" : "-c");
+    result.add(shellCommand);
+    result.add(shellCommandSufix);
     String mergedCmd = buildCommandLine(setup,
         cmd,
         stdoutFilename,
@@ -631,48 +643,71 @@ public class TaskLog {
     String stdout = FileUtil.makeShellPath(stdoutFilename);
     String stderr = FileUtil.makeShellPath(stderrFilename);
     StringBuilder mergedCmd = new StringBuilder();
-    
+
     if (!Shell.WINDOWS) {
       mergedCmd.append("export JVM_PID=`echo $$`\n");
     }
 
     if (setup != null) {
       for (String s : setup) {
+        if (s.length() > MAX_CMD_LINE_LENGTH) {
+          throw new IOException("Command exceeds the OS command length limit: "
+                                + MAX_CMD_LINE_LENGTH + ", command: \""
+                                + s + "\"");
+        }
+
         mergedCmd.append(s);
         mergedCmd.append("\n");
       }
     }
+    StringBuilder runCommand = new StringBuilder();
+
     if (tailLength > 0) {
-      mergedCmd.append("(");
+      runCommand.append("(");
     } else if (ProcessTree.isSetsidAvailable && useSetSid 
         && !Shell.WINDOWS) {
-      mergedCmd.append("exec setsid ");
+      runCommand.append("exec setsid ");
     } else {
       if (!Shell.WINDOWS)
-        mergedCmd.append("exec ");
+        runCommand.append("exec ");
     }
-    mergedCmd.append(addCommand(cmd, true));
-    mergedCmd.append((Shell.WINDOWS)? " < nul ":" < /dev/null ");
+    runCommand.append(addCommand(cmd, true));
+    runCommand.append(" ");
+    runCommand.append(shellCommandNullOutput);
+    runCommand.append(" ");
     if (tailLength > 0) {
-      mergedCmd.append(" | ");
-      mergedCmd.append(tailCommand);
-      mergedCmd.append((Shell.WINDOWS)?" /c ":" -c ");
-      mergedCmd.append(tailLength);
-      mergedCmd.append(" >> ");
-      mergedCmd.append(stdout);
-      mergedCmd.append(" ; exit $PIPESTATUS ) 2>&1 | ");
-      mergedCmd.append(tailCommand);
-      mergedCmd.append((Shell.WINDOWS)? " /c ":" -c ");
-      mergedCmd.append(tailLength);
-      mergedCmd.append(" >> ");
-      mergedCmd.append(stderr);
-      mergedCmd.append(" ; exit $PIPESTATUS");
+      runCommand.append(" | ");
+      runCommand.append(tailCommand);
+      runCommand.append(" ");
+      runCommand.append(shellCommandSufix);
+      runCommand.append(" ");
+      runCommand.append(tailLength);
+      runCommand.append(" >> ");
+      runCommand.append(stdout);
+      runCommand.append(" ; exit $PIPESTATUS ) 2>&1 | ");
+      runCommand.append(tailCommand);
+      runCommand.append(" ");
+      runCommand.append(shellCommandSufix);
+      runCommand.append(" ");
+      runCommand.append(tailLength);
+      runCommand.append(" >> ");
+      runCommand.append(stderr);
+      runCommand.append(" ; exit $PIPESTATUS");
     } else {
-      mergedCmd.append(" 1>> ");
-      mergedCmd.append(stdout);
-      mergedCmd.append(" 2>> ");
-      mergedCmd.append(stderr);
+      runCommand.append(" 1>> ");
+      runCommand.append(stdout);
+      runCommand.append(" 2>> ");
+      runCommand.append(stderr);
     }
+
+    if (runCommand.length() > MAX_CMD_LINE_LENGTH) {
+      throw new IOException("Command exceeds the OS command length limit: "
+                            + MAX_CMD_LINE_LENGTH + ", command: \""
+                            + runCommand + "\"");
+    }
+
+    mergedCmd.append(runCommand);
+
     return mergedCmd.toString();
   }
 
@@ -730,8 +765,8 @@ public class TaskLog {
                                             ) throws IOException {
     String debugout = FileUtil.makeShellPath(debugoutFilename);
     List<String> result = new ArrayList<String>(3);
-    result.add(bashCommand);
-    result.add((Shell.WINDOWS)? "/c" : "-c");
+    result.add(shellCommand);
+    result.add(shellCommandSufix);
     StringBuffer mergedCmd = new StringBuffer();
     mergedCmd.append("exec ");
     boolean isExecutable = true;

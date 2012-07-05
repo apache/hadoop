@@ -75,6 +75,8 @@ abstract class TaskRunner extends Thread {
   
   static final String HADOOP_WORK_DIR = "HADOOP_WORK_DIR";
   
+  static final String JAVA_CLASSPATH = "CLASSPATH";
+  
   static final String MAPRED_ADMIN_USER_ENV =
     "mapreduce.admin.user.env";
 
@@ -212,13 +214,15 @@ abstract class TaskRunner extends Thread {
       }
       
       // Accumulates class paths for child.
-      List<String> classPaths = getClassPaths(conf, workDir,
-                                              taskDistributedCacheManager);
+      List<String> classPathsList = getClassPaths(conf, workDir,
+                                                  taskDistributedCacheManager);
+      String classPaths = StringUtils.join(SYSTEM_PATH_SEPARATOR,
+                                           classPathsList);
 
       long logSize = TaskLog.getTaskLogLength(conf);
       
       //  Build exec child JVM args.
-      Vector<String> vargs = getVMArgs(taskid, workDir, classPaths, logSize);
+      Vector<String> vargs = getVMArgs(taskid, workDir, logSize);
       
       tracker.addToMemoryManager(t.getTaskID(), t.isMapTask(), conf);
 
@@ -232,8 +236,8 @@ abstract class TaskRunner extends Thread {
                  stderr);
       
       Map<String, String> env = new HashMap<String, String>();
-      errorInfo = getVMEnvironment(errorInfo, user, workDir, conf, env, taskid,
-                                   logSize);
+      errorInfo = getVMEnvironment(errorInfo, user, workDir, classPaths,
+                                   conf, env, taskid, logSize);
       
       // flatten the env as a set of export commands
       List <String> setupCmds = new ArrayList<String>();
@@ -369,7 +373,7 @@ abstract class TaskRunner extends Thread {
    * @throws IOException
    */
   private Vector<String> getVMArgs(TaskAttemptID taskid, File workDir,
-      List<String> classPaths, long logSize)
+      long logSize)
       throws IOException {
     Vector<String> vargs = new Vector<String>(8);
     File jvm =                                  // use same jvm as parent
@@ -442,11 +446,6 @@ abstract class TaskRunner extends Thread {
 
     Path childTmpDir = createChildTmpDir(workDir, conf, false);
     vargs.add("-Djava.io.tmpdir=" + childTmpDir);
-
-    // Add classpath.
-    vargs.add("-classpath");
-    String classPath = StringUtils.join(SYSTEM_PATH_SEPARATOR, classPaths);
-    vargs.add(classPath);
 
     // Setup the log4j prop
     setupLog4jProperties(vargs, taskid, logSize);
@@ -551,9 +550,10 @@ abstract class TaskRunner extends Thread {
     return classPaths;
   }
 
-  private String getVMEnvironment(String errorInfo, String user, File workDir, 
-                                  JobConf conf, Map<String, String> env, 
-                                  TaskAttemptID taskid, long logSize
+  private String getVMEnvironment(String errorInfo, String user, File workDir,
+                                  String classPaths, JobConf conf,
+                                  Map<String, String> env, TaskAttemptID taskid,
+                                  long logSize
                                   ) throws Throwable {
     StringBuffer ldLibraryPath = new StringBuffer();
     ldLibraryPath.append(workDir.toString());
@@ -565,6 +565,7 @@ abstract class TaskRunner extends Thread {
     }
     env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
     env.put(HADOOP_WORK_DIR, workDir.toString());
+    env.put(JAVA_CLASSPATH, classPaths.toString());
     //update user configured login-shell properties
     updateUserLoginEnv(errorInfo, user, conf, env);
     // put jobTokenFile name into env
