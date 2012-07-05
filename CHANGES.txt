@@ -51,6 +51,8 @@ Release 1.2.0 - unreleased
     HDFS-3595. Update the regular expression in TestEditLogLoading for the
     error message change by HDFS-3521.  (Colin Patrick McCabe via szetszwo)
 
+    MAPREDUCE-4317. Job view ACL checks are too permissive (kkambatl via tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
