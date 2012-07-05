@@ -59,6 +59,9 @@ branch-hadoop-1-win - unreleased
     MAPREDUCE-4368. Fix TaskRunner to deal with java.library.path with a
     quoted path on Windows. (John Gordon via acmurthy) 
 
+    HADOOP-8414 Address problems related to localhost resolving to 127.0.0.1 on Windows
+    (Ivan Mitic via Sanjay Radia)
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

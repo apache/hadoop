@@ -89,7 +89,7 @@ public class TestCLI extends TestCase {
   /**
    * Read the test config file - testConfig.xml
    */
-  private void readTestConfigFile() {
+  private void readTestConfigFile(String namenode) {
     
     if (testsFromConfigFile == null) {
       boolean success = false;
@@ -98,6 +98,13 @@ public class TestCLI extends TestCase {
         SAXParser p = (SAXParserFactory.newInstance()).newSAXParser();
         p.parse(testConfigFile, new TestConfigFileParser());
         success = true;
+        // Expand the expected test results
+        for (CLITestData testData: testsFromConfigFile) {
+          for (ComparatorData cd: testData.getComparatorData()) {
+            cd.setExpectedOutput(cd.getExpectedOutput()
+                .replaceAll("NAMENODE", namenode));
+          }
+        }
       } catch (Exception e) {
         LOG.info("File: " + testConfigFile + " not found");
         success = false;
@@ -110,9 +117,6 @@ public class TestCLI extends TestCase {
    * Setup
    */
   public void setUp() throws Exception {
-    // Read the testConfig.xml file
-    readTestConfigFile();
-    
     // Start up the mini dfs cluster
     boolean success = false;
     conf = new Configuration();
@@ -137,6 +141,9 @@ public class TestCLI extends TestCase {
     mrCluster = new MiniMRCluster(1, dfsCluster.getFileSystem().getUri().toString(), 1, 
                            null, null, mrConf);
     jobtracker = mrCluster.createJobConf().get("mapred.job.tracker", "local");
+
+    // Read the testConfig.xml file
+    readTestConfigFile(namenode);
 
     success = true;
 

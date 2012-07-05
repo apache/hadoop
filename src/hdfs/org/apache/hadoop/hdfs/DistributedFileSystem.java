@@ -80,9 +80,10 @@ public class DistributedFileSystem extends FileSystem {
     super.initialize(uri, conf);
     setConf(conf);
 
-    String host = uri.getHost();
-    if (host == null) {
-      throw new IOException("Incomplete HDFS URI, no host: "+ uri);
+    // Check for authority as URI.getHost() returns null if host contains
+    // numbers. This URI is still valid and it should not be rejected.
+    if (uri.getAuthority() == null) {
+      throw new IOException("Incomplete HDFS URI, no authority: "+ uri);
     }
 
     InetSocketAddress namenode = NameNode.getAddress(uri.getAuthority());

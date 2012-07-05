@@ -52,6 +52,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.TestUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.util.Shell;
 
 import org.apache.log4j.Level;
 import org.junit.BeforeClass;
@@ -59,7 +60,8 @@ import org.junit.Test;
 
 /** Unit tests for using Sasl over RPC. */
 public class TestSaslRPC {
-  private static final String ADDRESS = "localhost";
+  private static final String ADDRESS = Shell.WINDOWS ? "127.0.0.1"
+                                                      : "localhost";
 
   public static final Log LOG =
     LogFactory.getLog(TestSaslRPC.class);
