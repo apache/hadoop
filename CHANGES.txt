@@ -56,6 +56,9 @@ branch-hadoop-1-win - unreleased
     MAPREDUCE-4369. Fix streaming test failures caused by
     WindowsResourceCalculatorPlugin. (Bikas Saha via acmurthy) 
 
+    MAPREDUCE-4368. Fix TaskRunner to deal with java.library.path with a
+    quoted path on Windows. (John Gordon via acmurthy) 
+
 Release 1.1.0 - unreleased
 
   NEW FEATURES

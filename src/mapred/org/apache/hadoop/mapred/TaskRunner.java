@@ -429,19 +429,29 @@ abstract class TaskRunner extends Thread {
     } else {
       libraryPath += SYSTEM_PATH_SEPARATOR + workDir;
     }
+
+    // MAPREDUCE-4368
+    // For Windows, " is not a valid character for filenames, but
+    // is often embedded in concatenated path strings for paths
+    // with embedded spaces.  We will wrap the entire path in ",
+    // and embedded " marks cause matching issues and failure to
+    // launch the jar.
+    if (Shell.WINDOWS) {
+      libraryPath = libraryPath.replaceAll("\"", "");
+    }
+
     boolean hasUserLDPath = false;
     for(int i=0; i<javaOptsSplit.length ;i++) { 
       if(javaOptsSplit[i].startsWith("-Djava.library.path=")) {
         javaOptsSplit[i] += SYSTEM_PATH_SEPARATOR + libraryPath;
+        // MAPREDUCE-4377 blocks complete fix for 4368, since this is only
+        // partial library path in the case of quote-escaped strings
         hasUserLDPath = true;
-        break;
       }
+      vargs.add(javaOptsSplit[i]);
     }
     if(!hasUserLDPath) {
       vargs.add("-Djava.library.path=" + libraryPath);
-    }
-    for (int i = 0; i < javaOptsSplit.length; i++) {
-      vargs.add(javaOptsSplit[i]);
     }
 
     Path childTmpDir = createChildTmpDir(workDir, conf, false);
