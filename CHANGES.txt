@@ -8,6 +8,8 @@ Release 1.2.0 - unreleased
 
     HADOOP-8023. Add unset() method to Configuration (tucu)
 
+    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+
   IMPROVEMENTS
 
     HDFS-3515. Port HDFS-1457 to branch-1. (eli)

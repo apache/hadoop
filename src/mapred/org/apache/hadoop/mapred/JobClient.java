@@ -426,6 +426,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       ensureFreshStatus();
       return status.getFailureInfo();
     }
+
+    @Override
+    public JobStatus getJobStatus() throws IOException {
+      updateStatus();
+      return status;
+    }
   }
 
   private JobSubmissionProtocol jobSubmitClient;

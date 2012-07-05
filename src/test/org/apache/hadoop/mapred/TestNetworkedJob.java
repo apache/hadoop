@@ -18,15 +18,16 @@
 
 package org.apache.hadoop.mapred;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.List;
 
-import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.mapreduce.Job;
 import org.junit.Test;
-import static org.mockito.Mockito.*;
 
 public class TestNetworkedJob {
 
@@ -50,7 +51,6 @@ public class TestNetworkedJob {
     JobProfile mockProf = mock(JobProfile.class);
     new JobClient.NetworkedJob(mockStatus, mockProf, null);
   }
-  
 
   @SuppressWarnings("deprecation")
   @Test
@@ -96,4 +96,19 @@ public class TestNetworkedJob {
     verify(mockClient).getJobCounters(id);
   }
 
+  @Test
+  public void testGetJobStatus() throws IOException {
+    JobID id = new JobID("test", 0);
+
+    JobStatus mockStatus = mock(JobStatus.class);
+    JobProfile mockProf = mock(JobProfile.class);
+    JobSubmissionProtocol mockClient = mock(JobSubmissionProtocol.class);
+
+    when(mockProf.getJobID()).thenReturn(id);
+    when(mockClient.getJobStatus(id)).thenReturn(mockStatus);
+
+    RunningJob rj = new JobClient.NetworkedJob(mockStatus, mockProf, mockClient);
+    assertEquals("Expected getJobStatus() to return the correct status",
+        rj.getJobStatus(), mockStatus);
+  }
 }
