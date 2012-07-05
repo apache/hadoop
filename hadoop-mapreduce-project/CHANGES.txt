@@ -511,6 +511,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4228. mapreduce.job.reduce.slowstart.completedmaps is not working
     properly (Jason Lowe via bobby)
 
+    MAPREDUCE-4392. Counters.makeCompactString() changed behavior from 0.20
+    (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
