@@ -606,9 +606,14 @@ public class UtilsForTests {
     conf.setReducerClass(IdentityReducer.class);
     
     RunningJob job = UtilsForTests.runJob(conf, inDir, outDir);
+    long sleepCount = 0;
     while (!job.isComplete()) {
       try {
+        if (sleepCount > 300) { // 30 seconds
+          throw new IOException("Job didn't finish in 30 seconds");
+        }
         Thread.sleep(100);
+        sleepCount++;
       } catch (InterruptedException e) {
         break;
       }
@@ -626,9 +631,14 @@ public class UtilsForTests {
     conf.setMaxMapAttempts(1);
     
     RunningJob job = UtilsForTests.runJob(conf, inDir, outDir);
+    long sleepCount = 0;
     while (!job.isComplete()) {
       try {
+        if (sleepCount > 300) { // 30 seconds
+          throw new IOException("Job didn't finish in 30 seconds");
+        }
         Thread.sleep(100);
+        sleepCount++;
       } catch (InterruptedException e) {
         break;
       }
@@ -646,17 +656,27 @@ public class UtilsForTests {
     conf.setReducerClass(IdentityReducer.class);
     
     RunningJob job = UtilsForTests.runJob(conf, inDir, outDir);
+    long sleepCount = 0;
     while (job.getJobState() != JobStatus.RUNNING) {
       try {
+        if (sleepCount > 300) { // 30 seconds
+          throw new IOException("Job didn't finish in 30 seconds");
+        }
         Thread.sleep(100);
+        sleepCount++;
       } catch (InterruptedException e) {
         break;
       }
     }
     job.killJob();
+    sleepCount = 0;
     while (job.cleanupProgress() == 0.0f) {
       try {
+        if (sleepCount > 2000) { // 20 seconds
+          throw new IOException("Job cleanup didn't start in 20 seconds");
+        }
         Thread.sleep(10);
+        sleepCount++;
       } catch (InterruptedException ie) {
         break;
       }
