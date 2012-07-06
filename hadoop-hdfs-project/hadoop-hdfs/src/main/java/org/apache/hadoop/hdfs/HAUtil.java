@@ -127,25 +127,21 @@ public class HAUtil {
     }
     return null;
   }
-
+  
   /**
-   * Given the configuration for this node, return a Configuration object for
-   * the other node in an HA setup.
+   * Get the NN ID of the other node in an HA setup.
    * 
-   * @param myConf the configuration of this node
-   * @return the configuration of the other node in an HA setup
+   * @param conf the configuration of this node
+   * @return the NN ID of the other node in this nameservice
    */
-  public static Configuration getConfForOtherNode(
-      Configuration myConf) {
-    
-    String nsId = DFSUtil.getNamenodeNameServiceId(myConf);
+  public static String getNameNodeIdOfOtherNode(Configuration conf, String nsId) {
     Preconditions.checkArgument(nsId != null,
         "Could not determine namespace id. Please ensure that this " +
         "machine is one of the machines listed as a NN RPC address, " +
         "or configure " + DFSConfigKeys.DFS_NAMESERVICE_ID);
     
-    Collection<String> nnIds = DFSUtil.getNameNodeIds(myConf, nsId);
-    String myNNId = myConf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY);
+    Collection<String> nnIds = DFSUtil.getNameNodeIds(conf, nsId);
+    String myNNId = conf.get(DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY);
     Preconditions.checkArgument(nnIds != null,
         "Could not determine namenode ids in namespace '%s'. " +
         "Please configure " +
@@ -165,11 +161,25 @@ public class HAUtil {
     ArrayList<String> nnSet = Lists.newArrayList(nnIds);
     nnSet.remove(myNNId);
     assert nnSet.size() == 1;
-    String activeNN = nnSet.get(0);
+    return nnSet.get(0);
+  }
+
+  /**
+   * Given the configuration for this node, return a Configuration object for
+   * the other node in an HA setup.
+   * 
+   * @param myConf the configuration of this node
+   * @return the configuration of the other node in an HA setup
+   */
+  public static Configuration getConfForOtherNode(
+      Configuration myConf) {
+    
+    String nsId = DFSUtil.getNamenodeNameServiceId(myConf);
+    String otherNn = getNameNodeIdOfOtherNode(myConf, nsId);
     
     // Look up the address of the active NN.
     Configuration confForOtherNode = new Configuration(myConf);
-    NameNode.initializeGenericKeys(confForOtherNode, nsId, activeNN);
+    NameNode.initializeGenericKeys(confForOtherNode, nsId, otherNn);
     return confForOtherNode;
   }
 
