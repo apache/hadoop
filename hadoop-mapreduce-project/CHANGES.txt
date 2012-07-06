@@ -288,6 +288,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-2289. Permissions race can make getStagingDir fail on local filesystem 
     (ahmed via tucu)
 
+    MAPREDUCE-4372. Deadlock in Resource Manager (Devaraj K via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
