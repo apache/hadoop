@@ -91,6 +91,7 @@ public class ContainerLocalizer {
   private final LocalDirAllocator userDirs;
   private final RecordFactory recordFactory;
   private final Map<LocalResource,Future<Path>> pendingResources;
+  private final String appCacheDirContextName;
 
   public ContainerLocalizer(FileContext lfs, String user, String appId,
       String localizerId, List<Path> localDirs,
@@ -108,10 +109,9 @@ public class ContainerLocalizer {
     this.localizerId = localizerId;
     this.recordFactory = recordFactory;
     this.conf = new Configuration();
-    this.appDirs =
-      new LocalDirAllocator(String.format(APPCACHE_CTXT_FMT, appId));
-    this.userDirs =
-      new LocalDirAllocator(String.format(USERCACHE_CTXT_FMT, appId));
+    this.appCacheDirContextName = String.format(APPCACHE_CTXT_FMT, appId);
+    this.appDirs = new LocalDirAllocator(appCacheDirContextName);
+    this.userDirs = new LocalDirAllocator(String.format(USERCACHE_CTXT_FMT, user));
     this.pendingResources = new HashMap<LocalResource,Future<Path>>();
   }
 
@@ -121,6 +121,7 @@ public class ContainerLocalizer {
       rpc.getProxy(LocalizationProtocol.class, nmAddr, conf);
   }
 
+  @SuppressWarnings("deprecation")
   public int runLocalization(final InetSocketAddress nmAddr)
       throws IOException, InterruptedException {
     // load credentials
@@ -177,6 +178,7 @@ public class ContainerLocalizer {
       if (exec != null) {
         exec.shutdownNow();
       }
+      LocalDirAllocator.removeContext(appCacheDirContextName);
     }
   }
 
@@ -373,7 +375,7 @@ public class ContainerLocalizer {
       lfs.mkdir(appFileCacheDir, null, false);
     }
     conf.setStrings(String.format(APPCACHE_CTXT_FMT, appId), appsFileCacheDirs);
-    conf.setStrings(String.format(USERCACHE_CTXT_FMT, appId), usersFileCacheDirs);
+    conf.setStrings(String.format(USERCACHE_CTXT_FMT, user), usersFileCacheDirs);
   }
 
 }
