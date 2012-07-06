@@ -516,6 +516,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4384. Race conditions in IndexCache (Kihwal Lee via tgraves)
 
+    MAPREDUCE-4387. RM gets fatal error and exits during TestRM 
+    (Kihwal Lee via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
