@@ -207,6 +207,19 @@ public class LocalDirAllocator {
       return contexts.containsKey(contextCfgItemName);
     }
   }
+  
+  /**
+   * Removes the context from the context config items
+   * 
+   * @param contextCfgItemName
+   */
+  @Deprecated
+  @InterfaceAudience.LimitedPrivate({"MapReduce"})
+  public static void removeContext(String contextCfgItemName) {
+    synchronized (contexts) {
+      contexts.remove(contextCfgItemName);
+    }
+  }
     
   /** We search through all the configured dirs for the file's existence
    *  and return true when we find  

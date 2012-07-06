@@ -519,6 +519,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4387. RM gets fatal error and exits during TestRM 
     (Kihwal Lee via tgraves)
 
+    MAPREDUCE-4379. Node Manager throws java.lang.OutOfMemoryError: Java heap
+    space due to org.apache.hadoop.fs.LocalDirAllocator.contexts (Devaraj K
+    via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
