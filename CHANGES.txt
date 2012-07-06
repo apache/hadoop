@@ -58,6 +58,10 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4359. Potential deadlock in Counters. (tomwhite)
 
+    MAPREDUCE-2129. Job may hang if 
+    mapreduce.job.committer.setup.cleanup.needed=false and
+    mapreduce.map/reduce.failures.maxpercent>0 (Subroto Sanyal via tgraves)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
