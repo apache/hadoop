@@ -207,7 +207,7 @@ checkout () {
 }
 
 ###############################################################################
-setup () {
+downloadPatch () {
   ### Download latest patch file (ignoring .htm and .html) when run from patch process
   if [[ $JENKINS == "true" ]] ; then
     $WGET -q -O $PATCH_DIR/jira http://issues.apache.org/jira/browse/$defect
@@ -240,6 +240,25 @@ setup () {
       cleanupAndExit 0
     fi
   fi
+}
+
+###############################################################################
+verifyPatch () {
+  # Before building, check to make sure that the patch is valid
+  $bindir/smart-apply-patch.sh $PATCH_DIR/patch dryrun
+  if [[ $? != 0 ]] ; then
+    echo "PATCH APPLICATION FAILED"
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    -1 patch.  The patch command could not apply the patch."
+    return 1
+  else
+    return 0
+  fi
+}
+
+###############################################################################
+buildWithPatch () {
   echo ""
   echo ""
   echo "======================================================================"
@@ -886,9 +905,15 @@ if [[ $JENKINS == "true" ]] ; then
     exit 100
   fi
 fi
-setup
+downloadPatch
+verifyPatch
+(( RESULT = RESULT + $? ))
+if [[ $RESULT != 0 ]] ; then
+  submitJiraComment 1
+  cleanupAndExit 1
+fi
+buildWithPatch
 checkAuthor
-RESULT=$?
 
 if [[ $JENKINS == "true" ]] ; then
   cleanUpXml
@@ -896,7 +921,8 @@ fi
 checkTests
 (( RESULT = RESULT + $? ))
 applyPatch
-if [[ $? != 0 ]] ; then
+(( RESULT = RESULT + $? ))
+if [[ $RESULT != 0 ]] ; then
   submitJiraComment 1
   cleanupAndExit 1
 fi

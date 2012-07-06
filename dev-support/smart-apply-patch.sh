@@ -14,6 +14,7 @@
 set -e
 
 PATCH_FILE=$1
+DRY_RUN=$2
 if [ -z "$PATCH_FILE" ]; then
   echo usage: $0 patch-file
   exit 1
@@ -98,6 +99,11 @@ elif $PATCH -p2 -E --dry-run < $PATCH_FILE 2>&1 > /dev/null; then
 else
   echo "The patch does not appear to apply with p0 to p2";
   cleanup 1;
+fi
+
+# If this is a dry run then exit instead of applying the patch
+if [[ -n $DRY_RUN ]]; then
+  cleanup 0;
 fi
 
 echo Going to apply patch with: $PATCH -p$PLEVEL
