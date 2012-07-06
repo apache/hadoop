@@ -27,6 +27,10 @@ public class DFSClientAdapter {
     return dfs.dfs;
   }
   
+  public static void setDFSClient(DistributedFileSystem dfs, DFSClient client) {
+    dfs.dfs = client;
+  }
+  
   public static void stopLeaseRenewer(DistributedFileSystem dfs) throws IOException {
     try {
       dfs.dfs.leaserenewer.interruptAndJoin();

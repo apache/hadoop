@@ -27,6 +27,8 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.Acces
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Manages a {@link BlockTokenSecretManager} per block pool. Routes the requests
  * given a block pool Id to corresponding {@link BlockTokenSecretManager}
@@ -96,11 +98,11 @@ public class BlockPoolTokenSecretManager extends
   }
 
   /**
-   * See {@link BlockTokenSecretManager#setKeys(ExportedBlockKeys)}
+   * See {@link BlockTokenSecretManager#addKeys(ExportedBlockKeys)}
    */
-  public void setKeys(String bpid, ExportedBlockKeys exportedKeys)
+  public void addKeys(String bpid, ExportedBlockKeys exportedKeys)
       throws IOException {
-    get(bpid).setKeys(exportedKeys);
+    get(bpid).addKeys(exportedKeys);
   }
 
   /**
@@ -109,5 +111,12 @@ public class BlockPoolTokenSecretManager extends
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock b,
       EnumSet<AccessMode> of) throws IOException {
     return get(b.getBlockPoolId()).generateToken(b, of);
+  }
+  
+  @VisibleForTesting
+  public void clearAllKeysForTesting() {
+    for (BlockTokenSecretManager btsm : map.values()) {
+      btsm.clearAllKeysForTesting();
+    }
   }
 }

@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
@@ -302,12 +303,24 @@ public class BlockManager {
         + "=" + updateMin + " min(s), "
         + DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY
         + "=" + lifetimeMin + " min(s)");
-    return new BlockTokenSecretManager(true,
-        updateMin*60*1000L, lifetimeMin*60*1000L);
+    
+    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    boolean isHaEnabled = HAUtil.isHAEnabled(conf, nsId);
+
+    if (isHaEnabled) {
+      String thisNnId = HAUtil.getNameNodeId(conf, nsId);
+      String otherNnId = HAUtil.getNameNodeIdOfOtherNode(conf, nsId);
+      return new BlockTokenSecretManager(updateMin*60*1000L,
+          lifetimeMin*60*1000L, thisNnId.compareTo(otherNnId) < 0 ? 0 : 1);
+    } else {
+      return new BlockTokenSecretManager(updateMin*60*1000L,
+          lifetimeMin*60*1000L, 0);
+    }
   }
 
   /** get the BlockTokenSecretManager */
-  BlockTokenSecretManager getBlockTokenSecretManager() {
+  @VisibleForTesting
+  public BlockTokenSecretManager getBlockTokenSecretManager() {
     return blockTokenSecretManager;
   }
 

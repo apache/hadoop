@@ -285,8 +285,7 @@ public class TestLeaseRecovery2 {
     LocatedBlocks locatedBlocks;
     do {
       Thread.sleep(SHORT_LEASE_PERIOD);
-      locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
-        filestr, 0L, size);
+      locatedBlocks = dfs.dfs.getLocatedBlocks(filestr, 0L, size);
     } while (locatedBlocks.isUnderConstruction());
     assertEquals(size, locatedBlocks.getFileLength());
 
@@ -498,8 +497,7 @@ public class TestLeaseRecovery2 {
     LocatedBlocks locatedBlocks;
     do {
       Thread.sleep(SHORT_LEASE_PERIOD);
-      locatedBlocks = DFSClient.callGetBlockLocations(dfs.dfs.namenode,
-        fileStr, 0L, size);
+      locatedBlocks = dfs.dfs.getLocatedBlocks(fileStr, 0L, size);
     } while (locatedBlocks.isUnderConstruction());
     assertEquals(size, locatedBlocks.getFileLength());
 

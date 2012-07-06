@@ -255,6 +255,7 @@ public class DataNode extends Configured
   
   boolean isBlockTokenEnabled;
   BlockPoolTokenSecretManager blockPoolTokenSecretManager;
+  private boolean hasAnyBlockPoolRegistered = false;
   
   volatile DataBlockScanner blockScanner = null;
   private DirectoryScanner directoryScanner = null;
@@ -719,10 +720,19 @@ public class DataNode extends Configured
    * @param blockPoolId
    * @throws IOException
    */
-  private void registerBlockPoolWithSecretManager(DatanodeRegistration bpRegistration,
-      String blockPoolId) throws IOException {
+  private synchronized void registerBlockPoolWithSecretManager(
+      DatanodeRegistration bpRegistration, String blockPoolId) throws IOException {
     ExportedBlockKeys keys = bpRegistration.getExportedKeys();
-    isBlockTokenEnabled = keys.isBlockTokenEnabled();
+    if (!hasAnyBlockPoolRegistered) {
+      hasAnyBlockPoolRegistered = true;
+      isBlockTokenEnabled = keys.isBlockTokenEnabled();
+    } else {
+      if (isBlockTokenEnabled != keys.isBlockTokenEnabled()) {
+        throw new RuntimeException("Inconsistent configuration of block access"
+            + " tokens. Either all block pools must be configured to use block"
+            + " tokens, or none may be.");
+      }
+    }
     // TODO should we check that all federated nns are either enabled or
     // disabled?
     if (!isBlockTokenEnabled) return;
@@ -736,13 +746,9 @@ public class DataNode extends Configured
           + " min(s), tokenLifetime=" + blockTokenLifetime / (60 * 1000)
           + " min(s)");
       final BlockTokenSecretManager secretMgr = 
-        new BlockTokenSecretManager(false, 0, blockTokenLifetime);
+        new BlockTokenSecretManager(0, blockTokenLifetime);
       blockPoolTokenSecretManager.addBlockPool(blockPoolId, secretMgr);
     }
-    
-    blockPoolTokenSecretManager.setKeys(blockPoolId,
-        bpRegistration.getExportedKeys());
-    bpRegistration.setExportedKeys(ExportedBlockKeys.DUMMY_KEYS);
   }
 
   /**
@@ -2203,6 +2209,11 @@ public class DataNode extends Configured
   @VisibleForTesting
   public DatanodeID getDatanodeId() {
     return id;
+  }
+  
+  @VisibleForTesting
+  public void clearAllBlockSecretKeys() {
+    blockPoolTokenSecretManager.clearAllKeysForTesting();
   }
 
   /**

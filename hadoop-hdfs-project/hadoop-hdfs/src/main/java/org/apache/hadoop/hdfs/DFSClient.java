@@ -140,6 +140,7 @@ import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
@@ -871,6 +872,16 @@ public class DFSClient implements java.io.Closeable {
   public short getDefaultReplication() {
     return dfsClientConf.defaultReplication;
   }
+  
+  /*
+   * This is just a wrapper around callGetBlockLocations, but non-static so that
+   * we can stub it out for tests.
+   */
+  @VisibleForTesting
+  public LocatedBlocks getLocatedBlocks(String src, long start, long length)
+      throws IOException {
+    return callGetBlockLocations(namenode, src, start, length);
+  }
 
   /**
    * @see ClientProtocol#getBlockLocations(String, long, long)
@@ -918,7 +929,7 @@ public class DFSClient implements java.io.Closeable {
    */
   public BlockLocation[] getBlockLocations(String src, long start, 
     long length) throws IOException, UnresolvedLinkException {
-    LocatedBlocks blocks = callGetBlockLocations(namenode, src, start, length);
+    LocatedBlocks blocks = getLocatedBlocks(src, start, length);
     return DFSUtil.locatedBlocks2Locations(blocks);
   }
   
