@@ -830,6 +830,10 @@ class DataXceiver extends Receiver implements Runnable {
       final Op op,
       final BlockTokenSecretManager.AccessMode mode) throws IOException {
     if (datanode.isBlockTokenEnabled) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Checking block access token for block '" + blk.getBlockId()
+            + "' with mode '" + mode + "'");
+      }
       try {
         datanode.blockPoolTokenSecretManager.checkAccess(t, null, blk, mode);
       } catch(InvalidToken e) {

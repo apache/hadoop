@@ -37,6 +37,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
 /**
  * BlockTokenSecretManager can be instantiated in 2 modes, master mode and slave
  * mode. Master can generate new block keys and export block keys to slaves,
@@ -49,17 +52,24 @@ public class BlockTokenSecretManager extends
     SecretManager<BlockTokenIdentifier> {
   public static final Log LOG = LogFactory
       .getLog(BlockTokenSecretManager.class);
+  
+  // We use these in an HA setup to ensure that the pair of NNs produce block
+  // token serial numbers that are in different ranges.
+  private static final int LOW_MASK  = ~(1 << 31);
+  
   public static final Token<BlockTokenIdentifier> DUMMY_TOKEN = new Token<BlockTokenIdentifier>();
 
   private final boolean isMaster;
+  private int nnIndex;
+  
   /**
    * keyUpdateInterval is the interval that NN updates its block keys. It should
    * be set long enough so that all live DN's and Balancer should have sync'ed
    * their block keys with NN at least once during each interval.
    */
-  private final long keyUpdateInterval;
+  private long keyUpdateInterval;
   private volatile long tokenLifetime;
-  private int serialNo = new SecureRandom().nextInt();
+  private int serialNo;
   private BlockKey currentKey;
   private BlockKey nextKey;
   private Map<Integer, BlockKey> allKeys;
@@ -67,22 +77,47 @@ public class BlockTokenSecretManager extends
   public static enum AccessMode {
     READ, WRITE, COPY, REPLACE
   };
-
+  
   /**
-   * Constructor
+   * Constructor for slaves.
    * 
-   * @param isMaster
-   * @param keyUpdateInterval
-   * @param tokenLifetime
-   * @throws IOException
+   * @param keyUpdateInterval how often a new key will be generated
+   * @param tokenLifetime how long an individual token is valid
    */
-  public BlockTokenSecretManager(boolean isMaster, long keyUpdateInterval,
-      long tokenLifetime) throws IOException {
+  public BlockTokenSecretManager(long keyUpdateInterval,
+      long tokenLifetime) {
+    this(false, keyUpdateInterval, tokenLifetime);
+  }
+  
+  /**
+   * Constructor for masters.
+   * 
+   * @param keyUpdateInterval how often a new key will be generated
+   * @param tokenLifetime how long an individual token is valid
+   * @param isHaEnabled whether or not HA is enabled
+   * @param thisNnId the NN ID of this NN in an HA setup
+   * @param otherNnId the NN ID of the other NN in an HA setup
+   */
+  public BlockTokenSecretManager(long keyUpdateInterval,
+      long tokenLifetime, int nnIndex) {
+    this(true, keyUpdateInterval, tokenLifetime);
+    Preconditions.checkArgument(nnIndex == 0 || nnIndex == 1);
+    this.nnIndex = nnIndex;
+    setSerialNo(new SecureRandom().nextInt());
+    generateKeys();
+  }
+  
+  private BlockTokenSecretManager(boolean isMaster, long keyUpdateInterval,
+      long tokenLifetime) {
     this.isMaster = isMaster;
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenLifetime = tokenLifetime;
     this.allKeys = new HashMap<Integer, BlockKey>();
-    generateKeys();
+  }
+  
+  @VisibleForTesting
+  public void setSerialNo(int serialNo) {
+    this.serialNo = (serialNo & LOW_MASK) | (nnIndex << 31);
   }
 
   /** Initialize block keys */
@@ -101,10 +136,10 @@ public class BlockTokenSecretManager extends
      * Similarly, the estimated expiry date for nextKey is one keyUpdateInterval
      * more.
      */
-    serialNo++;
+    setSerialNo(serialNo + 1);
     currentKey = new BlockKey(serialNo, System.currentTimeMillis() + 2
         * keyUpdateInterval + tokenLifetime, generateSecret());
-    serialNo++;
+    setSerialNo(serialNo + 1);
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
     allKeys.put(currentKey.getKeyId(), currentKey);
@@ -135,7 +170,7 @@ public class BlockTokenSecretManager extends
   /**
    * Set block keys, only to be used in slave mode
    */
-  public synchronized void setKeys(ExportedBlockKeys exportedKeys)
+  public synchronized void addKeys(ExportedBlockKeys exportedKeys)
       throws IOException {
     if (isMaster || exportedKeys == null)
       return;
@@ -179,7 +214,7 @@ public class BlockTokenSecretManager extends
         + 2 * keyUpdateInterval + tokenLifetime, nextKey.getKey());
     allKeys.put(currentKey.getKeyId(), currentKey);
     // generate a new nextKey
-    serialNo++;
+    setSerialNo(serialNo + 1);
     nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
     allKeys.put(nextKey.getKeyId(), nextKey);
@@ -334,4 +369,20 @@ public class BlockTokenSecretManager extends
     }
     return createPassword(identifier.getBytes(), key.getKey());
   }
+  
+  @VisibleForTesting
+  public void setKeyUpdateIntervalForTesting(long millis) {
+    this.keyUpdateInterval = millis;
+  }
+
+  @VisibleForTesting
+  public void clearAllKeysForTesting() {
+    allKeys.clear();
+  }
+  
+  @VisibleForTesting
+  public int getSerialNoForTesting() {
+    return serialNo;
+  }
+  
 }
