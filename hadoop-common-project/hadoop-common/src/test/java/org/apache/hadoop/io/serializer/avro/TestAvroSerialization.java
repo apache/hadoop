@@ -21,6 +21,7 @@ package org.apache.hadoop.io.serializer.avro;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.SerializationTestUtil;
 
 public class TestAvroSerialization extends TestCase {
@@ -41,6 +42,12 @@ public class TestAvroSerialization extends TestCase {
         before.getClass().getPackage().getName());
     Record after = SerializationTestUtil.testSerialization(conf, before);
     assertEquals(before, after);
+  }
+
+  public void testAcceptHandlingPrimitivesAndArrays() throws Exception {
+    SerializationFactory factory = new SerializationFactory(conf);
+    assertNull(factory.getSerializer(byte[].class));
+    assertNull(factory.getSerializer(byte.class));
   }
 
   public void testReflectInnerClass() throws Exception {

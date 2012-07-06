@@ -58,8 +58,8 @@ public class AvroReflectSerialization extends AvroSerialization<Object>{
     if (packages == null) {
       getPackages();
     }
-    return AvroReflectSerializable.class.isAssignableFrom(c) || 
-      packages.contains(c.getPackage().getName());
+    return AvroReflectSerializable.class.isAssignableFrom(c) ||
+      (c.getPackage() != null && packages.contains(c.getPackage().getName()));
   }
 
   private void getPackages() {

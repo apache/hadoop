@@ -134,6 +134,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8563. don't package hadoop-pipes examples/bin
     (Colin Patrick McCabe via tgraves)
 
+    HADOOP-8566. AvroReflectSerializer.accept(Class) throws a NPE if the class has no 
+    package (primitive types and arrays). (tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
