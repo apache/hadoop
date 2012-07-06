@@ -311,4 +311,43 @@ public class TestLocalDirAllocator {
       rmBufferDirs();
     }
   }
+
+  /**
+   * Test getLocalPathToRead() returns correct filename and "file" schema.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testGetLocalPathToRead() throws IOException {
+    if (isWindows)
+      return;
+    String dir = buildBufferDir(ROOT, 0);
+    try {
+      conf.set(CONTEXT, dir);
+      assertTrue(localFs.mkdirs(new Path(dir)));
+      File f1 = dirAllocator.createTmpFileForWrite(FILENAME, SMALL_FILE_SIZE,
+          conf);
+      Path p1 = dirAllocator.getLocalPathToRead(f1.getName(), conf);
+      assertEquals(f1.getName(), p1.getName());
+      assertEquals("file", p1.getFileSystem(conf).getUri().getScheme());
+    } finally {
+      Shell.execCommand(new String[] { "chmod", "u+w", BUFFER_DIR_ROOT });
+      rmBufferDirs();
+    }
+
+  }
+  
+  @Test
+  public void testRemoveContext() throws IOException {
+    String dir = buildBufferDir(ROOT, 0);
+    String contextCfgItemName = "application_1340842292563_0004.app.cache.dirs";
+    conf.set(contextCfgItemName, dir);
+    LocalDirAllocator localDirAllocator = new LocalDirAllocator(
+        contextCfgItemName);
+    localDirAllocator.getLocalPathForWrite("p1/x", SMALL_FILE_SIZE, conf);
+    assertTrue(LocalDirAllocator.isContextValid(contextCfgItemName));
+    LocalDirAllocator.removeContext(contextCfgItemName);
+    assertFalse(LocalDirAllocator.isContextValid(contextCfgItemName));
+  }
+
 }
