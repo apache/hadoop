@@ -324,6 +324,13 @@ public class ResourceManager extends CompositeService implements Recoverable {
           try {
             scheduler.handle(event);
           } catch (Throwable t) {
+            // An error occurred, but we are shutting down anyway.
+            // If it was an InterruptedException, the very act of 
+            // shutdown could have caused it and is probably harmless.
+            if (stopped) {
+              LOG.warn("Exception during shutdown: ", t);
+              break;
+            }
             LOG.fatal("Error in handling event type " + event.getType()
                 + " to the scheduler", t);
             if (shouldExitOnError
