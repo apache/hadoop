@@ -285,6 +285,9 @@ Release 0.23.3 - UNRELEASED
     space due to org.apache.hadoop.fs.LocalDirAllocator.contexts (Devaraj K
     via bobby)
 
+    MAPREDUCE-2289. Permissions race can make getStagingDir fail on local filesystem 
+    (ahmed via tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
