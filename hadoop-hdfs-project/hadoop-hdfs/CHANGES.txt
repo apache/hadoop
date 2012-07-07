@@ -99,6 +99,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3170. Add more useful metrics for write latency (Matthew Jacobs via
     todd)
 
+    HDFS-3604. Add dfs.webhdfs.enabled to hdfs-default.xml. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
