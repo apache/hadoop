@@ -19,6 +19,8 @@ Release 1.2.0 - unreleased
     HDFS-3521. Check every byte at the end of edit log and allow namenode to
     tolerate corruption.  (szetszwo)
 
+    HDFS-3604. Add dfs.webhdfs.enabled to hdfs-default.xml. (eli)
+
   BUG FIXES
 
     HADOOP-8445. Token should not print the password in toString
