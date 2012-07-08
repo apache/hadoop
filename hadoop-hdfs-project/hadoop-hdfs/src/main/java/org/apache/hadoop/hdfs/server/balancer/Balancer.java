@@ -74,6 +74,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import static com.google.common.base.Preconditions.checkArgument;
 
 /** <p>The balancer is a tool that balances disk space usage on an HDFS cluster
  * when some datanodes become full or when new empty nodes join the cluster.
@@ -1501,6 +1502,7 @@ public class Balancer {
       if (args != null) {
         try {
           for(int i = 0; i < args.length; i++) {
+            checkArgument(args.length >= 2, "args = " + Arrays.toString(args));           
             if ("-threshold".equalsIgnoreCase(args[i])) {
               i++;
               try {

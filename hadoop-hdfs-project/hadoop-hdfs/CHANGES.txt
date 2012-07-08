@@ -177,6 +177,9 @@ Trunk (unreleased changes)
 
     HDFS-3541. Deadlock between recovery, xceiver and packet responder (Vinay via umamahesh)
 
+    HDFS-3482. hdfs balancer throws ArrayIndexOutOfBoundsException 
+    if option is specified without values. ( Madhukara Phatak via umamahesh) 
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
