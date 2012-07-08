@@ -104,6 +104,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-2988. Improve error message when storage directory lock fails
     (Miomir Boljanovic via harsh)
 
+    HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
+    (harsh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
