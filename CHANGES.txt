@@ -268,6 +268,8 @@ Release 1.1.0 - unreleased
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
     subsequent tests to fail.  (Ivan Mitic via szetszwo)
 
+    HDFS-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml (Zhihong Ted Yu via cos)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
