@@ -288,6 +288,8 @@ Release 2.0.1-alpha - UNRELEASED
     so that V conforms to boolean compiling HttpFSServer.java with OpenJDK 
     (adi2 via tucu)
 
+    HDFS-3603. Decouple TestHDFSTrash from TestTrash. (Jason Lowe via eli)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES

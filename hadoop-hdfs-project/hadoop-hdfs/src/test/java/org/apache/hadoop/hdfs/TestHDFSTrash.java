@@ -19,46 +19,45 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 
-import junit.extensions.TestSetup;
-import junit.framework.Test;
-import junit.framework.TestSuite;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestTrash;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * This class tests commands from Trash.
  */
-public class TestHDFSTrash extends TestTrash {
-
+public class TestHDFSTrash {
   private static MiniDFSCluster cluster = null;
-  public static Test suite() {
-    TestSetup setup = new TestSetup(new TestSuite(TestHDFSTrash.class)) {
-      protected void setUp() throws Exception {
-        Configuration conf = new HdfsConfiguration();
-        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-      }
-      protected void tearDown() throws Exception {
-        if (cluster != null) { cluster.shutdown(); }
-      }
-    };
-    return setup;
+
+  @BeforeClass
+  public static void setUp() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+  }
+
+  @AfterClass
+  public static void tearDown() {
+    if (cluster != null) { cluster.shutdown(); }
   }
 
   /**
    * Tests Trash on HDFS
    */
+  @Test
   public void testTrash() throws IOException {
-    trashShell(cluster.getFileSystem(), new Path("/"));
+    TestTrash.trashShell(cluster.getFileSystem(), new Path("/"));
   }
 
+  @Test
   public void testNonDefaultFS() throws IOException {
     FileSystem fs = cluster.getFileSystem();
     Configuration conf = fs.getConf();
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, fs.getUri().toString());
-    trashNonDefaultFS(conf);
+    TestTrash.trashNonDefaultFS(conf);
   }
 
 }
