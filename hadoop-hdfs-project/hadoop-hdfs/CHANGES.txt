@@ -276,6 +276,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3604. Add dfs.webhdfs.enabled to hdfs-default.xml. (eli)
 
+    HDFS-2988. Improve error message when storage directory lock fails
+    (Miomir Boljanovic via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

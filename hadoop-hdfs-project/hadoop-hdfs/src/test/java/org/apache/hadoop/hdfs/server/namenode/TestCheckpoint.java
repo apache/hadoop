@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import junit.framework.TestCase;
+
+import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
 import java.io.File;
 import java.io.IOException;
@@ -48,6 +50,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -60,6 +63,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
 import org.mockito.ArgumentMatcher;
@@ -679,6 +683,38 @@ public class TestCheckpoint extends TestCase {
     }
   }
   
+  /**
+   * Test that, an attempt to lock a storage that is already locked by a nodename,
+   * logs error message that includes JVM name of the namenode that locked it.
+   */
+  public void testStorageAlreadyLockedErrorMessage() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .numDataNodes(0)
+      .build();
+    
+    StorageDirectory savedSd = null;
+    try {
+      NNStorage storage = cluster.getNameNode().getFSImage().getStorage();
+      for (StorageDirectory sd : storage.dirIterable(null)) {
+        assertLockFails(sd);
+        savedSd = sd;
+      }
+      
+      LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(LogFactory.getLog(Storage.class));
+      try {
+        // try to lock the storage that's already locked
+        savedSd.lock();
+        fail("Namenode should not be able to lock a storage that is already locked");
+      } catch (IOException ioe) {
+        String jvmName = ManagementFactory.getRuntimeMXBean().getName();
+        assertTrue("Error message does not include JVM name '" + jvmName 
+            + "'", logs.getOutput().contains(jvmName));
+      }
+    } finally {
+      cluster.shutdown();
+    }
+  }
 
   /**
    * Assert that the given storage directory can't be locked, because
