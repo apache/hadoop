@@ -415,6 +415,16 @@ Branch-2 ( Unreleased changes )
     HDFS-3581. FSPermissionChecker#checkPermission sticky bit check
     missing range check. (eli)
 
+    HDFS-3428. Move DelegationTokenRenewer to common (tucu)
+
+    HDFS-3491. HttpFs does not set permissions correctly (tucu)
+
+    HDFS-3580. incompatible types; no instance(s) of type variable(s) V exist 
+    so that V conforms to boolean compiling HttpFSServer.java with OpenJDK 
+    (adi2 via tucu)
+
+    HDFS-3603. Decouple TestHDFSTrash from TestTrash. (Jason Lowe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
@@ -430,16 +440,6 @@ Branch-2 ( Unreleased changes )
     HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
-
-    HDFS-3428. Move DelegationTokenRenewer to common (tucu)
-
-    HDFS-3491. HttpFs does not set permissions correctly (tucu)
-
-    HDFS-3580. incompatible types; no instance(s) of type variable(s) V exist 
-    so that V conforms to boolean compiling HttpFSServer.java with OpenJDK 
-    (adi2 via tucu)
-
-    HDFS-3603. Decouple TestHDFSTrash from TestTrash. (Jason Lowe via eli)
 
 Release 2.0.0-alpha - 05-23-2012
 
