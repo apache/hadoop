@@ -82,9 +82,6 @@ Trunk (unreleased changes)
 
     HDFS-3197. Incorrect class comments in a few tests. (Andy Isaacson via eli)
 
-    HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
-    (harsh)
-
     HDFS-3476. Correct the default used in TestDFSClientRetries.busyTest()
     after HDFS-3462 (harsh)
 
@@ -286,6 +283,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-2988. Improve error message when storage directory lock fails
     (Miomir Boljanovic via harsh)
+
+    HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
+    (harsh)
 
   OPTIMIZATIONS
 
