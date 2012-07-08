@@ -148,6 +148,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4253. Tests for mapreduce-client-core are lying under
     mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
 
+    MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in
+    mapred-default.xml (Rui Kubo via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
