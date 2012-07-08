@@ -1710,8 +1710,9 @@ int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
       return -2;
     }
 
-    jlong jmtime = mtime * (jlong)1000;
-    jlong jatime = atime * (jlong)1000;
+    const tTime NO_CHANGE = -1;
+    jlong jmtime = (mtime == NO_CHANGE) ? -1 : (mtime * (jlong)1000);
+    jlong jatime = (atime == NO_CHANGE) ? -1 : (atime * (jlong)1000);
 
     int ret = 0;
     jthrowable jExc = NULL;
