@@ -115,6 +115,22 @@ public class DFSTestUtil {
     this.maxSize = maxSize;
     this.minSize = minSize;
   }
+
+  /** Creates a new instance of DFSTestUtil
+   *
+   * @param testName Name of the test from where this utility is used
+   * @param nFiles Number of files to be created
+   * @param maxLevels Maximum number of directory levels
+   * @param maxSize Maximum size for file
+   * @param minSize Minimum size for file
+   */
+  public DFSTestUtil(String testName, int nFiles, int maxLevels, int maxSize,
+      int minSize) {
+    this.nFiles = nFiles;
+    this.maxLevels = maxLevels;
+    this.maxSize = maxSize;
+    this.minSize = minSize;
+  }
   
   /**
    * when formating a namenode - we must provide clusterid.
