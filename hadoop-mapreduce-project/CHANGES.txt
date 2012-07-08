@@ -143,6 +143,9 @@ Release 2.0.0-alpha - 05-23-2012
 
     HADOOP-8285 MR changes for Use ProtoBuf for RpcPayLoadHeader (sanjay radia)
 
+    MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in
+    mapred-default.xml (Rui Kubo via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
