@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -35,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -51,6 +53,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -102,6 +105,12 @@ public class NamenodeFsck {
   private boolean showLocations = false;
   private boolean showRacks = false;
   private boolean showCorruptFileBlocks = false;
+
+  /**
+   * True if we encountered an internal error during FSCK, such as not being
+   * able to delete a corrupt file.
+   */
+  private boolean internalError = false;
 
   /** 
    * True if the user specified the -move option.
@@ -199,6 +208,13 @@ public class NamenodeFsck {
 
         out.println("FSCK ended at " + new Date() + " in "
             + (System.currentTimeMillis() - startTime + " milliseconds"));
+
+        // If there were internal errors during the fsck operation, we want to
+        // return FAILURE_STATUS, even if those errors were not immediately
+        // fatal.  Otherwise many unit tests will pass even when there are bugs.
+        if (internalError) {
+          throw new IOException("fsck encountered internal errors!");
+        }
 
         // DFSck client scans for the string HEALTHY/CORRUPT to check the status
         // of file system and return appropriate code. Changing the output
@@ -388,20 +404,11 @@ public class NamenodeFsck {
             + " blocks of total size " + missize + " B.");
       }
       res.corruptFiles++;
-      try {
-        if (doMove) {
-          if (!isOpen) {
-            copyBlocksToLostFound(parent, file, blocks);
-          }
-        }
-        if (doDelete) {
-          if (!isOpen) {
-            LOG.warn("\n - deleting corrupted file " + path);
-            namenode.getRpcServer().delete(path, true);
-          }
-        }
-      } catch (IOException e) {
-        LOG.error("error processing " + path + ": " + e.toString());
+      if (isOpen) {
+        LOG.info("Fsck: ignoring open file " + path);
+      } else {
+        if (doMove) copyBlocksToLostFound(parent, file, blocks);
+        if (doDelete) deleteCorruptedFile(path);
       }
     }
     if (showFiles) {
@@ -415,29 +422,52 @@ public class NamenodeFsck {
       }
     }
   }
+
+  private void deleteCorruptedFile(String path) {
+    try {
+      namenode.getRpcServer().delete(path, true);
+      LOG.info("Fsck: deleted corrupt file " + path);
+    } catch (Exception e) {
+      LOG.error("Fsck: error deleting corrupted file " + path, e);
+      internalError = true;
+    }
+  }
+
+  boolean hdfsPathExists(String path)
+      throws AccessControlException, UnresolvedLinkException, IOException {
+    try {
+      HdfsFileStatus hfs = namenode.getRpcServer().getFileInfo(path);
+      return (hfs != null);
+    } catch (FileNotFoundException e) {
+      return false;
+    }
+  }
   
   private void copyBlocksToLostFound(String parent, HdfsFileStatus file,
         LocatedBlocks blocks) throws IOException {
     final DFSClient dfs = new DFSClient(NameNode.getAddress(conf), conf);
+    final String fullName = file.getFullName(parent);
+    OutputStream fos = null;
     try {
-    if (!lfInited) {
-      lostFoundInit(dfs);
-    }
-    if (!lfInitedOk) {
-      return;
-    }
-    String fullName = file.getFullName(parent);
-    String target = lostFound + fullName;
-    String errmsg = "Failed to move " + fullName + " to /lost+found";
-    try {
+      if (!lfInited) {
+        lostFoundInit(dfs);
+      }
+      if (!lfInitedOk) {
+        throw new IOException("failed to initialize lost+found");
+      }
+      String target = lostFound + fullName;
+      if (hdfsPathExists(target)) {
+        LOG.warn("Fsck: can't copy the remains of " + fullName + " to " +
+          "lost+found, because " + target + " already exists.");
+        return;
+      }
       if (!namenode.getRpcServer().mkdirs(
           target, file.getPermission(), true)) {
-        LOG.warn(errmsg);
-        return;
+        throw new IOException("failed to create directory " + target);
       }
       // create chains
       int chain = 0;
-      OutputStream fos = null;
+      boolean copyError = false;
       for (LocatedBlock lBlk : blocks.getLocatedBlocks()) {
         LocatedBlock lblock = lBlk;
         DatanodeInfo[] locs = lblock.getLocations();
@@ -451,32 +481,38 @@ public class NamenodeFsck {
         }
         if (fos == null) {
           fos = dfs.create(target + "/" + chain, true);
-          if (fos != null)
-            chain++;
-          else {
-            throw new IOException(errmsg + ": could not store chain " + chain);
+          if (fos == null) {
+            throw new IOException("Failed to copy " + fullName +
+                " to /lost+found: could not store chain " + chain);
           }
+          chain++;
         }
         
         // copy the block. It's a pity it's not abstracted from DFSInputStream ...
         try {
           copyBlock(dfs, lblock, fos);
         } catch (Exception e) {
-          e.printStackTrace();
-          // something went wrong copying this block...
-          LOG.warn(" - could not copy block " + lblock.getBlock() + " to " + target);
+          LOG.error("Fsck: could not copy block " + lblock.getBlock() +
+              " to " + target, e);
           fos.flush();
           fos.close();
           fos = null;
+          internalError = true;
+          copyError = true;
         }
       }
-      if (fos != null) fos.close();
-      LOG.warn("\n - copied corrupted file " + fullName + " to /lost+found");
-    }  catch (Exception e) {
-      e.printStackTrace();
-      LOG.warn(errmsg + ": " + e.getMessage());
-    }
+      if (copyError) {
+        LOG.warn("Fsck: there were errors copying the remains of the " +
+          "corrupted file " + fullName + " to /lost+found");
+      } else {
+        LOG.info("Fsck: copied the remains of the corrupted file " + 
+          fullName + " to /lost+found");
+      }
+    } catch (Exception e) {
+      LOG.error("copyBlocksToLostFound: error processing " + fullName, e);
+      internalError = true;
     } finally {
+      if (fos != null) fos.close();
       dfs.close();
     }
   }
@@ -503,7 +539,7 @@ public class NamenodeFsck {
         targetAddr = NetUtils.createSocketAddr(chosenNode.getXferAddr());
       }  catch (IOException ie) {
         if (failures >= DFSConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT) {
-          throw new IOException("Could not obtain block " + lblock);
+          throw new IOException("Could not obtain block " + lblock, ie);
         }
         LOG.info("Could not obtain block from any node:  " + ie);
         try {
@@ -515,7 +551,7 @@ public class NamenodeFsck {
         continue;
       }
       try {
-        s = new Socket();
+        s = NetUtils.getDefaultSocketFactory(conf).createSocket();
         s.connect(targetAddr, HdfsServerConstants.READ_TIMEOUT);
         s.setSoTimeout(HdfsServerConstants.READ_TIMEOUT);
         
@@ -555,7 +591,7 @@ public class NamenodeFsck {
                               ", but datanode returned " +bytesRead+" bytes");
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.error("Error reading block", e);
       success = false;
     } finally {
       try {s.close(); } catch (Exception e1) {}
@@ -606,6 +642,7 @@ public class NamenodeFsck {
     if (lostFound == null) {
       LOG.warn("Cannot initialize /lost+found .");
       lfInitedOk = false;
+      internalError = true;
     }
   }
 
