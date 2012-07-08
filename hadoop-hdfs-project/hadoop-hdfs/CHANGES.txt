@@ -425,6 +425,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3603. Decouple TestHDFSTrash from TestTrash. (Jason Lowe via eli)
 
+    HDFS-711. hdfsUtime does not handle atime = 0 or mtime = 0 correctly.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)

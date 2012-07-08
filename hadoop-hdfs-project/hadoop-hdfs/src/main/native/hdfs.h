@@ -468,8 +468,8 @@ extern  "C" {
      * hdfsUtime
      * @param fs The configured filesystem handle.
      * @param path the path to the file or directory
-     * @param mtime new modification time or 0 for only set access time in seconds
-     * @param atime new access time or 0 for only set modification time in seconds
+     * @param mtime new modification time or -1 for no change
+     * @param atime new access time or -1 for no change
      * @return 0 on success else -1
      */
     int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime);
