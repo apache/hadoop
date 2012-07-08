@@ -180,6 +180,9 @@ Trunk (unreleased changes)
     HDFS-3482. hdfs balancer throws ArrayIndexOutOfBoundsException 
     if option is specified without values. ( Madhukara Phatak via umamahesh) 
 
+    HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049.
+    (acmurthy via eli)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
