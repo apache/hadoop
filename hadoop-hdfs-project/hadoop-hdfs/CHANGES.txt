@@ -178,7 +178,7 @@ Trunk (unreleased changes)
     HDFS-3541. Deadlock between recovery, xceiver and packet responder (Vinay via umamahesh)
 
 Branch-2 ( Unreleased changes )
- 
+
   INCOMPATIBLE CHANGES
 
     HDFS-3446. HostsFileReader silently ignores bad includes/excludes
@@ -438,6 +438,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3580. incompatible types; no instance(s) of type variable(s) V exist 
     so that V conforms to boolean compiling HttpFSServer.java with OpenJDK 
     (adi2 via tucu)
+
+    HDFS-3603. Decouple TestHDFSTrash from TestTrash. (Jason Lowe via eli)
 
 Release 2.0.0-alpha - 05-23-2012
 
