@@ -175,6 +175,8 @@ Trunk (unreleased changes)
 
     HDFS-3549. Fix dist tar build fails in hadoop-hdfs-raid project. (Jason Lowe via daryn)
 
+    HDFS-3541. Deadlock between recovery, xceiver and packet responder (Vinay via umamahesh)
+
 Branch-2 ( Unreleased changes )
  
   INCOMPATIBLE CHANGES
