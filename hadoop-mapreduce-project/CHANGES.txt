@@ -149,6 +149,9 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-3907. Document entries mapred-default.xml for the
     jobhistory server. (Eugene Koontz via harsh)
 
+    MAPREDUCE-3906. Fix inconsistency in documentation regarding
+    mapreduce.jobhistory.principal. (Eugene Koontz via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES

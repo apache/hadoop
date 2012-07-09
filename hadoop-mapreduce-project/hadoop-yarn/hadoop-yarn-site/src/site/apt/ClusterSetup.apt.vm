@@ -985,7 +985,7 @@ KVNO Timestamp         Principal
 | | </etc/security/keytab/jhs.service.keytab> | |
 | | | Kerberos keytab file for the MapReduce JobHistory Server. |
 *-------------------------+-------------------------+------------------------+
-| <<<mapreduce.jobhistory.principal>>> | mapred/_HOST@REALM.TLD | |
+| <<<mapreduce.jobhistory.principal>>> | jhs/_HOST@REALM.TLD | |
 | | | Kerberos principal name for the MapReduce JobHistory Server. |
 *-------------------------+-------------------------+------------------------+
 
