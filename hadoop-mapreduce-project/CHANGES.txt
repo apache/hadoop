@@ -532,6 +532,9 @@ Release 0.23.3 - UNRELEASED
     space due to org.apache.hadoop.fs.LocalDirAllocator.contexts (Devaraj K
     via bobby)
 
+    MAPREDUCE-4402. TestFileInputFormat fails intermittently (Jason Lowe via
+    bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
