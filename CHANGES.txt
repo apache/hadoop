@@ -21,6 +21,9 @@ Release 1.2.0 - unreleased
 
     HDFS-3604. Add dfs.webhdfs.enabled to hdfs-default.xml. (eli)
 
+    HDFS-3596. Improve FSEditLog pre-allocation in branch-1
+    (Colin Patrick McCabe via mattf)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and

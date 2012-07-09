@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
+import org.apache.hadoop.io.BytesWritable;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -77,6 +78,36 @@ public class TestEditLog extends TestCase {
     }
   }
 
+  public void testEditLogPreallocation() throws IOException {
+    final File TEST_DIR =
+        new File(System.getProperty("test.build.data", "/tmp"));
+    final File TEST_EDITS = new File(TEST_DIR, "edit_log");
+    
+    FSEditLog.EditLogFileOutputStream elfos = null;
+    try {
+      elfos = new FSEditLog.EditLogFileOutputStream(TEST_EDITS);
+      byte b[] = new byte[1024];
+      for (int i = 0; i < b.length; i++) {
+        b[i] = 0;
+      }
+      elfos.write(b);
+      elfos.setReadyToFlush();
+      elfos.flushAndSync();
+      assertEquals(FSEditLog.MIN_PREALLOCATION_LENGTH,
+          elfos.getFile().length());
+      for (int i = 0;
+          i < 2 * FSEditLog.MIN_PREALLOCATION_LENGTH / b.length; i++) {
+        elfos.write(b);
+        elfos.setReadyToFlush();
+        elfos.flushAndSync();
+      }
+      assertEquals(3 * FSEditLog.MIN_PREALLOCATION_LENGTH, elfos.getFile().length());
+    } finally {
+      if (elfos != null) elfos.close();
+      if (TEST_EDITS.exists()) TEST_EDITS.delete();
+    }
+  }
+    
   /**
    * Tests transaction logging in dfs.
    */

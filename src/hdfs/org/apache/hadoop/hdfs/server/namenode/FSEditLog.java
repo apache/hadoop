@@ -92,7 +92,7 @@ public class FSEditLog {
 
   private static int sizeFlushBuffer = 512*1024;
   /** Preallocation length in bytes for writing edit log. */
-  private static final int PREALLOCATION_LENGTH = 1024 * 1024;
+  static final int MIN_PREALLOCATION_LENGTH = 1024 * 1024;
   /** The limit of the length in bytes for each edit log transaction. */
   private static int TRANSACTION_LENGTH_LIMIT = Integer.MAX_VALUE;
 
@@ -136,12 +136,12 @@ public class FSEditLog {
    * An implementation of the abstract class {@link EditLogOutputStream},
    * which stores edits in a local file.
    */
-  static private class EditLogFileOutputStream extends EditLogOutputStream {
+  static class EditLogFileOutputStream extends EditLogOutputStream {
     /** Preallocation buffer, padded with OP_INVALID */
     private static final ByteBuffer PREALLOCATION_BUFFER
-        = ByteBuffer.allocateDirect(PREALLOCATION_LENGTH);
+        = ByteBuffer.allocateDirect(MIN_PREALLOCATION_LENGTH);
     static {
-      PREALLOCATION_BUFFER.position(0).limit(PREALLOCATION_LENGTH);
+      PREALLOCATION_BUFFER.position(0).limit(MIN_PREALLOCATION_LENGTH);
       for(int i = 0; i < PREALLOCATION_BUFFER.capacity(); i++) {
         PREALLOCATION_BUFFER.put(OP_INVALID);
       }
@@ -211,7 +211,7 @@ public class FSEditLog {
       bufCurrent.close();
       bufReady.close();
 
-      // remove the last INVALID marker from transaction log.
+      // remove any preallocated padding bytes from the transaction log.
       fc.truncate(fc.position());
       fp.close();
       
@@ -227,7 +227,6 @@ public class FSEditLog {
     @Override
     void setReadyToFlush() throws IOException {
       assert bufReady.size() == 0 : "previous data is not flushed yet";
-      write(OP_INVALID);           // insert end-of-file marker
       DataOutputBuffer tmp = bufReady;
       bufReady = bufCurrent;
       bufCurrent = tmp;
@@ -244,7 +243,6 @@ public class FSEditLog {
       bufReady.writeTo(fp);     // write data to file
       bufReady.reset();         // erase all data in the buffer
       fc.force(false);          // metadata updates not needed because of preallocation
-      fc.position(fc.position()-1); // skip back the end-of-file marker
     }
 
     /**
@@ -258,18 +256,26 @@ public class FSEditLog {
 
     // allocate a big chunk of data
     private void preallocate() throws IOException {
-      final long oldsize = fc.size();
-      if (fc.position() + 4096 >= oldsize) {
-        final ByteBuffer buffer = PREALLOCATION_BUFFER;
-        buffer.position(0).limit(PREALLOCATION_LENGTH);
-
-        int w = 0;
-        for(; (w += fc.write(buffer, oldsize + w)) < PREALLOCATION_LENGTH; );
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("PREALLOCATE: size is now " + fc.size() + " written " + w
-              + " bytes at offset " + oldsize + "; editlog=" + getName());
-        }
+      long size = fc.size();
+      int bufSize = bufReady.getLength();
+      long need = bufSize - (size - fc.position());
+      if (need <= 0) {
+        return;
+      }
+      long oldSize = size;
+      long total = 0;
+      long fillCapacity = PREALLOCATION_BUFFER.capacity();
+      PREALLOCATION_BUFFER.position(0);
+      while (need > 0) {
+        do {
+          size += fc.write(PREALLOCATION_BUFFER, size);
+        } while (PREALLOCATION_BUFFER.remaining() > 0);
+        need -= fillCapacity;
+        total += fillCapacity;
+      }
+      if(FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug("Preallocated " + total + " bytes at the end of " +
+            "the edit log (offset " + oldSize + ")");
       }
     }
     
