@@ -141,9 +141,6 @@ Trunk (unreleased changes)
 
     HDFS-2966. TestNameNodeMetrics tests can fail under load. (stevel)
 
-    HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
-    corrupted block. (Henry Robinson via atm)
-
     HDFS-3116. Typo in fetchdt error message. (AOE Takashi via atm)
 
     HDFS-3126. Journal stream from Namenode to BackupNode needs to have 
@@ -286,6 +283,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
     (harsh)
+
+    HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
+    corrupted block. (Henry Robinson via atm)
 
   OPTIMIZATIONS
 
