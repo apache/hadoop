@@ -95,6 +95,7 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -969,6 +970,7 @@ public class MRAppMaster extends CompositeService {
 
   public static void main(String[] args) {
     try {
+      Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
       String containerIdStr =
           System.getenv(ApplicationConstants.AM_CONTAINER_ID_ENV);
       String nodeHostString = System.getenv(ApplicationConstants.NM_HOST_ENV);

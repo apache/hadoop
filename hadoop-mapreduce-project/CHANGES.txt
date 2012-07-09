@@ -540,6 +540,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4402. TestFileInputFormat fails intermittently (Jason Lowe via
     bobby)
 
+    MAPREDUCE-4300. OOM in AM can turn it into a zombie. (Robert Evans via
+    tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
