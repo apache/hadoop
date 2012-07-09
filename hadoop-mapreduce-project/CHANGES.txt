@@ -47,6 +47,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
     (tomwhite)
 
+    MAPREDUCE-3906. Fix inconsistency in documentation regarding
+    mapreduce.jobhistory.principal. (Eugene Koontz via harsh)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
