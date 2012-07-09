@@ -83,6 +83,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     MAPREDUCE-2739. Update installation docs (remove YarnClientFactory) (bowang via tucu)
 
+    MAPREDUCE-3993. Graceful handling of codec errors during decompression 
+    (kkambatl via tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
