@@ -1702,15 +1702,16 @@ class ReduceTask extends Task {
         
         int bytesRead = 0;
         try {
-          int n = input.read(shuffleData, 0, shuffleData.length);
+          int n = IOUtils.wrappedReadForCompressedData(input, shuffleData, 0,
+              shuffleData.length);
           while (n > 0) {
             bytesRead += n;
             shuffleClientMetrics.inputBytes(n);
 
             // indicate we're making progress
             reporter.progress();
-            n = input.read(shuffleData, bytesRead, 
-                           (shuffleData.length-bytesRead));
+            n = IOUtils.wrappedReadForCompressedData(input, shuffleData,
+                bytesRead, shuffleData.length - bytesRead);
           }
 
           if (LOG.isDebugEnabled()) {

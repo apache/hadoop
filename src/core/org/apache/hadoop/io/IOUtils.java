@@ -138,6 +138,28 @@ public class IOUtils {
     }
   }
 
+  /**
+   * Utility wrapper for reading from {@link InputStream}. It catches any errors
+   * thrown by the underlying stream (either IO or decompression-related), and
+   * re-throws as an IOException.
+   * 
+   * @param is - InputStream to be read from
+   * @param buf - buffer the data is read into
+   * @param off - offset within buf
+   * @param len - amount of data to be read
+   * @return number of bytes read
+   */
+  public static int wrappedReadForCompressedData(InputStream is, byte[] buf,
+      int off, int len) throws IOException {
+    try {
+      return is.read(buf, off, len);
+    } catch (IOException ie) {
+      throw ie;
+    } catch (Throwable t) {
+      throw new IOException("Error while reading compressed data", t);
+    }
+  }
+
   /** Reads len bytes in a loop.
    * @param in The InputStream to read from
    * @param buf The buffer to fill
