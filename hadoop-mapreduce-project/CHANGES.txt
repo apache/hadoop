@@ -298,6 +298,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4376. TestClusterMRNotification times out (Kihwal Lee via bobby)
 
+    MAPREDUCE-4402. TestFileInputFormat fails intermittently (Jason Lowe via
+    bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
