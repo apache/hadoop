@@ -55,6 +55,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3603. Decouple TestHDFSTrash from TestTrash. (Jason Lowe via eli)
 
+    HDFS-3037. TestMulitipleNNDataBlockScanner#testBlockScannerAfterRestart is
+    racy. (atm)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
