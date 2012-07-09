@@ -623,7 +623,9 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
       int retries = 2;
       while (retries > 0) {
         try {
-          if (pos > blockEnd) {
+          // currentNode can be left as null if previous read had a checksum
+          // error on the same block. See HDFS-3067
+          if (pos > blockEnd || currentNode == null) {
             currentNode = blockSeekTo(pos);
           }
           int realLen = (int) Math.min(len, (blockEnd - pos + 1L));
