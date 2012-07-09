@@ -127,10 +127,10 @@ class FSPermissionChecker {
           ancestorIndex--);
       checkTraverse(inodes, ancestorIndex);
 
-      if(parentAccess != null && parentAccess.implies(FsAction.WRITE)
-          && inodes[inodes.length - 1] != null)
+      if (parentAccess != null && parentAccess.implies(FsAction.WRITE)
+          && inodes.length > 1 && inodes[inodes.length - 1] != null) {
         checkStickyBit(inodes[inodes.length - 2], inodes[inodes.length - 1]);
-
+      }
       if (ancestorAccess != null && inodes.length > 1) {
         check(inodes, ancestorIndex, ancestorAccess);
       }
