@@ -187,6 +187,11 @@
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer$DelegationTokenCancelThread" />
     <Bug pattern="DM_EXIT" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.yarn.YarnUncaughtExceptionHandler"/>
+    <Bug pattern="DM_EXIT"/>
+  </Match>
+
   <!-- AsyncDispatcher will kill the process if there is an error dispatching -->
   <Match>
     <Class name="org.apache.hadoop.yarn.event.AsyncDispatcher" />
