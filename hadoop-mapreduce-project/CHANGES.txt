@@ -81,6 +81,8 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-4383. HadoopPipes.cc needs to include unistd.h.
     (Andy Isaacson via eli)
 
+    MAPREDUCE-2739. Update installation docs (remove YarnClientFactory) (bowang via tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
