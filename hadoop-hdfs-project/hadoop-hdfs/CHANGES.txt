@@ -6,6 +6,8 @@ Release 0.23.3 - UNRELEASED
 
   NEW FEATURES
 
+    HDFS-2978. The NameNode should expose name dir statuses via JMX. (atm)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
