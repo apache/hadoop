@@ -146,6 +146,9 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in
     mapred-default.xml (Rui Kubo via harsh)
 
+    MAPREDUCE-3907. Document entries mapred-default.xml for the
+    jobhistory server. (Eugene Koontz via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES

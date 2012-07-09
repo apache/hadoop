@@ -1285,13 +1285,30 @@
 <property>
   <name>mapreduce.jobhistory.address</name>
   <value>0.0.0.0:10020</value>
-  <description>MapReduce JobHistory Server host:port</description>
+  <description>MapReduce JobHistory Server IPC host:port</description>
 </property>
 
 <property>
   <name>mapreduce.jobhistory.webapp.address</name>
   <value>0.0.0.0:19888</value>
   <description>MapReduce JobHistory Server Web UI host:port</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.keytab</name>
+  <description>
+    Location of the kerberos keytab file for the MapReduce
+    JobHistory Server.
+  </description>
+  <value>/etc/security/keytab/jhs.service.keytab</value>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.principal</name>
+  <description>
+    Kerberos principal name for the MapReduce JobHistory Server.
+  </description>
+  <value>jhs/_HOST@REALM.TLD</value>
 </property>
 
 </configuration>
