@@ -24,6 +24,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.StaticMapping;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.*;
 import org.junit.Test;
@@ -111,6 +112,16 @@ public class TestJobInProgress {
   @Test
   public void testPendingMapTaskCount() throws Exception {
     launchTask(FailMapTaskJob.class, IdentityReducer.class);
+    checkTaskCounts();
+  }
+
+  /** 
+   * Test to ensure that the job works when slow start is used and 
+   * some tasks are allowed to fail  
+   */
+  @Test
+  public void testSlowStartAndFailurePercent() throws Exception {
+    launchTaskSlowStart(FailMapTaskJob.class, IdentityReducer.class);
     checkTaskCounts();
   }
   
@@ -246,6 +257,16 @@ public class TestJobInProgress {
     dfsCluster.shutdown();
   }
   
+  void launchTaskSlowStart(Class MapClass,Class ReduceClass) throws Exception{
+    JobConf job = configure(MapClass, ReduceClass, 5, 10, true);
+    // set it so no reducers start until all maps finished
+    job.setFloat("mapred.reduce.slowstart.completed.maps", 1.0f);
+    // allow all maps to fail
+    job.setInt("mapred.max.map.failures.percent", 100);
+    try {
+      JobClient.runJob(job);
+    } catch (IOException ioe) {}
+  }
 
   void launchTask(Class MapClass,Class ReduceClass) throws Exception{
     JobConf job = configure(MapClass, ReduceClass, 5, 10, true);
@@ -306,5 +327,15 @@ public class TestJobInProgress {
       }
     }
   }
-  
+
+  @Test
+  public void testScheduleReducesConsiderFailedMapTips() throws Exception {
+    JobInProgress jip = Mockito.mock(JobInProgress.class);
+    Mockito.when(jip.scheduleReduces()).thenCallRealMethod();
+    jip.failedMapTIPs = 10;
+    jip.finishedMapTasks = 50;
+    jip.completedMapsForReduceSlowstart = 60;
+    assertTrue("The Reduce is not scheduled", jip.scheduleReduces());
+  }
+
 }
