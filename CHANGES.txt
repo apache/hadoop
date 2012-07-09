@@ -334,6 +334,9 @@ Release 1.1.0 - unreleased
 
     HDFS-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml (Zhihong Ted Yu via cos)
 
+    HADOOP-8399. Remove JDK5 dependency from Hadoop 1.0+ line 
+    (Konstantin Boudnik via mattf)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
