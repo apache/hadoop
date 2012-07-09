@@ -20,6 +20,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8450. Remove src/test/system. (eli)
 
+    HADOOP-8350. Improve NetUtils.getInputStream to return a stream which has
+    a tunable timeout. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -107,6 +107,24 @@ class BPOfferService implements Runnable {
   }
 
   /**
+   * Run an immediate heartbeat from all actors. Used by tests.
+   */
+  @VisibleForTesting
+  void triggerHeartbeatForTests() throws IOException {
+    synchronized(receivedBlockList) {
+      lastHeartbeat = 0;
+      receivedBlockList.notifyAll();
+      while (lastHeartbeat == 0) {
+        try {
+          receivedBlockList.wait(100);
+        } catch (InterruptedException e) {
+          return;
+        }
+      }
+    }
+  }
+  
+  /**
    * returns true if BP thread has completed initialization of storage
    * and has registered with the corresponding namenode
    * @return true if initialized

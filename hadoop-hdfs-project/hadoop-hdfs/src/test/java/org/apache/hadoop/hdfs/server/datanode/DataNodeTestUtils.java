@@ -36,6 +36,12 @@ public class DataNodeTestUtils {
     return dn.getDNRegistrationByMachineName(mName);
   }
   
+  public static void triggerHeartbeat(DataNode dn) throws IOException {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      bpos.triggerHeartbeatForTests();
+    } 
+  }
+  
   public static DatanodeRegistration 
   getDNRegistrationForBP(DataNode dn, String bpid) throws IOException {
     return dn.getDNRegistrationForBP(bpid);

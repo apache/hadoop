@@ -135,6 +135,7 @@ class DataXceiverServer implements Runnable {
       try {
         s = ss.accept();
         s.setTcpNoDelay(true);
+        // Timeouts are set within DataXceiver.run()
 
         // Make sure the xceiver count is not exceeded
         int curXceiverCount = datanode.getXceiverCount();
@@ -144,7 +145,8 @@ class DataXceiverServer implements Runnable {
               + maxXceiverCount);
         }
 
-        new Daemon(datanode.threadGroup, new DataXceiver(s, datanode, this))
+        new Daemon(datanode.threadGroup,
+            DataXceiver.create(s, datanode, this))
             .start();
       } catch (SocketTimeoutException ignored) {
         // wake up to see if should continue to run

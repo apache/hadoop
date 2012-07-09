@@ -1495,6 +1495,13 @@ public class MiniDFSCluster {
     return FSNamesystem.getNamespaceEditsDirs(nameNodes[nnIndex].conf);
   }
 
+  public void triggerHeartbeats()
+  throws IOException {
+    for (DataNode dn : getDataNodes()) {
+      DataNodeTestUtils.triggerHeartbeat(dn);
+    }
+  }
+  
   /** Wait until the given namenode gets registration from all the datanodes */
   public void waitActive(int nnIndex) throws IOException {
     if (nameNodes.length == 0 || nameNodes[nnIndex] == null) {
