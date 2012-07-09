@@ -72,13 +72,13 @@ public class TaskGraphServlet extends HttpServlet {
     final boolean isMap = "map".equalsIgnoreCase(request.getParameter("type"));
     final TaskReport[] reports = isMap? tracker.getMapTaskReports(jobId) 
                                       : tracker.getReduceTaskReports(jobId);
-    if(reports == null || reports.length == 0) {
+    if(reports == null) {
       return;
     }
 
     final int numTasks = reports.length;     
     int tasksPerBar = (int)Math.ceil(numTasks / 600d);
-    int numBars = (int) Math.ceil((double)numTasks / tasksPerBar);
+    int numBars = (numTasks==0)?600:(int) Math.ceil((double)numTasks / tasksPerBar);
     int w = Math.max(600, numBars);
     int barWidth = Math.min(10,  w / numBars); //min 1px, max 10px
     int barsPerNotch = (int)Math.ceil(10d / barWidth);

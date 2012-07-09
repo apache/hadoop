@@ -340,6 +340,9 @@ Release 1.1.0 - unreleased
     HADOOP-8445. Token should not print the password in toString
     (Ravi Prakash via tgraves)
 
+    MAPREDUCE-2903. Map Tasks graph is throwing XML Parse error when Job is 
+    executed with 0 maps. (Devaraj K via mattf)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
