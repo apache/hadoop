@@ -97,13 +97,16 @@ public class TestFileInputFormat extends TestCase {
   private void createInputs(FileSystem fs, Path inDir, String fileName)
   throws IOException {
     // create a multi-block file on hdfs
-    DataOutputStream out = fs.create(new Path(inDir, fileName), true, 4096,
-                                     (short) 2, 512, null);
+    Path path = new Path(inDir, fileName);
+    final short replication = 2;
+    DataOutputStream out = fs.create(path, true, 4096,
+                                     replication, 512, null);
     for(int i=0; i < 1000; ++i) {
       out.writeChars("Hello\n");
     }
     out.close();
     System.out.println("Wrote file");
+    DFSTestUtil.waitReplication(fs, path, replication);
   }
 
   public void testNumInputs() throws Exception {
