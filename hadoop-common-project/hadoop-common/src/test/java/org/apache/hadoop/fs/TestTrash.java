@@ -89,7 +89,7 @@ public class TestTrash extends TestCase {
    * @param base - the base path where files are created
    * @throws IOException
    */
-  protected static void trashShell(final FileSystem fs, final Path base)
+  public static void trashShell(final FileSystem fs, final Path base)
   throws IOException {
     Configuration conf = new Configuration();
     conf.set("fs.defaultFS", fs.getUri().toString());

@@ -53,6 +53,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3376. DFSClient fails to make connection to DN if there are many
     unusable cached sockets (todd)
 
+    HDFS-3603. Decouple TestHDFSTrash from TestTrash. (Jason Lowe via eli)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
