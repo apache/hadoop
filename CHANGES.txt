@@ -273,6 +273,9 @@ Release 1.1.0 - unreleased
     HADOOP-8399. Remove JDK5 dependency from Hadoop 1.0+ line 
     (Konstantin Boudnik via mattf)
 
+    HADOOP-8445. Token should not print the password in toString
+    (Ravi Prakash via tgraves)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
