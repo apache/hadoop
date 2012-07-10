@@ -541,7 +541,6 @@ public class DFSClient implements java.io.Closeable {
     Token<DelegationTokenIdentifier> result =
       namenode.getDelegationToken(renewer);
     SecurityUtil.setTokenService(result, nnAddress);
-    LOG.info("Created " + DelegationTokenIdentifier.stringifyToken(result));
     return result;
   }
 

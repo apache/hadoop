@@ -61,6 +61,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3581. FSPermissionChecker#checkPermission sticky bit check
     missing range check. (eli)
 
+    HDFS-3486. offlineimageviewer can't read fsimage files that contain
+    persistent delegation tokens. (Colin Patrick McCabe via eli)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

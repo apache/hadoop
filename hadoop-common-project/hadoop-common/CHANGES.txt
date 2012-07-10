@@ -25,6 +25,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
 
+    HADOOP-8242. AbstractDelegationTokenIdentifier: add getter methods
+    for owner and realuser. (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
