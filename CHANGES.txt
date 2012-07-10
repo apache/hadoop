@@ -24,6 +24,9 @@ Release 1.2.0 - unreleased
     HDFS-3596. Improve FSEditLog pre-allocation in branch-1
     (Colin Patrick McCabe via mattf)
 
+    HDFS-3617. Port HDFS-96 to branch-1 (support blocks greater than 2GB).
+    (Patrick Kling and harsh via eli)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
