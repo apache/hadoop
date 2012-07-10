@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -55,7 +53,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -541,11 +538,12 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
 
         // If security is enabled, send the container-tokens too.
         if (UserGroupInformation.isSecurityEnabled()) {
-          ContainerTokenIdentifier tokenIdentifier = new ContainerTokenIdentifier(
-              containerId, nodeId.toString(), capability);
-          containerToken = BuilderUtils.newContainerToken(nodeId, ByteBuffer
-              .wrap(containerTokenSecretManager
-                  .createPassword(tokenIdentifier)), tokenIdentifier);
+          containerToken =
+              containerTokenSecretManager.createContainerToken(containerId,
+                nodeId, capability);
+          if (containerToken == null) {
+            return i; // Try again later.
+          }
         }
 
         // Create the container
@@ -562,11 +560,11 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         // Inform the node
         node.allocateContainer(application.getApplicationId(), 
             rmContainer);
+
+        // Update usage for this container
+        Resources.addTo(usedResource, capability);
       }
-      
-      // Update total usage
-      Resources.addTo(usedResource,
-          Resources.multiply(capability, assignedContainers));
+
     }
     
     return assignedContainers;

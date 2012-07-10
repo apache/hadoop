@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -54,7 +53,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -1178,17 +1176,11 @@ public class LeafQueue implements CSQueue {
 
     // If security is enabled, send the container-tokens too.
     if (UserGroupInformation.isSecurityEnabled()) {
-      ContainerTokenIdentifier tokenIdentifier = new ContainerTokenIdentifier(
-          containerId, nodeId.toString(), capability);
-      try {
-        containerToken = BuilderUtils.newContainerToken(nodeId, ByteBuffer
-            .wrap(containerTokenSecretManager
-                .createPassword(tokenIdentifier)), tokenIdentifier);
-      } catch (IllegalArgumentException e) {
-         // this could be because DNS is down - in which case we just want
-         // to retry and not bring RM down
-         LOG.error("Error trying to create new container", e);
-         return null;
+      containerToken =
+          containerTokenSecretManager.createContainerToken(containerId, nodeId,
+            capability);
+      if (containerToken == null) {
+        return null; // Try again later.
       }
     }
 

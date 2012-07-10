@@ -100,8 +100,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ClientToAMSecretManager clientToAMSecretManager =
       new ClientToAMSecretManager();
   
-  protected ContainerTokenSecretManager containerTokenSecretManager =
-      new ContainerTokenSecretManager();
+  protected ContainerTokenSecretManager containerTokenSecretManager;
 
   protected ApplicationTokenSecretManager appTokenSecretManager;
 
@@ -150,6 +149,8 @@ public class ResourceManager extends CompositeService implements Recoverable {
     this.containerAllocationExpirer = new ContainerAllocationExpirer(
         this.rmDispatcher);
     addService(this.containerAllocationExpirer);
+
+    this.containerTokenSecretManager  = new ContainerTokenSecretManager(conf);
 
     AMLivelinessMonitor amLivelinessMonitor = createAMLivelinessMonitor();
     addService(amLivelinessMonitor);
@@ -609,6 +610,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
   @Private
   public ApplicationACLsManager getApplicationACLsManager() {
     return this.applicationACLsManager;
+  }
+
+  @Private
+  public ContainerTokenSecretManager getContainerTokenSecretManager() {
+    return this.containerTokenSecretManager;
   }
 
   @Private

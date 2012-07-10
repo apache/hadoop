@@ -385,7 +385,7 @@ public class TestContainerManager extends BaseContainerManagerTest {
     delSrvc.init(conf);
 
     ContainerTokenSecretManager containerTokenSecretManager = new 
-        ContainerTokenSecretManager();
+        ContainerTokenSecretManager(conf);
     containerManager = new ContainerManagerImpl(context, exec, delSrvc,
         nodeStatusUpdater, metrics, containerTokenSecretManager,
         new ApplicationACLsManager(conf), dirsHandler);
