@@ -23,6 +23,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8350. Improve NetUtils.getInputStream to return a stream which has
     a tunable timeout. (todd)
 
+    HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES

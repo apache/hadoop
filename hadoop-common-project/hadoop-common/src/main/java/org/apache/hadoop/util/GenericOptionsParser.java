@@ -268,7 +268,8 @@ public class GenericOptionsParser {
     }
 
     if (line.hasOption("jt")) {
-      conf.set("mapred.job.tracker", line.getOptionValue("jt"));
+      conf.set("mapred.job.tracker", line.getOptionValue("jt"), 
+          "from -jt command line option");
     }
     if (line.hasOption("conf")) {
       String[] values = line.getOptionValues("conf");
@@ -278,7 +279,8 @@ public class GenericOptionsParser {
     }
     if (line.hasOption("libjars")) {
       conf.set("tmpjars", 
-               validateFiles(line.getOptionValue("libjars"), conf));
+               validateFiles(line.getOptionValue("libjars"), conf),
+               "from -libjars command line option");
       //setting libjars in client classpath
       URL[] libjars = getLibJars(conf);
       if(libjars!=null && libjars.length>0) {
@@ -290,18 +292,20 @@ public class GenericOptionsParser {
     }
     if (line.hasOption("files")) {
       conf.set("tmpfiles", 
-               validateFiles(line.getOptionValue("files"), conf));
+               validateFiles(line.getOptionValue("files"), conf),
+               "from -files command line option");
     }
     if (line.hasOption("archives")) {
       conf.set("tmparchives", 
-                validateFiles(line.getOptionValue("archives"), conf));
+                validateFiles(line.getOptionValue("archives"), conf),
+                "from -archives command line option");
     }
     if (line.hasOption('D')) {
       String[] property = line.getOptionValues('D');
       for(String prop : property) {
         String[] keyval = prop.split("=", 2);
         if (keyval.length == 2) {
-          conf.set(keyval[0], keyval[1]);
+          conf.set(keyval[0], keyval[1], "from command line");
         }
       }
     }
@@ -320,7 +324,7 @@ public class GenericOptionsParser {
         LOG.debug("setting conf tokensFile: " + fileName);
       }
       conf.set("mapreduce.job.credentials.json", localFs.makeQualified(p)
-          .toString());
+          .toString(), "from -tokenCacheFile command line option");
 
     }
   }

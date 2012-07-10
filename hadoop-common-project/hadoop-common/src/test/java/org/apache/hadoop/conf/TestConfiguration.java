@@ -168,7 +168,8 @@ public class TestConfiguration extends TestCase {
     appendProperty(name, val, false);
   }
  
-  void appendProperty(String name, String val, boolean isFinal)
+  void appendProperty(String name, String val, boolean isFinal, 
+      String ... sources)
     throws IOException {
     out.write("<property>");
     out.write("<name>");
@@ -179,6 +180,11 @@ public class TestConfiguration extends TestCase {
     out.write("</value>");
     if (isFinal) {
       out.write("<final>true</final>");
+    }
+    for(String s : sources) {
+      out.write("<source>");
+      out.write(s);
+      out.write("</source>");
     }
     out.write("</property>\n");
   }
@@ -640,7 +646,49 @@ public class TestConfiguration extends TestCase {
                  conf.getPattern("test.pattern3", defaultPattern).pattern());
   }
 
-  public void testSocketAddress() throws IOException {
+  public void testPropertySource() throws IOException {
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.foo", "bar");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    conf.set("fs.defaultFS", "value");
+    String [] sources = conf.getPropertySources("test.foo");
+    assertEquals(1, sources.length);
+    assertEquals(
+        "Resource string returned for a file-loaded property" +
+        " must be a proper absolute path",
+        fileResource,
+        new Path(sources[0]));
+    assertArrayEquals("Resource string returned for a set() property must be " +
+    		"\"programatically\"",
+        new String[]{"programatically"},
+        conf.getPropertySources("fs.defaultFS"));
+    assertEquals("Resource string returned for an unset property must be null",
+        null, conf.getPropertySources("fs.defaultFoo"));
+  }
+  
+  public void testMultiplePropertySource() throws IOException {
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.foo", "bar", false, "a", "b", "c");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    String [] sources = conf.getPropertySources("test.foo");
+    assertEquals(4, sources.length);
+    assertEquals("a", sources[0]);
+    assertEquals("b", sources[1]);
+    assertEquals("c", sources[2]);
+    assertEquals(
+        "Resource string returned for a file-loaded property" +
+        " must be a proper absolute path",
+        fileResource,
+        new Path(sources[3]));
+  }
+
+  public void testSocketAddress() {
     Configuration conf = new Configuration();
     final String defaultAddr = "host:1";
     final int defaultPort = 2;
@@ -886,7 +934,7 @@ public class TestConfiguration extends TestCase {
       confDump.put(prop.getKey(), prop);
     }
     assertEquals("value5",confDump.get("test.key6").getValue());
-    assertEquals("Unknown", confDump.get("test.key4").getResource());
+    assertEquals("programatically", confDump.get("test.key4").getResource());
     outWriter.close();
   }
   
