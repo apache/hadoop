@@ -18,10 +18,12 @@
 package org.apache.hadoop.conf;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -76,6 +78,22 @@ public class TestConfiguration extends TestCase {
 
   private void addInclude(String filename) throws IOException{
     out.write("<xi:include href=\"" + filename + "\" xmlns:xi=\"http://www.w3.org/2001/XInclude\"  />\n ");
+  }
+  
+  public void testInputStreamResource() throws Exception {
+    StringWriter writer = new StringWriter();
+    out = new BufferedWriter(writer);
+    startConfig();
+    declareProperty("prop", "A", "A");
+    endConfig();
+    
+    InputStream in1 = new ByteArrayInputStream(writer.toString().getBytes());
+    Configuration conf = new Configuration(false);
+    conf.addResource(in1);
+    assertEquals("A", conf.get("prop"));
+    InputStream in2 = new ByteArrayInputStream(writer.toString().getBytes());
+    conf.addResource(in2);
+    assertEquals("A", conf.get("prop"));
   }
 
   public void testVariableSubstitution() throws IOException {

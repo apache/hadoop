@@ -102,6 +102,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8342. HDFS command fails with exception following merge of 
     HADOOP-8325 (tucu)
 
+    HADOOP-8573. Configuration tries to read from an inputstream resource 
+    multiple times (Robert Evans via tgraves)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
