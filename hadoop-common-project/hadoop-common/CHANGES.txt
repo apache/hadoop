@@ -63,6 +63,10 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8533. Remove parallel call ununsed capability in RPC.
     (Brandon Li via suresh)
 
+    HADOOP-8423. MapFile.Reader.get() crashes jvm or throws
+    EOFException on Snappy or LZO block-compressed data
+    (todd via harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
