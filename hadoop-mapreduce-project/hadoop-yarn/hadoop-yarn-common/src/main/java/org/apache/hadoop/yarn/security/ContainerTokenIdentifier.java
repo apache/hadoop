@@ -35,6 +35,11 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
+/**
+ * TokenIdentifier for a container. Encodes {@link ContainerId},
+ * {@link Resource} needed by the container and the target NMs host-address.
+ * 
+ */
 public class ContainerTokenIdentifier extends TokenIdentifier {
 
   private static Log LOG = LogFactory.getLog(ContainerTokenIdentifier.class);
@@ -44,14 +49,19 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   private ContainerId containerId;
   private String nmHostAddr;
   private Resource resource;
+  private long expiryTimeStamp;
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
-      Resource r) {
+      Resource r, long expiryTimeStamp) {
     this.containerId = containerID;
     this.nmHostAddr = hostName;
     this.resource = r;
+    this.expiryTimeStamp = expiryTimeStamp;
   }
 
+  /**
+   * Default constructor needed by RPC layer/SecretManager.
+   */
   public ContainerTokenIdentifier() {
   }
 
@@ -67,6 +77,10 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     return this.resource;
   }
 
+  public long getExpiryTimeStamp() {
+    return this.expiryTimeStamp;
+  }
+
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing ContainerTokenIdentifier to RPC layer: " + this);
@@ -79,6 +93,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     out.writeInt(this.containerId.getId());
     out.writeUTF(this.nmHostAddr);
     out.writeInt(this.resource.getMemory());
+    out.writeLong(this.expiryTimeStamp);
   }
 
   @Override
@@ -91,6 +106,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
         .readInt());
     this.nmHostAddr = in.readUTF();
     this.resource = BuilderUtils.newResource(in.readInt());
+    this.expiryTimeStamp = in.readLong();
   }
 
   @Override
@@ -103,6 +119,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     return UserGroupInformation.createRemoteUser(this.containerId.toString());
   }
 
+  // TODO: Needed?
   @InterfaceAudience.Private
   public static class Renewer extends Token.TrivialRenewer {
     @Override
