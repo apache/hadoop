@@ -124,7 +124,7 @@ public class TestNameNodeRecovery {
           }
         } catch (Throwable e) {
           fail("caught IOException while trying to skip over bad " +
-              "transaction.  message was " + e.getMessage() + 
+              "transaction.   message was " + e.getMessage() + 
               "\nstack trace\n" + StringUtils.stringifyException(e));
         }
       }

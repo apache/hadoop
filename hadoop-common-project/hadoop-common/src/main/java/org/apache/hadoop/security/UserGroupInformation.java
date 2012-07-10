@@ -19,6 +19,7 @@ package org.apache.hadoop.security;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -32,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -453,9 +455,31 @@ public class UserGroupInformation {
       return null;
     }
   }
-  
+
+  public static final HadoopConfiguration HADOOP_LOGIN_CONFIG =
+      new HadoopConfiguration();
+
+  /**
+   * Represents a javax.security configuration that is created at runtime.
+   */
+  private static class DynamicConfiguration
+      extends javax.security.auth.login.Configuration {
+    private AppConfigurationEntry[] ace;
+    
+    DynamicConfiguration(AppConfigurationEntry[] ace) {
+      this.ace = ace;
+    }
+    
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String appName) {
+      return ace;
+    }
+  }
+
   private static LoginContext
-  newLoginContext(String appName, Subject subject) throws LoginException {
+  newLoginContext(String appName, Subject subject,
+    javax.security.auth.login.Configuration loginConf)
+      throws LoginException {
     // Temporarily switch the thread's ContextClassLoader to match this
     // class's classloader, so that we can properly load HadoopLoginModule
     // from the JAAS libraries.
@@ -463,7 +487,7 @@ public class UserGroupInformation {
     ClassLoader oldCCL = t.getContextClassLoader();
     t.setContextClassLoader(HadoopLoginModule.class.getClassLoader());
     try {
-      return new LoginContext(appName, subject, null, new HadoopConfiguration());
+      return new LoginContext(appName, subject, null, loginConf);
     } finally {
       t.setContextClassLoader(oldCCL);
     }
@@ -516,6 +540,82 @@ public class UserGroupInformation {
   }
 
   /**
+   * Find the most appropriate UserGroupInformation to use
+   *
+   * @param ticketCachePath    The Kerberos ticket cache path, or NULL
+   *                           if none is specfied
+   * @param user               The user name, or NULL if none is specified.
+   *
+   * @return                   The most appropriate UserGroupInformation
+   */ 
+  public static UserGroupInformation getBestUGI(
+      String ticketCachePath, String user) throws IOException {
+    if (ticketCachePath != null) {
+      return getUGIFromTicketCache(ticketCachePath, user);
+    } else if (user == null) {
+      return getCurrentUser();
+    } else {
+      return createRemoteUser(user);
+    }    
+  }
+
+  /**
+   * Create a UserGroupInformation from a Kerberos ticket cache.
+   * 
+   * @param user                The principal name to load from the ticket
+   *                            cache
+   * @param ticketCachePath     the path to the ticket cache file
+   *
+   * @throws IOException        if the kerberos login fails
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public static UserGroupInformation getUGIFromTicketCache(
+            String ticketCache, String user) throws IOException {
+    if (!isSecurityEnabled()) {
+      return getBestUGI(null, user);
+    }
+    try {
+      Map<String,String> krbOptions = new HashMap<String,String>();
+      krbOptions.put("doNotPrompt", "true");
+      krbOptions.put("useTicketCache", "true");
+      krbOptions.put("useKeyTab", "false");
+      krbOptions.put("renewTGT", "false");
+      krbOptions.put("ticketCache", ticketCache);
+      krbOptions.putAll(HadoopConfiguration.BASIC_JAAS_OPTIONS);
+      AppConfigurationEntry ace = new AppConfigurationEntry(
+          KerberosUtil.getKrb5LoginModuleName(),
+          LoginModuleControlFlag.REQUIRED,
+          krbOptions);
+      DynamicConfiguration dynConf =
+          new DynamicConfiguration(new AppConfigurationEntry[]{ ace });
+      LoginContext login = newLoginContext(
+          HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, null, dynConf);
+      login.login();
+
+      Subject loginSubject = login.getSubject();
+      Set<Principal> loginPrincipals = loginSubject.getPrincipals();
+      if (loginPrincipals.isEmpty()) {
+        throw new RuntimeException("No login principals found!");
+      }
+      if (loginPrincipals.size() != 1) {
+        LOG.warn("found more than one principal in the ticket cache file " +
+          ticketCache);
+      }
+      User ugiUser = new User(loginPrincipals.iterator().next().getName(),
+          AuthenticationMethod.KERBEROS, login);
+      loginSubject.getPrincipals().add(ugiUser);
+      UserGroupInformation ugi = new UserGroupInformation(loginSubject);
+      ugi.setLogin(login);
+      ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
+      return ugi;
+    } catch (LoginException le) {
+      throw new IOException("failure to login using ticket cache file " +
+          ticketCache, le);
+    }
+  }
+
+  /**
    * Get the currently logged in user.
    * @return the logged in user
    * @throws IOException if login fails
@@ -530,10 +630,10 @@ public class UserGroupInformation {
         LoginContext login;
         if (isSecurityEnabled()) {
           login = newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
-              subject);
+              subject, HADOOP_LOGIN_CONFIG);
         } else {
           login = newLoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
-              subject);
+              subject, HADOOP_LOGIN_CONFIG);
         }
         login.login();
         loginUser = new UserGroupInformation(subject);
@@ -673,8 +773,8 @@ public class UserGroupInformation {
     LoginContext login; 
     long start = 0;
     try {
-      login = 
-        newLoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
+      login = newLoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME,
+            subject, HADOOP_LOGIN_CONFIG);
       start = System.currentTimeMillis();
       login.login();
       metrics.loginSuccess.add(System.currentTimeMillis() - start);
@@ -756,7 +856,8 @@ public class UserGroupInformation {
         // login and also update the subject field of this instance to
         // have the new credentials (pass it to the LoginContext constructor)
         login = newLoginContext(
-            HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, getSubject());
+            HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, getSubject(),
+            HADOOP_LOGIN_CONFIG);
         LOG.info("Initiating re-login for " + keytabPrincipal);
         start = System.currentTimeMillis();
         login.login();
@@ -807,7 +908,7 @@ public class UserGroupInformation {
       //have the new credentials (pass it to the LoginContext constructor)
       login = 
         newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, 
-            getSubject());
+            getSubject(), HADOOP_LOGIN_CONFIG);
       LOG.info("Initiating re-login for " + getUserName());
       login.login();
       setLogin(login);
@@ -842,8 +943,9 @@ public class UserGroupInformation {
       keytabPrincipal = user;
       Subject subject = new Subject();
       
-      LoginContext login = 
-        newLoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject); 
+      LoginContext login = newLoginContext(
+          HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject,
+          HADOOP_LOGIN_CONFIG);
        
       start = System.currentTimeMillis();
       login.login();

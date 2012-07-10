@@ -113,6 +113,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3555. idle client socket triggers DN ERROR log
     (should be INFO or DEBUG). (Andy Isaacson via harsh)
 
+    HDFS-3568. fuse_dfs: add support for security. (Colin McCabe via atm)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

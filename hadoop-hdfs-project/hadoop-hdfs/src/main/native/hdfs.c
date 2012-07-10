@@ -45,6 +45,7 @@
 #define JMETHOD2(X, Y, R)   "(" X Y ")" R
 #define JMETHOD3(X, Y, Z, R)   "(" X Y Z")" R
 
+#define KERBEROS_TICKET_CACHE_PATH "hadoop.security.kerberos.ticket.cache.path"
 
 /**
  * hdfsJniEnv: A wrapper struct to be used as 'value'
@@ -168,268 +169,378 @@ done:
     return errnum;
 }
 
+/**
+ * Set a configuration value.
+ *
+ * @param env               The JNI environment
+ * @param jConfiguration    The configuration object to modify
+ * @param key               The key to modify
+ * @param value             The value to set the key to
+ *
+ * @return                  0 on success; error code otherwise
+ */
+static int hadoopConfSet(JNIEnv *env, jobject jConfiguration,
+        const char *key, const char *value)
+{
+    int ret;
+    jthrowable jExc = NULL;
+    jstring jkey = NULL, jvalue = NULL;
+    char buf[1024];
 
+    jkey = (*env)->NewStringUTF(env, key);
+    if (!jkey) {
+        ret = ENOMEM;
+        goto done;
+    }
+    jvalue = (*env)->NewStringUTF(env, value);
+    if (!jvalue) {
+        ret = ENOMEM;
+        goto done;
+    }
+    ret = invokeMethod(env, NULL, &jExc, INSTANCE, jConfiguration,
+            HADOOP_CONF, "set", JMETHOD2(JPARAM(JAVA_STRING),
+                                         JPARAM(JAVA_STRING), JAVA_VOID),
+            jkey, jvalue);
+    if (ret) {
+        snprintf(buf, sizeof(buf), "hadoopConfSet(%s, %s)", key, value);
+        ret = errnoFromException(jExc, env, buf);
+        goto done;
+    }
+done:
+    if (jkey)
+        destroyLocalReference(env, jkey);
+    if (jvalue)
+        destroyLocalReference(env, jvalue);
+    if (ret)
+        errno = ret;
+    return ret;
+}
 
+/**
+ * Convert a Java string into a C string.
+ *
+ * @param env               The JNI environment
+ * @param jStr              The Java string to convert
+ * @param cstr              (out param) the C string.
+ *                          This will be set to a dynamically allocated
+ *                          UTF-8 C string on success.
+ *
+ * @return                  0 on success; error code otherwise
+ */
+static int jStrToCstr(JNIEnv *env, jstring jstr, char **cstr)
+{
+    char *tmp;
 
-hdfsFS hdfsConnect(const char* host, tPort port) {
-  // connect with NULL as user name
-  return hdfsConnectAsUser(host, port, NULL);
+    tmp = (*env)->GetStringUTFChars(env, jstr, NULL);
+    *cstr = strdup(tmp);
+    (*env)->ReleaseStringUTFChars(env, jstr, tmp);
+    return 0;
+}
+
+static int hadoopConfGet(JNIEnv *env, jobject jConfiguration,
+        const char *key, char **val)
+{
+    int ret;
+    jthrowable jExc = NULL;
+    jvalue jVal;
+    jstring jkey = NULL;
+    char buf[1024];
+
+    jkey = (*env)->NewStringUTF(env, key);
+    if (!jkey) {
+        ret = ENOMEM;
+        goto done;
+    }
+    ret = invokeMethod(env, &jVal, &jExc, INSTANCE, jConfiguration,
+            HADOOP_CONF, "get", JMETHOD1(JPARAM(JAVA_STRING),
+                                         JPARAM(JAVA_STRING)), jkey);
+    if (ret) {
+        snprintf(buf, sizeof(buf), "hadoopConfGet(%s)", key);
+        ret = errnoFromException(jExc, env, buf);
+        goto done;
+    }
+    if (!jVal.l) {
+        *val = NULL;
+        goto done;
+    }
+
+    ret = jStrToCstr(env, jVal.l, val);
+    if (ret)
+        goto done;
+done:
+    if (jkey)
+        destroyLocalReference(env, jkey);
+    if (ret)
+        errno = ret;
+    return ret;
+}
+
+int hdfsConfGet(const char *key, char **val)
+{
+    JNIEnv *env;
+    int ret;
+    jobject jConfiguration = NULL;
+
+    env = getJNIEnv();
+    if (env == NULL) {
+      ret = EINTERNAL;
+      goto done;
+    }
+    jConfiguration = constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
+    if (jConfiguration == NULL) {
+        fprintf(stderr, "Can't construct instance of class "
+                "org.apache.hadoop.conf.Configuration\n");
+        ret = EINTERNAL;
+        goto done;
+    }
+    ret = hadoopConfGet(env, jConfiguration, key, val);
+    if (ret)
+        goto done;
+    ret = 0;
+done:
+    if (jConfiguration)
+        destroyLocalReference(env, jConfiguration);
+    if (ret)
+        errno = ret;
+    return ret;
+}
+
+void hdfsConfFree(char *val)
+{
+    free(val);
+}
+
+struct hdfsBuilder {
+    int forceNewInstance;
+    const char *nn;
+    tPort port;
+    const char *kerbTicketCachePath;
+    const char *userName;
+};
+
+struct hdfsBuilder *hdfsNewBuilder(void)
+{
+    struct hdfsBuilder *bld = calloc(1, sizeof(struct hdfsBuilder));
+    if (!bld) {
+        errno = ENOMEM;
+        return NULL;
+    }
+    return bld;
+}
+
+void hdfsFreeBuilder(struct hdfsBuilder *bld)
+{
+    free(bld);
+}
+
+void hdfsBuilderSetForceNewInstance(struct hdfsBuilder *bld)
+{
+    bld->forceNewInstance = 1;
+}
+
+void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn)
+{
+    bld->nn = nn;
+}
+
+void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port)
+{
+    bld->port = port;
+}
+
+void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName)
+{
+    bld->userName = userName;
+}
+
+void hdfsBuilderSetKerbTicketCachePath(struct hdfsBuilder *bld,
+                                       const char *kerbTicketCachePath)
+{
+    bld->kerbTicketCachePath = kerbTicketCachePath;
+}
+
+hdfsFS hdfsConnect(const char* host, tPort port)
+{
+    struct hdfsBuilder *bld = hdfsNewBuilder();
+    if (!bld)
+        return NULL;
+    hdfsBuilderSetNameNode(bld, host);
+    hdfsBuilderSetNameNodePort(bld, port);
+    return hdfsBuilderConnect(bld);
 }
 
 /** Always return a new FileSystem handle */
-hdfsFS hdfsConnectNewInstance(const char* host, tPort port) {
-  // connect with NULL as user name/groups
-  return hdfsConnectAsUserNewInstance(host, port, NULL);
+hdfsFS hdfsConnectNewInstance(const char* host, tPort port)
+{
+    struct hdfsBuilder *bld = hdfsNewBuilder();
+    if (!bld)
+        return NULL;
+    hdfsBuilderSetNameNode(bld, host);
+    hdfsBuilderSetNameNodePort(bld, port);
+    hdfsBuilderSetForceNewInstance(bld);
+    return hdfsBuilderConnect(bld);
 }
 
 hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user)
 {
-    // JAVA EQUIVALENT:
-    //  FileSystem fs = FileSystem.get(new Configuration());
-    //  return fs;
-
-    JNIEnv *env = 0;
-    jobject jConfiguration = NULL;
-    jobject jFS = NULL;
-    jobject jURI = NULL;
-    jstring jURIString = NULL;
-    jvalue  jVal;
-    jthrowable jExc = NULL;
-    char    *cURI = 0;
-    jobject gFsRef = NULL;
-    jstring jUserString = NULL;
-
-
-    //Get the JNIEnv* corresponding to current thread
-    env = getJNIEnv();
-    if (env == NULL) {
-      errno = EINTERNAL;
-      return NULL;
-    }
-
-    //Create the org.apache.hadoop.conf.Configuration object
-    jConfiguration =
-        constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
-
-    if (jConfiguration == NULL) {
-        fprintf(stderr, "Can't construct instance of class "
-                "org.apache.hadoop.conf.Configuration\n");
-        errno = EINTERNAL;
+    struct hdfsBuilder *bld = hdfsNewBuilder();
+    if (!bld)
         return NULL;
-    }
- 
-    if (user != NULL) {
-      jUserString = (*env)->NewStringUTF(env, user);
-    }
-    //Check what type of FileSystem the caller wants...
-    if (host == NULL) {
-        // fs = FileSytem::getLocal(conf);
-        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "getLocal",
-                         JMETHOD1(JPARAM(HADOOP_CONF),
-                                  JPARAM(HADOOP_LOCALFS)),
-                         jConfiguration) != 0) {
-            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                       "FileSystem::getLocal");
-            goto done;
-        }
-        jFS = jVal.l;
-    }
-    //FileSystem.get(conf) -> FileSystem.get(FileSystem.getDefaultUri(conf), 
-    //                                       conf, user)
-    else if (!strcmp(host, "default") && port == 0) {
-      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS,
-                      "getDefaultUri", 
-                      "(Lorg/apache/hadoop/conf/Configuration;)Ljava/net/URI;",
-                      jConfiguration) != 0) {
-        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs.", 
-                                   "FileSystem::getDefaultUri");
-        goto done;
-      }
-      jURI = jVal.l;
-      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "get",
-                       JMETHOD3(JPARAM(JAVA_NET_URI),
-                                JPARAM(HADOOP_CONF), JPARAM(JAVA_STRING), 
-                                JPARAM(HADOOP_FS)),
-                       jURI, jConfiguration, jUserString) != 0) {
-        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                   "Filesystem::get(URI, Configuration)");
-        goto done;
-      }
-
-      jFS = jVal.l;
-    }
-    else {
-      // fs = FileSystem::get(URI, conf, ugi);
-      cURI = malloc(strlen(host)+16);
-      sprintf(cURI, "hdfs://%s:%d", host, (int)(port));
-      if (cURI == NULL) {
-        fprintf (stderr, "Couldn't allocate an object of size %d",
-                 (int)(strlen(host) + 16));
-        errno = EINTERNAL;			
-        goto done;	
-      }
-
-      jURIString = (*env)->NewStringUTF(env, cURI);
-      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, JAVA_NET_URI,
-                       "create", "(Ljava/lang/String;)Ljava/net/URI;",
-                       jURIString) != 0) {
-        errno = errnoFromException(jExc, env, "java.net.URI::create");
-        goto done;
-      }
-      jURI = jVal.l;
-
-      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "get",
-                       JMETHOD3(JPARAM(JAVA_NET_URI),
-                                JPARAM(HADOOP_CONF), JPARAM(JAVA_STRING),
-                                JPARAM(HADOOP_FS)),
-                       jURI, jConfiguration, jUserString) != 0) {
-        errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                   "Filesystem::get(URI, Configuration)");
-        goto done;
-      }
-
-      jFS = jVal.l;
-    }
-
-  done:
-    
-    // Release unnecessary local references
-    destroyLocalReference(env, jConfiguration);
-    destroyLocalReference(env, jURIString);
-    destroyLocalReference(env, jURI);
-    destroyLocalReference(env, jUserString);
-
-    if (cURI) free(cURI);
-
-    /* Create a global reference for this fs */
-    if (jFS) {
-        gFsRef = (*env)->NewGlobalRef(env, jFS);
-        destroyLocalReference(env, jFS);
-    }
-
-    return gFsRef;
+    hdfsBuilderSetNameNode(bld, host);
+    hdfsBuilderSetNameNodePort(bld, port);
+    hdfsBuilderSetUserName(bld, user);
+    return hdfsBuilderConnect(bld);
 }
 
-
 /** Always return a new FileSystem handle */
-hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port, const char *user)
+hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port,
+        const char *user)
 {
-    // JAVA EQUIVALENT:
-    //  FileSystem fs = FileSystem.get(new Configuration());
-    //  return fs;
+    struct hdfsBuilder *bld = hdfsNewBuilder();
+    if (!bld)
+        return NULL;
+    hdfsBuilderSetNameNode(bld, host);
+    hdfsBuilderSetNameNodePort(bld, port);
+    hdfsBuilderSetForceNewInstance(bld);
+    hdfsBuilderSetUserName(bld, user);
+    return hdfsBuilderConnect(bld);
+}
 
+hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
+{
     JNIEnv *env = 0;
-    jobject jConfiguration = NULL;
-    jobject jFS = NULL;
-    jobject jURI = NULL;
-    jstring jURIString = NULL;
+    jobject gFsRef = NULL;
+    jobject jConfiguration = NULL, jFS = NULL, jURI = NULL, jCachePath = NULL;
+    jstring jURIString = NULL, jUserString = NULL;
     jvalue  jVal;
     jthrowable jExc = NULL;
-    char    *cURI = 0;
-    jobject gFsRef = NULL;
-    jstring jUserString = NULL;
+    size_t cURILen;
+    char *cURI = 0;
+    int ret = 0;
 
     //Get the JNIEnv* corresponding to current thread
     env = getJNIEnv();
     if (env == NULL) {
-      errno = EINTERNAL;
-      return NULL;
+      ret = EINTERNAL;
+      goto done;
     }
 
-    //Create the org.apache.hadoop.conf.Configuration object
-    jConfiguration =
-        constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
-
+    //  jConfiguration = new Configuration();
+    jConfiguration = constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
     if (jConfiguration == NULL) {
         fprintf(stderr, "Can't construct instance of class "
                 "org.apache.hadoop.conf.Configuration\n");
-        errno = EINTERNAL;
-        return NULL;
+      goto done;
     }
  
-    if (user != NULL) {
-      jUserString = (*env)->NewStringUTF(env, user);
-    }      
     //Check what type of FileSystem the caller wants...
-    if (host == NULL) {
-        // fs = FileSytem::newInstanceLocal(conf);
-        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "newInstanceLocal",
-                         JMETHOD1(JPARAM(HADOOP_CONF),
-                                  JPARAM(HADOOP_LOCALFS)),
-                         jConfiguration) != 0) {
-            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                       "FileSystem::newInstanceLocal");
-            goto done;
+    if (bld->nn == NULL) {
+        // Get a local filesystem.
+        if (bld->forceNewInstance) {
+            // fs = FileSytem::newInstanceLocal(conf);
+            if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS,
+                    "newInstanceLocal", JMETHOD1(JPARAM(HADOOP_CONF),
+                    JPARAM(HADOOP_LOCALFS)), jConfiguration)) {
+                ret = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                           "FileSystem::newInstanceLocal");
+                goto done;
+            }
+            jFS = jVal.l;
+        } else {
+            // fs = FileSytem::getLocal(conf);
+            if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "getLocal",
+                             JMETHOD1(JPARAM(HADOOP_CONF),
+                                      JPARAM(HADOOP_LOCALFS)),
+                             jConfiguration) != 0) {
+                ret = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                           "FileSystem::getLocal");
+                goto done;
+            }
+            jFS = jVal.l;
         }
-        jFS = jVal.l;
-    }
-    else if (!strcmp(host, "default") && port == 0) {
-      //fs = FileSystem::get(conf); 
-      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS,
-                      "getDefaultUri",
-                      "(Lorg/apache/hadoop/conf/Configuration;)Ljava/net/URI;",
-                      jConfiguration) != 0) {
-          errno = errnoFromException(jExc, env, "org.apache.hadoop.fs.",
-                                   "FileSystem::getDefaultUri");
-          goto done;
-      }
-      jURI = jVal.l;
-      if (invokeMethod(env, &jVal, &jExc, STATIC, NULL,
-                         HADOOP_FS, "newInstance",
-                         JMETHOD3(JPARAM(JAVA_NET_URI),
-                                  JPARAM(HADOOP_CONF),
-                                  JPARAM(JAVA_STRING),
-                                  JPARAM(HADOOP_FS)),
-                         jURI, jConfiguration, jUserString) != 0) {
-          errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                       "FileSystem::newInstance");
-          goto done;
-      }
-      jFS = jVal.l;
-    }
-    else {
-        // fs = FileSystem::newInstance(URI, conf);
-        cURI = malloc(strlen(host)+16);
-        sprintf(cURI, "hdfs://%s:%d", host, (int)(port));
-
-        jURIString = (*env)->NewStringUTF(env, cURI);
-        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, JAVA_NET_URI,
-                         "create", "(Ljava/lang/String;)Ljava/net/URI;",
-                         jURIString) != 0) {
-            errno = errnoFromException(jExc, env, "java.net.URI::create");
-            goto done;
-        }
-        jURI = jVal.l;
-
-        if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "newInstance",
-                         JMETHOD3(JPARAM(JAVA_NET_URI),
-                                  JPARAM(HADOOP_CONF), JPARAM(JAVA_STRING),
-                                  JPARAM(HADOOP_FS)),
-                         jURI, jConfiguration, jUserString) != 0) {
-            errno = errnoFromException(jExc, env, "org.apache.hadoop.fs."
-                                       "Filesystem::newInstance(URI, Configuration)");
-            goto done;
+    } else {
+        if (!strcmp(bld->nn, "default")) {
+            // jURI = FileSystem.getDefaultUri(conf)
+            if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS,
+                          "getDefaultUri", 
+                          "(Lorg/apache/hadoop/conf/Configuration;)Ljava/net/URI;",
+                          jConfiguration) != 0) {
+                ret = errnoFromException(jExc, env, "org.apache.hadoop.fs.", 
+                                           "FileSystem::getDefaultUri");
+                goto done;
+            }
+            jURI = jVal.l;
+        } else {
+            // fs = FileSystem::get(URI, conf, ugi);
+            cURILen = strlen(bld->nn) + 16;
+            cURI = malloc(cURILen);
+            if (!cURI) {
+                fprintf(stderr, "failed to allocate memory for HDFS URI\n");
+                ret = ENOMEM;			
+                goto done;
+            }
+            snprintf(cURI, cURILen, "hdfs://%s:%d", bld->nn, (int)(bld->port));
+            jURIString = (*env)->NewStringUTF(env, cURI);
+            if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, JAVA_NET_URI,
+                             "create", "(Ljava/lang/String;)Ljava/net/URI;",
+                             jURIString) != 0) {
+                ret = errnoFromException(jExc, env, "java.net.URI::create");
+                goto done;
+            }
+            jURI = jVal.l;
         }
 
-        jFS = jVal.l;
+        if (bld->kerbTicketCachePath) {
+            ret = hadoopConfSet(env, jConfiguration,
+                KERBEROS_TICKET_CACHE_PATH, bld->kerbTicketCachePath);
+            if (ret)
+                goto done;
+        }
+        if (bld->userName) {
+            jUserString = (*env)->NewStringUTF(env, bld->userName);
+        }
+        if (bld->forceNewInstance) {
+            if (invokeMethod(env, &jVal, &jExc, STATIC, NULL,
+                    HADOOP_FS, "newInstance",
+                    JMETHOD3(JPARAM(JAVA_NET_URI), JPARAM(HADOOP_CONF),
+                        JPARAM(JAVA_STRING), JPARAM(HADOOP_FS)), jURI,
+                    jConfiguration, jUserString)) {
+                ret = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                                           "Filesystem::newInstance(URI, Configuration)");
+                goto done;
+            }
+            jFS = jVal.l;
+        } else {
+            if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, HADOOP_FS, "get",
+                    JMETHOD3(JPARAM(JAVA_NET_URI), JPARAM(HADOOP_CONF),
+                        JPARAM(JAVA_STRING), JPARAM(HADOOP_FS)),
+                        jURI, jConfiguration, jUserString)) {
+                ret = errnoFromException(jExc, env, "org.apache.hadoop.fs."
+                               "Filesystem::get(URI, Configuration, String)");
+                goto done;
+            }
+            jFS = jVal.l;
+        }
     }
 
-  done:
-    
+done:
+    if (jFS) {
+        /* Create a global reference for this fs */
+        gFsRef = (*env)->NewGlobalRef(env, jFS);
+    }
+
     // Release unnecessary local references
     destroyLocalReference(env, jConfiguration);
-    destroyLocalReference(env, jURIString);
+    destroyLocalReference(env, jFS);
     destroyLocalReference(env, jURI);
+    destroyLocalReference(env, jCachePath);
+    destroyLocalReference(env, jURIString);
     destroyLocalReference(env, jUserString);
+    free(cURI);
+    free(bld);
 
-    if (cURI) free(cURI);
-
-    /* Create a global reference for this fs */
-    if (jFS) {
-        gFsRef = (*env)->NewGlobalRef(env, jFS);
-        destroyLocalReference(env, jFS);
-    }
-
+    if (ret)
+        errno = ret;
     return gFsRef;
 }
 
