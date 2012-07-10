@@ -921,8 +921,9 @@ fi
 checkTests
 (( RESULT = RESULT + $? ))
 applyPatch
-(( RESULT = RESULT + $? ))
-if [[ $RESULT != 0 ]] ; then
+APPLY_PATCH_RET=$?
+(( RESULT = RESULT + $APPLY_PATCH_RET ))
+if [[ $APPLY_PATCH_RET != 0 ]] ; then
   submitJiraComment 1
   cleanupAndExit 1
 fi
