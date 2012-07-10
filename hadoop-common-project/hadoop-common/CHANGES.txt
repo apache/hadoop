@@ -15,8 +15,6 @@ Trunk (unreleased changes)
     HADOOP-8470. Add NetworkTopologyWithNodeGroup, a 4-layer implementation
     of NetworkTopology.  (Junping Du via szetszwo)
 
-    HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
-
   IMPROVEMENTS
 
     HADOOP-8017. Configure hadoop-main pom to get rid of M2E plugin execution
@@ -732,6 +730,8 @@ Release 0.23.3 - UNRELEASED
     not being used any more (Ravi Prakash via bobby)
 
     HADOOP-8535. Cut hadoop build times in half (Job Eagles via bobby)
+
+    HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
 
   OPTIMIZATIONS
 
