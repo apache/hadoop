@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
@@ -493,18 +494,27 @@ class BlockSender implements java.io.Closeable {
         out.write(buf, 0, dataOff + dataLen);
       }
     } catch (IOException e) {
-      /* Exception while writing to the client. Connection closure from
-       * the other end is mostly the case and we do not care much about
-       * it. But other things can go wrong, especially in transferTo(),
-       * which we do not want to ignore.
-       *
-       * The message parsing below should not be considered as a good
-       * coding example. NEVER do it to drive a program logic. NEVER.
-       * It was done here because the NIO throws an IOException for EPIPE.
-       */
-      String ioem = e.getMessage();
-      if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
-        LOG.error("BlockSender.sendChunks() exception: ", e);
+      if (e instanceof SocketTimeoutException) {
+        /*
+         * writing to client timed out.  This happens if the client reads
+         * part of a block and then decides not to read the rest (but leaves
+         * the socket open).
+         */
+          LOG.info("BlockSender.sendChunks() exception: ", e);
+      } else {
+        /* Exception while writing to the client. Connection closure from
+         * the other end is mostly the case and we do not care much about
+         * it. But other things can go wrong, especially in transferTo(),
+         * which we do not want to ignore.
+         *
+         * The message parsing below should not be considered as a good
+         * coding example. NEVER do it to drive a program logic. NEVER.
+         * It was done here because the NIO throws an IOException for EPIPE.
+         */
+        String ioem = e.getMessage();
+        if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
+          LOG.error("BlockSender.sendChunks() exception: ", e);
+        }
       }
       throw ioeToSocketException(e);
     }
