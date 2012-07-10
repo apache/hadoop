@@ -127,6 +127,8 @@ public class BlockDecompressorStream extends DecompressorStream {
   }
 
   public void resetState() throws IOException {
+    originalBlockSize = 0;
+    noUncompressedBytes = 0;
     super.resetState();
   }
 
