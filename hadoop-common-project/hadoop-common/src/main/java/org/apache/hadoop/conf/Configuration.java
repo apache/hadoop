@@ -40,6 +40,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -75,7 +76,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.JsonFactory;
 import org.codehaus.jackson.JsonGenerator;
-import org.w3c.dom.Comment;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -158,16 +158,44 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   private boolean quietmode = true;
   
+  private static class Resource {
+    private final Object resource;
+    private final String name;
+    
+    public Resource(Object resource) {
+      this(resource, resource.toString());
+    }
+    
+    public Resource(Object resource, String name) {
+      this.resource = resource;
+      this.name = name;
+    }
+    
+    public String getName(){
+      return name;
+    }
+    
+    public Object getResource() {
+      return resource;
+    }
+    
+    @Override
+    public String toString() {
+      return name;
+    }
+  }
+  
   /**
    * List of configuration resources.
    */
-  private ArrayList<Object> resources = new ArrayList<Object>();
-
+  private ArrayList<Resource> resources = new ArrayList<Resource>();
+  
   /**
    * The value reported as the setting resource when a key is set
-   * by code rather than a file resource.
+   * by code rather than a file resource by dumpConfiguration.
    */
   static final String UNKNOWN_RESOURCE = "Unknown";
+
 
   /**
    * List of configuration parameters marked <b>final</b>. 
@@ -202,7 +230,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Stores the mapping of key to the resource which modifies or loads 
    * the key most recently
    */
-  private HashMap<String, String> updatingResource;
+  private HashMap<String, String[]> updatingResource;
  
   /**
    * Class to keep the information about the keys which replace the deprecated
@@ -369,7 +397,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return alternate name.
    */
   private String[] getAlternateNames(String name) {
-    String oldName, altNames[] = null;
+    String altNames[] = null;
     DeprecatedKeyInfo keyInfo = deprecatedKeyMap.get(name);
     if (keyInfo == null) {
       altNames = (reverseDeprecatedKeyMap.get(name) != null ) ? 
@@ -485,7 +513,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Configuration(boolean loadDefaults) {
     this.loadDefaults = loadDefaults;
-    updatingResource = new HashMap<String, String>();
+    updatingResource = new HashMap<String, String[]>();
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
     }
@@ -498,7 +526,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   @SuppressWarnings("unchecked")
   public Configuration(Configuration other) {
-   this.resources = (ArrayList)other.resources.clone();
+   this.resources = (ArrayList<Resource>) other.resources.clone();
    synchronized(other) {
      if (other.properties != null) {
        this.properties = (Properties)other.properties.clone();
@@ -508,7 +536,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
        this.overlay = (Properties)other.overlay.clone();
      }
 
-     this.updatingResource = new HashMap<String, String>(other.updatingResource);
+     this.updatingResource = new HashMap<String, String[]>(other.updatingResource);
    }
    
     this.finalParameters = new HashSet<String>(other.finalParameters);
@@ -546,7 +574,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *             with that name.
    */
   public void addResource(String name) {
-    addResourceObject(name);
+    addResourceObject(new Resource(name));
   }
 
   /**
@@ -560,7 +588,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *            the classpath.
    */
   public void addResource(URL url) {
-    addResourceObject(url);
+    addResourceObject(new Resource(url));
   }
 
   /**
@@ -574,7 +602,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    *             the classpath.
    */
   public void addResource(Path file) {
-    addResourceObject(file);
+    addResourceObject(new Resource(file));
   }
 
   /**
@@ -586,7 +614,21 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param in InputStream to deserialize the object from. 
    */
   public void addResource(InputStream in) {
-    addResourceObject(in);
+    addResourceObject(new Resource(in));
+  }
+
+  /**
+   * Add a configuration resource. 
+   * 
+   * The properties of this resource will override properties of previously 
+   * added resources, unless they were marked <a href="#Final">final</a>. 
+   * 
+   * @param in InputStream to deserialize the object from.
+   * @param name the name of the resource because InputStream.toString is not
+   * very descriptive some times.  
+   */
+  public void addResource(InputStream in, String name) {
+    addResourceObject(new Resource(in, name));
   }
   
   
@@ -603,7 +645,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     finalParameters.clear();                      // clear site-limits
   }
   
-  private synchronized void addResourceObject(Object resource) {
+  private synchronized void addResourceObject(Resource resource) {
     resources.add(resource);                      // add to resources
     reloadConfiguration();
   }
@@ -715,17 +757,39 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param value property value.
    */
   public void set(String name, String value) {
+    set(name, value, null);
+  }
+  
+  /** 
+   * Set the <code>value</code> of the <code>name</code> property. If 
+   * <code>name</code> is deprecated or there is a deprecated name associated to it,
+   * it sets the value to both names.
+   * 
+   * @param name property name.
+   * @param value property value.
+   * @param source the place that this configuration value came from 
+   * (For debugging).
+   */
+  public void set(String name, String value, String source) {
     if (deprecatedKeyMap.isEmpty()) {
       getProps();
     }
     getOverlay().setProperty(name, value);
     getProps().setProperty(name, value);
-    updatingResource.put(name, UNKNOWN_RESOURCE);
+    if(source == null) {
+      updatingResource.put(name, new String[] {"programatically"});
+    } else {
+      updatingResource.put(name, new String[] {source});
+    }
     String[] altNames = getAlternateNames(name);
     if (altNames != null && altNames.length > 0) {
+      String altSource = "because " + name + " is deprecated";
       for(String altName : altNames) {
-    	getOverlay().setProperty(altName, value);
-        getProps().setProperty(altName, value);
+        if(!altName.equals(name)) {
+          getOverlay().setProperty(altName, value);
+          getProps().setProperty(altName, value);
+          updatingResource.put(altName, new String[] {altSource});
+        }
       }
     }
     warnOnceIfDeprecated(name);
@@ -1035,17 +1099,22 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
-   * Gets the absolute path to the resource object (file, URL, etc.), for a given
-   * property name.
+   * Gets information about why a property was set.  Typically this is the 
+   * path to the resource objects (file, URL, etc.) the property came from, but
+   * it can also indicate that it was set programatically, or because of the
+   * command line.
    *
    * @param name - The property name to get the source of.
-   * @return null - If the property or its source wasn't found or if the property
-   * was defined in code (i.e. in a Configuration instance, not from a physical
-   * resource). Otherwise, returns the absolute path of the resource that loaded
-   * the property name, as a String.
+   * @return null - If the property or its source wasn't found. Otherwise, 
+   * returns a list of the sources of the resource.  The older sources are
+   * the first ones in the list.  So for example if a configuration is set from
+   * the command line, and then written out to a file that is read back in the
+   * first entry would indicate that it was set from the command line, while
+   * the second one would indicate the file that the new configuration was read
+   * in from.
    */
   @InterfaceStability.Unstable
-  public synchronized String getPropertySource(String name) {
+  public synchronized String[] getPropertySources(String name) {
     if (properties == null) {
       // If properties is null, it means a resource was newly added
       // but the props were cleared so as to load it upon future
@@ -1057,11 +1126,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (properties == null || updatingResource == null) {
       return null;
     } else {
-      String source = updatingResource.get(name);
-      if (source == null || source.equals(UNKNOWN_RESOURCE)) {
+      String[] source = updatingResource.get(name);
+      if(source == null) {
         return null;
       } else {
-        return source;
+        return Arrays.copyOf(source, source.length);
       }
     }
   }
@@ -1664,11 +1733,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   protected synchronized Properties getProps() {
     if (properties == null) {
       properties = new Properties();
+      HashMap<String, String[]> backup = 
+        new HashMap<String, String[]>(updatingResource);
       loadResources(properties, resources, quietmode);
       if (overlay!= null) {
         properties.putAll(overlay);
         for (Map.Entry<Object,Object> item: overlay.entrySet()) {
-          updatingResource.put((String) item.getKey(), UNKNOWN_RESOURCE);
+          String key = (String)item.getKey();
+          updatingResource.put(key, backup.get(key));
         }
       }
     }
@@ -1714,25 +1786,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   private void loadResources(Properties properties,
-                             ArrayList resources,
+                             ArrayList<Resource> resources,
                              boolean quiet) {
     if(loadDefaults) {
       for (String resource : defaultResources) {
-        loadResource(properties, resource, quiet);
+        loadResource(properties, new Resource(resource), quiet);
       }
     
       //support the hadoop-site.xml as a deprecated case
       if(getResource("hadoop-site.xml")!=null) {
-        loadResource(properties, "hadoop-site.xml", quiet);
+        loadResource(properties, new Resource("hadoop-site.xml"), quiet);
       }
     }
     
-    for (Object resource : resources) {
+    for (Resource resource : resources) {
       loadResource(properties, resource, quiet);
     }
   }
   
-  private void loadResource(Properties properties, Object name, boolean quiet) {
+  private void loadResource(Properties properties, Resource wrapper, boolean quiet) {
     try {
       DocumentBuilderFactory docBuilderFactory 
         = DocumentBuilderFactory.newInstance();
@@ -1753,26 +1825,29 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       Document doc = null;
       Element root = null;
 
-      if (name instanceof URL) {                  // an URL resource
-        URL url = (URL)name;
+      Object resource = wrapper.getResource();
+      String name = wrapper.getName();
+      
+      if (resource instanceof URL) {                  // an URL resource
+        URL url = (URL)resource;
         if (url != null) {
           if (!quiet) {
             LOG.info("parsing " + url);
           }
           doc = builder.parse(url.toString());
         }
-      } else if (name instanceof String) {        // a CLASSPATH resource
-        URL url = getResource((String)name);
+      } else if (resource instanceof String) {        // a CLASSPATH resource
+        URL url = getResource((String)resource);
         if (url != null) {
           if (!quiet) {
             LOG.info("parsing " + url);
           }
           doc = builder.parse(url.toString());
         }
-      } else if (name instanceof Path) {          // a file resource
+      } else if (resource instanceof Path) {          // a file resource
         // Can't use FileSystem API or we get an infinite loop
         // since FileSystem uses Configuration API.  Use java.io.File instead.
-        File file = new File(((Path)name).toUri().getPath())
+        File file = new File(((Path)resource).toUri().getPath())
           .getAbsoluteFile();
         if (file.exists()) {
           if (!quiet) {
@@ -1785,20 +1860,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             in.close();
           }
         }
-      } else if (name instanceof InputStream) {
+      } else if (resource instanceof InputStream) {
         try {
-          doc = builder.parse((InputStream)name);
+          doc = builder.parse((InputStream)resource);
         } finally {
-          ((InputStream)name).close();
+          ((InputStream)resource).close();
         }
-      } else if (name instanceof Element) {
-        root = (Element)name;
+      } else if (resource instanceof Element) {
+        root = (Element)resource;
       }
 
       if (doc == null && root == null) {
         if (quiet)
           return;
-        throw new RuntimeException(name + " not found");
+        throw new RuntimeException(resource + " not found");
       }
 
       if (root == null) {
@@ -1813,7 +1888,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           continue;
         Element prop = (Element)propNode;
         if ("configuration".equals(prop.getTagName())) {
-          loadResource(properties, prop, quiet);
+          loadResource(properties, new Resource(prop, name), quiet);
           continue;
         }
         if (!"property".equals(prop.getTagName()))
@@ -1822,6 +1897,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         String attr = null;
         String value = null;
         boolean finalParameter = false;
+        LinkedList<String> source = new LinkedList<String>();
         for (int j = 0; j < fields.getLength(); j++) {
           Node fieldNode = fields.item(j);
           if (!(fieldNode instanceof Element))
@@ -1833,7 +1909,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             value = ((Text)field.getFirstChild()).getData();
           if ("final".equals(field.getTagName()) && field.hasChildNodes())
             finalParameter = "true".equals(((Text)field.getFirstChild()).getData());
+          if ("source".equals(field.getTagName()) && field.hasChildNodes())
+            source.add(((Text)field.getFirstChild()).getData());
         }
+        source.add(name);
         
         // Ignore this parameter if it has already been marked as 'final'
         if (attr != null) {
@@ -1842,11 +1921,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             keyInfo.accessed = false;
             for (String key:keyInfo.newKeys) {
               // update new keys with deprecated key's value 
-              loadProperty(properties, name, key, value, finalParameter);
+              loadProperty(properties, name, key, value, finalParameter, 
+                  source.toArray(new String[source.size()]));
             }
           }
           else {
-            loadProperty(properties, name, attr, value, finalParameter);
+            loadProperty(properties, name, attr, value, finalParameter, 
+                source.toArray(new String[source.size()]));
           }
         }
       }
@@ -1866,12 +1947,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
-  private void loadProperty(Properties properties, Object name, String attr,
-      String value, boolean finalParameter) {
+  private void loadProperty(Properties properties, String name, String attr,
+      String value, boolean finalParameter, String[] source) {
     if (value != null) {
       if (!finalParameters.contains(attr)) {
         properties.setProperty(attr, value);
-        updatingResource.put(attr, name.toString());
+        updatingResource.put(attr, source);
       } else {
         LOG.warn(name+":an attempt to override final parameter: "+attr
             +";  Ignoring.");
@@ -1943,11 +2024,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       Element propNode = doc.createElement("property");
       conf.appendChild(propNode);
 
-      if (updatingResource != null) {
-        Comment commentNode = doc.createComment(
-          "Loaded from " + updatingResource.get(name));
-        propNode.appendChild(commentNode);
-      }
       Element nameNode = doc.createElement("name");
       nameNode.appendChild(doc.createTextNode(name));
       propNode.appendChild(nameNode);
@@ -1956,6 +2032,17 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       valueNode.appendChild(doc.createTextNode(value));
       propNode.appendChild(valueNode);
 
+      if (updatingResource != null) {
+        String[] sources = updatingResource.get(name);
+        if(sources != null) {
+          for(String s : sources) {
+            Element sourceNode = doc.createElement("source");
+            sourceNode.appendChild(doc.createTextNode(s));
+            propNode.appendChild(sourceNode);
+          }
+        }
+      }
+      
       conf.appendChild(doc.createTextNode("\n"));
     }
     return doc;
@@ -1988,8 +2075,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                                        config.get((String) item.getKey()));
         dumpGenerator.writeBooleanField("isFinal",
                                         config.finalParameters.contains(item.getKey()));
-        dumpGenerator.writeStringField("resource",
-                                       config.updatingResource.get(item.getKey()));
+        String[] resources = config.updatingResource.get(item.getKey());
+        String resource = UNKNOWN_RESOURCE;
+        if(resources != null && resources.length > 0) {
+          resource = resources[0];
+        }
+        dumpGenerator.writeStringField("resource", resource);
         dumpGenerator.writeEndObject();
       }
     }
@@ -2029,7 +2120,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     toString(resources, sb);
     return sb.toString();
   }
-
+  
   private <T> void toString(List<T> resources, StringBuilder sb) {
     ListIterator<T> i = resources.listIterator();
     while (i.hasNext()) {
@@ -2066,8 +2157,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     clear();
     int size = WritableUtils.readVInt(in);
     for(int i=0; i < size; ++i) {
-      set(org.apache.hadoop.io.Text.readString(in), 
-          org.apache.hadoop.io.Text.readString(in));
+      String key = org.apache.hadoop.io.Text.readString(in);
+      String value = org.apache.hadoop.io.Text.readString(in);
+      set(key, value); 
+      String sources[] = WritableUtils.readCompressedStringArray(in);
+      updatingResource.put(key, sources);
     }
   }
 
@@ -2078,6 +2172,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     for(Map.Entry<Object, Object> item: props.entrySet()) {
       org.apache.hadoop.io.Text.writeString(out, (String) item.getKey());
       org.apache.hadoop.io.Text.writeString(out, (String) item.getValue());
+      WritableUtils.writeCompressedStringArray(out, 
+          updatingResource.get(item.getKey()));
     }
   }
   

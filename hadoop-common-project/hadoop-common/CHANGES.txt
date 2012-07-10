@@ -561,6 +561,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
 
+    HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
