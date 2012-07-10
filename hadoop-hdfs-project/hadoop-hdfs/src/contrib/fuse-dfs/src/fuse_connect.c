@@ -21,10 +21,20 @@
 #include "fuse_connect.h"
 #include "fuse_users.h" 
 
+#include <limits.h>
 #include <search.h>
+
+#define HADOOP_SECURITY_AUTHENTICATION "hadoop.security.authentication"
+
+enum authConf {
+    AUTH_CONF_UNKNOWN,
+    AUTH_CONF_KERBEROS,
+    AUTH_CONF_OTHER,
+};
 
 #define MAX_ELEMENTS (16 * 1024)
 static struct hsearch_data *fsTable = NULL;
+static enum authConf hdfsAuthConf = AUTH_CONF_UNKNOWN;
 static pthread_mutex_t tableMutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
@@ -75,13 +85,96 @@ static int insertFs(char *key, hdfsFS fs) {
   return 0;
 }
 
+/** 
+ * Find out what type of authentication the system administrator
+ * has configured.
+ *
+ * @return     the type of authentication, or AUTH_CONF_UNKNOWN on error.
+ */
+static enum authConf discoverAuthConf(void)
+{
+    int ret;
+    char *val = NULL;
+    enum authConf authConf;
+
+    ret = hdfsConfGet(HADOOP_SECURITY_AUTHENTICATION, &val);
+    if (ret)
+        authConf = AUTH_CONF_UNKNOWN;
+    else if (!strcmp(val, "kerberos"))
+        authConf = AUTH_CONF_KERBEROS;
+    else
+        authConf = AUTH_CONF_OTHER;
+    free(val);
+    return authConf;
+}
+
+/**
+ * Find the Kerberos ticket cache path.
+ *
+ * This function finds the Kerberos ticket cache path from the thread ID and
+ * user ID of the process making the request.
+ *
+ * Normally, the ticket cache path is in a well-known location in /tmp.
+ * However, it's possible that the calling process could set the KRB5CCNAME
+ * environment variable, indicating that its Kerberos ticket cache is at a
+ * non-default location.  We try to handle this possibility by reading the
+ * process' environment here.  This will be allowed if we have root
+ * capabilities, or if our UID is the same as the remote process' UID.
+ *
+ * Note that we don't check to see if the cache file actually exists or not.
+ * We're just trying to find out where it would be if it did exist. 
+ *
+ * @param path          (out param) the path to the ticket cache file
+ * @param pathLen       length of the path buffer
+ */
+static void findKerbTicketCachePath(char *path, size_t pathLen)
+{
+  struct fuse_context *ctx = fuse_get_context();
+  FILE *fp = NULL;
+  static const char * const KRB5CCNAME = "\0KRB5CCNAME=";
+  int c = '\0', pathIdx = 0, keyIdx = 0;
+  size_t KRB5CCNAME_LEN = strlen(KRB5CCNAME + 1) + 1;
+
+  // /proc/<tid>/environ contains the remote process' environment.  It is
+  // exposed to us as a series of KEY=VALUE pairs, separated by NULL bytes.
+  snprintf(path, pathLen, "/proc/%d/environ", ctx->pid);
+  fp = fopen(path, "r");
+  if (!fp)
+    goto done;
+  while (1) {
+    if (c == EOF)
+      goto done;
+    if (keyIdx == KRB5CCNAME_LEN) {
+      if (pathIdx >= pathLen - 1)
+        goto done;
+      if (c == '\0')
+        goto done;
+      path[pathIdx++] = c;
+    } else if (KRB5CCNAME[keyIdx++] != c) {
+      keyIdx = 0;
+    }
+    c = fgetc(fp);
+  }
+
+done:
+  if (fp)
+    fclose(fp);
+  if (pathIdx == 0) {
+    snprintf(path, pathLen, "/tmp/krb5cc_%d", ctx->uid);
+  } else {
+    path[pathIdx] = '\0';
+  }
+}
+
 /*
  * Connect to the NN as the current user/group.
  * Returns a fs handle on success, or NULL on failure.
  */
 hdfsFS doConnectAsUser(const char *hostname, int port) {
+  struct hdfsBuilder *bld;
   uid_t uid = fuse_get_context()->uid;
   char *user = getUsername(uid);
+  char kpath[PATH_MAX];
   int ret;
   hdfsFS fs = NULL;
   if (NULL == user) {
@@ -93,9 +186,31 @@ hdfsFS doConnectAsUser(const char *hostname, int port) {
 
   fs = findFs(user);
   if (NULL == fs) {
-    fs = hdfsConnectAsUserNewInstance(hostname, port, user);
+    if (hdfsAuthConf == AUTH_CONF_UNKNOWN) {
+      hdfsAuthConf = discoverAuthConf();
+      if (hdfsAuthConf == AUTH_CONF_UNKNOWN) {
+        ERROR("Unable to determine the configured value for %s.",
+              HADOOP_SECURITY_AUTHENTICATION);
+        goto done;
+      }
+    }
+    bld = hdfsNewBuilder();
+    if (!bld) {
+      ERROR("Unable to create hdfs builder");
+      goto done;
+    }
+    hdfsBuilderSetForceNewInstance(bld);
+    hdfsBuilderSetNameNode(bld, hostname);
+    hdfsBuilderSetNameNodePort(bld, port);
+    hdfsBuilderSetUserName(bld, user);
+    if (hdfsAuthConf == AUTH_CONF_KERBEROS) {
+      findKerbTicketCachePath(kpath, sizeof(kpath));
+      hdfsBuilderSetKerbTicketCachePath(bld, kpath);
+    }
+    fs = hdfsBuilderConnect(bld);
     if (NULL == fs) {
-      ERROR("Unable to create fs for user %s", user);
+      int err = errno;
+      ERROR("Unable to create fs for user %s: error code %d", user, err);
       goto done;
     }
     if (-1 == insertFs(user, fs)) {
@@ -106,9 +221,7 @@ hdfsFS doConnectAsUser(const char *hostname, int port) {
 done:
   ret = pthread_mutex_unlock(&tableMutex);
   assert(0 == ret);
-  if (user) {
-    free(user);
-  }
+  free(user);
   return fs;
 }
 

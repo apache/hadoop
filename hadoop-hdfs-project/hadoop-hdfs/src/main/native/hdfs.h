@@ -53,7 +53,7 @@ extern  "C" {
     /**
      * Some utility decls used in libhdfs.
      */
-
+    struct hdfsBuilder;
     typedef int32_t   tSize; /// size of data for read/write io ops 
     typedef time_t    tTime; /// time type in seconds
     typedef int64_t   tOffset;/// offset within the file
@@ -97,39 +97,148 @@ extern  "C" {
     /** 
      * hdfsConnectAsUser - Connect to a hdfs file system as a specific user
      * Connect to the hdfs.
-     * @param host A string containing either a host name, or an ip address
-     * of the namenode of a hdfs cluster. 'host' should be passed as NULL if
-     * you want to connect to local filesystem. 'host' should be passed as
-     * 'default' (and port as 0) to used the 'configured' filesystem
-     * (core-site/core-default.xml).
+     * @param nn   The NameNode.  See hdfsBuilderSetNameNode for details.
      * @param port The port on which the server is listening.
      * @param user the user name (this is hadoop domain user). Or NULL is equivelant to hhdfsConnect(host, port)
      * @return Returns a handle to the filesystem or NULL on error.
+     * @deprecated Use hdfsBuilderConnect instead. 
      */
-     hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user);
+     hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user);
 
 
     /** 
      * hdfsConnect - Connect to a hdfs file system.
      * Connect to the hdfs.
-     * @param host A string containing either a host name, or an ip address
-     * of the namenode of a hdfs cluster. 'host' should be passed as NULL if
-     * you want to connect to local filesystem. 'host' should be passed as
-     * 'default' (and port as 0) to used the 'configured' filesystem
-     * (core-site/core-default.xml).
+     * @param nn   The NameNode.  See hdfsBuilderSetNameNode for details.
      * @param port The port on which the server is listening.
      * @return Returns a handle to the filesystem or NULL on error.
+     * @deprecated Use hdfsBuilderConnect instead. 
      */
-     hdfsFS hdfsConnect(const char* host, tPort port);
+     hdfsFS hdfsConnect(const char* nn, tPort port);
 
+    /** 
+     * hdfsConnect - Connect to an hdfs file system.
+     *
+     * Forces a new instance to be created
+     *
+     * @param nn     The NameNode.  See hdfsBuilderSetNameNode for details.
+     * @param port   The port on which the server is listening.
+     * @param user   The user name to use when connecting
+     * @return       Returns a handle to the filesystem or NULL on error.
+     * @deprecated   Use hdfsBuilderConnect instead. 
+     */
+     hdfsFS hdfsConnectAsUserNewInstance(const char* nn, tPort port, const char *user );
+
+    /** 
+     * hdfsConnect - Connect to an hdfs file system.
+     *
+     * Forces a new instance to be created
+     *
+     * @param nn     The NameNode.  See hdfsBuilderSetNameNode for details.
+     * @param port   The port on which the server is listening.
+     * @return       Returns a handle to the filesystem or NULL on error.
+     * @deprecated   Use hdfsBuilderConnect instead. 
+     */
+     hdfsFS hdfsConnectNewInstance(const char* nn, tPort port);
+
+    /** 
+     * Connect to HDFS using the parameters defined by the builder.
+     *
+     * The HDFS builder will be freed, whether or not the connection was
+     * successful.
+     *
+     * Every successful call to hdfsBuilderConnect should be matched with a call
+     * to hdfsDisconnect, when the hdfsFS is no longer needed.
+     *
+     * @param bld    The HDFS builder
+     * @return       Returns a handle to the filesystem, or NULL on error.
+     */
+     hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld);
 
     /**
-     * This are the same as hdfsConnectAsUser except that every invocation returns a new FileSystem handle.
-     * Applications should call a hdfsDisconnect for every call to hdfsConnectAsUserNewInstance.
+     * Create an HDFS builder.
+     *
+     * @return The HDFS builder, or NULL on error.
      */
-     hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port, const char *user );
-     hdfsFS hdfsConnectNewInstance(const char* host, tPort port);
-     hdfsFS hdfsConnectPath(const char* uri);
+    struct hdfsBuilder *hdfsNewBuilder(void);
+
+    /**
+     * Force the builder to always create a new instance of the FileSystem,
+     * rather than possibly finding one in the cache.
+     *
+     * @param bld The HDFS builder
+     */
+    void hdfsBuilderSetForceNewInstance(struct hdfsBuilder *bld);
+
+    /**
+     * Set the HDFS NameNode to connect to.
+     *
+     * @param bld  The HDFS builder
+     * @param nn   The NameNode to use.
+     *             If the string given is 'default', the default NameNode
+     *             configuration will be used (from the XML configuration files)
+     *             If NULL is given, a LocalFileSystem will be created.
+     *             Otherwise, the string will be interpreted as a hostname or IP
+     *             address.
+     */
+    void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn);
+
+    /**
+     * Set the port of the HDFS NameNode to connect to.
+     *
+     * @param bld The HDFS builder
+     * @param port The port.
+     */
+    void hdfsBuilderSetNameNodePort(struct hdfsBuilder *bld, tPort port);
+
+    /**
+     * Set the username to use when connecting to the HDFS cluster.
+     *
+     * @param bld The HDFS builder
+     * @param userName The user name.  The string will be shallow-copied.
+     */
+    void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName);
+
+    /**
+     * Set the path to the Kerberos ticket cache to use when connecting to
+     * the HDFS cluster.
+     *
+     * @param bld The HDFS builder
+     * @param kerbTicketCachePath The Kerberos ticket cache path.  The string
+     *                            will be shallow-copied.
+     */
+    void hdfsBuilderSetKerbTicketCachePath(struct hdfsBuilder *bld,
+                                   const char *kerbTicketCachePath);
+
+    /**
+     * Free an HDFS builder.
+     *
+     * It is normally not necessary to call this function since
+     * hdfsBuilderConnect frees the builder.
+     *
+     * @param bld The HDFS builder
+     */
+    void hdfsFreeBuilder(struct hdfsBuilder *bld);
+
+    /**
+     * Get a configuration string.
+     *
+     * @param key      The key to find
+     * @param val      (out param) The value.  This will be NULL if the
+     *                 key isn't found.  You must free this string with
+     *                 hdfsConfFree.
+     *
+     * @return         0 on success; nonzero error code otherwise.
+     *                 Failure to find the key is not an error.
+     */
+    int hdfsConfGet(const char *key, char **val);
+
+    /**
+     * Free a configuration string found with hdfsConfGet. 
+     *
+     * @param val      A configuration string obtained from hdfsConfGet
+     */
+    void hdfsConfFree(char *val);
 
     /** 
      * hdfsDisconnect - Disconnect from the hdfs file system.
