@@ -310,6 +310,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3728. ShuffleHandler can't access results when configured in a
     secure mode (ahmed via tucu)
 
+    MAPREDUCE-4252. MR2 job never completes with 1 pending task (Tom White via
+    bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
