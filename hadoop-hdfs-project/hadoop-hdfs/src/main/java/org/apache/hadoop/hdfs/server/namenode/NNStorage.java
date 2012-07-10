@@ -1103,7 +1103,7 @@ public class NNStorage extends Storage implements Closeable {
     }
     if (multipleLV) {            
       throw new IOException(
-          "Storage directories containe multiple layout versions: "
+          "Storage directories contain multiple layout versions: "
               + layoutVersions);
     }
     // If the storage directories are with the new layout version

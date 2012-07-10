@@ -115,6 +115,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3568. fuse_dfs: add support for security. (Colin McCabe via atm)
 
+    HDFS-3629. Fix the typo in the error message about inconsistent
+    storage layout version. (Brandon Li via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
