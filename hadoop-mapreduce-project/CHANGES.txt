@@ -543,6 +543,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4300. OOM in AM can turn it into a zombie. (Robert Evans via
     tgraves)
 
+    MAPREDUCE-4252. MR2 job never completes with 1 pending task (Tom White via
+    bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
