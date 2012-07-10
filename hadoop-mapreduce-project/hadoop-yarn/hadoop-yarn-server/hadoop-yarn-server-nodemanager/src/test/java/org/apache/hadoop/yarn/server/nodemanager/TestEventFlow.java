@@ -86,7 +86,8 @@ public class TestEventFlow {
     healthChecker.init(conf);
     LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
-    ContainerTokenSecretManager containerTokenSecretManager =  new ContainerTokenSecretManager();
+    ContainerTokenSecretManager containerTokenSecretManager =
+        new ContainerTokenSecretManager(conf);
     NodeStatusUpdater nodeStatusUpdater =
         new NodeStatusUpdaterImpl(context, dispatcher, healthChecker, metrics, containerTokenSecretManager) {
       @Override

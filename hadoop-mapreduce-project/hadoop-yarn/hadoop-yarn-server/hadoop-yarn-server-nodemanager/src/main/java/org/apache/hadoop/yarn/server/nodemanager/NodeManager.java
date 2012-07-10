@@ -116,7 +116,7 @@ public class NodeManager extends CompositeService implements
     if (UserGroupInformation.isSecurityEnabled()) {
       LOG.info("Security is enabled on NodeManager. "
           + "Creating ContainerTokenSecretManager");
-      this.containerTokenSecretManager = new ContainerTokenSecretManager();
+      this.containerTokenSecretManager = new ContainerTokenSecretManager(conf);
     }
 
     this.aclsManager = new ApplicationACLsManager(conf);
