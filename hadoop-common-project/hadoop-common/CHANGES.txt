@@ -621,6 +621,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8129. ViewFileSystemTestSetup setupForViewFileSystem is erring
     (Ahmed Radwan and Ravi Prakash via bobby)
 
+    HADOOP-8573. Configuration tries to read from an inputstream resource 
+    multiple times (Robert Evans via tgraves)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES

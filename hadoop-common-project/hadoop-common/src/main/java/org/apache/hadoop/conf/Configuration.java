@@ -44,6 +44,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -611,7 +612,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * The properties of this resource will override properties of previously 
    * added resources, unless they were marked <a href="#Final">final</a>. 
    * 
-   * @param in InputStream to deserialize the object from. 
+   * WARNING: The contents of the InputStream will be cached, by this method. 
+   * So use this sparingly because it does increase the memory consumption.
+   * 
+   * @param in InputStream to deserialize the object from. In will be read from
+   * when a get or set is called next.  After it is read the stream will be
+   * closed. 
    */
   public void addResource(InputStream in) {
     addResourceObject(new Resource(in));
@@ -1799,13 +1805,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     
-    for (Resource resource : resources) {
-      loadResource(properties, resource, quiet);
+    for (int i = 0; i < resources.size(); i++) {
+      Resource ret = loadResource(properties, resources.get(i), quiet);
+      if (ret != null) {
+        resources.set(i, ret);
+      }
     }
   }
   
-  private void loadResource(Properties properties, Resource wrapper, boolean quiet) {
+  private Resource loadResource(Properties properties, Resource wrapper, boolean quiet) {
+    String name = UNKNOWN_RESOURCE;
     try {
+      Object resource = wrapper.getResource();
+      name = wrapper.getName();
+      
       DocumentBuilderFactory docBuilderFactory 
         = DocumentBuilderFactory.newInstance();
       //ignore all comments inside the xml file
@@ -1824,9 +1837,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       DocumentBuilder builder = docBuilderFactory.newDocumentBuilder();
       Document doc = null;
       Element root = null;
-
-      Object resource = wrapper.getResource();
-      String name = wrapper.getName();
+      boolean returnCachedProperties = false;
       
       if (resource instanceof URL) {                  // an URL resource
         URL url = (URL)resource;
@@ -1863,21 +1874,28 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       } else if (resource instanceof InputStream) {
         try {
           doc = builder.parse((InputStream)resource);
+          returnCachedProperties = true;
         } finally {
           ((InputStream)resource).close();
         }
+      } else if (resource instanceof Properties) {
+        overlay(properties, (Properties)resource);
       } else if (resource instanceof Element) {
         root = (Element)resource;
       }
 
       if (doc == null && root == null) {
         if (quiet)
-          return;
+          return null;
         throw new RuntimeException(resource + " not found");
       }
 
       if (root == null) {
         root = doc.getDocumentElement();
+      }
+      Properties toAddTo = properties;
+      if(returnCachedProperties) {
+        toAddTo = new Properties();
       }
       if (!"configuration".equals(root.getTagName()))
         LOG.fatal("bad conf file: top-level element not <configuration>");
@@ -1888,7 +1906,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           continue;
         Element prop = (Element)propNode;
         if ("configuration".equals(prop.getTagName())) {
-          loadResource(properties, new Resource(prop, name), quiet);
+          loadResource(toAddTo, new Resource(prop, name), quiet);
           continue;
         }
         if (!"property".equals(prop.getTagName()))
@@ -1921,32 +1939,43 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
             keyInfo.accessed = false;
             for (String key:keyInfo.newKeys) {
               // update new keys with deprecated key's value 
-              loadProperty(properties, name, key, value, finalParameter, 
+              loadProperty(toAddTo, name, key, value, finalParameter, 
                   source.toArray(new String[source.size()]));
             }
           }
           else {
-            loadProperty(properties, name, attr, value, finalParameter, 
+            loadProperty(toAddTo, name, attr, value, finalParameter, 
                 source.toArray(new String[source.size()]));
           }
         }
       }
-        
+      
+      if (returnCachedProperties) {
+        overlay(properties, toAddTo);
+        return new Resource(toAddTo, name);
+      }
+      return null;
     } catch (IOException e) {
-      LOG.fatal("error parsing conf file: " + e);
+      LOG.fatal("error parsing conf " + name, e);
       throw new RuntimeException(e);
     } catch (DOMException e) {
-      LOG.fatal("error parsing conf file: " + e);
+      LOG.fatal("error parsing conf " + name, e);
       throw new RuntimeException(e);
     } catch (SAXException e) {
-      LOG.fatal("error parsing conf file: " + e);
+      LOG.fatal("error parsing conf " + name, e);
       throw new RuntimeException(e);
     } catch (ParserConfigurationException e) {
-      LOG.fatal("error parsing conf file: " + e);
+      LOG.fatal("error parsing conf " + name , e);
       throw new RuntimeException(e);
     }
   }
 
+  private void overlay(Properties to, Properties from) {
+    for (Entry<Object, Object> entry: from.entrySet()) {
+      to.put(entry.getKey(), entry.getValue());
+    }
+  }
+  
   private void loadProperty(Properties properties, String name, String attr,
       String value, boolean finalParameter, String[] source) {
     if (value != null) {
