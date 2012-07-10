@@ -172,6 +172,9 @@ Trunk (unreleased changes)
 
     HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
 
+    HADOOP-8584. test-patch.sh should not immediately exit when no
+    tests are added or modified. (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -319,9 +322,6 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8566. AvroReflectSerializer.accept(Class) throws a NPE if the class has no 
     package (primitive types and arrays). (tucu)
-
-    HADOOP-8584. test-patch.sh should not immediately exit when no
-    tests are added or modified. (Colin Patrick McCabe via eli)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
