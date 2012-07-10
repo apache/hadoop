@@ -110,6 +110,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
     corrupted block. (Henry Robinson via atm)
 
+    HDFS-3555. idle client socket triggers DN ERROR log
+    (should be INFO or DEBUG). (Andy Isaacson via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
