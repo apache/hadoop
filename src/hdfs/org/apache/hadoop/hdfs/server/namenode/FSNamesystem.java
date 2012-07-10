@@ -5464,7 +5464,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
     if (destinationExisted && dinfo.isDir()) {
       Path spath = new Path(src);
-      overwrite = spath.getParent().toString() + Path.SEPARATOR;
+      Path parent = spath.getParent();
+      if (isRoot(parent)) {
+        overwrite = parent.toString();
+      } else {
+        overwrite = parent.toString() + Path.SEPARATOR;
+      }
       replaceBy = dst + Path.SEPARATOR;
     } else {
       overwrite = src;
@@ -5473,7 +5478,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
     leaseManager.changeLease(src, dst, overwrite, replaceBy);
   }
-           
+
+  private boolean isRoot(Path path) {
+    return path.getParent() == null;
+  }
+
   /**
    * Serializes leases. 
    */
