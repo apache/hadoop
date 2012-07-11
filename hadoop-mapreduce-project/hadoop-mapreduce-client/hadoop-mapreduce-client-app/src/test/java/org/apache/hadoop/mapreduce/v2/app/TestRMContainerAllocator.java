@@ -342,7 +342,7 @@ public class TestRMContainerAllocator {
     }
     @Override
     protected ResourceScheduler createScheduler() {
-      return new MyFifoScheduler();
+      return new MyFifoScheduler(this.getRMContext());
     }
   }
 
@@ -998,6 +998,19 @@ public class TestRMContainerAllocator {
   }
   
   private static class MyFifoScheduler extends FifoScheduler {
+
+    public MyFifoScheduler(RMContext rmContext) {
+      super();
+      try {
+        Configuration conf = new Configuration();
+        reinitialize(conf, new ContainerTokenSecretManager(conf),
+            rmContext);
+      } catch (IOException ie) {
+        LOG.info("add application failed with ", ie);
+        assert (false);
+      }
+    }
+
     // override this to copy the objects otherwise FifoScheduler updates the
     // numContainers in same objects as kept by RMContainerAllocator
     @Override

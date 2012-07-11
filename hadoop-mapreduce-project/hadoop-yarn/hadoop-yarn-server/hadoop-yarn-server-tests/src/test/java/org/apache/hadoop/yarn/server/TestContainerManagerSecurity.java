@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -214,11 +215,12 @@ public class TestContainerManagerSecurity {
 
     ContainerTokenIdentifier dummyIdentifier = new ContainerTokenIdentifier();
     dummyIdentifier.readFields(di);
+
     // Malice user modifies the resource amount
     Resource modifiedResource = BuilderUtils.newResource(2048);
     ContainerTokenIdentifier modifiedIdentifier = new ContainerTokenIdentifier(
         dummyIdentifier.getContainerID(), dummyIdentifier.getNmHostAddress(),
-        modifiedResource);
+        modifiedResource, Long.MAX_VALUE);
     Token<ContainerTokenIdentifier> modifiedToken = new Token<ContainerTokenIdentifier>(
         modifiedIdentifier.getBytes(), containerToken.getPassword().array(),
         new Text(containerToken.getKind()), new Text(containerToken
@@ -288,6 +290,7 @@ public class TestContainerManagerSecurity {
     // Now talk to the NM for launching the container with modified containerID
     final ContainerId containerID = allocatedContainer.getId();
 
+    /////////// Test calls with illegal containerIDs and illegal Resources
     UserGroupInformation unauthorizedUser = UserGroupInformation
         .createRemoteUser(containerID.toString());
     ContainerToken containerToken = allocatedContainer.getContainerToken();
@@ -303,9 +306,10 @@ public class TestContainerManagerSecurity {
             containerToken.getKind()), new Text(containerToken.getService()));
 
     unauthorizedUser.addToken(token);
-    unauthorizedUser.doAs(new PrivilegedAction<Void>() {
+    ContainerManager client =
+        unauthorizedUser.doAs(new PrivilegedAction<ContainerManager>() {
       @Override
-      public Void run() {
+      public ContainerManager run() {
         ContainerManager client = (ContainerManager) yarnRPC.getProxy(
             ContainerManager.class, NetUtils
                 .createSocketAddr(allocatedContainer.getNodeId().toString()),
@@ -316,16 +320,76 @@ public class TestContainerManagerSecurity {
         callWithIllegalContainerID(client, tokenId);
         callWithIllegalResource(client, tokenId);
 
+        return client;
+      }
+    });
+    
+    /////////// End of testing for illegal containerIDs and illegal Resources
+
+    /////////// Test calls with expired tokens
+    RPC.stopProxy(client);
+    unauthorizedUser = UserGroupInformation
+        .createRemoteUser(containerID.toString());
+
+    final ContainerTokenIdentifier newTokenId =
+        new ContainerTokenIdentifier(tokenId.getContainerID(),
+          tokenId.getNmHostAddress(), tokenId.getResource(),
+          System.currentTimeMillis() - 1);
+    byte[] passowrd =
+        resourceManager.getContainerTokenSecretManager().createPassword(
+            newTokenId);
+    // Create a valid token by using the key from the RM.
+    token = new Token<ContainerTokenIdentifier>(
+        newTokenId.getBytes(), passowrd, new Text(
+            containerToken.getKind()), new Text(containerToken.getService()));
+    
+    
+    
+    unauthorizedUser.addToken(token);
+    unauthorizedUser.doAs(new PrivilegedAction<Void>() {
+      @Override
+      public Void run() {
+        ContainerManager client = (ContainerManager) yarnRPC.getProxy(
+            ContainerManager.class, NetUtils
+                .createSocketAddr(allocatedContainer.getNodeId().toString()),
+            conf);
+
+        LOG.info("Going to contact NM with expired token");
+        ContainerLaunchContext context = createContainerLaunchContextForTest(newTokenId);
+        StartContainerRequest request = Records.newRecord(StartContainerRequest.class);
+        request.setContainerLaunchContext(context);
+
+        //Calling startContainer with an expired token.
+        try {
+          client.startContainer(request);
+          fail("Connection initiation with expired "
+              + "token is expected to fail.");
+        } catch (Throwable t) {
+          LOG.info("Got exception : ", t);
+          Assert.assertTrue(t.getMessage().contains(
+                  "This token is expired. current time is"));
+        }
+
+        // Try stopping a container - should not get an expiry error.
+        StopContainerRequest stopRequest = Records.newRecord(StopContainerRequest.class);
+        stopRequest.setContainerId(newTokenId.getContainerID());
+        try {
+          client.stopContainer(stopRequest);
+        } catch (Throwable t) {
+          fail("Stop Container call should have succeeded");
+        }
+        
         return null;
       }
     });
+    /////////// End of testing calls with expired tokens
 
     KillApplicationRequest request = Records
         .newRecord(KillApplicationRequest.class);
     request.setApplicationId(appID);
     resourceManager.getClientRMService().forceKillApplication(request);
   }
-
+  
   private AMRMProtocol submitAndRegisterApplication(
       ResourceManager resourceManager, final YarnRPC yarnRPC,
       ApplicationId appID) throws IOException,
@@ -481,11 +545,9 @@ public class TestContainerManagerSecurity {
     StartContainerRequest request = recordFactory
         .newRecordInstance(StartContainerRequest.class);
     // Authenticated but unauthorized, due to wrong resource
-    ContainerLaunchContext context = BuilderUtils.newContainerLaunchContext(
-        tokenId.getContainerID(), "testUser", BuilderUtils.newResource(2048),
-        new HashMap<String, LocalResource>(), new HashMap<String, String>(),
-        new ArrayList<String>(), new HashMap<String, ByteBuffer>(), null,
-        new HashMap<ApplicationAccessType, String>());
+    ContainerLaunchContext context =
+        createContainerLaunchContextForTest(tokenId);
+    context.getResource().setMemory(2048); // Set a different resource size.
     request.setContainerLaunchContext(context);
     try {
       client.startContainer(request);
@@ -499,5 +561,18 @@ public class TestContainerManagerSecurity {
           "\nExpected resource " + tokenId.getResource().toString()
               + " but found " + context.getResource().toString()));
     }
+  }
+
+  private ContainerLaunchContext createContainerLaunchContextForTest(
+      ContainerTokenIdentifier tokenId) {
+    ContainerLaunchContext context =
+        BuilderUtils.newContainerLaunchContext(tokenId.getContainerID(),
+            "testUser",
+            BuilderUtils.newResource(tokenId.getResource().getMemory()),
+            new HashMap<String, LocalResource>(),
+            new HashMap<String, String>(), new ArrayList<String>(),
+            new HashMap<String, ByteBuffer>(), null,
+            new HashMap<ApplicationAccessType, String>());
+    return context;
   }
 }

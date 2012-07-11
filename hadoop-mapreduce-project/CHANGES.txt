@@ -368,6 +368,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4215. RM app page shows 500 error on appid parse error 
     (Jonathon Eagles via tgraves)
 
+    MAPREDUCE-3940. ContainerTokens should have an expiry interval. (Siddharth
+    Seth and Vinod Kumar Vavilapalli via vinodkv)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
