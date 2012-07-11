@@ -37,7 +37,7 @@ $ curl "http://<HTTFS_HOST>:14000/webhdfs/v1?op=homedir&user.name=babu"
 
 ** Kerberos HTTP SPNEGO Authentication
 
-  Kerberos HTTP SPENGO authentication requires a tool or library supporting
+  Kerberos HTTP SPNEGO authentication requires a tool or library supporting
   Kerberos HTTP SPNEGO protocol.
 
   IMPORTANT: If using <<<curl>>>, the <<<curl>>> version being used must support
