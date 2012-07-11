@@ -29,6 +29,8 @@ Release 1.2.0 - unreleased
 
     HADOOP-8586. Fixup a bunch of SPNEGO misspellings. (eli)
 
+    HDFS-1957. Documentation for HFTP. (Ari Rabkin via eli)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
