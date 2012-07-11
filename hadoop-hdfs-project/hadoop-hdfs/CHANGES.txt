@@ -118,6 +118,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3629. Fix the typo in the error message about inconsistent
     storage layout version. (Brandon Li via harsh)
 
+    HDFS-3613. GSet prints some INFO level values, which aren't
+    really very useful to all (Andrew Wang via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
