@@ -72,7 +72,7 @@ Hadoop HDFS over HTTP - Documentation Sets ${project.version}
   HttpFS uses a clean HTTP REST API making its use with HTTP tools more
   intuitive.
 
-  HttpFS supports Hadoop pseudo authentication, Kerberos SPENGOS authentication
+  HttpFS supports Hadoop pseudo authentication, Kerberos SPNEGOS authentication
   and Hadoop proxy users. Hadoop HDFS proxy did not.
 
 * User and Developer Documentation
