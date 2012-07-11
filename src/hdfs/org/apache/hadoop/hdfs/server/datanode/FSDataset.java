@@ -347,6 +347,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       this.reserved = conf.getLong("dfs.datanode.du.reserved", 0);
       this.dataDir = new FSDir(currentDir);
       this.currentDir = currentDir;
+      boolean durableSync = conf.getBoolean("dfs.durable.sync", true);
       File parent = currentDir.getParentFile();
 
       this.detachDir = new File(parent, "detach");
@@ -366,7 +367,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       // should not be deleted.
       blocksBeingWritten = new File(parent, "blocksBeingWritten");
       if (blocksBeingWritten.exists()) {
-        recoverBlocksBeingWritten(blocksBeingWritten);
+        if (durableSync) {  
+          recoverBlocksBeingWritten(blocksBeingWritten);
+        } else {
+          FileUtil.fullyDelete(blocksBeingWritten);
+        }
       }
       
       if (!blocksBeingWritten.mkdirs()) {
