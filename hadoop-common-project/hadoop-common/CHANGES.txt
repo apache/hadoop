@@ -323,6 +323,8 @@ Branch-2 ( Unreleased changes )
     HADOOP-8566. AvroReflectSerializer.accept(Class) throws a NPE if the class has no 
     package (primitive types and arrays). (tucu)
 
+    HADOOP-8586. Fixup a bunch of SPNEGO misspellings. (eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
