@@ -104,7 +104,7 @@
       The HTTP Kerberos principal used by HttpFS in the HTTP endpoint.
 
       The HTTP Kerberos principal MUST start with 'HTTP/' per Kerberos
-      HTTP SPNEGO specification.
+      HTTP SPENGO specification.
     </description>
   </property>
 
