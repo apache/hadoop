@@ -27,6 +27,8 @@ Release 1.2.0 - unreleased
     HDFS-3617. Port HDFS-96 to branch-1 (support blocks greater than 2GB).
     (Patrick Kling and harsh via eli)
 
+    HADOOP-8586. Fixup a bunch of SPNEGO misspellings. (eli)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and

@@ -30,7 +30,7 @@ import java.util.Map;
 
 /**
  * Initializes Alfredo AuthenticationFilter which provides support for
- * Kerberos HTTP SPENGO authentication.
+ * Kerberos HTTP SPNEGO authentication.
  * <p/>
  * It enables anonymous access, simple/speudo and Kerberos HTTP SPNEGO
  * authentication  for Hadoop JobTracker, NameNode, DataNodes and

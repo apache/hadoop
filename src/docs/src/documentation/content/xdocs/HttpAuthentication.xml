@@ -110,7 +110,7 @@
 
       <p><code>hadoop.http.authentication.kerberos.principal</code>: Indicates the Kerberos 
       principal to be used for HTTP endpoint when using 'kerberos' authentication.
-      The principal short name must be <code>HTTP</code> per Kerberos HTTP SPENGO specification.
+      The principal short name must be <code>HTTP</code> per Kerberos HTTP SPNEGO specification.
       The default value is <code>HTTP/localhost@$LOCALHOST</code>.
       </p>
 
