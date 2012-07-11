@@ -143,6 +143,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8586. Fixup a bunch of SPNEGO misspellings. (eli)
 
+    HADOOP-3886. Error in javadoc of Reporter, Mapper and Progressable
+    (Jingguo Yao via harsh)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
