@@ -300,6 +300,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3611. NameNode prints unnecessary WARNs about edit log normally skipping a few bytes. (Colin Patrick McCabe via harsh)
 
+    HDFS-3582. Hook daemon process exit for testing. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

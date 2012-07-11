@@ -53,6 +53,9 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
+
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.Util;
@@ -2962,8 +2965,8 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
           LOG.warn("ReplicationMonitor thread received InterruptedException.", ie);
           break;
         } catch (Throwable t) {
-          LOG.warn("ReplicationMonitor thread received Runtime exception. ", t);
-          Runtime.getRuntime().exit(-1);
+          LOG.fatal("ReplicationMonitor thread received Runtime exception. ", t);
+          terminate(1);
         }
       }
     }
