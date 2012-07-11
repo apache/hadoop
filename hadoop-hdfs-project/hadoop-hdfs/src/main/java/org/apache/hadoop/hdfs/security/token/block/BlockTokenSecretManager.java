@@ -116,7 +116,7 @@ public class BlockTokenSecretManager extends
   }
   
   @VisibleForTesting
-  public void setSerialNo(int serialNo) {
+  public synchronized void setSerialNo(int serialNo) {
     this.serialNo = (serialNo & LOW_MASK) | (nnIndex << 31);
   }
 
@@ -189,7 +189,7 @@ public class BlockTokenSecretManager extends
    * Update block keys if update time > update interval.
    * @return true if the keys are updated.
    */
-  public boolean updateKeys(final long updateTime) throws IOException {
+  public synchronized boolean updateKeys(final long updateTime) throws IOException {
     if (updateTime > keyUpdateInterval) {
       return updateKeys();
     }
@@ -371,7 +371,7 @@ public class BlockTokenSecretManager extends
   }
   
   @VisibleForTesting
-  public void setKeyUpdateIntervalForTesting(long millis) {
+  public synchronized void setKeyUpdateIntervalForTesting(long millis) {
     this.keyUpdateInterval = millis;
   }
 
@@ -381,7 +381,7 @@ public class BlockTokenSecretManager extends
   }
   
   @VisibleForTesting
-  public int getSerialNoForTesting() {
+  public synchronized int getSerialNoForTesting() {
     return serialNo;
   }
   

@@ -299,6 +299,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3548. NamenodeFsck.copyBlock fails to create a Block Reader.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3615. Two BlockTokenSecretManager findbugs warnings. (atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
