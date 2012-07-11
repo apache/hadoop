@@ -723,6 +723,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * @throws IOException
    */
   public void setBalancerBandwidth(long bandwidth) throws IOException {
+    checkSuperuserPrivilege();
     synchronized(datanodeMap) {
       for (DatanodeDescriptor nodeInfo : datanodeMap.values()) {
         nodeInfo.setBalancerBandwidth(bandwidth);

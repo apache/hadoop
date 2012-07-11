@@ -68,6 +68,9 @@ Release 1.2.0 - unreleased
 
     HDFS-2827. Cannot save namespace after renaming a directory above
     a file with an open lease. (Uma Maheswara Rao G via eli)
+
+    HDFS-3628. The dfsadmin -setBalancerBandwidth command on branch-1
+    does not check for superuser privileges. (harsh)
  
 Release 1.1.0 - unreleased
 
