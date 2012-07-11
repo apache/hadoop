@@ -164,9 +164,11 @@ public class EditLogFileInputStream extends EditLogInputStream {
           //
           long skipAmt = file.length() - tracker.getPos();
           if (skipAmt > 0) {
-            LOG.warn("skipping " + skipAmt + " bytes at the end " +
-              "of edit log  '" + getName() + "': reached txid " + txId +
-              " out of " + lastTxId);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("skipping " + skipAmt + " bytes at the end " +
+                  "of edit log  '" + getName() + "': reached txid " + txId +
+                  " out of " + lastTxId);
+            }
             tracker.clearLimit();
             IOUtils.skipFully(tracker, skipAmt);
           }
