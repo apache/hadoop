@@ -175,6 +175,9 @@ Trunk (unreleased changes)
     HADOOP-8584. test-patch.sh should not immediately exit when no
     tests are added or modified. (Colin Patrick McCabe via eli)
 
+    HADOOP-8521. Port StreamInputFormat to new Map Reduce API (madhukara
+    phatak via bobby)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

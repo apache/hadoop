@@ -16,47 +16,52 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.streaming;
+package org.apache.hadoop.streaming.mapreduce;
 
-import java.io.*;
-import java.util.regex.*;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.FileSplit;
-import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
+import org.apache.hadoop.streaming.StreamUtil;
 
-/** A way to interpret XML fragments as Mapper input records.
- *  Values are XML subtrees delimited by configurable tags.
- *  Keys could be the value of a certain attribute in the XML subtree, 
- *  but this is left to the stream processor application.
- *
- *  The name-value properties that StreamXmlRecordReader understands are:
- *    String begin (chars marking beginning of record)
- *    String end   (chars marking end of record)
- *    int maxrec   (maximum record size)
- *    int lookahead(maximum lookahead to sync CDATA)
- *    boolean slowmatch
+/**
+ * A way to interpret XML fragments as Mapper input records. Values are XML
+ * subtrees delimited by configurable tags. Keys could be the value of a certain
+ * attribute in the XML subtree, but this is left to the stream processor
+ * application.
+ * 
+ * The name-value properties that StreamXmlRecordReader understands are: String
+ * begin (chars marking beginning of record) String end (chars marking end of
+ * record) int maxrec (maximum record size) int lookahead(maximum lookahead to
+ * sync CDATA) boolean slowmatch
  */
 public class StreamXmlRecordReader extends StreamBaseRecordReader {
 
-  public StreamXmlRecordReader(FSDataInputStream in, FileSplit split, Reporter reporter,
-                               JobConf job, FileSystem fs) throws IOException {
-    super(in, split, reporter, job, fs);
+  private Text key;
+  private Text value;
+
+  public StreamXmlRecordReader(FSDataInputStream in, FileSplit split,
+      TaskAttemptContext context, Configuration conf, FileSystem fs)
+  throws IOException {
+    super(in, split, context, conf, fs);
 
     beginMark_ = checkJobGet(CONF_NS + "begin");
     endMark_ = checkJobGet(CONF_NS + "end");
 
-    maxRecSize_ = job_.getInt(CONF_NS + "maxrec", 50 * 1000);
-    lookAhead_ = job_.getInt(CONF_NS + "lookahead", 2 * maxRecSize_);
+    maxRecSize_ = conf_.getInt(CONF_NS + "maxrec", 50 * 1000);
+    lookAhead_ = conf_.getInt(CONF_NS + "lookahead", 2 * maxRecSize_);
     synched_ = false;
 
-    slowMatch_ = job_.getBoolean(CONF_NS + "slowmatch", false);
+    slowMatch_ = conf_.getBoolean(CONF_NS + "slowmatch", false);
     if (slowMatch_) {
       beginPat_ = makePatternCDataOrMark(beginMark_);
       endPat_ = makePatternCDataOrMark(endMark_);
@@ -65,9 +70,9 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   }
 
   public final void init() throws IOException {
-    LOG.info("StreamBaseRecordReader.init: " + " start_=" + start_ + " end_=" + end_ + " length_="
-             + length_ + " start_ > in_.getPos() =" + (start_ > in_.getPos()) + " " + start_ + " > "
-             + in_.getPos());
+    LOG.info("StreamBaseRecordReader.init: " + " start_=" + start_ + " end_="
+        + end_ + " length_=" + length_ + " start_ > in_.getPos() ="
+        + (start_ > in_.getPos()) + " " + start_ + " > " + in_.getPos());
     if (start_ > in_.getPos()) {
       in_.seek(start_);
     }
@@ -75,7 +80,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     bin_ = new BufferedInputStream(in_);
     seekNextRecordBoundary();
   }
-  
+
   int numNext = 0;
 
   public synchronized boolean next(Text key, Text value) throws IOException {
@@ -125,12 +130,14 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   }
 
   private boolean slowReadUntilMatch(Pattern markPattern, boolean includePat,
-                                     DataOutputBuffer outBufOrNull) throws IOException {
+      DataOutputBuffer outBufOrNull) throws IOException {
     byte[] buf = new byte[Math.max(lookAhead_, maxRecSize_)];
     int read = 0;
-    bin_.mark(Math.max(lookAhead_, maxRecSize_) + 2); //mark to invalidate if we read more
+    bin_.mark(Math.max(lookAhead_, maxRecSize_) + 2); // mark to invalidate if
+    // we read more
     read = bin_.read(buf);
-    if (read == -1) return false;
+    if (read == -1)
+      return false;
 
     String sbuf = new String(buf, 0, read, "UTF-8");
     Matcher match = markPattern.matcher(sbuf);
@@ -167,18 +174,20 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     if (state != CDATA_UNK) {
       synched_ = true;
     }
-    boolean matched = (firstMatchStart_ != NA) && (state == RECORD_ACCEPT || state == CDATA_UNK);
+    boolean matched = (firstMatchStart_ != NA)
+    && (state == RECORD_ACCEPT || state == CDATA_UNK);
     if (matched) {
       int endPos = includePat ? firstMatchEnd_ : firstMatchStart_;
       bin_.reset();
 
-      for (long skiplen = endPos; skiplen > 0; ) {
-        skiplen -= bin_.skip(skiplen); // Skip succeeds as we have read this buffer
+      for (long skiplen = endPos; skiplen > 0;) {
+        skiplen -= bin_.skip(skiplen); // Skip succeeds as we have read this
+        // buffer
       }
 
       pos_ += endPos;
       if (outBufOrNull != null) {
-        outBufOrNull.writeBytes(sbuf.substring(0,endPos));
+        outBufOrNull.writeBytes(sbuf.substring(0, endPos));
       }
     }
     return matched;
@@ -194,7 +203,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   private final static int CDATA_END = 21;
   private final static int RECORD_MAYBE = 22;
 
-  /* also updates firstMatchStart_;*/
+  /* also updates firstMatchStart_; */
   int nextState(int state, int input, int bufPos) {
     switch (state) {
     case CDATA_UNK:
@@ -204,7 +213,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
         return CDATA_IN;
       case CDATA_END:
         if (state == CDATA_OUT) {
-          //System.out.println("buggy XML " + bufPos);
+          // System.out.println("buggy XML " + bufPos);
         }
         return CDATA_OUT;
       case RECORD_MAYBE:
@@ -214,7 +223,8 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     case CDATA_IN:
       return (input == CDATA_END) ? CDATA_OUT : CDATA_IN;
     }
-    throw new IllegalStateException(state + " " + input + " " + bufPos + " " + splitName_);
+    throw new IllegalStateException(state + " " + input + " " + bufPos + " "
+        + splitName_);
   }
 
   Pattern makePatternCDataOrMark(String escapedMark) {
@@ -234,7 +244,8 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     pat.append(")");
   }
 
-  boolean fastReadUntilMatch(String textPat, boolean includePat, DataOutputBuffer outBufOrNull) throws IOException {
+  boolean fastReadUntilMatch(String textPat, boolean includePat,
+      DataOutputBuffer outBufOrNull) throws IOException {
     byte[] cpat = textPat.getBytes("UTF-8");
     int m = 0;
     boolean match = false;
@@ -244,7 +255,8 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     bin_.mark(LL); // large number to invalidate mark
     while (true) {
       int b = bin_.read();
-      if (b == -1) break;
+      if (b == -1)
+        break;
 
       byte c = (byte) b; // this assumes eight-bit matching. OK with UTF-8
       if (c == cpat[m]) {
@@ -273,7 +285,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   }
 
   String checkJobGet(String prop) throws IOException {
-    String val = job_.get(prop);
+    String val = conf_.get(prop);
     if (val == null) {
       throw new IOException("JobConf: missing required property: " + prop);
     }
@@ -287,15 +299,42 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   Pattern endPat_;
 
   boolean slowMatch_;
-  int lookAhead_; // bytes to read to try to synch CDATA/non-CDATA. Should be more than max record size
+  int lookAhead_; // bytes to read to try to synch CDATA/non-CDATA. Should be
+  // more than max record size
   int maxRecSize_;
 
-  BufferedInputStream bin_; // Wrap FSDataInputStream for efficient backward seeks 
-  long pos_; // Keep track on position with respect encapsulated FSDataInputStream  
+  BufferedInputStream bin_; // Wrap FSDataInputStream for efficient backward
+  // seeks
+  long pos_; // Keep track on position with respect encapsulated
+  // FSDataInputStream
 
   private final static int NA = -1;
   int firstMatchStart_ = 0; // candidate record boundary. Might just be CDATA.
   int firstMatchEnd_ = 0;
 
   boolean synched_;
+
+  @Override
+  public Text getCurrentKey() throws IOException, InterruptedException {
+    return key;
+  }
+
+  @Override
+  public Text getCurrentValue() throws IOException, InterruptedException {
+    return value;
+  }
+
+  @Override
+  public void initialize(InputSplit arg0, TaskAttemptContext arg1)
+  throws IOException, InterruptedException {
+
+  }
+
+  @Override
+  public boolean nextKeyValue() throws IOException, InterruptedException {
+    key = createKey();
+    value = createValue();
+    return next(key, value);
+  }
+
 }
