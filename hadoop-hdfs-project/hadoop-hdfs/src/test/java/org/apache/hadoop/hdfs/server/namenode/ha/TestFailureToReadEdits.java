@@ -21,36 +21,30 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
-import org.apache.hadoop.hdfs.server.namenode.EditLogInputException;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
 import org.apache.hadoop.hdfs.server.namenode.MetaRecoveryContext;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -60,15 +54,12 @@ import org.mockito.stubbing.Answer;
 import com.google.common.collect.ImmutableList;
 
 public class TestFailureToReadEdits {
-  
-  private static final Log LOG = LogFactory.getLog(TestFailureToReadEdits.class);
-  
+
   private static final String TEST_DIR1 = "/test1";
   private static final String TEST_DIR2 = "/test2";
   private static final String TEST_DIR3 = "/test3";
   
   private Configuration conf;
-  private Runtime mockRuntime = mock(Runtime.class);
   private MiniDFSCluster cluster;
   private NameNode nn0;
   private NameNode nn1;
@@ -90,13 +81,13 @@ public class TestFailureToReadEdits {
     cluster = new MiniDFSCluster.Builder(conf)
       .nnTopology(topology)
       .numDataNodes(0)
+      .checkExitOnShutdown(false)
       .build();
     
     cluster.waitActive();
     
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
-    nn1.getNamesystem().getEditLogTailer().setRuntime(mockRuntime);
     
     cluster.transitionToActive(0);
     fs = HATestUtil.configureFailoverFs(cluster, conf);
@@ -139,7 +130,7 @@ public class TestFailureToReadEdits {
       HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
       fail("Standby fully caught up, but should not have been able to");
     } catch (HATestUtil.CouldNotCatchUpException e) {
-      verify(mockRuntime, times(0)).exit(anyInt());
+      // Expected. The NN did not exit.
     }
     
     // Null because it was deleted.
@@ -200,7 +191,7 @@ public class TestFailureToReadEdits {
       HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
       fail("Standby fully caught up, but should not have been able to");
     } catch (HATestUtil.CouldNotCatchUpException e) {
-      verify(mockRuntime, times(0)).exit(anyInt());
+      // Expected. The NN did not exit.
     }
     
     // 5 because we should get OP_START_LOG_SEGMENT and one successful OP_MKDIR
@@ -252,27 +243,19 @@ public class TestFailureToReadEdits {
       HATestUtil.waitForStandbyToCatchUp(nn0, nn1);
       fail("Standby fully caught up, but should not have been able to");
     } catch (HATestUtil.CouldNotCatchUpException e) {
-      verify(mockRuntime, times(0)).exit(anyInt());
+      // Expected. The NN did not exit.
     }
     
     // Shutdown the active NN.
     cluster.shutdownNameNode(0);
     
-    Runtime mockRuntime = mock(Runtime.class);
-    cluster.getNameNode(1).setRuntimeForTesting(mockRuntime);
-    verify(mockRuntime, times(0)).exit(anyInt());
     try {
       // Transition the standby to active.
       cluster.transitionToActive(1);
       fail("Standby transitioned to active, but should not have been able to");
-    } catch (ServiceFailedException sfe) {
-      Throwable sfeCause = sfe.getCause();
-      LOG.info("got expected exception: " + sfeCause.toString(), sfeCause);
-      assertTrue("Standby failed to catch up for some reason other than "
-          + "failure to read logs", sfeCause.getCause().toString().contains(
-              EditLogInputException.class.getName()));
+    } catch (ExitException ee) {
+      GenericTestUtils.assertExceptionContains("Error replaying edit log", ee);
     }
-    verify(mockRuntime, times(1)).exit(anyInt());
   }
   
   private LimitedEditLogAnswer causeFailureOnEditLogRead() throws IOException {

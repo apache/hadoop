@@ -82,6 +82,9 @@ import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.ExitUtil.ExitException;
+
+import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -227,7 +230,6 @@ public class NameNode {
   private final boolean haEnabled;
   private final HAContext haContext;
   protected boolean allowStaleStandbyReads;
-  private Runtime runtime = Runtime.getRuntime();
 
   
   /** httpServer */
@@ -1095,29 +1097,29 @@ public class NameNode {
       case FORMAT: {
         boolean aborted = format(conf, startOpt.getForceFormat(),
             startOpt.getInteractiveFormat());
-        System.exit(aborted ? 1 : 0);
+        terminate(aborted ? 1 : 0);
         return null; // avoid javac warning
       }
       case GENCLUSTERID: {
         System.err.println("Generating new cluster id:");
         System.out.println(NNStorage.newClusterID());
-        System.exit(0);
+        terminate(0);
         return null;
       }
       case FINALIZE: {
         boolean aborted = finalize(conf, true);
-        System.exit(aborted ? 1 : 0);
+        terminate(aborted ? 1 : 0);
         return null; // avoid javac warning
       }
       case BOOTSTRAPSTANDBY: {
         String toolArgs[] = Arrays.copyOfRange(argv, 1, argv.length);
         int rc = BootstrapStandby.run(toolArgs, conf);
-        System.exit(rc);
+        terminate(rc);
         return null; // avoid warning
       }
       case INITIALIZESHAREDEDITS: {
         boolean aborted = initializeSharedEdits(conf, false, true);
-        System.exit(aborted ? 1 : 0);
+        terminate(aborted ? 1 : 0);
         return null; // avoid warning
       }
       case BACKUP:
@@ -1130,9 +1132,10 @@ public class NameNode {
         NameNode.doRecovery(startOpt, conf);
         return null;
       }
-      default:
+      default: {
         DefaultMetricsSystem.initialize("NameNode");
         return new NameNode(conf);
+      }
     }
   }
 
@@ -1195,8 +1198,8 @@ public class NameNode {
       if (namenode != null)
         namenode.join();
     } catch (Throwable e) {
-      LOG.error("Exception in namenode join", e);
-      System.exit(-1);
+      LOG.fatal("Exception in namenode join", e);
+      terminate(1);
     }
   }
 
@@ -1265,11 +1268,6 @@ public class NameNode {
     }
     return state.getServiceState();
   }
-  
-  @VisibleForTesting
-  public synchronized void setRuntimeForTesting(Runtime runtime) {
-    this.runtime = runtime;
-  }
 
   /**
    * Shutdown the NN immediately in an ungraceful way. Used when it would be
@@ -1278,10 +1276,10 @@ public class NameNode {
    * 
    * @param t exception which warrants the shutdown. Printed to the NN log
    *          before exit.
-   * @throws ServiceFailedException thrown only for testing.
+   * @throws ExitException thrown only for testing.
    */
   private synchronized void doImmediateShutdown(Throwable t)
-      throws ServiceFailedException {
+      throws ExitException {
     String message = "Error encountered requiring NN shutdown. " +
         "Shutting down immediately.";
     try {
@@ -1289,9 +1287,7 @@ public class NameNode {
     } catch (Throwable ignored) {
       // This is unlikely to happen, but there's nothing we can do if it does.
     }
-    runtime.exit(1);
-    // This code is only reached during testing, when runtime is stubbed out.
-    throw new ServiceFailedException(message, t);
+    terminate(1, t.getMessage());
   }
   
   /**

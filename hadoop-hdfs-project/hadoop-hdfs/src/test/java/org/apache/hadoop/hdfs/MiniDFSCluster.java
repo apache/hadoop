@@ -95,6 +95,7 @@ import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -140,6 +141,7 @@ public class MiniDFSCluster {
     private boolean waitSafeMode = true;
     private boolean setupHostsFile = false;
     private MiniDFSNNTopology nnTopology = null;
+    private boolean checkExitOnShutdown = true;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -240,7 +242,15 @@ public class MiniDFSCluster {
       this.waitSafeMode = val;
       return this;
     }
-    
+
+    /**
+     * Default: true
+     */
+    public Builder checkExitOnShutdown(boolean val) {
+      this.checkExitOnShutdown = val;
+      return this;
+    }
+
     /**
      * Default: null
      */
@@ -303,7 +313,8 @@ public class MiniDFSCluster {
                        builder.clusterId,
                        builder.waitSafeMode,
                        builder.setupHostsFile,
-                       builder.nnTopology);
+                       builder.nnTopology,
+                       builder.checkExitOnShutdown);
   }
   
   public class DataNodeProperties {
@@ -327,6 +338,7 @@ public class MiniDFSCluster {
   private File data_dir;
   private boolean waitSafeMode = true;
   private boolean federation;
+  private boolean checkExitOnShutdown = true;
   
   /**
    * A unique instance identifier for the cluster. This
@@ -536,7 +548,7 @@ public class MiniDFSCluster {
     initMiniDFSCluster(conf, numDataNodes, format,
         manageNameDfsDirs, true, manageDataDfsDirs, operation, racks, hosts,
         simulatedCapacities, null, true, false,
-        MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0));
+        MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0), true);
   }
 
   private void initMiniDFSCluster(
@@ -546,8 +558,10 @@ public class MiniDFSCluster {
       StartupOption operation, String[] racks,
       String[] hosts, long[] simulatedCapacities, String clusterId,
       boolean waitSafeMode, boolean setupHostsFile,
-      MiniDFSNNTopology nnTopology)
+      MiniDFSNNTopology nnTopology, boolean checkExitOnShutdown)
   throws IOException {
+    ExitUtil.disableSystemExit();
+
     synchronized (MiniDFSCluster.class) {
       instanceId = instanceCount++;
     }
@@ -556,6 +570,7 @@ public class MiniDFSCluster {
     base_dir = new File(determineDfsBaseDir());
     data_dir = new File(base_dir, "data");
     this.waitSafeMode = waitSafeMode;
+    this.checkExitOnShutdown = checkExitOnShutdown;
     
     int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
     conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
@@ -1275,6 +1290,11 @@ public class MiniDFSCluster {
    */
   public void shutdown() {
     LOG.info("Shutting down the Mini HDFS Cluster");
+    if (checkExitOnShutdown)  {
+     if (ExitUtil.terminateCalled()) {
+       throw new AssertionError("Test resulted in an unexpected exit");
+     }
+    }
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : nameNodes) {
       if (nnInfo == null) continue;

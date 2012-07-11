@@ -32,6 +32,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
@@ -163,15 +165,9 @@ public class JournalSet implements JournalManager {
   
   private List<JournalAndStream> journals = Lists.newArrayList();
   final int minimumRedundantJournals;
-  private volatile Runtime runtime = Runtime.getRuntime();
   
   JournalSet(int minimumRedundantResources) {
     this.minimumRedundantJournals = minimumRedundantResources;
-  }
-  
-  @VisibleForTesting
-  public void setRuntimeForTesting(Runtime runtime) {
-    this.runtime = runtime;
   }
   
   @Override
@@ -319,7 +315,7 @@ public class JournalSet implements JournalManager {
         closure.apply(jas);
       } catch (Throwable t) {
         if (jas.isRequired()) {
-          String msg = "Error: " + status + " failed for required journal ("
+          final String msg = "Error: " + status + " failed for required journal ("
             + jas + ")";
           LOG.fatal(msg, t);
           // If we fail on *any* of the required journals, then we must not
@@ -331,8 +327,7 @@ public class JournalSet implements JournalManager {
           // roll of edits etc. All of them go through this common function 
           // where the isRequired() check is made. Applying exit policy here 
           // to catch all code paths.
-          runtime.exit(1);
-          throw new IOException(msg);
+          terminate(1, msg);
         } else {
           LOG.error("Error: " + status + " failed for (journal " + jas + ")", t);
           badJAS.add(jas);          

@@ -55,6 +55,9 @@ import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
+
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -323,9 +326,9 @@ public class SecondaryNameNode implements Runnable {
         LOG.error("Exception in doCheckpoint", e);
         e.printStackTrace();
       } catch (Throwable e) {
-        LOG.error("Throwable Exception in doCheckpoint", e);
+        LOG.fatal("Throwable Exception in doCheckpoint", e);
         e.printStackTrace();
-        Runtime.getRuntime().exit(-1);
+        terminate(1);
       }
     }
   }
@@ -517,7 +520,7 @@ public class SecondaryNameNode implements Runnable {
       //
       // This is a error returned by hadoop server. Print
       // out the first line of the error mesage, ignore the stack trace.
-      exitCode = -1;
+      exitCode = 1;
       try {
         String[] content;
         content = e.getLocalizedMessage().split("\n");
@@ -529,7 +532,7 @@ public class SecondaryNameNode implements Runnable {
       //
       // IO exception encountered locally.
       //
-      exitCode = -1;
+      exitCode = 1;
       LOG.error(cmd + ": " + e.getLocalizedMessage());
     } finally {
       // Does the RPC connection need to be closed?
@@ -557,7 +560,8 @@ public class SecondaryNameNode implements Runnable {
   public static void main(String[] argv) throws Exception {
     CommandLineOpts opts = SecondaryNameNode.parseArgs(argv);
     if (opts == null) {
-      System.exit(-1);
+      LOG.fatal("Failed to parse options");
+      terminate(1);
     }
     
     StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
@@ -567,12 +571,12 @@ public class SecondaryNameNode implements Runnable {
       secondary = new SecondaryNameNode(tconf, opts);
     } catch (IOException ioe) {
       LOG.fatal("Failed to start secondary namenode", ioe);
-      System.exit(-1);
+      terminate(1);
     }
 
-    if (opts.getCommand() != null) {
+    if (opts != null && opts.getCommand() != null) {
       int ret = secondary.processStartupCommand(opts);
-      System.exit(ret);
+      terminate(ret);
     }
 
     // Create a never ending deamon

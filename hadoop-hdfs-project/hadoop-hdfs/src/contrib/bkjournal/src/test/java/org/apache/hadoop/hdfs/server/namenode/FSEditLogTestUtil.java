@@ -36,9 +36,4 @@ public class FSEditLogTestUtil {
     FSEditLogLoader.EditLogValidation validation = FSEditLogLoader.validateEditLog(in);
     return (validation.getEndTxId() - in.getFirstTxId()) + 1;
   }
-
-  public static void setRuntimeForEditLog(NameNode nn, Runtime rt) {
-    nn.setRuntimeForTesting(rt);
-    nn.getFSImage().getEditLog().setRuntimeForTesting(rt);
-  }
 }
