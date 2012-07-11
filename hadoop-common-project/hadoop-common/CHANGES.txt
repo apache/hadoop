@@ -105,6 +105,10 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8573. Configuration tries to read from an inputstream resource 
     multiple times (Robert Evans via tgraves)
 
+    HADOOP-8423. MapFile.Reader.get() crashes jvm or throws
+    EOFException on Snappy or LZO block-compressed data
+    (todd via harsh)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
