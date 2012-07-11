@@ -181,6 +181,8 @@ Release 1.1.0 - unreleased
 
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
 
+    HADOOP-8365. Provide ability to disable working sync. (eli)
+
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can

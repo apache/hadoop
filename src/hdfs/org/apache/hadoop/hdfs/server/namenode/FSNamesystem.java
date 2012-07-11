@@ -316,6 +316,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private long defaultBlockSize = 0;
   // allow file appending (for test coverage)
   private boolean allowBrokenAppend = false;
+  // enable durable sync
+  private boolean durableSync = true;
 
   /**
    * Last block index used for replication work.
@@ -537,6 +539,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       LOG.warn("The dfs.support.append option is in your configuration, " +
                "however append is not supported. This configuration option " +
                "is no longer required to enable sync.");
+    }
+    this.durableSync = conf.getBoolean("dfs.durable.sync", true);
+    if (!durableSync) {
+      LOG.warn("Durable sync disabled. Beware data loss when running " +
+               "programs like HBase that require durable sync!");
     }
     this.isAccessTokenEnabled = conf.getBoolean(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, false);
@@ -2312,11 +2319,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
 
     // If this commit does not want to close the file, persist
-    // blocks and return
+    // blocks (if durable sync is enabled) and return
     src = leaseManager.findPath(pendingFile);
     if (!closeFile) {
-      dir.persistBlocks(src, pendingFile);
-      getEditLog().logSync();
+      if (durableSync) {
+        dir.persistBlocks(src, pendingFile);
+        getEditLog().logSync();
+      }
       LOG.info("commitBlockSynchronization(" + lastblock + ") successful");
       return;
     }

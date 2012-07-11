@@ -228,6 +228,7 @@ public class DataNode extends Configured
   int socketWriteTimeout = 0;  
   boolean transferToAllowed = true;
   int writePacketSize = 0;
+  private boolean durableSync;
   boolean isBlockTokenEnabled;
   BlockTokenSecretManager blockTokenSecretManager;
   boolean isBlockTokenInitialized = false;
@@ -294,6 +295,7 @@ public class DataNode extends Configured
         DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY);
 
     datanodeObject = this;
+    durableSync = conf.getBoolean("dfs.durable.sync", true);
     this.userWithLocalPathAccess = conf
         .get(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
     try {
@@ -755,11 +757,12 @@ public class DataNode extends Configured
       dnRegistration.exportedKeys = ExportedBlockKeys.DUMMY_KEYS;
     }
 
-
-    Block[] bbwReport = data.getBlocksBeingWrittenReport();
-    long[] blocksBeingWritten =
-      BlockListAsLongs.convertToArrayLongs(bbwReport);
-    namenode.blocksBeingWrittenReport(dnRegistration, blocksBeingWritten);
+    if (durableSync) {
+      Block[] bbwReport = data.getBlocksBeingWrittenReport();
+      long[] blocksBeingWritten =
+        BlockListAsLongs.convertToArrayLongs(bbwReport);
+      namenode.blocksBeingWrittenReport(dnRegistration, blocksBeingWritten);
+    }
 
     // random short delay - helps scatter the BR from all DNs
     // - but we can start generating the block report immediately
