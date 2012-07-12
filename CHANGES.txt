@@ -35,6 +35,9 @@ Release 1.2.0 - unreleased
     ReadaheadPool infrastructure for use in HDFS and MR.
     (Brandon Li and todd via suresh)
 
+    HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
+    (todd via suresh)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
