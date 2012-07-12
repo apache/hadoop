@@ -95,6 +95,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -411,7 +412,7 @@ public abstract class Server {
       this.callId = id;
       this.rpcRequest = param;
       this.connection = connection;
-      this.timestamp = System.currentTimeMillis();
+      this.timestamp = Time.now();
       this.rpcResponse = null;
       this.rpcKind = kind;
     }
@@ -561,7 +562,7 @@ public abstract class Server {
      */
     private void cleanupConnections(boolean force) {
       if (force || numConnections > thresholdIdleConnections) {
-        long currentTime = System.currentTimeMillis();
+        long currentTime = Time.now();
         if (!force && (currentTime - lastCleanupRunTime) < cleanupInterval) {
           return;
         }
@@ -597,7 +598,7 @@ public abstract class Server {
           }
           else i++;
         }
-        lastCleanupRunTime = System.currentTimeMillis();
+        lastCleanupRunTime = Time.now();
       }
     }
 
@@ -682,7 +683,7 @@ public abstract class Server {
         try {
           reader.startAdd();
           SelectionKey readKey = reader.registerChannel(channel);
-          c = new Connection(readKey, channel, System.currentTimeMillis());
+          c = new Connection(readKey, channel, Time.now());
           readKey.attach(c);
           synchronized (connectionList) {
             connectionList.add(numConnections, c);
@@ -704,7 +705,7 @@ public abstract class Server {
       if (c == null) {
         return;  
       }
-      c.setLastContact(System.currentTimeMillis());
+      c.setLastContact(Time.now());
       
       try {
         count = c.readAndProcess();
@@ -726,7 +727,7 @@ public abstract class Server {
         c = null;
       }
       else {
-        c.setLastContact(System.currentTimeMillis());
+        c.setLastContact(Time.now());
       }
     }   
 
@@ -805,7 +806,7 @@ public abstract class Server {
               LOG.info(getName() + ": doAsyncWrite threw exception " + e);
             }
           }
-          long now = System.currentTimeMillis();
+          long now = Time.now();
           if (now < lastPurgeTime + PURGE_INTERVAL) {
             continue;
           }
@@ -951,7 +952,7 @@ public abstract class Server {
             
             if (inHandler) {
               // set the serve time when the response has to be sent later
-              call.timestamp = System.currentTimeMillis();
+              call.timestamp = Time.now();
               
               incPending();
               try {

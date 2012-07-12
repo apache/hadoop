@@ -38,6 +38,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.log4j.Level;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -409,9 +410,9 @@ public class TestRaidPurge extends TestCase {
       LOG.info("deleted file " + file1);
 
       // wait till parity file and directory are automatically deleted
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       while (fileSys.exists(destPath) &&
-            System.currentTimeMillis() - start < 120000) {
+            Time.now() - start < 120000) {
         LOG.info("testPurgeDirectory waiting for parity files to be removed.");
         Thread.sleep(1000);                  // keep waiting
       }
@@ -498,7 +499,7 @@ public class TestRaidPurge extends TestCase {
       assertFalse(fileSys.exists(xorHar));
 
       // Create the har.
-      long cutoff = System.currentTimeMillis();
+      long cutoff = Time.now();
       cnode.recurseHar(infoXor, fileSys, raidStat,
         RaidNode.DEFAULT_RAID_LOCATION, fileSys, cutoff,
         RaidNode.tmpHarPathForCode(conf, infoXor.getErasureCode()));

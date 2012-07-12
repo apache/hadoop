@@ -50,6 +50,7 @@ import org.apache.hadoop.tools.HadoopArchives;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.fs.HarFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -443,7 +444,7 @@ public abstract class RaidNode implements RaidProtocol {
       int selectLimit = configMgr.getMaxFilesPerJob();
       int targetRepl = Integer.parseInt(info.getProperty("targetReplication"));
 
-      long selectStartTime = System.currentTimeMillis();
+      long selectStartTime = Time.now();
 
       ScanState scanState = scanStateMap.get(policyName);
       // If we have a pending traversal, resume it.
@@ -1528,7 +1529,7 @@ public abstract class RaidNode implements RaidProtocol {
    * Returns current time.
    */
   static long now() {
-    return System.currentTimeMillis();
+    return Time.now();
   }
 
   /**                       

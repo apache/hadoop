@@ -46,6 +46,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager.DelegationTokenInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -188,7 +189,7 @@ public class TestDelegationToken {
         }
       }, AccessControlException.class);
       long time = dtSecretManager.renewToken(token, "JobTracker");
-      assertTrue("renew time is in future", time > System.currentTimeMillis());
+      assertTrue("renew time is in future", time > Time.now());
       TestDelegationTokenIdentifier identifier = 
         new TestDelegationTokenIdentifier();
       byte[] tokenId = token.getIdentifier();

@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 
 /**
  * Manage the heartbeats received from datanodes.
@@ -247,7 +248,7 @@ class HeartbeatManager implements DatanodeStatistics {
     public void run() {
       while(namesystem.isRunning()) {
         try {
-          final long now = Util.now();
+          final long now = Time.now();
           if (lastHeartbeatCheck + heartbeatRecheckInterval < now) {
             heartbeatCheck();
             lastHeartbeatCheck = now;

@@ -60,6 +60,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
@@ -253,7 +254,7 @@ public class NNThroughputBenchmark {
         setNameNodeLoggingLevel(logLevel);
         for(tIdx=0; tIdx < numThreads; tIdx++)
           daemons.add(new StatsDaemon(tIdx, opsPerThread[tIdx], this));
-        start = System.currentTimeMillis();
+        start = Time.now();
         LOG.info("Starting " + numOpsRequired + " " + getOpName() + "(s).");
         for(StatsDaemon d : daemons)
           d.start();
@@ -261,7 +262,7 @@ public class NNThroughputBenchmark {
         while(isInPorgress()) {
           // try {Thread.sleep(500);} catch (InterruptedException e) {}
         }
-        elapsedTime = System.currentTimeMillis() - start;
+        elapsedTime = Time.now() - start;
         for(StatsDaemon d : daemons) {
           incrementStats(d.localNumOpsExecuted, d.localCumulativeTime);
           // System.out.println(d.toString() + ": ops Exec = " + d.localNumOpsExecuted);
@@ -472,9 +473,9 @@ public class NNThroughputBenchmark {
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
       nameNodeProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE);
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       nameNodeProto.delete(BASE_DIR_NAME, true);
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       return end-start;
     }
 
@@ -565,12 +566,12 @@ public class NNThroughputBenchmark {
      */
     long executeOp(int daemonId, int inputIdx, String clientName) 
     throws IOException {
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       // dummyActionNoSynch(fileIdx);
       nameNodeProto.create(fileNames[daemonId][inputIdx], FsPermission.getDefault(),
                       clientName, new EnumSetWritable<CreateFlag>(EnumSet
               .of(CreateFlag.CREATE, CreateFlag.OVERWRITE)), true, replication, BLOCK_SIZE);
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       for(boolean written = !closeUponCreate; !written; 
         written = nameNodeProto.complete(fileNames[daemonId][inputIdx],
                                     clientName, null));
@@ -653,9 +654,9 @@ public class NNThroughputBenchmark {
      */
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       nameNodeProto.getBlockLocations(fileNames[daemonId][inputIdx], 0L, BLOCK_SIZE);
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       return end-start;
     }
   }
@@ -681,9 +682,9 @@ public class NNThroughputBenchmark {
 
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       nameNodeProto.delete(fileNames[daemonId][inputIdx], false);
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       return end-start;
     }
   }
@@ -709,9 +710,9 @@ public class NNThroughputBenchmark {
 
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       nameNodeProto.getFileInfo(fileNames[daemonId][inputIdx]);
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       return end-start;
     }
   }
@@ -750,10 +751,10 @@ public class NNThroughputBenchmark {
 
     long executeOp(int daemonId, int inputIdx, String ignore) 
     throws IOException {
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       nameNodeProto.rename(fileNames[daemonId][inputIdx],
                       destNames[daemonId][inputIdx]);
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       return end-start;
     }
   }
@@ -1050,12 +1051,12 @@ public class NNThroughputBenchmark {
     long executeOp(int daemonId, int inputIdx, String ignore) throws IOException {
       assert daemonId < numThreads : "Wrong daemonId.";
       TinyDatanode dn = datanodes[daemonId];
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       StorageBlockReport[] report = { new StorageBlockReport(
           dn.storage, dn.getBlockReportList()) };
       nameNodeProto.blockReport(dn.dnRegistration, nameNode.getNamesystem()
           .getBlockPoolId(), report);
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       return end-start;
     }
 
@@ -1198,11 +1199,11 @@ public class NNThroughputBenchmark {
 
     long executeOp(int daemonId, int inputIdx, String ignore) throws IOException {
       assert daemonId < numThreads : "Wrong daemonId.";
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       // compute data-node work
       int work = BlockManagerTestUtil.getComputedDatanodeWork(
           nameNode.getNamesystem().getBlockManager());
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       numPendingBlocks += work;
       if(work == 0)
         daemons.get(daemonId).terminate();

@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Time;
 
 
 /**
@@ -85,11 +86,11 @@ public class TestDFSMkdirs extends TestCase {
     DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
     try {
       // Create a dir in root dir, should succeed
-      assertTrue(dfs.mkdir(new Path("/mkdir-" + System.currentTimeMillis()),
+      assertTrue(dfs.mkdir(new Path("/mkdir-" + Time.now()),
           FsPermission.getDefault()));
       // Create a dir when parent dir exists as a file, should fail
       IOException expectedException = null;
-      String filePath = "/mkdir-file-" + System.currentTimeMillis();
+      String filePath = "/mkdir-file-" + Time.now();
       writeFile(dfs, new Path(filePath));
       try {
         dfs.mkdir(new Path(filePath + "/mkdir"), FsPermission.getDefault());
@@ -103,7 +104,7 @@ public class TestDFSMkdirs extends TestCase {
       // Create a dir in a non-exist directory, should fail
       expectedException = null;
       try {
-        dfs.mkdir(new Path("/non-exist/mkdir-" + System.currentTimeMillis()),
+        dfs.mkdir(new Path("/non-exist/mkdir-" + Time.now()),
             FsPermission.getDefault());
       } catch (IOException e) {
         expectedException = e;

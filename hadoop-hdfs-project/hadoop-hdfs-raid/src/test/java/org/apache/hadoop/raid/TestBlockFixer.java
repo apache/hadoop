@@ -35,6 +35,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -189,9 +190,9 @@ public class TestBlockFixer {
           srcStat.getLen()).size());
 
       cnode = RaidNode.createRaidNode(null, localConf);
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       while (cnode.blockFixer.filesFixed() < 1 &&
-             System.currentTimeMillis() - start < 120000) {
+             Time.now() - start < 120000) {
         LOG.info("Test testBlockFix waiting for files to be fixed.");
         Thread.sleep(1000);
       }
@@ -266,9 +267,9 @@ public class TestBlockFixer {
                    corruptFiles[0], file1.toUri().getPath());
       
       cnode = RaidNode.createRaidNode(null, localConf);
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       while (cnode.blockFixer.filesFixed() < 1 &&
-             System.currentTimeMillis() - start < 120000) {
+             Time.now() - start < 120000) {
         LOG.info("Test " + testName + " waiting for files to be fixed.");
         Thread.sleep(1000);
       }
@@ -395,9 +396,9 @@ public class TestBlockFixer {
                    corruptFiles[0], parityFile.toUri().getPath());
 
       cnode = RaidNode.createRaidNode(null, localConf);
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       while (cnode.blockFixer.filesFixed() < 1 &&
-             System.currentTimeMillis() - start < 120000) {
+             Time.now() - start < 120000) {
         LOG.info("Test " + testName + " waiting for files to be fixed.");
         Thread.sleep(1000);
       }
@@ -456,8 +457,8 @@ public class TestBlockFixer {
       Path harDirectory =
         new Path("/destraid/user/dhruba/raidtest/raidtest" +
                  RaidNode.HAR_SUFFIX);
-      long start = System.currentTimeMillis();
-      while (System.currentTimeMillis() - start < 1000 * 120) {
+      long start = Time.now();
+      while (Time.now() - start < 1000 * 120) {
         if (fileSys.exists(harDirectory)) {
           break;
         }
@@ -494,9 +495,9 @@ public class TestBlockFixer {
                    corruptFiles[0], partFile.toUri().getPath());
 
       cnode = RaidNode.createRaidNode(null, localConf);
-      start = System.currentTimeMillis();
+      start = Time.now();
       while (cnode.blockFixer.filesFixed() < 1 &&
-             System.currentTimeMillis() - start < 120000) {
+             Time.now() - start < 120000) {
         LOG.info("Test " + testName + " waiting for files to be fixed.");
         Thread.sleep(1000);
       }

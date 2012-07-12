@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
 import org.apache.hadoop.test.MultithreadedTestUtil.RepeatingTestThread;
+import org.apache.hadoop.util.Time;
 
 public class TestMultithreadedTestUtil {
 
@@ -47,9 +48,9 @@ public class TestMultithreadedTestUtil {
     }
     assertEquals(0, threadsRun.get());
     ctx.startThreads();
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     ctx.waitFor(30000);
-    long et = System.currentTimeMillis();
+    long et = Time.now();
 
     // All threads should have run
     assertEquals(3, threadsRun.get());
@@ -69,7 +70,7 @@ public class TestMultithreadedTestUtil {
       }
     });
     ctx.startThreads();
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     try {
       ctx.waitFor(30000);
       fail("waitFor did not throw");
@@ -77,7 +78,7 @@ public class TestMultithreadedTestUtil {
       // expected
       assertEquals(FAIL_MSG, rte.getCause().getMessage());
     }
-    long et = System.currentTimeMillis();
+    long et = Time.now();
     // Test shouldn't have waited the full 30 seconds, since
     // the thread throws faster than that
     assertTrue("Test took " + (et - st) + "ms",
@@ -94,7 +95,7 @@ public class TestMultithreadedTestUtil {
       }
     });
     ctx.startThreads();
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     try {
       ctx.waitFor(30000);
       fail("waitFor did not throw");
@@ -102,7 +103,7 @@ public class TestMultithreadedTestUtil {
       // expected
       assertEquals("my ioe", rte.getCause().getMessage());
     }
-    long et = System.currentTimeMillis();
+    long et = Time.now();
     // Test shouldn't have waited the full 30 seconds, since
     // the thread throws faster than that
     assertTrue("Test took " + (et - st) + "ms",
@@ -121,10 +122,10 @@ public class TestMultithreadedTestUtil {
       }
     });
     ctx.startThreads();
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     ctx.waitFor(3000);
     ctx.stop();
-    long et = System.currentTimeMillis();
+    long et = Time.now();
     long elapsed = et - st;
 
     // Test should have waited just about 3 seconds

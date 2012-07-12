@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -563,20 +564,20 @@ public class TestRaidNode extends TestCase {
         }
       }
 
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       final int MAX_WAITTIME = 300000;
       
       assertTrue("cnode is not DistRaidNode", cnode instanceof DistRaidNode);
       DistRaidNode dcnode = (DistRaidNode) cnode;
 
       while (dcnode.jobMonitor.jobsMonitored() < 2 &&
-             System.currentTimeMillis() - start < MAX_WAITTIME) {
+             Time.now() - start < MAX_WAITTIME) {
         Thread.sleep(1000);
       }
       
-      start = System.currentTimeMillis();
+      start = Time.now();
       while (dcnode.jobMonitor.jobsSucceeded() < 2 &&
-             System.currentTimeMillis() - start < MAX_WAITTIME) {
+             Time.now() - start < MAX_WAITTIME) {
         Thread.sleep(1000);
       }
       assertEquals(dcnode.jobMonitor.jobsSucceeded(), dcnode.jobMonitor.jobsMonitored());
@@ -694,23 +695,23 @@ public class TestRaidNode extends TestCase {
       final int numJobsExpected = 2;
       cnode = RaidNode.createRaidNode(null, localConf);
 
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       final int MAX_WAITTIME = 300000;
 
       assertTrue("cnode is not DistRaidNode", cnode instanceof DistRaidNode);
       DistRaidNode dcnode = (DistRaidNode) cnode;
 
-      start = System.currentTimeMillis();
+      start = Time.now();
       while (dcnode.jobMonitor.jobsSucceeded() < numJobsExpected &&
-             System.currentTimeMillis() - start < MAX_WAITTIME) {
+             Time.now() - start < MAX_WAITTIME) {
         LOG.info("Waiting for num jobs succeeded " + dcnode.jobMonitor.jobsSucceeded() + 
          " to reach " + numJobsExpected);
         Thread.sleep(3000);
       }
       // Wait for any running jobs to finish.
-      start = System.currentTimeMillis();
+      start = Time.now();
       while (dcnode.jobMonitor.runningJobsCount() > 0 &&
-             System.currentTimeMillis() - start < MAX_WAITTIME) {
+             Time.now() - start < MAX_WAITTIME) {
         LOG.info("Waiting for zero running jobs: " +
              dcnode.jobMonitor.runningJobsCount());
         Thread.sleep(1000);

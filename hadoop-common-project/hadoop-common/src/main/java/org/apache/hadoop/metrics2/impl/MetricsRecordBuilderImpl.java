@@ -30,6 +30,7 @@ import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.Interns;
+import org.apache.hadoop.util.Time;
 
 class MetricsRecordBuilderImpl extends MetricsRecordBuilder {
   private final MetricsCollector parent;
@@ -44,7 +45,7 @@ class MetricsRecordBuilderImpl extends MetricsRecordBuilder {
                            MetricsFilter rf, MetricsFilter mf,
                            boolean acceptable) {
     this.parent = parent;
-    timestamp = System.currentTimeMillis();
+    timestamp = Time.now();
     recInfo = info;
     metrics = Lists.newArrayList();
     tags = Lists.newArrayList();

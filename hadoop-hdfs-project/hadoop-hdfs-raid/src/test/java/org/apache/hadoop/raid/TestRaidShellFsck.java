@@ -30,6 +30,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -228,7 +229,7 @@ public class TestRaidShellFsck {
     rnode = RaidNode.createRaidNode(null, raidConf);
 
     for (Path filePath: filePaths) {
-      long waitStart = System.currentTimeMillis();
+      long waitStart = Time.now();
       boolean raided = false;
       
       Path parityFilePath = new Path(RAID_DIR, 
@@ -276,7 +277,7 @@ public class TestRaidShellFsck {
         } catch (FileNotFoundException ignore) {
         }
         if (!raided) {
-          if (System.currentTimeMillis() > waitStart + 40000L) {
+          if (Time.now() > waitStart + 40000L) {
             LOG.error("parity file not created after 40s");
             throw new IOException("parity file not HARed after 40s");
           } else {
@@ -302,7 +303,7 @@ public class TestRaidShellFsck {
   private void waitUntilCorruptFileCount(DistributedFileSystem dfs,
                                          int corruptFiles)
     throws IOException {
-    long waitStart = System.currentTimeMillis();
+    long waitStart = Time.now();
     while (RaidDFSUtil.getCorruptFiles(dfs).length != corruptFiles) {
       try {
         Thread.sleep(1000);
@@ -310,7 +311,7 @@ public class TestRaidShellFsck {
         
       }
 
-      if (System.currentTimeMillis() > waitStart + 20000L) {
+      if (Time.now() > waitStart + 20000L) {
         break;
       }
     }

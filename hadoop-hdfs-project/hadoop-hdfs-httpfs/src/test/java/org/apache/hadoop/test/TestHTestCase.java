@@ -19,6 +19,8 @@
 package org.apache.hadoop.test;
 
 import junit.framework.Assert;
+
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -58,13 +60,13 @@ public class TestHTestCase extends HTestCase {
 
   @Test
   public void waitFor() {
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     long waited = waitFor(1000, new Predicate() {
       public boolean evaluate() throws Exception {
         return true;
       }
     });
-    long end = System.currentTimeMillis();
+    long end = Time.now();
     Assert.assertEquals(waited, 0, 50);
     Assert.assertEquals(end - start - waited, 0, 50);
   }
@@ -72,13 +74,13 @@ public class TestHTestCase extends HTestCase {
   @Test
   public void waitForTimeOutRatio1() {
     setWaitForRatio(1);
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     long waited = waitFor(200, new Predicate() {
       public boolean evaluate() throws Exception {
         return false;
       }
     });
-    long end = System.currentTimeMillis();
+    long end = Time.now();
     Assert.assertEquals(waited, -1);
     Assert.assertEquals(end - start, 200, 50);
   }
@@ -86,13 +88,13 @@ public class TestHTestCase extends HTestCase {
   @Test
   public void waitForTimeOutRatio2() {
     setWaitForRatio(2);
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     long waited = waitFor(200, new Predicate() {
       public boolean evaluate() throws Exception {
         return false;
       }
     });
-    long end = System.currentTimeMillis();
+    long end = Time.now();
     Assert.assertEquals(waited, -1);
     Assert.assertEquals(end - start, 200 * getWaitForRatio(), 50 * getWaitForRatio());
   }
@@ -100,18 +102,18 @@ public class TestHTestCase extends HTestCase {
   @Test
   public void sleepRatio1() {
     setWaitForRatio(1);
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     sleep(100);
-    long end = System.currentTimeMillis();
+    long end = Time.now();
     Assert.assertEquals(end - start, 100, 50);
   }
 
   @Test
   public void sleepRatio2() {
     setWaitForRatio(1);
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     sleep(100);
-    long end = System.currentTimeMillis();
+    long end = Time.now();
     Assert.assertEquals(end - start, 100 * getWaitForRatio(), 50 * getWaitForRatio());
   }
 

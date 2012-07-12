@@ -52,6 +52,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -128,7 +129,7 @@ public class DistBlockFixer extends BlockFixer {
     pendingFiles = 0L;
 
     // start off due for the first iteration
-    lastCheckTime = System.currentTimeMillis() - blockFixInterval;
+    lastCheckTime = Time.now() - blockFixInterval;
   }
 
   /**
@@ -153,7 +154,7 @@ public class DistBlockFixer extends BlockFixer {
   public void run() {
     while (running) {
       // check if it is time to run the block fixer
-      long now = System.currentTimeMillis();
+      long now = Time.now();
       if (now >= lastCheckTime + blockFixInterval) {
         lastCheckTime = now;
         try {
@@ -170,7 +171,7 @@ public class DistBlockFixer extends BlockFixer {
       }
       
       // try to sleep for the remainder of the interval
-      long sleepPeriod = (lastCheckTime - System.currentTimeMillis()) + 
+      long sleepPeriod = (lastCheckTime - Time.now()) + 
         blockFixInterval;
       
       if ((sleepPeriod > 0L) && running) {
@@ -479,7 +480,7 @@ public class DistBlockFixer extends BlockFixer {
     }
     
     public boolean isExpired() {
-      return done && ((System.currentTimeMillis() - time) > historyInterval);
+      return done && ((Time.now() - time) > historyInterval);
     }
 
     public Path getFile() {
@@ -513,7 +514,7 @@ public class DistBlockFixer extends BlockFixer {
       // will be pruged later
       job = null;
       done = true;
-      time = System.currentTimeMillis();
+      time = Time.now();
       LOG.info("fixing " + file.toString() + " succeeded");
       pendingFiles--;
     }

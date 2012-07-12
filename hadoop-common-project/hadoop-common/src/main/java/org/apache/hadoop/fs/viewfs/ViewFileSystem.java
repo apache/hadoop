@@ -55,6 +55,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Time;
 
 /**
  * ViewFileSystem (extends the FileSystem interface) implements a client-side
@@ -146,7 +147,7 @@ public class ViewFileSystem extends FileSystem {
    */
   public ViewFileSystem() throws IOException {
     ugi = UserGroupInformation.getCurrentUser();
-    creationTime = System.currentTimeMillis();
+    creationTime = Time.now();
   }
 
   /**

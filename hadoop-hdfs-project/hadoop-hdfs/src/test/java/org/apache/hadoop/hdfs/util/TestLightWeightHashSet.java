@@ -30,6 +30,7 @@ import static org.junit.Assert.*;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.Time;
 
 public class TestLightWeightHashSet{
 
@@ -45,7 +46,7 @@ public class TestLightWeightHashSet{
     float maxF = LightWeightHashSet.DEFAULT_MAX_LOAD_FACTOR;
     float minF = LightWeightHashSet.DEFAUT_MIN_LOAD_FACTOR;
     int initCapacity = LightWeightHashSet.MINIMUM_CAPACITY;
-    rand = new Random(System.currentTimeMillis());
+    rand = new Random(Time.now());
     list.clear();
     for (int i = 0; i < NUM; i++) {
       list.add(rand.nextInt());

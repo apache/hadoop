@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -152,13 +153,13 @@ public class TestRaidShell extends TestCase {
     throws Exception {
     String path = file.toUri().getPath();
     FileStatus stat = dfs.getFileStatus(file);
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     long actual = 0;
     do {
       actual = RaidDFSUtil.corruptBlocksInFile(
           dfs, path, 0, stat.getLen()).size();
       if (actual == numCorruptBlocks) break;
-      if (System.currentTimeMillis() - start > 120000) break;
+      if (Time.now() - start > 120000) break;
       LOG.info("Waiting for " + numCorruptBlocks + " corrupt blocks in " +
         path + ", found " + actual);
       Thread.sleep(1000);

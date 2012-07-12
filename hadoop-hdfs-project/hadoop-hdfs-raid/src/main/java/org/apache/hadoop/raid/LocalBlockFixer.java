@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.net.NetUtils;
 
@@ -132,7 +133,7 @@ public class LocalBlockFixer extends BlockFixer {
    * recognize files that have actually become corrupt since being fixed.
    */
   void purgeHistory() {
-    java.util.Date cutOff = new java.util.Date(System.currentTimeMillis() -
+    java.util.Date cutOff = new java.util.Date(Time.now() -
                                                historyInterval);
     List<String> toRemove = new java.util.ArrayList<String>();
 

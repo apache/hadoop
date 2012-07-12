@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 
+import org.apache.hadoop.util.Time;
+
 /**
  * this class is a time class to 
  * measure to measure the time 
@@ -31,11 +33,11 @@ public  class Timer {
   private DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
   
   public void startTime() throws IOException {
-      startTimeEpoch = System.currentTimeMillis();
+      startTimeEpoch = Time.now();
     }
 
     public void stopTime() throws IOException {
-      finishTimeEpoch = System.currentTimeMillis();
+      finishTimeEpoch = Time.now();
     }
 
     public long getIntervalMillis() throws IOException {
@@ -56,7 +58,7 @@ public  class Timer {
     }
     
     public String formatCurrentTime() {
-      return formatTime(System.currentTimeMillis());
+      return formatTime(Time.now());
     }
 
 }

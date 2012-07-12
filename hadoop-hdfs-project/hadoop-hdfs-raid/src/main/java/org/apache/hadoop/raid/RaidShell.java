@@ -39,6 +39,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryProxy;
@@ -298,7 +299,7 @@ public class RaidShell extends Configured implements Tool {
       String path = argv[i];
       long corruptOffset = Long.parseLong(argv[i+1]);
       LOG.info("RaidShell recoverFile for " + path + " corruptOffset " + corruptOffset);
-      Path recovered = new Path("/tmp/recovered." + System.currentTimeMillis());
+      Path recovered = new Path("/tmp/recovered." + Time.now());
       FileSystem fs = recovered.getFileSystem(conf);
       DistributedFileSystem dfs = (DistributedFileSystem)fs;
       Configuration raidConf = new Configuration(conf);

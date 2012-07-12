@@ -73,6 +73,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -99,7 +100,7 @@ public class SecondaryNameNode implements Runnable {
   public static final Log LOG = 
     LogFactory.getLog(SecondaryNameNode.class.getName());
 
-  private final long starttime = System.currentTimeMillis();
+  private final long starttime = Time.now();
   private volatile long lastCheckpointTime = 0;
 
   private String fsName;
@@ -315,7 +316,7 @@ public class SecondaryNameNode implements Runnable {
         if(UserGroupInformation.isSecurityEnabled())
           UserGroupInformation.getCurrentUser().reloginFromKeytab();
         
-        long now = System.currentTimeMillis();
+        long now = Time.now();
 
         if (shouldCheckpointBasedOnCount() ||
             now >= lastCheckpointTime + 1000 * checkpointConf.getPeriod()) {

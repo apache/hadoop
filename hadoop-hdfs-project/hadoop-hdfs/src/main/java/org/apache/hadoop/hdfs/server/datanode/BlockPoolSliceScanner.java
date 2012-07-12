@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Time;
 
 /**
  * Scans the block files under a block pool and verifies that the
@@ -90,7 +91,7 @@ class BlockPoolSliceScanner {
   private long totalTransientErrors = 0;
   private final AtomicInteger totalBlocksScannedInLastRun = new AtomicInteger(); // Used for test only
   
-  private long currentPeriodStart = System.currentTimeMillis();
+  private long currentPeriodStart = Time.now();
   private long bytesLeft = 0; // Bytes to scan in this period
   private long totalBytesToScan = 0;
   
@@ -224,7 +225,7 @@ class BlockPoolSliceScanner {
     long period = Math.min(scanPeriod, 
                            Math.max(blockMap.size(),1) * 600 * 1000L);
     int periodInt = Math.abs((int)period);
-    return System.currentTimeMillis() - scanPeriod + 
+    return Time.now() - scanPeriod + 
         DFSUtil.getRandom().nextInt(periodInt);
   }
 
@@ -281,7 +282,7 @@ class BlockPoolSliceScanner {
       info = new BlockScanInfo(block);
     }
     
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     info.lastScanType = type;
     info.lastScanTime = now;
     info.lastScanOk = scanOk;
@@ -358,7 +359,7 @@ class BlockPoolSliceScanner {
   }
   
   private synchronized void adjustThrottler() {
-    long timeLeft = currentPeriodStart+scanPeriod - System.currentTimeMillis();
+    long timeLeft = currentPeriodStart+scanPeriod - Time.now();
     long bw = Math.max(bytesLeft*1000/timeLeft, MIN_SCAN_RATE);
     throttler.setBandwidth(Math.min(bw, MAX_SCAN_RATE));
   }
@@ -481,7 +482,7 @@ class BlockPoolSliceScanner {
   private boolean assignInitialVerificationTimes() {
     //First updates the last verification times from the log file.
     if (verificationLog != null) {
-      long now = System.currentTimeMillis();
+      long now = Time.now();
       RollingLogs.LineIterator logIterator = null;
       try {
         logIterator = verificationLog.logs.iterator(false);
@@ -529,7 +530,7 @@ class BlockPoolSliceScanner {
       // Initially spread the block reads over half of scan period
       // so that we don't keep scanning the blocks too quickly when restarted.
       long verifyInterval = Math.min(scanPeriod/(2L * numBlocks), 10*60*1000L);
-      long lastScanTime = System.currentTimeMillis() - scanPeriod;
+      long lastScanTime = Time.now() - scanPeriod;
 
       if (!blockInfoSet.isEmpty()) {
         BlockScanInfo info;
@@ -556,7 +557,7 @@ class BlockPoolSliceScanner {
 
     // reset the byte counts :
     bytesLeft = totalBytesToScan;
-    currentPeriodStart = System.currentTimeMillis();
+    currentPeriodStart = Time.now();
   }
   
   void scanBlockPoolSlice() {
@@ -571,7 +572,7 @@ class BlockPoolSliceScanner {
       scan();
     } finally {
       totalBlocksScannedInLastRun.set(processedBlocks.size());
-      lastScanTime.set(System.currentTimeMillis());
+      lastScanTime.set(Time.now());
     }
   }
   
@@ -584,7 +585,7 @@ class BlockPoolSliceScanner {
         
       while (datanode.shouldRun && !Thread.interrupted()
           && datanode.isBPServiceAlive(blockPoolId)) {
-        long now = System.currentTimeMillis();
+        long now = Time.now();
         synchronized (this) {
           if ( now >= (currentPeriodStart + scanPeriod)) {
             startNewPeriod();
@@ -642,7 +643,7 @@ class BlockPoolSliceScanner {
     
     int total = blockInfoSet.size();
     
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     
     Date date = new Date();
     

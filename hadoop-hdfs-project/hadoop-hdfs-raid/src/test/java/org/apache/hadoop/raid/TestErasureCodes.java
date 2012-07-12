@@ -21,6 +21,8 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
+import org.apache.hadoop.util.Time;
+
 import junit.framework.TestCase;
 
 public class TestErasureCodes extends TestCase {
@@ -82,7 +84,7 @@ public class TestErasureCodes extends TestCase {
     for (int i = 0; i < paritySize; i++) {
       parity[i] = new byte[bufsize];
     }
-    long encodeStart = System.currentTimeMillis();
+    long encodeStart = Time.now();
     int[] tmpIn = new int[stripeSize];
     int[] tmpOut = new int[paritySize];
     for (int i = 0; i < bufsize; i++) {
@@ -92,7 +94,7 @@ public class TestErasureCodes extends TestCase {
       // Copy parity.
       for (int j = 0; j < paritySize; j++) parity[j][i] = (byte)tmpOut[j];
     }
-    long encodeEnd = System.currentTimeMillis();
+    long encodeEnd = Time.now();
     float encodeMSecs = (encodeEnd - encodeStart);
     System.out.println("Time to encode rs = " + encodeMSecs +
       "msec (" + message[0].length / (1000 * encodeMSecs) + " MB/s)");
@@ -108,7 +110,7 @@ public class TestErasureCodes extends TestCase {
       message[0][j] = 0;
     }
 
-    long decodeStart = System.currentTimeMillis();
+    long decodeStart = Time.now();
     for (int i = 0; i < bufsize; i++) {
       // Copy parity first.
       for (int j = 0; j < paritySize; j++) {
@@ -122,7 +124,7 @@ public class TestErasureCodes extends TestCase {
       ec.decode(data, erasedLocations, erasedValues);
       message[0][i] = (byte)erasedValues[0];
     }
-    long decodeEnd = System.currentTimeMillis();
+    long decodeEnd = Time.now();
     float decodeMSecs = (decodeEnd - decodeStart);
     System.out.println("Time to decode = " + decodeMSecs +
       "msec (" + message[0].length / (1000 * decodeMSecs) + " MB/s)");
@@ -142,11 +144,11 @@ public class TestErasureCodes extends TestCase {
     }
     byte[] parity = new byte[bufsize];
 
-    long encodeStart = System.currentTimeMillis();
+    long encodeStart = Time.now();
     for (int i = 0; i < bufsize; i++) {
       for (int j = 0; j < stripeSize; j++) parity[i] ^= message[j][i];
     }
-    long encodeEnd = System.currentTimeMillis();
+    long encodeEnd = Time.now();
     float encodeMSecs = encodeEnd - encodeStart;
     System.out.println("Time to encode xor = " + encodeMSecs +
       " msec (" + message[0].length / (1000 * encodeMSecs) + "MB/s)");
@@ -157,12 +159,12 @@ public class TestErasureCodes extends TestCase {
       message[0][j] = 0;
     }
 
-    long decodeStart = System.currentTimeMillis();
+    long decodeStart = Time.now();
     for (int i = 0; i < bufsize; i++) {
       for (int j = 1; j < stripeSize; j++) message[0][i] ^= message[j][i];
       message[0][i] ^= parity[i];
     }
-    long decodeEnd = System.currentTimeMillis();
+    long decodeEnd = Time.now();
     float decodeMSecs = decodeEnd - decodeStart;
     System.out.println("Time to decode xor = " + decodeMSecs +
       " msec (" + message[0].length / (1000 * decodeMSecs) + "MB/s)");

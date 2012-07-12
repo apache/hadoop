@@ -43,7 +43,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import com.google.common.annotations.VisibleForTesting;

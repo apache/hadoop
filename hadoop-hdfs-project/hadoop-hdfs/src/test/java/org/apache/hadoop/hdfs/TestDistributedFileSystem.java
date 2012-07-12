@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
 
@@ -169,7 +170,7 @@ public class TestDistributedFileSystem {
       for(int i = 0; i < filepaths.length; i++) {
         filepaths[i] = new Path(filepathstring + i);
       }
-      final long millis = System.currentTimeMillis();
+      final long millis = Time.now();
 
       {
         DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();

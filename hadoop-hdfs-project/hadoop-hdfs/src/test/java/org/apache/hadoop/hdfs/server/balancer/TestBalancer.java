@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -221,7 +222,7 @@ public class TestBalancer {
   throws IOException, TimeoutException {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
-             : System.currentTimeMillis() + timeout;
+             : Time.now() + timeout;
     
     while (true) {
       long[] status = client.getStats();
@@ -233,7 +234,7 @@ public class TestBalancer {
           && usedSpaceVariance < CAPACITY_ALLOWED_VARIANCE)
         break; //done
 
-      if (System.currentTimeMillis() > failtime) {
+      if (Time.now() > failtime) {
         throw new TimeoutException("Cluster failed to reached expected values of "
             + "totalSpace (current: " + status[0] 
             + ", expected: " + expectedTotalSpace 
@@ -259,7 +260,7 @@ public class TestBalancer {
   throws IOException, TimeoutException {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
-        : System.currentTimeMillis() + timeout;
+        : Time.now() + timeout;
     final double avgUtilization = ((double)totalUsedSpace) / totalCapacity;
     boolean balanced;
     do {
@@ -272,7 +273,7 @@ public class TestBalancer {
             / datanode.getCapacity();
         if (Math.abs(avgUtilization - nodeUtilization) > BALANCE_ALLOWED_VARIANCE) {
           balanced = false;
-          if (System.currentTimeMillis() > failtime) {
+          if (Time.now() > failtime) {
             throw new TimeoutException(
                 "Rebalancing expected avg utilization to become "
                 + avgUtilization + ", but on datanode " + datanode

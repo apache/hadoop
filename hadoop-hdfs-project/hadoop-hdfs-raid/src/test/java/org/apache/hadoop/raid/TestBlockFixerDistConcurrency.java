@@ -21,6 +21,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
@@ -89,10 +90,10 @@ public class TestBlockFixerDistConcurrency extends TestBlockFixer {
 
       cnode = RaidNode.createRaidNode(null, localConf);
       DistBlockFixer blockFixer = (DistBlockFixer) cnode.blockFixer;
-      long start = System.currentTimeMillis();
+      long start = Time.now();
 
       while (blockFixer.jobsRunning() < 1 &&
-             System.currentTimeMillis() - start < 240000) {
+             Time.now() - start < 240000) {
         LOG.info("Test testBlockFix waiting for fixing job 1 to start");
         Thread.sleep(10);
       }
@@ -104,14 +105,14 @@ public class TestBlockFixerDistConcurrency extends TestBlockFixer {
       reportCorruptBlocks(dfs, file2, corruptBlockIdxs, blockSize);
       
       while (blockFixer.jobsRunning() < 2 &&
-             System.currentTimeMillis() - start < 240000) {
+             Time.now() - start < 240000) {
         LOG.info("Test testBlockFix waiting for fixing job 2 to start");
         Thread.sleep(10);
       }
       assertEquals("2 jobs not running", 2, blockFixer.jobsRunning());
 
       while (blockFixer.filesFixed() < 2 &&
-             System.currentTimeMillis() - start < 240000) {
+             Time.now() - start < 240000) {
         LOG.info("Test testBlockFix waiting for files to be fixed.");
         Thread.sleep(10);
       }
@@ -197,10 +198,10 @@ public class TestBlockFixerDistConcurrency extends TestBlockFixer {
 
       cnode = RaidNode.createRaidNode(null, localConf);
       DistBlockFixer blockFixer = (DistBlockFixer) cnode.blockFixer;
-      long start = System.currentTimeMillis();
+      long start = Time.now();
 
       while (blockFixer.jobsRunning() < 1 &&
-             System.currentTimeMillis() - start < 240000) {
+             Time.now() - start < 240000) {
         LOG.info("Test testBlockFix waiting for fixing job 1 to start");
         Thread.sleep(10);
       }
@@ -214,7 +215,7 @@ public class TestBlockFixerDistConcurrency extends TestBlockFixer {
       
       // wait until both files are fixed
       while (blockFixer.filesFixed() < 2 &&
-             System.currentTimeMillis() - start < 240000) {
+             Time.now() - start < 240000) {
         // make sure the block fixer does not start a second job while
         // the first one is still running
         assertTrue("too many jobs running", blockFixer.jobsRunning() <= 1);

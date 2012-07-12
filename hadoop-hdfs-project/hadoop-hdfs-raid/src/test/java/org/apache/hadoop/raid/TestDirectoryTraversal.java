@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.util.Time;
 
 import org.apache.hadoop.raid.protocol.PolicyInfo;
 
@@ -110,7 +111,7 @@ public class TestDirectoryTraversal extends TestCase {
       Path raid = new Path("/raid");
       DirectoryTraversal.FileFilter filter =
         new RaidFilter.TimeBasedFilter(conf,
-          RaidNode.xorDestinationPath(conf), 1, System.currentTimeMillis(), 0);
+          RaidNode.xorDestinationPath(conf), 1, Time.now(), 0);
       List<FileStatus> selected = dt.getFilteredFiles(filter, limit);
       for (FileStatus f: selected) {
         LOG.info(f.getPath());
@@ -146,15 +147,15 @@ public class TestDirectoryTraversal extends TestCase {
       DirectoryTraversal.FileFilter timeBasedXORFilter =
         new RaidFilter.TimeBasedFilter(conf,
           RaidNode.xorDestinationPath(conf), targetRepl,
-            System.currentTimeMillis(), 0);
+            Time.now(), 0);
       DirectoryTraversal.FileFilter timeBasedRSFilter =
         new RaidFilter.TimeBasedFilter(conf,
           RaidNode.rsDestinationPath(conf), targetRepl,
-            System.currentTimeMillis(), 0);
+            Time.now(), 0);
       DirectoryTraversal.FileFilter preferenceForRSFilter =
         new RaidFilter.PreferenceFilter(
           conf, RaidNode.rsDestinationPath(conf),
-          RaidNode.xorDestinationPath(conf), 1, System.currentTimeMillis(), 0);
+          RaidNode.xorDestinationPath(conf), 1, Time.now(), 0);
 
       assertTrue(timeBasedXORFilter.check(stat));
       assertTrue(timeBasedRSFilter.check(stat));

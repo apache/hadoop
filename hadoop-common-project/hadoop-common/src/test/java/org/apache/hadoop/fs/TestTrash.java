@@ -32,6 +32,7 @@ import java.util.Set;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 
 /**
  * This class tests commands from Trash.
@@ -600,7 +601,7 @@ public class TestTrash extends TestCase {
       
       writeFile(fs, myFile, 10);
       
-      start = System.currentTimeMillis();
+      start = Time.now();
       
       try {
         retVal = shell.run(args);
@@ -612,7 +613,7 @@ public class TestTrash extends TestCase {
       
       assertTrue(retVal == 0);
       
-      long iterTime = System.currentTimeMillis() - start;
+      long iterTime = Time.now() - start;
       // take median of the first 10 runs
       if(i<10) {
         if(i==0) {

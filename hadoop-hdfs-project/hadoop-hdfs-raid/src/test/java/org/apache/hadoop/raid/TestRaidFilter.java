@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.raid.protocol.PolicyInfo;
+import org.apache.hadoop.util.Time;
 
 public class TestRaidFilter extends TestCase {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
@@ -106,7 +107,7 @@ public class TestRaidFilter extends TestCase {
       RaidFilter.Statistics stats = new RaidFilter.Statistics();
       RaidFilter.TimeBasedFilter filter = new RaidFilter.TimeBasedFilter(
         conf, RaidNode.xorDestinationPath(conf), info1, all,
-        System.currentTimeMillis(), stats);
+        Time.now(), stats);
       System.out.println("Stats " + stats);
 
       assertTrue(filter.check(stat1));

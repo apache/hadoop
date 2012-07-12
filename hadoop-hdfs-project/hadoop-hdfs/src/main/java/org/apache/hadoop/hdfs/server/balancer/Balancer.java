@@ -72,6 +72,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -710,7 +711,7 @@ public class Balancer {
      */ 
     private static final long MAX_ITERATION_TIME = 20*60*1000L; //20 mins
     private void dispatchBlocks() {
-      long startTime = Util.now();
+      long startTime = Time.now();
       this.blocksToReceive = 2*scheduledSize;
       boolean isTimeUp = false;
       while(!isTimeUp && scheduledSize>0 &&
@@ -739,7 +740,7 @@ public class Balancer {
         } 
         
         // check if time is up or not
-        if (Util.now()-startTime > MAX_ITERATION_TIME) {
+        if (Time.now()-startTime > MAX_ITERATION_TIME) {
           isTimeUp = true;
           continue;
         }
@@ -1144,7 +1145,7 @@ public class Balancer {
    * move blocks in current window to old window.
    */ 
   private static class MovedBlocks {
-    private long lastCleanupTime = System.currentTimeMillis();
+    private long lastCleanupTime = Time.now();
     final private static int CUR_WIN = 0;
     final private static int OLD_WIN = 1;
     final private static int NUM_WINS = 2;
@@ -1175,7 +1176,7 @@ public class Balancer {
 
     /* remove old blocks */
     synchronized private void cleanup() {
-      long curTime = System.currentTimeMillis();
+      long curTime = Time.now();
       // check if old win is older than winWidth
       if (lastCleanupTime + WIN_WIDTH <= curTime) {
         // purge the old window
@@ -1472,7 +1473,7 @@ public class Balancer {
     /** Parse arguments and then run Balancer */
     @Override
     public int run(String[] args) {
-      final long startTime = Util.now();
+      final long startTime = Time.now();
       final Configuration conf = getConf();
       WIN_WIDTH = conf.getLong(
           DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 
@@ -1490,7 +1491,7 @@ public class Balancer {
         System.out.println(e + ".  Exiting ...");
         return ReturnStatus.INTERRUPTED.code;
       } finally {
-        System.out.println("Balancing took " + time2Str(Util.now()-startTime));
+        System.out.println("Balancing took " + time2Str(Time.now()-startTime));
       }
     }
 

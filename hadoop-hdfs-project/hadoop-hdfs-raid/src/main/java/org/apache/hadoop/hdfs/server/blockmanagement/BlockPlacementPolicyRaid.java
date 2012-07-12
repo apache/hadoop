@@ -41,6 +41,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.raid.RaidNode;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 /**
  * This BlockPlacementPolicy spreads out the group of blocks which used by RAID
@@ -514,7 +515,7 @@ public class BlockPlacementPolicyRaid extends BlockPlacementPolicy {
       // The method is not synchronized so we may get some stale value here but
       // it's OK.
       ValueWithTime result = cache.get(key);
-      long now = System.currentTimeMillis();
+      long now = Time.now();
       if (result != null &&
           now - result.cachedTime < CACHE_TIMEOUT) {
         return result.value;

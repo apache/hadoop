@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.ZooKeeperServer;
@@ -36,7 +37,7 @@ public abstract class ActiveStandbyElectorTestUtil {
   public static void waitForActiveLockData(TestContext ctx,
       ZooKeeperServer zks, String parentDir, byte[] activeData)
       throws Exception {
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     long lastPrint = st;
     while (true) {
       if (ctx != null) {
@@ -51,17 +52,17 @@ public abstract class ActiveStandbyElectorTestUtil {
             Arrays.equals(activeData, data)) {
           return;
         }
-        if (System.currentTimeMillis() > lastPrint + LOG_INTERVAL_MS) {
+        if (Time.now() > lastPrint + LOG_INTERVAL_MS) {
           LOG.info("Cur data: " + StringUtils.byteToHexString(data));
-          lastPrint = System.currentTimeMillis();
+          lastPrint = Time.now();
         }
       } catch (NoNodeException nne) {
         if (activeData == null) {
           return;
         }
-        if (System.currentTimeMillis() > lastPrint + LOG_INTERVAL_MS) {
+        if (Time.now() > lastPrint + LOG_INTERVAL_MS) {
           LOG.info("Cur data: no node");
-          lastPrint = System.currentTimeMillis();
+          lastPrint = Time.now();
         }
       }
       Thread.sleep(50);

@@ -302,6 +302,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3582. Hook daemon process exit for testing. (eli)
 
+    HDFS-3641. Move server Util time methods to common and use now
+    instead of System#currentTimeMillis. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

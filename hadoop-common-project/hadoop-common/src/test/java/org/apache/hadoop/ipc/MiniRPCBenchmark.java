@@ -42,6 +42,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.TestDelegationToken.TestDelegationTokenSecretManager;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
@@ -186,10 +187,10 @@ public class MiniRPCBenchmark {
   throws IOException {
     MiniProtocol client = null;
     try {
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       client = (MiniProtocol) RPC.getProxy(MiniProtocol.class,
           MiniProtocol.versionID, addr, conf);
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       return end - start;
     } finally {
       RPC.stopProxy(client);
@@ -231,7 +232,7 @@ public class MiniRPCBenchmark {
       final Configuration conf, final InetSocketAddress addr) throws IOException {
     MiniProtocol client = null;
     try {
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       try {
         client = currentUgi.doAs(new PrivilegedExceptionAction<MiniProtocol>() {
           public MiniProtocol run() throws IOException {
@@ -242,7 +243,7 @@ public class MiniRPCBenchmark {
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
-      long end = System.currentTimeMillis();
+      long end = Time.now();
       return end - start;
     } finally {
       RPC.stopProxy(client);

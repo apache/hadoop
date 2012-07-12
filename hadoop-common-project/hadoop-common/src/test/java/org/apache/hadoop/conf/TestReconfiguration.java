@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.conf;
 
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
 import org.junit.Before;
 import static org.junit.Assert.*;
@@ -295,8 +296,8 @@ public class TestReconfiguration {
     }
     dummy.reconfigureProperty(PROP1, VAL2);
 
-    long endWait = System.currentTimeMillis() + 2000;
-    while (dummyThread.isAlive() && System.currentTimeMillis() < endWait) {
+    long endWait = Time.now() + 2000;
+    while (dummyThread.isAlive() && Time.now() < endWait) {
       try {
         Thread.sleep(50);
       } catch (InterruptedException ignore) {

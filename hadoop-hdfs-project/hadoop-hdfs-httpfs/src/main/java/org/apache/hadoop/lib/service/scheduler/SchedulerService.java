@@ -25,6 +25,7 @@ import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.Instrumentation;
 import org.apache.hadoop.lib.service.Scheduler;
 import org.apache.hadoop.lib.util.Check;
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,11 +60,11 @@ public class SchedulerService extends BaseService implements Scheduler {
   @Override
   public void destroy() {
     try {
-      long limit = System.currentTimeMillis() + 30 * 1000;
+      long limit = Time.now() + 30 * 1000;
       scheduler.shutdownNow();
       while (!scheduler.awaitTermination(1000, TimeUnit.MILLISECONDS)) {
         LOG.debug("Waiting for scheduler to shutdown");
-        if (System.currentTimeMillis() > limit) {
+        if (Time.now() > limit) {
           LOG.warn("Gave up waiting for scheduler to shutdown");
           break;
         }
