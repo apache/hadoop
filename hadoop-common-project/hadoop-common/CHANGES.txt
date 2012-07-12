@@ -67,6 +67,8 @@ Release 2.0.1-alpha - UNRELEASED
     EOFException on Snappy or LZO block-compressed data
     (todd via harsh)
 
+    HADOOP-8541. Better high-percentile latency metrics. (Andrew Wang via atm)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
