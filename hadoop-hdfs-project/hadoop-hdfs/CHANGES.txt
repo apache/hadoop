@@ -454,6 +454,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3615. Two BlockTokenSecretManager findbugs warnings. (atm)
 
+    HDFS-3639. JspHelper#getUGI should always verify the token if
+    security is enabled. (eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
