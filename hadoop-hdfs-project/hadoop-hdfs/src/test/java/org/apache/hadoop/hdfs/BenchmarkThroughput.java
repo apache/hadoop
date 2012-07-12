@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -52,12 +53,12 @@ public class BenchmarkThroughput extends Configured implements Tool {
   private int BUFFER_SIZE;
 
   private void resetMeasurements() {
-    startTime = System.currentTimeMillis();
+    startTime = Time.now();
   }
 
   private void printMeasurements() {
     System.out.println(" time: " +
-                       ((System.currentTimeMillis() - startTime)/1000));
+                       ((Time.now() - startTime)/1000));
   }
 
   private Path writeLocalFile(String name, Configuration conf,

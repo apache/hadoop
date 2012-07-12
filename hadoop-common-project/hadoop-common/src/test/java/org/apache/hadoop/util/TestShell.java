@@ -55,7 +55,7 @@ public class TestShell extends TestCase {
     testInterval(Long.MIN_VALUE / 60000);  // test a negative interval
     testInterval(0L);  // test a zero interval
     testInterval(10L); // interval equal to 10mins
-    testInterval(System.currentTimeMillis() / 60000 + 60); // test a very big interval
+    testInterval(Time.now() / 60000 + 60); // test a very big interval
   }
 
   /**

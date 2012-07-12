@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.Time;
 
 public class TestNativeIO {
   static final Log LOG = LogFactory.getLog(TestNativeIO.class);
@@ -88,8 +89,8 @@ public class TestNativeIO {
     for (int i = 0; i < 10; i++) {
       Thread statter = new Thread() {
         public void run() {
-          long et = System.currentTimeMillis() + 5000;
-          while (System.currentTimeMillis() < et) {
+          long et = Time.now() + 5000;
+          while (Time.now() < et) {
             try {
               NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
               assertEquals(System.getProperty("user.name"), stat.getOwner());

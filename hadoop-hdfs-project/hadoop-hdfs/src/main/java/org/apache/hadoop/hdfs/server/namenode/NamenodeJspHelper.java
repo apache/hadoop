@@ -58,6 +58,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.znerd.xmlenc.XMLOutputter;
 
@@ -487,7 +488,7 @@ class NamenodeJspHelper {
 
       long decommRequestTime = d.decommissioningStatus.getStartTime();
       long timestamp = d.getLastUpdate();
-      long currentTime = System.currentTimeMillis();
+      long currentTime = Time.now();
       long hoursSinceDecommStarted = (currentTime - decommRequestTime)/3600000;
       long remainderMinutes = ((currentTime - decommRequestTime)/60000) % 60;
       out.print("<td class=\"lastcontact\"> "
@@ -534,7 +535,7 @@ class NamenodeJspHelper {
       String adminState = d.getAdminState().toString();
 
       long timestamp = d.getLastUpdate();
-      long currentTime = System.currentTimeMillis();
+      long currentTime = Time.now();
       
       long bpUsed = d.getBlockPoolUsed();
       String percentBpUsed = StringUtils.limitDecimalTo2(d

@@ -36,6 +36,7 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -137,10 +138,10 @@ public class BlockTokenSecretManager extends
      * more.
      */
     setSerialNo(serialNo + 1);
-    currentKey = new BlockKey(serialNo, System.currentTimeMillis() + 2
+    currentKey = new BlockKey(serialNo, Time.now() + 2
         * keyUpdateInterval + tokenLifetime, generateSecret());
     setSerialNo(serialNo + 1);
-    nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
+    nextKey = new BlockKey(serialNo, Time.now() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
     allKeys.put(currentKey.getKeyId(), currentKey);
     allKeys.put(nextKey.getKeyId(), nextKey);
@@ -157,7 +158,7 @@ public class BlockTokenSecretManager extends
   }
 
   private synchronized void removeExpiredKeys() {
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     for (Iterator<Map.Entry<Integer, BlockKey>> it = allKeys.entrySet()
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, BlockKey> e = it.next();
@@ -207,15 +208,15 @@ public class BlockTokenSecretManager extends
     removeExpiredKeys();
     // set final expiry date of retiring currentKey
     allKeys.put(currentKey.getKeyId(), new BlockKey(currentKey.getKeyId(),
-        System.currentTimeMillis() + keyUpdateInterval + tokenLifetime,
+        Time.now() + keyUpdateInterval + tokenLifetime,
         currentKey.getKey()));
     // update the estimated expiry date of new currentKey
-    currentKey = new BlockKey(nextKey.getKeyId(), System.currentTimeMillis()
+    currentKey = new BlockKey(nextKey.getKeyId(), Time.now()
         + 2 * keyUpdateInterval + tokenLifetime, nextKey.getKey());
     allKeys.put(currentKey.getKeyId(), currentKey);
     // generate a new nextKey
     setSerialNo(serialNo + 1);
-    nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3
+    nextKey = new BlockKey(serialNo, Time.now() + 3
         * keyUpdateInterval + tokenLifetime, generateSecret());
     allKeys.put(nextKey.getKeyId(), nextKey);
     return true;
@@ -290,7 +291,7 @@ public class BlockTokenSecretManager extends
   }
 
   private static boolean isExpired(long expiryDate) {
-    return System.currentTimeMillis() > expiryDate;
+    return Time.now() > expiryDate;
   }
 
   /**
@@ -335,7 +336,7 @@ public class BlockTokenSecretManager extends
     }
     if (key == null)
       throw new IllegalStateException("currentKey hasn't been initialized.");
-    identifier.setExpiryDate(System.currentTimeMillis() + tokenLifetime);
+    identifier.setExpiryDate(Time.now() + tokenLifetime);
     identifier.setKeyId(key.getKeyId());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Generating block token for " + identifier.toString());

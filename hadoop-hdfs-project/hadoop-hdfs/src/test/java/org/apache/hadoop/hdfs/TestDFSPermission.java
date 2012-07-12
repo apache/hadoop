@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 
 /** Unit tests for permission */
 public class TestDFSPermission extends TestCase {
@@ -77,7 +78,7 @@ public class TestDFSPermission extends TestCase {
   static {
     try {
       // Initiate the random number generator and logging the seed
-      long seed = Util.now();
+      long seed = Time.now();
       r = new Random(seed);
       LOG.info("Random number generator uses seed " + seed);
       LOG.info("NUM_TEST_PERMISSIONS=" + NUM_TEST_PERMISSIONS);

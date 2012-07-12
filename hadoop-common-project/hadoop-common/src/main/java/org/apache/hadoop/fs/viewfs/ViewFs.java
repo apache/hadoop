@@ -55,6 +55,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Time;
 
 
 /**
@@ -192,7 +193,7 @@ public class ViewFs extends AbstractFileSystem {
   ViewFs(final URI theUri, final Configuration conf) throws IOException,
       URISyntaxException {
     super(theUri, FsConstants.VIEWFS_SCHEME, false, -1);
-    creationTime = System.currentTimeMillis();
+    creationTime = Time.now();
     ugi = UserGroupInformation.getCurrentUser();
     config = conf;
     // Now build  client side view (i.e. client side mount table) from config.

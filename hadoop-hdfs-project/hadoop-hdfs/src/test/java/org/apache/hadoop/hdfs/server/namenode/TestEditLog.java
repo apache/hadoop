@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.aspectj.util.FileUtil;
 
@@ -1268,7 +1269,7 @@ public class TestEditLog extends TestCase {
     }
 
     // How long does it take to read through all these edit logs?
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.now();
     try {
       cluster = new MiniDFSCluster.Builder(conf).
           numDataNodes(NUM_DATA_NODES).build();
@@ -1278,7 +1279,7 @@ public class TestEditLog extends TestCase {
         cluster.shutdown();
       }
     }
-    long endTime = System.currentTimeMillis();
+    long endTime = Time.now();
     double delta = ((float)(endTime - startTime)) / 1000.0;
     LOG.info(String.format("loaded %d edit log segments in %.2f seconds",
         NUM_EDIT_LOG_ROLLS, delta));

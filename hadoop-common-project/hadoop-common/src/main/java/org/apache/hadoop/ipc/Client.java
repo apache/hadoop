@@ -75,6 +75,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 
 /** A client for an IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -316,7 +317,7 @@ public class Client {
 
     /** Update lastActivity with the current time. */
     private void touch() {
-      lastActivity.set(System.currentTimeMillis());
+      lastActivity.set(Time.now());
     }
 
     /**
@@ -762,7 +763,7 @@ public class Client {
     private synchronized boolean waitForWork() {
       if (calls.isEmpty() && !shouldCloseConnection.get()  && running.get())  {
         long timeout = maxIdleTime-
-              (System.currentTimeMillis()-lastActivity.get());
+              (Time.now()-lastActivity.get());
         if (timeout>0) {
           try {
             wait(timeout);
@@ -792,7 +793,7 @@ public class Client {
      * since last I/O activity is equal to or greater than the ping interval
      */
     private synchronized void sendPing() throws IOException {
-      long curTime = System.currentTimeMillis();
+      long curTime = Time.now();
       if ( curTime - lastActivity.get() >= pingInterval) {
         lastActivity.set(curTime);
         synchronized (out) {

@@ -60,6 +60,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricsSourceBuilder;
 import org.apache.hadoop.metrics2.lib.MutableStat;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.util.Time;
 
 /**
  * A base class for metrics system singletons
@@ -372,10 +373,10 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
 
   private void snapshotMetrics(MetricsSourceAdapter sa,
                                MetricsBufferBuilder bufferBuilder) {
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.now();
     bufferBuilder.add(sa.name(), sa.getMetrics(collector, false));
     collector.clear();
-    snapshotStat.add(System.currentTimeMillis() - startTime);
+    snapshotStat.add(Time.now() - startTime);
     LOG.debug("Snapshotted source "+ sa.name());
   }
 
@@ -386,9 +387,9 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   synchronized void publishMetrics(MetricsBuffer buffer) {
     int dropped = 0;
     for (MetricsSinkAdapter sa : sinks.values()) {
-      long startTime = System.currentTimeMillis();
+      long startTime = Time.now();
       dropped += sa.putMetrics(buffer, logicalTime) ? 0 : 1;
-      publishStat.add(System.currentTimeMillis() - startTime);
+      publishStat.add(Time.now() - startTime);
     }
     droppedPubAll.incr(dropped);
   }

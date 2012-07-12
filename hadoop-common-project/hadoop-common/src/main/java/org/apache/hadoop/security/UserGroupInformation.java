@@ -64,6 +64,7 @@ import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Time;
 
 /**
  * User and group information for Hadoop.
@@ -710,7 +711,7 @@ public class UserGroupInformation {
             long nextRefresh = getRefreshTime(tgt);
             while (true) {
               try {
-                long now = System.currentTimeMillis();
+                long now = Time.now();
                 if(LOG.isDebugEnabled()) {
                   LOG.debug("Current time is " + now);
                   LOG.debug("Next refresh is " + nextRefresh);
@@ -772,15 +773,15 @@ public class UserGroupInformation {
     try {
       login = newLoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME,
             subject, new HadoopConfiguration());
-      start = System.currentTimeMillis();
+      start = Time.now();
       login.login();
-      metrics.loginSuccess.add(System.currentTimeMillis() - start);
+      metrics.loginSuccess.add(Time.now() - start);
       loginUser = new UserGroupInformation(subject);
       loginUser.setLogin(login);
       loginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (LoginException le) {
       if (start > 0) {
-        metrics.loginFailure.add(System.currentTimeMillis() - start);
+        metrics.loginFailure.add(Time.now() - start);
       }
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
@@ -800,7 +801,7 @@ public class UserGroupInformation {
         || !isKeytab)
       return;
     KerberosTicket tgt = getTGT();
-    if (tgt != null && System.currentTimeMillis() < getRefreshTime(tgt)) {
+    if (tgt != null && Time.now() < getRefreshTime(tgt)) {
       return;
     }
     reloginFromKeytab();
@@ -824,7 +825,7 @@ public class UserGroupInformation {
          !isKeytab)
       return;
     
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     if (!hasSufficientTimeElapsed(now)) {
       return;
     }
@@ -856,14 +857,14 @@ public class UserGroupInformation {
             HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, getSubject(),
             new HadoopConfiguration());
         LOG.info("Initiating re-login for " + keytabPrincipal);
-        start = System.currentTimeMillis();
+        start = Time.now();
         login.login();
-        metrics.loginSuccess.add(System.currentTimeMillis() - start);
+        metrics.loginSuccess.add(Time.now() - start);
         setLogin(login);
       }
     } catch (LoginException le) {
       if (start > 0) {
-        metrics.loginFailure.add(System.currentTimeMillis() - start);
+        metrics.loginFailure.add(Time.now() - start);
       }
       throw new IOException("Login failure for " + keytabPrincipal + 
           " from keytab " + keytabFile, le);
@@ -889,7 +890,7 @@ public class UserGroupInformation {
     if (login == null) {
       throw new IOException("login must be done first");
     }
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     if (!hasSufficientTimeElapsed(now)) {
       return;
     }
@@ -944,9 +945,9 @@ public class UserGroupInformation {
           HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject,
           new HadoopConfiguration());
        
-      start = System.currentTimeMillis();
+      start = Time.now();
       login.login();
-      metrics.loginSuccess.add(System.currentTimeMillis() - start);
+      metrics.loginSuccess.add(Time.now() - start);
       UserGroupInformation newLoginUser = new UserGroupInformation(subject);
       newLoginUser.setLogin(login);
       newLoginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
@@ -954,7 +955,7 @@ public class UserGroupInformation {
       return newLoginUser;
     } catch (LoginException le) {
       if (start > 0) {
-        metrics.loginFailure.add(System.currentTimeMillis() - start);
+        metrics.loginFailure.add(Time.now() - start);
       }
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);

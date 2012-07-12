@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -209,7 +210,7 @@ public class TransferFsImage {
     //
     // open connection to remote server
     //
-    long startTime = Util.monotonicNow();
+    long startTime = Time.monotonicNow();
     URL url = new URL(str);
 
     HttpURLConnection connection = (HttpURLConnection)
@@ -316,7 +317,7 @@ public class TransferFsImage {
       }
     }
     double xferSec = Math.max(
-        ((float)(Util.monotonicNow() - startTime)) / 1000.0, 0.001);
+        ((float)(Time.monotonicNow() - startTime)) / 1000.0, 0.001);
     long xferKb = received / 1024;
     LOG.info(String.format("Transfer took %.2fs at %.2f KB/s",
         xferSec, xferKb / xferSec));

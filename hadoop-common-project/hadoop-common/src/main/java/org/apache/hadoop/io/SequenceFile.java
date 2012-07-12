@@ -47,6 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.MergeSort;
 import org.apache.hadoop.util.PriorityQueue;
+import org.apache.hadoop.util.Time;
 
 /** 
  * <code>SequenceFile</code>s are flat files consisting of binary key/value 
@@ -835,7 +836,7 @@ public class SequenceFile {
     {
       try {                                       
         MessageDigest digester = MessageDigest.getInstance("MD5");
-        long time = System.currentTimeMillis();
+        long time = Time.now();
         digester.update((new UID()+"@"+time).getBytes());
         sync = digester.digest();
       } catch (Exception e) {

@@ -32,6 +32,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import static org.apache.hadoop.metrics2.util.Contracts.*;
 import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsSink;
+import org.apache.hadoop.util.Time;
 
 /**
  * An adapter class for metrics sink and associated filters
@@ -158,7 +159,7 @@ class MetricsSinkAdapter implements SinkQueue.Consumer<MetricsBuffer> {
     }
     if (ts > 0) {
       sink.flush();
-      latency.add(System.currentTimeMillis() - ts);
+      latency.add(Time.now() - ts);
     }
     LOG.debug("Done");
   }

@@ -42,6 +42,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.file.tfile.TFile.Reader.Scanner.Entry;
+import org.apache.hadoop.util.Time;
 
 public class TestTFileSeqFileComparison extends TestCase {
   MyOptions options;
@@ -86,12 +87,12 @@ public class TestTFileSeqFileComparison extends TestCase {
   }
 
   public void startTime() throws IOException {
-    startTimeEpoch = System.currentTimeMillis();
+    startTimeEpoch = Time.now();
     System.out.println(formatTime() + " Started timing.");
   }
 
   public void stopTime() throws IOException {
-    finishTimeEpoch = System.currentTimeMillis();
+    finishTimeEpoch = Time.now();
     System.out.println(formatTime() + " Stopped timing.");
   }
 
@@ -111,7 +112,7 @@ public class TestTFileSeqFileComparison extends TestCase {
   }
 
   public String formatTime() {
-    return formatTime(System.currentTimeMillis());
+    return formatTime(Time.now());
   }
 
   private interface KVAppendable {

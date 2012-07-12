@@ -34,29 +34,6 @@ public final class Util {
   private final static Log LOG = LogFactory.getLog(Util.class.getName());
 
   /**
-   * Current system time.  Do not use this to calculate a duration or interval
-   * to sleep, because it will be broken by settimeofday.  Instead, use
-   * monotonicNow.
-   * @return current time in msec.
-   */
-  public static long now() {
-    return System.currentTimeMillis();
-  }
-  
-  /**
-   * Current time from some arbitrary time base in the past, counting in
-   * milliseconds, and not affected by settimeofday or similar system clock
-   * changes.  This is appropriate to use when computing how much longer to
-   * wait for an interval to expire.
-   * @return a monotonic clock that counts in milliseconds.
-   */
-  public static long monotonicNow() {
-    final long NANOSECONDS_PER_MILLISECOND = 1000000;
-
-    return System.nanoTime() / NANOSECONDS_PER_MILLISECOND;
-  }
-
-  /**
    * Interprets the passed string as a URI. In case of error it 
    * assumes the specified string is a file.
    *

@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.util.LightWeightHashSet;
+import org.apache.hadoop.util.Time;
 
 /**
  * This class extends the DatanodeInfo class with ephemeral information (eg
@@ -310,7 +311,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.dfsUsed = dfsUsed;
     this.remaining = remaining;
     this.blockPoolUsed = blockPoolUsed;
-    this.lastUpdate = System.currentTimeMillis();
+    this.lastUpdate = Time.now();
     this.xceiverCount = xceiverCount;
     this.volumeFailures = volFailures;
     this.heartbeatedSinceFailover = true;
