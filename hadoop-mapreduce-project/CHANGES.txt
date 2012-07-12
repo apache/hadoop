@@ -86,6 +86,8 @@ Release 2.0.1-alpha - UNRELEASED
     MAPREDUCE-3993. Graceful handling of codec errors during decompression 
     (kkambatl via tucu)
 
+    MAPREDUCE-4416. Some tests fail if Clover is enabled (Kihwal Lee via bobby)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
