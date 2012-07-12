@@ -107,6 +107,8 @@ Trunk (unreleased changes)
     HDFS-3190. Simple refactors in existing NN code to assist
     QuorumJournalManager extension. (todd)
 
+    HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
+
   OPTIMIZATIONS
 
   BUG FIXES
