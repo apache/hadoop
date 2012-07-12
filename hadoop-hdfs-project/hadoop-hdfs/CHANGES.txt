@@ -128,6 +128,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3641. Move server Util time methods to common and use now
     instead of System#currentTimeMillis. (eli)
 
+    HDFS-3633. libhdfs: hdfsDelete should pass JNI_FALSE or JNI_TRUE.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

@@ -1455,7 +1455,7 @@ int hdfsDelete(hdfsFS fs, const char* path, int recursive)
     //Delete the file
     jvalue jVal;
     jthrowable jExc = NULL;
-    jboolean jRecursive = recursive;
+    jboolean jRecursive = recursive ? JNI_TRUE : JNI_FALSE;
     if (invokeMethod(env, &jVal, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "delete", "(Lorg/apache/hadoop/fs/Path;Z)Z",
                      jPath, jRecursive) != 0) {
