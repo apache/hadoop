@@ -109,6 +109,8 @@ Release 0.23.3 - UNRELEASED
     EOFException on Snappy or LZO block-compressed data
     (todd via harsh)
 
+    HADOOP-8587. HarFileSystem access of harMetaCache isn't threadsafe. (eli)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
