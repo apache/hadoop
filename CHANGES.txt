@@ -82,6 +82,9 @@ Release 1.2.0 - unreleased
 
     HDFS-3639. JspHelper#getUGI should always verify the token if
     security is enabled. (eli)
+
+    HADOOP-7836. TestSaslRPC#testDigestAuthMethodHostBasedToken fails
+    with hostname localhost.localdomain. (daryn via eli)
  
 Release 1.1.0 - unreleased
 
