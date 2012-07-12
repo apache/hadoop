@@ -31,4 +31,21 @@
   <modules>
     <module>hadoop-yarn-applications-distributedshell</module>
   </modules>
+ <profiles>
+  <profile>
+    <id>clover</id>
+    <activation>
+      <activeByDefault>false</activeByDefault>
+      <property>
+        <name>clover</name>
+      </property>
+    </activation>
+    <dependencies>
+      <dependency>
+        <groupId>com.cenqua.clover</groupId>
+        <artifactId>clover</artifactId>
+      </dependency>
+    </dependencies>
+  </profile>
+</profiles>
 </project>
