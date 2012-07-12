@@ -456,9 +456,6 @@ public class UserGroupInformation {
     }
   }
 
-  public static final HadoopConfiguration HADOOP_LOGIN_CONFIG =
-      new HadoopConfiguration();
-
   /**
    * Represents a javax.security configuration that is created at runtime.
    */
@@ -630,10 +627,10 @@ public class UserGroupInformation {
         LoginContext login;
         if (isSecurityEnabled()) {
           login = newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME,
-              subject, HADOOP_LOGIN_CONFIG);
+              subject, new HadoopConfiguration());
         } else {
           login = newLoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, 
-              subject, HADOOP_LOGIN_CONFIG);
+              subject, new HadoopConfiguration());
         }
         login.login();
         loginUser = new UserGroupInformation(subject);
@@ -774,7 +771,7 @@ public class UserGroupInformation {
     long start = 0;
     try {
       login = newLoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME,
-            subject, HADOOP_LOGIN_CONFIG);
+            subject, new HadoopConfiguration());
       start = System.currentTimeMillis();
       login.login();
       metrics.loginSuccess.add(System.currentTimeMillis() - start);
@@ -857,7 +854,7 @@ public class UserGroupInformation {
         // have the new credentials (pass it to the LoginContext constructor)
         login = newLoginContext(
             HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, getSubject(),
-            HADOOP_LOGIN_CONFIG);
+            new HadoopConfiguration());
         LOG.info("Initiating re-login for " + keytabPrincipal);
         start = System.currentTimeMillis();
         login.login();
@@ -908,7 +905,7 @@ public class UserGroupInformation {
       //have the new credentials (pass it to the LoginContext constructor)
       login = 
         newLoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, 
-            getSubject(), HADOOP_LOGIN_CONFIG);
+            getSubject(), new HadoopConfiguration());
       LOG.info("Initiating re-login for " + getUserName());
       login.login();
       setLogin(login);
@@ -945,7 +942,7 @@ public class UserGroupInformation {
       
       LoginContext login = newLoginContext(
           HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject,
-          HADOOP_LOGIN_CONFIG);
+          new HadoopConfiguration());
        
       start = System.currentTimeMillis();
       login.login();
