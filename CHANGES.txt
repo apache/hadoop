@@ -79,6 +79,9 @@ Release 1.2.0 - unreleased
     HADOOP-8355. SPNEGO filter throws/logs exception when authentication fails (tucu)
 
     HADOOP-8587. HarFileSystem access of harMetaCache isn't threadsafe. (eli)
+
+    HDFS-3639. JspHelper#getUGI should always verify the token if
+    security is enabled. (eli)
  
 Release 1.1.0 - unreleased
 
