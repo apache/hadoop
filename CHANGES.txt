@@ -31,6 +31,10 @@ Release 1.2.0 - unreleased
 
     HDFS-1957. Documentation for HFTP. (Ari Rabkin via eli)
 
+    HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
+    ReadaheadPool infrastructure for use in HDFS and MR.
+    (Brandon Li and todd via suresh)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and

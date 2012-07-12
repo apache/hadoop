@@ -39,6 +39,7 @@ AC_CONFIG_SRCDIR([src/org_apache_hadoop.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config.h])
 AC_SYS_LARGEFILE
+AC_GNU_SOURCE
 
 AM_INIT_AUTOMAKE(hadoop,1.0.0)
 
@@ -80,10 +81,8 @@ then
     JNI_CPPFLAGS="$JNI_CPPFLAGS -I$dir"
   done
 fi
-cppflags_bak=$CPPFLAGS
 CPPFLAGS="$CPPFLAGS $JNI_CPPFLAGS"
 AC_CHECK_HEADERS([jni.h], [], AC_MSG_ERROR([Native java headers not found. Is \$JAVA_HOME set correctly?]))
-CPPFLAGS=$cppflags_bak
 AC_SUBST([JNI_CPPFLAGS])
 
 dnl Check for zlib headers
@@ -104,6 +103,12 @@ AC_CHECK_HEADERS([snappy-c.h],
 
 dnl Check for headers needed by the native Group resolution implementation
 AC_CHECK_HEADERS([fcntl.h stdlib.h string.h unistd.h], [], AC_MSG_ERROR(Some system headers not found... please ensure their presence on your platform.))
+
+dnl check for posix_fadvise
+AC_CHECK_HEADERS(fcntl.h, [AC_CHECK_FUNCS(posix_fadvise)])
+
+dnl check for sync_file_range
+AC_CHECK_HEADERS(fcntl.h, [AC_CHECK_FUNCS(sync_file_range)])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
