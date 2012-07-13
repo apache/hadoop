@@ -389,7 +389,9 @@ public class ClientRMService extends AbstractService implements
         appReports = new ArrayList<ApplicationReport>(
             apps.size());
         for (RMApp app : apps) {
-          appReports.add(app.createAndGetApplicationReport(true));
+          if (app.getQueue().equals(queueInfo.getQueueName())) {
+            appReports.add(app.createAndGetApplicationReport(true));
+          }
         }
       }
       queueInfo.setApplications(appReports);
