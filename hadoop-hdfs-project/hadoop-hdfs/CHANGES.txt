@@ -137,6 +137,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3306. fuse_dfs: don't lock release operations.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3612. Single namenode image directory config warning can
+    be improved. (Andy Isaacson via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

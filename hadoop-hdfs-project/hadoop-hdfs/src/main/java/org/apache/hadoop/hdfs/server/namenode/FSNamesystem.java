@@ -378,12 +378,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException {
 
     if (namespaceDirs.size() == 1) {
-      LOG.warn("Only one " + DFS_NAMENODE_NAME_DIR_KEY
-          + " directory configured , beware data loss!");
+      LOG.warn("Only one image storage directory ("
+          + DFS_NAMENODE_NAME_DIR_KEY + ") configured. Beware of dataloss"
+          + " due to lack of redundant storage directories!");
     }
     if (namespaceEditsDirs.size() == 1) {
-      LOG.warn("Only one " + DFS_NAMENODE_EDITS_DIR_KEY
-          + " directory configured , beware data loss!");
+      LOG.warn("Only one namespace edits storage directory ("
+          + DFS_NAMENODE_EDITS_DIR_KEY + ") configured. Beware of dataloss"
+          + " due to lack of redundant storage directories!");
     }
 
     FSImage fsImage = new FSImage(conf, namespaceDirs, namespaceEditsDirs);
