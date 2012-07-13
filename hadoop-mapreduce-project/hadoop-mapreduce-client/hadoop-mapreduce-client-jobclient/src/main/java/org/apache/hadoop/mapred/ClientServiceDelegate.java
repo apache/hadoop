@@ -149,7 +149,7 @@ public class ClientServiceDelegate {
         || YarnApplicationState.RUNNING == application
             .getYarnApplicationState()) {
       if (application == null) {
-        LOG.debug("Could not get Job info from RM for job " + jobId
+        LOG.info("Could not get Job info from RM for job " + jobId
             + ". Redirecting to job history server.");
         return checkAndGetHSProxy(null, JobState.NEW);
       }
@@ -214,7 +214,7 @@ public class ClientServiceDelegate {
         }
         application = rm.getApplicationReport(appId);
         if (application == null) {
-          LOG.debug("Could not get Job info from RM for job " + jobId
+          LOG.info("Could not get Job info from RM for job " + jobId
               + ". Redirecting to job history server.");
           return checkAndGetHSProxy(null, JobState.RUNNING);
         }
