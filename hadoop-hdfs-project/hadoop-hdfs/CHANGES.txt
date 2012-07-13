@@ -313,6 +313,9 @@ Branch-2 ( Unreleased changes )
     HDFS-799. libhdfs must call DetachCurrentThread when a thread is destroyed.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3306. fuse_dfs: don't lock release operations.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
