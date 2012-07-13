@@ -161,6 +161,9 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-3906. Fix inconsistency in documentation regarding
     mapreduce.jobhistory.principal. (Eugene Koontz via harsh)
 
+    MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default
+    value in YarnConfiguration. (Ahmed Radwan via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
