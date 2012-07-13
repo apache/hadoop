@@ -159,6 +159,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-3906. Fix inconsistency in documentation regarding
     mapreduce.jobhistory.principal. (Eugene Koontz via harsh)
 
+    MAPREDUCE-4432. Confusing warning message when GenericOptionsParser
+    is not used. (Gabriel Reid via harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
