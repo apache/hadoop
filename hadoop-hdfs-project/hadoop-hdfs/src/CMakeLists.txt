@@ -67,6 +67,12 @@ function(FLATTEN_LIST INPUT SEPARATOR OUTPUT)
   set (${OUTPUT} "${_TMPS}" PARENT_SCOPE)
 endfunction()
 
+# Check to see if our compiler and linker support the __thread attribute.
+# On Linux and some other operating systems, this is a more efficient 
+# alternative to POSIX thread local storage. 
+INCLUDE(CheckCSourceCompiles)
+CHECK_C_SOURCE_COMPILES("int main(void) { static __thread int i = 0; return 0; }" HAVE_BETTER_TLS)
+
 find_package(JNI REQUIRED)
 if (NOT GENERATED_JAVAH)
     # Must identify where the generated headers have been placed
