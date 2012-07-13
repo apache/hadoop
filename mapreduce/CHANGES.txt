@@ -14,6 +14,9 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-4404. Test case for TestMRJobClient to verify user name.
     (Mayank Bansal via shv)
 
+    MAPREDUCE-4405. Test case for HierarchicalQueue in TestJobQueueClient.
+    (Mayank Bansal via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES

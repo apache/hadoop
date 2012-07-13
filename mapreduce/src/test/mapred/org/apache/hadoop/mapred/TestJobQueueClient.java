@@ -24,6 +24,7 @@ import static org.apache.hadoop.mapred.QueueManagerTestUtils.miniMRCluster;
 import static org.apache.hadoop.mapred.QueueManagerTestUtils.deleteQueuesConfigFile;
 import static org.apache.hadoop.mapred.QueueManagerTestUtils.writeToFile;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.io.StringWriter;
@@ -42,6 +43,25 @@ public class TestJobQueueClient {
     deleteQueuesConfigFile();
   }
 
+  @Test
+  public void testQueueListwithHierarchicalQueue() throws Exception {
+    // create some sample queues in a hierarchy..
+    JobQueueInfo[] roots = new JobQueueInfo[2];
+    roots[0] = new JobQueueInfo("q1", "q1 scheduling info");
+    roots[1] = new JobQueueInfo("q2", "q2 scheduling info");
+
+    List<JobQueueInfo> children = new ArrayList<JobQueueInfo>();
+    children.add(new JobQueueInfo("q1:1", null));
+    children.add(new JobQueueInfo("q1:2", null));
+    roots[0].setChildren(children);
+
+    JobQueueClient client = new JobQueueClient(new JobConf());
+    List<JobQueueInfo> allQueues = client.expandQueueList(roots);
+
+    assertNotNull("Queues should not be null", allQueues);
+    assertEquals(4, allQueues.size());
+  }
+  
   @Test
   public void testQueueOrdering() throws Exception {
     // create some sample queues in a hierarchy..
