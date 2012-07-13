@@ -230,6 +230,9 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4441. Fix build issue caused by MR-3451 (kkambatl via tucu)
 
+    HADOOP-8499. Lower min.user.id to 500 for the tests.
+    (Colin Patrick McCabe via eli)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
