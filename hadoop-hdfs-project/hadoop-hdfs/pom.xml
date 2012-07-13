@@ -422,18 +422,23 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   </target>
                 </configuration>
               </execution>
-              <!-- TODO wire here native testcases
               <execution>
-                <id>test</id>
+                <id>native_tests</id>
                 <phase>test</phase>
-                <goals>
-                  <goal>test</goal>
-                </goals>
+                <goals><goal>run</goal></goals>
                 <configuration>
-                  <destDir>${project.build.directory}/native/target</destDir>
+                  <target>
+                    <property name="compile_classpath" refid="maven.compile.classpath"/>
+                    <property name="test_classpath" refid="maven.test.classpath"/>
+                    <exec executable="${project.build.directory}/native/test_libhdfs_threaded" dir="${project.build.directory}/native/" failonerror="true">
+                      <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
+                    </exec>
+                    <exec executable="${project.build.directory}/native/test_native_mini_dfs" dir="${project.build.directory}/native/" failonerror="true">
+                      <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
+                    </exec>
+                  </target>
                 </configuration>
               </execution>
-              -->
             </executions>
           </plugin>
         </plugins>

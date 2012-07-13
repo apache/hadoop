@@ -319,6 +319,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3612. Single namenode image directory config warning can
     be improved. (Andy Isaacson via harsh)
 
+    HDFS-3606. libhdfs: create self-contained unit test.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

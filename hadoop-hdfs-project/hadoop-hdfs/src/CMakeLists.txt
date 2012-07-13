@@ -132,4 +132,28 @@ target_link_libraries(hdfs_write
 )
 output_directory(hdfs_write target/usr/local/bin)
 
+add_library(native_mini_dfs
+    main/native/native_mini_dfs.c
+)
+target_link_libraries(native_mini_dfs
+    hdfs
+)
+
+add_executable(test_native_mini_dfs
+    main/native/test_native_mini_dfs.c
+)
+target_link_libraries(test_native_mini_dfs
+    native_mini_dfs
+)
+
+add_executable(test_libhdfs_threaded
+    main/native/test_libhdfs_threaded.c
+)
+target_link_libraries(test_libhdfs_threaded
+    hdfs
+    native_mini_dfs
+    pthread
+)
+
 add_subdirectory(contrib/fuse-dfs/src)
+
