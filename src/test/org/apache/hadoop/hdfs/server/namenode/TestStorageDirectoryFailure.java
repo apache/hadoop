@@ -63,9 +63,11 @@ public class TestStorageDirectoryFailure {
     String baseDir = System.getProperty("test.build.data", "/tmp");
     File dfsDir = new File(baseDir, "dfs");
     nameDirs = new ArrayList<String>();
-    nameDirs.add(new File(dfsDir, "name1").getPath());
-    nameDirs.add(new File(dfsDir, "name2").getPath());
-    nameDirs.add(new File(dfsDir, "name3").getPath());
+    // Have all the name dirs with the same filename: important for regression
+    // testing HDFS-3652.
+    nameDirs.add(new File(new File(dfsDir, "name1"), "nn").getPath());
+    nameDirs.add(new File(new File(dfsDir, "name2"), "nn").getPath());
+    nameDirs.add(new File(new File(dfsDir, "name3"), "nn").getPath());
 
     conf.set("dfs.name.dir", StringUtils.join(nameDirs, ","));
     conf.set("dfs.data.dir", new File(dfsDir, "data").getPath());

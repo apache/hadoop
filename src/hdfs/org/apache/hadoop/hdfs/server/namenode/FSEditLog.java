@@ -444,8 +444,10 @@ public class FSEditLog {
     }
     for (int idx = 0; idx < editStreams.size(); idx++) {
       File parentDir = getStorageDirForStream(idx);
-      if (parentDir.getName().equals(sd.getRoot().getName())) {
+      if (parentDir.getAbsolutePath().equals(
+            sd.getRoot().getAbsolutePath())) {
         editStreams.remove(idx);
+        idx--;
       }
     }
     exitIfNoStreams();
