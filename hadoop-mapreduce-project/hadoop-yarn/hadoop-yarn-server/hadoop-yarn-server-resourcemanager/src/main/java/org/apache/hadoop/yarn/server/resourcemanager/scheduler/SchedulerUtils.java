@@ -45,6 +45,9 @@ public class SchedulerUtils {
   public static final String LOST_CONTAINER = 
       "Container released on a *lost* node";
   
+  public static final String PREEMPTED_CONTAINER = 
+      "Container preempted by scheduler";
+  
   public static final String COMPLETED_APPLICATION = 
       "Container of a completed application";
   

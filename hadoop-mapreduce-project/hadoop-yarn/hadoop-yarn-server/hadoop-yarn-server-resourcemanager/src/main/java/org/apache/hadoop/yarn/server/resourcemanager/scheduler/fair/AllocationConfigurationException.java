@@ -16,22 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-public enum RMContainerEventType {
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
-  // Source: SchedulerApp
-  START,
-  ACQUIRED,
-  KILL, // Also from Node on NodeRemoval
-  RESERVED,
+/**
+ * Thrown when the allocation file for {@link QueueManager} is malformed.
+ */
+@Private
+@Unstable
+public class AllocationConfigurationException extends Exception {
+  private static final long serialVersionUID = 4046517047810854249L;
 
-  LAUNCHED,
-  FINISHED,
-
-  // Source: ApplicationMasterService->Scheduler
-  RELEASED,
-
-  // Source: ContainerAllocationExpirer  
-  EXPIRE
+  public AllocationConfigurationException(String message) {
+    super(message);
+  }
 }

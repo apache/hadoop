@@ -16,22 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-public enum RMContainerEventType {
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configurable;
 
-  // Source: SchedulerApp
-  START,
-  ACQUIRED,
-  KILL, // Also from Node on NodeRemoval
-  RESERVED,
-
-  LAUNCHED,
-  FINISHED,
-
-  // Source: ApplicationMasterService->Scheduler
-  RELEASED,
-
-  // Source: ContainerAllocationExpirer  
-  EXPIRE
+/**
+ * A pluggable object for altering the weights of apps in the fair scheduler,
+ * which is used for example by {@link NewJobWeightBooster} to give higher
+ * weight to new jobs so that short jobs finish faster.
+ *
+ * May implement {@link Configurable} to access configuration parameters.
+ */
+@Private
+@Unstable
+public interface WeightAdjuster {
+  public double adjustWeight(AppSchedulable app, double curWeight);
 }

@@ -16,22 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-public enum RMContainerEventType {
+import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
-  // Source: SchedulerApp
-  START,
-  ACQUIRED,
-  KILL, // Also from Node on NodeRemoval
-  RESERVED,
-
-  LAUNCHED,
-  FINISHED,
-
-  // Source: ApplicationMasterService->Scheduler
-  RELEASED,
-
-  // Source: ContainerAllocationExpirer  
-  EXPIRE
+/**
+ * Internal scheduling modes for queues.
+ */
+@Private
+@Unstable
+public enum SchedulingMode {
+  FAIR, FIFO
 }

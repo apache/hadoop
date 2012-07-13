@@ -91,6 +91,16 @@ public class Resources {
   public static Resource multiply(Resource lhs, int by) {
     return multiplyTo(clone(lhs), by);
   }
+  
+  /**
+   * Mutliply a resource by a {@code double}. Note that integral 
+   * resource quantites are subject to rounding during cast.
+   */
+  public static Resource multiply(Resource lhs, double by) {
+    Resource out = clone(lhs);
+    out.setMemory((int) (lhs.getMemory() * by));
+    return out;
+  }
 
   public static boolean equals(Resource lhs, Resource rhs) {
     return lhs.getMemory() == rhs.getMemory();
