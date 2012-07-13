@@ -386,6 +386,9 @@ Release 1.0.4 - Unreleased
 
   BUG FIXES
 
+    HDFS-3652. FSEditLog failure removes the wrong edit stream when storage
+    dirs have same name. (todd)
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
