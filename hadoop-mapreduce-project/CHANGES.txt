@@ -685,6 +685,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4419. ./mapred queue -info <queuename> -showJobs displays all
     the jobs irrespective of <queuename> (Devaraj K via bobby)
 
+    MAPREDUCE-4299. Terasort hangs with MR2 FifoScheduler (Tom White via
+    bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

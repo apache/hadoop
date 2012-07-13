@@ -372,15 +372,19 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
         }
       }
       
-      application.setHeadroom(clusterResource);
-      
       LOG.debug("post-assignContainers");
       application.showRequests();
 
       // Done
       if (Resources.lessThan(node.getAvailableResource(), minimumAllocation)) {
-        return;
+        break;
       }
+    }
+
+    // Update the applications' headroom to correctly take into
+    // account the containers assigned in this update.
+    for (SchedulerApp application : applications.values()) {
+      application.setHeadroom(Resources.subtract(clusterResource, usedResource));
     }
   }
 
