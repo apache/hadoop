@@ -8,6 +8,9 @@ Release 0.22.1 - Unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-4403. Test case for job resubmission in TestRecoveryManager.
+    (Mayank Bansal via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
