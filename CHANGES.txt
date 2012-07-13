@@ -296,6 +296,14 @@ Release 1.1.0 - 2012.07.09
     mapreduce.job.committer.setup.cleanup.needed=false and
     mapreduce.map/reduce.failures.maxpercent>0 (Subroto Sanyal via tgraves)
 
+Release 1.0.4 - Unreleased
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
 Release 1.0.3 - 2012.05.07
 
   NEW FEATURES
