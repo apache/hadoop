@@ -682,6 +682,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3940. ContainerTokens should have an expiry interval. (Siddharth
     Seth and Vinod Kumar Vavilapalli via vinodkv)
 
+    MAPREDUCE-4419. ./mapred queue -info <queuename> -showJobs displays all
+    the jobs irrespective of <queuename> (Devaraj K via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
