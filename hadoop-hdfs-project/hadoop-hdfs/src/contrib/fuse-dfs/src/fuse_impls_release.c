@@ -22,10 +22,17 @@
 #include "fuse_connect.h"
 
 /**
- * This mutex is to protect releasing a file handle in case the user calls close in different threads
- * and fuse passes these calls to here.
+ * release a fuse_file_info structure.
+ *
+ * When this function is invoked, there are no more references to our
+ * fuse_file_info structure that exist anywhere.  So there is no need for
+ * locking to protect this structure here.
+ *
+ * Another thread could open() the same file, and get a separate, different file
+ * descriptor with a different, separate fuse_file_info structure.  In HDFS,
+ * this results in one writer winning and overwriting everything the other
+ * writer has done.
  */
-pthread_mutex_t release_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int dfs_release (const char *path, struct fuse_file_info *fi) {
   TRACE1("release", path)
@@ -39,49 +46,21 @@ int dfs_release (const char *path, struct fuse_file_info *fi) {
   assert('/' == *path);
 
   int ret = 0;
-
-  //
-  // Critical section - protect from multiple close calls in different threads.
-  // (no returns until end)
-  //
-
-  pthread_mutex_lock(&release_mutex);
-
-  if (NULL != (void*)fi->fh) {
-
-    dfs_fh *fh = (dfs_fh*)fi->fh;
-    assert(fh);
-
-    hdfsFile file_handle = (hdfsFile)fh->hdfsFH;
-
-    if (NULL != file_handle) {
-      if (hdfsCloseFile(fh->fs, file_handle) != 0) {
-        ERROR("Could not close handle %ld for %s\n",(long)file_handle, path);
-        ret = -EIO;
-      }
-    }
-
-    if (fh->buf != NULL) {
-      free(fh->buf);
-    }
-
-    if (doDisconnect(fh->fs)) {
+  dfs_fh *fh = (dfs_fh*)fi->fh;
+  assert(fh);
+  hdfsFile file_handle = (hdfsFile)fh->hdfsFH;
+  if (NULL != file_handle) {
+    if (hdfsCloseFile(fh->fs, file_handle) != 0) {
+      ERROR("Could not close handle %ld for %s\n",(long)file_handle, path);
       ret = -EIO;
     }
-
-    // this is always created and initialized, so always destroy it. (see dfs_open)
-    pthread_mutex_destroy(&fh->mutex);
-
-    free(fh);
-
-    fi->fh = (uint64_t)0;
   }
-
-  pthread_mutex_unlock(&release_mutex);
-
-  //
-  // End critical section 
-  // 
-
+  free(fh->buf);
+  if (doDisconnect(fh->fs)) {
+    ret = -EIO;
+  }
+  pthread_mutex_destroy(&fh->mutex);
+  free(fh);
+  fi->fh = 0;
   return ret;
 }
