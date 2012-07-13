@@ -228,6 +228,8 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4416. Some tests fail if Clover is enabled (Kihwal Lee via bobby)
 
+    MAPREDUCE-4441. Fix build issue caused by MR-3451 (kkambatl via tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
