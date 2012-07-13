@@ -593,19 +593,21 @@ static USHORT ComputeNewMode(__in USHORT oldMode,
   USHORT mask = 0;
   USHORT mode = 0;
 
-  // Operations are exclusive
+  // Operations are exclusive, and cannot be invalid
   //
   assert(op == CHMOD_OP_EQUAL || op == CHMOD_OP_PLUS || op == CHMOD_OP_MINUS);
+
+  // Nothing needs to be changed if there is not permission or reference
+  //
+  if(perm == CHMOD_PERM_NA && ref == CHMOD_WHO_NONE)
+  {
+    return oldMode;
+  }
 
   // We should have only permissions or a reference target, not both.
   //
   assert((perm != CHMOD_PERM_NA && ref == CHMOD_WHO_NONE) ||
     (perm == CHMOD_PERM_NA && ref != CHMOD_WHO_NONE));
-
-  if(perm == CHMOD_PERM_NA && ref == CHMOD_WHO_NONE)
-  {
-    return oldMode;
-  }
 
   if (perm != CHMOD_PERM_NA)
   {

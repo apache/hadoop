@@ -62,6 +62,8 @@ branch-hadoop-1-win - unreleased
     HADOOP-8414 Address problems related to localhost resolving to 127.0.0.1 on Windows
     (Ivan Mitic via Sanjay Radia)
 
+    HADOOP-8544 Move an assertion location in 'winutils chmod' (Chuan Liu via sanjay)
+
 BUG FIXES
 
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes

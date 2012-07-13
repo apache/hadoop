@@ -181,7 +181,7 @@ static BOOL CreateDaclForNewOwner(
 
   assert(pDACL != NULL && ppNewDACL != NULL);
   assert(pOldOwnerSid != NULL && pOldGroupSid != NULL);
-  assert(pNewOwnerSid != NULL || pNewOwnerSid != NULL);
+  assert(pNewOwnerSid != NULL || pNewGroupSid != NULL);
 
   if (!GetAclInformation(pDACL, (LPVOID)&aclSizeInfo,
     sizeof(ACL_SIZE_INFORMATION), AclSizeInformation))
