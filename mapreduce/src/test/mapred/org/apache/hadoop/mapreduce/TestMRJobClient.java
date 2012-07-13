@@ -87,9 +87,29 @@ public class TestMRJobClient extends ClusterMapReduceTestCase {
   }
 
   @Test
-  public void testJobList(String jobId,
-      Configuration conf) throws Exception {
+  public void testJobList(String jobId, Configuration conf) throws Exception {
     verifyJobPriority(jobId, "HIGH", conf, createJobClient());
+    verifyJobUser(jobId, System.getProperty("user.name"), conf,
+        createJobClient());
+  }
+
+  protected void verifyJobUser(String jobId, String user, Configuration conf,
+      CLI jc) throws Exception {
+    PipedInputStream pis = new PipedInputStream();
+    PipedOutputStream pos = new PipedOutputStream(pis);
+    int exitCode = runTool(conf, jc, new String[] { "-list", "all" }, pos);
+    assertEquals("Exit code", 0, exitCode);
+    BufferedReader br = new BufferedReader(new InputStreamReader(pis));
+    String line = null;
+    while ((line = br.readLine()) != null) {
+      LOG.info("line = " + line);
+      if (!line.startsWith(jobId)) {
+        continue;
+      }
+      assertTrue(line.contains(user));
+      break;
+    }
+    pis.close();
   }
 
   protected void verifyJobPriority(String jobId, String priority,

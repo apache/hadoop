@@ -11,6 +11,9 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-4403. Test case for job resubmission in TestRecoveryManager.
     (Mayank Bansal via shv)
 
+    MAPREDUCE-4404. Test case for TestMRJobClient to verify user name.
+    (Mayank Bansal via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
