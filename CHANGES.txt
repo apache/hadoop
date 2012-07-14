@@ -38,6 +38,9 @@ Release 1.2.0 - unreleased
     HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
     (todd via suresh)
 
+    HDFS-3647. Backport HDFS-2868 (Add number of active transfer
+    threads to the DataNode status) to branch-1 (harsh)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
