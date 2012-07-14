@@ -93,6 +93,8 @@ Release 1.2.0 - unreleased
     HADOOP-7836. TestSaslRPC#testDigestAuthMethodHostBasedToken fails
     with hostname localhost.localdomain. (daryn via eli)
  
+    HDFS-3654. TestJspHelper#testGetUgi fails with NPE. (eli)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
