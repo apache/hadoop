@@ -483,6 +483,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3492. fix some misuses of InputStream#skip.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3609. libhdfs: don't force the URI to look like hdfs://hostname:port.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
