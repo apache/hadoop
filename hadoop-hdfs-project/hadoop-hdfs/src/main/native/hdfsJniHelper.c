@@ -74,8 +74,6 @@ static void hdfsThreadDestructor(void *v)
     JNIEnv *env = tls->env;
     jint ret;
 
-    if (!tls)
-        return;
     ret = (*env)->GetJavaVM(env, &vm);
     if (ret) {
         fprintf(stderr, "hdfsThreadDestructor: GetJavaVM failed with "
