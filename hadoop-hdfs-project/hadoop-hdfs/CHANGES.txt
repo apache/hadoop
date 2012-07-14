@@ -327,6 +327,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-470. libhdfs should handle 0-length reads from FSInputStream
     correctly. (Colin Patrick McCabe via eli)
 
+    HDFS-3492. fix some misuses of InputStream#skip.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
