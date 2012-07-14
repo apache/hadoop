@@ -16,11 +16,12 @@
  * limitations under the License.
  */
 
+#include "fuse_context_handle.h"
 #include "fuse_dfs.h"
 #include "fuse_options.h"
-#include <getopt.h>
 
-#include "fuse_context_handle.h"
+#include <getopt.h>
+#include <stdlib.h>
 
 void print_options() {
   printf("options:\n"

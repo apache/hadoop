@@ -19,18 +19,10 @@
 #ifndef LIBHDFS_HDFS_H
 #define LIBHDFS_HDFS_H
 
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-#include <time.h>
-#include <errno.h>
-
-#include <jni.h>
+#include <errno.h> /* for EINTERNAL, etc. */
+#include <fcntl.h> /* for O_RDONLY, O_WRONLY */
+#include <stdint.h> /* for uint64_t, etc. */
+#include <time.h> /* for time_t */
 
 #ifndef O_RDONLY
 #define O_RDONLY 1
@@ -46,10 +38,10 @@
 
 
 /** All APIs set errno to meaningful values */
+
 #ifdef __cplusplus
 extern  "C" {
 #endif
-
     /**
      * Some utility decls used in libhdfs.
      */
@@ -67,33 +59,37 @@ extern  "C" {
     /**
      * The C reflection of org.apache.org.hadoop.FileSystem .
      */
-    typedef void* hdfsFS;
-
+    struct hdfs_internal;
+    typedef struct hdfs_internal* hdfsFS;
     
-    /**
-     * The C equivalent of org.apache.org.hadoop.FSData(Input|Output)Stream .
-     */
-    enum hdfsStreamType
-    {
-        UNINITIALIZED = 0,
-        INPUT = 1,
-        OUTPUT = 2,
-    };
-
-    
-    // Bit fields for hdfsFile_internal flags
-    #define HDFS_FILE_SUPPORTS_DIRECT_READ (1<<0)
-
-    /**
-     * The 'file-handle' to a file in hdfs.
-     */
-    struct hdfsFile_internal {
-        void* file;
-        enum hdfsStreamType type;
-        uint32_t flags;
-    };
+    struct hdfsFile_internal;
     typedef struct hdfsFile_internal* hdfsFile;
-      
+
+    /**
+     * Determine if a file is open for read.
+     *
+     * @param file     The HDFS file
+     * @return         1 if the file is open for read; 0 otherwise
+     */
+    int hdfsFileIsOpenForRead(hdfsFile file);
+
+    /**
+     * Determine if a file is open for write.
+     *
+     * @param file     The HDFS file
+     * @return         1 if the file is open for write; 0 otherwise
+     */
+    int hdfsFileIsOpenForWrite(hdfsFile file);
+
+    /**
+     * Disable the direct read optimization for a file.
+     *
+     * This is mainly provided for unit testing purposes.
+     *
+     * @param file     The HDFS file
+     */
+    void hdfsFileDisableDirectRead(hdfsFile file);
+
     /** 
      * hdfsConnectAsUser - Connect to a hdfs file system as a specific user
      * Connect to the hdfs.

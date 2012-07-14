@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-#include <strings.h>
-
 #include "fuse_dfs.h"
 #include "fuse_init.h"
 #include "fuse_options.h"
 #include "fuse_context_handle.h"
 #include "fuse_connect.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 // Hacked up function to basically do:
 //  protectedpaths = split(options.protected,':');

@@ -22,6 +22,9 @@
 #include "fuse_init.h"
 #include "fuse_connect.h"
 
+#include <string.h>
+#include <stdlib.h>
+
 int is_protected(const char *path) {
 
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;

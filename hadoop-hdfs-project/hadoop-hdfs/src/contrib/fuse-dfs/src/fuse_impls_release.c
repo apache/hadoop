@@ -21,6 +21,8 @@
 #include "fuse_file_handle.h"
 #include "fuse_connect.h"
 
+#include <stdlib.h>
+
 /**
  * release a fuse_file_info structure.
  *

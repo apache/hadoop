@@ -19,6 +19,8 @@
 #include "hdfs.h"
 #include "hdfsJniHelper.h"
 
+#include <stdio.h>
+#include <string.h>
 
 /* Some frequently used Java paths */
 #define HADOOP_CONF     "org/apache/hadoop/conf/Configuration"
@@ -46,6 +48,50 @@
 #define JMETHOD3(X, Y, Z, R)   "(" X Y Z")" R
 
 #define KERBEROS_TICKET_CACHE_PATH "hadoop.security.kerberos.ticket.cache.path"
+
+// Bit fields for hdfsFile_internal flags
+#define HDFS_FILE_SUPPORTS_DIRECT_READ (1<<0)
+
+tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length);
+
+/**
+ * The C equivalent of org.apache.org.hadoop.FSData(Input|Output)Stream .
+ */
+enum hdfsStreamType
+{
+    UNINITIALIZED = 0,
+    INPUT = 1,
+    OUTPUT = 2,
+};
+
+/**
+ * The 'file-handle' to a file in hdfs.
+ */
+struct hdfsFile_internal {
+    void* file;
+    enum hdfsStreamType type;
+    int flags;
+};
+    
+int hdfsFileIsOpenForRead(hdfsFile file)
+{
+    return (file->type == INPUT);
+}
+
+int hdfsFileIsOpenForWrite(hdfsFile file)
+{
+    return (file->type == OUTPUT);
+}
+
+int hdfsFileUsesDirectRead(hdfsFile file)
+{
+    return !!(file->flags & HDFS_FILE_SUPPORTS_DIRECT_READ);
+}
+
+void hdfsFileDisableDirectRead(hdfsFile file)
+{
+    file->flags &= ~HDFS_FILE_SUPPORTS_DIRECT_READ;
+}
 
 /**
  * hdfsJniEnv: A wrapper struct to be used as 'value'
@@ -2182,7 +2228,7 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
                                    "FileStatus::getModificationTime");
         return -1;
     }
-    fileInfo->mLastMod = (tTime) (jVal.j / 1000);
+    fileInfo->mLastMod = jVal.j / 1000;
 
     if (invokeMethod(env, &jVal, &jExc, INSTANCE, jStat,
                      HADOOP_STAT, "getAccessTime", "()J") != 0) {
