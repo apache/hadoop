@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -78,6 +79,7 @@ import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
@@ -1283,7 +1285,18 @@ public class NameNode {
     }
     terminate(1, t.getMessage());
   }
-  
+
+  /**
+   * Verifies that the given identifier and password are valid and match.
+   * @param identifier Token identifier.
+   * @param password Password in the token.
+   * @throws InvalidToken
+   */
+  public synchronized void verifyToken(DelegationTokenIdentifier identifier,
+      byte[] password) throws InvalidToken {
+    namesystem.getDelegationTokenSecretManager().verifyToken(identifier, password);
+  }
+
   /**
    * Class used to expose {@link NameNode} as context to {@link HAState}
    */

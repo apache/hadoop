@@ -5460,20 +5460,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return blockManager;
   }
   
-  /**
-   * Verifies that the given identifier and password are valid and match.
-   * @param identifier Token identifier.
-   * @param password Password in the token.
-   * @throws InvalidToken
-   */
-  public synchronized void verifyToken(DelegationTokenIdentifier identifier,
-      byte[] password) throws InvalidToken {
-    getDelegationTokenSecretManager().verifyToken(identifier, password);
-  }
-  
   public boolean isGenStampInFuture(long genStamp) {
     return (genStamp > getGenerationStamp());
   }
+
   @VisibleForTesting
   public EditLogTailer getEditLogTailer() {
     return editLogTailer;

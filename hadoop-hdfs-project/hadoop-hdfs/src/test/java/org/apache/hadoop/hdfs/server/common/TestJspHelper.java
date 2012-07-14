@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -69,6 +70,7 @@ public class TestJspHelper {
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     HttpServletRequest request = mock(HttpServletRequest.class);
     ServletContext context = mock(ServletContext.class);
+    NameNode nn = mock(NameNode.class);
     String user = "TheDoctor";
     Text userText = new Text(user);
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(userText,
@@ -79,6 +81,8 @@ public class TestJspHelper {
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);
     when(request.getRemoteUser()).thenReturn(user);
+    when(context.getAttribute(
+        NameNodeHttpServer.NAMENODE_ATTRIBUTE_KEY)).thenReturn(nn);
 
     //Test attribute in the url to be used as service in the token.
     when(request.getParameter(JspHelper.NAMENODE_ADDRESS)).thenReturn(
