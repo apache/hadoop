@@ -22,8 +22,8 @@
 /** options for fuse_opt.h */
 struct options {
   char* protected;
-  char* server;
-  int port;
+  char* nn_uri;
+  int nn_port;
   int debug;
   int read_only;
   int initchecks;

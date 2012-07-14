@@ -45,7 +45,7 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
     return -EIO;
   }
 
-  fh->fs = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  fh->fs = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (fh->fs == NULL) {
     ERROR("Could not connect to dfs");
     return -EIO;

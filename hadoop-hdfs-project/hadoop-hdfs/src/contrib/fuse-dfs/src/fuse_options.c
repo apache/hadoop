@@ -23,6 +23,9 @@
 #include <getopt.h>
 #include <stdlib.h>
 
+#define OLD_HDFS_URI_LOCATION "dfs://"
+#define NEW_HDFS_URI_LOCATION "hdfs://"
+
 void print_options() {
   printf("options:\n"
 	 "\tprotected=%s\n"
@@ -35,7 +38,7 @@ void print_options() {
 	 "\tattribute_timeout=%d\n"
 	 "\tprivate=%d\n"
 	 "\trdbuffer_size=%d (KBs)\n", 
-	 options.protected, options.server, options.port, options.debug,
+	 options.protected, options.nn_uri, options.nn_port, options.debug,
 	 options.read_only, options.usetrash, options.entry_timeout, 
 	 options.attribute_timeout, options.private, 
 	 (int)options.rdbuffer_size / 1024);
@@ -78,11 +81,11 @@ enum
 
 struct fuse_opt dfs_opts[] =
   {
-    DFSFS_OPT_KEY("server=%s", server, 0),
+    DFSFS_OPT_KEY("server=%s", nn_uri, 0),
     DFSFS_OPT_KEY("entry_timeout=%d", entry_timeout, 0),
     DFSFS_OPT_KEY("attribute_timeout=%d", attribute_timeout, 0),
     DFSFS_OPT_KEY("protected=%s", protected, 0),
-    DFSFS_OPT_KEY("port=%d", port, 0),
+    DFSFS_OPT_KEY("port=%d", nn_port, 0),
     DFSFS_OPT_KEY("rdbuffer=%d", rdbuffer_size,0),
 
     FUSE_OPT_KEY("private", KEY_PRIVATE),
@@ -105,6 +108,7 @@ struct fuse_opt dfs_opts[] =
 int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs)
 {
   (void) data;
+  int nn_uri_len;
 
   switch (key) {
   case FUSE_OPT_KEY_OPT:
@@ -150,11 +154,8 @@ int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs
 #endif
     break;
   default: {
-    // try and see if the arg is a URI for DFS
-    int tmp_port;
-    char tmp_server[1024];
-
-    if (!sscanf(arg,"dfs://%1024[a-zA-Z0-9_.-]:%d",tmp_server,&tmp_port)) {
+    // try and see if the arg is a URI
+    if (!strstr(arg, "://")) {
       if (strcmp(arg,"ro") == 0) {
         options.read_only = 1;
       } else if (strcmp(arg,"rw") == 0) {
@@ -165,8 +166,21 @@ int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs
         return 0;
       }
     } else {
-      options.port = tmp_port;
-      options.server = strdup(tmp_server);
+      if (options.nn_uri) {
+        INFO("Ignoring option %s because '-server' was already "
+          "specified!", arg);
+        return 1;
+      }
+      if (strstr(arg, OLD_HDFS_URI_LOCATION) == arg) {
+        // For historical reasons, we let people refer to hdfs:// as dfs://
+        nn_uri_len = strlen(NEW_HDFS_URI_LOCATION) + 
+                strlen(arg + strlen(OLD_HDFS_URI_LOCATION)) + 1;
+        options.nn_uri = malloc(nn_uri_len);
+        snprintf(options.nn_uri, nn_uri_len, "%s%s", NEW_HDFS_URI_LOCATION, 
+              arg + strlen(OLD_HDFS_URI_LOCATION));
+      } else {
+        options.nn_uri = strdup(arg);
+      }
     }
   }
   }

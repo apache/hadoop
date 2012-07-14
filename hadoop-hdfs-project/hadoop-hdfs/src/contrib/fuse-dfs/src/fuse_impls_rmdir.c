@@ -43,7 +43,7 @@ int dfs_rmdir(const char *path)
     return -EACCES;
   }
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (userFS == NULL) {
     ERROR("Could not connect");
     return -EIO;

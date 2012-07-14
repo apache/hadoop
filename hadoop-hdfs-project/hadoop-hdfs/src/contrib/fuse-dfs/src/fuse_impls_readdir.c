@@ -31,7 +31,7 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   assert(path);
   assert(buf);
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (userFS == NULL) {
     ERROR("Could not connect");
     return -EIO;

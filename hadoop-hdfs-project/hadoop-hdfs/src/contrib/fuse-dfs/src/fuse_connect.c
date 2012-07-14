@@ -172,7 +172,7 @@ done:
  * Connect to the NN as the current user/group.
  * Returns a fs handle on success, or NULL on failure.
  */
-hdfsFS doConnectAsUser(const char *hostname, int port) {
+hdfsFS doConnectAsUser(const char *nn_uri, int nn_port) {
   struct hdfsBuilder *bld;
   uid_t uid = fuse_get_context()->uid;
   char *user = getUsername(uid);
@@ -202,8 +202,10 @@ hdfsFS doConnectAsUser(const char *hostname, int port) {
       goto done;
     }
     hdfsBuilderSetForceNewInstance(bld);
-    hdfsBuilderSetNameNode(bld, hostname);
-    hdfsBuilderSetNameNodePort(bld, port);
+    hdfsBuilderSetNameNode(bld, nn_uri);
+    if (nn_port) {
+        hdfsBuilderSetNameNodePort(bld, nn_port);
+    }
     hdfsBuilderSetUserName(bld, user);
     if (hdfsAuthConf == AUTH_CONF_KERBEROS) {
       findKerbTicketCachePath(kpath, sizeof(kpath));

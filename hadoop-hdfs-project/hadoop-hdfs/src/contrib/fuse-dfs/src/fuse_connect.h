@@ -21,7 +21,7 @@
 
 #include "fuse_dfs.h"
 
-hdfsFS doConnectAsUser(const char *hostname, int port);
+hdfsFS doConnectAsUser(const char *nn_uri, int nn_port);
 int doDisconnect(hdfsFS fs);
 int allocFsTable(void);
 

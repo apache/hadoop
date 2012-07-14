@@ -45,7 +45,7 @@ int dfs_truncate(const char *path, off_t size)
     return ret;
   }
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (userFS == NULL) {
     ERROR("Could not connect");
     ret = -EIO;
