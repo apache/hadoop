@@ -878,11 +878,15 @@ static int handleReadResult(int success, jvalue jVal, jthrowable jExc,
     noReadBytes = -1;
   } else {
     noReadBytes = jVal.i;
-    if (noReadBytes < 0) {
+    if (noReadBytes == 0) {
+      // 0 from Java means try again, which is EINTR here
+      errno = EINTR;
+      noReadBytes = -1;
+    } else if (noReadBytes < 0) {
       // -1 from Java is EOF, which is 0 here
+      errno = 0;
       noReadBytes = 0;
     }
-    errno = 0;
   }
 
   return noReadBytes;

@@ -311,8 +311,13 @@ extern  "C" {
      * @param file The file handle.
      * @param buffer The buffer to copy read bytes into.
      * @param length The length of the buffer.
-     * @return Returns the number of bytes actually read, possibly less
-     * than than length;-1 on error.
+     * @return      On success, a positive number indicating how many bytes
+     *              were read.
+     *              On end-of-file, 0.
+     *              On error, -1.  Errno will be set to the error code.
+     *              Just like the POSIX read function, hdfsRead will return -1
+     *              and set errno to EINTR if data is temporarily unavailable,
+     *              but we are not yet at the end of the file.
      */
     tSize hdfsRead(hdfsFS fs, hdfsFile file, void* buffer, tSize length);
 

@@ -477,6 +477,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3639. JspHelper#getUGI should always verify the token if
     security is enabled. (eli)
 
+    HDFS-470. libhdfs should handle 0-length reads from FSInputStream
+    correctly. (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
