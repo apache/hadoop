@@ -31,9 +31,9 @@ int dfs_getattr(const char *path, struct stat *st)
   assert(path);
   assert(st);
 
-  hdfsFS fs = doConnectAsUser(dfs->nn_hostname,dfs->nn_port);
+  hdfsFS fs = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (NULL == fs) {
-    ERROR("Could not connect to %s:%d", dfs->nn_hostname, dfs->nn_port);
+    ERROR("Could not connect to %s:%d", dfs->nn_uri, dfs->nn_port);
     return -EIO;
   }
 

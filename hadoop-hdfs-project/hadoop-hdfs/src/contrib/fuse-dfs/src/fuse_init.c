@@ -92,15 +92,15 @@ void *dfs_init(void) {
 
   // initialize the context
   dfs->debug                 = options.debug;
-  dfs->nn_hostname           = options.server;
-  dfs->nn_port               = options.port;
+  dfs->nn_uri                = options.nn_uri;
+  dfs->nn_port               = options.nn_port;
   dfs->read_only             = options.read_only;
   dfs->usetrash              = options.usetrash;
   dfs->protectedpaths        = NULL;
   dfs->rdbuffer_size         = options.rdbuffer_size;
   dfs->direct_io             = options.direct_io;
 
-  INFO("Mounting %s:%d", dfs->nn_hostname, dfs->nn_port);
+  INFO("Mounting.  nn_uri=%s, nn_port=%d", dfs->nn_uri, dfs->nn_port);
 
   init_protectedpaths(dfs);
   assert(dfs->protectedpaths != NULL);

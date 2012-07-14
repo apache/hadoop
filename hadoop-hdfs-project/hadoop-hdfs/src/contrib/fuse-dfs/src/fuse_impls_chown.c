@@ -54,7 +54,7 @@ int dfs_chown(const char *path, uid_t uid, gid_t gid)
     goto cleanup;
   } 
 
-  userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (userFS == NULL) {
     ERROR("Could not connect to HDFS");
     ret = -EIO;

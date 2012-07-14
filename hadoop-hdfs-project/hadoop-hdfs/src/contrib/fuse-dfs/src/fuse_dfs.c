@@ -101,14 +101,14 @@ int main(int argc, char *argv[])
     fuse_opt_add_arg(&args, buf);
   }
 
-  if (options.server == NULL || options.port == 0) {
+  if (options.nn_uri == NULL) {
     print_usage(argv[0]);
     exit(0);
   }
 
   // Check connection as root
   if (options.initchecks == 1) {
-    hdfsFS tempFS = hdfsConnectAsUser(options.server, options.port, "root");
+    hdfsFS tempFS = hdfsConnectAsUser(options.nn_uri, options.nn_port, "root");
     if (NULL == tempFS) {
       const char *cp = getenv("CLASSPATH");
       const char *ld = getenv("LD_LIBRARY_PATH");

@@ -31,7 +31,7 @@ int dfs_chmod(const char *path, mode_t mode)
   assert(dfs);
   assert('/' == *path);
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (userFS == NULL) {
     ERROR("Could not connect to HDFS");
     ret = -EIO;

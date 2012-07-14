@@ -33,7 +33,7 @@ int dfs_utimens(const char *path, const struct timespec ts[2])
   time_t aTime = ts[0].tv_sec;
   time_t mTime = ts[1].tv_sec;
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_hostname, dfs->nn_port);
+  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (userFS == NULL) {
     ERROR("Could not connect");
     return -EIO;
