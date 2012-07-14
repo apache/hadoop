@@ -175,11 +175,21 @@ extern  "C" {
      *
      * @param bld  The HDFS builder
      * @param nn   The NameNode to use.
+     *
      *             If the string given is 'default', the default NameNode
      *             configuration will be used (from the XML configuration files)
+     *
      *             If NULL is given, a LocalFileSystem will be created.
-     *             Otherwise, the string will be interpreted as a hostname or IP
-     *             address.
+     *
+     *             If the string starts with a protocol type such as file:// or
+     *             hdfs://, this protocol type will be used.  If not, the
+     *             hdfs:// protocol type will be used.
+     *
+     *             You may specify a NameNode port in the usual way by 
+     *             passing a string of the format hdfs://<hostname>:<port>.
+     *             Alternately, you may set the port with
+     *             hdfsBuilderSetNameNodePort.  However, you must not pass the
+     *             port in two different ways.
      */
     void hdfsBuilderSetNameNode(struct hdfsBuilder *bld, const char *nn);
 

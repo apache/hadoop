@@ -406,6 +406,57 @@ hdfsFS hdfsConnectAsUserNewInstance(const char* host, tPort port,
     return hdfsBuilderConnect(bld);
 }
 
+
+/**
+ * Calculate the effective URI to use, given a builder configuration.
+ *
+ * If there is not already a URI scheme, we prepend 'hdfs://'.
+ *
+ * If there is not already a port specified, and a port was given to the
+ * builder, we suffix that port.  If there is a port specified but also one in
+ * the URI, that is an error.
+ *
+ * @param bld       The hdfs builder object
+ * @param uri       (out param) dynamically allocated string representing the
+ *                  effective URI
+ *
+ * @return          0 on success; error code otherwise
+ */
+static int calcEffectiveURI(struct hdfsBuilder *bld, char ** uri)
+{
+    const char *scheme;
+    char suffix[64];
+    const char *lastColon;
+    char *u;
+    size_t uriLen;
+
+    if (!bld->nn)
+        return EINVAL;
+    scheme = (strstr(bld->nn, "://")) ? "" : "hdfs://";
+    if (bld->port == 0) {
+        suffix[0] = '\0';
+    } else {
+        lastColon = rindex(bld->nn, ':');
+        if (lastColon && (strspn(lastColon + 1, "0123456789") ==
+                          strlen(lastColon + 1))) {
+            fprintf(stderr, "port %d was given, but URI '%s' already "
+                "contains a port!\n", bld->port, bld->nn);
+            return EINVAL;
+        }
+        snprintf(suffix, sizeof(suffix), ":%d", bld->port);
+    }
+
+    uriLen = strlen(scheme) + strlen(bld->nn) + strlen(suffix);
+    u = malloc((uriLen + 1) * (sizeof(char)));
+    if (!u) {
+        fprintf(stderr, "calcEffectiveURI: out of memory");
+        return ENOMEM;
+    }
+    snprintf(u, uriLen + 1, "%s%s%s", scheme, bld->nn, suffix);
+    *uri = u;
+    return 0;
+}
+
 hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
 {
     JNIEnv *env = 0;
@@ -414,7 +465,6 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
     jstring jURIString = NULL, jUserString = NULL;
     jvalue  jVal;
     jthrowable jExc = NULL;
-    size_t cURILen;
     char *cURI = 0;
     int ret = 0;
 
@@ -472,14 +522,9 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
             jURI = jVal.l;
         } else {
             // fs = FileSystem::get(URI, conf, ugi);
-            cURILen = strlen(bld->nn) + 16;
-            cURI = malloc(cURILen);
-            if (!cURI) {
-                fprintf(stderr, "failed to allocate memory for HDFS URI\n");
-                ret = ENOMEM;			
+            ret = calcEffectiveURI(bld, &cURI);
+            if (ret)
                 goto done;
-            }
-            snprintf(cURI, cURILen, "hdfs://%s:%d", bld->nn, (int)(bld->port));
             jURIString = (*env)->NewStringUTF(env, cURI);
             if (invokeMethod(env, &jVal, &jExc, STATIC, NULL, JAVA_NET_URI,
                              "create", "(Ljava/lang/String;)Ljava/net/URI;",
