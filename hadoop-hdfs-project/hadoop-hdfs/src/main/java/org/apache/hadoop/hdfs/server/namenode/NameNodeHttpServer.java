@@ -63,7 +63,7 @@ public class NameNodeHttpServer {
   
   public static final String NAMENODE_ADDRESS_ATTRIBUTE_KEY = "name.node.address";
   public static final String FSIMAGE_ATTRIBUTE_KEY = "name.system.image";
-  protected static final String NAMENODE_ATTRIBUTE_KEY = "name.node";
+  public static final String NAMENODE_ATTRIBUTE_KEY = "name.node";
   
   public NameNodeHttpServer(
       Configuration conf,
