@@ -17,8 +17,15 @@
  */
 
 #include "hdfs.h" 
+#include "hdfs_test.h" 
 
-tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length);
+#include <inttypes.h>
+#include <jni.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
 
 void permission_disp(short permissions, char *rtr) {
   rtr[9] = '\0';
@@ -53,6 +60,9 @@ void permission_disp(short permissions, char *rtr) {
 } 
 
 int main(int argc, char **argv) {
+    char buffer[32];
+    tSize num_written_bytes;
+
     hdfsFS fs = hdfsConnectNewInstance("default", 0);
     if(!fs) {
         fprintf(stderr, "Oops! Failed to connect to hdfs!\n");
@@ -77,7 +87,7 @@ int main(int argc, char **argv) {
             exit(-1);
         }
         fprintf(stderr, "Opened %s for writing successfully...\n", writePath);
-        tSize num_written_bytes =
+        num_written_bytes =
           hdfsWrite(fs, writeFile, (void*)fileContents, strlen(fileContents)+1);
         if (num_written_bytes != strlen(fileContents) + 1) {
           fprintf(stderr, "Failed to write correct number of bytes - expected %d, got %d\n",
@@ -127,6 +137,13 @@ int main(int argc, char **argv) {
             exit(-1);
         }
 
+        if (!hdfsFileIsOpenForRead(readFile)) {
+            fprintf(stderr, "hdfsFileIsOpenForRead: we just opened a file "
+                    "with O_RDONLY, and it did not show up as 'open for "
+                    "read'\n");
+            exit(-1);
+        }
+
         fprintf(stderr, "hdfsAvailable: %d\n", hdfsAvailable(fs, readFile));
 
         tOffset seekPos = 1;
@@ -144,7 +161,7 @@ int main(int argc, char **argv) {
         }
         fprintf(stderr, "Current position: %ld\n", currentPos);
 
-        if ((readFile->flags & HDFS_FILE_SUPPORTS_DIRECT_READ) == 0) {
+        if (!hdfsFileUsesDirectRead(readFile)) {
           fprintf(stderr, "Direct read support incorrectly not detected "
                   "for HDFS filesystem\n");
           exit(-1);
@@ -152,11 +169,31 @@ int main(int argc, char **argv) {
 
         fprintf(stderr, "Direct read support detected for HDFS\n");
 
-        // Clear flags so that we really go through slow read path
-        readFile->flags &= ~HDFS_FILE_SUPPORTS_DIRECT_READ;
+        // Test the direct read path
+        if(hdfsSeek(fs, readFile, 0)) {
+            fprintf(stderr, "Failed to seek %s for reading!\n", readPath);
+            exit(-1);
+        }
+        memset(buffer, 0, sizeof(buffer));
+        tSize num_read_bytes = hdfsRead(fs, readFile, (void*)buffer,
+                sizeof(buffer));
+        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
+            fprintf(stderr, "Failed to read (direct). Expected %s but got %s (%d bytes)\n",
+                    fileContents, buffer, num_read_bytes);
+            exit(-1);
+        }
+        fprintf(stderr, "Read (direct) following %d bytes:\n%s\n",
+                num_read_bytes, buffer);
+        if (hdfsSeek(fs, readFile, 0L)) {
+            fprintf(stderr, "Failed to seek to file start!\n");
+            exit(-1);
+        }
 
-        static char buffer[32];
-        tSize num_read_bytes = hdfsRead(fs, readFile, (void*)buffer, 
+        // Disable the direct read path so that we really go through the slow
+        // read path
+        hdfsFileDisableDirectRead(readFile);
+
+        num_read_bytes = hdfsRead(fs, readFile, (void*)buffer, 
                 sizeof(buffer));
         fprintf(stderr, "Read following %d bytes:\n%s\n", 
                 num_read_bytes, buffer);
@@ -168,24 +205,6 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Read following %d bytes:\n%s\n", 
                 num_read_bytes, buffer);
 
-        if (hdfsSeek(fs, readFile, 0L)) {
-            fprintf(stderr,
-                    "Failed to seek to file start for direct read test!\n");
-            exit(-1);
-        }
-
-        readFile->flags |= HDFS_FILE_SUPPORTS_DIRECT_READ;
-
-        memset(buffer, 0, strlen(fileContents + 1));
-        num_read_bytes = hdfsRead(fs, readFile, (void*)buffer,
-                sizeof(buffer));
-        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
-            fprintf(stderr, "Failed to read (direct). Expected %s but got %s (%d bytes)\n",
-                    fileContents, buffer, num_read_bytes);
-            exit(-1);
-        }
-        fprintf(stderr, "Read (direct) following %d bytes:\n%s\n",
-                num_read_bytes, buffer);
         hdfsCloseFile(fs, readFile);
 
         // Test correct behaviour for unsupported filesystems
@@ -195,33 +214,17 @@ int main(int argc, char **argv) {
             exit(-1);
         }
 
-        tSize num_written_bytes = hdfsWrite(lfs, localFile,
-                                            (void*)fileContents,
-                                            strlen(fileContents) + 1);
+        num_written_bytes = hdfsWrite(lfs, localFile, (void*)fileContents,
+                                      strlen(fileContents) + 1);
 
         hdfsCloseFile(lfs, localFile);
         localFile = hdfsOpenFile(lfs, writePath, O_RDONLY, 0, 0, 0);
 
-        if (localFile->flags & HDFS_FILE_SUPPORTS_DIRECT_READ) {
+        if (hdfsFileUsesDirectRead(localFile)) {
           fprintf(stderr, "Direct read support incorrectly detected for local "
                   "filesystem\n");
           exit(-1);
         }
-
-        memset(buffer, 0, strlen(fileContents + 1));
-        int result = readDirect(lfs, localFile, (void*)buffer, sizeof(buffer));
-        if (result != -1) {
-          fprintf(stderr, "Expected error from local direct read not seen!\n");
-          exit(-1);
-        }
-
-        if (errno != ENOTSUP) {
-          fprintf(stderr, "Error code not correctly set to ENOTSUP, was %d!\n",
-                  errno);
-          exit(-1);
-        }
-
-        fprintf(stderr, "Expected exception thrown for unsupported direct read\n");
 
         hdfsCloseFile(lfs, localFile);
     }

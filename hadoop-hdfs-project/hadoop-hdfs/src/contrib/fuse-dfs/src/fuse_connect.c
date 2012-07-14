@@ -23,6 +23,8 @@
 
 #include <limits.h>
 #include <search.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define HADOOP_SECURITY_AUTHENTICATION "hadoop.security.authentication"
 

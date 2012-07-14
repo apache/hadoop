@@ -21,7 +21,9 @@
 #include "fuse_impls.h"
 #include "fuse_connect.h"
 
- int dfs_chown(const char *path, uid_t uid, gid_t gid)
+#include <stdlib.h>
+
+int dfs_chown(const char *path, uid_t uid, gid_t gid)
 {
   TRACE1("chown", path)
 

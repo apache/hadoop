@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 
-#include <limits.h>
-
 #include "hdfs.h" 
+
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 int main(int argc, char **argv) {
 
