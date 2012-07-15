@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -131,7 +132,7 @@ public class TestRMAppTransitions {
     rmDispatcher.start();
   }
 
-  protected RMApp createNewTestApp() {
+  protected RMApp createNewTestApp(ApplicationSubmissionContext submissionContext) {
     ApplicationId applicationId = MockApps.newAppID(appId++);
     String user = MockApps.newUserName();
     String name = MockApps.newAppName();
@@ -139,12 +140,15 @@ public class TestRMAppTransitions {
     Configuration conf = new YarnConfiguration();
     // ensure max retries set to known value
     conf.setInt(YarnConfiguration.RM_AM_MAX_RETRIES, maxRetries);
-    ApplicationSubmissionContext submissionContext = null; 
     String clientTokenStr = "bogusstring";
     ApplicationStore appStore = mock(ApplicationStore.class);
     YarnScheduler scheduler = mock(YarnScheduler.class);
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
+    
+    if(submissionContext == null) {
+      submissionContext = new ApplicationSubmissionContextPBImpl();
+    }
 
     RMApp application = new RMAppImpl(applicationId, rmContext,
         conf, name, user,
@@ -235,8 +239,9 @@ public class TestRMAppTransitions {
         diag.toString().matches(regex));
   }
 
-  protected RMApp testCreateAppSubmitted() throws IOException {
-    RMApp application = createNewTestApp();
+  protected RMApp testCreateAppSubmitted(
+      ApplicationSubmissionContext submissionContext) throws IOException {
+  RMApp application = createNewTestApp(submissionContext);
     // NEW => SUBMITTED event RMAppEventType.START
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.START);
@@ -246,9 +251,10 @@ public class TestRMAppTransitions {
     return application;
   }
 
-  protected RMApp testCreateAppAccepted() throws IOException {
-    RMApp application = testCreateAppSubmitted();
-    // SUBMITTED => ACCEPTED event RMAppEventType.APP_ACCEPTED
+  protected RMApp testCreateAppAccepted(
+      ApplicationSubmissionContext submissionContext) throws IOException {
+    RMApp application = testCreateAppSubmitted(submissionContext);
+  // SUBMITTED => ACCEPTED event RMAppEventType.APP_ACCEPTED
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), 
             RMAppEventType.APP_ACCEPTED);
@@ -258,8 +264,9 @@ public class TestRMAppTransitions {
     return application;
   }
 
-  protected RMApp testCreateAppRunning() throws IOException {
-    RMApp application = testCreateAppAccepted();
+  protected RMApp testCreateAppRunning(
+      ApplicationSubmissionContext submissionContext) throws IOException {
+  RMApp application = testCreateAppAccepted(submissionContext);
     // ACCEPTED => RUNNING event RMAppEventType.ATTEMPT_REGISTERED
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), 
@@ -271,8 +278,9 @@ public class TestRMAppTransitions {
     return application;
   }
 
-  protected RMApp testCreateAppFinished() throws IOException {
-    RMApp application = testCreateAppRunning();
+  protected RMApp testCreateAppFinished(
+      ApplicationSubmissionContext submissionContext) throws IOException {
+  RMApp application = testCreateAppRunning(submissionContext);
     // RUNNING => FINISHED event RMAppEventType.ATTEMPT_FINISHED
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), 
@@ -286,16 +294,37 @@ public class TestRMAppTransitions {
   }
 
   @Test
+  public void testUnmanagedApp() throws IOException {
+    ApplicationSubmissionContext subContext = new ApplicationSubmissionContextPBImpl();
+    subContext.setUnmanagedAM(true);
+
+    // test success path
+    LOG.info("--- START: testUnmanagedAppSuccessPath ---");
+    testCreateAppFinished(subContext);
+
+    // test app fails after 1 app attempt failure
+    LOG.info("--- START: testUnmanagedAppFailPath ---");
+    RMApp application = testCreateAppRunning(subContext);
+    RMAppEvent event = new RMAppFailedAttemptEvent(
+        application.getApplicationId(), RMAppEventType.ATTEMPT_FAILED, "");
+    application.handle(event);
+    RMAppAttempt appAttempt = application.getCurrentAppAttempt();
+    Assert.assertEquals(1, appAttempt.getAppAttemptId().getAttemptId());
+    assertFailed(application,
+        ".*Unmanaged application.*Failing the application.*");
+  }
+  
+  @Test
   public void testAppSuccessPath() throws IOException {
     LOG.info("--- START: testAppSuccessPath ---");
-    testCreateAppFinished();
+    testCreateAppFinished(null);
   }
 
   @Test
   public void testAppNewKill() throws IOException {
     LOG.info("--- START: testAppNewKill ---");
 
-    RMApp application = createNewTestApp();
+    RMApp application = createNewTestApp(null);
     // NEW => KILLED event RMAppEventType.KILL
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
@@ -307,7 +336,7 @@ public class TestRMAppTransitions {
   public void testAppNewReject() throws IOException {
     LOG.info("--- START: testAppNewReject ---");
 
-    RMApp application = createNewTestApp();
+    RMApp application = createNewTestApp(null);
     // NEW => FAILED event RMAppEventType.APP_REJECTED
     String rejectedText = "Test Application Rejected";
     RMAppEvent event = 
@@ -320,7 +349,7 @@ public class TestRMAppTransitions {
   public void testAppSubmittedRejected() throws IOException {
     LOG.info("--- START: testAppSubmittedRejected ---");
 
-    RMApp application = testCreateAppSubmitted();
+    RMApp application = testCreateAppSubmitted(null);
     // SUBMITTED => FAILED event RMAppEventType.APP_REJECTED
     String rejectedText = "app rejected";
     RMAppEvent event = 
@@ -333,7 +362,7 @@ public class TestRMAppTransitions {
   public void testAppSubmittedKill() throws IOException {
     LOG.info("--- START: testAppSubmittedKill---");
 
-    RMApp application = testCreateAppAccepted();
+    RMApp application = testCreateAppAccepted(null);
     // SUBMITTED => KILLED event RMAppEventType.KILL 
     RMAppEvent event = new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
     this.rmContext.getRMApps().putIfAbsent(application.getApplicationId(), application);
@@ -345,7 +374,7 @@ public class TestRMAppTransitions {
   public void testAppAcceptedFailed() throws IOException {
     LOG.info("--- START: testAppAcceptedFailed ---");
 
-    RMApp application = testCreateAppAccepted();
+    RMApp application = testCreateAppAccepted(null);
     // ACCEPTED => ACCEPTED event RMAppEventType.RMAppEventType.ATTEMPT_FAILED
     for (int i=1; i<maxRetries; i++) {
       RMAppEvent event = 
@@ -374,7 +403,7 @@ public class TestRMAppTransitions {
   public void testAppAcceptedKill() throws IOException {
     LOG.info("--- START: testAppAcceptedKill ---");
 
-    RMApp application = testCreateAppAccepted();
+    RMApp application = testCreateAppAccepted(null);
     // ACCEPTED => KILLED event RMAppEventType.KILL
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
@@ -386,7 +415,7 @@ public class TestRMAppTransitions {
   public void testAppRunningKill() throws IOException {
     LOG.info("--- START: testAppRunningKill ---");
 
-    RMApp application = testCreateAppRunning();
+    RMApp application = testCreateAppRunning(null);
     // RUNNING => KILLED event RMAppEventType.KILL
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
@@ -398,7 +427,7 @@ public class TestRMAppTransitions {
   public void testAppRunningFailed() throws IOException {
     LOG.info("--- START: testAppRunningFailed ---");
 
-    RMApp application = testCreateAppRunning();
+    RMApp application = testCreateAppRunning(null);
     RMAppAttempt appAttempt = application.getCurrentAppAttempt();
     int expectedAttemptId = 1;
     Assert.assertEquals(expectedAttemptId, 
@@ -444,7 +473,7 @@ public class TestRMAppTransitions {
   public void testAppFinishedFinished() throws IOException {
     LOG.info("--- START: testAppFinishedFinished ---");
 
-    RMApp application = testCreateAppFinished();
+    RMApp application = testCreateAppFinished(null);
     // FINISHED => FINISHED event RMAppEventType.KILL
     RMAppEvent event = 
         new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
@@ -460,7 +489,7 @@ public class TestRMAppTransitions {
   public void testAppKilledKilled() throws IOException {
     LOG.info("--- START: testAppKilledKilled ---");
 
-    RMApp application = testCreateAppRunning();
+    RMApp application = testCreateAppRunning(null);
 
     // RUNNING => KILLED event RMAppEventType.KILL
     RMAppEvent event = 

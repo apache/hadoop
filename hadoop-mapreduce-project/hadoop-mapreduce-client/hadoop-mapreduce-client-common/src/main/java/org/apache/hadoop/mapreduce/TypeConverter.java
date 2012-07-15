@@ -383,6 +383,7 @@ public class TypeConverter {
     switch (yarnApplicationState) {
     case NEW:
     case SUBMITTED:
+    case ACCEPTED:
       return State.PREP;
     case RUNNING:
       return State.RUNNING;

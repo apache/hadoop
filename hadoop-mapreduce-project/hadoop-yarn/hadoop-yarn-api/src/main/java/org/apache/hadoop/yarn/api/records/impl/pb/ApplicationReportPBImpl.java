@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.yarn.api.records.impl.pb;
 
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
+import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationAttemptIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationIdProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProto;
 import org.apache.hadoop.yarn.proto.YarnProtos.ApplicationReportProtoOrBuilder;
@@ -39,6 +41,7 @@ implements ApplicationReport {
   boolean viaProto = false;
 
   ApplicationId applicationId;
+  ApplicationAttemptId currentApplicationAttemptId;
 
   public ApplicationReportPBImpl() {
     builder = ApplicationReportProto.newBuilder();
@@ -70,6 +73,20 @@ implements ApplicationReport {
       return;
     }
     builder.setAppResourceUsage(convertToProtoFormat(appInfo));
+  }
+  
+  @Override
+  public ApplicationAttemptId getCurrentApplicationAttemptId() {
+    if (this.currentApplicationAttemptId != null) {
+      return this.currentApplicationAttemptId;
+    }
+
+    ApplicationReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasCurrentApplicationAttemptId()) {
+      return null;
+    }
+    this.currentApplicationAttemptId = convertFromProtoFormat(p.getCurrentApplicationAttemptId());
+    return this.currentApplicationAttemptId;
   }
 
   @Override
@@ -196,6 +213,14 @@ implements ApplicationReport {
     if (applicationId == null)
       builder.clearStatus();
     this.applicationId = applicationId;
+  }
+
+  @Override
+  public void setCurrentApplicationAttemptId(ApplicationAttemptId applicationAttemptId) {
+    maybeInitBuilder();
+    if (applicationId == null)
+      builder.clearStatus();
+    this.currentApplicationAttemptId = applicationAttemptId;
   }
 
   @Override
@@ -330,6 +355,11 @@ implements ApplicationReport {
             builder.getApplicationId())) {
       builder.setApplicationId(convertToProtoFormat(this.applicationId));
     }
+    if (this.currentApplicationAttemptId != null
+        && !((ApplicationAttemptIdPBImpl) this.currentApplicationAttemptId).getProto().equals(
+            builder.getCurrentApplicationAttemptId())) {
+      builder.setCurrentApplicationAttemptId(convertToProtoFormat(this.currentApplicationAttemptId));
+    }
   }
 
   private void mergeLocalToProto() {
@@ -350,6 +380,10 @@ implements ApplicationReport {
   private ApplicationIdProto convertToProtoFormat(ApplicationId t) {
     return ((ApplicationIdPBImpl) t).getProto();
   }
+  
+  private ApplicationAttemptIdProto convertToProtoFormat(ApplicationAttemptId t) {
+    return ((ApplicationAttemptIdPBImpl) t).getProto();
+  }
 
   private ApplicationResourceUsageReport convertFromProtoFormat(ApplicationResourceUsageReportProto s) {
     return ProtoUtils.convertFromProtoFormat(s);
@@ -362,6 +396,11 @@ implements ApplicationReport {
   private ApplicationIdPBImpl convertFromProtoFormat(
       ApplicationIdProto applicationId) {
     return new ApplicationIdPBImpl(applicationId);
+  }
+  
+  private ApplicationAttemptIdPBImpl convertFromProtoFormat(
+      ApplicationAttemptIdProto applicationAttemptId) {
+    return new ApplicationAttemptIdPBImpl(applicationAttemptId);
   }
 
   private YarnApplicationState convertFromProtoFormat(YarnApplicationStateProto s) {

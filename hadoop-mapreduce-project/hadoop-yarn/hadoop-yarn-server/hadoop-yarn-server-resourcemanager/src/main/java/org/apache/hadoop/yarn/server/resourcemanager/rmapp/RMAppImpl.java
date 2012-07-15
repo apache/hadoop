@@ -333,8 +333,9 @@ public class RMAppImpl implements RMApp {
     case NEW:
       return YarnApplicationState.NEW;
     case SUBMITTED:
-    case ACCEPTED:
       return YarnApplicationState.SUBMITTED;
+    case ACCEPTED:
+      return YarnApplicationState.ACCEPTED;
     case RUNNING:
       return YarnApplicationState.RUNNING;
     case FINISHED:
@@ -403,12 +404,12 @@ public class RMAppImpl implements RMApp {
       } else {
         appUsageReport = DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
       }
-      return BuilderUtils.newApplicationReport(this.applicationId, this.user,
-          this.queue, this.name, host, rpcPort, clientToken,
-          createApplicationState(this.stateMachine.getCurrentState()),
-          diags, trackingUrl,
-          this.startTime, this.finishTime, finishState, appUsageReport,
-          origTrackingUrl);
+      return BuilderUtils.newApplicationReport(this.applicationId,
+          this.currentAttempt.getAppAttemptId(), this.user, this.queue,
+          this.name, host, rpcPort, clientToken,
+          createApplicationState(this.stateMachine.getCurrentState()), diags,
+          trackingUrl, this.startTime, this.finishTime, finishState,
+          appUsageReport, origTrackingUrl);
     } finally {
       this.readLock.unlock();
     }
@@ -599,21 +600,32 @@ public class RMAppImpl implements RMApp {
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
 
-      RMAppFailedAttemptEvent failedEvent = ((RMAppFailedAttemptEvent)event);
-      if (app.attempts.size() == app.maxRetries) {
-        String msg = "Application " + app.getApplicationId()
-        + " failed " + app.maxRetries
-        + " times due to " + failedEvent.getDiagnostics()
-        + ". Failing the application.";
+      RMAppFailedAttemptEvent failedEvent = ((RMAppFailedAttemptEvent) event);
+      boolean retryApp = true;
+      String msg = null;
+      if (app.submissionContext.getUnmanagedAM()) {
+        // RM does not manage the AM. Do not retry
+        retryApp = false;
+        msg = "Unmanaged application " + app.getApplicationId()
+            + " failed due to " + failedEvent.getDiagnostics()
+            + ". Failing the application.";
+      } else if (app.attempts.size() == app.maxRetries) {
+        retryApp = false;
+        msg = "Application " + app.getApplicationId() + " failed "
+            + app.maxRetries + " times due to " + failedEvent.getDiagnostics()
+            + ". Failing the application.";
+      }
+
+      if (retryApp) {
+        app.createNewAttempt();
+        return initialState;
+      } else {
         LOG.info(msg);
         app.diagnostics.append(msg);
         // Inform the node for app-finish
         FINAL_TRANSITION.transition(app, event);
         return RMAppState.FAILED;
       }
-
-      app.createNewAttempt();
-      return initialState;
     }
 
   }
