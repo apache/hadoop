@@ -1021,6 +1021,26 @@ public class TestConfiguration extends TestCase {
     assertTrue("Picked out wrong key " + key3, !res.containsKey(key3));
     assertTrue("Picked out wrong key " + key4, !res.containsKey(key4));
   }
+  
+  public void testSettingValueNull() throws Exception {
+    Configuration config = new Configuration();
+    try {
+      config.set("testClassName", null);
+      fail("Should throw an IllegalArgumentException exception ");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
+  }
+
+  public void testSettingKeyNull() throws Exception {
+    Configuration config = new Configuration();
+    try {
+      config.set(null, "test");
+      fail("Should throw an IllegalArgumentException exception ");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
+  }
 
   public static void main(String[] argv) throws Exception {
     junit.textui.TestRunner.main(new String[]{

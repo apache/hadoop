@@ -69,6 +69,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8541. Better high-percentile latency metrics. (Andrew Wang via atm)
 
+    HADOOP-8362. Improve exception message when Configuration.set() is called with a null key or value. (Madhukara Phatak and Suresh Srinivas via harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
