@@ -162,6 +162,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4432. Confusing warning message when GenericOptionsParser
     is not used. (Gabriel Reid via harsh)
 
+    MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
+    development of new applications. (Bikas Saha via acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES

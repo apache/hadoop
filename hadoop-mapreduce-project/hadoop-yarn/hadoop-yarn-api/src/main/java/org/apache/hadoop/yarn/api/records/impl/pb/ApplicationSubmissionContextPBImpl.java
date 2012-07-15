@@ -208,12 +208,25 @@ implements ApplicationSubmissionContext {
   }
   
   @Override
+  public boolean getUnmanagedAM() {
+    ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
+    //There is a default so cancelTokens should never be null
+    return p.getUnmanagedAm();
+  }
+  
+  @Override
+  public void setUnmanagedAM(boolean value) {
+    maybeInitBuilder();
+    builder.setUnmanagedAm(value);
+  }
+
+  @Override
   public boolean getCancelTokensWhenComplete() {
     ApplicationSubmissionContextProtoOrBuilder p = viaProto ? proto : builder;
     //There is a default so cancelTokens should never be null
     return p.getCancelTokensWhenComplete();
   }
-
+  
   @Override
   public void setCancelTokensWhenComplete(boolean cancel) {
     maybeInitBuilder();
