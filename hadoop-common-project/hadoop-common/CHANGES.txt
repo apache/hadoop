@@ -258,6 +258,9 @@ Branch-2 ( Unreleased changes )
     called with a null key or value. (Madhukara Phatak
     and Suresh Srinivas via harsh)
 
+    HADOOP-7818. DiskChecker#checkDir should fail if the directory is
+    not executable. (Madhukara Phatak via harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname

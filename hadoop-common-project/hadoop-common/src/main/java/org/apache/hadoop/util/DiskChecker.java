@@ -78,26 +78,32 @@ public class DiskChecker {
   }
   
   /**
-   * Create the directory if it doesn't exist and
+   * Create the directory if it doesn't exist and check that dir is readable,
+   * writable and executable
+   *  
    * @param dir
    * @throws DiskErrorException
    */
   public static void checkDir(File dir) throws DiskErrorException {
     if (!mkdirsWithExistsCheck(dir))
-      throw new DiskErrorException("can not create directory: " 
+      throw new DiskErrorException("Can not create directory: "
                                    + dir.toString());
-        
+
     if (!dir.isDirectory())
-      throw new DiskErrorException("not a directory: " 
+      throw new DiskErrorException("Not a directory: "
                                    + dir.toString());
-            
+
     if (!dir.canRead())
-      throw new DiskErrorException("directory is not readable: " 
+      throw new DiskErrorException("Directory is not readable: "
                                    + dir.toString());
-            
+
     if (!dir.canWrite())
-      throw new DiskErrorException("directory is not writable: " 
+      throw new DiskErrorException("Directory is not writable: "
                                    + dir.toString());
+
+    if (!dir.canExecute())
+      throw new DiskErrorException("Directory is not executable: "
+	  + dir.toString());
   }
 
   /**
