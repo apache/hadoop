@@ -30,7 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class ExitUtil {
   private final static Log LOG = LogFactory.getLog(ExitUtil.class.getName());
   private static volatile boolean systemExitDisabled = false;
-  private static volatile boolean terminateCalled = false;
+  private static volatile ExitException firstExitException;
 
   public static class ExitException extends RuntimeException {
     private static final long serialVersionUID = 1L;
@@ -53,7 +53,15 @@ public final class ExitUtil {
    * @return true if terminate has been called
    */
   public static boolean terminateCalled() {
-    return terminateCalled;
+    // Either we set this member or we actually called System#exit
+    return firstExitException != null;
+  }
+
+  /**
+   * @return the first ExitException thrown, null if none thrown yet
+   */
+  public static ExitException getFirstExitException() {
+    return firstExitException;
   }
 
   /**
@@ -65,9 +73,13 @@ public final class ExitUtil {
    */
   public static void terminate(int status, String msg) throws ExitException {
     LOG.info("Exiting with status " + status);
-    terminateCalled = true;
     if (systemExitDisabled) {
-      throw new ExitException(status, msg);
+      ExitException ee = new ExitException(status, msg);
+      LOG.fatal("Terminate called", ee);
+      if (null == firstExitException) {
+        firstExitException = ee;
+      }
+      throw ee;
     }
     System.exit(status);
   }
