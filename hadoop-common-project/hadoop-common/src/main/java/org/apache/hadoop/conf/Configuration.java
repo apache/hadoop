@@ -84,6 +84,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
+import com.google.common.base.Preconditions;
 
 /** 
  * Provides access to configuration parameters.
@@ -781,8 +782,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @param value property value.
    * @param source the place that this configuration value came from 
    * (For debugging).
+   * @throws IllegalArgumentException when the value or name is null.
    */
   public void set(String name, String value, String source) {
+    Preconditions.checkArgument(
+        name != null,
+        "Property name must not be null");
+    Preconditions.checkArgument(
+        value != null,
+        "Property value must not be null");
     if (deprecatedKeyMap.isEmpty()) {
       getProps();
     }

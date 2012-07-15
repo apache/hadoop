@@ -1065,6 +1065,26 @@ public class TestConfiguration extends TestCase {
         "Not returning expected number of classes. Number of returned classes ="
             + classes.length, 0, classes.length);
   }
+  
+  public void testSettingValueNull() throws Exception {
+    Configuration config = new Configuration();
+    try {
+      config.set("testClassName", null);
+      fail("Should throw an IllegalArgumentException exception ");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
+  }
+
+  public void testSettingKeyNull() throws Exception {
+    Configuration config = new Configuration();
+    try {
+      config.set(null, "test");
+      fail("Should throw an IllegalArgumentException exception ");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
+  }
 
   public void testInvalidSubstitutation() {
     String key = "test.random.key";
