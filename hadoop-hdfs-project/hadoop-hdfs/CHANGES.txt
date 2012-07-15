@@ -327,6 +327,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3610. fuse_dfs: Provide a way to use the default (configured) NN URI.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3663. MiniDFSCluster should capture the code path that led to
+    the first ExitException. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

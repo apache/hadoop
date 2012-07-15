@@ -1316,9 +1316,11 @@ public class MiniDFSCluster {
   public void shutdown() {
     LOG.info("Shutting down the Mini HDFS Cluster");
     if (checkExitOnShutdown)  {
-     if (ExitUtil.terminateCalled()) {
-       throw new AssertionError("Test resulted in an unexpected exit");
-     }
+      if (ExitUtil.terminateCalled()) {
+        LOG.fatal("Test resulted in an unexpected exit",
+            ExitUtil.getFirstExitException());
+        throw new AssertionError("Test resulted in an unexpected exit");
+      }
     }
     shutdownDataNodes();
     for (NameNodeInfo nnInfo : nameNodes) {
