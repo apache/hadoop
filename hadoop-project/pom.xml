@@ -645,7 +645,12 @@
         <version>4.0.0</version>
         <scope>compile</scope>
       </dependency>
-
+      <dependency>
+        <groupId>com.cenqua.clover</groupId>
+        <artifactId>clover</artifactId>
+        <!-- Use the version needed by maven-clover-plugin -->
+        <version>3.0.2</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 

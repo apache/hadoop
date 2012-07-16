@@ -71,6 +71,7 @@ class INodeDirectoryWithQuota extends INodeDirectory {
   /** Get this directory's namespace quota
    * @return this directory's namespace quota
    */
+  @Override
   long getNsQuota() {
     return nsQuota;
   }
@@ -78,6 +79,7 @@ class INodeDirectoryWithQuota extends INodeDirectory {
   /** Get this directory's diskspace quota
    * @return this directory's diskspace quota
    */
+  @Override
   long getDsQuota() {
     return dsQuota;
   }

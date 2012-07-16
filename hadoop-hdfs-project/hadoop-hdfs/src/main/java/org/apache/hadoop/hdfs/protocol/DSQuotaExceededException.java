@@ -37,6 +37,7 @@ public class DSQuotaExceededException extends QuotaExceededException {
     super(quota, count);
   }
 
+  @Override
   public String getMessage() {
     String msg = super.getMessage();
     if (msg == null) {

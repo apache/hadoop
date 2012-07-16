@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.HeartbeatManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.util.Time;
 
 /**
  * Test if live nodes count per node is correct 
@@ -140,7 +141,7 @@ public class TestNodeCount extends TestCase {
   
   void initializeTimeout(long timeout) {
     this.timeout = timeout;
-    this.failtime = System.currentTimeMillis()
+    this.failtime = Time.now()
         + ((timeout <= 0) ? Long.MAX_VALUE : timeout);
   }
   
@@ -151,7 +152,7 @@ public class TestNodeCount extends TestCase {
   
   /* check for timeout, then wait for cycleTime msec */
   void checkTimeout(String testLabel, long cycleTime) throws TimeoutException {
-    if (System.currentTimeMillis() > failtime) {
+    if (Time.now() > failtime) {
       throw new TimeoutException("Timeout: "
           + testLabel + " for block " + lastBlock + " after " + timeout 
           + " msec.  Last counts: live = " + lastNum.liveReplicas()

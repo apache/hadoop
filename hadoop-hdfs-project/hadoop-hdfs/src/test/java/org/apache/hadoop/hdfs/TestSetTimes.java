@@ -24,6 +24,7 @@ import java.net.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -159,8 +160,8 @@ public class TestSetTimes extends TestCase {
       assertTrue(atime2 == stat.getAccessTime());
       assertTrue(mtime2 == mtime3);
 
-      long mtime4 = System.currentTimeMillis() - (3600L * 1000L);
-      long atime4 = System.currentTimeMillis();
+      long mtime4 = Time.now() - (3600L * 1000L);
+      long atime4 = Time.now();
       fileSys.setTimes(dir1, mtime4, atime4);
       // check new modification time on file
       stat = fileSys.getFileStatus(dir1);

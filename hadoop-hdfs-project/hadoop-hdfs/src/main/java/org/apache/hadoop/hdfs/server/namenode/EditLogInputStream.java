@@ -57,6 +57,7 @@ public abstract class EditLogInputStream implements Closeable {
    * Close the stream.
    * @throws IOException if an error occurred while closing
    */
+  @Override
   public abstract void close() throws IOException;
 
   /** 

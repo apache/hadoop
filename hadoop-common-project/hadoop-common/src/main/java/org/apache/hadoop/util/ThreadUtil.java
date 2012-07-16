@@ -35,10 +35,10 @@ public class ThreadUtil {
    * @param millis the number of milliseconds for the current thread to sleep
    */
   public static void sleepAtLeastIgnoreInterrupts(long millis) {
-    long start = System.currentTimeMillis();
-    while (System.currentTimeMillis() - start < millis) {
+    long start = Time.now();
+    while (Time.now() - start < millis) {
       long timeToSleep = millis -
-          (System.currentTimeMillis() - start);
+          (Time.now() - start);
       try {
         Thread.sleep(timeToSleep);
       } catch (InterruptedException ie) {

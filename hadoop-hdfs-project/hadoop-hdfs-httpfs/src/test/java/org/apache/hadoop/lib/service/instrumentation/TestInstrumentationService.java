@@ -27,6 +27,7 @@ import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.Test;
@@ -50,26 +51,26 @@ public class TestInstrumentationService extends HTestCase {
     Assert.assertEquals(cron.lapStart, 0);
     Assert.assertEquals(cron.own, 0);
     Assert.assertEquals(cron.total, 0);
-    long begin = System.currentTimeMillis();
+    long begin = Time.now();
     Assert.assertEquals(cron.start(), cron);
     Assert.assertEquals(cron.start(), cron);
     Assert.assertEquals(cron.start, begin, 20);
     Assert.assertEquals(cron.start, cron.lapStart);
     sleep(100);
     Assert.assertEquals(cron.stop(), cron);
-    long end = System.currentTimeMillis();
+    long end = Time.now();
     long delta = end - begin;
     Assert.assertEquals(cron.own, delta, 20);
     Assert.assertEquals(cron.total, 0);
     Assert.assertEquals(cron.lapStart, 0);
     sleep(100);
-    long reStart = System.currentTimeMillis();
+    long reStart = Time.now();
     cron.start();
     Assert.assertEquals(cron.start, begin, 20);
     Assert.assertEquals(cron.lapStart, reStart, 20);
     sleep(100);
     cron.stop();
-    long reEnd = System.currentTimeMillis();
+    long reEnd = Time.now();
     delta += reEnd - reStart;
     Assert.assertEquals(cron.own, delta, 20);
     Assert.assertEquals(cron.total, 0);
@@ -109,22 +110,22 @@ public class TestInstrumentationService extends HTestCase {
     long avgOwn;
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     totalStart = ownStart;
     ownDelta = 0;
     sleep(100);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     sleep(100);
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     sleep(100);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     totalEnd = ownEnd;
     totalDelta = totalEnd - totalStart;
@@ -142,22 +143,22 @@ public class TestInstrumentationService extends HTestCase {
     cron = new InstrumentationService.Cron();
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     totalStart = ownStart;
     ownDelta = 0;
     sleep(200);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     sleep(200);
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     sleep(200);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     totalEnd = ownEnd;
     totalDelta = totalEnd - totalStart;
@@ -178,22 +179,22 @@ public class TestInstrumentationService extends HTestCase {
     cron = new InstrumentationService.Cron();
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     totalStart = ownStart;
     ownDelta = 0;
     sleep(300);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     sleep(300);
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     sleep(300);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     totalEnd = ownEnd;
     totalDelta = totalEnd - totalStart;

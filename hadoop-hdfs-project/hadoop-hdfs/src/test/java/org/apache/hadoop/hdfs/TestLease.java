@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -82,7 +83,7 @@ public class TestLease {
       // We don't need to wait the lease renewer thread to act.
       // call renewLease() manually.
       // make it look like lease has already expired.
-      dfs.lastLeaseRenewal = System.currentTimeMillis() - 300000;
+      dfs.lastLeaseRenewal = Time.now() - 300000;
       dfs.renewLease();
 
       // this should not work.

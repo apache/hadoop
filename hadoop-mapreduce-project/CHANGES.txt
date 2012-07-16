@@ -6,6 +6,8 @@ Release 2.0.1-alpha - UNRELEASED
 
   NEW FEATURES
 
+    MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-4146. Support limits on task status string length and number of
@@ -21,6 +23,9 @@ Release 2.0.1-alpha - UNRELEASED
     mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
 
     MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+
+    MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
+    development of new applications. (Bikas Saha via acmurthy) 
 
   OPTIMIZATIONS
 
@@ -82,6 +87,19 @@ Release 2.0.1-alpha - UNRELEASED
     (Andy Isaacson via eli)
 
     MAPREDUCE-2739. Update installation docs (remove YarnClientFactory) (bowang via tucu)
+
+    MAPREDUCE-3993. Graceful handling of codec errors during decompression 
+    (kkambatl via tucu)
+
+    MAPREDUCE-4416. Some tests fail if Clover is enabled (Kihwal Lee via bobby)
+
+    MAPREDUCE-4441. Fix build issue caused by MR-3451 (kkambatl via tucu)
+
+    HADOOP-8499. Lower min.user.id to 500 for the tests.
+    (Colin Patrick McCabe via eli)
+
+    MAPREDUCE-4395. Possible NPE at ClientDistributedCacheManager
+    #determineTimestamps (Bhallamudi via bobby)
 
 Release 2.0.0-alpha - 05-23-2012
 
@@ -153,6 +171,9 @@ Release 2.0.0-alpha - 05-23-2012
 
     MAPREDUCE-3906. Fix inconsistency in documentation regarding
     mapreduce.jobhistory.principal. (Eugene Koontz via harsh)
+
+    MAPREDUCE-4432. Confusing warning message when GenericOptionsParser
+    is not used. (Gabriel Reid via harsh)
 
   OPTIMIZATIONS
 
@@ -535,6 +556,21 @@ Release 0.23.3 - UNRELEASED
     via bobby)
 
     MAPREDUCE-4402. TestFileInputFormat fails intermittently (Jason Lowe via
+    bobby)
+
+    MAPREDUCE-4300. OOM in AM can turn it into a zombie. (Robert Evans via
+    tgraves)
+
+    MAPREDUCE-4252. MR2 job never completes with 1 pending task (Tom White via
+    bobby)
+
+    MAPREDUCE-3940. ContainerTokens should have an expiry interval. (Siddharth
+    Seth and Vinod Kumar Vavilapalli via vinodkv)
+
+    MAPREDUCE-4419. ./mapred queue -info <queuename> -showJobs displays all
+    the jobs irrespective of <queuename> (Devaraj K via bobby)
+
+    MAPREDUCE-4299. Terasort hangs with MR2 FifoScheduler (Tom White via
     bobby)
 
 Release 0.23.2 - UNRELEASED

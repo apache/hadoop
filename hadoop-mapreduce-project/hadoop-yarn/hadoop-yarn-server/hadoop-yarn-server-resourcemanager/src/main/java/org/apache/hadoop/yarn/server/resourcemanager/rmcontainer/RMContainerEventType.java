@@ -20,10 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.rmcontainer;
 
 public enum RMContainerEventType {
 
-  // Source: scheduler
-  START,
-
   // Source: SchedulerApp
+  START,
   ACQUIRED,
   KILL, // Also from Node on NodeRemoval
   RESERVED,

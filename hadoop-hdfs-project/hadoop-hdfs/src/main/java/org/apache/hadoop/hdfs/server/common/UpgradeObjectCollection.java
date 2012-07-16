@@ -73,6 +73,7 @@ public class UpgradeObjectCollection {
       }
     }
 
+    @Override
     public int compareTo(UOSignature o) {
       if(this.version != o.version)
         return (version < o.version ? -1 : 1);
@@ -82,6 +83,7 @@ public class UpgradeObjectCollection {
       return className.compareTo(o.className);
     }
 
+    @Override
     public boolean equals(Object o) {
         if (!(o instanceof UOSignature)) {
           return false;
@@ -89,6 +91,7 @@ public class UpgradeObjectCollection {
         return this.compareTo((UOSignature)o) == 0;
       }
 
+      @Override
       public int hashCode() {
         return version ^ ((type==null)?0:type.hashCode()) 
                        ^ ((className==null)?0:className.hashCode());

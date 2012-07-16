@@ -64,7 +64,7 @@ public class TestConfServlet extends TestCase {
       String resource = (String)propertyInfo.get("resource");
       System.err.println("k: " + key + " v: " + val + " r: " + resource);
       if (TEST_KEY.equals(key) && TEST_VAL.equals(val)
-          && Configuration.UNKNOWN_RESOURCE.equals(resource)) {
+          && "programatically".equals(resource)) {
         foundSetting = true;
       }
     }

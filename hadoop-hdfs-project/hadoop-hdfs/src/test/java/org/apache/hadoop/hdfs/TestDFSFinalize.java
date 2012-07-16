@@ -125,6 +125,7 @@ public class TestDFSFinalize extends TestCase {
     } // end numDir loop
   }
  
+  @Override
   protected void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();

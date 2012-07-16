@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.api.records;
 
 import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -151,6 +150,28 @@ public interface ApplicationSubmissionContext {
   @Public
   @Stable
   public void setAMContainerSpec(ContainerLaunchContext amContainer);
+  
+  /**
+   * Get if the RM should manage the execution of the AM. 
+   * If true, then the RM 
+   * will not allocate a container for the AM and start it. It will expect the 
+   * AM to be launched and connect to the RM within the AM liveliness period and 
+   * fail the app otherwise. The client should launch the AM only after the RM 
+   * has ACCEPTED the application and changed the <code>YarnApplicationState</code>.
+   * Such apps will not be retried by the RM on app attempt failure.
+   * The default value is false.
+   * @return true if the AM is not managed by the RM
+   */
+  @Public
+  @Unstable
+  public boolean getUnmanagedAM();
+  
+  /**
+   * @param value true if RM should not manage the AM
+   */
+  @Public
+  @Unstable
+  public void setUnmanagedAM(boolean value);
 
   /**
    * @return true if tokens should be canceled when the app completes.

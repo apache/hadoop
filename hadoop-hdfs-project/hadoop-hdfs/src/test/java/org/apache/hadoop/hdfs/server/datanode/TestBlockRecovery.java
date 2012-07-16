@@ -595,6 +595,7 @@ public class TestBlockRecovery {
       
       final AtomicBoolean recoveryInitResult = new AtomicBoolean(true);
       Thread recoveryThread = new Thread() {
+        @Override
         public void run() {
           try {
             DatanodeInfo[] locations = block.getLocations();

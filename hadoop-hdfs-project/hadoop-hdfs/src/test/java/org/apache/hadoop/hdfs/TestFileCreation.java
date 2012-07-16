@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 
 /**
@@ -668,13 +669,13 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
-    final Path path = new Path("/" + System.currentTimeMillis()
+    final Path path = new Path("/" + Time.now()
         + "-testFileCreationNonRecursive");
     FSDataOutputStream out = null;
 
     try {
       IOException expectedException = null;
-      final String nonExistDir = "/non-exist-" + System.currentTimeMillis();
+      final String nonExistDir = "/non-exist-" + Time.now();
 
       fs.delete(new Path(nonExistDir), true);
       EnumSet<CreateFlag> createFlag = EnumSet.of(CreateFlag.CREATE);

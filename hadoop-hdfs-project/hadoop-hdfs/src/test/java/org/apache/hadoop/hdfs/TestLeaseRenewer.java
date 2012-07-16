@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -118,8 +119,8 @@ public class TestLeaseRenewer {
     renewer.put(filePath, mockStream, MOCK_DFSCLIENT);
 
     // Wait for lease to get renewed
-    long failTime = System.currentTimeMillis() + 5000;
-    while (System.currentTimeMillis() < failTime &&
+    long failTime = Time.now() + 5000;
+    while (Time.now() < failTime &&
         leaseRenewalCount.get() == 0) {
       Thread.sleep(50);
     }
@@ -206,8 +207,8 @@ public class TestLeaseRenewer {
     renewer.closeFile(filePath, MOCK_DFSCLIENT);
     
     // Should stop the renewer running within a few seconds
-    long failTime = System.currentTimeMillis() + 5000;
-    while (renewer.isRunning() && System.currentTimeMillis() < failTime) {
+    long failTime = Time.now() + 5000;
+    while (renewer.isRunning() && Time.now() < failTime) {
       Thread.sleep(50);
     }
     Assert.assertFalse(renewer.isRunning());

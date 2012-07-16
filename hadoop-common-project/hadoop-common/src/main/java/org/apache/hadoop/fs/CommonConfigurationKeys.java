@@ -166,5 +166,12 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "hadoop.http.staticuser.user";
   public static final String DEFAULT_HADOOP_HTTP_STATIC_USER =
     "dr.who";
+
+  /* Path to the Kerberos ticket cache.  Setting this will force
+   * UserGroupInformation to use only this ticket cache file when creating a
+   * FileSystem instance.
+   */
+  public static final String KERBEROS_TICKET_CACHE_PATH =
+      "hadoop.security.kerberos.ticket.cache.path";
 }
 

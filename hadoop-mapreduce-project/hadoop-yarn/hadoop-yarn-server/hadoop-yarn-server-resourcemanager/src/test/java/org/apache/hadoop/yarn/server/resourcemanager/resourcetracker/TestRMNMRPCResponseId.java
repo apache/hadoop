@@ -52,8 +52,6 @@ import org.junit.Test;
 public class TestRMNMRPCResponseId {
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   ResourceTrackerService resourceTrackerService;
-  ContainerTokenSecretManager containerTokenSecretManager =
-    new ContainerTokenSecretManager();
   private NodeId nodeId;
 
   @Before
@@ -73,6 +71,8 @@ public class TestRMNMRPCResponseId {
     NodesListManager nodesListManager = new NodesListManager(context);
     Configuration conf = new Configuration();
     nodesListManager.init(conf);
+    ContainerTokenSecretManager containerTokenSecretManager =
+        new ContainerTokenSecretManager(conf);
     resourceTrackerService = new ResourceTrackerService(context,
         nodesListManager, new NMLivelinessMonitor(dispatcher),
         containerTokenSecretManager);

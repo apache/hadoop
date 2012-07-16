@@ -79,7 +79,9 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
    */
   public LightWeightGSet(final int recommended_length) {
     final int actual = actualArrayLength(recommended_length);
-    LOG.info("recommended=" + recommended_length + ", actual=" + actual);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("recommended=" + recommended_length + ", actual=" + actual);
+    }
 
     entries = new LinkedElement[actual];
     hash_mask = entries.length - 1;

@@ -134,6 +134,7 @@ class SocketCache {
     multimap.clear();
   }
 
+  @Override
   protected void finalize() {
     clear();
   }

@@ -331,14 +331,16 @@ public class BuilderUtils {
   }
 
   public static ApplicationReport newApplicationReport(
-      ApplicationId applicationId, String user, String queue, String name,
-      String host, int rpcPort, String clientToken, YarnApplicationState state,
-      String diagnostics, String url, long startTime, long finishTime,
-      FinalApplicationStatus finalStatus, ApplicationResourceUsageReport appResources,
-      String origTrackingUrl) {
+      ApplicationId applicationId, ApplicationAttemptId applicationAttemptId,
+      String user, String queue, String name, String host, int rpcPort,
+      String clientToken, YarnApplicationState state, String diagnostics,
+      String url, long startTime, long finishTime,
+      FinalApplicationStatus finalStatus,
+      ApplicationResourceUsageReport appResources, String origTrackingUrl) {
     ApplicationReport report = recordFactory
         .newRecordInstance(ApplicationReport.class);
     report.setApplicationId(applicationId);
+    report.setCurrentApplicationAttemptId(applicationAttemptId);
     report.setUser(user);
     report.setQueue(queue);
     report.setName(name);

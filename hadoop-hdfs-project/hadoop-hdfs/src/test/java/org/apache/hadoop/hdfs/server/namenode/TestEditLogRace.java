@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 
 import static org.junit.Assert.*;
@@ -111,6 +112,7 @@ public class TestEditLogRace {
     }
 
     // add a bunch of transactions.
+    @Override
     public void run() {
       thr = Thread.currentThread();
       PermissionStatus p = namesystem.createFsOwnerPermissions(
@@ -367,6 +369,7 @@ public class TestEditLogRace {
       final CountDownLatch waitToEnterFlush = new CountDownLatch(1);
       
       final Thread doAnEditThread = new Thread() {
+        @Override
         public void run() {
           try {
             LOG.info("Starting mkdirs");
@@ -410,9 +413,9 @@ public class TestEditLogRace {
       LOG.info("Trying to enter safe mode.");
       LOG.info("This should block for " + BLOCK_TIME + "sec, since flush will sleep that long");
       
-      long st = System.currentTimeMillis();
+      long st = Time.now();
       namesystem.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      long et = System.currentTimeMillis();
+      long et = Time.now();
       LOG.info("Entered safe mode");
       // Make sure we really waited for the flush to complete!
       assertTrue(et - st > (BLOCK_TIME - 1)*1000);
@@ -462,6 +465,7 @@ public class TestEditLogRace {
       final CountDownLatch waitToEnterSync = new CountDownLatch(1);
       
       final Thread doAnEditThread = new Thread() {
+        @Override
         public void run() {
           try {
             LOG.info("Starting mkdirs");
@@ -503,9 +507,9 @@ public class TestEditLogRace {
       LOG.info("Trying to enter safe mode.");
       LOG.info("This should block for " + BLOCK_TIME + "sec, since we have pending edits");
       
-      long st = System.currentTimeMillis();
+      long st = Time.now();
       namesystem.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
-      long et = System.currentTimeMillis();
+      long et = Time.now();
       LOG.info("Entered safe mode");
       // Make sure we really waited for the flush to complete!
       assertTrue(et - st > (BLOCK_TIME - 1)*1000);

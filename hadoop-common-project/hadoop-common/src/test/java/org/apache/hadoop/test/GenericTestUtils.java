@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Logger;
 import org.apache.log4j.WriterAppender;
@@ -94,7 +95,7 @@ public abstract class GenericTestUtils {
       int checkEveryMillis, int waitForMillis)
       throws TimeoutException, InterruptedException
   {
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     do {
       boolean result = check.get();
       if (result) {
@@ -102,7 +103,7 @@ public abstract class GenericTestUtils {
       }
       
       Thread.sleep(checkEveryMillis);
-    } while (System.currentTimeMillis() - st < waitForMillis);
+    } while (Time.now() - st < waitForMillis);
     throw new TimeoutException("Timed out waiting for condition");
   }
   

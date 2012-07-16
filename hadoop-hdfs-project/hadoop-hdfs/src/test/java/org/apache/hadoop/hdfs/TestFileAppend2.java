@@ -238,6 +238,7 @@ public class TestFileAppend2 extends TestCase {
     }
 
     // create a bunch of files. Write to them and then verify.
+    @Override
     public void run() {
       System.out.println("Workload " + id + " starting... ");
       for (int i = 0; i < numAppendsPerThread; i++) {

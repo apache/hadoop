@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.util.Time;
 
 
 /**
@@ -72,7 +73,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
                                        ClientProtocol namenode,
                                        int expected, long maxWaitSec) 
                                        throws IOException {
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     
     //wait for all the blocks to be replicated;
     LOG.info("Checking for block replication for " + filename);
@@ -97,7 +98,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
                                actual + ".");
       
         if (maxWaitSec > 0 && 
-            (System.currentTimeMillis() - start) > (maxWaitSec * 1000)) {
+            (Time.now() - start) > (maxWaitSec * 1000)) {
           throw new IOException("Timedout while waiting for all blocks to " +
                                 " be replicated for " + filename);
         }

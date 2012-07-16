@@ -110,6 +110,55 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
     corrupted block. (Henry Robinson via atm)
 
+    HDFS-3555. idle client socket triggers DN ERROR log
+    (should be INFO or DEBUG). (Andy Isaacson via harsh)
+
+    HDFS-3568. fuse_dfs: add support for security. (Colin McCabe via atm)
+
+    HDFS-3629. Fix the typo in the error message about inconsistent
+    storage layout version. (Brandon Li via harsh)
+
+    HDFS-3613. GSet prints some INFO level values, which aren't
+    really very useful to all (Andrew Wang via harsh)
+
+    HDFS-3611. NameNode prints unnecessary WARNs about edit log normally skipping a few bytes. (Colin Patrick McCabe via harsh)
+
+    HDFS-3582. Hook daemon process exit for testing. (eli)
+
+    HDFS-3641. Move server Util time methods to common and use now
+    instead of System#currentTimeMillis. (eli)
+
+    HDFS-3633. libhdfs: hdfsDelete should pass JNI_FALSE or JNI_TRUE.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-799. libhdfs must call DetachCurrentThread when a thread is destroyed.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3306. fuse_dfs: don't lock release operations.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3612. Single namenode image directory config warning can
+    be improved. (Andy Isaacson via harsh)
+
+    HDFS-3606. libhdfs: create self-contained unit test.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3539. libhdfs code cleanups. (Colin Patrick McCabe via eli)
+
+    HDFS-3610. fuse_dfs: Provide a way to use the default (configured) NN URI.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3663. MiniDFSCluster should capture the code path that led to
+    the first ExitException. (eli)
+
+    HDFS-3659. Add missing @Override to methods across the hadoop-hdfs
+    project. (Brandon Li via harsh)
+
+    HDFS-3537. Move libhdfs and fuse-dfs source to native subdirectories.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3665. Add a test for renaming across file systems via a symlink. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
@@ -285,6 +334,22 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3548. NamenodeFsck.copyBlock fails to create a Block Reader.
     (Colin Patrick McCabe via eli)
+
+    HDFS-3615. Two BlockTokenSecretManager findbugs warnings. (atm)
+
+    HDFS-3639. JspHelper#getUGI should always verify the token if
+    security is enabled. (eli)
+
+    HDFS-470. libhdfs should handle 0-length reads from FSInputStream
+    correctly. (Colin Patrick McCabe via eli)
+
+    HDFS-3492. fix some misuses of InputStream#skip.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3609. libhdfs: don't force the URI to look like hdfs://hostname:port.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3654. TestJspHelper#testGetUgi fails with NPE. (eli)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 

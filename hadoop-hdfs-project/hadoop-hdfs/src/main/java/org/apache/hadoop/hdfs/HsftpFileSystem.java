@@ -42,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.web.URLUtils;
+import org.apache.hadoop.util.Time;
 
 /**
  * An implementation of a protocol for accessing filesystems over HTTPS. The
@@ -164,8 +165,7 @@ public class HsftpFileSystem extends HftpFileSystem {
     final int warnDays = ExpWarnDays;
     if (warnDays > 0) { // make sure only check once
       ExpWarnDays = 0;
-      long expTimeThreshold = warnDays * MM_SECONDS_PER_DAY
-          + System.currentTimeMillis();
+      long expTimeThreshold = warnDays * MM_SECONDS_PER_DAY + Time.now();
       X509Certificate[] clientCerts = (X509Certificate[]) conn
           .getLocalCertificates();
       if (clientCerts != null) {
@@ -175,7 +175,7 @@ public class HsftpFileSystem extends HftpFileSystem {
             StringBuilder sb = new StringBuilder();
             sb.append("\n Client certificate "
                 + cert.getSubjectX500Principal().getName());
-            int dayOffSet = (int) ((expTime - System.currentTimeMillis()) / MM_SECONDS_PER_DAY);
+            int dayOffSet = (int) ((expTime - Time.now()) / MM_SECONDS_PER_DAY);
             sb.append(" have " + dayOffSet + " days to expire");
             LOG.warn(sb.toString());
           }
@@ -189,6 +189,7 @@ public class HsftpFileSystem extends HftpFileSystem {
    * Dummy hostname verifier that is used to bypass hostname checking
    */
   protected static class DummyHostnameVerifier implements HostnameVerifier {
+    @Override
     public boolean verify(String hostname, SSLSession session) {
       return true;
     }
@@ -198,12 +199,15 @@ public class HsftpFileSystem extends HftpFileSystem {
    * Dummy trustmanager that is used to trust all server certificates
    */
   protected static class DummyTrustManager implements X509TrustManager {
+    @Override
     public void checkClientTrusted(X509Certificate[] chain, String authType) {
     }
 
+    @Override
     public void checkServerTrusted(X509Certificate[] chain, String authType) {
     }
 
+    @Override
     public X509Certificate[] getAcceptedIssuers() {
       return null;
     }

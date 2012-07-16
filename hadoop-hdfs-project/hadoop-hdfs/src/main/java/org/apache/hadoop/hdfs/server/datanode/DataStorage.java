@@ -587,6 +587,7 @@ public class DataStorage extends Storage {
 
     // 2. delete finalized.tmp dir in a separate thread
     new Daemon(new Runnable() {
+        @Override
         public void run() {
           try {
             deleteDir(tmpDir);
@@ -595,6 +596,7 @@ public class DataStorage extends Storage {
           }
           LOG.info("Finalize upgrade for " + dataDirPath + " is complete.");
         }
+        @Override
         public String toString() { return "Finalize " + dataDirPath; }
       }).start();
   }
@@ -677,6 +679,7 @@ public class DataStorage extends Storage {
       throw new IOException("Cannot create directory " + to);
     
     String[] blockNames = from.list(new java.io.FilenameFilter() {
+      @Override
       public boolean accept(File dir, String name) {
         return name.startsWith(BLOCK_FILE_PREFIX);
       }
@@ -694,6 +697,7 @@ public class DataStorage extends Storage {
     
     // Now take care of the rest of the files and subdirectories
     String[] otherNames = from.list(new java.io.FilenameFilter() {
+        @Override
         public boolean accept(File dir, String name) {
           return name.startsWith(BLOCK_SUBDIR_PREFIX) 
             || name.startsWith(COPY_FILE_PREFIX);

@@ -42,5 +42,6 @@ public interface NodeRegistration {
    */
   public int getVersion();
 
+  @Override
   public String toString();
 }

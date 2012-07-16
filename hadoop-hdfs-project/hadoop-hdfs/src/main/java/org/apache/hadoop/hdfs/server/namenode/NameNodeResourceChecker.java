@@ -119,6 +119,7 @@ public class NameNodeResourceChecker {
     Collection<URI> localEditDirs = Collections2.filter(
         FSNamesystem.getNamespaceEditsDirs(conf),
         new Predicate<URI>() {
+          @Override
           public boolean apply(URI input) {
             if (input.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
               return true;

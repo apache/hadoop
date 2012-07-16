@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
 import com.google.common.annotations.VisibleForTesting;
@@ -101,10 +102,12 @@ public class NNStorage extends Storage implements Closeable {
     EDITS,
     IMAGE_AND_EDITS;
 
+    @Override
     public StorageDirType getStorageDirType() {
       return this;
     }
 
+    @Override
     public boolean isOfType(StorageDirType type) {
       if ((this == IMAGE_AND_EDITS) && (type == IMAGE || type == EDITS))
         return true;
@@ -1023,7 +1026,7 @@ public class NNStorage extends Storage implements Closeable {
     }
     
     int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
-    String bpid = "BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
+    String bpid = "BP-" + rand + "-"+ ip + "-" + Time.now();
     return bpid;
   }
 
@@ -1103,7 +1106,7 @@ public class NNStorage extends Storage implements Closeable {
     }
     if (multipleLV) {            
       throw new IOException(
-          "Storage directories containe multiple layout versions: "
+          "Storage directories contain multiple layout versions: "
               + layoutVersions);
     }
     // If the storage directories are with the new layout version

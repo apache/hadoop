@@ -90,6 +90,7 @@ public class TestSaveNamespace {
       this.throwRTE = throwRTE;
     }
 
+    @Override
     public Void answer(InvocationOnMock invocation) throws Throwable {
       Object[] args = invocation.getArguments();
       StorageDirectory sd = (StorageDirectory)args[1];
@@ -564,6 +565,7 @@ public class TestSaveNamespace {
         delayer.waitForCall();
         // then cancel the saveNamespace
         Future<Void> cancelFuture = pool.submit(new Callable<Void>() {
+          @Override
           public Void call() throws Exception {
             canceler.cancel("cancelled");
             return null;

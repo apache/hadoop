@@ -50,11 +50,11 @@ public interface ContainerToken extends DelegationToken {
    */
   @Public
   @Stable
-  public abstract ByteBuffer getIdentifier();
+  ByteBuffer getIdentifier();
   
   @Private
   @Stable
-  public abstract void setIdentifier(ByteBuffer identifier);
+  void setIdentifier(ByteBuffer identifier);
 
   /**
    * Get the token password
@@ -62,11 +62,11 @@ public interface ContainerToken extends DelegationToken {
    */
   @Public
   @Stable
-  public abstract ByteBuffer getPassword();
+  ByteBuffer getPassword();
   
   @Private
   @Stable
-  public abstract void setPassword(ByteBuffer password);
+  void setPassword(ByteBuffer password);
 
   /**
    * Get the token kind.
@@ -74,11 +74,11 @@ public interface ContainerToken extends DelegationToken {
    */
   @Public
   @Stable
-  public abstract String getKind();
+  String getKind();
   
   @Private
   @Stable
-  public abstract void setKind(String kind);
+  void setKind(String kind);
 
   /**
    * Get the service to which the token is allocated.
@@ -86,10 +86,10 @@ public interface ContainerToken extends DelegationToken {
    */
   @Public
   @Stable
-  public abstract String getService();
+  String getService();
 
   @Private
   @Stable
-  public abstract void setService(String service);
+  void setService(String service);
 
 }

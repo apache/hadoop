@@ -47,6 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.MergeSort;
 import org.apache.hadoop.util.PriorityQueue;
+import org.apache.hadoop.util.Time;
 
 /** 
  * <code>SequenceFile</code>s are flat files consisting of binary key/value 
@@ -835,7 +836,7 @@ public class SequenceFile {
     {
       try {                                       
         MessageDigest digester = MessageDigest.getInstance("MD5");
-        long time = System.currentTimeMillis();
+        long time = Time.now();
         digester.update((new UID()+"@"+time).getBytes());
         sync = digester.digest();
       } catch (Exception e) {
@@ -1160,8 +1161,26 @@ public class SequenceFile {
       this.metadata = metadata;
       SerializationFactory serializationFactory = new SerializationFactory(conf);
       this.keySerializer = serializationFactory.getSerializer(keyClass);
+      if (this.keySerializer == null) {
+        throw new IOException(
+            "Could not find a serializer for the Key class: '"
+                + keyClass.getCanonicalName() + "'. "
+                + "Please ensure that the configuration '" +
+                CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                + "properly configured, if you're using"
+                + "custom serialization.");
+      }
       this.keySerializer.open(buffer);
       this.uncompressedValSerializer = serializationFactory.getSerializer(valClass);
+      if (this.uncompressedValSerializer == null) {
+        throw new IOException(
+            "Could not find a serializer for the Value class: '"
+                + valClass.getCanonicalName() + "'. "
+                + "Please ensure that the configuration '" +
+                CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                + "properly configured, if you're using"
+                + "custom serialization.");
+      }
       this.uncompressedValSerializer.open(buffer);
       if (this.codec != null) {
         ReflectionUtils.setConf(this.codec, this.conf);
@@ -1170,6 +1189,15 @@ public class SequenceFile {
         this.deflateOut = 
           new DataOutputStream(new BufferedOutputStream(deflateFilter));
         this.compressedValSerializer = serializationFactory.getSerializer(valClass);
+        if (this.compressedValSerializer == null) {
+          throw new IOException(
+              "Could not find a serializer for the Value class: '"
+                  + valClass.getCanonicalName() + "'. "
+                  + "Please ensure that the configuration '" +
+                  CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                  + "properly configured, if you're using"
+                  + "custom serialization.");
+        }
         this.compressedValSerializer.open(deflateOut);
       }
       writeFileHeader();
@@ -1897,6 +1925,15 @@ public class SequenceFile {
           new SerializationFactory(conf);
         this.keyDeserializer =
           getDeserializer(serializationFactory, getKeyClass());
+        if (this.keyDeserializer == null) {
+          throw new IOException(
+              "Could not find a deserializer for the Key class: '"
+                  + getKeyClass().getCanonicalName() + "'. "
+                  + "Please ensure that the configuration '" +
+                  CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                  + "properly configured, if you're using "
+                  + "custom serialization.");
+        }
         if (!blockCompressed) {
           this.keyDeserializer.open(valBuffer);
         } else {
@@ -1904,6 +1941,15 @@ public class SequenceFile {
         }
         this.valDeserializer =
           getDeserializer(serializationFactory, getValueClass());
+        if (this.valDeserializer == null) {
+          throw new IOException(
+              "Could not find a deserializer for the Value class: '"
+                  + getValueClass().getCanonicalName() + "'. "
+                  + "Please ensure that the configuration '" +
+                  CommonConfigurationKeys.IO_SERIALIZATIONS_KEY + "' is "
+                  + "properly configured, if you're using "
+                  + "custom serialization.");
+        }
         this.valDeserializer.open(valIn);
       }
     }

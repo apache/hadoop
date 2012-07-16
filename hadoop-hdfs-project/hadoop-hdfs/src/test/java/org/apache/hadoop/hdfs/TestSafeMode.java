@@ -278,36 +278,43 @@ public class TestSafeMode {
         dfs.setSafeMode(SafeModeAction.SAFEMODE_ENTER));
 
     runFsFun("Set quota while in SM", new FSRun() { 
+      @Override
       public void run(FileSystem fs) throws IOException {
         ((DistributedFileSystem)fs).setQuota(file1, 1, 1); 
       }});
 
     runFsFun("Set perm while in SM", new FSRun() {
+      @Override
       public void run(FileSystem fs) throws IOException {
         fs.setPermission(file1, FsPermission.getDefault());
       }});
 
     runFsFun("Set owner while in SM", new FSRun() {
+      @Override
       public void run(FileSystem fs) throws IOException {
         fs.setOwner(file1, "user", "group");
       }});
 
     runFsFun("Set repl while in SM", new FSRun() {
+      @Override
       public void run(FileSystem fs) throws IOException {
         fs.setReplication(file1, (short)1);
       }});
 
     runFsFun("Append file while in SM", new FSRun() {
+      @Override
       public void run(FileSystem fs) throws IOException {
         DFSTestUtil.appendFile(fs, file1, "new bytes");
       }});
 
     runFsFun("Delete file while in SM", new FSRun() {
+      @Override
       public void run(FileSystem fs) throws IOException {
         fs.delete(file1, false);
       }});
 
     runFsFun("Rename file while in SM", new FSRun() {
+      @Override
       public void run(FileSystem fs) throws IOException {
         fs.rename(file1, new Path("file2"));
       }});

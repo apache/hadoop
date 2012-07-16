@@ -62,6 +62,7 @@ public class TestJMXGet extends TestCase {
   }
 
 
+  @Override
   protected void setUp() throws Exception {
     config = new HdfsConfiguration();
   }
@@ -69,6 +70,7 @@ public class TestJMXGet extends TestCase {
   /**
    * clean up
    */
+  @Override
   public void tearDown() throws Exception {
     if(cluster.isClusterUp())
       cluster.shutdown();

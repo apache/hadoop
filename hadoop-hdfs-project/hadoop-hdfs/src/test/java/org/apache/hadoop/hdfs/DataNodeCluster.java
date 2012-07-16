@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.CreateEditsLog;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.Time;
 
 
 /**
@@ -231,7 +232,6 @@ public class DataNodeCluster {
     }
     
     int rand = DFSUtil.getSecureRandom().nextInt(Integer.MAX_VALUE);
-    return "/Rack-" + rand + "-"+ ip  + "-" + 
-                      System.currentTimeMillis();
+    return "/Rack-" + rand + "-"+ ip  + "-" + Time.now(); 
   }
 }

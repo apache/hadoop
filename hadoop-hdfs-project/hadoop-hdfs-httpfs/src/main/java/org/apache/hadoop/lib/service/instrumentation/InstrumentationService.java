@@ -22,6 +22,7 @@ import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.Instrumentation;
 import org.apache.hadoop.lib.service.Scheduler;
+import org.apache.hadoop.util.Time;
 import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONStreamAware;
@@ -164,10 +165,10 @@ public class InstrumentationService extends BaseService implements Instrumentati
         throw new IllegalStateException("Cron already used");
       }
       if (start == 0) {
-        start = System.currentTimeMillis();
+        start = Time.now();
         lapStart = start;
       } else if (lapStart == 0) {
-        lapStart = System.currentTimeMillis();
+        lapStart = Time.now();
       }
       return this;
     }
@@ -177,7 +178,7 @@ public class InstrumentationService extends BaseService implements Instrumentati
         throw new IllegalStateException("Cron already used");
       }
       if (lapStart > 0) {
-        own += System.currentTimeMillis() - lapStart;
+        own += Time.now() - lapStart;
         lapStart = 0;
       }
       return this;
@@ -185,7 +186,7 @@ public class InstrumentationService extends BaseService implements Instrumentati
 
     void end() {
       stop();
-      total = System.currentTimeMillis() - start;
+      total = Time.now() - start;
     }
 
   }

@@ -63,6 +63,14 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8533. Remove parallel call ununsed capability in RPC.
     (Brandon Li via suresh)
 
+    HADOOP-8423. MapFile.Reader.get() crashes jvm or throws
+    EOFException on Snappy or LZO block-compressed data
+    (todd via harsh)
+
+    HADOOP-8541. Better high-percentile latency metrics. (Andrew Wang via atm)
+
+    HADOOP-8362. Improve exception message when Configuration.set() is called with a null key or value. (Madhukara Phatak and Suresh Srinivas via harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
@@ -136,6 +144,19 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8566. AvroReflectSerializer.accept(Class) throws a NPE if the class has no 
     package (primitive types and arrays). (tucu)
+
+    HADOOP-8586. Fixup a bunch of SPNEGO misspellings. (eli)
+
+    HADOOP-3886. Error in javadoc of Reporter, Mapper and Progressable
+    (Jingguo Yao via harsh)
+
+    HADOOP-8587. HarFileSystem access of harMetaCache isn't threadsafe. (eli)
+
+    HADOOP-8585. Fix initialization circularity between UserGroupInformation
+    and HadoopConfiguration. (Colin Patrick McCabe via atm)
+
+    HADOOP-8552. Conflict: Same security.log.file for multiple users. 
+    (kkambatl via tucu)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
@@ -347,6 +368,13 @@ Release 2.0.0-alpha - 05-23-2012
 
     HADOOP-8422. Deprecate FileSystem#getDefault* and getServerDefault
     methods that don't take a Path argument. (eli)
+
+    HADOOP-7818. DiskChecker#checkDir should fail if the directory is
+    not executable. (Madhukara Phatak via harsh)
+
+    HADOOP-8531. SequenceFile Writer can throw out a better error if a
+    serializer or deserializer isn't available
+    (Madhukara Phatak via harsh)
 
   BUG FIXES
 
@@ -561,6 +589,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
 
+    HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -614,6 +644,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8129. ViewFileSystemTestSetup setupForViewFileSystem is erring
     (Ahmed Radwan and Ravi Prakash via bobby)
+
+    HADOOP-8573. Configuration tries to read from an inputstream resource 
+    multiple times (Robert Evans via tgraves)
 
 Release 0.23.2 - UNRELEASED 
 

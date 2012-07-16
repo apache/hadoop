@@ -44,7 +44,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -59,7 +58,6 @@ import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -111,6 +109,7 @@ public class JspHelper {
   // compare two records based on their frequency
   private static class NodeRecordComparator implements Comparator<NodeRecord> {
 
+    @Override
     public int compare(NodeRecord o1, NodeRecord o2) {
       if (o1.frequency < o2.frequency) {
         return -1;
@@ -314,6 +313,7 @@ public class JspHelper {
         }
       }
 
+      @Override
       public int compare(DatanodeDescriptor d1,
                          DatanodeDescriptor d2) {
         int ret = 0;
@@ -540,7 +540,7 @@ public class JspHelper {
     final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
     final String doAsUserFromQuery = request.getParameter(DoAsParam.NAME);
 
-    if(UserGroupInformation.isSecurityEnabled()) {
+    if (UserGroupInformation.isSecurityEnabled()) {
       final String remoteUser = request.getRemoteUser();
       String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
@@ -557,13 +557,8 @@ public class JspHelper {
         DataInputStream in = new DataInputStream(buf);
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
-        if (context != null) {
-          final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-          if (nn != null) {
-            // Verify the token.
-            nn.getNamesystem().verifyToken(id, token.getPassword());
-          }
-        }
+        final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
+        nn.verifyToken(id, token.getPassword());
         ugi = id.getUser();
         if (ugi.getRealUser() == null) {
           //non-proxy case

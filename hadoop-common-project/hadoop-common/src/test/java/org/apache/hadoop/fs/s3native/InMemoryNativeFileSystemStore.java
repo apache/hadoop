@@ -39,6 +39,7 @@ import java.util.TreeSet;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 
 /**
  * <p>
@@ -59,7 +60,7 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
   }
 
   public void storeEmptyFile(String key) throws IOException {
-    metadataMap.put(key, new FileMetadata(key, 0, System.currentTimeMillis()));
+    metadataMap.put(key, new FileMetadata(key, 0, Time.now()));
     dataMap.put(key, new byte[0]);
   }
 
@@ -81,7 +82,7 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
       }
     }
     metadataMap.put(key,
-        new FileMetadata(key, file.length(), System.currentTimeMillis()));
+        new FileMetadata(key, file.length(), Time.now()));
     dataMap.put(key, out.toByteArray());
   }
 

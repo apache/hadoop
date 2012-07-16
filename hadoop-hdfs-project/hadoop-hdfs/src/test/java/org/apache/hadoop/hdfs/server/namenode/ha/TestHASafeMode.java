@@ -18,11 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,7 +33,6 @@ import org.apache.hadoop.ha.HAServiceProtocol.RequestSource;
 import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -67,7 +61,6 @@ public class TestHASafeMode {
   private NameNode nn1;
   private FileSystem fs;
   private MiniDFSCluster cluster;
-  private Runtime mockRuntime = mock(Runtime.class);
   
   static {
     ((Log4JLogger)LogFactory.getLog(FSImage.class)).getLogger().setLevel(Level.ALL);
@@ -92,8 +85,6 @@ public class TestHASafeMode {
     nn0 = cluster.getNameNode(0);
     nn1 = cluster.getNameNode(1);
     fs = HATestUtil.configureFailoverFs(cluster, conf);
-    
-    nn0.getNamesystem().getEditLogTailer().setRuntime(mockRuntime);
 
     cluster.transitionToActive(0);
   }
@@ -101,7 +92,6 @@ public class TestHASafeMode {
   @After
   public void shutdownCluster() throws IOException {
     if (cluster != null) {
-      verify(mockRuntime, times(0)).exit(anyInt());
       cluster.shutdown();
     }
   }

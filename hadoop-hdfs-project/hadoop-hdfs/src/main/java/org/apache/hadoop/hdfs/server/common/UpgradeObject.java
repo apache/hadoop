@@ -32,19 +32,23 @@ import org.apache.hadoop.hdfs.server.common.UpgradeObjectCollection.UOSignature;
 public abstract class UpgradeObject implements Upgradeable {
   protected short status;
   
+  @Override
   public short getUpgradeStatus() {
     return status;
   }
 
+  @Override
   public String getDescription() {
     return "Upgrade object for " + getType() + " layout version " + getVersion();
   }
 
+  @Override
   public UpgradeStatusReport getUpgradeStatusReport(boolean details) 
                                                     throws IOException {
     return new UpgradeStatusReport(getVersion(), getUpgradeStatus(), false);
   }
 
+  @Override
   public int compareTo(Upgradeable o) {
     if(this.getVersion() != o.getVersion())
       return (getVersion() > o.getVersion() ? -1 : 1);
@@ -55,6 +59,7 @@ public abstract class UpgradeObject implements Upgradeable {
                     o.getClass().getCanonicalName());
   }
 
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof UpgradeObject)) {
       return false;
@@ -62,6 +67,7 @@ public abstract class UpgradeObject implements Upgradeable {
     return this.compareTo((UpgradeObject)o) == 0;
   }
 
+  @Override
   public int hashCode() {
     return new UOSignature(this).hashCode(); 
   }

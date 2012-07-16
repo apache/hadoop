@@ -29,6 +29,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -150,6 +151,28 @@ public class TestIOUtils {
       if (f.exists()) {
         f.delete();
       }
+    }
+  }
+
+  @Test
+  public void testWrappedReadForCompressedData() throws IOException {
+    byte[] buf = new byte[2];
+    InputStream mockStream = Mockito.mock(InputStream.class);
+    Mockito.when(mockStream.read(buf, 0, 1)).thenReturn(1);
+    Mockito.when(mockStream.read(buf, 0, 2)).thenThrow(
+        new java.lang.InternalError());
+
+    try {
+      assertEquals("Check expected value", 1,
+          IOUtils.wrappedReadForCompressedData(mockStream, buf, 0, 1));
+    } catch (IOException ioe) {
+      fail("Unexpected error while reading");
+    }
+    try {
+      IOUtils.wrappedReadForCompressedData(mockStream, buf, 0, 2);
+    } catch (IOException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "Error while reading compressed data", ioe);
     }
   }
 }

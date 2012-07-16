@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 
@@ -61,7 +62,7 @@ public class TestParallelReadUtil {
   public static void setupCluster(int replicationFactor, HdfsConfiguration conf) throws Exception {
     util = new BlockReaderTestUtil(replicationFactor, conf);
     dfsClient = util.getDFSClient();
-    long seed = System.currentTimeMillis();
+    long seed = Time.now();
     LOG.info("Random seed: " + seed);
     rand = new Random(seed);
   }
@@ -321,7 +322,7 @@ public class TestParallelReadUtil {
     }
 
     // Start the workers and wait
-    long starttime = System.currentTimeMillis();
+    long starttime = Time.now();
     for (ReadWorker worker : workers) {
       worker.start();
     }
@@ -331,7 +332,7 @@ public class TestParallelReadUtil {
         worker.join();
       } catch (InterruptedException ignored) { }
     }
-    long endtime = System.currentTimeMillis();
+    long endtime = Time.now();
 
     // Cleanup
     for (TestFileInfo testInfo : testInfoArr) {

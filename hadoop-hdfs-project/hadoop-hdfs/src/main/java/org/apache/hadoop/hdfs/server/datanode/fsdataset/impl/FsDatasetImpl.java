@@ -78,6 +78,7 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.Time;
 
 /**************************************************
  * FSDataset manages a set of data blocks.  Each block
@@ -263,6 +264,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   /**
    * Return the number of failed volumes in the FSDataset.
    */
+  @Override
   public int getNumFailedVolumes() {
     return volumes.numberOfFailedVolumes();
   }
@@ -1142,7 +1144,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     
     // Otherwise remove blocks for the failed volumes
-    long mlsec = System.currentTimeMillis();
+    long mlsec = Time.now();
     synchronized (this) {
       for (FsVolumeImpl fv: failedVols) {
         for (String bpid : fv.getBlockPoolList()) {
@@ -1161,7 +1163,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         }
       }
     } // end of sync
-    mlsec = System.currentTimeMillis() - mlsec;
+    mlsec = Time.now() - mlsec;
     LOG.warn("Removed " + removedBlocks + " out of " + totalBlocks +
         "(took " + mlsec + " millisecs)");
 

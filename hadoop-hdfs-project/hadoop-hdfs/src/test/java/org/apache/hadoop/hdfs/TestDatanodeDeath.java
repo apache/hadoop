@@ -84,6 +84,7 @@ public class TestDatanodeDeath extends TestCase {
     }
 
     // create a bunch of files. Write to them and then verify.
+    @Override
     public void run() {
       System.out.println("Workload starting ");
       for (int i = 0; i < numberOfFiles; i++) {
@@ -226,6 +227,7 @@ public class TestDatanodeDeath extends TestCase {
       this.conf = conf;
     }
 
+    @Override
     public void run() {
 
       while (running) {

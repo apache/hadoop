@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;

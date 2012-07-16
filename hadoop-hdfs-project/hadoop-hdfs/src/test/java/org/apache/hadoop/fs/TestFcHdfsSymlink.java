@@ -53,18 +53,22 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
   private static WebHdfsFileSystem webhdfs;
 
   
+  @Override
   protected String getScheme() {
     return "hdfs";
   }
 
+  @Override
   protected String testBaseDir1() throws IOException {
     return "/test1";
   }
   
+  @Override
   protected String testBaseDir2() throws IOException {
     return "/test2";
   }
 
+  @Override
   protected URI testURI() {
     return cluster.getURI(0);
   }
@@ -93,7 +97,7 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
   }
      
   @Test
-  /** Link from Hdfs to LocalFs */
+  /** Access a file using a link that spans Hdfs to LocalFs */
   public void testLinkAcrossFileSystems() throws IOException {
     Path localDir  = new Path("file://"+getAbsoluteTestRootDir(fc)+"/test");
     Path localFile = new Path("file://"+getAbsoluteTestRootDir(fc)+"/test/file");
@@ -108,7 +112,42 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     readFile(link);
     assertEquals(fileSize, fc.getFileStatus(link).getLen());
   }
-  
+
+  @Test
+  /** Test renaming a file across two file systems using a link */
+  public void testRenameAcrossFileSystemsViaLink() throws IOException {
+    Path localDir    = new Path("file://"+getAbsoluteTestRootDir(fc)+"/test");
+    Path hdfsFile    = new Path(testBaseDir1(), "file");
+    Path link        = new Path(testBaseDir1(), "link");
+    Path hdfsFileNew = new Path(testBaseDir1(), "fileNew");
+    Path hdfsFileNewViaLink = new Path(link, "fileNew");
+    FileContext localFc = FileContext.getLocalFSFileContext();
+    localFc.delete(localDir, true);
+    localFc.mkdir(localDir, FileContext.DEFAULT_PERM, true);
+    localFc.setWorkingDirectory(localDir);
+    createAndWriteFile(fc, hdfsFile);
+    fc.createSymlink(localDir, link, false);
+    // Rename hdfs://test1/file to hdfs://test1/link/fileNew
+    // which renames to file://TEST_ROOT/test/fileNew which
+    // spans AbstractFileSystems and therefore fails.
+    try {
+      fc.rename(hdfsFile, hdfsFileNewViaLink);
+      fail("Renamed across file systems");
+    } catch (InvalidPathException ipe) {
+      // Expected
+    }
+    // Now rename hdfs://test1/link/fileNew to hdfs://test1/fileNew
+    // which renames file://TEST_ROOT/test/fileNew to hdfs://test1/fileNew
+    // which spans AbstractFileSystems and therefore fails.
+    createAndWriteFile(fc, hdfsFileNewViaLink);
+    try {
+      fc.rename(hdfsFileNewViaLink, hdfsFileNew);
+      fail("Renamed across file systems");
+    } catch (InvalidPathException ipe) {
+      // Expected
+    }
+  }
+
   @Test
   /** Test access a symlink using AbstractFileSystem */
   public void testAccessLinkFromAbstractFileSystem() throws IOException {

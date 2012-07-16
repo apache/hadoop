@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Test;
 
@@ -64,10 +65,10 @@ public class TestDeadDatanode {
    */
   private void waitForDatanodeState(String nodeID, boolean alive, int waitTime)
       throws TimeoutException, InterruptedException {
-    long stopTime = System.currentTimeMillis() + waitTime;
+    long stopTime = Time.now() + waitTime;
     FSNamesystem namesystem = cluster.getNamesystem();
     String state = alive ? "alive" : "dead";
-    while (System.currentTimeMillis() < stopTime) {
+    while (Time.now() < stopTime) {
       final DatanodeDescriptor dd = BlockManagerTestUtil.getDatanode(
           namesystem, nodeID);
       if (dd.isAlive == alive) {

@@ -19,28 +19,20 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.Test;
 
 /**
  * Tests to verify the behavior of failing to fully start transition HA states.
  */
 public class TestStateTransitionFailure {
-  
-  public static final Log LOG = LogFactory.getLog(TestStateTransitionFailure.class);
 
   /**
    * Ensure that a failure to fully transition to the active state causes a
@@ -57,20 +49,16 @@ public class TestStateTransitionFailure {
       cluster = new MiniDFSCluster.Builder(conf)
           .nnTopology(MiniDFSNNTopology.simpleHATopology())
           .numDataNodes(0)
+          .checkExitOnShutdown(false)
           .build();
       cluster.waitActive();
-      Runtime mockRuntime = mock(Runtime.class);
-      cluster.getNameNode(0).setRuntimeForTesting(mockRuntime);
-      verify(mockRuntime, times(0)).exit(anyInt());
       try {
         cluster.transitionToActive(0);
         fail("Transitioned to active but should not have been able to.");
-      } catch (ServiceFailedException sfe) {
-        assertExceptionContains("Error encountered requiring NN shutdown. " +
-            "Shutting down immediately.", sfe.getCause());
-        LOG.info("got expected exception", sfe.getCause());
+      } catch (ExitException ee) {
+        assertExceptionContains(
+            "Cannot start tresh emptier with negative interval", ee);
       }
-      verify(mockRuntime, times(1)).exit(anyInt());
     } finally {
       if (cluster != null) {
         cluster.shutdown();

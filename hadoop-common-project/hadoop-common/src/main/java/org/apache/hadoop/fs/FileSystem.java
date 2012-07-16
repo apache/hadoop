@@ -137,12 +137,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public static FileSystem get(final URI uri, final Configuration conf,
         final String user) throws IOException, InterruptedException {
-    UserGroupInformation ugi;
-    if (user == null) {
-      ugi = UserGroupInformation.getCurrentUser();
-    } else {
-      ugi = UserGroupInformation.createRemoteUser(user);
-    }
+    String ticketCachePath =
+      conf.get(CommonConfigurationKeys.KERBEROS_TICKET_CACHE_PATH);
+    UserGroupInformation ugi =
+        UserGroupInformation.getBestUGI(ticketCachePath, user);
     return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
       public FileSystem run() throws IOException {
         return get(uri, conf);
@@ -314,12 +312,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   public static FileSystem newInstance(final URI uri, final Configuration conf,
       final String user) throws IOException, InterruptedException {
-    UserGroupInformation ugi;
-    if (user == null) {
-      ugi = UserGroupInformation.getCurrentUser();
-    } else {
-      ugi = UserGroupInformation.createRemoteUser(user);
-    }
+    String ticketCachePath =
+      conf.get(CommonConfigurationKeys.KERBEROS_TICKET_CACHE_PATH);
+    UserGroupInformation ugi =
+        UserGroupInformation.getBestUGI(ticketCachePath, user);
     return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
       public FileSystem run() throws IOException {
         return newInstance(uri,conf); 

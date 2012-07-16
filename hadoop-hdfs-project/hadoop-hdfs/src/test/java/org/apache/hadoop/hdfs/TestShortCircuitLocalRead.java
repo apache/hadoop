@@ -40,8 +40,10 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -94,8 +96,7 @@ public class TestShortCircuitLocalRead {
     // Now read using a different API.
     actual = new byte[expected.length-readOffset];
     stm = fs.open(name);
-    long skipped = stm.skip(readOffset);
-    Assert.assertEquals(skipped, readOffset);
+    IOUtils.skipFully(stm, readOffset);
     //Read a small number of bytes first.
     int nread = stm.read(actual, 0, 3);
     nread += stm.read(actual, nread, 2);
@@ -123,8 +124,7 @@ public class TestShortCircuitLocalRead {
 
     ByteBuffer actual = ByteBuffer.allocate(expected.length - readOffset);
 
-    long skipped = stm.skip(readOffset);
-    Assert.assertEquals(skipped, readOffset);
+    IOUtils.skipFully(stm, readOffset);
 
     actual.limit(3);
 
@@ -363,7 +363,7 @@ public class TestShortCircuitLocalRead {
     stm.write(dataToWrite);
     stm.close();
 
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     final int iteration = 20;
     Thread[] threads = new Thread[threadCount];
     for (int i = 0; i < threadCount; i++) {
@@ -386,7 +386,7 @@ public class TestShortCircuitLocalRead {
     for (int i = 0; i < threadCount; i++) {
       threads[i].join();
     }
-    long end = System.currentTimeMillis();
+    long end = Time.now();
     System.out.println("Iteration " + iteration + " took " + (end - start));
     fs.delete(file1, false);
   }

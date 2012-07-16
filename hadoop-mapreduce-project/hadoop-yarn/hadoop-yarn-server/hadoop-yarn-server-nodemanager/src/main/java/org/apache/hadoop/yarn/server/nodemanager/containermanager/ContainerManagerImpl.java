@@ -324,6 +324,15 @@ public class ContainerManagerImpl extends CompositeService implements
                 + containerIDStr);
       } else {
 
+        // Ensure the token is not expired. 
+        // Token expiry is not checked for stopContainer/getContainerStatus
+        if (tokenId.getExpiryTimeStamp() < System.currentTimeMillis()) {
+          unauthorized = true;
+          messageBuilder.append("\nThis token is expired. current time is "
+              + System.currentTimeMillis() + " found "
+              + tokenId.getExpiryTimeStamp());
+        }
+        
         Resource resource = tokenId.getResource();
         if (!resource.equals(launchContext.getResource())) {
           unauthorized = true;

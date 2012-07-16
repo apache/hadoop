@@ -31,6 +31,7 @@ import org.apache.hadoop.security.token.TokenSelector;
 @InterfaceAudience.Private
 public class BlockTokenSelector implements TokenSelector<BlockTokenIdentifier> {
 
+  @Override
   @SuppressWarnings("unchecked")
   public Token<BlockTokenIdentifier> selectToken(Text service,
       Collection<Token<? extends TokenIdentifier>> tokens) {

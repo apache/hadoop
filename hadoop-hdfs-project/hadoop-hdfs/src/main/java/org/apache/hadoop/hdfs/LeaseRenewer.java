@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 /**
  * <p>
@@ -279,7 +280,7 @@ class LeaseRenewer {
   /** Is the empty period longer than the grace period? */  
   private synchronized boolean isRenewerExpired() {
     return emptyTime != Long.MAX_VALUE
-        && System.currentTimeMillis() - emptyTime > gracePeriod;
+        && Time.now() - emptyTime > gracePeriod;
   }
 
   synchronized void put(final String src, final DFSOutputStream out,
@@ -339,7 +340,7 @@ class LeaseRenewer {
           }
         }
         //discover the first time that all file-being-written maps are empty.
-        emptyTime = System.currentTimeMillis();
+        emptyTime = Time.now();
       }
     }
   }
@@ -354,7 +355,7 @@ class LeaseRenewer {
       }
       if (emptyTime == Long.MAX_VALUE) {
         //discover the first time that the client list is empty.
-        emptyTime = System.currentTimeMillis();
+        emptyTime = Time.now();
       }
     }
 
@@ -427,10 +428,10 @@ class LeaseRenewer {
    * when the lease period is half over.
    */
   private void run(final int id) throws InterruptedException {
-    for(long lastRenewed = System.currentTimeMillis();
+    for(long lastRenewed = Time.now();
         clientsRunning() && !Thread.interrupted();
         Thread.sleep(getSleepPeriod())) {
-      final long elapsed = System.currentTimeMillis() - lastRenewed;
+      final long elapsed = Time.now() - lastRenewed;
       if (elapsed >= getRenewalTime()) {
         try {
           renew();
@@ -438,7 +439,7 @@ class LeaseRenewer {
             LOG.debug("Lease renewer daemon for " + clientsString()
                 + " with renew id " + id + " executed");
           }
-          lastRenewed = System.currentTimeMillis();
+          lastRenewed = Time.now();
         } catch (SocketTimeoutException ie) {
           LOG.warn("Failed to renew lease for " + clientsString() + " for "
               + (elapsed/1000) + " seconds.  Aborting ...", ie);

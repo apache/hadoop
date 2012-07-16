@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
+
 import java.net.URI;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,6 +36,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+
+import static org.apache.hadoop.util.ExitUtil.terminate;
+
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.*;
@@ -114,10 +118,6 @@ public class FSEditLog  {
   // is an automatic sync scheduled?
   private volatile boolean isAutoSyncScheduled = false;
   
-  // Used to exit in the event of a failure to sync to all journals. It's a
-  // member variable so it can be swapped out for testing.
-  private Runtime runtime = Runtime.getRuntime();
-
   // these are statistics counters.
   private long numTransactions;        // number of transactions
   private long numTransactionsBatchedInSync;
@@ -152,6 +152,7 @@ public class FSEditLog  {
 
   // stores the most current transactionId of this thread.
   private static final ThreadLocal<TransactionId> myTransactionId = new ThreadLocal<TransactionId>() {
+    @Override
     protected synchronized TransactionId initialValue() {
       return new TransactionId(Long.MAX_VALUE);
     }
@@ -210,9 +211,6 @@ public class FSEditLog  {
         DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_MINIMUM_DEFAULT);
 
     journalSet = new JournalSet(minimumRedundantJournals);
-    // set runtime so we can test starting with a faulty or unavailable
-    // shared directory
-    this.journalSet.setRuntimeForTesting(runtime);
 
     for (URI u : dirs) {
       boolean required = FSNamesystem.getRequiredNamespaceEditsDirs(conf)
@@ -525,10 +523,11 @@ public class FSEditLog  {
             }
             editLogStream.setReadyToFlush();
           } catch (IOException e) {
-            LOG.fatal("Could not sync enough journals to persistent storage. "
-                + "Unsynced transactions: " + (txid - synctxid),
-                new Exception());
-            runtime.exit(1);
+            final String msg =
+                "Could not sync enough journals to persistent storage. "
+                + "Unsynced transactions: " + (txid - synctxid);
+            LOG.fatal(msg, new Exception());
+            terminate(1, msg);
           }
         } finally {
           // Prevent RuntimeException from blocking other log edit write 
@@ -547,9 +546,11 @@ public class FSEditLog  {
         }
       } catch (IOException ex) {
         synchronized (this) {
-          LOG.fatal("Could not sync enough journals to persistent storage. "
-              + "Unsynced transactions: " + (txid - synctxid), new Exception());
-          runtime.exit(1);
+          final String msg =
+              "Could not sync enough journals to persistent storage. "
+              + "Unsynced transactions: " + (txid - synctxid);
+          LOG.fatal(msg, new Exception());
+          terminate(1, msg);
         }
       }
       long elapsed = now() - start;
@@ -821,15 +822,6 @@ public class FSEditLog  {
     return journalSet;
   }
   
-  /**
-   * Used only by unit tests.
-   */
-  @VisibleForTesting
-  synchronized public void setRuntimeForTesting(Runtime runtime) {
-    this.runtime = runtime;
-    this.journalSet.setRuntimeForTesting(runtime);
-  }
-
   /**
    * Used only by tests.
    */
