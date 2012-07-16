@@ -336,6 +336,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3537. Move libhdfs and fuse-dfs source to native subdirectories.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3665. Add a test for renaming across file systems via a symlink. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
