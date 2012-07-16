@@ -261,6 +261,10 @@ Branch-2 ( Unreleased changes )
     HADOOP-7818. DiskChecker#checkDir should fail if the directory is
     not executable. (Madhukara Phatak via harsh)
 
+    HADOOP-8531. SequenceFile Writer can throw out a better error if a
+    serializer or deserializer isn't available
+    (Madhukara Phatak via harsh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
