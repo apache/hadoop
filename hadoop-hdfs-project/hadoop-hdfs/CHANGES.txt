@@ -64,6 +64,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3486. offlineimageviewer can't read fsimage files that contain
     persistent delegation tokens. (Colin Patrick McCabe via eli)
 
+    HDFS-3541. Deadlock between recovery, xceiver and packet responder (Vinay via umamahesh)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

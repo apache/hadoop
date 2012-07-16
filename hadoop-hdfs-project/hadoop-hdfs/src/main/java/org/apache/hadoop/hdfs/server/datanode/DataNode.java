@@ -995,6 +995,15 @@ public class DataNode extends Configured
     dnId.storageID = createNewStorageId(dnId.getPort());
   }
   
+  
+  /**
+   * Connect to the NN. This is separated out for easier testing.
+   */
+  DatanodeProtocol connectToNN(InetSocketAddress nnAddr) throws IOException {
+    return (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
+          DatanodeProtocol.versionID, nnAddr, conf);
+  }
+  
   static String createNewStorageId(int port) {
     /* Return 
      * "DS-randInt-ipaddr-currentTimeMillis"
@@ -1911,8 +1920,10 @@ public class DataNode extends Configured
    */
   public DatanodeProtocol getBPNamenode(String bpid) throws IOException {
     BPOfferService bpos = blockPoolManager.get(bpid);
-    if(bpos == null || bpos.bpNamenode == null) {
-      throw new IOException("cannot find a namnode proxy for bpid=" + bpid);
+    if (bpos == null) {
+      throw new IOException("No block pool offer service for bpid=" + bpid);
+    } else if (bpos.bpNamenode == null) {
+      throw new IOException("cannot find a namenode proxy for bpid=" + bpid);
     }
     return bpos.bpNamenode;
   }

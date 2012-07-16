@@ -237,10 +237,10 @@ class BPOfferService implements Runnable {
   }
 
   private void connectToNNAndHandshake() throws IOException {
+    
     // get NN proxy
-    bpNamenode = (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
-          DatanodeProtocol.versionID, nnAddr, dn.getConf());
-
+    bpNamenode = dn.connectToNN(nnAddr);
+    
     // First phase of the handshake with NN - get the namespace
     // info.
     bpNSInfo = retrieveNamespaceInfo();
