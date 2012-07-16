@@ -269,6 +269,17 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertEquals("Yy", StringUtils.camelize("yY"));
     assertEquals("Zz", StringUtils.camelize("zZ"));
   }
+  
+  @Test
+  public void testStringToURI() {
+    String[] str = new String[] { "file://" };
+    try {
+      StringUtils.stringToURI(str);
+      fail("Ignoring URISyntaxException while creating URI from string file://");
+    } catch (IllegalArgumentException iae) {
+      assertEquals("Failed to create uri for file://", iae.getMessage());
+    }
+  }
 
   // Benchmark for StringUtils split
   public static void main(String []args) {

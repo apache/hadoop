@@ -202,8 +202,12 @@ public class StringUtils {
   }
   
   /**
-   * 
    * @param str
+   *          The string array to be parsed into an URI array.
+   * @return <tt>null</tt> if str is <tt>null</tt>, else the URI array
+   *         equivalent to str.
+   * @throws IllegalArgumentException
+   *           If any string in str violates RFC&nbsp;2396.
    */
   public static URI[] stringToURI(String[] str){
     if (str == null) 
@@ -213,9 +217,8 @@ public class StringUtils {
       try{
         uris[i] = new URI(str[i]);
       }catch(URISyntaxException ur){
-        System.out.println("Exception in specified URI's " + StringUtils.stringifyException(ur));
-        //making sure its asssigned to null in case of an error
-        uris[i] = null;
+        throw new IllegalArgumentException(
+            "Failed to create uri for " + str[i], ur);
       }
     }
     return uris;
