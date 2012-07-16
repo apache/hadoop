@@ -699,6 +699,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4299. Terasort hangs with MR2 FifoScheduler (Tom White via
     bobby)
 
+    MAPREDUCE-4437. Race in MR ApplicationMaster can cause reducers to never be
+    scheduled (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
