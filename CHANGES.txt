@@ -215,6 +215,8 @@ Release 1.1.0 - unreleased
 
     HADOOP-8365. Provide ability to disable working sync. (eli)
 
+    HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
+
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
