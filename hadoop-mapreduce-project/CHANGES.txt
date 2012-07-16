@@ -165,6 +165,8 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
     development of new applications. (Bikas Saha via acmurthy) 
 
+    MAPREDUCE-4447. Remove aop from cruft from the ant build. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
