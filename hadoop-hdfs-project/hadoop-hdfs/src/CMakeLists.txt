@@ -87,15 +87,15 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}
-    main/native/
+    main/native/libhdfs
 )
 
 set(_FUSE_DFS_VERSION 0.1.0)
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 add_dual_library(hdfs
-    main/native/hdfs.c
-    main/native/hdfsJniHelper.c
+    main/native/libhdfs/hdfs.c
+    main/native/libhdfs/jni_helper.c
 )
 target_link_dual_libraries(hdfs
     ${JAVA_JVM_LIBRARY}
@@ -105,49 +105,46 @@ set(LIBHDFS_VERSION "0.0.0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
-add_executable(hdfs_test
-    main/native/hdfs_test.c
+add_executable(test_libhdfs_ops
+    main/native/libhdfs/test/test_libhdfs_ops.c
 )
-target_link_libraries(hdfs_test
+target_link_libraries(test_libhdfs_ops
     hdfs
     ${JAVA_JVM_LIBRARY}
 )
-output_directory(hdfs_test target/usr/local/bin)
 
-add_executable(hdfs_read
-    main/native/hdfs_read.c
+add_executable(test_libhdfs_read
+    main/native/libhdfs/test/test_libhdfs_read.c
 )
-target_link_libraries(hdfs_read
+target_link_libraries(test_libhdfs_read
     hdfs
     ${JAVA_JVM_LIBRARY}
 )
-output_directory(hdfs_read target/usr/local/bin)
 
-add_executable(hdfs_write
-    main/native/hdfs_write.c
+add_executable(test_libhdfs_write
+    main/native/libhdfs/test/test_libhdfs_write.c
 )
-target_link_libraries(hdfs_write
+target_link_libraries(test_libhdfs_write
     hdfs
     ${JAVA_JVM_LIBRARY}
 )
-output_directory(hdfs_write target/usr/local/bin)
 
 add_library(native_mini_dfs
-    main/native/native_mini_dfs.c
+    main/native/libhdfs/native_mini_dfs.c
 )
 target_link_libraries(native_mini_dfs
     hdfs
 )
 
 add_executable(test_native_mini_dfs
-    main/native/test_native_mini_dfs.c
+    main/native/libhdfs/test_native_mini_dfs.c
 )
 target_link_libraries(test_native_mini_dfs
     native_mini_dfs
 )
 
 add_executable(test_libhdfs_threaded
-    main/native/test_libhdfs_threaded.c
+    main/native/libhdfs/test_libhdfs_threaded.c
 )
 target_link_libraries(test_libhdfs_threaded
     hdfs
@@ -155,5 +152,4 @@ target_link_libraries(test_libhdfs_threaded
     pthread
 )
 
-add_subdirectory(contrib/fuse-dfs/src)
-
+add_subdirectory(main/native/fuse-dfs)

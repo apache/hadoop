@@ -17,7 +17,7 @@
  */
 
 #include "hdfs.h"
-#include "hdfsJniHelper.h"
+#include "jni_helper.h"
 
 #include <stdio.h>
 #include <string.h>

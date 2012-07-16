@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-#include "hdfsJniHelper.h"
+#include "jni_helper.h"
 #include "native_mini_dfs.h"
 
 #include <errno.h>
