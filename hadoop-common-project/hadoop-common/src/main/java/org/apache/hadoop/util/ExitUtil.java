@@ -85,9 +85,10 @@ public final class ExitUtil {
   }
 
   /**
-   * Like {@link terminate(int, String)} but takes an exception to
+   * Like {@link terminate(int, String)} but uses the given throwable to
+   * initialize the ExitException.
    * @param status
-   * @param t Exception
+   * @param t throwable used to create the ExitException
    * @throws ExitException if System.exit is disabled for test purposes
    */
   public static void terminate(int status, Throwable t) throws ExitException {
