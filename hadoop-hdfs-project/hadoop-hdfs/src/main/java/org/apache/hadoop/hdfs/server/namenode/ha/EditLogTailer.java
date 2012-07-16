@@ -316,7 +316,7 @@ public class EditLogTailer {
         } catch (Throwable t) {
           LOG.fatal("Unknown error encountered while tailing edits. " +
               "Shutting down standby NN.", t);
-          terminate(1, t.getMessage());
+          terminate(1, t);
         }
 
         try {
