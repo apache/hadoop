@@ -66,6 +66,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3541. Deadlock between recovery, xceiver and packet responder (Vinay via umamahesh)
 
+    HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
+    corrupted block. (Henry Robinson via atm)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

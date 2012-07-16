@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -62,6 +63,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -645,6 +647,53 @@ public class TestDFSClientRetries extends TestCase {
         RPC.stopProxy(proxy);
       }
       server.stop();
+    }
+  }
+
+  /**
+   * Test that checksum failures are recovered from by the next read on the same
+   * DFSInputStream. Corruption information is not persisted from read call to
+   * read call, so the client should expect consecutive calls to behave the same
+   * way. See HDFS-3067.
+   */
+  public void testRetryOnChecksumFailure()
+      throws UnresolvedLinkException, IOException {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster =
+      new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+
+    try {
+      final short REPL_FACTOR = 1;
+      final long FILE_LENGTH = 512L;
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+
+      Path path = new Path("/corrupted");
+
+      DFSTestUtil.createFile(fs, path, FILE_LENGTH, REPL_FACTOR, 12345L);
+      DFSTestUtil.waitReplication(fs, path, REPL_FACTOR);
+
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, path);
+      int blockFilesCorrupted = cluster.corruptBlockOnDataNodes(block);
+      assertEquals("All replicas not corrupted", REPL_FACTOR,
+          blockFilesCorrupted);
+
+      InetSocketAddress nnAddr =
+        new InetSocketAddress("localhost", cluster.getNameNodePort());
+      DFSClient client = new DFSClient(nnAddr, conf);
+      DFSInputStream dis = client.open(path.toString());
+      byte[] arr = new byte[(int)FILE_LENGTH];
+      for (int i = 0; i < 2; ++i) {
+        try {
+          dis.read(arr, 0, (int)FILE_LENGTH);
+          fail("Expected ChecksumException not thrown");
+        } catch (Exception ex) {
+          GenericTestUtils.assertExceptionContains(
+              "Checksum error", ex);
+        }
+      }
+    } finally {
+      cluster.shutdown();
     }
   }
 }
