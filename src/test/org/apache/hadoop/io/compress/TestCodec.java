@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.RandomDatum;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
@@ -621,5 +622,57 @@ public class TestCodec extends TestCase {
     w.close();
 
     verifyGzipFile(fileName, msg);
+  }
+
+  /**
+   * Regression test for HADOOP-8423: seeking in a block-compressed
+   * stream would not properly reset the block decompressor state.
+   */
+  public void testSnappyMapFile() throws Exception {
+    if (SnappyCodec.isNativeSnappyLoaded(conf)) {
+      codecTestMapFile(SnappyCodec.class, CompressionType.BLOCK, 100);
+    } else {
+      System.err.println(
+          "Could not find the snappy codec to test MapFiles with!");
+    }
+  }
+
+  private void codecTestMapFile(Class<? extends CompressionCodec> clazz,
+      CompressionType type, int records) throws Exception {
+    FileSystem fs = FileSystem.get(conf);
+    LOG.info("Creating MapFiles with " + records  +
+            " records using codec " + clazz.getSimpleName());
+    Path path = new Path(new Path(
+        System.getProperty("test.build.data", "/tmp")),
+      clazz.getSimpleName() + "-" + type + "-" + records);
+
+    LOG.info("Writing " + path);
+    createMapFile(conf, fs, path, clazz.newInstance(), type, records);
+    MapFile.Reader reader = new MapFile.Reader(fs, path.toString(), conf);
+    Text key1 = new Text("002");
+    assertNotNull(reader.get(key1, new Text()));
+    Text key2 = new Text("004");
+    assertNotNull(reader.get(key2, new Text()));
+  }
+
+  private static void createMapFile(Configuration conf, FileSystem fs,
+      Path path, CompressionCodec codec, CompressionType type, int records)
+          throws IOException {
+    MapFile.Writer writer =
+        new MapFile.Writer(
+              conf,
+              fs,
+              path.toString(),
+              Text.class,
+              Text.class,
+              type,
+              codec,
+              null);
+    Text key = new Text();
+    for (int j = 0; j < records; j++) {
+        key.set(String.format("%03d", j));
+        writer.append(key, key);
+    }
+    writer.close();
   }
 }

@@ -98,6 +98,9 @@ Release 1.2.0 - unreleased
  
     HDFS-3654. TestJspHelper#testGetUgi fails with NPE. (eli)
 
+    HADOOP-8423. MapFile.Reader.get() crashes jvm or throws EOFException on
+    Snappy or LZO block-compressed data (todd and harsh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
