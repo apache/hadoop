@@ -829,6 +829,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8573. Configuration tries to read from an inputstream resource 
     multiple times (Robert Evans via tgraves)
 
+    HADOOP-8599. Non empty response from FileSystem.getFileBlockLocations when
+    asking for data beyond the end of file. (Andrey Klochkov via todd)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
