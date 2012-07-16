@@ -125,7 +125,8 @@ public class TestEditLogJournalFailures {
     } catch (RemoteException re) {
       assertTrue(re.getClassName().contains("ExitException"));
       GenericTestUtils.assertExceptionContains(
-          "Could not sync enough journals to persistent storage. " +
+          "Could not sync enough journals to persistent storage due to " +
+          "No journals available to flush. " +
           "Unsynced transactions: 1", re);
     }
   }
@@ -227,7 +228,8 @@ public class TestEditLogJournalFailures {
     } catch (RemoteException re) {
       assertTrue(re.getClassName().contains("ExitException"));
       GenericTestUtils.assertExceptionContains(
-          "Could not sync enough journals to persistent storage. " +
+          "Could not sync enough journals to persistent storage due to " +
+          "setReadyToFlush failed for too many journals. " +
           "Unsynced transactions: 1", re);
     }
   }

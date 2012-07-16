@@ -2967,7 +2967,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
           break;
         } catch (Throwable t) {
           LOG.fatal("ReplicationMonitor thread received Runtime exception. ", t);
-          terminate(1);
+          terminate(1, t);
         }
       }
     }

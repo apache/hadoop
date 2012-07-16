@@ -545,8 +545,9 @@ public class FSEditLog  {
             editLogStream.setReadyToFlush();
           } catch (IOException e) {
             final String msg =
-                "Could not sync enough journals to persistent storage. "
-                + "Unsynced transactions: " + (txid - synctxid);
+                "Could not sync enough journals to persistent storage " +
+                "due to " + e.getMessage() + ". " +
+                "Unsynced transactions: " + (txid - synctxid);
             LOG.fatal(msg, new Exception());
             terminate(1, msg);
           }

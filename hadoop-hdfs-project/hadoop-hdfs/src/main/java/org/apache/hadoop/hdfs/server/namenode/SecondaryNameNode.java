@@ -330,7 +330,7 @@ public class SecondaryNameNode implements Runnable {
       } catch (Throwable e) {
         LOG.fatal("Throwable Exception in doCheckpoint", e);
         e.printStackTrace();
-        terminate(1);
+        terminate(1, e);
       }
     }
   }

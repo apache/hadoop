@@ -1704,7 +1704,7 @@ public class DataNode extends Configured
         datanode.join();
     } catch (Throwable e) {
       LOG.fatal("Exception in secureMain", e);
-      terminate(1);
+      terminate(1, e);
     } finally {
       // We need to terminate the process here because either shutdown was called
       // or some disk related conditions like volumes tolerated or volumes required
