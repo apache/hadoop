@@ -233,6 +233,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private static final ThreadLocal<StringBuilder> auditBuffer =
     new ThreadLocal<StringBuilder>() {
+      @Override
       protected StringBuilder initialValue() {
         return new StringBuilder();
       }
@@ -4140,6 +4141,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
     /**
      */
+    @Override
     public void run() {
       while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
         try {
@@ -4244,6 +4246,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param deltaSafe the change in number of safe blocks
    * @param deltaTotal the change i nnumber of total blocks expected
    */
+  @Override
   public void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal) {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
@@ -4966,6 +4969,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       block = b;
     }
     
+    @Override
     public String toString() {
       return block.getBlockName() + "\t" + path;
     }
@@ -5460,6 +5464,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     return blockManager;
   }
   
+  @Override
   public boolean isGenStampInFuture(long genStamp) {
     return (genStamp > getGenerationStamp());
   }

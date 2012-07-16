@@ -169,6 +169,7 @@ public class BenchmarkThroughput extends Configured implements Tool {
       "  dfsthroughput.buffer.size:\tbuffer size for write/read (4k)\n");
   }
 
+  @Override
   public int run(String[] args) throws IOException {
     // silence the minidfs cluster
     Log hadoopLog = LogFactory.getLog("org");

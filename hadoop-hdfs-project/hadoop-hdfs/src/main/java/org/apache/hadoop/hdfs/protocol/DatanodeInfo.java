@@ -56,6 +56,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.value = v;
     }
 
+    @Override
     public String toString() {
       return value;
     }
@@ -126,6 +127,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
   
   /** Network location name */
+  @Override
   public String getName() {
     return getXferAddr();
   }
@@ -200,9 +202,11 @@ public class DatanodeInfo extends DatanodeID implements Node {
   }
 
   /** network location */
+  @Override
   public synchronized String getNetworkLocation() {return location;}
     
   /** Sets the network location */
+  @Override
   public synchronized void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
@@ -334,13 +338,17 @@ public class DatanodeInfo extends DatanodeID implements Node {
   private transient Node parent; //its parent
 
   /** Return this node's parent */
+  @Override
   public Node getParent() { return parent; }
+  @Override
   public void setParent(Node parent) {this.parent = parent;}
    
   /** Return this node's level in the tree.
    * E.g. the root of a tree returns 0 and its children return 1
    */
+  @Override
   public int getLevel() { return level; }
+  @Override
   public void setLevel(int level) {this.level = level;}
 
   @Override

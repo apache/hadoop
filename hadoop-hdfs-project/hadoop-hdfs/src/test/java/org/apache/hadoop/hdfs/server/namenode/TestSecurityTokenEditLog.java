@@ -62,6 +62,7 @@ public class TestSecurityTokenEditLog extends TestCase {
     }
 
     // add a bunch of transactions.
+    @Override
     public void run() {
       FSEditLog editLog = namesystem.getEditLog();
 

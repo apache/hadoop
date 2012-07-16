@@ -369,6 +369,7 @@ class NamenodeJspHelper {
       final UserGroupInformation ugi) throws IOException, InterruptedException {
     Token<DelegationTokenIdentifier> token = ugi
         .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
+          @Override
           public Token<DelegationTokenIdentifier> run() throws IOException {
             return nn.getDelegationToken(new Text(ugi.getUserName()));
           }

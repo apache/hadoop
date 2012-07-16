@@ -276,6 +276,7 @@ public class TestDFSStartupVersions extends TestCase {
     }
   }
   
+  @Override
   protected void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();

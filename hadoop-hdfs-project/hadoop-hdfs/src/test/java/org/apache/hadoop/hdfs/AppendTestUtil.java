@@ -53,6 +53,7 @@ public class AppendTestUtil {
   }
 
   private static final ThreadLocal<Random> RANDOM = new ThreadLocal<Random>() {
+    @Override
     protected Random initialValue() {
       final Random r =  new Random();
       synchronized(SEED) { 

@@ -440,6 +440,7 @@ public class BlockPoolSliceStorage extends Storage {
 
     // delete finalized.tmp dir in a separate thread
     new Daemon(new Runnable() {
+      @Override
       public void run() {
         try {
           deleteDir(tmpDir);
@@ -449,6 +450,7 @@ public class BlockPoolSliceStorage extends Storage {
         LOG.info("Finalize upgrade for " + dataDirPath + " is complete.");
       }
 
+      @Override
       public String toString() {
         return "Finalize " + dataDirPath;
       }

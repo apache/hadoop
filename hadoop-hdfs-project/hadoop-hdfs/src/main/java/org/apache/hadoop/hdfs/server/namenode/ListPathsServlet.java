@@ -54,6 +54,7 @@ public class ListPathsServlet extends DfsServlet {
 
   public static final ThreadLocal<SimpleDateFormat> df =
     new ThreadLocal<SimpleDateFormat>() {
+      @Override
       protected SimpleDateFormat initialValue() {
         return HftpFileSystem.getDateFormat();
       }
@@ -128,6 +129,7 @@ public class ListPathsServlet extends DfsServlet {
    *   </listing>
    * }
    */
+  @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
     final PrintWriter out = response.getWriter();

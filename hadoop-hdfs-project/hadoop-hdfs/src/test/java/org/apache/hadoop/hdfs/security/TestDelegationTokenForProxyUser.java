@@ -138,6 +138,7 @@ public class TestDelegationTokenForProxyUser {
     try {
       Token<DelegationTokenIdentifier> token = proxyUgi
           .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
+            @Override
             public Token<DelegationTokenIdentifier> run() throws IOException {
               DistributedFileSystem dfs = (DistributedFileSystem) cluster
                   .getFileSystem();

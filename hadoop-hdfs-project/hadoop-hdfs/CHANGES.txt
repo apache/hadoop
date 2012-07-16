@@ -330,6 +330,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3663. MiniDFSCluster should capture the code path that led to
     the first ExitException. (eli)
 
+    HDFS-3659. Add missing @Override to methods across the hadoop-hdfs
+    project. (Brandon Li via harsh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

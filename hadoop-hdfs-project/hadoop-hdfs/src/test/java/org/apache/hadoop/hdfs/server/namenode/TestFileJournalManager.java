@@ -296,6 +296,7 @@ public class TestFileJournalManager {
     final long startGapTxId = 3*TXNS_PER_ROLL + 1;
     final long endGapTxId = 4*TXNS_PER_ROLL;
     File[] files = new File(f, "current").listFiles(new FilenameFilter() {
+        @Override
         public boolean accept(File dir, String name) {
           if (name.startsWith(NNStorage.getFinalizedEditsFileName(startGapTxId, endGapTxId))) {
             return true;
@@ -327,6 +328,7 @@ public class TestFileJournalManager {
     StorageDirectory sd = storage.dirIterator(NameNodeDirType.EDITS).next();
 
     File[] files = new File(f, "current").listFiles(new FilenameFilter() {
+        @Override
         public boolean accept(File dir, String name) {
           if (name.startsWith("edits_inprogress")) {
             return true;

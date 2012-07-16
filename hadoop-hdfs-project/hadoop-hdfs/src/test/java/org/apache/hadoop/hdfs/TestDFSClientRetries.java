@@ -420,6 +420,7 @@ public class TestDFSClientRetries extends TestCase {
       this.realNN = preSpyNN;
     }
 
+    @Override
     public LocatedBlocks answer(InvocationOnMock invocation) throws IOException {
       Object args[] = invocation.getArguments();
       LocatedBlocks realAnswer = realNN.getBlockLocations(
@@ -651,6 +652,7 @@ public class TestDFSClientRetries extends TestCase {
       }
     }
     
+    @Override
     public void run() {
       try {
         fs = cluster.getNewFileSystemInstance(0);

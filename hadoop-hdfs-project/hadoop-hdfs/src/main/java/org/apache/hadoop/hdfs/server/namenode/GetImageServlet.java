@@ -79,6 +79,7 @@ public class GetImageServlet extends HttpServlet {
   private static Set<Long> currentlyDownloadingCheckpoints =
     Collections.<Long>synchronizedSet(new HashSet<Long>());
   
+  @Override
   public void doGet(final HttpServletRequest request,
                     final HttpServletResponse response
                     ) throws ServletException, IOException {

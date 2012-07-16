@@ -118,6 +118,7 @@ class Checkpointer extends Daemon {
   //
   // The main work loop
   //
+  @Override
   public void run() {
     // Check the size of the edit log once every 5 minutes.
     long periodMSec = 5 * 60;   // 5 minutes

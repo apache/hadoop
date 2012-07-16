@@ -189,6 +189,7 @@ public class HsftpFileSystem extends HftpFileSystem {
    * Dummy hostname verifier that is used to bypass hostname checking
    */
   protected static class DummyHostnameVerifier implements HostnameVerifier {
+    @Override
     public boolean verify(String hostname, SSLSession session) {
       return true;
     }
@@ -198,12 +199,15 @@ public class HsftpFileSystem extends HftpFileSystem {
    * Dummy trustmanager that is used to trust all server certificates
    */
   protected static class DummyTrustManager implements X509TrustManager {
+    @Override
     public void checkClientTrusted(X509Certificate[] chain, String authType) {
     }
 
+    @Override
     public void checkServerTrusted(X509Certificate[] chain, String authType) {
     }
 
+    @Override
     public X509Certificate[] getAcceptedIssuers() {
       return null;
     }

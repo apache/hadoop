@@ -43,12 +43,14 @@ public class TestSimulatedFSDataset extends TestCase {
   static final int NUMBLOCKS = 20;
   static final int BLOCK_LENGTH_MULTIPLIER = 79;
 
+  @Override
   protected void setUp() throws Exception {
     super.setUp();
     conf = new HdfsConfiguration();
     SimulatedFSDataset.setFactory(conf);
   }
 
+  @Override
   protected void tearDown() throws Exception {
     super.tearDown();
   }

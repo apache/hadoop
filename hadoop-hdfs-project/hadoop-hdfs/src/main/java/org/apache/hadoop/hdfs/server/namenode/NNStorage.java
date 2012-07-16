@@ -101,10 +101,12 @@ public class NNStorage extends Storage implements Closeable,
     EDITS,
     IMAGE_AND_EDITS;
 
+    @Override
     public StorageDirType getStorageDirType() {
       return this;
     }
 
+    @Override
     public boolean isOfType(StorageDirType type) {
       if ((this == IMAGE_AND_EDITS) && (type == IMAGE || type == EDITS))
         return true;

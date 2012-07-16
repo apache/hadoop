@@ -339,6 +339,7 @@ class FileJournalManager implements JournalManager {
 
     final static Comparator<EditLogFile> COMPARE_BY_START_TXID 
       = new Comparator<EditLogFile>() {
+      @Override
       public int compare(EditLogFile a, EditLogFile b) {
         return ComparisonChain.start()
         .compare(a.getFirstTxId(), b.getFirstTxId())

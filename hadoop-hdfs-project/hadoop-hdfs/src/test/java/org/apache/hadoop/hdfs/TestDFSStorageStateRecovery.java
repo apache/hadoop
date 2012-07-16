@@ -431,11 +431,13 @@ public class TestDFSStorageStateRecovery extends TestCase {
     } // end numDirs loop
   }
 
+  @Override
   protected void setUp() throws Exception {
     LOG.info("Setting up the directory structures.");
     UpgradeUtilities.initialize();
   }
 
+  @Override
   protected void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();

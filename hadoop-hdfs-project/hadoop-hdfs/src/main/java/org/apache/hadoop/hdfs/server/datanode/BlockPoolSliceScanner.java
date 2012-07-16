@@ -115,10 +115,12 @@ class BlockPoolSliceScanner {
       this.block = block;
     }
     
+    @Override
     public int hashCode() {
       return block.hashCode();
     }
     
+    @Override
     public boolean equals(Object other) {
       return other instanceof BlockScanInfo &&
              compareTo((BlockScanInfo)other) == 0;
@@ -128,6 +130,7 @@ class BlockPoolSliceScanner {
       return (lastScanType == ScanType.NONE) ? 0 : lastScanTime;
     }
     
+    @Override
     public int compareTo(BlockScanInfo other) {
       long t1 = lastScanTime;
       long t2 = other.lastScanTime;

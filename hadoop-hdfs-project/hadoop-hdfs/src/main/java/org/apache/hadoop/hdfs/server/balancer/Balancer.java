@@ -378,6 +378,7 @@ public class Balancer {
     /* start a thread to dispatch the block move */
     private void scheduleBlockMove() {
       moverExecutor.execute(new Runnable() {
+        @Override
         public void run() {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Starting moving "+ block.getBlockId() +
@@ -570,6 +571,7 @@ public class Balancer {
     /* A thread that initiates a block move 
      * and waits for block move to complete */
     private class BlockMoveDispatcher implements Runnable {
+      @Override
       public void run() {
         dispatchBlocks();
       }

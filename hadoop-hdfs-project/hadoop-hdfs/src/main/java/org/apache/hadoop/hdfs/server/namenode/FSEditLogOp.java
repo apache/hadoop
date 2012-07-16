@@ -183,6 +183,7 @@ public abstract class FSEditLogOp {
       return (T)this;
     }
     
+    @Override
     public String getPath() {
       return path;
     }
@@ -216,6 +217,7 @@ public abstract class FSEditLogOp {
       return (T)this;
     }
     
+    @Override
     public Block[] getBlocks() {
       return blocks;
     }
@@ -409,6 +411,7 @@ public abstract class FSEditLogOp {
       return (AddOp)cache.get(OP_ADD);
     }
 
+    @Override
     public boolean shouldCompleteLastBlock() {
       return false;
     }
@@ -431,6 +434,7 @@ public abstract class FSEditLogOp {
       return (CloseOp)cache.get(OP_CLOSE);
     }
 
+    @Override
     public boolean shouldCompleteLastBlock() {
       return true;
     }
@@ -462,6 +466,7 @@ public abstract class FSEditLogOp {
       return this;
     }
     
+    @Override
     public String getPath() {
       return path;
     }
@@ -471,6 +476,7 @@ public abstract class FSEditLogOp {
       return this;
     }
     
+    @Override
     public Block[] getBlocks() {
       return blocks;
     }
@@ -2082,6 +2088,7 @@ public abstract class FSEditLogOp {
       return (LogSegmentOp)cache.get(code);
     }
 
+    @Override
     public void readFields(DataInputStream in, int logVersion)
         throws IOException {
       // no data stored in these ops yet
@@ -2174,6 +2181,7 @@ public abstract class FSEditLogOp {
       WritableFactories.setFactory
         (BlockTwo.class,
          new WritableFactory() {
+           @Override
            public Writable newInstance() { return new BlockTwo(); }
          });
     }
@@ -2186,11 +2194,13 @@ public abstract class FSEditLogOp {
     /////////////////////////////////////
     // Writable
     /////////////////////////////////////
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeLong(blkid);
       out.writeLong(len);
     }
 
+    @Override
     public void readFields(DataInput in) throws IOException {
       this.blkid = in.readLong();
       this.len = in.readLong();

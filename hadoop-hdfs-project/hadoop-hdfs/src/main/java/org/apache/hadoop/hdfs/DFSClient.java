@@ -597,6 +597,7 @@ public class DFSClient implements java.io.Closeable {
    * Close the file system, abandoning all of the leases and files being
    * created and close connections to the namenode.
    */
+  @Override
   public synchronized void close() throws IOException {
     if(clientRunning) {
       closeAllFilesBeingWritten(false);

@@ -109,6 +109,7 @@ public class JspHelper {
   // compare two records based on their frequency
   private static class NodeRecordComparator implements Comparator<NodeRecord> {
 
+    @Override
     public int compare(NodeRecord o1, NodeRecord o2) {
       if (o1.frequency < o2.frequency) {
         return -1;
@@ -312,6 +313,7 @@ public class JspHelper {
         }
       }
 
+      @Override
       public int compare(DatanodeDescriptor d1,
                          DatanodeDescriptor d2) {
         int ret = 0;

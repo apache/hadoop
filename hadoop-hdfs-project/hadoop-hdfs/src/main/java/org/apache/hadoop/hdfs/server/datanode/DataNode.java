@@ -928,6 +928,7 @@ public class DataNode extends Configured
     try {
       return loginUgi
           .doAs(new PrivilegedExceptionAction<InterDatanodeProtocol>() {
+            @Override
             public InterDatanodeProtocol run() throws IOException {
               return new InterDatanodeProtocolTranslatorPB(addr, loginUgi,
                   conf, NetUtils.getDefaultSocketFactory(conf), socketTimeout);
@@ -1367,6 +1368,7 @@ public class DataNode extends Configured
     /**
      * Do the deed, write the bytes
      */
+    @Override
     public void run() {
       xmitsInProgress.getAndIncrement();
       Socket sock = null;
@@ -1723,6 +1725,7 @@ public class DataNode extends Configured
     
     Daemon d = new Daemon(threadGroup, new Runnable() {
       /** Recover a list of blocks. It is run by the primary datanode. */
+      @Override
       public void run() {
         for(RecoveringBlock b : blocks) {
           try {

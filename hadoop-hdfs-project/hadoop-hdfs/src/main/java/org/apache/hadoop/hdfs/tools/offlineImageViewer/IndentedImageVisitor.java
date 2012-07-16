@@ -59,6 +59,7 @@ class IndentedImageVisitor extends TextWriterImageVisitor {
     write(element + " = " + value + "\n");
   }
 
+  @Override
   void visit(ImageElement element, long value) throws IOException {
     if ((element == ImageElement.DELEGATION_TOKEN_IDENTIFIER_EXPIRY_TIME) || 
         (element == ImageElement.DELEGATION_TOKEN_IDENTIFIER_ISSUE_DATE) || 

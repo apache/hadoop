@@ -110,6 +110,7 @@ public class DFSUtil {
    * Address matcher for matching an address to local address
    */
   static final AddressMatcher LOCAL_ADDRESS_MATCHER = new AddressMatcher() {
+    @Override
     public boolean match(InetSocketAddress s) {
       return NetUtils.isLocalAddress(s.getAddress());
     };

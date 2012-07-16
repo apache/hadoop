@@ -282,6 +282,7 @@ public class SecondaryNameNode implements Runnable {
     }
   }
 
+  @Override
   public void run() {
     SecurityUtil.doAsLoginUserOrFatal(
         new PrivilegedAction<Object>() {

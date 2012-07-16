@@ -148,10 +148,12 @@ public class BlockListAsLongs implements Iterable<Block> {
       this.currentReplicaState = null;
     }
 
+    @Override
     public boolean hasNext() {
       return currentBlockIndex < getNumberOfBlocks();
     }
 
+    @Override
     public Block next() {
       block.set(blockId(currentBlockIndex),
                 blockLength(currentBlockIndex),
@@ -161,6 +163,7 @@ public class BlockListAsLongs implements Iterable<Block> {
       return block;
     }
 
+    @Override
     public void remove() {
       throw new UnsupportedOperationException("Sorry. can't remove.");
     }
@@ -178,6 +181,7 @@ public class BlockListAsLongs implements Iterable<Block> {
   /**
    * Returns an iterator over blocks in the block report. 
    */
+  @Override
   public Iterator<Block> iterator() {
     return getBlockReportIterator();
   }

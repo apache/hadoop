@@ -59,6 +59,7 @@ public class StreamFile extends DfsServlet {
     return DatanodeJspHelper.getDFSClient(request, datanode, conf, ugi);
   }
 
+  @Override
   @SuppressWarnings("unchecked")
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {

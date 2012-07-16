@@ -74,6 +74,7 @@ public abstract class EditLogOutputStream implements Closeable {
    * @throws IOException if the journal can't be closed,
    *         or if there are unflushed edits
    */
+  @Override
   abstract public void close() throws IOException;
 
   /**

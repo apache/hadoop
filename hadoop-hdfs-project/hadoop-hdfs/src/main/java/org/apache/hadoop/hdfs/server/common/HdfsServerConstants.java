@@ -141,6 +141,7 @@ public final class HdfsServerConstants {
     private String description = null;
     private NamenodeRole(String arg) {this.description = arg;}
   
+    @Override
     public String toString() {
       return description;
     }

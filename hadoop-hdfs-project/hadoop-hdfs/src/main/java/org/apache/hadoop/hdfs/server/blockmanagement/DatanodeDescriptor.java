@@ -326,16 +326,19 @@ public class DatanodeDescriptor extends DatanodeInfo {
       this.node = dn;
     }
 
+    @Override
     public boolean hasNext() {
       return current != null;
     }
 
+    @Override
     public BlockInfo next() {
       BlockInfo res = current;
       current = current.getNext(current.findDatanode(node));
       return res;
     }
 
+    @Override
     public void remove()  {
       throw new UnsupportedOperationException("Sorry. can't remove.");
     }
@@ -542,6 +545,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * @param nodeReg DatanodeID to update registration for.
    */
+  @Override
   public void updateRegInfo(DatanodeID nodeReg) {
     super.updateRegInfo(nodeReg);
   }

@@ -246,6 +246,7 @@ class BlockReceiver implements Closeable {
   /**
    * close files.
    */
+  @Override
   public void close() throws IOException {
     IOException ioe = null;
     if (syncOnClose && (out != null || checksumOut != null)) {
@@ -1033,6 +1034,7 @@ class BlockReceiver implements Closeable {
      * Thread to process incoming acks.
      * @see java.lang.Runnable#run()
      */
+    @Override
     public void run() {
       boolean lastPacketInBlock = false;
       final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;

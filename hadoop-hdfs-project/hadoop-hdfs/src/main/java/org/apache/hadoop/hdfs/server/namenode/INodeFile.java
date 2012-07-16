@@ -59,10 +59,12 @@ public class INodeFile extends INode implements BlockCollection {
    * Since this is a file,
    * the {@link FsAction#EXECUTE} action, if any, is ignored.
    */
+  @Override
   void setPermission(FsPermission permission) {
     super.setPermission(permission.applyUMask(UMASK));
   }
 
+  @Override
   boolean isDirectory() {
     return false;
   }
@@ -138,6 +140,7 @@ public class INodeFile extends INode implements BlockCollection {
     this.blocks[idx] = blk;
   }
 
+  @Override
   int collectSubtreeBlocksAndClear(List<Block> v) {
     parent = null;
     if(blocks != null && v != null) {

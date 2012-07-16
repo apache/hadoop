@@ -54,6 +54,7 @@ public class CyclicIteration<K, V> implements Iterable<Map.Entry<K, V>> {
   }
 
   /** {@inheritDoc} */
+  @Override
   public Iterator<Map.Entry<K, V>> iterator() {
     return new CyclicIterator();
   }
@@ -89,11 +90,13 @@ public class CyclicIteration<K, V> implements Iterable<Map.Entry<K, V>> {
     }
 
     /** {@inheritDoc} */
+    @Override
     public boolean hasNext() {
       return hasnext;
     }
 
     /** {@inheritDoc} */
+    @Override
     public Map.Entry<K, V> next() {
       if (!hasnext) {
         throw new NoSuchElementException();
@@ -106,6 +109,7 @@ public class CyclicIteration<K, V> implements Iterable<Map.Entry<K, V>> {
     }
 
     /** Not supported */
+    @Override
     public void remove() {
       throw new UnsupportedOperationException("Not supported");
     }

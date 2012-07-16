@@ -1386,6 +1386,7 @@ public class TestCheckpoint extends TestCase {
       final Answer<Object> delegator = new GenericTestUtils.DelegateAnswer(origNN);
       NamenodeProtocol spyNN = Mockito.mock(NamenodeProtocol.class, delegator);
       DelayAnswer delayer = new DelayAnswer(LOG) {
+        @Override
         protected Object passThrough(InvocationOnMock invocation) throws Throwable {
           return delegator.answer(invocation);
         }

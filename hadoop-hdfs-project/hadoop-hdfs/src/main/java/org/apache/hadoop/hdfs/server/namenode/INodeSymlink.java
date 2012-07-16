@@ -40,6 +40,7 @@ public class INodeSymlink extends INode {
     setAccessTime(atime);
   }
 
+  @Override
   public boolean isLink() {
     return true;
   }

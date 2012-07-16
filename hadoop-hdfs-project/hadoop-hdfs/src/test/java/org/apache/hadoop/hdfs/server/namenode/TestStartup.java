@@ -88,6 +88,7 @@ public class TestStartup extends TestCase {
   }
 
 
+  @Override
   protected void setUp() throws Exception {
     config = new HdfsConfiguration();
     hdfsDir = new File(MiniDFSCluster.getBaseDirectory());
@@ -114,6 +115,7 @@ public class TestStartup extends TestCase {
   /**
    * clean up
    */
+  @Override
   public void tearDown() throws Exception {
     if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
       throw new IOException("Could not delete hdfs directory in tearDown '" + hdfsDir + "'");

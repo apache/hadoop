@@ -133,10 +133,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       }
     }
 
+    @Override
     synchronized public long getGenerationStamp() {
       return theBlock.getGenerationStamp();
     }
 
+    @Override
     synchronized public long getNumBytes() {
       if (!finalized) {
          return bytesRcvd;
@@ -145,6 +147,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       }
     }
 
+    @Override
     synchronized public void setNumBytes(long length) {
       if (!finalized) {
          bytesRcvd = length;
@@ -877,14 +880,17 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     DataNode.LOG.info("Registered FSDatasetState MBean");
   }
 
+  @Override
   public void shutdown() {
     if (mbeanName != null) MBeans.unregister(mbeanName);
   }
 
+  @Override
   public String getStorageInfo() {
     return "Simulated FSDataset-" + storageId;
   }
   
+  @Override
   public boolean hasEnoughResource() {
     return true;
   }

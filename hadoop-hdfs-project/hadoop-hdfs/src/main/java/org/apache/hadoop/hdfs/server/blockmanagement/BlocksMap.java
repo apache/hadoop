@@ -37,15 +37,18 @@ class BlocksMap {
       this.blockInfo = blkInfo;
     }
 
+    @Override
     public boolean hasNext() {
       return blockInfo != null && nextIdx < blockInfo.getCapacity()
               && blockInfo.getDatanode(nextIdx) != null;
     }
 
+    @Override
     public DatanodeDescriptor next() {
       return blockInfo.getDatanode(nextIdx++);
     }
 
+    @Override
     public void remove()  {
       throw new UnsupportedOperationException("Sorry. can't remove.");
     }
