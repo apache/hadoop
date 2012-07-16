@@ -178,6 +178,9 @@ Trunk (unreleased changes)
     HADOOP-8521. Port StreamInputFormat to new Map Reduce API (madhukara
     phatak via bobby)
 
+    HADOOP-8593. Add missed @Override annotations in Metric/Metrics2 package.
+    (Brandon Li via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

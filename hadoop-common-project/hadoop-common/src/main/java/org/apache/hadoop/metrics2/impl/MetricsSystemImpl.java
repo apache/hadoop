@@ -287,8 +287,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
               throws Throwable {
             try {
               return method.invoke(callback, args);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
               // These are not considered fatal.
               LOG.warn("Caught exception in callback "+ method.getName(), e);
             }
@@ -332,11 +331,11 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     long millis = period * 1000;
     timer = new Timer("Timer for '"+ prefix +"' metrics system", true);
     timer.scheduleAtFixedRate(new TimerTask() {
+          @Override
           public void run() {
             try {
               onTimerEvent();
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
               LOG.warn(e);
             }
           }
@@ -451,8 +450,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
             conf.getString(DESC_KEY, sinkName), conf);
         sa.start();
         sinks.put(sinkName, sa);
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         LOG.warn("Error creating sink '"+ sinkName +"'", e);
       }
     }
@@ -494,8 +492,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
   static String getHostname() {
     try {
       return InetAddress.getLocalHost().getHostName();
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       LOG.error("Error getting localhost name. Using 'localhost'...", e);
     }
     return "localhost";
@@ -555,6 +552,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     return true;
   }
 
+  @Override
   public MetricsSource getSource(String name) {
     return allSources.get(name);
   }

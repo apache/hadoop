@@ -192,8 +192,7 @@ class MetricsSourceAdapter implements DynamicMBean {
     }
     try {
       source.getMetrics(builder, all);
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       LOG.error("Error getting metrics from source "+ name, e);
     }
     for (MetricsRecordBuilderImpl rb : builder) {

@@ -109,6 +109,7 @@ public class MutableStat extends MutableMetric {
     setChanged();
   }
 
+  @Override
   public synchronized void snapshot(MetricsRecordBuilder builder, boolean all) {
     if (all || changed()) {
       numSamples += intervalStat.numSamples();
