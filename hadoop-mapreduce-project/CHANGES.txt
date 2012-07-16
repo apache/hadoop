@@ -236,6 +236,9 @@ Branch-2 ( Unreleased changes )
     HADOOP-8499. Lower min.user.id to 500 for the tests.
     (Colin Patrick McCabe via eli)
 
+    MAPREDUCE-4395. Possible NPE at ClientDistributedCacheManager
+    #determineTimestamps (Bhallamudi via bobby)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
