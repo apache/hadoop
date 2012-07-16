@@ -92,6 +92,7 @@ public class TestMultiThreadedHflush {
       this.countdown = countdown;
     }
 
+    @Override
     public void run() {
       try {
         countdown.await();
@@ -151,6 +152,7 @@ public class TestMultiThreadedHflush {
     try {
       for (int i = 0; i < 10; i++) {
         Thread flusher = new Thread() {
+            @Override
             public void run() {
               try {
                 while (true) {

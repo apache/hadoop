@@ -146,6 +146,7 @@ public class XMLUtils {
     /** 
      * Convert a stanza to a human-readable string.
      */
+    @Override
     public String toString() {
       StringBuilder bld = new StringBuilder();
       bld.append("{");

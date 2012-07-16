@@ -53,18 +53,22 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
   private static WebHdfsFileSystem webhdfs;
 
   
+  @Override
   protected String getScheme() {
     return "hdfs";
   }
 
+  @Override
   protected String testBaseDir1() throws IOException {
     return "/test1";
   }
   
+  @Override
   protected String testBaseDir2() throws IOException {
     return "/test2";
   }
 
+  @Override
   protected URI testURI() {
     return cluster.getURI(0);
   }

@@ -113,6 +113,7 @@ public class HftpFileSystem extends FileSystem
 
   protected static final ThreadLocal<SimpleDateFormat> df =
     new ThreadLocal<SimpleDateFormat>() {
+    @Override
     protected SimpleDateFormat initialValue() {
       return getDateFormat();
     }
@@ -240,6 +241,7 @@ public class HftpFileSystem extends FileSystem
       //Renew TGT if needed
       ugi.reloginFromKeytab();
       return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
+        @Override
         public Token<?> run() throws IOException {
           final String nnHttpUrl = nnSecureUri.toString();
           Credentials c;
@@ -402,6 +404,7 @@ public class HftpFileSystem extends FileSystem
 
     ArrayList<FileStatus> fslist = new ArrayList<FileStatus>();
 
+    @Override
     public void startElement(String ns, String localname, String qname,
                 Attributes attrs) throws SAXException {
       if ("listing".equals(qname)) return;
@@ -541,6 +544,7 @@ public class HftpFileSystem extends FileSystem
   public void setWorkingDirectory(Path f) { }
 
   /** This optional operation is not yet supported. */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     throw new IOException("Not supported");

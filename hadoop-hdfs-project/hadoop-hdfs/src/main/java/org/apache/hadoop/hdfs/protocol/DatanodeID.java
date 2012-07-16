@@ -150,6 +150,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
     return ipcPort;
   }
 
+  @Override
   public boolean equals(Object to) {
     if (this == to) {
       return true;
@@ -161,10 +162,12 @@ public class DatanodeID implements Comparable<DatanodeID> {
             storageID.equals(((DatanodeID)to).getStorageID()));
   }
   
+  @Override
   public int hashCode() {
     return getXferAddr().hashCode()^ storageID.hashCode();
   }
   
+  @Override
   public String toString() {
     return getXferAddr();
   }
@@ -187,6 +190,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * @param that
    * @return as specified by Comparable
    */
+  @Override
   public int compareTo(DatanodeID that) {
     return getXferAddr().compareTo(that.getXferAddr());
   }

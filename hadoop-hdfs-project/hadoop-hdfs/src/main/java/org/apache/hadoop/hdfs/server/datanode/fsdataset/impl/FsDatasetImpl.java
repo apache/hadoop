@@ -264,6 +264,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   /**
    * Return the number of failed volumes in the FSDataset.
    */
+  @Override
   public int getNumFailedVolumes() {
     return volumes.numberOfFailedVolumes();
   }

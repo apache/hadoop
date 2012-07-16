@@ -268,6 +268,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       return seqno == HEART_BEAT_SEQNO;
     }
     
+    @Override
     public String toString() {
       return "packet seqno:" + this.seqno +
       " offsetInBlock:" + this.offsetInBlock + 
@@ -396,6 +397,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
      * streamer thread is the only thread that opens streams to datanode, 
      * and closes them. Any error recovery is also done by this thread.
      */
+    @Override
     public void run() {
       long lastPacket = Time.now();
       while (!streamerClosed && dfsClient.clientRunning) {
@@ -654,6 +656,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         this.targets = targets;
       }
 
+      @Override
       public void run() {
 
         setName("ResponseProcessor for block " + block);

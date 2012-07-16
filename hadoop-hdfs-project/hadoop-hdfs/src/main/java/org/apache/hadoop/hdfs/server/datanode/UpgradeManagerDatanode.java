@@ -47,6 +47,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     this.bpid = bpid;
   }
 
+  @Override
   public HdfsServerConstants.NodeType getType() {
     return HdfsServerConstants.NodeType.DATA_NODE;
   }
@@ -71,6 +72,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
    * @return true if distributed upgrade is required or false otherwise
    * @throws IOException
    */
+  @Override
   public synchronized boolean startUpgrade() throws IOException {
     if(upgradeState) {  // upgrade is already in progress
       assert currentUpgrades != null : 
@@ -134,6 +136,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
         + "The upgrade object is not defined.");
   }
 
+  @Override
   public synchronized void completeUpgrade() throws IOException {
     assert currentUpgrades != null : 
       "UpgradeManagerDatanode.currentUpgrades is null.";

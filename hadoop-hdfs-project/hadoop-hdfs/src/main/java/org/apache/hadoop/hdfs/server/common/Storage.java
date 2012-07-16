@@ -123,6 +123,7 @@ public abstract class Storage extends StorageInfo {
       this.prevIndex = 0;
     }
     
+    @Override
     public boolean hasNext() {
       if (storageDirs.isEmpty() || nextIndex >= storageDirs.size())
         return false;
@@ -138,6 +139,7 @@ public abstract class Storage extends StorageInfo {
       return true;
     }
     
+    @Override
     public StorageDirectory next() {
       StorageDirectory sd = getStorageDir(nextIndex);
       prevIndex = nextIndex;
@@ -152,6 +154,7 @@ public abstract class Storage extends StorageInfo {
       return sd;
     }
     
+    @Override
     public void remove() {
       nextIndex = prevIndex; // restore previous state
       storageDirs.remove(prevIndex); // remove last returned element

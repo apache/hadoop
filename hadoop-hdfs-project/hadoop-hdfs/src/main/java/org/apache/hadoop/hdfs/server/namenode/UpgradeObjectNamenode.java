@@ -44,12 +44,14 @@ public abstract class UpgradeObjectNamenode extends UpgradeObject {
   public abstract UpgradeCommand processUpgradeCommand(UpgradeCommand command
                                                ) throws IOException;
 
+  @Override
   public HdfsServerConstants.NodeType getType() {
     return HdfsServerConstants.NodeType.NAME_NODE;
   }
 
   /**
    */
+  @Override
   public UpgradeCommand startUpgrade() throws IOException {
     // broadcast that data-nodes must start the upgrade
     return new UpgradeCommand(UpgradeCommand.UC_ACTION_START_UPGRADE,

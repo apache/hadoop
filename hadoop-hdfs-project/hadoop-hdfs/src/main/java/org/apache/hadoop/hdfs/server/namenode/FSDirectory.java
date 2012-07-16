@@ -187,6 +187,7 @@ public class FSDirectory implements Closeable {
   /**
    * Shutdown the filestore
    */
+  @Override
   public void close() throws IOException {
     fsImage.close();
   }

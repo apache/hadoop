@@ -181,6 +181,7 @@ public class TestNameNodeRecovery {
     final private long BAD_TXID = 4;
     final private long MAX_TXID = 10;
     
+    @Override
     public void addTransactionsToLog(EditLogOutputStream elos,
         OpInstanceCache cache) throws IOException {
       for (long txid = 1; txid <= MAX_TXID; txid++) {
@@ -199,10 +200,12 @@ public class TestNameNodeRecovery {
       }
     }
 
+    @Override
     public long getLastValidTxId() {
       return BAD_TXID - 1;
     }
 
+    @Override
     public Set<Long> getValidTxIds() {
       return Sets.newHashSet(1L , 2L, 3L, 5L, 6L, 7L, 8L, 9L, 10L);
     }

@@ -86,6 +86,7 @@ public class BootstrapStandby implements Tool, Configurable {
   static final int ERR_CODE_ALREADY_FORMATTED = 5;
   static final int ERR_CODE_LOGS_UNAVAILABLE = 6; 
 
+  @Override
   public int run(String[] args) throws Exception {
     parseArgs(args);
     parseConfAndFindOtherNN();

@@ -122,6 +122,7 @@ class BlockPoolManager {
     try {
       UserGroupInformation.getLoginUser().doAs(
           new PrivilegedExceptionAction<Object>() {
+            @Override
             public Object run() throws Exception {
               for (BPOfferService bpos : offerServices) {
                 bpos.start();

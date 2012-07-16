@@ -35,6 +35,7 @@ public class TestGlobPaths extends TestCase {
       this.regex = regex;
     }
 
+    @Override
     public boolean accept(Path path) {
       return path.toString().matches(regex);
     }
@@ -47,6 +48,7 @@ public class TestGlobPaths extends TestCase {
   static final String USER_DIR = "/user/"+System.getProperty("user.name");
   private Path[] path = new Path[NUM_OF_PATHS];
   
+  @Override
   protected void setUp() throws Exception {
     try {
       Configuration conf = new HdfsConfiguration();
@@ -57,6 +59,7 @@ public class TestGlobPaths extends TestCase {
     }
   }
   
+  @Override
   protected void tearDown() throws Exception {
     if(dfsCluster!=null) {
       dfsCluster.shutdown();

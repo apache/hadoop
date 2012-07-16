@@ -58,7 +58,8 @@ public class TestHftpDelegationToken {
     assertEquals("wrong tokens in user", 2, user.getTokens().size());
     FileSystem fs = 
       user.doAs(new PrivilegedExceptionAction<FileSystem>() {
-	  public FileSystem run() throws Exception {
+	  @Override
+    public FileSystem run() throws Exception {
             return FileSystem.get(new URI("hftp://localhost:50470/"), conf);
 	  }
 	});

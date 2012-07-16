@@ -60,6 +60,7 @@ public class DatanodeJspHelper {
                                                  InterruptedException {
     return
       user.doAs(new PrivilegedExceptionAction<DFSClient>() {
+        @Override
         public DFSClient run() throws IOException {
           return new DFSClient(NetUtils.createSocketAddr(addr), conf);
         }

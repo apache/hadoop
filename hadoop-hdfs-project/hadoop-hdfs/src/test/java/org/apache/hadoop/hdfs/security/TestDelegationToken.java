@@ -241,6 +241,7 @@ public class TestDelegationToken {
     final UserGroupInformation shortUgi = UserGroupInformation
         .createRemoteUser("JobTracker");
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws IOException {
         final DistributedFileSystem dfs = (DistributedFileSystem) cluster
             .getFileSystem();
@@ -254,6 +255,7 @@ public class TestDelegationToken {
       }
     });
     shortUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws IOException {
         final DistributedFileSystem dfs = (DistributedFileSystem) cluster
             .getFileSystem();
@@ -262,6 +264,7 @@ public class TestDelegationToken {
       }
     });
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws IOException {
         final DistributedFileSystem dfs = (DistributedFileSystem) cluster
             .getFileSystem();

@@ -152,6 +152,7 @@ public class FSEditLog  {
 
   // stores the most current transactionId of this thread.
   private static final ThreadLocal<TransactionId> myTransactionId = new ThreadLocal<TransactionId>() {
+    @Override
     protected synchronized TransactionId initialValue() {
       return new TransactionId(Long.MAX_VALUE);
     }

@@ -231,6 +231,7 @@ public class TestDFSShell extends TestCase {
       show("begin");
       
       final Thread copy2ndFileThread = new Thread() {
+        @Override
         public void run() {
           try {
             show("copy local " + f2 + " to remote " + dst);
@@ -250,6 +251,7 @@ public class TestDFSShell extends TestCase {
       System.setSecurityManager(new SecurityManager() {
         private boolean firstTime = true;
   
+        @Override
         public void checkPermission(Permission perm) {
           if (firstTime) {
             Thread t = Thread.currentThread();
@@ -1269,6 +1271,7 @@ public class TestDFSShell extends TestCase {
       TestGetRunner runner = new TestGetRunner() {
         private int count = 0;
 
+        @Override
         public String run(int exitcode, String... options) throws IOException {
           String dst = TEST_ROOT_DIR + "/" + fname+ ++count;
           String[] args = new String[options.length + 3];

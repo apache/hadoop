@@ -166,6 +166,7 @@ public class TestFileAppend4 {
       AppendTestUtil.write(stm, 0, 4096);
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
       Thread t = new Thread() { 
+          @Override
           public void run() {
             try {
               stm.close();
@@ -238,6 +239,7 @@ public class TestFileAppend4 {
       AppendTestUtil.write(stm, 0, 4096);
       final AtomicReference<Throwable> err = new AtomicReference<Throwable>();
       Thread t = new Thread() { 
+          @Override
           public void run() {
             try {
               stm.close();

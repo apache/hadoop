@@ -38,6 +38,7 @@ public class TestFileCreationEmpty extends junit.framework.TestCase {
   public void testLeaseExpireEmptyFiles() throws Exception {
     final Thread.UncaughtExceptionHandler oldUEH = Thread.getDefaultUncaughtExceptionHandler();
     Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+      @Override
       public void uncaughtException(Thread t, Throwable e) {
         if (e instanceof ConcurrentModificationException) {
           LeaseManager.LOG.error("t=" + t, e);

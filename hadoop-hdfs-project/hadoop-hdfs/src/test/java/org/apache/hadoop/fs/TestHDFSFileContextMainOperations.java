@@ -75,6 +75,7 @@ public class TestHDFSFileContextMainOperations extends
     cluster.shutdown();   
   }
   
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();
