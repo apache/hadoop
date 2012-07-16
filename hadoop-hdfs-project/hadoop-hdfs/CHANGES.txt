@@ -179,6 +179,9 @@ Trunk (unreleased changes)
     HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049.
     (acmurthy via eli)
 
+    HDFS-3625. Fix TestBackupNode by properly initializing edit log during
+    startup. (Junping Du via todd)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
