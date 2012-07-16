@@ -333,6 +333,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3659. Add missing @Override to methods across the hadoop-hdfs
     project. (Brandon Li via harsh)
 
+    HDFS-3537. Move libhdfs and fuse-dfs source to native subdirectories.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
