@@ -155,6 +155,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8585. Fix initialization circularity between UserGroupInformation
     and HadoopConfiguration. (Colin Patrick McCabe via atm)
 
+    HADOOP-8552. Conflict: Same security.log.file for multiple users. 
+    (kkambatl via tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
