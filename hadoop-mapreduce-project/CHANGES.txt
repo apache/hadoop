@@ -254,6 +254,9 @@ Release 2.1.0-alpha - Unreleased
     MAPREDUCE-4395. Possible NPE at ClientDistributedCacheManager
     #determineTimestamps (Bhallamudi via bobby)
 
+    MAPREDUCE-4380. Empty Userlogs directory is getting created under logs
+    directory (Devaraj K via bobby)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
