@@ -8,6 +8,10 @@ Release 1.1.1 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
+    ReadaheadPool infrastructure for use in HDFS and MR.
+    (Brandon Li and todd via suresh)
+
   BUG FIXES
 
 
