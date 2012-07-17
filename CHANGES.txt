@@ -20,10 +20,15 @@ Release 1.1.0 - 2012.07.09
 
     HADOOP-8230. Enable sync by default and disable append. (eli)
 
+    HADOOP-8365. Provide ability to disable working sync. (eli)
+
+    HADOOP-8552. Conflict: Same security.log.file for multiple users. 
+    (kkambatl via tucu)
+    
   NEW FEATURES
 
     MAPREDUCE-3118. Backport Gridmix and Rumen features to
-                    branch-0.20-security (Ravi Gummadi via amarrk)
+    branch-0.20-security (Ravi Gummadi via amarrk)
 
     HADOOP-7806. Support binding to sub-interfaces. (harsh, eli via eli)
 
@@ -42,12 +47,12 @@ Release 1.1.0 - 2012.07.09
   IMPROVEMENTS
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
-                    from Rumen tool. (ravigummadi)
+    from Rumen tool. (ravigummadi)
 
     MAPREDUCE-2517. Add system tests to Gridmix. (Vinay Thota via amarrk)
 
     MAPREDUCE-3008. [Gridmix] Improve cumulative CPU usage emulation for
-                    short running tasks. (amarrk)
+    short running tasks. (amarrk)
 
     MAPREDUCE-2836. Provide option to fail jobs when submitted to
     non-existent fair scheduler pools. (Ahmed Radwan via todd)
@@ -123,22 +128,20 @@ Release 1.1.0 - 2012.07.09
 
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
 
-    HADOOP-8365. Provide ability to disable working sync. (eli)
-
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
-                    become slow in some cases (ravigummadi)
+    become slow in some cases (ravigummadi)
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
 
     HADOOP-7634. Docs specify wrong owner for task-controller.cfg (eli)
 
     HADOOP-7665. branch-0.20-security doesn't include SPNEGO settings in
-                 core-default.xml (atm)
+    core-default.xml (atm)
 
     HADOOP-7666. branch-0.20-security doesn't include
-                 o.a.h.security.TestAuthenticationFilter (atm)
+    o.a.h.security.TestAuthenticationFilter (atm)
 
     HADOOP-7621. alfredo config should be in a file not readable by users (atm)
 
@@ -241,7 +244,7 @@ Release 1.1.0 - 2012.07.09
     HDFS-3176. Use MD5MD5CRC32FileChecksum.readFields() in JsonUtil .  (Kihwal
     Lee via szetszwo)
 
-    HADOOP-8269. Fix some javadoc warnings on branch-1.
+    HADOOP-8269. Fix some javadoc warnings on branch-1. (eli)
 
     MAPREDUCE-3674. Invoked with no queueName request param, the
     jobqueue_details.jsp injects a null queue name into schedulers. (harsh)
@@ -281,7 +284,8 @@ Release 1.1.0 - 2012.07.09
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
     subsequent tests to fail.  (Ivan Mitic via szetszwo)
 
-    HDFS-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml (Zhihong Ted Yu via cos)
+    HDFS-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml
+    (Zhihong Ted Yu via cos)
 
     HADOOP-8399. Remove JDK5 dependency from Hadoop 1.0+ line 
     (Konstantin Boudnik via mattf)
