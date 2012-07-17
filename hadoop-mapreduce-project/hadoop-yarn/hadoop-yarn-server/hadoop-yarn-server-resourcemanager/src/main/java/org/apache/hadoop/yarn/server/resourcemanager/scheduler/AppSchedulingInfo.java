@@ -245,7 +245,8 @@ public class AppSchedulingInfo {
    * @param allocatedContainers
    *          resources allocated to the application
    */
-  synchronized private void allocateNodeLocal(SchedulerNode node, Priority priority,
+  synchronized private void allocateNodeLocal( 
+      SchedulerNode node, Priority priority, 
       ResourceRequest nodeLocalRequest, Container container) {
     // Update consumption and track allocations
     allocate(container);
@@ -273,7 +274,8 @@ public class AppSchedulingInfo {
    * @param allocatedContainers
    *          resources allocated to the application
    */
-  synchronized private void allocateRackLocal(SchedulerNode node, Priority priority,
+  synchronized private void allocateRackLocal(
+      SchedulerNode node, Priority priority,
       ResourceRequest rackLocalRequest, Container container) {
 
     // Update consumption and track allocations
@@ -295,7 +297,8 @@ public class AppSchedulingInfo {
    * @param allocatedContainers
    *          resources allocated to the application
    */
-  synchronized private void allocateOffSwitch(SchedulerNode node, Priority priority,
+  synchronized private void allocateOffSwitch(
+      SchedulerNode node, Priority priority,
       ResourceRequest offSwitchRequest, Container container) {
 
     // Update consumption and track allocations

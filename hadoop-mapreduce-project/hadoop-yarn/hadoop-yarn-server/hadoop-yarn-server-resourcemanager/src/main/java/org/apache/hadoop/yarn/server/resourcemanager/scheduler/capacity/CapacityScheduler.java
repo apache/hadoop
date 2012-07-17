@@ -63,11 +63,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainer
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
@@ -103,10 +103,10 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     }
   };
 
-  static final Comparator<SchedulerApp> applicationComparator = 
-    new Comparator<SchedulerApp>() {
+  static final Comparator<FiCaSchedulerApp> applicationComparator = 
+    new Comparator<FiCaSchedulerApp>() {
     @Override
-    public int compare(SchedulerApp a1, SchedulerApp a2) {
+    public int compare(FiCaSchedulerApp a1, FiCaSchedulerApp a2) {
       return a1.getApplicationId().getId() - a2.getApplicationId().getId();
     }
   };
@@ -131,8 +131,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
   private Map<String, CSQueue> queues = new ConcurrentHashMap<String, CSQueue>();
 
-  private Map<NodeId, SchedulerNode> nodes = 
-      new ConcurrentHashMap<NodeId, SchedulerNode>();
+  private Map<NodeId, FiCaSchedulerNode> nodes = 
+      new ConcurrentHashMap<NodeId, FiCaSchedulerNode>();
 
   private Resource clusterResource = 
     RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Resource.class);
@@ -141,8 +141,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   private Resource minimumAllocation;
   private Resource maximumAllocation;
 
-  private Map<ApplicationAttemptId, SchedulerApp> applications = 
-      new ConcurrentHashMap<ApplicationAttemptId, SchedulerApp>();
+  private Map<ApplicationAttemptId, FiCaSchedulerApp> applications = 
+      new ConcurrentHashMap<ApplicationAttemptId, FiCaSchedulerApp>();
 
   private boolean initialized = false;
 
@@ -299,7 +299,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
       CSQueue parent, String queueName, Map<String, CSQueue> queues,
       Map<String, CSQueue> oldQueues, 
       Comparator<CSQueue> queueComparator,
-      Comparator<SchedulerApp> applicationComparator,
+      Comparator<FiCaSchedulerApp> applicationComparator,
       QueueHook hook) throws IOException {
     CSQueue queue;
     String[] childQueueNames = 
@@ -370,8 +370,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     }
 
     // TODO: Fix store
-    SchedulerApp SchedulerApp = 
-        new SchedulerApp(applicationAttemptId, user, queue, 
+    FiCaSchedulerApp SchedulerApp = 
+        new FiCaSchedulerApp(applicationAttemptId, user, queue, 
             queue.getActiveUsersManager(), rmContext, null);
 
     // Submit to the queue
@@ -404,7 +404,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     LOG.info("Application " + applicationAttemptId + " is done." +
     		" finalState=" + rmAppAttemptFinalState);
     
-    SchedulerApp application = getApplication(applicationAttemptId);
+    FiCaSchedulerApp application = getApplication(applicationAttemptId);
 
     if (application == null) {
       //      throw new IOException("Unknown application " + applicationId + 
@@ -456,7 +456,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   public Allocation allocate(ApplicationAttemptId applicationAttemptId,
       List<ResourceRequest> ask, List<ContainerId> release) {
 
-    SchedulerApp application = getApplication(applicationAttemptId);
+    FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Calling allocate on removed " +
           "or non existant application " + applicationAttemptId);
@@ -551,7 +551,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
       LOG.debug("nodeUpdate: " + nm + " clusterResources: " + clusterResource);
     }
                   
-    SchedulerNode node = getNode(nm.getNodeID());
+    FiCaSchedulerNode node = getNode(nm.getNodeID());
 
     // Processing the newly launched containers
     for (ContainerStatus launchedContainer : newlyLaunchedContainers) {
@@ -578,7 +578,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
     RMContainer reservedContainer = node.getReservedContainer();
     if (reservedContainer != null) {
-      SchedulerApp reservedApplication = 
+      FiCaSchedulerApp reservedApplication = 
           getApplication(reservedContainer.getApplicationAttemptId());
       
       // Try to fulfill the reservation
@@ -601,10 +601,10 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
   }
 
-  private void containerLaunchedOnNode(ContainerId containerId, SchedulerNode node) {
+  private void containerLaunchedOnNode(ContainerId containerId, FiCaSchedulerNode node) {
     // Get the application for the finished container
     ApplicationAttemptId applicationAttemptId = containerId.getApplicationAttemptId();
-    SchedulerApp application = getApplication(applicationAttemptId);
+    FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Unknown application: " + applicationAttemptId + 
           " launched container " + containerId +
@@ -672,7 +672,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
 
   private synchronized void addNode(RMNode nodeManager) {
-    this.nodes.put(nodeManager.getNodeID(), new SchedulerNode(nodeManager));
+    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
     root.updateClusterResource(clusterResource);
     ++numNodeManagers;
@@ -681,7 +681,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
 
   private synchronized void removeNode(RMNode nodeInfo) {
-    SchedulerNode node = this.nodes.get(nodeInfo.getNodeID());
+    FiCaSchedulerNode node = this.nodes.get(nodeInfo.getNodeID());
     if (node == null) {
       return;
     }
@@ -726,7 +726,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     
     // Get the application for the finished container
     ApplicationAttemptId applicationAttemptId = container.getId().getApplicationAttemptId();
-    SchedulerApp application = getApplication(applicationAttemptId);
+    FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Container " + container + " of" +
       		" unknown application " + applicationAttemptId + 
@@ -735,7 +735,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     }
     
     // Get the node on which the container was allocated
-    SchedulerNode node = getNode(container.getNodeId());
+    FiCaSchedulerNode node = getNode(container.getNodeId());
     
     // Inform the queue
     LeafQueue queue = (LeafQueue)application.getQueue();
@@ -749,24 +749,24 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
 
   @Lock(Lock.NoLock.class)
-  SchedulerApp getApplication(ApplicationAttemptId applicationAttemptId) {
+  FiCaSchedulerApp getApplication(ApplicationAttemptId applicationAttemptId) {
     return applications.get(applicationAttemptId);
   }
 
   @Override
   public SchedulerAppReport getSchedulerAppInfo(
       ApplicationAttemptId applicationAttemptId) {
-    SchedulerApp app = getApplication(applicationAttemptId);
+    FiCaSchedulerApp app = getApplication(applicationAttemptId);
     return app == null ? null : new SchedulerAppReport(app);
   }
   
   @Lock(Lock.NoLock.class)
-  SchedulerNode getNode(NodeId nodeId) {
+  FiCaSchedulerNode getNode(NodeId nodeId) {
     return nodes.get(nodeId);
   }
 
   private RMContainer getRMContainer(ContainerId containerId) {
-    SchedulerApp application = 
+    FiCaSchedulerApp application = 
         getApplication(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
   }
@@ -790,7 +790,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
   @Override
   public SchedulerNodeReport getNodeReport(NodeId nodeId) {
-    SchedulerNode node = getNode(nodeId);
+    FiCaSchedulerNode node = getNode(nodeId);
     return node == null ? null : new SchedulerNodeReport(node);
   }
   

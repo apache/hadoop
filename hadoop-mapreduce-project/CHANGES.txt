@@ -132,11 +132,24 @@ Branch-2 ( Unreleased changes )
 
   NEW FEATURES
 
+  IMPROVEMENTS
+
+  BUG FIXES
+
+Release 2.1.0-alpha - Unreleased 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
     MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
 
     MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
 
   IMPROVEMENTS
+
+    MAPREDUCE-4440. Changed SchedulerApp and SchedulerNode to be a minimal
+    interface to allow schedulers to maintain their own. (acmurthy) 
 
     MAPREDUCE-4146. Support limits on task status string length and number of
     block locations in branch-2. (Ahmed Radwan via tomwhite)

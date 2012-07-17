@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
+package org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Stable;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -53,6 +54,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerReservedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplication;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -63,9 +69,11 @@ import com.google.common.collect.Multiset;
  * of this class.
  */
 @SuppressWarnings("unchecked")
-public class SchedulerApp {
+@Private
+@Unstable
+public class FiCaSchedulerApp extends SchedulerApplication {
 
-  private static final Log LOG = LogFactory.getLog(SchedulerApp.class);
+  private static final Log LOG = LogFactory.getLog(FiCaSchedulerApp.class);
 
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -101,7 +109,7 @@ public class SchedulerApp {
       .newRecordInstance(Resource.class);
 
   private final RMContext rmContext;
-  public SchedulerApp(ApplicationAttemptId applicationAttemptId, 
+  public FiCaSchedulerApp(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, ActiveUsersManager activeUsersManager,
       RMContext rmContext, ApplicationStore store) {
     this.rmContext = rmContext;
@@ -115,6 +123,7 @@ public class SchedulerApp {
     return this.appSchedulingInfo.getApplicationId();
   }
 
+  @Override
   public ApplicationAttemptId getApplicationAttemptId() {
     return this.appSchedulingInfo.getApplicationAttemptId();
   }
@@ -156,6 +165,7 @@ public class SchedulerApp {
    * Is this application pending?
    * @return true if it is else false.
    */
+  @Override
   public boolean isPending() {
     return this.appSchedulingInfo.isPending();
   }
@@ -168,6 +178,7 @@ public class SchedulerApp {
    * Get the list of live containers
    * @return All of the live containers
    */
+  @Override
   public synchronized Collection<RMContainer> getLiveContainers() {
     return new ArrayList<RMContainer>(liveContainers.values());
   }
@@ -222,7 +233,7 @@ public class SchedulerApp {
     Resources.subtractFrom(currentConsumption, containerResource);
   }
 
-  synchronized public RMContainer allocate(NodeType type, SchedulerNode node,
+  synchronized public RMContainer allocate(NodeType type, FiCaSchedulerNode node,
       Priority priority, ResourceRequest request, 
       Container container) {
     
@@ -347,7 +358,7 @@ public class SchedulerApp {
     return currentReservation;
   }
 
-  public synchronized RMContainer reserve(SchedulerNode node, Priority priority,
+  public synchronized RMContainer reserve(FiCaSchedulerNode node, Priority priority,
       RMContainer rmContainer, Container container) {
     // Create RMContainer if necessary
     if (rmContainer == null) {
@@ -384,7 +395,7 @@ public class SchedulerApp {
     return rmContainer;
   }
 
-  public synchronized void unreserve(SchedulerNode node, Priority priority) {
+  public synchronized void unreserve(FiCaSchedulerNode node, Priority priority) {
     Map<NodeId, RMContainer> reservedContainers = 
         this.reservedContainers.get(priority);
     RMContainer reservedContainer = reservedContainers.remove(node.getNodeID());
@@ -410,7 +421,7 @@ public class SchedulerApp {
    * @param priority priority of reserved container
    * @return true is reserved, false if not
    */
-  public synchronized boolean isReserved(SchedulerNode node, Priority priority) {
+  public synchronized boolean isReserved(FiCaSchedulerNode node, Priority priority) {
     Map<NodeId, RMContainer> reservedContainers = 
         this.reservedContainers.get(priority);
     if (reservedContainers != null) {
@@ -434,6 +445,7 @@ public class SchedulerApp {
    * Get the list of reserved containers
    * @return All of the reserved containers.
    */
+  @Override
   public synchronized List<RMContainer> getReservedContainers() {
     List<RMContainer> reservedContainers = new ArrayList<RMContainer>();
     for (Map.Entry<Priority, Map<NodeId, RMContainer>> e : 

@@ -33,8 +33,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 
 /**
  * <code>CSQueue</code> represents a node in the tree of 
@@ -150,7 +150,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param user user who submitted the application
    * @param queue queue to which the application is submitted
    */
-  public void submitApplication(SchedulerApp application, String user, 
+  public void submitApplication(FiCaSchedulerApp application, String user, 
       String queue) 
   throws AccessControlException;
   
@@ -159,7 +159,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param application
    * @param queue application queue 
    */
-  public void finishApplication(SchedulerApp application, String queue);
+  public void finishApplication(FiCaSchedulerApp application, String queue);
   
   /**
    * Assign containers to applications in the queue or it's children (if any).
@@ -168,7 +168,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @return the assignment
    */
   public CSAssignment assignContainers(
-      Resource clusterResource, SchedulerNode node);
+      Resource clusterResource, FiCaSchedulerNode node);
   
   /**
    * A container assigned to the queue has completed.
@@ -182,7 +182,7 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param event event to be sent to the container
    */
   public void completedContainer(Resource clusterResource,
-      SchedulerApp application, SchedulerNode node, 
+      FiCaSchedulerApp application, FiCaSchedulerNode node, 
       RMContainer container, ContainerStatus containerStatus, 
       RMContainerEventType event);
 
@@ -219,6 +219,6 @@ extends org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue {
    * @param application the application for which the container was allocated
    * @param container the container that was recovered.
    */
-  public void recoverContainer(Resource clusterResource, SchedulerApp application, 
+  public void recoverContainer(Resource clusterResource, FiCaSchedulerApp application, 
       Container container);
 }
