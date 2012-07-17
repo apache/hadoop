@@ -334,6 +334,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4449. Incorrect MR_HISTORY_STORAGE property name in JHAdminConfig
     (Ahmed Radwan via bobby)
 
+    MAPREDUCE-4395. Possible NPE at ClientDistributedCacheManager
+    #determineTimestamps (Bhallamudi via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
