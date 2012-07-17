@@ -724,6 +724,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4283. Display tail of aggregated logs by default (Jason Lowe via
     bobby)
 
+    MAPREDUCE-4448. Fix NM crash during app cleanup if aggregation didn't
+    init. (Jason Lowe via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
