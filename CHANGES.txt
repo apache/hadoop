@@ -8,12 +8,7 @@ Release 1.1.1 - Unreleased
 
   IMPROVEMENTS
 
-    HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
-    ReadaheadPool infrastructure for use in HDFS and MR.
-    (Brandon Li and todd via suresh)
-
   BUG FIXES
-
 
 Release 1.1.0 - 2012.07.09
 
@@ -131,6 +126,14 @@ Release 1.1.0 - 2012.07.09
     policy.  (szetszwo)
 
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
+
+    HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
+    ReadaheadPool infrastructure for use in HDFS and MR.
+    (Brandon Li and todd via suresh)
+
+    HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
+    (todd via suresh)
+
 
   BUG FIXES
 
