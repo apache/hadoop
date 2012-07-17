@@ -56,6 +56,11 @@ import org.apache.hadoop.util.GenericOptionsParser;
  */
 public class DelegationTokenFetcher {
   
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
+
   private static final Log LOG = 
     LogFactory.getLog(DelegationTokenFetcher.class);
   private static final String WEBSERVICE = "webservice";

@@ -210,4 +210,23 @@ public class TestStorageDirectoryFailure {
     checkFileContents("file0");
     checkFileContents("file1");
   }
+
+  @Test
+  /** Test that we abort when there are no valid edit log directories
+   * remaining. */
+  public void testAbortOnNoValidEditDirs() throws IOException {
+    cluster.restartNameNode();
+    assertEquals(0, numRemovedDirs());
+    checkFileCreation("file9");
+    cluster.getNameNode().getFSImage().
+      removeStorageDir(new File(nameDirs.get(0)));
+    cluster.getNameNode().getFSImage().
+      removeStorageDir(new File(nameDirs.get(1)));
+    FSEditLog spyLog = spy(cluster.getNameNode().getFSImage().getEditLog());
+    doNothing().when(spyLog).fatalExit(anyString());
+    cluster.getNameNode().getFSImage().setEditLog(spyLog);
+    cluster.getNameNode().getFSImage().
+      removeStorageDir(new File(nameDirs.get(2)));
+    verify(spyLog, atLeastOnce()).fatalExit(anyString());
+  }
 }

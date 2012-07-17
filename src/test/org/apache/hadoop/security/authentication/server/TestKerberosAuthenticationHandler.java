@@ -18,15 +18,17 @@ import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
 import junit.framework.TestCase;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.junit.Ignore;
 import org.mockito.Mockito;
-import sun.security.jgss.GSSUtil;
+import org.ietf.jgss.Oid;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.Field;
 import java.util.Properties;
 import java.util.concurrent.Callable;
 
@@ -116,9 +118,12 @@ public class TestKerberosAuthenticationHandler extends TestCase {
         GSSContext gssContext = null;
         try {
           String servicePrincipal = KerberosTestUtils.getServerPrincipal();
-          GSSName serviceName = gssManager.createName(servicePrincipal, GSSUtil.NT_GSS_KRB5_PRINCIPAL);
-          gssContext = gssManager.createContext(serviceName, GSSUtil.GSS_KRB5_MECH_OID, null,
-                                                GSSContext.DEFAULT_LIFETIME);
+          Oid oid = KerberosUtil.getOidInstance("NT_GSS_KRB5_PRINCIPAL");
+          GSSName serviceName = gssManager.createName(servicePrincipal,
+              oid);
+          oid = KerberosUtil.getOidInstance("GSS_KRB5_MECH_OID");
+          gssContext = gssManager.createContext(serviceName, oid, null,
+                                                  GSSContext.DEFAULT_LIFETIME);
           gssContext.requestCredDeleg(true);
           gssContext.requestMutualAuth(true);
 

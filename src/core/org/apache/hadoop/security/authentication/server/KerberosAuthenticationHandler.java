@@ -15,9 +15,9 @@ package org.apache.hadoop.security.authentication.server;
 
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
-import com.sun.security.auth.module.Krb5LoginModule;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.KerberosName;
+import org.apache.hadoop.security.authentication.util.KerberosUtil;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
@@ -93,7 +93,7 @@ public class KerberosAuthenticationHandler implements AuthenticationHandler {
       }
 
       return new AppConfigurationEntry[]{
-        new AppConfigurationEntry(Krb5LoginModule.class.getName(),
+          new AppConfigurationEntry(KerberosUtil.getKrb5LoginModuleName(),
                                   AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
                                   options),};
     }

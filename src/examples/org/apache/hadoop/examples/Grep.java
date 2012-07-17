@@ -68,7 +68,7 @@ public class Grep extends Configured implements Tool {
 
       JobClient.runJob(grepJob);
 
-      JobConf sortJob = new JobConf(Grep.class);
+      JobConf sortJob = new JobConf(getConf(), Grep.class);
       sortJob.setJobName("grep-sort");
 
       FileInputFormat.setInputPaths(sortJob, tempDir);

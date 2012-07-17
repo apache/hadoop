@@ -17,23 +17,32 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.*;
+
+import java.io.File;
 import java.lang.management.ManagementFactory;
+import java.util.Collection;
+import java.util.Map;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.junit.Test;
+import org.mortbay.util.ajax.JSON;
+
 import junit.framework.Assert;
 
 /**
  * Class for testing {@link NameNodeMXBean} implementation
  */
 public class TestNameNodeMXBean {
+  @SuppressWarnings({ "unchecked", "deprecation" })
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
     Configuration conf = new Configuration();
@@ -84,8 +93,44 @@ public class TestNameNodeMXBean {
       String deadnodeinfo = (String) (mbs.getAttribute(mxbeanName,
           "DeadNodes"));
       Assert.assertEquals(fsn.getDeadNodes(), deadnodeinfo);
+      // get attribute NameDirStatuses
+      String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
+          "NameDirStatuses"));
+      Assert.assertEquals(fsn.getNameDirStatuses(), nameDirStatuses);
+      Map<String, Map<String, String>> statusMap =
+        (Map<String, Map<String, String>>) JSON.parse(nameDirStatuses);
+      Collection<File> nameDirs = cluster.getNameDirs();
+      for (File nameDir : nameDirs) {
+        System.out.println("Checking for the presence of " + nameDir +
+            " in active name dirs.");
+        assertTrue(statusMap.get("active").containsKey(nameDir.getAbsolutePath()));
+      }
+      assertEquals(2, statusMap.get("active").size());
+      assertEquals(0, statusMap.get("failed").size());
+      
+      // This will cause the first dir to fail.
+      File failedNameDir = nameDirs.toArray(new File[0])[0];
+      assertEquals(0, FileUtil.chmod(failedNameDir.getAbsolutePath(), "000"));
+      cluster.getNameNode().rollEditLog();
+      
+      nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
+          "NameDirStatuses"));
+      statusMap = (Map<String, Map<String, String>>) JSON.parse(nameDirStatuses);
+      for (File nameDir : nameDirs) {
+        String expectedStatus =
+            nameDir.equals(failedNameDir) ? "failed" : "active";
+        System.out.println("Checking for the presence of " + nameDir +
+            " in " + expectedStatus + " name dirs.");
+        assertTrue(statusMap.get(expectedStatus).containsKey(
+            nameDir.getAbsolutePath()));
+      }
+      assertEquals(1, statusMap.get("active").size());
+      assertEquals(1, statusMap.get("failed").size());
     } finally {
       if (cluster != null) {
+        for (File dir : cluster.getNameDirs()) {
+          FileUtil.chmod(dir.toString(), "700");
+        }
         cluster.shutdown();
       }
     }

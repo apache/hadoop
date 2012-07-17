@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.lang.Math;
 import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
@@ -428,6 +429,7 @@ public class FSEditLog {
     
     File dir = getStorageDirForStream(idx);
     editStreams.remove(idx);
+    exitIfNoStreams();
     fsimage.removeStorageDir(dir);
   }
 
@@ -446,6 +448,7 @@ public class FSEditLog {
         editStreams.remove(idx);
       }
     }
+    exitIfNoStreams();
   }
   
   /**
@@ -957,69 +960,86 @@ public class FSEditLog {
     // Fetch the transactionId of this thread. 
     long mytxid = myTransactionId.get().txid;
 
-    final int numEditStreams;
-    synchronized (this) {
-      numEditStreams = editStreams.size();
-      assert numEditStreams > 0 : "no editlog streams";
-      printStatistics(false);
+    ArrayList<EditLogOutputStream> streams = new ArrayList<EditLogOutputStream>();
+    boolean sync = false;
+    try {
+      synchronized (this) {
+        printStatistics(false);
 
-      // if somebody is already syncing, then wait
-      while (mytxid > synctxid && isSyncRunning) {
+        // if somebody is already syncing, then wait
+        while (mytxid > synctxid && isSyncRunning) {
+          try {
+            wait(1000);
+          } catch (InterruptedException ie) { 
+          }
+        }
+
+        //
+        // If this transaction was already flushed, then nothing to do
+        //
+        if (mytxid <= synctxid) {
+          numTransactionsBatchedInSync++;
+          if (metrics != null) // Metrics is non-null only when used inside name node
+            metrics.incrTransactionsBatchedInSync();
+          return;
+        }
+
+        // now, this thread will do the sync
+        syncStart = txid;
+        isSyncRunning = true;
+        sync = true;
+
+        // swap buffers
+        exitIfNoStreams();
+        for(EditLogOutputStream eStream : editStreams) {
+          try {
+            eStream.setReadyToFlush();
+            streams.add(eStream);
+          } catch (IOException ie) {
+            FSNamesystem.LOG.error("Unable to get ready to flush.", ie);
+            //
+            // remember the streams that encountered an error.
+            //
+            if (errorStreams == null) {
+              errorStreams = new ArrayList<EditLogOutputStream>(1);
+            }
+            errorStreams.add(eStream);
+          }
+        }
+      }
+
+      // do the sync
+      long start = FSNamesystem.now();
+      for (EditLogOutputStream eStream : streams) {
         try {
-          wait(1000);
-        } catch (InterruptedException ie) { 
+          eStream.flush();
+        } catch (IOException ie) {
+          FSNamesystem.LOG.error("Unable to sync edit log.", ie);
+          //
+          // remember the streams that encountered an error.
+          //
+          if (errorStreams == null) {
+            errorStreams = new ArrayList<EditLogOutputStream>(1);
+          }
+          errorStreams.add(eStream);
         }
       }
+      long elapsed = FSNamesystem.now() - start;
+      removeEditsStreamsAndStorageDirs(errorStreams);
+      exitIfNoStreams();
 
-      //
-      // If this transaction was already flushed, then nothing to do
-      //
-      if (mytxid <= synctxid) {
-        numTransactionsBatchedInSync++;
-        if (metrics != null) // Metrics is non-null only when used inside name node
-          metrics.incrTransactionsBatchedInSync();
-        return;
-      }
-   
-      // now, this thread will do the sync
-      syncStart = txid;
-      isSyncRunning = true;   
+      if (metrics != null) // Metrics is non-null only when used inside name node
+        metrics.addSync(elapsed);
 
-      // swap buffers
-      for (int idx = 0; idx < numEditStreams; idx++) {
-        editStreams.get(idx).setReadyToFlush();
-      }
-    }
-
-    // do the sync
-    long start = FSNamesystem.now();
-    for (int idx = 0; idx < numEditStreams; idx++) {
-      EditLogOutputStream eStream = editStreams.get(idx);
-      try {
-        eStream.flush();
-      } catch (IOException ioe) {
-        //
-        // remember the streams that encountered an error.
-        //
-        if (errorStreams == null) {
-          errorStreams = new ArrayList<EditLogOutputStream>(1);
+    } finally {
+      synchronized (this) {
+        if(sync) {
+          synctxid = syncStart;
+          isSyncRunning = false;
         }
-        errorStreams.add(eStream);
-        FSNamesystem.LOG.error("Unable to sync "+eStream.getName());
+        this.notifyAll();
       }
     }
-    long elapsed = FSNamesystem.now() - start;
-
-    synchronized (this) {
-       removeEditsStreamsAndStorageDirs(errorStreams);
-       exitIfNoStreams();
-       synctxid = syncStart;
-       isSyncRunning = false;
-       this.notifyAll();
-    }
-
-    if (metrics != null) // Metrics is non-null only when used inside name node
-      metrics.addSync(elapsed);
   }
 
   //
@@ -1233,22 +1253,30 @@ public class FSEditLog {
     if (existsNew()) {
       Iterator<StorageDirectory> it =
         fsimage.dirIterator(NameNodeDirType.EDITS);
+      StringBuilder b = new StringBuilder();
       while (it.hasNext()) {
         File editsNew = getEditNewFile(it.next());
+        b.append("\n  ").append(editsNew);
         if (!editsNew.exists()) {
           throw new IOException(
               "Inconsistent existence of edits.new " + editsNew);
         }
       }
-      return; // nothing to do, edits.new exists!
+      FSNamesystem.LOG.warn("Cannot roll edit log," +
+          " edits.new files already exists in all healthy directories:" + b);
+      return;
     }
-
     close(); // close existing edit log
 
+    // After edit streams are closed, healthy edits files should be identical,
+    // and same to fsimage files
+    fsimage.restoreStorageDirs();
+    
     //
     // Open edits.new
     //
     Iterator<StorageDirectory> it = fsimage.dirIterator(NameNodeDirType.EDITS);
+    LinkedList<StorageDirectory> toRemove = new LinkedList<StorageDirectory>();
     while (it.hasNext()) {
       StorageDirectory sd = it.next();
       try {
@@ -1257,10 +1285,18 @@ public class FSEditLog {
         eStream.create();
         editStreams.add(eStream);
       } catch (IOException ioe) {
-        removeEditsForStorageDir(sd);
-        fsimage.updateRemovedDirs(sd, ioe);
+        FSImage.LOG.error("error retrying to reopen storage directory '" +
+            sd.getRoot().getAbsolutePath() + "'", ioe);
+        toRemove.add(sd);
         it.remove();
       }
+    }
+
+    // updateRemovedDirs will abort the NameNode if it removes the last
+    // valid edit log directory.
+    for (StorageDirectory sd : toRemove) {
+      removeEditsForStorageDir(sd);
+      fsimage.updateRemovedDirs(sd);
     }
     exitIfNoStreams();
   }
@@ -1294,7 +1330,7 @@ public class FSEditLog {
         if (!getEditNewFile(sd).renameTo(getEditFile(sd))) {
           sd.unlock();
           removeEditsForStorageDir(sd);
-          fsimage.updateRemovedDirs(sd, null);
+          fsimage.updateRemovedDirs(sd);
           it.remove();
         }
       }

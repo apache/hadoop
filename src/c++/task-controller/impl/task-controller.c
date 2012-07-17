@@ -590,6 +590,17 @@ int set_user(const char *user) {
   if (user_detail == NULL) {
     return -1;
   }
+
+  if (geteuid() == user_detail->pw_uid) {
+    return 0;
+  }
+
+  if (initgroups(user, user_detail->pw_gid) != 0) {
+    fprintf(LOGFILE, "Error setting supplementary groups for user %s: %s\n",
+        user, strerror(errno));
+    return -1;
+  }
+
   return change_effective_user(user_detail->pw_uid, user_detail->pw_gid);
 }
 

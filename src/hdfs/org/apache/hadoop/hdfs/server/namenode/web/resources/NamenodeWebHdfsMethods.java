@@ -137,9 +137,11 @@ public class NamenodeWebHdfsMethods {
         throw new FileNotFoundException("File " + path + " not found.");
       }
       final long len = status.getLen();
-      if (op == GetOpParam.Op.OPEN && (openOffset < 0L || openOffset >= len)) {
-        throw new IOException("Offset=" + openOffset + " out of the range [0, "
-          + len + "); " + op + ", path=" + path);
+      if (op == GetOpParam.Op.OPEN) {
+        if (openOffset < 0L || (openOffset >= len && len > 0)) {
+          throw new IOException("Offset=" + openOffset
+              + " out of the range [0, " + len + "); " + op + ", path=" + path);
+        }
       }
 
       if (len > 0) {

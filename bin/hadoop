@@ -315,16 +315,19 @@ if $cygwin; then
   HADOOP_LOG_DIR=`cygpath -w "$HADOOP_LOG_DIR"`
   TOOL_PATH=`cygpath -p -w "$TOOL_PATH"`
 fi
+
+#Determine the JAVA_PLATFORM
+JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
+  
+if [ "$JAVA_PLATFORM" = "Linux-amd64-64" ]; then
+  JSVC_ARCH="amd64"
+else
+  JSVC_ARCH="i386"
+fi
+
 # setup 'java.library.path' for native-hadoop code if necessary
 JAVA_LIBRARY_PATH=''
 if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" -o -e "${HADOOP_PREFIX}/lib/libhadoop.a" ]; then
-  JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m ${HADOOP_JAVA_PLATFORM_OPTS} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
-  
-  if [ "$JAVA_PLATFORM" = "Linux-amd64-64" ]; then
-    JSVC_ARCH="amd64"
-  else
-    JSVC_ARCH="i386"
-  fi
 
   if [ -d "$HADOOP_HOME/build/native" ]; then
     JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
