@@ -23,7 +23,6 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 
 /**
  * A Schedulable represents an entity that can launch tasks, such as a job
@@ -104,7 +103,7 @@ abstract class Schedulable {
    * already exists on this node, and the schedulable should fulfill that
    * reservation if possible.
    */
-  public abstract Resource assignContainer(SchedulerNode node, boolean reserved);
+  public abstract Resource assignContainer(FSSchedulerNode node, boolean reserved);
 
   /** Assign a fair share to this Schedulable. */
   public void setFairShare(Resource fairShare) {

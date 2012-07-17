@@ -192,7 +192,8 @@ public class RMAppImpl implements RMApp {
       BuilderUtils.newApplicationResourceUsageReport(-1, -1,
           Resources.createResource(-1), Resources.createResource(-1),
           Resources.createResource(-1));
-
+  private static final int DUMMY_APPLICATION_ATTEMPT_NUMBER = -1;
+  
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, String clientTokenStr,
@@ -383,6 +384,7 @@ public class RMAppImpl implements RMApp {
     this.readLock.lock();
 
     try {
+      ApplicationAttemptId currentApplicationAttemptId = null;
       String clientToken = UNAVAILABLE;
       String trackingUrl = UNAVAILABLE;
       String host = UNAVAILABLE;
@@ -393,19 +395,27 @@ public class RMAppImpl implements RMApp {
       String diags = UNAVAILABLE;
       if (allowAccess) {
         if (this.currentAttempt != null) {
+          currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
           trackingUrl = this.currentAttempt.getTrackingUrl();
           origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
           clientToken = this.currentAttempt.getClientToken();
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();
           appUsageReport = currentAttempt.getApplicationResourceUsageReport();
+        } else {
+          currentApplicationAttemptId = 
+              BuilderUtils.newApplicationAttemptId(this.applicationId, 
+                  DUMMY_APPLICATION_ATTEMPT_NUMBER);
         }
         diags = this.diagnostics.toString();
       } else {
         appUsageReport = DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
+        currentApplicationAttemptId = 
+            BuilderUtils.newApplicationAttemptId(this.applicationId, 
+                DUMMY_APPLICATION_ATTEMPT_NUMBER);
       }
       return BuilderUtils.newApplicationReport(this.applicationId,
-          this.currentAttempt.getAppAttemptId(), this.user, this.queue,
+          currentApplicationAttemptId, this.user, this.queue,
           this.name, host, rpcPort, clientToken,
           createApplicationState(this.stateMachine.getCurrentState()), diags,
           trackingUrl, this.startTime, this.finishTime, finishState,

@@ -71,11 +71,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppReport;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNodeReport;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
@@ -103,14 +103,14 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private final static List<Container> EMPTY_CONTAINER_LIST = Arrays.asList(EMPTY_CONTAINER_ARRAY);
   private RMContext rmContext;
 
-  private Map<NodeId, SchedulerNode> nodes = new ConcurrentHashMap<NodeId, SchedulerNode>();
+  private Map<NodeId, FiCaSchedulerNode> nodes = new ConcurrentHashMap<NodeId, FiCaSchedulerNode>();
 
   private boolean initialized;
   private Resource minimumAllocation;
   private Resource maximumAllocation;
 
-  private Map<ApplicationAttemptId, SchedulerApp> applications
-      = new TreeMap<ApplicationAttemptId, SchedulerApp>();
+  private Map<ApplicationAttemptId, FiCaSchedulerApp> applications
+      = new TreeMap<ApplicationAttemptId, FiCaSchedulerApp>();
   
   private ActiveUsersManager activeUsersManager;
 
@@ -223,7 +223,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   public Allocation allocate(
       ApplicationAttemptId applicationAttemptId, List<ResourceRequest> ask,
       List<ContainerId> release) {
-    SchedulerApp application = getApplication(applicationAttemptId);
+    FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.error("Calling allocate on removed " +
           "or non existant application " + applicationAttemptId);
@@ -276,7 +276,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     }
   }
 
-  private SchedulerApp getApplication(
+  private FiCaSchedulerApp getApplication(
       ApplicationAttemptId applicationAttemptId) {
     return applications.get(applicationAttemptId);
   }
@@ -284,19 +284,19 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   @Override
   public SchedulerAppReport getSchedulerAppInfo(
       ApplicationAttemptId applicationAttemptId) {
-    SchedulerApp app = getApplication(applicationAttemptId);
+    FiCaSchedulerApp app = getApplication(applicationAttemptId);
     return app == null ? null : new SchedulerAppReport(app);
   }
   
-  private SchedulerNode getNode(NodeId nodeId) {
+  private FiCaSchedulerNode getNode(NodeId nodeId) {
     return nodes.get(nodeId);
   }
   
   private synchronized void addApplication(ApplicationAttemptId appAttemptId,
       String user) {
     // TODO: Fix store
-    SchedulerApp schedulerApp = 
-        new SchedulerApp(appAttemptId, user, DEFAULT_QUEUE, activeUsersManager,
+    FiCaSchedulerApp schedulerApp = 
+        new FiCaSchedulerApp(appAttemptId, user, DEFAULT_QUEUE, activeUsersManager,
             this.rmContext, null);
     applications.put(appAttemptId, schedulerApp);
     metrics.submitApp(user, appAttemptId.getAttemptId());
@@ -311,7 +311,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
       ApplicationAttemptId applicationAttemptId,
       RMAppAttemptState rmAppAttemptFinalState)
       throws IOException {
-    SchedulerApp application = getApplication(applicationAttemptId);
+    FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       throw new IOException("Unknown application " + applicationAttemptId + 
       " has completed!");
@@ -344,15 +344,15 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
    * 
    * @param node node on which resources are available to be allocated
    */
-  private void assignContainers(SchedulerNode node) {
+  private void assignContainers(FiCaSchedulerNode node) {
     LOG.debug("assignContainers:" +
         " node=" + node.getRMNode().getNodeAddress() + 
         " #applications=" + applications.size());
 
     // Try to assign containers to applications in fifo order
-    for (Map.Entry<ApplicationAttemptId, SchedulerApp> e : applications
+    for (Map.Entry<ApplicationAttemptId, FiCaSchedulerApp> e : applications
         .entrySet()) {
-      SchedulerApp application = e.getValue();
+      FiCaSchedulerApp application = e.getValue();
       LOG.debug("pre-assignContainers");
       application.showRequests();
       synchronized (application) {
@@ -383,15 +383,15 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
 
     // Update the applications' headroom to correctly take into
     // account the containers assigned in this update.
-    for (SchedulerApp application : applications.values()) {
+    for (FiCaSchedulerApp application : applications.values()) {
       application.setHeadroom(Resources.subtract(clusterResource, usedResource));
     }
   }
 
-  private int getMaxAllocatableContainers(SchedulerApp application,
-      Priority priority, SchedulerNode node, NodeType type) {
+  private int getMaxAllocatableContainers(FiCaSchedulerApp application,
+      Priority priority, FiCaSchedulerNode node, NodeType type) {
     ResourceRequest offSwitchRequest = 
-      application.getResourceRequest(priority, SchedulerNode.ANY);
+      application.getResourceRequest(priority, FiCaSchedulerNode.ANY);
     int maxContainers = offSwitchRequest.getNumContainers();
 
     if (type == NodeType.OFF_SWITCH) {
@@ -420,8 +420,8 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   }
 
 
-  private int assignContainersOnNode(SchedulerNode node, 
-      SchedulerApp application, Priority priority 
+  private int assignContainersOnNode(FiCaSchedulerNode node, 
+      FiCaSchedulerApp application, Priority priority 
   ) {
     // Data-local
     int nodeLocalContainers = 
@@ -447,8 +447,8 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     return (nodeLocalContainers + rackLocalContainers + offSwitchContainers);
   }
 
-  private int assignNodeLocalContainers(SchedulerNode node, 
-      SchedulerApp application, Priority priority) {
+  private int assignNodeLocalContainers(FiCaSchedulerNode node, 
+      FiCaSchedulerApp application, Priority priority) {
     int assignedContainers = 0;
     ResourceRequest request = 
       application.getResourceRequest(priority, node.getRMNode().getNodeAddress());
@@ -473,15 +473,15 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     return assignedContainers;
   }
 
-  private int assignRackLocalContainers(SchedulerNode node, 
-      SchedulerApp application, Priority priority) {
+  private int assignRackLocalContainers(FiCaSchedulerNode node, 
+      FiCaSchedulerApp application, Priority priority) {
     int assignedContainers = 0;
     ResourceRequest request = 
       application.getResourceRequest(priority, node.getRMNode().getRackName());
     if (request != null) {
       // Don't allocate on this rack if the application doens't need containers
       ResourceRequest offSwitchRequest =
-          application.getResourceRequest(priority, SchedulerNode.ANY);
+          application.getResourceRequest(priority, FiCaSchedulerNode.ANY);
       if (offSwitchRequest.getNumContainers() <= 0) {
         return 0;
       }
@@ -498,11 +498,11 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     return assignedContainers;
   }
 
-  private int assignOffSwitchContainers(SchedulerNode node, 
-      SchedulerApp application, Priority priority) {
+  private int assignOffSwitchContainers(FiCaSchedulerNode node, 
+      FiCaSchedulerApp application, Priority priority) {
     int assignedContainers = 0;
     ResourceRequest request = 
-      application.getResourceRequest(priority, SchedulerNode.ANY);
+      application.getResourceRequest(priority, FiCaSchedulerNode.ANY);
     if (request != null) {
       assignedContainers = 
         assignContainer(node, application, priority, 
@@ -511,7 +511,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     return assignedContainers;
   }
 
-  private int assignContainer(SchedulerNode node, SchedulerApp application, 
+  private int assignContainer(FiCaSchedulerNode node, FiCaSchedulerApp application, 
       Priority priority, int assignableContainers, 
       ResourceRequest request, NodeType type) {
     LOG.debug("assignContainers:" +
@@ -577,7 +577,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private synchronized void nodeUpdate(RMNode rmNode, 
       List<ContainerStatus> newlyLaunchedContainers,
       List<ContainerStatus> completedContainers) {
-    SchedulerNode node = getNode(rmNode.getNodeID());
+    FiCaSchedulerNode node = getNode(rmNode.getNodeID());
     
     // Processing the newly launched containers
     for (ContainerStatus launchedContainer : newlyLaunchedContainers) {
@@ -667,10 +667,10 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     }
   }
 
-  private void containerLaunchedOnNode(ContainerId containerId, SchedulerNode node) {
+  private void containerLaunchedOnNode(ContainerId containerId, FiCaSchedulerNode node) {
     // Get the application for the finished container
     ApplicationAttemptId applicationAttemptId = containerId.getApplicationAttemptId();
-    SchedulerApp application = getApplication(applicationAttemptId);
+    FiCaSchedulerApp application = getApplication(applicationAttemptId);
     if (application == null) {
       LOG.info("Unknown application: " + applicationAttemptId + 
           " launched container " + containerId +
@@ -696,10 +696,10 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
     // Get the application for the finished container
     Container container = rmContainer.getContainer();
     ApplicationAttemptId applicationAttemptId = container.getId().getApplicationAttemptId();
-    SchedulerApp application = getApplication(applicationAttemptId);
+    FiCaSchedulerApp application = getApplication(applicationAttemptId);
     
     // Get the node on which the container was allocated
-    SchedulerNode node = getNode(container.getNodeId());
+    FiCaSchedulerNode node = getNode(container.getNodeId());
     
     if (application == null) {
       LOG.info("Unknown application: " + applicationAttemptId + 
@@ -729,7 +729,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   private Resource usedResource = recordFactory.newRecordInstance(Resource.class);
 
   private synchronized void removeNode(RMNode nodeInfo) {
-    SchedulerNode node = getNode(nodeInfo.getNodeID());
+    FiCaSchedulerNode node = getNode(nodeInfo.getNodeID());
     if (node == null) {
       return;
     }
@@ -761,7 +761,7 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
   }
 
   private synchronized void addNode(RMNode nodeManager) {
-    this.nodes.put(nodeManager.getNodeID(), new SchedulerNode(nodeManager));
+    this.nodes.put(nodeManager.getNodeID(), new FiCaSchedulerNode(nodeManager));
     Resources.addTo(clusterResource, nodeManager.getTotalCapability());
   }
 
@@ -778,12 +778,12 @@ public class FifoScheduler implements ResourceScheduler, Configurable {
 
   @Override
   public synchronized SchedulerNodeReport getNodeReport(NodeId nodeId) {
-    SchedulerNode node = getNode(nodeId);
+    FiCaSchedulerNode node = getNode(nodeId);
     return node == null ? null : new SchedulerNodeReport(node);
   }
   
   private RMContainer getRMContainer(ContainerId containerId) {
-    SchedulerApp application = 
+    FiCaSchedulerApp application = 
         getApplication(containerId.getApplicationAttemptId());
     return (application == null) ? null : application.getRMContainer(containerId);
   }

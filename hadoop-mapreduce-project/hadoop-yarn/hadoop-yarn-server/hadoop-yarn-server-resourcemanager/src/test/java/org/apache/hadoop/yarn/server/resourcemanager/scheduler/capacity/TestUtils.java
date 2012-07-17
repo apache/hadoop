@@ -44,8 +44,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 
 public class TestUtils {
@@ -140,7 +140,7 @@ public class TestUtils {
     return applicationAttemptId;
   }
   
-  public static SchedulerNode getMockNode(
+  public static FiCaSchedulerNode getMockNode(
       String host, String rack, int port, int capability) {
     NodeId nodeId = mock(NodeId.class);
     when(nodeId.getHost()).thenReturn(host);
@@ -153,12 +153,12 @@ public class TestUtils {
     when(rmNode.getHostName()).thenReturn(host);
     when(rmNode.getRackName()).thenReturn(rack);
     
-    SchedulerNode node = spy(new SchedulerNode(rmNode));
+    FiCaSchedulerNode node = spy(new FiCaSchedulerNode(rmNode));
     LOG.info("node = " + host + " avail=" + node.getAvailableResource());
     return node;
   }
   
-  public static ContainerId getMockContainerId(SchedulerApp application) {
+  public static ContainerId getMockContainerId(FiCaSchedulerApp application) {
     ContainerId containerId = mock(ContainerId.class);
     doReturn(application.getApplicationAttemptId()).
     when(containerId).getApplicationAttemptId();

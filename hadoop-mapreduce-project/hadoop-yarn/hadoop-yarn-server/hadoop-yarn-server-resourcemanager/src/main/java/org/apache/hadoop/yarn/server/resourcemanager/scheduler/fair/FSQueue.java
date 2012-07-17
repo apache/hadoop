@@ -23,7 +23,6 @@ import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
 
 /**
  * A queue containing several applications.
@@ -35,7 +34,8 @@ public class FSQueue {
   private String name;
 
   /** Applications in this specific queue; does not include children queues' jobs. */
-  private Collection<SchedulerApp> applications = new ArrayList<SchedulerApp>();
+  private Collection<FSSchedulerApp> applications = 
+      new ArrayList<FSSchedulerApp>();
 
   /** Scheduling mode for jobs inside the queue (fair or FIFO) */
   private SchedulingMode schedulingMode;
@@ -50,7 +50,7 @@ public class FSQueue {
     this.scheduler = scheduler;
   }
 
-  public Collection<SchedulerApp> getApplications() {
+  public Collection<FSSchedulerApp> getApplications() {
     return applications;
   }
 
@@ -59,7 +59,7 @@ public class FSQueue {
     queueSchedulable.addApp(new AppSchedulable(scheduler, app, this));
   }
 
-  public void removeJob(SchedulerApp app) {
+  public void removeJob(FSSchedulerApp app) {
     applications.remove(app);
     queueSchedulable.removeApp(app);
   }

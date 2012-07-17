@@ -37,8 +37,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
@@ -69,7 +67,7 @@ public class AppSchedulable extends Schedulable {
     return app.getApplicationId().toString();
   }
 
-  public SchedulerApp getApp() {
+  public FSSchedulerApp getApp() {
     return app;
   }
 
@@ -150,7 +148,8 @@ public class AppSchedulable extends Schedulable {
    * given appliction on the given node with the given capability and
    * priority.
    */
-  public Container createContainer(SchedulerApp application, SchedulerNode node,
+  public Container createContainer(
+      FSSchedulerApp application, FSSchedulerNode node,
       Resource capability, Priority priority) {
 
     NodeId nodeId = node.getRMNode().getNodeID();
@@ -180,10 +179,10 @@ public class AppSchedulable extends Schedulable {
    * Reserve a spot for {@code container} on this {@code node}. If
    * the container is {@code alreadyReserved} on the node, simply
    * update relevant bookeeping. This dispatches ro relevant handlers
-   * in the {@link SchedulerNode} and {@link SchedulerApp} classes.
+   * in the {@link FSSchedulerNode} and {@link SchedulerApp} classes.
    */
-  private void reserve(SchedulerApp application, Priority priority,
-      SchedulerNode node, Container container, boolean alreadyReserved) {
+  private void reserve(FSSchedulerApp application, Priority priority,
+      FSSchedulerNode node, Container container, boolean alreadyReserved) {
     LOG.info("Making reservation: node=" + node.getHostName() +
                                  " app_id=" + app.getApplicationId());
     if (!alreadyReserved) {
@@ -209,8 +208,8 @@ public class AppSchedulable extends Schedulable {
    * {@link Priority}. This dispatches to the SchedulerApp and SchedulerNode
    * handlers for an unreservation.
    */
-  private void unreserve(SchedulerApp application, Priority priority,
-      SchedulerNode node) {
+  private void unreserve(FSSchedulerApp application, Priority priority,
+      FSSchedulerNode node) {
     RMContainer rmContainer = node.getReservedContainer();
     application.unreserve(node, priority);
     node.unreserveResource(application);
@@ -225,8 +224,8 @@ public class AppSchedulable extends Schedulable {
    * not have enough memory, create a reservation. This is called once we are
    * sure the particular request should be facilitated by this node.
    */
-  private Resource assignContainer(SchedulerNode node,
-      SchedulerApp application, Priority priority,
+  private Resource assignContainer(FSSchedulerNode node,
+      FSSchedulerApp application, Priority priority,
       ResourceRequest request, NodeType type, boolean reserved) {
 
     // How much does this request need?
@@ -282,7 +281,7 @@ public class AppSchedulable extends Schedulable {
 
 
   @Override
-  public Resource assignContainer(SchedulerNode node, boolean reserved) {
+  public Resource assignContainer(FSSchedulerNode node, boolean reserved) {
     LOG.info("Node offered to app: " + getName() + " reserved: " + reserved);
 
     if (reserved) {
