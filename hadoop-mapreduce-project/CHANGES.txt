@@ -1,5 +1,8 @@
 Hadoop MapReduce Change Log
 
+    MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
+    YarnConfiguration. (ahmed via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES

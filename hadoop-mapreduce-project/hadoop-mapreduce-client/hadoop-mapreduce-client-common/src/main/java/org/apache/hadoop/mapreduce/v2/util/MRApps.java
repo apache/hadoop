@@ -171,8 +171,9 @@ public class MRApps extends Apps {
       }
 
       // Add standard Hadoop classes
-      for (String c : conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH)
-          .split(",")) {
+      for (String c : conf.getStrings(
+          YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+          YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
         Apps.addToEnvironment(environment, Environment.CLASSPATH.name(), c
             .trim());
       }
