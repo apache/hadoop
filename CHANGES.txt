@@ -31,13 +31,6 @@ Release 1.2.0 - unreleased
 
     HDFS-1957. Documentation for HFTP. (Ari Rabkin via eli)
 
-    HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
-    ReadaheadPool infrastructure for use in HDFS and MR.
-    (Brandon Li and todd via suresh)
-
-    HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
-    (todd via suresh)
-
     HDFS-3647. Backport HDFS-2868 (Add number of active transfer
     threads to the DataNode status) to branch-1 (harsh)
 
@@ -219,6 +212,13 @@ Release 1.1.0 - unreleased
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
 
     HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
+
+    HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
+    ReadaheadPool infrastructure for use in HDFS and MR.
+    (Brandon Li and todd via suresh)
+
+    HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
+    (todd, backported by Brandon Li via suresh)
 
   BUG FIXES
 
