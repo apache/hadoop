@@ -133,5 +133,5 @@ public class JHAdminConfig {
    * The HistoryStorage class to use to cache history data.
    */
   public static final String MR_HISTORY_STORAGE =
-    MR_HISTORY_PREFIX + ".store.class";
+    MR_HISTORY_PREFIX + "store.class";
 }
