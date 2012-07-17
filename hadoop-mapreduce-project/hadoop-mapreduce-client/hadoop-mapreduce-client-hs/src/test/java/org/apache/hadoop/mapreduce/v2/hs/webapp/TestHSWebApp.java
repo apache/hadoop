@@ -24,9 +24,11 @@ import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_OWNER;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
+import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -35,6 +37,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockJobs;
@@ -44,13 +47,14 @@ import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
 import org.junit.Test;
 
-import static org.mockito.Mockito.verify;
+import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 
 public class TestHSWebApp {
@@ -250,6 +254,64 @@ public class TestHSWebApp {
     verify(spyPw).write(
         "Aggregation is not enabled. Try the nodemanager at "
             + MockJobs.NM_HOST + ":" + MockJobs.NM_PORT);
+  }
+
+  @Test
+  public void testLogsViewSingle() throws IOException {
+    LOG.info("HsLogsPage with params for single log and data limits");
+    TestAppContext ctx = new TestAppContext();
+    Map<String, String> params = new HashMap<String, String>();
+
+    final Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED, true);
+
+    params.put("start", "-2048");
+    params.put("end", "-1024");
+    params.put(CONTAINER_LOG_TYPE, "syslog");
+    params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
+        .toString());
+    params.put(NM_NODENAME,
+        BuilderUtils.newNodeId(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
+    params.put(ENTITY_STRING, "container_10_0001_01_000001");
+    params.put(APP_OWNER, "owner");
+
+    Injector injector =
+        WebAppTests.testPage(AggregatedLogsPage.class, AppContext.class, ctx,
+            params, new AbstractModule() {
+          @Override
+          protected void configure() {
+            bind(Configuration.class).toInstance(conf);
+          }
+        });
+    PrintWriter spyPw = WebAppTests.getPrintWriter(injector);
+    verify(spyPw).write(
+        "Logs not available for container_10_0001_01_000001."
+            + " Aggregation may not be complete, "
+            + "Check back later or try the nodemanager at "
+            + MockJobs.NM_HOST + ":" + MockJobs.NM_PORT);
+  }
+
+  @Test
+  public void testLogsViewBadStartEnd() throws IOException {
+    LOG.info("HsLogsPage with bad start/end params");
+    TestAppContext ctx = new TestAppContext();
+    Map<String, String> params = new HashMap<String, String>();
+
+    params.put("start", "foo");
+    params.put("end", "bar");
+    params.put(CONTAINER_ID, BuilderUtils.newContainerId(1, 1, 333, 1)
+        .toString());
+    params.put(NM_NODENAME,
+        BuilderUtils.newNodeId(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
+    params.put(ENTITY_STRING, "container_10_0001_01_000001");
+    params.put(APP_OWNER, "owner");
+
+    Injector injector =
+        WebAppTests.testPage(AggregatedLogsPage.class, AppContext.class, ctx,
+            params);
+    PrintWriter spyPw = WebAppTests.getPrintWriter(injector);
+    verify(spyPw).write("Invalid log start value: foo");
+    verify(spyPw).write("Invalid log end value: bar");
   }
 }
   
