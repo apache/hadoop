@@ -623,6 +623,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs.");
         editLogTailer.catchupDuringFailover();
+        blockManager.setPostponeBlocksFromFuture(false);
         
         LOG.info("Reprocessing replication and invalidation queues...");
         blockManager.getDatanodeManager().markAllDatanodesStale();
@@ -706,6 +707,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // During startup, we're already open for read.
       dir.fsImage.editLog.initSharedJournalsForRead();
     }
+    
+    blockManager.setPostponeBlocksFromFuture(true);
+
     editLogTailer = new EditLogTailer(this, conf);
     editLogTailer.start();
     if (standbyShouldCheckpoint) {
