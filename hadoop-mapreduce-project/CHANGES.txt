@@ -139,6 +139,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
     YarnConfiguration. (ahmed via tucu)
 
+    MAPREDUCE-4406. Users should be able to specify the MiniCluster ResourceManager 
+    and JobHistoryServer ports. (ahmed via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
