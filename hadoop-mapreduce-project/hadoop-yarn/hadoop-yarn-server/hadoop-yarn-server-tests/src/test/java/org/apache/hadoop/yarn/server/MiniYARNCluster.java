@@ -135,18 +135,21 @@ public class MiniYARNCluster extends CompositeService {
     public synchronized void start() {
       try {
         getConfig().setBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, true);
-        getConfig().set(YarnConfiguration.RM_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
-        getConfig().set(YarnConfiguration.RM_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
-        getConfig().set(YarnConfiguration.RM_ADMIN_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
-        getConfig().set(YarnConfiguration.RM_SCHEDULER_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
-        getConfig().set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
-        getConfig().set(YarnConfiguration.RM_WEBAPP_ADDRESS,
-                        MiniYARNCluster.getHostname() + ":0");
+        if (!getConfig().getBoolean(
+            YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS,
+            YarnConfiguration.DEFAULT_YARN_MINICLUSTER_FIXED_PORTS)) {
+          // pick free random ports.
+          getConfig().set(YarnConfiguration.RM_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(YarnConfiguration.RM_ADMIN_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+          getConfig().set(YarnConfiguration.RM_WEBAPP_ADDRESS,
+              MiniYARNCluster.getHostname() + ":0");
+        }
         Store store = StoreFactory.getStore(getConfig());
         resourceManager = new ResourceManager(store) {
           @Override
