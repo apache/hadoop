@@ -540,7 +540,7 @@ public class JspHelper {
     final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
     final String doAsUserFromQuery = request.getParameter(DoAsParam.NAME);
 
-    if (UserGroupInformation.isSecurityEnabled()) {
+    if(UserGroupInformation.isSecurityEnabled()) {
       final String remoteUser = request.getRemoteUser();
       String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
@@ -558,7 +558,7 @@ public class JspHelper {
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
         final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-        nn.verifyToken(id, token.getPassword());
+        nn.getNamesystem().verifyToken(id, token.getPassword());
         ugi = id.getUser();
         if (ugi.getRealUser() == null) {
           //non-proxy case
