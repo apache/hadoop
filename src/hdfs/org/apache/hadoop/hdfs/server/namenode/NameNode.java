@@ -1372,13 +1372,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     NameNode namenode = new NameNode(conf);
     return namenode;
   }
-
-  public synchronized void verifyToken(DelegationTokenIdentifier identifier, 
-      byte[] password) throws InvalidToken {
-    namesystem.getDelegationTokenSecretManager().verifyToken(
-        identifier, password);
-  }
-
+    
   /**
    */
   public static void main(String argv[]) throws Exception {

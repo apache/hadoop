@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.ServletContext;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -68,8 +67,6 @@ public class TestJspHelper {
   public void testGetUgi() throws IOException {
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     HttpServletRequest request = mock(HttpServletRequest.class);
-    ServletContext context = mock(ServletContext.class);
-    NameNode nn = mock(NameNode.class);
     String user = "TheDoctor";
     Text userText = new Text(user);
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(userText,
@@ -80,7 +77,6 @@ public class TestJspHelper {
     when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
         tokenString);
     when(request.getRemoteUser()).thenReturn(user);
-    when(context.getAttribute("name.node")).thenReturn(nn);
 
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
@@ -88,7 +84,7 @@ public class TestJspHelper {
     InetSocketAddress serviceAddr = NameNode.getAddress(conf);
     Text tokenService = SecurityUtil.buildTokenService(serviceAddr);
 
-    UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
+    UserGroupInformation ugi = JspHelper.getUGI(request, conf);
     Token<? extends TokenIdentifier> tokenInUgi = ugi.getTokens().iterator()
         .next();
     Assert.assertEquals(tokenService, tokenInUgi.getService());
