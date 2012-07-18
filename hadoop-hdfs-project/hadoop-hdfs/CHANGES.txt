@@ -497,9 +497,6 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3615. Two BlockTokenSecretManager findbugs warnings. (atm)
 
-    HDFS-3639. JspHelper#getUGI should always verify the token if
-    security is enabled. (eli)
-
     HDFS-470. libhdfs should handle 0-length reads from FSInputStream
     correctly. (Colin Patrick McCabe via eli)
 
