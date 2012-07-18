@@ -182,7 +182,7 @@ public class TestFileAppend4 {
       // has not been completed in the NN.
       // Lose the leases
       LOG.info("Killing lease checker");
-      client.leaserenewer.interruptAndJoin();
+      client.getLeaseRenewer().interruptAndJoin();
  
       FileSystem fs1 = cluster.getFileSystem();
       FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(
@@ -255,7 +255,7 @@ public class TestFileAppend4 {
       // has not been completed in the NN.
       // Lose the leases
       LOG.info("Killing lease checker");
-      client.leaserenewer.interruptAndJoin();
+      client.getLeaseRenewer().interruptAndJoin();
  
       FileSystem fs1 = cluster.getFileSystem();
       FileSystem fs2 = AppendTestUtil.createHdfsWithDifferentUsername(
