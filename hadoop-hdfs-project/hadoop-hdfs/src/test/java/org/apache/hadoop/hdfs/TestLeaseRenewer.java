@@ -93,13 +93,6 @@ public class TestLeaseRenewer {
   }
   
   @Test
-  public void testClientName() throws IOException {
-    String clientName = renewer.getClientName("NONMAPREDUCE");
-    Assert.assertTrue("bad client name: " + clientName,
-        clientName.startsWith("DFSClient_NONMAPREDUCE_"));
-  }
-  
-  @Test
   public void testRenewal() throws Exception {
     // Keep track of how many times the lease gets renewed
     final AtomicInteger leaseRenewalCount = new AtomicInteger();

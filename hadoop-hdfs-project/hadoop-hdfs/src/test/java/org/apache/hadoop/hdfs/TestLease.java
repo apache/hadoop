@@ -80,6 +80,7 @@ public class TestLease {
       // We don't need to wait the lease renewer thread to act.
       // call renewLease() manually.
       // make it look like lease has already expired.
+      LeaseRenewer originalRenewer = dfs.getLeaseRenewer();
       dfs.lastLeaseRenewal = Time.now() - 300000;
       dfs.renewLease();
 
@@ -91,6 +92,10 @@ public class TestLease {
       } catch (IOException e) {
         LOG.info("Write failed as expected. ", e);
       }
+
+      // If aborted, the renewer should be empty. (no reference to clients)
+      Thread.sleep(1000);
+      Assert.assertTrue(originalRenewer.isEmpty());
 
       // unstub
       doNothing().when(spyNN).renewLease(anyString());
@@ -165,15 +170,20 @@ public class TestLease {
 
     final Configuration conf = new Configuration();
     final DFSClient c1 = createDFSClientAs(ugi[0], conf);
+    FSDataOutputStream out1 = createFsOut(c1, "/out1");
     final DFSClient c2 = createDFSClientAs(ugi[0], conf);
-    Assert.assertEquals(c1.leaserenewer, c2.leaserenewer);
+    FSDataOutputStream out2 = createFsOut(c2, "/out2");
+    Assert.assertEquals(c1.getLeaseRenewer(), c2.getLeaseRenewer());
     final DFSClient c3 = createDFSClientAs(ugi[1], conf);
-    Assert.assertTrue(c1.leaserenewer != c3.leaserenewer);
+    FSDataOutputStream out3 = createFsOut(c3, "/out3");
+    Assert.assertTrue(c1.getLeaseRenewer() != c3.getLeaseRenewer());
     final DFSClient c4 = createDFSClientAs(ugi[1], conf);
-    Assert.assertEquals(c3.leaserenewer, c4.leaserenewer);
+    FSDataOutputStream out4 = createFsOut(c4, "/out4");
+    Assert.assertEquals(c3.getLeaseRenewer(), c4.getLeaseRenewer());
     final DFSClient c5 = createDFSClientAs(ugi[2], conf);
-    Assert.assertTrue(c1.leaserenewer != c5.leaserenewer);
-    Assert.assertTrue(c3.leaserenewer != c5.leaserenewer);
+    FSDataOutputStream out5 = createFsOut(c5, "/out5");
+    Assert.assertTrue(c1.getLeaseRenewer() != c5.getLeaseRenewer());
+    Assert.assertTrue(c3.getLeaseRenewer() != c5.getLeaseRenewer());
   }
   
   private FSDataOutputStream createFsOut(DFSClient dfs, String path) 

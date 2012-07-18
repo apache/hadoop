@@ -157,9 +157,6 @@ class LeaseRenewer {
     }
   }
 
-  private final String clienNamePostfix = DFSUtil.getRandom().nextInt()
-      + "_" + Thread.currentThread().getId();
-
   /** The time in milliseconds that the map became empty. */
   private long emptyTime = Long.MAX_VALUE;
   /** A fixed lease renewal time period in milliseconds */
@@ -211,11 +208,6 @@ class LeaseRenewer {
   /** @return the renewal time in milliseconds. */
   private synchronized long getRenewalTime() {
     return renewal;
-  }
-
-  /** @return the client name for the given id. */
-  String getClientName(final String id) {
-    return "DFSClient_" + id + "_" + clienNamePostfix;
   }
 
   /** Add a client. */
@@ -270,6 +262,11 @@ class LeaseRenewer {
   /** Is the daemon running? */
   synchronized boolean isRunning() {
     return daemon != null && daemon.isAlive();
+  }
+
+  /** Does this renewer have nothing to renew? */
+  public boolean isEmpty() {
+    return dfsclients.isEmpty();
   }
   
   /** Used only by tests */
@@ -331,6 +328,9 @@ class LeaseRenewer {
     dfsc.removeFileBeingWritten(src);
 
     synchronized(this) {
+      if (dfsc.isFilesBeingWrittenEmpty()) {
+        dfsclients.remove(dfsc);
+      }
       //update emptyTime if necessary
       if (emptyTime == Long.MAX_VALUE) {
         for(DFSClient c : dfsclients) {
@@ -428,8 +428,7 @@ class LeaseRenewer {
    * when the lease period is half over.
    */
   private void run(final int id) throws InterruptedException {
-    for(long lastRenewed = Time.now();
-        clientsRunning() && !Thread.interrupted();
+    for(long lastRenewed = Time.now(); !Thread.interrupted();
         Thread.sleep(getSleepPeriod())) {
       final long elapsed = Time.now() - lastRenewed;
       if (elapsed >= getRenewalTime()) {
@@ -468,6 +467,13 @@ class LeaseRenewer {
           }
           //no longer the current daemon or expired
           return;
+        }
+
+        // if no clients are in running state or there is no more clients
+        // registered with this renewer, stop the daemon after the grace
+        // period.
+        if (!clientsRunning() && emptyTime == Long.MAX_VALUE) {
+          emptyTime = Time.now();
         }
       }
     }

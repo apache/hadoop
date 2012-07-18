@@ -1373,6 +1373,9 @@ Release 0.23.3 - UNRELEASED
     StreamingOutput, otherwise, it will fail to transfer large files.
     (szetszwo)
 
+    HDFS-3646. LeaseRenewer can hold reference to inactive DFSClient
+    instances forever. (Kihwal Lee via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
