@@ -486,9 +486,14 @@ public class JspHelper {
         DataInputStream in = new DataInputStream(buf);
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
-        NameNode nn = (NameNode) context.getAttribute("name.node");
-        nn.getNamesystem().getDelegationTokenSecretManager()
-          .verifyToken(id, token.getPassword());
+        if (context != null) {
+          NameNode nn = (NameNode) context.getAttribute("name.node");
+          if (nn != null) {
+            //Verify the token.
+            nn.getNamesystem().getDelegationTokenSecretManager()
+                .verifyToken(id, token.getPassword());
+          }
+        }
         ugi = id.getUser();
         if (ugi.getRealUser() == null) {
           //non-proxy case
