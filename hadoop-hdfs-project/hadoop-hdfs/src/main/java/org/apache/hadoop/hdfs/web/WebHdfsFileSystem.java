@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
+import javax.ws.rs.core.MediaType;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -241,9 +243,23 @@ public class WebHdfsFileSystem extends FileSystem
     return f.isAbsolute()? f: new Path(workingDir, f);
   }
 
-  static Map<?, ?> jsonParse(final InputStream in) throws IOException {
+  static Map<?, ?> jsonParse(final HttpURLConnection c, final boolean useErrorStream
+      ) throws IOException {
+    if (c.getContentLength() == 0) {
+      return null;
+    }
+    final InputStream in = useErrorStream? c.getErrorStream(): c.getInputStream();
     if (in == null) {
-      throw new IOException("The input stream is null.");
+      throw new IOException("The " + (useErrorStream? "error": "input") + " stream is null.");
+    }
+    final String contentType = c.getContentType();
+    if (contentType != null) {
+      final MediaType parsed = MediaType.valueOf(contentType);
+      if (!MediaType.APPLICATION_JSON_TYPE.isCompatible(parsed)) {
+        throw new IOException("Content-Type \"" + contentType
+            + "\" is incompatible with \"" + MediaType.APPLICATION_JSON
+            + "\" (parsed=\"" + parsed + "\")");
+      }
     }
     return (Map<?, ?>)JSON.parse(new InputStreamReader(in));
   }
@@ -254,7 +270,7 @@ public class WebHdfsFileSystem extends FileSystem
     if (code != op.getExpectedHttpResponseCode()) {
       final Map<?, ?> m;
       try {
-        m = jsonParse(conn.getErrorStream());
+        m = jsonParse(conn, true);
       } catch(IOException e) {
         throw new IOException("Unexpected HTTP response: code=" + code + " != "
             + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
@@ -414,7 +430,7 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpURLConnection conn = httpConnect(op, fspath, parameters);
     try {
       final Map<?, ?> m = validateResponse(op, conn);
-      return m != null? m: jsonParse(conn.getInputStream());
+      return m != null? m: jsonParse(conn, false);
     } finally {
       conn.disconnect();
     }
