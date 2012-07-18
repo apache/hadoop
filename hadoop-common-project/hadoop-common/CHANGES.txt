@@ -355,6 +355,9 @@ Branch-2 ( Unreleased changes )
     HADOOP-8552. Conflict: Same security.log.file for multiple users. 
     (kkambatl via tucu)
 
+    HADOOP-8537. Fix TFile tests to pass even when native zlib support is not
+    compiled. (todd)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
