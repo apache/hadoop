@@ -145,6 +145,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4406. Users should be able to specify the MiniCluster ResourceManager 
     and JobHistoryServer ports. (ahmed via tucu)
 
+    MAPREDUCE-4407. Add hadoop-yarn-server-tests-<version>-tests.jar to hadoop dist
+    package. (ahmed via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
