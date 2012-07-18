@@ -69,6 +69,10 @@ Release 0.23.3 - UNRELEASED
     HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
     corrupted block. (Henry Robinson via atm)
 
+    HDFS-3577. In DatanodeWebHdfsMethods, use MessageBodyWriter instead of
+    StreamingOutput, otherwise, it will fail to transfer large files.
+    (szetszwo)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
