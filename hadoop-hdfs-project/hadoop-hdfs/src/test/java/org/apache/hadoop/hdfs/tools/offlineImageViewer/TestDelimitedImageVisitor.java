@@ -17,20 +17,23 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
+import org.junit.Test;
 
 /**
  * Test that the DelimitedImageVisistor gives the expected output based
  * on predetermined inputs
  */
-public class TestDelimitedImageVisitor extends TestCase {
+public class TestDelimitedImageVisitor {
   private static String ROOT = System.getProperty("test.build.data","/tmp");
   private static final String delim = "--";
   
@@ -44,6 +47,7 @@ public class TestDelimitedImageVisitor extends TestCase {
       sb.append(delim);
   }
   
+  @Test
   public void testDelimitedImageVisistor() {
     String filename = ROOT + "/testDIV";
     File f = new File(filename);

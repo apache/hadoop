@@ -17,19 +17,22 @@
  */
 package org.apache.hadoop.raid;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 
 import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
-import junit.framework.TestCase;
-
-public class TestErasureCodes extends TestCase {
+public class TestErasureCodes {
   final int TEST_CODES = 100;
   final int TEST_TIMES = 1000;
   final Random RAND = new Random();
 
+  @Test
   public void testEncodeDecode() {
     for (int n = 0; n < TEST_CODES; n++) {
       int stripeSize = RAND.nextInt(99) + 1; // 1, 2, 3, ... 100
@@ -67,6 +70,7 @@ public class TestErasureCodes extends TestCase {
     }
   }
 
+  @Test
   public void testRSPerformance() {
     int stripeSize = 10;
     int paritySize = 4;
@@ -131,6 +135,7 @@ public class TestErasureCodes extends TestCase {
     assertTrue("Decode failed", java.util.Arrays.equals(copy, message[0]));
   }
 
+  @Test
   public void testXorPerformance() {
     java.util.Random RAND = new java.util.Random();
     int stripeSize = 10;
@@ -171,6 +176,7 @@ public class TestErasureCodes extends TestCase {
     assertTrue("Decode failed", java.util.Arrays.equals(copy, message[0]));
   }
 
+  @Test
   public void testComputeErrorLocations() {
     for (int i = 0; i < TEST_TIMES; ++i) {
       verifyErrorLocations(10, 4, 1);

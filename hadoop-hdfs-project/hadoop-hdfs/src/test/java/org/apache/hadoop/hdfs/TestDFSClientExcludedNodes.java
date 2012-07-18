@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.io.OutputStream;
-
-import org.junit.*;
-import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.junit.Test;
 
 
 /**

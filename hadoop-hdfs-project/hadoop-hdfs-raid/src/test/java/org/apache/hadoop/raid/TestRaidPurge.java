@@ -17,48 +17,37 @@
  */
 package org.apache.hadoop.raid;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.GregorianCalendar;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Properties;
-import java.util.Random;
-import java.util.zip.CRC32;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import junit.framework.TestCase;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
-
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.raid.protocol.PolicyInfo;
-import org.apache.hadoop.raid.protocol.PolicyList;
 import org.apache.hadoop.hdfs.TestRaidDfs;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.raid.protocol.PolicyInfo;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * If a file gets deleted, then verify that the parity file gets deleted too.
  */
-public class TestRaidPurge extends TestCase {
+public class TestRaidPurge {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
       "target/test-data")).getAbsolutePath();
   final static String CONFIG_FILE = new File(TEST_DIR, 
@@ -206,6 +195,7 @@ public class TestRaidPurge extends TestCase {
    * Test that parity files that do not have an associated master file
    * get deleted.
    */
+  @Test
   public void testPurge() throws Exception {
     LOG.info("Test testPurge  started.");
 
@@ -312,6 +302,7 @@ public class TestRaidPurge extends TestCase {
    * Create a file, wait for parity file to get HARed. Then modify the file,
    * wait for the HAR to get purged.
    */
+  @Test
   public void testPurgeHar() throws Exception {
     LOG.info("testPurgeHar started");
     int harDelay = 0;
@@ -381,6 +372,7 @@ public class TestRaidPurge extends TestCase {
    * Create parity file, delete original file's directory and then validate that
    * parity directory is automatically deleted.
    */
+  @Test
   public void testPurgeDirectory() throws Exception {
     long stripeLength = 5;
     long blockSize = 8192;
@@ -433,6 +425,7 @@ public class TestRaidPurge extends TestCase {
   /**
    * Test that an XOR parity file is removed when a RS parity file is detected.
    */
+  @Test
   public void testPurgePreference() throws Exception {
     createClusters(true);
     Path dir = new Path("/user/test/raidtest/");

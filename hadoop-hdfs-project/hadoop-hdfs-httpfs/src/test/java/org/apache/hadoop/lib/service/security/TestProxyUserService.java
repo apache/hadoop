@@ -18,7 +18,12 @@
 
 package org.apache.hadoop.lib.service.security;
 
-import junit.framework.Assert;
+import static org.junit.Assert.assertNotNull;
+
+import java.security.AccessControlException;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.lib.server.ServiceException;
@@ -30,10 +35,6 @@ import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestException;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
-
-import java.security.AccessControlException;
-import java.util.Arrays;
-import java.util.List;
 
 public class TestProxyUserService extends HTestCase {
 
@@ -47,7 +48,7 @@ public class TestProxyUserService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     ProxyUser proxyUser = server.get(ProxyUser.class);
-    Assert.assertNotNull(proxyUser);
+    assertNotNull(proxyUser);
     server.destroy();
   }
 
@@ -103,7 +104,7 @@ public class TestProxyUserService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     ProxyUser proxyUser = server.get(ProxyUser.class);
-    Assert.assertNotNull(proxyUser);
+    assertNotNull(proxyUser);
     proxyUser.validate("foo", "localhost", "bar");
     server.destroy();
   }
@@ -120,7 +121,7 @@ public class TestProxyUserService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     ProxyUser proxyUser = server.get(ProxyUser.class);
-    Assert.assertNotNull(proxyUser);
+    assertNotNull(proxyUser);
     proxyUser.validate("bar", "localhost", "foo");
     server.destroy();
   }
@@ -137,7 +138,7 @@ public class TestProxyUserService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     ProxyUser proxyUser = server.get(ProxyUser.class);
-    Assert.assertNotNull(proxyUser);
+    assertNotNull(proxyUser);
     proxyUser.validate("foo", "localhost", "bar");
     server.destroy();
   }
@@ -166,7 +167,7 @@ public class TestProxyUserService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     ProxyUser proxyUser = server.get(ProxyUser.class);
-    Assert.assertNotNull(proxyUser);
+    assertNotNull(proxyUser);
     proxyUser.validate("foo", "localhost", System.getProperty("user.name"));
     server.destroy();
   }
@@ -184,7 +185,7 @@ public class TestProxyUserService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     ProxyUser proxyUser = server.get(ProxyUser.class);
-    Assert.assertNotNull(proxyUser);
+    assertNotNull(proxyUser);
     proxyUser.validate("foo", "unknownhost.bar.foo", "bar");
     server.destroy();
   }
@@ -201,7 +202,7 @@ public class TestProxyUserService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     ProxyUser proxyUser = server.get(ProxyUser.class);
-    Assert.assertNotNull(proxyUser);
+    assertNotNull(proxyUser);
     proxyUser.validate("foo", "www.yahoo.com", "bar");
     server.destroy();
   }
@@ -218,7 +219,7 @@ public class TestProxyUserService extends HTestCase {
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
     ProxyUser proxyUser = server.get(ProxyUser.class);
-    Assert.assertNotNull(proxyUser);
+    assertNotNull(proxyUser);
     proxyUser.validate("foo", "localhost", System.getProperty("user.name"));
     server.destroy();
   }

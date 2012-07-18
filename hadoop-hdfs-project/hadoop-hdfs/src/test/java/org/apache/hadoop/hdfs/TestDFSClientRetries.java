@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
@@ -37,8 +41,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -75,6 +77,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
+import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.stubbing.answers.ThrowsException;
 import org.mockito.invocation.InvocationOnMock;
@@ -86,7 +89,7 @@ import com.google.common.base.Joiner;
  * These tests make sure that DFSClient retries fetching data from DFS
  * properly in case of errors.
  */
-public class TestDFSClientRetries extends TestCase {
+public class TestDFSClientRetries {
   private static final String ADDRESS = "0.0.0.0";
   final static private int PING_INTERVAL = 1000;
   final static private int MIN_SLEEP_TIME = 1000;
@@ -146,6 +149,7 @@ public class TestDFSClientRetries extends TestCase {
    * This makes sure that when DN closes clients socket after client had
    * successfully connected earlier, the data can still be fetched.
    */
+  @Test
   public void testWriteTimeoutAtDataNode() throws IOException,
                                                   InterruptedException { 
     final int writeTimeout = 100; //milliseconds.
@@ -198,6 +202,7 @@ public class TestDFSClientRetries extends TestCase {
    * of times trying to add a block
    */
   @SuppressWarnings("serial")
+  @Test
   public void testNotYetReplicatedErrors() throws IOException
   { 
     final String exceptionMsg = "Nope, not replicated yet...";
@@ -242,6 +247,7 @@ public class TestDFSClientRetries extends TestCase {
    * operation, and not over the lifetime of the stream. It is a regression
    * test for HDFS-127.
    */
+  @Test
   public void testFailuresArePerOperation() throws Exception
   {
     long fileSize = 4096;
@@ -317,6 +323,7 @@ public class TestDFSClientRetries extends TestCase {
    * a client to safely retry a call and still produce a correct
    * file. See HDFS-3031.
    */
+  @Test
   public void testIdempotentAllocateBlockAndClose() throws Exception {
     final String src = "/testIdempotentAllocateBlock";
     Path file = new Path(src);
@@ -457,6 +464,7 @@ public class TestDFSClientRetries extends TestCase {
   /**
    * Test that a DFSClient waits for random time before retry on busy blocks.
    */
+  @Test
   public void testDFSClientRetriesOnBusyBlocks() throws IOException {
     
     System.out.println("Testing DFSClient random waiting on busy blocks.");
@@ -700,6 +708,7 @@ public class TestDFSClientRetries extends TestCase {
     public int get() { return counter; }
   }
 
+  @Test
   public void testGetFileChecksum() throws Exception {
     final String f = "/testGetFileChecksum";
     final Path p = new Path(f);
@@ -736,6 +745,7 @@ public class TestDFSClientRetries extends TestCase {
    * RPC to the server and set rpcTimeout to less than n and ensure
    * that socketTimeoutException is obtained
    */
+  @Test
   public void testClientDNProtocolTimeout() throws IOException {
     final Server server = new TestServer(1, true);
     server.start();
@@ -770,6 +780,7 @@ public class TestDFSClientRetries extends TestCase {
    * read call, so the client should expect consecutive calls to behave the same
    * way. See HDFS-3067.
    */
+  @Test
   public void testRetryOnChecksumFailure()
       throws UnresolvedLinkException, IOException {
     HdfsConfiguration conf = new HdfsConfiguration();
@@ -812,6 +823,7 @@ public class TestDFSClientRetries extends TestCase {
   }
 
   /** Test client retry with namenode restarting. */
+  @Test
   public void testNamenodeRestart() throws Exception {
     ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
 
@@ -937,6 +949,7 @@ public class TestDFSClientRetries extends TestCase {
     }
   }
 
+  @Test
   public void testMultipleLinearRandomRetry() {
     parseMultipleLinearRandomRetry(null, "");
     parseMultipleLinearRandomRetry(null, "11");

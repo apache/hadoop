@@ -17,27 +17,29 @@
  */
 package org.apache.hadoop.raid;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.util.Time;
-
 import org.apache.hadoop.raid.protocol.PolicyInfo;
+import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
-public class TestDirectoryTraversal extends TestCase {
+public class TestDirectoryTraversal {
   final static Log LOG = LogFactory.getLog(
                             "org.apache.hadoop.raid.TestDirectoryTraversal");
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
@@ -50,6 +52,7 @@ public class TestDirectoryTraversal extends TestCase {
   /**
    * Test basic enumeration.
    */
+  @Test
   public void testEnumeration() throws IOException {
     mySetup();
 
@@ -91,6 +94,7 @@ public class TestDirectoryTraversal extends TestCase {
     }
   }
 
+  @Test
   public void testSuspension() throws IOException {
     LOG.info("Starting testSuspension");
     mySetup();
@@ -128,6 +132,7 @@ public class TestDirectoryTraversal extends TestCase {
     }
   }
 
+  @Test
   public void testFileFilter() throws IOException {
     mySetup();
 

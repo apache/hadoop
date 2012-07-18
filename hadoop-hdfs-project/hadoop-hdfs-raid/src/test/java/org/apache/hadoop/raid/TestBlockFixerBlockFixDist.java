@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.raid;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class TestBlockFixerBlockFixDist extends TestBlockFixer {
   @Test

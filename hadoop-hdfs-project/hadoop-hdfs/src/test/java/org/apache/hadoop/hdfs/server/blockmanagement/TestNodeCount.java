@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.TimeoutException;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,11 +32,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
-import org.apache.hadoop.hdfs.server.blockmanagement.HeartbeatManager;
-import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 /**
  * Test if live nodes count per node is correct 
@@ -45,7 +43,7 @@ import org.apache.hadoop.util.Time;
  * Two of the "while" loops below use "busy wait"
  * because they are detecting transient states.
  */
-public class TestNodeCount extends TestCase {
+public class TestNodeCount {
   final short REPLICATION_FACTOR = (short)2;
   final long TIMEOUT = 20000L;
   long timeout = 0;
@@ -53,6 +51,7 @@ public class TestNodeCount extends TestCase {
   Block lastBlock = null;
   NumberReplicas lastNum = null;
 
+  @Test
   public void testNodeCount() throws Exception {
     // start a mini dfs cluster of 2 nodes
     final Configuration conf = new HdfsConfiguration();

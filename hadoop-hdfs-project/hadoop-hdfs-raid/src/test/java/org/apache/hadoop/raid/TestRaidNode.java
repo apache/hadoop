@@ -17,26 +17,26 @@
  */
 package org.apache.hadoop.raid;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.File;
-import java.io.FileWriter;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 import java.util.zip.CRC32;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobContext;
@@ -45,14 +45,16 @@ import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.raid.protocol.PolicyInfo;
 import org.apache.hadoop.raid.protocol.PolicyList;
 import org.apache.hadoop.util.JarFinder;
-import org.apache.hadoop.raid.protocol.PolicyInfo.ErasureCodeType;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 /**
   * Test the generation of parity blocks for files with different block
   * sizes. Also test that a data block can be regenerated from a raid stripe
   * using the parity block
   */
-public class TestRaidNode extends TestCase {
+public class TestRaidNode {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
       "target/test-data")).getAbsolutePath();
   public static final String DistRaid_JAR = JarFinder.getJar(DistRaid.class);
@@ -258,6 +260,7 @@ public class TestRaidNode extends TestCase {
   /**
    * Test to run a filter
    */
+  @Test
   public void testPathFilter() throws Exception {
     LOG.info("Test testPathFilter started.");
 
@@ -513,6 +516,7 @@ public class TestRaidNode extends TestCase {
   /**
    * Test dist Raid
    */
+  @Test
   public void testDistRaid() throws Exception {
     LOG.info("Test testDistRaid started.");
     long targetReplication = 2;
@@ -664,6 +668,7 @@ public class TestRaidNode extends TestCase {
     }
   }
 
+  @Test
   public void testSuspendTraversal() throws Exception {
     LOG.info("Test testSuspendTraversal started.");
     long targetReplication = 2;

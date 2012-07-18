@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.lib.wsrs;
 
-import junit.framework.Assert;
-import org.json.simple.JSONObject;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.util.Map;
+
+import org.json.simple.JSONObject;
+import org.junit.Test;
 
 public class TestJSONMapProvider {
 
@@ -31,15 +34,15 @@ public class TestJSONMapProvider {
   @SuppressWarnings("unchecked")
   public void test() throws Exception {
     JSONMapProvider p = new JSONMapProvider();
-    Assert.assertTrue(p.isWriteable(Map.class, null, null, null));
-    Assert.assertFalse(p.isWriteable(this.getClass(), null, null, null));
-    Assert.assertEquals(p.getSize(null, null, null, null, null), -1);
+    assertTrue(p.isWriteable(Map.class, null, null, null));
+    assertFalse(p.isWriteable(this.getClass(), null, null, null));
+    assertEquals(p.getSize(null, null, null, null, null), -1);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     JSONObject json = new JSONObject();
     json.put("a", "A");
     p.writeTo(json, JSONObject.class, null, null, null, null, baos);
     baos.close();
-    Assert.assertEquals(new String(baos.toByteArray()).trim(), "{\"a\":\"A\"}");
+    assertEquals(new String(baos.toByteArray()).trim(), "{\"a\":\"A\"}");
   }
 
 }

@@ -17,21 +17,27 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 
 /**
  * This class tests that the DFS command mkdirs cannot create subdirectories
  * from a file when passed an illegal path.  HADOOP-281.
  */
-public class TestDFSMkdirs extends TestCase {
+public class TestDFSMkdirs {
 
   private void writeFile(FileSystem fileSys, Path name) throws IOException {
     DataOutputStream stm = fileSys.create(name);
@@ -43,6 +49,7 @@ public class TestDFSMkdirs extends TestCase {
    * Tests mkdirs can create a directory that does not exist and will
    * not create a subdirectory off a file.
    */
+  @Test
   public void testDFSMkdirs() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -80,6 +87,7 @@ public class TestDFSMkdirs extends TestCase {
   /**
    * Tests mkdir will not create directory when parent is missing.
    */
+  @Test
   public void testMkdir() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();

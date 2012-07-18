@@ -17,25 +17,25 @@
  */
 package org.apache.hadoop.raid;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
-import junit.framework.TestCase;
+import java.io.File;
+import java.util.ArrayList;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.raid.protocol.PolicyInfo;
 import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
-public class TestRaidFilter extends TestCase {
+public class TestRaidFilter {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
       "target/test-data")).getAbsolutePath();
   final static Log LOG =
@@ -59,6 +59,7 @@ public class TestRaidFilter extends TestCase {
     if (dfs != null) { dfs.shutdown(); }
   }
 
+  @Test
   public void testLayeredPolicies() throws Exception {
     mySetup();
     Path src1 = new Path("/user/foo");

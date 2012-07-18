@@ -18,11 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,13 +34,14 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.junit.Test;
 
 
 
 /**
  * This tests InterDataNodeProtocol for block handling. 
  */
-public class TestNamenodeCapacityReport extends TestCase {
+public class TestNamenodeCapacityReport {
   private static final Log LOG = LogFactory.getLog(TestNamenodeCapacityReport.class);
 
   /**
@@ -48,6 +49,7 @@ public class TestNamenodeCapacityReport extends TestCase {
    * It verifies the block information from a datanode.
    * Then, it updates the block with new information and verifies again. 
    */
+  @Test
   public void testVolumeSize() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;

@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.After;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -44,6 +45,8 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.RollingFileAppender;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 /**

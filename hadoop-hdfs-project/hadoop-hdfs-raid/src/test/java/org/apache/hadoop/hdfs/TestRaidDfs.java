@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,8 +30,6 @@ import java.net.URI;
 import java.util.Random;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,8 +45,9 @@ import org.apache.hadoop.raid.RaidNode;
 import org.apache.hadoop.raid.RaidUtils;
 import org.apache.hadoop.raid.protocol.PolicyInfo.ErasureCodeType;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.Test;
 
-public class TestRaidDfs extends TestCase {
+public class TestRaidDfs {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
       "target/test-data")).getAbsolutePath();
   final static String LOG_DIR = "target/raidlog";
@@ -195,6 +197,7 @@ public class TestRaidDfs extends TestCase {
    * Create a file, corrupt several blocks in it and ensure that the file can be
    * read through DistributedRaidFileSystem by ReedSolomon coding.
    */
+  @Test
   public void testRaidDfsRs() throws Exception {
     LOG.info("Test testRaidDfs started.");
 
@@ -224,6 +227,7 @@ public class TestRaidDfs extends TestCase {
   /**
    * Test DistributedRaidFileSystem.readFully()
    */
+  @Test
   public void testReadFully() throws Exception {
     code = ErasureCodeType.XOR;
     stripeLength = 3;
@@ -268,6 +272,7 @@ public class TestRaidDfs extends TestCase {
    * Test that access time and mtime of a source file do not change after
    * raiding.
    */
+  @Test
   public void testAccessTime() throws Exception {
     LOG.info("Test testAccessTime started.");
 
@@ -300,6 +305,7 @@ public class TestRaidDfs extends TestCase {
    * Create a file, corrupt a block in it and ensure that the file can be
    * read through DistributedRaidFileSystem by XOR code.
    */
+  @Test
   public void testRaidDfsXor() throws Exception {
     LOG.info("Test testRaidDfs started.");
 

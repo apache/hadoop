@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.lib.servlet;
 
-import junit.framework.Assert;
+import static org.junit.Assert.assertEquals;
+
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
@@ -35,10 +36,10 @@ public class TestServerWebApp extends HTestCase {
   @Test
   public void getHomeDir() {
     System.setProperty("TestServerWebApp0.home.dir", "/tmp");
-    Assert.assertEquals(ServerWebApp.getHomeDir("TestServerWebApp0"), "/tmp");
-    Assert.assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmp/log");
+    assertEquals(ServerWebApp.getHomeDir("TestServerWebApp0"), "/tmp");
+    assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmp/log");
     System.setProperty("TestServerWebApp0.log.dir", "/tmplog");
-    Assert.assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmplog");
+    assertEquals(ServerWebApp.getDir("TestServerWebApp0", ".log.dir", "/tmp/log"), "/tmplog");
   }
 
   @Test
@@ -52,11 +53,11 @@ public class TestServerWebApp extends HTestCase {
     ServerWebApp server = new ServerWebApp("TestServerWebApp1") {
     };
 
-    Assert.assertEquals(server.getStatus(), Server.Status.UNDEF);
+    assertEquals(server.getStatus(), Server.Status.UNDEF);
     server.contextInitialized(null);
-    Assert.assertEquals(server.getStatus(), Server.Status.NORMAL);
+    assertEquals(server.getStatus(), Server.Status.NORMAL);
     server.contextDestroyed(null);
-    Assert.assertEquals(server.getStatus(), Server.Status.SHUTDOWN);
+    assertEquals(server.getStatus(), Server.Status.SHUTDOWN);
   }
 
   @Test(expected = RuntimeException.class)

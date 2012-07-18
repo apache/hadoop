@@ -17,31 +17,32 @@
  */
 package org.apache.hadoop.raid;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
-import java.io.FileWriter;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.util.Random;
 
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
-
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * If a file gets deleted, then verify that the parity file gets deleted too.
  */
-public class TestRaidHar extends TestCase {
+public class TestRaidHar {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
      "target/test-data")).getAbsolutePath();
   final static String CONFIG_FILE = new File(TEST_DIR, 
@@ -182,6 +183,7 @@ public class TestRaidHar extends TestCase {
    * Test that parity files that do not have an associated master file
    * get deleted.
    */
+  @Test
   public void testRaidHar() throws Exception {
     LOG.info("Test testRaidHar  started.");
 

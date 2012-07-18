@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.test;
 
-import junit.framework.Assert;
+import static org.junit.Assert.fail;
+
+import java.text.MessageFormat;
 
 import org.apache.hadoop.util.Time;
 import org.junit.Rule;
 import org.junit.rules.MethodRule;
-
-import java.text.MessageFormat;
 
 public abstract class HTestCase {
 
@@ -161,7 +161,7 @@ public abstract class HTestCase {
       }
       if (!eval) {
         if (failIfTimeout) {
-          Assert.fail(MessageFormat.format("Waiting timed out after [{0}] msec", timeout));
+          fail(MessageFormat.format("Waiting timed out after [{0}] msec", timeout));
         } else {
           System.out.println(MessageFormat.format("Waiting timed out after [{0}] msec", timeout));
         }

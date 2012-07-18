@@ -17,25 +17,30 @@
  */
 package org.apache.hadoop.raid;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-public class TestHarIndexParser extends TestCase {
+public class TestHarIndexParser {
   final static Log LOG = LogFactory.getLog(TestHarIndexParser.class);
   File indexFile = null;
 
-  protected void setUp() throws FileNotFoundException, IOException {
+  @Before
+  public void setUp() throws FileNotFoundException, IOException {
     LOG.info("TestHarIndexParser.setUp()");
     indexFile = File.createTempFile("harindex", ".tmp");
     indexFile.deleteOnExit();
@@ -51,12 +56,14 @@ public class TestHarIndexParser extends TestCase {
     out.close();
   }
 
-  protected void tearDown() {
+  @After
+  public void tearDown() {
     LOG.info("TestHarIndexParser.tearDown()");
     if (indexFile != null)
       indexFile.delete();
   }
 
+  @Test
   public void testHarIndexParser()
     throws UnsupportedEncodingException, IOException {
     LOG.info("testHarIndexParser started.");

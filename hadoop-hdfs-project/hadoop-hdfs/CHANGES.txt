@@ -109,6 +109,8 @@ Trunk (unreleased changes)
 
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
+    HDFS-3583. Convert remaining tests to Junit4. (Andrew Wang via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES

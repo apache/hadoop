@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.IOException;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import junit.framework.TestCase;
+import java.io.IOException;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -31,17 +32,18 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * This class tests that pipelines survive data node death and recovery.
  */
-public class TestDatanodeDeath extends TestCase {
+public class TestDatanodeDeath {
   {
     ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
@@ -410,11 +412,15 @@ public class TestDatanodeDeath extends TestCase {
     }
   }
 
+  @Test
   public void testSimple0() throws IOException {simpleTest(0);}
 
+  @Test
   public void testSimple1() throws IOException {simpleTest(1);}
 
+  @Test
   public void testSimple2() throws IOException {simpleTest(2);}
 
+  @Test
   public void testComplex() throws IOException {complexTest();}
 }

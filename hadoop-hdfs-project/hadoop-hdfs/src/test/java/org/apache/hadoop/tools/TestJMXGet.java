@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.tools;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -33,14 +35,16 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.tools.JMXGet;
-import static org.apache.hadoop.test.MetricsAsserts.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 
 /**
  * Startup and checkpoint tests
  * 
  */
-public class TestJMXGet extends TestCase {
+public class TestJMXGet {
 
   private Configuration config;
   private MiniDFSCluster cluster;
@@ -62,15 +66,15 @@ public class TestJMXGet extends TestCase {
   }
 
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     config = new HdfsConfiguration();
   }
 
   /**
    * clean up
    */
-  @Override
+  @After
   public void tearDown() throws Exception {
     if(cluster.isClusterUp())
       cluster.shutdown();
@@ -86,6 +90,7 @@ public class TestJMXGet extends TestCase {
    * test JMX connection to NameNode..
    * @throws Exception 
    */
+  @Test
   public void testNameNode() throws Exception {
     int numDatanodes = 2;
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();
@@ -114,6 +119,7 @@ public class TestJMXGet extends TestCase {
    * test JMX connection to DataNode..
    * @throws Exception 
    */
+  @Test
   public void testDataNode() throws Exception {
     int numDatanodes = 2;
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(numDatanodes).build();

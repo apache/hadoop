@@ -17,20 +17,35 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import junit.framework.TestCase;
-import java.io.*;
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintWriter;
+import java.io.RandomAccessFile;
+import java.io.StringWriter;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Arrays;
+import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,17 +56,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.*;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -59,19 +72,16 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.aspectj.util.FileUtil;
-
-import org.mockito.Mockito;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-import static org.apache.hadoop.test.MetricsAsserts.*;
-
 /**
  * This class tests the creation and validation of a checkpoint.
  */
-public class TestEditLog extends TestCase {
+public class TestEditLog {
   
   static {
     ((Log4JLogger)FSEditLog.LOG).getLogger().setLevel(Level.ALL);
@@ -163,6 +173,7 @@ public class TestEditLog extends TestCase {
   /**
    * Test case for an empty edit log from a prior version of Hadoop.
    */
+  @Test
   public void testPreTxIdEditLogNoEdits() throws Exception {
     FSNamesystem namesys = Mockito.mock(FSNamesystem.class);
     namesys.dir = Mockito.mock(FSDirectory.class);
@@ -176,6 +187,7 @@ public class TestEditLog extends TestCase {
    * Test case for loading a very simple edit log from a format
    * prior to the inclusion of edit transaction IDs in the log.
    */
+  @Test
   public void testPreTxidEditLogWithEdits() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -204,6 +216,7 @@ public class TestEditLog extends TestCase {
   /**
    * Simple test for writing to and rolling the edit log.
    */
+  @Test
   public void testSimpleEditLog() throws IOException {
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
@@ -248,6 +261,7 @@ public class TestEditLog extends TestCase {
   /**
    * Tests transaction logging in dfs.
    */
+  @Test
   public void testMultiThreadedEditLog() throws IOException {
     testEditLog(2048);
     // force edit buffer to automatically sync on each log of edit log entry
@@ -397,6 +411,7 @@ public class TestEditLog extends TestCase {
     }).get();
   }
 
+  @Test
   public void testSyncBatching() throws Exception {
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
@@ -459,6 +474,7 @@ public class TestEditLog extends TestCase {
    * This sequence is legal and can occur if enterSafeMode() is closely
    * followed by saveNamespace.
    */
+  @Test
   public void testBatchedSyncWithClosedLogs() throws Exception {
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
@@ -498,6 +514,7 @@ public class TestEditLog extends TestCase {
     }
   }
   
+  @Test
   public void testEditChecksum() throws Exception {
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
@@ -549,6 +566,7 @@ public class TestEditLog extends TestCase {
    * Test what happens if the NN crashes when it has has started but
    * had no transactions written.
    */
+  @Test
   public void testCrashRecoveryNoTransactions() throws Exception {
     testCrashRecovery(0);
   }
@@ -557,6 +575,7 @@ public class TestEditLog extends TestCase {
    * Test what happens if the NN crashes when it has has started and
    * had a few transactions written
    */
+  @Test
   public void testCrashRecoveryWithTransactions() throws Exception {
     testCrashRecovery(150);
   }
@@ -666,22 +685,26 @@ public class TestEditLog extends TestCase {
   }
   
   // should succeed - only one corrupt log dir
+  @Test
   public void testCrashRecoveryEmptyLogOneDir() throws Exception {
     doTestCrashRecoveryEmptyLog(false, true, true);
   }
   
   // should fail - seen_txid updated to 3, but no log dir contains txid 3
+  @Test
   public void testCrashRecoveryEmptyLogBothDirs() throws Exception {
     doTestCrashRecoveryEmptyLog(true, true, false);
   }
 
   // should succeed - only one corrupt log dir
+  @Test
   public void testCrashRecoveryEmptyLogOneDirNoUpdateSeenTxId() 
       throws Exception {
     doTestCrashRecoveryEmptyLog(false, false, true);
   }
   
   // should succeed - both log dirs corrupt, but seen_txid never updated
+  @Test
   public void testCrashRecoveryEmptyLogBothDirsNoUpdateSeenTxId()
       throws Exception {
     doTestCrashRecoveryEmptyLog(true, false, true);
@@ -829,6 +852,7 @@ public class TestEditLog extends TestCase {
     }
   }
 
+  @Test
   public void testFailedOpen() throws Exception {
     File logDir = new File(TEST_DIR, "testFailedOpen");
     logDir.mkdirs();
@@ -850,6 +874,7 @@ public class TestEditLog extends TestCase {
    * Regression test for HDFS-1112/HDFS-3020. Ensures that, even if
    * logSync isn't called periodically, the edit log will sync itself.
    */
+  @Test
   public void testAutoSync() throws Exception {
     File logDir = new File(TEST_DIR, "testAutoSync");
     logDir.mkdirs();

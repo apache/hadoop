@@ -18,7 +18,23 @@
 
 package org.apache.hadoop.fs.http.server;
 
-import junit.framework.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.MessageFormat;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,20 +53,6 @@ import org.apache.hadoop.test.TestJettyHelper;
 import org.junit.Test;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.List;
 
 public class TestHttpFSServer extends HFSTestCase {
 
@@ -103,9 +105,9 @@ public class TestHttpFSServer extends HFSTestCase {
   }
   private void createHttpFSServer() throws Exception {
     File homeDir = TestDirHelper.getTestDir();
-    Assert.assertTrue(new File(homeDir, "conf").mkdir());
-    Assert.assertTrue(new File(homeDir, "log").mkdir());
-    Assert.assertTrue(new File(homeDir, "temp").mkdir());
+    assertTrue(new File(homeDir, "conf").mkdir());
+    assertTrue(new File(homeDir, "log").mkdir());
+    assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
     File secretFile = new File(new File(homeDir, "conf"), "secret");
@@ -157,23 +159,23 @@ public class TestHttpFSServer extends HFSTestCase {
     URL url = new URL(TestJettyHelper.getJettyURL(),
                       MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation", "nobody"));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_UNAUTHORIZED);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_UNAUTHORIZED);
 
     url = new URL(TestJettyHelper.getJettyURL(),
                   MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
                                        HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
     String line = reader.readLine();
     reader.close();
-    Assert.assertTrue(line.contains("\"counters\":{"));
+    assertTrue(line.contains("\"counters\":{"));
 
     url = new URL(TestJettyHelper.getJettyURL(),
                   MessageFormat.format("/webhdfs/v1/foo?user.name={0}&op=instrumentation",
                                        HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
   @Test
@@ -187,7 +189,7 @@ public class TestHttpFSServer extends HFSTestCase {
     URL url = new URL(TestJettyHelper.getJettyURL(),
                       MessageFormat.format("/webhdfs/v1/?user.name={0}&op=liststatus", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
@@ -208,7 +210,7 @@ public class TestHttpFSServer extends HFSTestCase {
     URL url = new URL(TestJettyHelper.getJettyURL(),
                       MessageFormat.format("/webhdfs/v1/tmp?user.name={0}&op=liststatus&filter=f*", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
@@ -228,7 +230,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setDoInput(true);
     conn.setDoOutput(true);
     conn.setRequestMethod("PUT");
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
 }

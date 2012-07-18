@@ -18,34 +18,23 @@
 
 package org.apache.hadoop.raid;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.DistributedRaidFileSystem;
 import org.apache.hadoop.hdfs.TestRaidDfs;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.raid.RaidNode;
+import org.junit.Test;
 
 
-public class TestReedSolomonEncoder extends TestCase {
+public class TestReedSolomonEncoder {
   final static Log LOG = LogFactory.getLog(
                             "org.apache.hadoop.raid.TestReedSolomonEncoder");
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
@@ -57,6 +46,7 @@ public class TestReedSolomonEncoder extends TestCase {
   MiniDFSCluster dfs = null;
   FileSystem fileSys = null;
 
+  @Test
   public void testEncoder() throws Exception {
     mySetup();
     int stripeSize = 10;

@@ -17,24 +17,25 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.junit.Test;
 
 /**
  * This class tests the DFS positional read functionality in a single node
  * mini-cluster.
  */
-public class TestPread extends TestCase {
+public class TestPread {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 4096;
   boolean simulatedStorage = false;
@@ -196,6 +197,7 @@ public class TestPread extends TestCase {
   /**
    * Tests positional read in DFS.
    */
+  @Test
   public void testPreadDFS() throws IOException {
     dfsPreadTest(false); //normal pread
     dfsPreadTest(true); //trigger read code path without transferTo.
@@ -225,6 +227,7 @@ public class TestPread extends TestCase {
     }
   }
   
+  @Test
   public void testPreadDFSSimulated() throws IOException {
     simulatedStorage = true;
     testPreadDFS();
@@ -234,6 +237,7 @@ public class TestPread extends TestCase {
   /**
    * Tests positional read in LocalFS.
    */
+  @Test
   public void testPreadLocalFS() throws IOException {
     Configuration conf = new HdfsConfiguration();
     FileSystem fileSys = FileSystem.getLocal(conf);

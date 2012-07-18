@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertSame;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;

@@ -17,34 +17,35 @@
  */
 package org.apache.hadoop.raid;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
 import java.util.zip.CRC32;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.RaidDFSUtil;
+import org.apache.hadoop.hdfs.TestRaidDfs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.TestRaidDfs;
-import org.apache.hadoop.hdfs.RaidDFSUtil;
-import org.apache.hadoop.raid.RaidNode;
+import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Test;
 
 
-public class TestRaidShell extends TestCase {
+public class TestRaidShell {
   final static Log LOG = LogFactory.getLog(
                             "org.apache.hadoop.raid.TestRaidShell");
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
@@ -65,6 +66,7 @@ public class TestRaidShell extends TestCase {
    * Create a file with three stripes, corrupt a block each in two stripes,
    * and wait for the the file to be fixed.
    */
+  @Test
   public void testBlockFix() throws Exception {
     LOG.info("Test testBlockFix started.");
     long blockSize = 8192L;

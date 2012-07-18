@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
+import org.junit.Test;
 
-public class TestFileCreationNamenodeRestart extends junit.framework.TestCase {
+public class TestFileCreationNamenodeRestart {
+  @Test
   public void testFileCreationNamenodeRestart() throws Exception {
     new TestFileCreation().xxxtestFileCreationNamenodeRestart();
   }

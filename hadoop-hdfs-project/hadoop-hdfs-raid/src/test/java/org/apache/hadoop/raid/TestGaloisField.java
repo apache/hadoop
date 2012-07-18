@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.raid;
 
+import static org.junit.Assert.assertTrue;
+
+import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
-import java.util.HashSet;
 
-import junit.framework.TestCase;
+import org.junit.Test;
 
-public class TestGaloisField extends TestCase {
+public class TestGaloisField {
 
   final int TEST_TIMES = 10000;
   final Random RAND = new Random();
@@ -40,6 +42,7 @@ public class TestGaloisField extends TestCase {
     return result;
   }
 
+  @Test
   public void testGetInstance() {
     GaloisField gf1 = GaloisField.getInstance(256, 285);
     GaloisField gf2 = GaloisField.getInstance();
@@ -52,6 +55,7 @@ public class TestGaloisField extends TestCase {
     assertTrue(gf5 == gf6);
   }
 
+  @Test
   public void testDistributivity() {
     for (int i = 0; i < TEST_TIMES; i++) {
       int a = RAND.nextInt(GF.getFieldSize());
@@ -64,6 +68,7 @@ public class TestGaloisField extends TestCase {
     }
   }
 
+  @Test
   public void testDevision() {
     for (int i = 0; i < TEST_TIMES; i++) {
       int a = RAND.nextInt(GF.getFieldSize());
@@ -77,6 +82,7 @@ public class TestGaloisField extends TestCase {
     }
   }
 
+  @Test
   public void testPower() {
     for (int i = 0; i < TEST_TIMES; i++) {
       int a = randGF();
@@ -90,6 +96,7 @@ public class TestGaloisField extends TestCase {
     }
   }
 
+  @Test
   public void testPolynomialDistributivity() {
     final int TEST_LEN = 15;
     for (int i = 0; i < TEST_TIMES; i++) {
@@ -103,6 +110,7 @@ public class TestGaloisField extends TestCase {
     }
   }
 
+  @Test
   public void testSubstitute() {
     final int TEST_LEN = 15;
     for (int i = 0; i < TEST_TIMES; i++) {
@@ -121,6 +129,7 @@ public class TestGaloisField extends TestCase {
     }
   }
 
+  @Test
   public void testSolveVandermondeSystem() {
     final int TEST_LEN = 15;
     for (int i = 0; i < TEST_TIMES; i++) {
@@ -151,6 +160,7 @@ public class TestGaloisField extends TestCase {
     }
   }
 
+  @Test
   public void testRemainder() {
     final int TEST_LEN = 15;
     for (int i = 0; i < TEST_TIMES; i++) {

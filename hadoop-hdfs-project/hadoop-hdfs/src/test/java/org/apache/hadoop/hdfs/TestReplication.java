@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -24,8 +27,6 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,16 +40,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 /**
  * This class tests the replication of a DFS file.
  */
-public class TestReplication extends TestCase {
+public class TestReplication {
   private static final long seed = 0xDEADBEEFL;
   private static final int blockSize = 8192;
   private static final int fileSize = 16384;
@@ -149,6 +151,7 @@ public class TestReplication extends TestCase {
   /* 
    * Test if Datanode reports bad blocks during replication request
    */
+  @Test
   public void testBadBlockReportOnTransfer() throws Exception {
     Configuration conf = new HdfsConfiguration();
     FileSystem fs = null;
@@ -240,11 +243,13 @@ public class TestReplication extends TestCase {
   }
 
 
+  @Test
   public void testReplicationSimulatedStorag() throws IOException {
     runReplication(true);
   }
   
   
+  @Test
   public void testReplication() throws IOException {
     runReplication(false);
   }
@@ -298,6 +303,7 @@ public class TestReplication extends TestCase {
    * two of the blocks and removes one of the replicas. Expected behavior is
    * that missing replica will be copied from one valid source.
    */
+  @Test
   public void testPendingReplicationRetry() throws IOException {
     
     MiniDFSCluster cluster = null;
@@ -400,6 +406,7 @@ public class TestReplication extends TestCase {
    * Test if replication can detect mismatched length on-disk blocks
    * @throws Exception
    */
+  @Test
   public void testReplicateLenMismatchedBlock() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).numDataNodes(2).build();
     try {
