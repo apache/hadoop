@@ -158,7 +158,8 @@ public class TestRMWebApp {
     for (RMNode node : deactivatedNodes) {
       deactivatedNodesMap.put(node.getHostName(), node);
     }
-   return new RMContextImpl(new MemStore(), null, null, null, null, null) {
+   return new RMContextImpl(new MemStore(), null, null, null, null,
+       null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return applicationsMaps;

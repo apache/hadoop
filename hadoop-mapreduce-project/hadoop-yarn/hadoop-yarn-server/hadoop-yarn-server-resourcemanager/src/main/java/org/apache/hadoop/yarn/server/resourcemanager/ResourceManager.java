@@ -155,13 +155,16 @@ public class ResourceManager extends CompositeService implements Recoverable {
     AMLivelinessMonitor amLivelinessMonitor = createAMLivelinessMonitor();
     addService(amLivelinessMonitor);
 
+    AMLivelinessMonitor amFinishingMonitor = createAMLivelinessMonitor();
+    addService(amFinishingMonitor);
+
     DelegationTokenRenewer tokenRenewer = createDelegationTokenRenewer();
     addService(tokenRenewer);
     
-    this.rmContext =
-        new RMContextImpl(this.store, this.rmDispatcher,
-          this.containerAllocationExpirer, amLivelinessMonitor, tokenRenewer,
-          this.appTokenSecretManager);
+    this.rmContext = new RMContextImpl(this.store, this.rmDispatcher,
+        this.containerAllocationExpirer,
+        amLivelinessMonitor, amFinishingMonitor,
+        tokenRenewer, this.appTokenSecretManager);
 
     // Register event handler for NodesListManager
     this.nodesListManager = new NodesListManager(this.rmContext);

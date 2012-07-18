@@ -92,6 +92,8 @@ public class TestApplicationCleanup {
     Assert.assertEquals(request, conts.size());
     
     am.unregisterAppAttempt();
+    HeartbeatResponse resp = nm1.nodeHeartbeat(attempt.getAppAttemptId(), 1,
+        ContainerState.COMPLETE);
     am.waitForState(RMAppAttemptState.FINISHED);
 
     int cleanedConts = 0;
@@ -102,8 +104,7 @@ public class TestApplicationCleanup {
     //currently only containers are cleaned via this
     //AM container is cleaned via container launcher
     waitCount = 0;
-    while ((cleanedConts < 3 || cleanedApps < 1) && waitCount++ < 20) {
-      HeartbeatResponse resp = nm1.nodeHeartbeat(true);
+    while ((cleanedConts < 2 || cleanedApps < 1) && waitCount++ < 20) {
       contsToClean = resp.getContainersToCleanupList();
       apps = resp.getApplicationsToCleanupList();
       LOG.info("Waiting to get cleanup events.. cleanedConts: "
@@ -111,12 +112,13 @@ public class TestApplicationCleanup {
       cleanedConts += contsToClean.size();
       cleanedApps += apps.size();
       Thread.sleep(1000);
+      resp = nm1.nodeHeartbeat(true);
     }
     
     Assert.assertEquals(1, apps.size());
     Assert.assertEquals(app.getApplicationId(), apps.get(0));
     Assert.assertEquals(1, cleanedApps);
-    Assert.assertEquals(3, cleanedConts);
+    Assert.assertEquals(2, cleanedConts);
 
     rm.stop();
   }

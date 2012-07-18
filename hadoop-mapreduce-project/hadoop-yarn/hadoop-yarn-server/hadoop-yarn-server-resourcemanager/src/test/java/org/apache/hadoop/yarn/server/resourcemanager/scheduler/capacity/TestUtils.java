@@ -80,7 +80,7 @@ public class TestUtils {
         new ContainerAllocationExpirer(nullDispatcher);
     
     RMContext rmContext =
-        new RMContextImpl(null, nullDispatcher, cae, null, null,
+        new RMContextImpl(null, nullDispatcher, cae, null, null, null,
           new ApplicationTokenSecretManager(new Configuration()));
     
     return rmContext;

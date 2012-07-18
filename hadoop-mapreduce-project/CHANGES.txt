@@ -134,6 +134,9 @@ Branch-2 ( Unreleased changes )
 
   IMPROVEMENTS
 
+    MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved
+    (Jason Lowe via bobby)
+
   BUG FIXES
 
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 

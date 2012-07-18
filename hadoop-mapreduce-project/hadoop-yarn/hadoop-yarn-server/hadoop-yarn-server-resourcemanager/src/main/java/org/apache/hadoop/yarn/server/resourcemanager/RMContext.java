@@ -51,6 +51,8 @@ public interface RMContext {
 
   AMLivelinessMonitor getAMLivelinessMonitor();
 
+  AMLivelinessMonitor getAMFinishingMonitor();
+
   ContainerAllocationExpirer getContainerAllocationExpirer();
   
   DelegationTokenRenewer getDelegationTokenRenewer();
