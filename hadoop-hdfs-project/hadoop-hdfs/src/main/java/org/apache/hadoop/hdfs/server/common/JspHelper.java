@@ -44,6 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.BlockReaderFactory;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -58,6 +59,7 @@ import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.http.HtmlQuoting;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -557,8 +559,13 @@ public class JspHelper {
         DataInputStream in = new DataInputStream(buf);
         DelegationTokenIdentifier id = new DelegationTokenIdentifier();
         id.readFields(in);
-        final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-        nn.getNamesystem().verifyToken(id, token.getPassword());
+        if (context != null) {
+          final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
+          if (nn != null) {
+            // Verify the token.
+            nn.getNamesystem().verifyToken(id, token.getPassword());
+          }
+        }
         ugi = id.getUser();
         if (ugi.getRealUser() == null) {
           //non-proxy case
