@@ -350,6 +350,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-2966 TestNameNodeMetrics tests can fail under load. (stevel)
 
+    HDFS-3605. Block mistakenly marked corrupt during edit log catchup
+    phase of failover. (todd and Brahma Reddy Battula via todd)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
