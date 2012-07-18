@@ -118,10 +118,10 @@ public class TestRMAppTransitions {
     ContainerAllocationExpirer containerAllocationExpirer = 
         mock(ContainerAllocationExpirer.class);
     AMLivelinessMonitor amLivelinessMonitor = mock(AMLivelinessMonitor.class);
-    this.rmContext =
-        new RMContextImpl(new MemStore(), rmDispatcher,
-          containerAllocationExpirer, amLivelinessMonitor, null,
-          new ApplicationTokenSecretManager(conf));
+    AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
+    this.rmContext = new RMContextImpl(new MemStore(), rmDispatcher,
+        containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
+        null, new ApplicationTokenSecretManager(conf));
 
     rmDispatcher.register(RMAppAttemptEventType.class,
         new TestApplicationAttemptEventDispatcher(this.rmContext));
@@ -278,14 +278,35 @@ public class TestRMAppTransitions {
     return application;
   }
 
+  protected RMApp testCreateAppFinishing(
+      ApplicationSubmissionContext submissionContext) throws IOException {
+    // unmanaged AMs don't use the FINISHING state
+    assert submissionContext == null || !submissionContext.getUnmanagedAM();
+    RMApp application = testCreateAppRunning(submissionContext);
+    // RUNNING => FINISHING event RMAppEventType.ATTEMPT_FINISHING
+    RMAppEvent finishingEvent =
+        new RMAppEvent(application.getApplicationId(),
+            RMAppEventType.ATTEMPT_FINISHING);
+    application.handle(finishingEvent);
+    assertAppState(RMAppState.FINISHING, application);
+    assertTimesAtFinish(application);
+    return application;
+  }
+
   protected RMApp testCreateAppFinished(
       ApplicationSubmissionContext submissionContext) throws IOException {
-  RMApp application = testCreateAppRunning(submissionContext);
-    // RUNNING => FINISHED event RMAppEventType.ATTEMPT_FINISHED
-    RMAppEvent event = 
+    // unmanaged AMs don't use the FINISHING state
+    RMApp application = null;
+    if (submissionContext != null && submissionContext.getUnmanagedAM()) {
+      application = testCreateAppRunning(submissionContext);
+    } else {
+      application = testCreateAppFinishing(submissionContext);
+    }
+    // RUNNING/FINISHING => FINISHED event RMAppEventType.ATTEMPT_FINISHED
+    RMAppEvent finishedEvent = 
         new RMAppEvent(application.getApplicationId(), 
             RMAppEventType.ATTEMPT_FINISHED);
-    application.handle(event);
+    application.handle(finishedEvent);
     assertAppState(RMAppState.FINISHED, application);
     assertTimesAtFinish(application);
     // finished without a proper unregister implies failed
@@ -468,6 +489,17 @@ public class TestRMAppTransitions {
     assertFailed(application, ".*Failing the application.*");
   }
 
+  @Test
+  public void testAppFinishingKill() throws IOException {
+    LOG.info("--- START: testAppFinishedFinished ---");
+
+    RMApp application = testCreateAppFinishing(null);
+    // FINISHING => FINISHED event RMAppEventType.KILL
+    RMAppEvent event =
+        new RMAppEvent(application.getApplicationId(), RMAppEventType.KILL);
+    application.handle(event);
+    assertAppState(RMAppState.FINISHED, application);
+  }
 
   @Test
   public void testAppFinishedFinished() throws IOException {

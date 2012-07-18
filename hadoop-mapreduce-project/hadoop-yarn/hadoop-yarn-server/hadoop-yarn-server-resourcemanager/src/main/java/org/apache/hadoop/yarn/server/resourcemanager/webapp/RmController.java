@@ -65,7 +65,8 @@ public class RmController extends Controller {
         RMAppState.NEW.toString(),
         RMAppState.SUBMITTED.toString(),
         RMAppState.ACCEPTED.toString(),
-        RMAppState.RUNNING.toString()));
+        RMAppState.RUNNING.toString(),
+        RMAppState.FINISHING.toString()));
 
     ResourceManager rm = getInstance(ResourceManager.class);
     ResourceScheduler rs = rm.getResourceScheduler();

@@ -1,5 +1,8 @@
 Hadoop MapReduce Change Log
 
+    MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved
+    (Jason Lowe via bobby)
+
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
     YarnConfiguration. (ahmed via tucu)
 

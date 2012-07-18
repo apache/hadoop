@@ -147,6 +147,8 @@ public class RMAppImpl implements RMApp {
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.RUNNING, RMAppState.FINISHING,
+        RMAppEventType.ATTEMPT_FINISHING, new RMAppFinishingTransition())
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
         RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
     .addTransition(RMAppState.RUNNING,
@@ -156,12 +158,24 @@ public class RMAppImpl implements RMApp {
     .addTransition(RMAppState.RUNNING, RMAppState.KILLED,
         RMAppEventType.KILL, new KillAppAndAttemptTransition())
 
+     // Transitions from FINISHING state
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
+        RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
+        RMAppEventType.KILL, new KillAppAndAttemptTransition())
+    // ignorable transitions
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
+        RMAppEventType.NODE_UPDATE)
+
      // Transitions from FINISHED state
     .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
         RMAppEventType.KILL)
      // ignorable transitions
     .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
-        RMAppEventType.NODE_UPDATE)
+        EnumSet.of(
+            RMAppEventType.NODE_UPDATE,
+            RMAppEventType.ATTEMPT_FINISHING,
+            RMAppEventType.ATTEMPT_FINISHED))
 
      // Transitions from FAILED state
     .addTransition(RMAppState.FAILED, RMAppState.FAILED,
@@ -339,6 +353,7 @@ public class RMAppImpl implements RMApp {
       return YarnApplicationState.ACCEPTED;
     case RUNNING:
       return YarnApplicationState.RUNNING;
+    case FINISHING:
     case FINISHED:
       return YarnApplicationState.FINISHED;
     case KILLED:
@@ -357,6 +372,7 @@ public class RMAppImpl implements RMApp {
     case RUNNING:
       return FinalApplicationStatus.UNDEFINED;    
     // finished without a proper final state is the same as failed  
+    case FINISHING:
     case FINISHED:
     case FAILED:
       return FinalApplicationStatus.FAILED;
@@ -548,6 +564,14 @@ public class RMAppImpl implements RMApp {
     };
   }
 
+  private static final class RMAppFinishingTransition extends
+      RMAppTransition {
+    @Override
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      app.finishTime = System.currentTimeMillis();
+    }
+  }
+
   private static class AppKilledTransition extends FinalTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
@@ -591,7 +615,9 @@ public class RMAppImpl implements RMApp {
         app.handler.handle(
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
-      app.finishTime = System.currentTimeMillis();
+      if (app.getState() != RMAppState.FINISHING) {
+        app.finishTime = System.currentTimeMillis();
+      }
       app.handler.handle(
           new RMAppManagerEvent(app.applicationId,
           RMAppManagerEventType.APP_COMPLETED));

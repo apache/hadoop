@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -33,6 +36,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 public class MockNM {
@@ -83,6 +87,20 @@ public class MockNM {
   public HeartbeatResponse nodeHeartbeat(boolean b) throws Exception {
     return nodeHeartbeat(new HashMap<ApplicationId, List<ContainerStatus>>(),
         b, ++responseId);
+  }
+
+  public HeartbeatResponse nodeHeartbeat(ApplicationAttemptId attemptId,
+      int containerId, ContainerState containerState) throws Exception {
+    HashMap<ApplicationId, List<ContainerStatus>> nodeUpdate =
+        new HashMap<ApplicationId, List<ContainerStatus>>(1);
+    ContainerStatus amContainerStatus = BuilderUtils.newContainerStatus(
+        BuilderUtils.newContainerId(attemptId, 1),
+        ContainerState.COMPLETE, "Success", 0);
+    ArrayList<ContainerStatus> containerStatusList =
+        new ArrayList<ContainerStatus>(1);
+    containerStatusList.add(amContainerStatus);
+    nodeUpdate.put(attemptId.getApplicationId(), containerStatusList);
+    return nodeHeartbeat(nodeUpdate, true);
   }
 
   public HeartbeatResponse nodeHeartbeat(Map<ApplicationId, 

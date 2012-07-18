@@ -31,6 +31,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
@@ -545,6 +546,8 @@ public class TestRMWebServicesApps extends JerseyTest {
         .sendAMLaunched(app1.getCurrentAppAttempt().getAppAttemptId());
     am.registerAppAttempt();
     am.unregisterAppAttempt();
+    amNodeManager.nodeHeartbeat(app1.getCurrentAppAttempt().getAppAttemptId(),
+        1, ContainerState.COMPLETE);
     rm.submitApp(1024);
     rm.submitApp(1024);
 
@@ -573,6 +576,8 @@ public class TestRMWebServicesApps extends JerseyTest {
         .sendAMLaunched(app1.getCurrentAppAttempt().getAppAttemptId());
     am.registerAppAttempt();
     am.unregisterAppAttempt();
+    amNodeManager.nodeHeartbeat(app1.getCurrentAppAttempt().getAppAttemptId(),
+        1, ContainerState.COMPLETE);
 
     rm.submitApp(1024);
     rm.submitApp(1024);
@@ -605,6 +610,8 @@ public class TestRMWebServicesApps extends JerseyTest {
         .sendAMLaunched(app1.getCurrentAppAttempt().getAppAttemptId());
     am.registerAppAttempt();
     am.unregisterAppAttempt();
+    amNodeManager.nodeHeartbeat(app1.getCurrentAppAttempt().getAppAttemptId(),
+        1, ContainerState.COMPLETE);
 
     rm.submitApp(1024);
     rm.submitApp(1024);
