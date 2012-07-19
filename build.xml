@@ -698,7 +698,7 @@
 
   <target name="compile-core"
           depends="clover,compile-core-classes,compile-mapred-classes,
-  	compile-hdfs-classes,compile-core-native,compile-c++" 
+  	compile-hdfs-classes"
   	description="Compile core only">
   </target>
 

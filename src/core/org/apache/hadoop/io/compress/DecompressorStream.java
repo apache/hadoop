@@ -32,7 +32,7 @@ public class DecompressorStream extends CompressionInputStream {
   private int lastBytesSent = 0;
 
   public DecompressorStream(InputStream in, Decompressor decompressor,
-                            int bufferSize) {
+                            int bufferSize) throws IOException {
     super(in);
 
     if (in == null || decompressor == null) {
@@ -45,7 +45,7 @@ public class DecompressorStream extends CompressionInputStream {
     buffer = new byte[bufferSize];
   }
 
-  public DecompressorStream(InputStream in, Decompressor decompressor) {
+  public DecompressorStream(InputStream in, Decompressor decompressor) throws IOException {
     this(in, decompressor, 512);
   }
 
@@ -53,8 +53,9 @@ public class DecompressorStream extends CompressionInputStream {
    * Allow derived classes to directly set the underlying stream.
    * 
    * @param in Underlying input stream.
+ * @throws IOException
    */
-  protected DecompressorStream(InputStream in) {
+  protected DecompressorStream(InputStream in) throws IOException {
     super(in);
   }
   

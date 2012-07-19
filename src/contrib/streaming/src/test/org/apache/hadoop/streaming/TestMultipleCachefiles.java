@@ -107,10 +107,10 @@ public class TestMultipleCachefiles extends TestCase
         file.writeBytes(mapString2 + "\n");
         file.close();
         file = fileSys.create(new Path(CACHE_FILE));
-        file.writeBytes(cacheString);
+        file.writeBytes(cacheString + "\n");
         file.close();
         file = fileSys.create(new Path(CACHE_FILE_2));
-        file.writeBytes(cacheString2);
+        file.writeBytes(cacheString2 + "\n");
         file.close();
           
         job = new StreamJob(argv, mayExit);     
