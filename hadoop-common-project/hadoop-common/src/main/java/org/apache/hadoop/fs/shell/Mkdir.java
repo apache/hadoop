@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.shell.PathExceptions.PathExistsException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIsNotDirectoryException;
-import org.apache.hadoop.fs.shell.PathExceptions.PathNotFoundException;
 
 /**
  * Create the given dir
@@ -67,9 +66,7 @@ class Mkdir extends FsCommand {
 
   @Override
   protected void processNonexistentPath(PathData item) throws IOException {
-    if (!item.parentExists() && !createParents) {
-      throw new PathNotFoundException(item.toString());
-    }
+    // TODO: should use createParents to control intermediate dir creation 
     if (!item.fs.mkdirs(item.path)) {
       throw new PathIOException(item.toString());
     }
