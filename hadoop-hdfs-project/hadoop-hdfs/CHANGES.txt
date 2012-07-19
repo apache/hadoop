@@ -345,6 +345,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3666. Plumb more exception messages to terminate. (eli)
 
+    HDFS-3673. libhdfs: fix some compiler warnings. (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

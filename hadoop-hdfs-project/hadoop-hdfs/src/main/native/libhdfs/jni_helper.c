@@ -550,7 +550,8 @@ JNIEnv* getJNIEnv(void)
         ret = pthread_key_create(&gTlsKey, hdfsThreadDestructor);
         if (ret) {
             pthread_mutex_unlock(&jvmMutex);
-            fprintf("pthread_key_create failed with error %d\n", ret);
+            fprintf(stderr, "getJNIEnv: pthread_key_create failed with "
+                "error %d\n", ret);
             return NULL;
         }
         gTlsKeyInitialized = 1;
@@ -569,7 +570,7 @@ JNIEnv* getJNIEnv(void)
     }
     tls = calloc(1, sizeof(struct hdfsTls));
     if (!tls) {
-        fprintf(stderr, "getJNIEnv: OOM allocating %d bytes\n",
+        fprintf(stderr, "getJNIEnv: OOM allocating %zd bytes\n",
                 sizeof(struct hdfsTls));
         return NULL;
     }

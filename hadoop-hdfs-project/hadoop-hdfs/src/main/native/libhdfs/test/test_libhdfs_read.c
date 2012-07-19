@@ -35,7 +35,6 @@ int main(int argc, char **argv) {
     } 
  
     const char* rfile = argv[1];
-    tSize fileTotalSize = strtoul(argv[2], NULL, 10);
     tSize bufferSize = strtoul(argv[3], NULL, 10);
    
     hdfsFile readFile = hdfsOpenFile(fs, rfile, O_RDONLY, bufferSize, 0, 0);

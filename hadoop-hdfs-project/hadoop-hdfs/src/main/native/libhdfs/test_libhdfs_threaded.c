@@ -25,6 +25,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define TLH_MAX_THREADS 100
 

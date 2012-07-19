@@ -19,7 +19,7 @@
 #ifndef LIBHDFS_HDFS_TEST_H
 #define LIBHDFS_HDFS_TEST_H
 
-struct hdfs_internal;
+struct hdfsFile_internal;
 
 /**
  * Some functions that are visible only for testing.
@@ -38,7 +38,16 @@ extern  "C" {
      * @return         1 if the file is using the direct read optimization,
      *                 0 otherwise.
      */
-    int hdfsFileUsesDirectRead(struct hdfs_internal *file);
+    int hdfsFileUsesDirectRead(struct hdfsFile_internal *file);
+
+    /**
+     * Disable the direct read optimization for a file.
+     *
+     * This is mainly provided for unit testing purposes.
+     *
+     * @param file     The HDFS file
+     */
+    void hdfsFileDisableDirectRead(struct hdfsFile_internal *file);
 #ifdef __cplusplus
 }
 #endif
