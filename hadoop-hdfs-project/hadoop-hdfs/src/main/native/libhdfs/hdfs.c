@@ -275,7 +275,7 @@ done:
  */
 static int jStrToCstr(JNIEnv *env, jstring jstr, char **cstr)
 {
-    char *tmp;
+    const char *tmp;
 
     tmp = (*env)->GetStringUTFChars(env, jstr, NULL);
     *cstr = strdup(tmp);
@@ -632,7 +632,7 @@ done:
 
     if (ret)
         errno = ret;
-    return gFsRef;
+    return (hdfsFS)gFsRef;
 }
 
 int hdfsDisconnect(hdfsFS fs)
@@ -667,7 +667,7 @@ int hdfsDisconnect(hdfsFS fs)
     }
 
     //Release unnecessary references
-    (*env)->DeleteGlobalRef(env, fs);
+    (*env)->DeleteGlobalRef(env, jFS);
 
     return 0;
 }

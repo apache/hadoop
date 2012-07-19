@@ -81,15 +81,6 @@ extern  "C" {
      */
     int hdfsFileIsOpenForWrite(hdfsFile file);
 
-    /**
-     * Disable the direct read optimization for a file.
-     *
-     * This is mainly provided for unit testing purposes.
-     *
-     * @param file     The HDFS file
-     */
-    void hdfsFileDisableDirectRead(hdfsFile file);
-
     /** 
      * hdfsConnectAsUser - Connect to a hdfs file system as a specific user
      * Connect to the hdfs.
@@ -100,7 +91,6 @@ extern  "C" {
      * @deprecated Use hdfsBuilderConnect instead. 
      */
      hdfsFS hdfsConnectAsUser(const char* nn, tPort port, const char *user);
-
 
     /** 
      * hdfsConnect - Connect to a hdfs file system.
