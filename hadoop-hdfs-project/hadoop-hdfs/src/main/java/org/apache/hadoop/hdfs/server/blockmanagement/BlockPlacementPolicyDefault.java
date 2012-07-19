@@ -27,7 +27,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -42,7 +43,8 @@ import org.apache.hadoop.net.NodeBase;
 
 import com.google.common.annotations.VisibleForTesting;
 
-/** The class is responsible for choosing the desired number of targets
+/**
+ * The class is responsible for choosing the desired number of targets
  * for placing block replicas.
  * The replica placement strategy is that if the writer is on a datanode,
  * the 1st replica is placed on the local machine, 
@@ -52,9 +54,13 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
+
+  private static final Log LOG =
+    LogFactory.getLog(BlockPlacementPolicyDefault.class.getName());
+
   private static final String enableDebugLogging =
     "For more information, please enable DEBUG log level on "
-    + ((Log4JLogger)LOG).getLogger().getName();
+    + LOG.getClass().getName();
 
   protected boolean considerLoad; 
   private boolean preferLocalNode = true;

@@ -516,6 +516,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3605. Block mistakenly marked corrupt during edit log catchup
     phase of failover. (todd and Brahma Reddy Battula via todd)
 
+    HDFS-3690. BlockPlacementPolicyDefault incorrectly casts LOG. (eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
