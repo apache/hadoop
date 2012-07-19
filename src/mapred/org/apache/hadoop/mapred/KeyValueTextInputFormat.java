@@ -23,7 +23,9 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
+import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 
 /**
  * An {@link InputFormat} for plain text files. Files are broken into lines.
@@ -41,9 +43,13 @@ public class KeyValueTextInputFormat extends FileInputFormat<Text, Text>
   }
   
   protected boolean isSplitable(FileSystem fs, Path file) {
-    return compressionCodecs.getCodec(file) == null;
+    final CompressionCodec codec = compressionCodecs.getCodec(file);
+    if (null == codec) {
+      return true;
+    }
+    return codec instanceof SplittableCompressionCodec;
   }
-  
+
   public RecordReader<Text, Text> getRecordReader(InputSplit genericSplit,
                                                   JobConf job,
                                                   Reporter reporter)

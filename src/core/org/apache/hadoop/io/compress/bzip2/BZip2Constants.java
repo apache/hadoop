@@ -44,6 +44,14 @@ public interface BZip2Constants {
   int N_ITERS = 4;
   int MAX_SELECTORS = (2 + (900000 / G_SIZE));
   int NUM_OVERSHOOT_BYTES = 20;
+  /**
+   * End of a BZip2 block
+   */
+  public static final int END_OF_BLOCK = -2;
+  /**
+   * End of BZip2 stream.
+   */
+  public static final int END_OF_STREAM = -1;
 
   /**
   * This array really shouldn't be here. Again, for historical purposes it

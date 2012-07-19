@@ -295,12 +295,12 @@ abstract public class FSInputChecker extends FSInputStream {
   
   @Override
   public synchronized long getPos() throws IOException {
-    return chunkPos-(count-pos);
+    return chunkPos-Math.max(0L, count - pos);
   }
 
   @Override
   public synchronized int available() throws IOException {
-    return count-pos;
+    return Math.max(0, count - pos);
   }
   
   /**
