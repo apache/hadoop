@@ -1602,6 +1602,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     streamer.setLastException(new IOException("Lease timeout of " +
                              (dfsClient.hdfsTimeout/1000) + " seconds expired."));
     closeThreads(true);
+    dfsClient.endFileLease(src);
   }
 
   // shutdown datastreamer and responseprocessor threads.
@@ -1655,7 +1656,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       ExtendedBlock lastBlock = streamer.getBlock();
       closeThreads(false);
       completeFile(lastBlock);
-      dfsClient.leaserenewer.closeFile(src, dfsClient);
+      dfsClient.endFileLease(src);
     } finally {
       closed = true;
     }
