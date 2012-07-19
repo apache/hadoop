@@ -526,6 +526,7 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
     if (jConfiguration == NULL) {
         fprintf(stderr, "Can't construct instance of class "
                 "org.apache.hadoop.conf.Configuration\n");
+      errno = EINTERNAL;
       goto done;
     }
  
@@ -645,7 +646,7 @@ int hdfsDisconnect(hdfsFS fs)
 
     if (env == NULL) {
       errno = EINTERNAL;
-      return -2;
+      return -1;
     }
 
     //Parameters
@@ -870,7 +871,7 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
 
     if (env == NULL) {
       errno = EINTERNAL;
-      return -2;
+      return -1;
     }
 
     //Parameters
@@ -909,7 +910,7 @@ int hdfsExists(hdfsFS fs, const char *path)
     JNIEnv *env = getJNIEnv();
     if (env == NULL) {
       errno = EINTERNAL;
-      return -2;
+      return -1;
     }
 
     jobject jPath = constructNewObjectOfPath(env, path);
@@ -1420,9 +1421,9 @@ int hdfsCopy(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
     if (jConfiguration == NULL) {
         fprintf(stderr, "Can't construct instance of class "
                 "org.apache.hadoop.conf.Configuration\n");
-        errno = EINTERNAL;
         destroyLocalReference(env, jSrcPath);
         destroyLocalReference(env, jDstPath);
+        errno = EINTERNAL;
         return -1;
     }
 
@@ -1493,9 +1494,9 @@ int hdfsMove(hdfsFS srcFS, const char* src, hdfsFS dstFS, const char* dst)
     if (jConfiguration == NULL) {
         fprintf(stderr, "Can't construct instance of class "
                 "org.apache.hadoop.conf.Configuration\n");
-        errno = EINTERNAL;
         destroyLocalReference(env, jSrcPath);
         destroyLocalReference(env, jDstPath);
+        errno = EINTERNAL;
         return -1;
     }
 
@@ -1847,6 +1848,7 @@ int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
 
 int hdfsChmod(hdfsFS fs, const char* path, short mode)
 {
+    int ret;
     // JAVA EQUIVALENT:
     //  fs.setPermission(path, FsPermission)
 
@@ -1866,18 +1868,18 @@ int hdfsChmod(hdfsFS fs, const char* path, short mode)
     jobject jPermObj =
       constructNewObjectOfClass(env, NULL, HADOOP_FSPERM,"(S)V",jmode);
     if (jPermObj == NULL) {
-      return -2;
+      errno = EINTERNAL;
+      return -1;
     }
 
     //Create an object of org.apache.hadoop.fs.Path
     jobject jPath = constructNewObjectOfPath(env, path);
     if (jPath == NULL) {
       destroyLocalReference(env, jPermObj);
-      return -3;
+      return -1;
     }
 
     //Create the directory
-    int ret = 0;
     jthrowable jExc = NULL;
     if (invokeMethod(env, NULL, &jExc, INSTANCE, jFS, HADOOP_FS,
                      "setPermission", JMETHOD2(JPARAM(HADOOP_PATH), JPARAM(HADOOP_FSPERM), JAVA_VOID),
@@ -1887,6 +1889,7 @@ int hdfsChmod(hdfsFS fs, const char* path, short mode)
         ret = -1;
         goto done;
     }
+    ret = 0;
 
  done:
     destroyLocalReference(env, jPath);
@@ -1913,7 +1916,7 @@ int hdfsUtime(hdfsFS fs, const char* path, tTime mtime, tTime atime)
     jobject jPath = constructNewObjectOfPath(env, path);
     if (jPath == NULL) {
       fprintf(stderr, "could not construct path object\n");
-      return -2;
+      return -1;
     }
 
     const tTime NO_CHANGE = -1;
