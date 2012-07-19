@@ -739,6 +739,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4448. Fix NM crash during app cleanup if aggregation didn't
     init. (Jason Lowe via daryn)
 
+    MAPREDUCE-4423. Potential infinite fetching of map output (Robert Evans
+    via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
