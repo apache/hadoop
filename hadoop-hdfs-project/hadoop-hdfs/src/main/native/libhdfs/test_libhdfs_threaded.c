@@ -67,6 +67,7 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     char prefix[256], tmp[256];
     hdfsFile file;
     int ret, expected;
+    hdfsFileInfo *fileInfo;
 
     snprintf(prefix, sizeof(prefix), "/tlhData%04d", ti->threadIdx);
 
@@ -119,6 +120,28 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
 
     // TODO: Non-recursive delete should fail?
     //EXPECT_NONZERO(hdfsDelete(fs, prefix, 0));
+
+    snprintf(tmp, sizeof(tmp), "%s/file", prefix);
+    EXPECT_ZERO(hdfsChown(fs, tmp, NULL, NULL));
+    EXPECT_ZERO(hdfsChown(fs, tmp, NULL, "doop"));
+    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_NONNULL(fileInfo);
+    EXPECT_ZERO(strcmp("doop", fileInfo->mGroup));
+    hdfsFreeFileInfo(fileInfo, 1);
+
+    EXPECT_ZERO(hdfsChown(fs, tmp, "ha", "doop2"));
+    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_NONNULL(fileInfo);
+    EXPECT_ZERO(strcmp("ha", fileInfo->mOwner));
+    EXPECT_ZERO(strcmp("doop2", fileInfo->mGroup));
+    hdfsFreeFileInfo(fileInfo, 1);
+
+    EXPECT_ZERO(hdfsChown(fs, tmp, "ha2", NULL));
+    fileInfo = hdfsGetPathInfo(fs, tmp);
+    EXPECT_NONNULL(fileInfo);
+    EXPECT_ZERO(strcmp("ha2", fileInfo->mOwner));
+    EXPECT_ZERO(strcmp("doop2", fileInfo->mGroup));
+    hdfsFreeFileInfo(fileInfo, 1);
 
     EXPECT_ZERO(hdfsDelete(fs, prefix, 1));
     return 0;

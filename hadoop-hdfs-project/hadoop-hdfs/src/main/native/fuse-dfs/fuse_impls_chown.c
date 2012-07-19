@@ -40,19 +40,26 @@ int dfs_chown(const char *path, uid_t uid, gid_t gid)
   assert(dfs);
   assert('/' == *path);
 
-  user = getUsername(uid);
-  if (NULL == user) {
-    ERROR("Could not lookup the user id string %d",(int)uid); 
-    ret = -EIO;
+  if ((uid == -1) && (gid == -1)) {
+    ret = 0;
     goto cleanup;
   }
-
-  group = getGroup(gid);
-  if (group == NULL) {
-    ERROR("Could not lookup the group id string %d",(int)gid);
-    ret = -EIO;
-    goto cleanup;
-  } 
+  if (uid != -1) {
+    user = getUsername(uid);
+    if (NULL == user) {
+      ERROR("Could not lookup the user id string %d",(int)uid);
+      ret = -EIO;
+      goto cleanup;
+    }
+  }
+  if (gid != -1) {
+    group = getGroup(gid);
+    if (group == NULL) {
+      ERROR("Could not lookup the group id string %d",(int)gid);
+      ret = -EIO;
+      goto cleanup;
+    }
+  }
 
   userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
   if (userFS == NULL) {
@@ -62,8 +69,9 @@ int dfs_chown(const char *path, uid_t uid, gid_t gid)
   }
 
   if (hdfsChown(userFS, path, user, group)) {
-    ERROR("Could not chown %s to %d:%d", path, (int)uid, gid);
-    ret = (errno > 0) ? -errno : -EIO;
+    ret = errno;
+    ERROR("Could not chown %s to %d:%d: error %d", path, (int)uid, gid, ret);
+    ret = (ret > 0) ? -ret : -EIO;
     goto cleanup;
   }
 

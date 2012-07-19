@@ -556,14 +556,16 @@ extern  "C" {
     tOffset hdfsGetUsed(hdfsFS fs);
 
     /** 
-     * hdfsChown 
-     * @param fs The configured filesystem handle.
-     * @param path the path to the file or directory
-     * @param owner this is a string in Hadoop land. Set to null or "" if only setting group
-     * @param group  this is a string in Hadoop land. Set to null or "" if only setting user
-     * @return 0 on success else -1
+     * Change the user and/or group of a file or directory.
+     *
+     * @param fs            The configured filesystem handle.
+     * @param path          the path to the file or directory
+     * @param owner         User string.  Set to NULL for 'no change'
+     * @param group         Group string.  Set to NULL for 'no change'
+     * @return              0 on success else -1
      */
-    int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group);
+    int hdfsChown(hdfsFS fs, const char* path, const char *owner,
+                  const char *group);
 
     /** 
      * hdfsChmod

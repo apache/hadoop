@@ -1811,9 +1811,7 @@ int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
     }
 
     if (owner == NULL && group == NULL) {
-      fprintf(stderr, "Both owner and group cannot be null in chown");
-      errno = EINVAL;
-      return -1;
+      return 0;
     }
 
     jobject jFS = (jobject)fs;
@@ -1823,8 +1821,8 @@ int hdfsChown(hdfsFS fs, const char* path, const char *owner, const char *group)
         return -1;
     }
 
-    jstring jOwnerString = (*env)->NewStringUTF(env, owner); 
-    jstring jGroupString = (*env)->NewStringUTF(env, group); 
+    jstring jOwnerString = owner ? (*env)->NewStringUTF(env, owner) : NULL;
+    jstring jGroupString = group ? (*env)->NewStringUTF(env, group) : NULL;
 
     //Create the directory
     int ret = 0;
