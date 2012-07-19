@@ -63,6 +63,17 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.security.use-weak-http-crypto</name>
+  <value>false</value>
+  <description>If enabled, use KSSL to authenticate HTTP connections to the
+  NameNode. Due to a bug in JDK6, using KSSL requires one to configure
+  Kerberos tickets to use encryption types that are known to be
+  cryptographically weak. If disabled, SPNEGO will be used for HTTP
+  authentication, which supports stronger encryption types.
+  </description>
+</property>
+
 <!--
 <property>
   <name>hadoop.security.service.user.name.key</name>

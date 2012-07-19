@@ -4,6 +4,10 @@ Release 1.2.0 - unreleased
 
   INCOMPATIBLE CHANGES
 
+    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck with
+    SPNEGO-based solution. (Jakob Homan, Owen O'Malley, Alejandro Abdelnur and
+    Aaron T. Myers via atm)
+
   NEW FEATURES
 
     HADOOP-8023. Add unset() method to Configuration (tucu)

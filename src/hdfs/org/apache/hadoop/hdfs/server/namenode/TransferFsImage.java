@@ -33,7 +33,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
 import org.apache.hadoop.io.MD5Hash;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * This class provides fetching a specified file from the NameNode.
@@ -166,19 +165,15 @@ class TransferFsImage implements FSConstants {
   static MD5Hash getFileClient(String fsName, String id, File[] localPath,
       boolean getChecksum) throws IOException {
     byte[] buf = new byte[BUFFER_SIZE];
-    String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
-    
-    StringBuffer str = new StringBuffer(proto+fsName+"/getimage?");
-    str.append(id);
 
+    String str = NameNode.getHttpUriScheme() + "://" + fsName + "/getimage?" + id;
+    LOG.info("Opening connection to " + str);
     //
     // open connection to remote server
     //
-    URL url = new URL(str.toString());
-    
-    // Avoid Krb bug with cross-realm hosts
-    SecurityUtil.fetchServiceTicket(url);
-    URLConnection connection = url.openConnection();
+    URL url = new URL(str);
+
+    URLConnection connection = SecurityUtil.openSecureHttpConnection(url);
     InputStream stream = connection.getInputStream();
     MessageDigest digester = null;
     if (getChecksum) {

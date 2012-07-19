@@ -48,7 +48,9 @@ import org.apache.hadoop.jmx.JMXJsonServlet;
 import org.apache.hadoop.log.LogLevel;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector.MODE;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.mortbay.jetty.Connector;
@@ -87,6 +89,8 @@ public class HttpServer implements FilterContainer {
   // gets stored.
   static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   static final String ADMINS_ACL = "admins.acl";
+  public static final String SPNEGO_FILTER = "SpnegoFilter";
+  public static final String KRB5_FILTER = "krb5Filter";
 
   private AccessControlList adminsAcl;
 
@@ -170,7 +174,7 @@ public class HttpServer implements FilterContainer {
 
     addDefaultApps(contexts, appDir);
     
-    defineFilter(webAppContext, "krb5Filter", 
+    defineFilter(webAppContext, KRB5_FILTER, 
         Krb5AndCertsSslSocketConnector.Krb5SslFilter.class.getName(), 
         null, null);
     
@@ -332,7 +336,7 @@ public class HttpServer implements FilterContainer {
    */
   public void addServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
-    addInternalServlet(name, pathSpec, clazz, false);
+    addInternalServlet(name, pathSpec, clazz, false, false);
     addFilterPathMapping(pathSpec, webAppContext);
   }
 
@@ -346,7 +350,7 @@ public class HttpServer implements FilterContainer {
   @Deprecated
   public void addInternalServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
-    addInternalServlet(name, pathSpec, clazz, false);
+    addInternalServlet(name, pathSpec, clazz, false, false);
   }
 
   /**
@@ -354,15 +358,18 @@ public class HttpServer implements FilterContainer {
    * protect with Kerberos authentication. 
    * Note: This method is to be used for adding servlets that facilitate
    * internal communication and not for user facing functionality. For
-   * servlets added using this method, filters (except internal Kerberized
+   * servlets added using this method, filters (except internal Kerberos
    * filters) are not enabled. 
    * 
    * @param name The name of the servlet (can be passed as null)
    * @param pathSpec The path spec for the servlet
    * @param clazz The servlet class
+   * @param requireAuth Require Kerberos authenticate to access servlet
+   * @param useKsslForAuth true to use KSSL for auth, false to use SPNEGO
    */
   public void addInternalServlet(String name, String pathSpec, 
-      Class<? extends HttpServlet> clazz, boolean requireAuth) {
+      Class<? extends HttpServlet> clazz, boolean requireAuth,
+      boolean useKsslForAuth) {
     ServletHolder holder = new ServletHolder(clazz);
     if (name != null) {
       holder.setName(name);
@@ -370,11 +377,16 @@ public class HttpServer implements FilterContainer {
     webAppContext.addServlet(holder, pathSpec);
     
     if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
-       LOG.info("Adding Kerberos filter to " + name);
        ServletHandler handler = webAppContext.getServletHandler();
        FilterMapping fmap = new FilterMapping();
        fmap.setPathSpec(pathSpec);
-       fmap.setFilterName("krb5Filter");
+       if (useKsslForAuth) {
+         LOG.info("Adding Kerberos (KSSL) filter to " + name);
+         fmap.setFilterName(KRB5_FILTER);
+       } else {
+         LOG.info("Adding Kerberos (SPNEGO) filter to " + name);
+         fmap.setFilterName(SPNEGO_FILTER);
+       }
        fmap.setDispatches(Handler.ALL);
        handler.addFilterMapping(fmap);
     }

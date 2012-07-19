@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -98,7 +99,7 @@ public class DelegationTokenFetcher {
     final Configuration conf = new Configuration();
     Options fetcherOptions = new Options();
     fetcherOptions.addOption(WEBSERVICE, true, 
-                             "HTTPS url to reach the NameNode at");
+                             "HTTP/S url to reach the NameNode at");
     fetcherOptions.addOption(CANCEL, false, "cancel the token");
     fetcherOptions.addOption(RENEW, false, "renew the token");
     GenericOptionsParser parser =
@@ -176,10 +177,11 @@ public class DelegationTokenFetcher {
   
   /**
    * Utility method to obtain a delegation token over http
-   * @param nnHttpAddr Namenode http addr, such as http://namenode:50070
+   * @param nnAddr Namenode http addr, such as http://namenode:50070
+   * @param renewer User that is renewing the ticket in such a request
    */
   static public Credentials getDTfromRemote(String nnAddr, 
-                                            String renewer) throws IOException {
+      String renewer) throws IOException {
     DataInputStream dis = null;
     InetSocketAddress serviceAddr = NetUtils.createSocketAddr(nnAddr);
 
@@ -195,8 +197,7 @@ public class DelegationTokenFetcher {
         LOG.debug("Retrieving token from: " + url);
       }
       URL remoteURL = new URL(url.toString());
-      SecurityUtil.fetchServiceTicket(remoteURL);
-      URLConnection connection = remoteURL.openConnection();
+      URLConnection connection = SecurityUtil.openSecureHttpConnection(remoteURL);
 
       InputStream in = connection.getInputStream();
       Credentials ts = new Credentials();
@@ -222,8 +223,7 @@ public class DelegationTokenFetcher {
    * @throws IOException
    */
   static public long renewDelegationToken(String nnAddr,
-                                          Token<DelegationTokenIdentifier> tok
-                                          ) throws IOException {
+      Token<DelegationTokenIdentifier> tok) throws IOException {
     StringBuilder buf = new StringBuilder();
     buf.append(nnAddr);
     buf.append(RenewDelegationTokenServlet.PATH_SPEC);
@@ -235,8 +235,7 @@ public class DelegationTokenFetcher {
     HttpURLConnection connection = null;
     try {
       URL url = new URL(buf.toString());
-      SecurityUtil.fetchServiceTicket(url);
-      connection = (HttpURLConnection)url.openConnection();
+      connection = (HttpURLConnection) SecurityUtil.openSecureHttpConnection(url);
       in = new BufferedReader(new InputStreamReader
                               (connection.getInputStream()));
       long result = Long.parseLong(in.readLine());
@@ -289,8 +288,7 @@ public class DelegationTokenFetcher {
    * @throws IOException
    */
   static public void cancelDelegationToken(String nnAddr,
-                                           Token<DelegationTokenIdentifier> tok
-                                           ) throws IOException {
+    Token<DelegationTokenIdentifier> tok) throws IOException {
     StringBuilder buf = new StringBuilder();
     buf.append(nnAddr);
     buf.append(CancelDelegationTokenServlet.PATH_SPEC);
@@ -301,8 +299,8 @@ public class DelegationTokenFetcher {
     BufferedReader in = null;
     try {
       URL url = new URL(buf.toString());
-      SecurityUtil.fetchServiceTicket(url);
-      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+      HttpURLConnection connection =
+              (HttpURLConnection)SecurityUtil.openSecureHttpConnection(url);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error cancelling token:" + 
                               connection.getResponseMessage());
