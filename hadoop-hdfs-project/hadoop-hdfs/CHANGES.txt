@@ -349,6 +349,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3675. libhdfs: follow documented return codes. (Colin Patrick McCabe via eli)
 
+    HDFS-1249. With fuse-dfs, chown which only has owner (or only group)
+    argument fails with Input/output error. (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
