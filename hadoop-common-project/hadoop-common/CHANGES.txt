@@ -268,6 +268,9 @@ Branch-2 ( Unreleased changes )
     serializer or deserializer isn't available
     (Madhukara Phatak via harsh)
 
+    HADOOP-8609. IPC server logs a useless message when shutting down socket.
+    (Jon Zuanich via atm)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname

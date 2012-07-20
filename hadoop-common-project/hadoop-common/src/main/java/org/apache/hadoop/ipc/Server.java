@@ -1643,7 +1643,7 @@ public abstract class Server {
       if (!channel.isOpen())
         return;
       try {socket.shutdownOutput();} catch(Exception e) {
-        LOG.warn("Ignoring socket shutdown exception");
+        LOG.debug("Ignoring socket shutdown exception", e);
       }
       if (channel.isOpen()) {
         try {channel.close();} catch(Exception e) {}
