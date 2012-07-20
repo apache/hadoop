@@ -69,5 +69,6 @@ IF(FUSE_FOUND)
         ${JAVA_JVM_LIBRARY}
         hdfs
         m
+        pthread
     )
 ENDIF(FUSE_FOUND)

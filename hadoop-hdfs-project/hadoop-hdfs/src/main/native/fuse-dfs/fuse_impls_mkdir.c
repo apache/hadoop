@@ -23,9 +23,12 @@
 
 int dfs_mkdir(const char *path, mode_t mode)
 {
-  TRACE1("mkdir", path)
-
+  struct hdfsConn *conn = NULL;
+  hdfsFS fs;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+  int ret;
+
+  TRACE1("mkdir", path)
 
   assert(path);
   assert(dfs);
@@ -41,29 +44,32 @@ int dfs_mkdir(const char *path, mode_t mode)
     return -EACCES;
   }
   
-  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (userFS == NULL) {
-    ERROR("Could not connect");
-    return -EIO;
+  ret = fuseConnectAsThreadUid(&conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
+    ret = -EIO;
+    goto cleanup;
   }
+  fs = hdfsConnGetFs(conn);
 
   // In theory the create and chmod should be atomic.
 
-  int ret = 0;
-  if (hdfsCreateDirectory(userFS, path)) {
+  if (hdfsCreateDirectory(fs, path)) {
     ERROR("HDFS could not create directory %s", path);
     ret = (errno > 0) ? -errno : -EIO;
     goto cleanup;
   }
 
-  if (hdfsChmod(userFS, path, (short)mode)) {
+  if (hdfsChmod(fs, path, (short)mode)) {
     ERROR("Could not chmod %s to %d", path, (int)mode);
     ret = (errno > 0) ? -errno : -EIO;
   }
+  ret = 0;
 
 cleanup:
-  if (doDisconnect(userFS)) {
-    ret = -EIO;
+  if (conn) {
+    hdfsConnRelease(conn);
   }
   return ret;
 }

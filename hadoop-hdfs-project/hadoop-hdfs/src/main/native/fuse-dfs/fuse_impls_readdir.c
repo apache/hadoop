@@ -24,25 +24,31 @@
 int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
                        off_t offset, struct fuse_file_info *fi)
 {
-  TRACE1("readdir", path)
+  int ret;
+  struct hdfsConn *conn = NULL;
+  hdfsFS fs;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+
+  TRACE1("readdir", path)
 
   assert(dfs);
   assert(path);
   assert(buf);
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (userFS == NULL) {
-    ERROR("Could not connect");
-    return -EIO;
+  ret = fuseConnectAsThreadUid(&conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
+    ret = -EIO;
+    goto cleanup;
   }
+  fs = hdfsConnGetFs(conn);
 
   // Read dirents. Calling a variant that just returns the final path
   // component (HDFS-975) would save us from parsing it out below.
   int numEntries = 0;
-  hdfsFileInfo *info = hdfsListDirectory(userFS, path, &numEntries);
+  hdfsFileInfo *info = hdfsListDirectory(fs, path, &numEntries);
 
-  int ret = 0;
   // NULL means either the directory doesn't exist or maybe IO error.
   if (NULL == info) {
     ret = (errno > 0) ? -errno : -ENOENT;
@@ -106,11 +112,11 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     }
   // free the info pointers
   hdfsFreeFileInfo(info,numEntries);
+  ret = 0;
 
 cleanup:
-  if (doDisconnect(userFS)) {
-    ret = -EIO;
-    ERROR("Failed to disconnect %d", errno);
+  if (conn) {
+    hdfsConnRelease(conn);
   }
   return ret;
 }

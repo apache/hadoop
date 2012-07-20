@@ -19,10 +19,72 @@
 #ifndef __FUSE_CONNECT_H__
 #define __FUSE_CONNECT_H__
 
-#include "fuse_dfs.h"
+struct fuse_context;
+struct hdfsConn;
+struct hdfs_internal;
 
-hdfsFS doConnectAsUser(const char *nn_uri, int nn_port);
-int doDisconnect(hdfsFS fs);
-int allocFsTable(void);
+/**
+ * Initialize the fuse connection subsystem.
+ *
+ * This must be called before any of the other functions in this module.
+ *
+ * @param nnUri      The NameNode URI
+ * @param port       The NameNode port
+ *
+ * @return           0 on success; error code otherwise
+ */
+int fuseConnectInit(const char *nnUri, int port);
+
+/**
+ * Get a libhdfs connection.
+ *
+ * If there is an existing connection, it will be reused.  If not, a new one
+ * will be created.
+ *
+ * You must call hdfsConnRelease on the connection you get back!
+ *
+ * @param usrname    The username to use
+ * @param ctx        The FUSE context to use (contains UID, PID of requestor)
+ * @param conn       (out param) The HDFS connection
+ *
+ * @return           0 on success; error code otherwise
+ */
+int fuseConnect(const char *usrname, struct fuse_context *ctx,
+                struct hdfsConn **out);
+
+/**
+ * Get a libhdfs connection.
+ *
+ * The same as fuseConnect, except the username will be determined from the FUSE
+ * thread context.
+ *
+ * @param conn       (out param) The HDFS connection
+ *
+ * @return           0 on success; error code otherwise
+ */
+int fuseConnectAsThreadUid(struct hdfsConn **conn);
+
+/**
+ * Test whether we can connect to the HDFS cluster
+ *
+ * @return           0 on success; error code otherwise
+ */
+int fuseConnectTest(void);
+
+/**
+ * Get the hdfsFS associated with an hdfsConn.
+ *
+ * @param conn       The hdfsConn
+ *
+ * @return           the hdfsFS
+ */
+struct hdfs_internal* hdfsConnGetFs(struct hdfsConn *conn);
+
+/**
+ * Release an hdfsConn when we're done with it.
+ *
+ * @param conn       The hdfsConn
+ */
+void hdfsConnRelease(struct hdfsConn *conn);
 
 #endif

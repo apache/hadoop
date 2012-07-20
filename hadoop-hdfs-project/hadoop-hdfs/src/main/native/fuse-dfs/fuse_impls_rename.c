@@ -23,10 +23,12 @@
 
 int dfs_rename(const char *from, const char *to)
 {
-  TRACE1("rename", from) 
-
- // retrieve dfs specific data
+  struct hdfsConn *conn = NULL;
+  hdfsFS fs;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+  int ret;
+
+  TRACE1("rename", from) 
 
   // check params and the context var
   assert(from);
@@ -46,23 +48,24 @@ int dfs_rename(const char *from, const char *to)
     return -EACCES;
   }
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (userFS == NULL) {
-    ERROR("Could not connect");
-    return -EIO;
+  ret = fuseConnectAsThreadUid(&conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
+    ret = -EIO;
+    goto cleanup;
   }
-
-  int ret = 0;
-  if (hdfsRename(userFS, from, to)) {
+  fs = hdfsConnGetFs(conn);
+  if (hdfsRename(fs, from, to)) {
     ERROR("Rename %s to %s failed", from, to);
     ret = (errno > 0) ? -errno : -EIO;
     goto cleanup;
   }
+  ret = 0;
 
 cleanup:
-  if (doDisconnect(userFS)) {
-    ret = -EIO;
+  if (conn) {
+    hdfsConnRelease(conn);
   }
   return ret;
-
 }

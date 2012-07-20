@@ -23,22 +23,27 @@
 
 int dfs_getattr(const char *path, struct stat *st)
 {
+  struct hdfsConn *conn = NULL;
+  hdfsFS fs;
+  int ret;
+  hdfsFileInfo *info;
+
   TRACE1("getattr", path)
-
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
-
   assert(dfs);
   assert(path);
   assert(st);
 
-  hdfsFS fs = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (NULL == fs) {
-    ERROR("Could not connect to %s:%d", dfs->nn_uri, dfs->nn_port);
-    return -EIO;
+  ret = fuseConnectAsThreadUid(&conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
+    ret = -EIO;
+    goto cleanup;
   }
-
-  int ret = 0;
-  hdfsFileInfo *info = hdfsGetPathInfo(fs,path);
+  fs = hdfsConnGetFs(conn);
+  
+  info = hdfsGetPathInfo(fs,path);
   if (NULL == info) {
     ret = -ENOENT;
     goto cleanup;
@@ -63,9 +68,8 @@ int dfs_getattr(const char *path, struct stat *st)
   hdfsFreeFileInfo(info,1);
 
 cleanup:
-  if (doDisconnect(fs)) {
-    ERROR("Could not disconnect from filesystem");
-    ret = -EIO;
+  if (conn) {
+    hdfsConnRelease(conn);
   }
   return ret;
 }

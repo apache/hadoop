@@ -52,15 +52,13 @@ int dfs_release (const char *path, struct fuse_file_info *fi) {
   assert(fh);
   hdfsFile file_handle = (hdfsFile)fh->hdfsFH;
   if (NULL != file_handle) {
-    if (hdfsCloseFile(fh->fs, file_handle) != 0) {
+    if (hdfsCloseFile(hdfsConnGetFs(fh->conn), file_handle) != 0) {
       ERROR("Could not close handle %ld for %s\n",(long)file_handle, path);
       ret = -EIO;
     }
   }
   free(fh->buf);
-  if (doDisconnect(fh->fs)) {
-    ret = -EIO;
-  }
+  hdfsConnRelease(fh->conn);
   pthread_mutex_destroy(&fh->mutex);
   free(fh);
   fi->fh = 0;

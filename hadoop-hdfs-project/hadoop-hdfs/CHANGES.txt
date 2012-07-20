@@ -520,6 +520,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3597. SNN fails to start after DFS upgrade. (Andy Isaacson via todd)
 
+    HDFS-3608. fuse_dfs: detect changes in UID ticket cache. (Colin Patrick
+    McCabe via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)

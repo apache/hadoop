@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "fuse_connect.h"
 #include "fuse_dfs.h"
 #include "fuse_impls.h"
 #include "fuse_file_handle.h"
@@ -48,15 +49,15 @@ int dfs_write(const char *path, const char *buf, size_t size,
   pthread_mutex_lock(&fh->mutex);
 
   tSize length = 0;
-  assert(fh->fs);
+  hdfsFS fs = hdfsConnGetFs(fh->conn);
 
-  tOffset cur_offset = hdfsTell(fh->fs, file_handle);
+  tOffset cur_offset = hdfsTell(fs, file_handle);
   if (cur_offset != offset) {
     ERROR("User trying to random access write to a file %d != %d for %s",
 	  (int)cur_offset, (int)offset, path);
     ret =  -ENOTSUP;
   } else {
-    length = hdfsWrite(fh->fs, file_handle, buf, size);
+    length = hdfsWrite(fs, file_handle, buf, size);
     if (length <= 0) {
       ERROR("Could not write all bytes for %s %d != %d (errno=%d)", 
 	    path, length, (int)size, errno);
