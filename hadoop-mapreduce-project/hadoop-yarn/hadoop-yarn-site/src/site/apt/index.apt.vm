@@ -49,4 +49,5 @@ MapReduce NextGen aka YARN aka MRv2
 
   * {{{./WebApplicationProxy.html}Web Application Proxy}}
 
+  * {{{./CLIMiniCluster.html}CLI MiniCluster}}
 
