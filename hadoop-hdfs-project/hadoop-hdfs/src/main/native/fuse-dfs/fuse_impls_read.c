@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
+#include "fuse_connect.h"
 #include "fuse_dfs.h"
-#include "fuse_impls.h"
 #include "fuse_file_handle.h"
+#include "fuse_impls.h"
 
 static size_t min(const size_t x, const size_t y) {
   return x < y ? x : y;
@@ -48,9 +49,9 @@ int dfs_read(const char *path, char *buf, size_t size, off_t offset,
   assert(fi);
 
   dfs_fh *fh = (dfs_fh*)fi->fh;
+  hdfsFS fs = hdfsConnGetFs(fh->conn);
 
   assert(fh != NULL);
-  assert(fh->fs != NULL);
   assert(fh->hdfsFH != NULL);
 
   // special case this as simplifies the rest of the logic to know the caller wanted > 0 bytes
@@ -61,7 +62,7 @@ int dfs_read(const char *path, char *buf, size_t size, off_t offset,
   if ( size >= dfs->rdbuffer_size) {
     int num_read;
     size_t total_read = 0;
-    while (size - total_read > 0 && (num_read = hdfsPread(fh->fs, fh->hdfsFH, offset + total_read, buf + total_read, size - total_read)) > 0) {
+    while (size - total_read > 0 && (num_read = hdfsPread(fs, fh->hdfsFH, offset + total_read, buf + total_read, size - total_read)) > 0) {
       total_read += num_read;
     }
     // if there was an error before satisfying the current read, this logic declares it an error
@@ -98,7 +99,7 @@ int dfs_read(const char *path, char *buf, size_t size, off_t offset,
       size_t total_read = 0;
 
       while (dfs->rdbuffer_size  - total_read > 0 &&
-             (num_read = hdfsPread(fh->fs, fh->hdfsFH, offset + total_read, fh->buf + total_read, dfs->rdbuffer_size - total_read)) > 0) {
+             (num_read = hdfsPread(fs, fh->hdfsFH, offset + total_read, fh->buf + total_read, dfs->rdbuffer_size - total_read)) > 0) {
         total_read += num_read;
       }
 

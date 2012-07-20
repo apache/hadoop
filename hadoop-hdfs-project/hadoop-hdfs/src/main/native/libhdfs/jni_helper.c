@@ -412,6 +412,7 @@ char *classNameOfObject(jobject jobj, JNIEnv *env) {
     return newstr;
 }
 
+
 /**
  * Get the global JNI environemnt.
  *
@@ -499,6 +500,11 @@ static JNIEnv* getGlobalJNIEnv(void)
             fprintf(stderr, "Call to JNI_CreateJavaVM failed "
                     "with error: %d\n", rv);
             return NULL;
+        }
+        if (invokeMethod(env, NULL, NULL, STATIC, NULL,
+                         "org/apache/hadoop/fs/FileSystem",
+                         "loadFileSystems", "()V") != 0) {
+            (*env)->ExceptionDescribe(env);
         }
     }
     else {

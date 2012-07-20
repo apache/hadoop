@@ -225,7 +225,7 @@ done:
  *
  * @return                  0 on success; error code otherwise
  */
-static int hadoopConfSet(JNIEnv *env, jobject jConfiguration,
+static int hadoopConfSetStr(JNIEnv *env, jobject jConfiguration,
         const char *key, const char *value)
 {
     int ret;
@@ -283,7 +283,7 @@ static int jStrToCstr(JNIEnv *env, jstring jstr, char **cstr)
     return 0;
 }
 
-static int hadoopConfGet(JNIEnv *env, jobject jConfiguration,
+static int hadoopConfGetStr(JNIEnv *env, jobject jConfiguration,
         const char *key, char **val)
 {
     int ret;
@@ -301,7 +301,7 @@ static int hadoopConfGet(JNIEnv *env, jobject jConfiguration,
             HADOOP_CONF, "get", JMETHOD1(JPARAM(JAVA_STRING),
                                          JPARAM(JAVA_STRING)), jkey);
     if (ret) {
-        snprintf(buf, sizeof(buf), "hadoopConfGet(%s)", key);
+        snprintf(buf, sizeof(buf), "hadoopConfGetStr(%s)", key);
         ret = errnoFromException(jExc, env, buf);
         goto done;
     }
@@ -321,7 +321,7 @@ done:
     return ret;
 }
 
-int hdfsConfGet(const char *key, char **val)
+int hdfsConfGetStr(const char *key, char **val)
 {
     JNIEnv *env;
     int ret;
@@ -339,19 +339,67 @@ int hdfsConfGet(const char *key, char **val)
         ret = EINTERNAL;
         goto done;
     }
-    ret = hadoopConfGet(env, jConfiguration, key, val);
-    if (ret)
-        goto done;
-    ret = 0;
+    ret = hadoopConfGetStr(env, jConfiguration, key, val);
 done:
-    if (jConfiguration)
-        destroyLocalReference(env, jConfiguration);
+    destroyLocalReference(env, jConfiguration);
     if (ret)
         errno = ret;
     return ret;
 }
 
-void hdfsConfFree(char *val)
+static int hadoopConfGetInt(JNIEnv *env, jobject jConfiguration,
+        const char *key, int32_t *val)
+{
+    int ret;
+    jthrowable jExc = NULL;
+    jvalue jVal;
+    jstring jkey = NULL;
+    char buf[1024];
+
+    jkey = (*env)->NewStringUTF(env, key);
+    if (!jkey) {
+        (*env)->ExceptionDescribe(env);
+        return ENOMEM;
+    }
+    ret = invokeMethod(env, &jVal, &jExc, INSTANCE, jConfiguration,
+            HADOOP_CONF, "getInt", JMETHOD2(JPARAM(JAVA_STRING), "I", "I"),
+            jkey, (jint)(*val));
+    destroyLocalReference(env, jkey);
+    if (ret) {
+        snprintf(buf, sizeof(buf), "hadoopConfGetInt(%s)", key);
+        return errnoFromException(jExc, env, buf);
+    }
+    *val = jVal.i;
+    return 0;
+}
+
+int hdfsConfGetInt(const char *key, int32_t *val)
+{
+    JNIEnv *env;
+    int ret;
+    jobject jConfiguration = NULL;
+
+    env = getJNIEnv();
+    if (env == NULL) {
+      ret = EINTERNAL;
+      goto done;
+    }
+    jConfiguration = constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
+    if (jConfiguration == NULL) {
+        fprintf(stderr, "Can't construct instance of class "
+                "org.apache.hadoop.conf.Configuration\n");
+        ret = EINTERNAL;
+        goto done;
+    }
+    ret = hadoopConfGetInt(env, jConfiguration, key, val);
+done:
+    destroyLocalReference(env, jConfiguration);
+    if (ret)
+        errno = ret;
+    return ret;
+}
+
+void hdfsConfStrFree(char *val)
 {
     free(val);
 }
@@ -583,7 +631,7 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
         }
 
         if (bld->kerbTicketCachePath) {
-            ret = hadoopConfSet(env, jConfiguration,
+            ret = hadoopConfSetStr(env, jConfiguration,
                 KERBEROS_TICKET_CACHE_PATH, bld->kerbTicketCachePath);
             if (ret)
                 goto done;

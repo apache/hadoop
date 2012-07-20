@@ -87,6 +87,7 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
     ${JNI_INCLUDE_DIRS}
+    main/native
     main/native/libhdfs
 )
 

@@ -21,38 +21,45 @@
 #include "fuse_connect.h"
 #include "fuse_file_handle.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 int dfs_open(const char *path, struct fuse_file_info *fi)
 {
-  TRACE1("open", path)
-
+  hdfsFS fs = NULL;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+  dfs_fh *fh = NULL;
+  int mutexInit = 0, ret;
+
+  TRACE1("open", path)
 
   // check params and the context var
   assert(path);
   assert('/' == *path);
   assert(dfs);
 
-  int ret = 0;
-
   // 0x8000 is always passed in and hadoop doesn't like it, so killing it here
   // bugbug figure out what this flag is and report problem to Hadoop JIRA
   int flags = (fi->flags & 0x7FFF);
 
   // retrieve dfs specific data
-  dfs_fh *fh = (dfs_fh*)calloc(1, sizeof (dfs_fh));
-  if (fh == NULL) {
+  fh = (dfs_fh*)calloc(1, sizeof (dfs_fh));
+  if (!fh) {
     ERROR("Malloc of new file handle failed");
-    return -EIO;
+    ret = -EIO;
+    goto error;
   }
-
-  fh->fs = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (fh->fs == NULL) {
-    ERROR("Could not connect to dfs");
-    return -EIO;
+  ret = fuseConnectAsThreadUid(&fh->conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
+    ret = -EIO;
+    goto error;
   }
+  fs = hdfsConnGetFs(fh->conn);
 
   if (flags & O_RDWR) {
-    hdfsFileInfo *info = hdfsGetPathInfo(fh->fs,path);
+    hdfsFileInfo *info = hdfsGetPathInfo(fs, path);
     if (info == NULL) {
       // File does not exist (maybe?); interpret it as a O_WRONLY
       // If the actual error was something else, we'll get it again when
@@ -66,15 +73,23 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
     }
   }
 
-  if ((fh->hdfsFH = hdfsOpenFile(fh->fs, path, flags,  0, 0, 0)) == NULL) {
+  if ((fh->hdfsFH = hdfsOpenFile(fs, path, flags,  0, 0, 0)) == NULL) {
     ERROR("Could not open file %s (errno=%d)", path, errno);
     if (errno == 0 || errno == EINTERNAL) {
-      return -EIO;
+      ret = -EIO;
+      goto error;
     }
-    return -errno;
+    ret = -errno;
+    goto error;
   }
 
-  pthread_mutex_init(&fh->mutex, NULL);
+  ret = pthread_mutex_init(&fh->mutex, NULL);
+  if (ret) {
+    fprintf(stderr, "dfs_open: error initializing mutex: error %d\n", ret); 
+    ret = -EIO;
+    goto error;
+  }
+  mutexInit = 1;
 
   if (fi->flags & O_WRONLY || fi->flags & O_CREAT) {
     fh->buf = NULL;
@@ -84,11 +99,27 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
     if (NULL == fh->buf) {
       ERROR("Could not allocate memory for a read for file %s\n", path);
       ret = -EIO;
+      goto error;
     }
     fh->buffersStartOffset = 0;
     fh->bufferSize = 0;
   }
   fi->fh = (uint64_t)fh;
+  return 0;
 
+error:
+  if (fh) {
+    if (mutexInit) {
+      pthread_mutex_destroy(&fh->mutex);
+    }
+    free(fh->buf);
+    if (fh->hdfsFH) {
+      hdfsCloseFile(fs, fh->hdfsFH);
+    }
+    if (fh->conn) {
+      hdfsConnRelease(fh->conn);
+    }
+    free(fh);
+  }
   return ret;
 }

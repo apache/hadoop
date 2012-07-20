@@ -31,8 +31,6 @@
 //
 typedef struct dfs_context_struct {
   int debug;
-  char *nn_uri;
-  int nn_port;
   int read_only;
   int usetrash;
   int direct_io;

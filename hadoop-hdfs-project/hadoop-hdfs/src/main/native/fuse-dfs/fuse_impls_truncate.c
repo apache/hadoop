@@ -28,9 +28,11 @@
  */
 int dfs_truncate(const char *path, off_t size)
 {
-  TRACE1("truncate", path)
-
+  struct hdfsConn *conn = NULL;
+  hdfsFS fs;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+
+  TRACE1("truncate", path)
 
   assert(path);
   assert('/' == *path);
@@ -45,31 +47,33 @@ int dfs_truncate(const char *path, off_t size)
     return ret;
   }
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (userFS == NULL) {
-    ERROR("Could not connect");
+  ret = fuseConnectAsThreadUid(&conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
     ret = -EIO;
     goto cleanup;
   }
+  fs = hdfsConnGetFs(conn);
 
   int flags = O_WRONLY | O_CREAT;
 
   hdfsFile file;
-  if ((file = (hdfsFile)hdfsOpenFile(userFS, path, flags,  0, 0, 0)) == NULL) {
+  if ((file = (hdfsFile)hdfsOpenFile(fs, path, flags,  0, 0, 0)) == NULL) {
     ERROR("Could not connect open file %s", path);
     ret = -EIO;
     goto cleanup;
   }
 
-  if (hdfsCloseFile(userFS, file) != 0) {
+  if (hdfsCloseFile(fs, file) != 0) {
     ERROR("Could not close file %s", path);
     ret = -EIO;
     goto cleanup;
   }
 
 cleanup:
-  if (doDisconnect(userFS)) {
-    ret = -EIO;
+  if (conn) {
+    hdfsConnRelease(conn);
   }
   return ret;
 }

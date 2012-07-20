@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "fuse_connect.h"
 #include "fuse_dfs.h"
 #include "fuse_impls.h"
 #include "fuse_file_handle.h"
@@ -43,9 +44,7 @@ int dfs_flush(const char *path, struct fuse_file_info *fi) {
     assert(fh);
     hdfsFile file_handle = (hdfsFile)fh->hdfsFH;
     assert(file_handle);
-
-    assert(fh->fs);
-    if (hdfsFlush(fh->fs, file_handle) != 0) {
+    if (hdfsFlush(hdfsConnGetFs(fh->conn), file_handle) != 0) {
       ERROR("Could not flush %lx for %s\n",(long)file_handle, path);
       return -EIO;
     }

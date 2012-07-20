@@ -22,6 +22,8 @@
 #include <hdfs.h>
 #include <pthread.h>
 
+struct hdfsConn;
+
 /**
  *
  * dfs_fh_struct is passed around for open files. Fuse provides a hook (the context) 
@@ -34,10 +36,10 @@
  */
 typedef struct dfs_fh_struct {
   hdfsFile hdfsFH;
+  struct hdfsConn *conn;
   char *buf;
   tSize bufferSize;  //what is the size of the buffer we have
   off_t buffersStartOffset; //where the buffer starts in the file
-  hdfsFS fs; // for reads/writes need to access as the real user
   pthread_mutex_t mutex;
 } dfs_fh;
 
