@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.lib.service.scheduler;
 
-import junit.framework.Assert;
+import static org.junit.Assert.assertNotNull;
+
+import java.util.Arrays;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.lib.service.Scheduler;
@@ -28,8 +31,6 @@ import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
-
-import java.util.Arrays;
 
 public class TestSchedulerService extends HTestCase {
 
@@ -42,7 +43,7 @@ public class TestSchedulerService extends HTestCase {
                                                                     SchedulerService.class.getName())));
     Server server = new Server("server", dir, dir, dir, dir, conf);
     server.init();
-    Assert.assertNotNull(server.get(Scheduler.class));
+    assertNotNull(server.get(Scheduler.class));
     server.destroy();
   }
 

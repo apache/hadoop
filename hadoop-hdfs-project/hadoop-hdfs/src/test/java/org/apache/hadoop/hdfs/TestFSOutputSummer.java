@@ -17,21 +17,24 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
-import java.util.Random;
-import org.apache.hadoop.conf.Configuration;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.util.Random;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.junit.Test;
 
 /**
  * This class tests if FSOutputSummer works correctly.
  */
-public class TestFSOutputSummer extends TestCase {
+public class TestFSOutputSummer {
   private static final long seed = 0xDEADBEEFL;
   private static final int BYTES_PER_CHECKSUM = 10;
   private static final int BLOCK_SIZE = 2*BYTES_PER_CHECKSUM;
@@ -111,6 +114,7 @@ public class TestFSOutputSummer extends TestCase {
   /**
    * Test write opeation for output stream in DFS.
    */
+  @Test
   public void testFSOutputSummer() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);

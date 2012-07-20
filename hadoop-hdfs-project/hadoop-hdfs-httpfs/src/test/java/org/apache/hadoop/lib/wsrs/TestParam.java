@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.lib.wsrs;
 
-import junit.framework.Assert;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.util.regex.Pattern;
+
+import org.junit.Test;
 
 public class TestParam {
 
@@ -29,30 +31,30 @@ public class TestParam {
                    String domain, T defaultValue, T validValue,
                    String invalidStrValue, String outOfRangeValue) throws Exception {
 
-    Assert.assertEquals(name, param.getName());
-    Assert.assertEquals(domain, param.getDomain());
-    Assert.assertEquals(defaultValue, param.value());
-    Assert.assertEquals(defaultValue, param.parseParam(""));
-    Assert.assertEquals(defaultValue, param.parseParam(null));
-    Assert.assertEquals(validValue, param.parseParam(validValue.toString()));
+    assertEquals(name, param.getName());
+    assertEquals(domain, param.getDomain());
+    assertEquals(defaultValue, param.value());
+    assertEquals(defaultValue, param.parseParam(""));
+    assertEquals(defaultValue, param.parseParam(null));
+    assertEquals(validValue, param.parseParam(validValue.toString()));
     if (invalidStrValue != null) {
       try {
         param.parseParam(invalidStrValue);
-        Assert.fail();
+        fail();
       } catch (IllegalArgumentException ex) {
         //NOP
       } catch (Exception ex) {
-        Assert.fail();
+        fail();
       }
     }
     if (outOfRangeValue != null) {
       try {
         param.parseParam(outOfRangeValue);
-        Assert.fail();
+        fail();
       } catch (IllegalArgumentException ex) {
         //NOP
       } catch (Exception ex) {
-        Assert.fail();
+        fail();
       }
     }
    }
@@ -81,7 +83,7 @@ public class TestParam {
     param = new ShortParam("S", (short) 1, 8) {
     };
 
-    Assert.assertEquals(new Short((short)01777), param.parse("01777"));
+    assertEquals(new Short((short)01777), param.parse("01777"));
   }
 
   @Test

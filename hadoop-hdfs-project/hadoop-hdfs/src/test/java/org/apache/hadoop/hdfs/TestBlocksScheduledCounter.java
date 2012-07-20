@@ -17,24 +17,26 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.junit.Test;
 
 /**
  * This class tests DatanodeDescriptor.getBlocksScheduled() at the
  * NameNode. This counter is supposed to keep track of blocks currently
  * scheduled to a datanode.
  */
-public class TestBlocksScheduledCounter extends TestCase {
+public class TestBlocksScheduledCounter {
 
+  @Test
   public void testBlocksScheduledCounter() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
                                                .build();

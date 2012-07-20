@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -32,8 +36,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.zip.GZIPOutputStream;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,11 +55,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.Test;
 
 /**
  * This class tests commands from DFSShell.
  */
-public class TestDFSShell extends TestCase {
+public class TestDFSShell {
   private static final Log LOG = LogFactory.getLog(TestDFSShell.class);
   
   static final String TEST_ROOT_DIR =
@@ -94,6 +97,7 @@ public class TestDFSShell extends TestCase {
     System.out.println(Thread.currentThread().getStackTrace()[2] + " " + s);
   }
 
+  @Test
   public void testZeroSizeFile() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -136,6 +140,7 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+  @Test
   public void testRecrusiveRm() throws IOException {
 	  Configuration conf = new HdfsConfiguration();
 	  MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -161,6 +166,7 @@ public class TestDFSShell extends TestCase {
     }
   }
     
+  @Test
   public void testDu() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -210,6 +216,7 @@ public class TestDFSShell extends TestCase {
     }
                                   
   }
+  @Test
   public void testPut() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -308,6 +315,7 @@ public class TestDFSShell extends TestCase {
 
 
   /** check command error outputs and exit statuses. */
+  @Test
   public void testErrOutPut() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -448,6 +456,7 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+  @Test
   public void testURIPaths() throws Exception {
     Configuration srcConf = new HdfsConfiguration();
     Configuration dstConf = new HdfsConfiguration();
@@ -540,6 +549,7 @@ public class TestDFSShell extends TestCase {
     }
   }
 
+  @Test
   public void testText() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -614,6 +624,7 @@ public class TestDFSShell extends TestCase {
     }
   }
 
+  @Test
   public void testCopyToLocal() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -711,6 +722,7 @@ public class TestDFSShell extends TestCase {
     return path;
   }
 
+  @Test
   public void testCount() throws Exception {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -877,6 +889,7 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+  @Test
   public void testFilePermissions() throws IOException {
     Configuration conf = new HdfsConfiguration();
     
@@ -942,6 +955,7 @@ public class TestDFSShell extends TestCase {
   /**
    * Tests various options of DFSShell.
    */
+  @Test
   public void testDFSShell() throws IOException {
     Configuration conf = new HdfsConfiguration();
     /* This tests some properties of ChecksumFileSystem as well.
@@ -1209,6 +1223,7 @@ public class TestDFSShell extends TestCase {
     String run(int exitcode, String... options) throws IOException;
   }
 
+  @Test
   public void testRemoteException() throws Exception {
     UserGroupInformation tmpUGI = 
       UserGroupInformation.createUserForTesting("tmpname", new String[] {"mygroup"});
@@ -1252,6 +1267,7 @@ public class TestDFSShell extends TestCase {
     }
   }
   
+  @Test
   public void testGet() throws IOException {
     DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
     final Configuration conf = new HdfsConfiguration();
@@ -1312,6 +1328,7 @@ public class TestDFSShell extends TestCase {
     }
   }
 
+  @Test
   public void testLsr() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
@@ -1369,6 +1386,7 @@ public class TestDFSShell extends TestCase {
    * and return -1 exit code.
    * @throws Exception
    */
+  @Test
   public void testInvalidShell() throws Exception {
     Configuration conf = new Configuration(); // default FS (non-DFS)
     DFSAdmin admin = new DFSAdmin();
@@ -1378,6 +1396,7 @@ public class TestDFSShell extends TestCase {
   }
 
   // force Copy Option is -f
+  @Test
   public void testCopyCommandsWithForceOption() throws Exception {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1)

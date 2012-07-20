@@ -168,6 +168,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-1249. With fuse-dfs, chown which only has owner (or only group)
     argument fails with Input/output error. (Colin Patrick McCabe via eli)
 
+    HDFS-3583. Convert remaining tests to Junit4. (Andrew Wang via atm)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

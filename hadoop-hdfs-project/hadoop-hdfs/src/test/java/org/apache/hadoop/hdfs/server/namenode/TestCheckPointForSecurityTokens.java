@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.junit.Assert.*;
-import junit.framework.Assert;
-import java.io.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -120,7 +122,7 @@ public class TestCheckPointForSecurityTokens {
         renewToken(token1);
         renewToken(token2);
       } catch (IOException e) {
-        Assert.fail("Could not renew or cancel the token");
+        fail("Could not renew or cancel the token");
       }
 
       namesystem = cluster.getNamesystem();
@@ -148,7 +150,7 @@ public class TestCheckPointForSecurityTokens {
         renewToken(token5);
 
       } catch (IOException e) {
-        Assert.fail("Could not renew or cancel the token");
+        fail("Could not renew or cancel the token");
       }
 
       // restart cluster again
@@ -171,7 +173,7 @@ public class TestCheckPointForSecurityTokens {
         renewToken(token5);
         cancelToken(token5);
       } catch (IOException e) {
-        Assert.fail("Could not renew or cancel the token");
+        fail("Could not renew or cancel the token");
       }
 
     } finally {

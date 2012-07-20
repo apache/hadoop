@@ -27,7 +27,6 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
-import java.net.URLConnection;
 import java.util.LinkedList;
 import java.util.List;
 

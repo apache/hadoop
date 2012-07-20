@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs;
-
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_SIZE_DEFAULT;
@@ -31,6 +30,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.junit.Assume.assumeTrue;
 
 import java.io.BufferedReader;
@@ -70,11 +72,12 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * This class tests various cases during file creation.
  */
-public class TestFileCreation extends junit.framework.TestCase {
+public class TestFileCreation {
   static final String DIR = "/" + TestFileCreation.class.getSimpleName() + "/";
 
   {
@@ -123,6 +126,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test that server default values can be retrieved on the client side
    */
+  @Test
   public void testServerDefaults() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFS_BLOCK_SIZE_KEY, DFS_BLOCK_SIZE_DEFAULT);
@@ -148,11 +152,13 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
   }
 
+  @Test
   public void testFileCreation() throws IOException {
     checkFileCreation(null);
   }
 
   /** Same test but the client should bind to a local interface */
+  @Test
   public void testFileCreationSetLocalInterface() throws IOException {
     assumeTrue(System.getProperty("os.name").startsWith("Linux"));
 
@@ -255,6 +261,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test deleteOnExit
    */
+  @Test
   public void testDeleteOnExit() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
@@ -317,6 +324,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test that file data does not become corrupted even in the face of errors.
    */
+  @Test
   public void testFileCreationError1() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
@@ -389,6 +397,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * Test that the filesystem removes the last block from a file if its
    * lease expires.
    */
+  @Test
   public void testFileCreationError2() throws IOException {
     long leasePeriod = 1000;
     System.out.println("testFileCreationError2 start");
@@ -454,6 +463,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   /** test addBlock(..) when replication<min and excludeNodes==null. */
+  @Test
   public void testFileCreationError3() throws IOException {
     System.out.println("testFileCreationError3 start");
     Configuration conf = new HdfsConfiguration();
@@ -626,6 +636,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test that all open files are closed when client dies abnormally.
    */
+  @Test
   public void testDFSClientDeath() throws IOException, InterruptedException {
     Configuration conf = new HdfsConfiguration();
     System.out.println("Testing adbornal client death.");
@@ -662,6 +673,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test file creation using createNonRecursive().
    */
+  @Test
   public void testFileCreationNonRecursive() throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (simulatedStorage) {
@@ -756,6 +768,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 /**
  * Test that file data becomes available before file is closed.
  */
+  @Test
   public void testFileCreationSimulated() throws IOException {
     simulatedStorage = true;
     testFileCreation();
@@ -765,6 +778,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test creating two files at the same time. 
    */
+  @Test
   public void testConcurrentFileCreation() throws IOException {
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -797,6 +811,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test creating a file whose data gets sync when closed
    */
+  @Test
   public void testFileCreationSyncOnClose() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFS_DATANODE_SYNCONCLOSE_KEY, true);
@@ -832,6 +847,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * Then change lease period and wait for lease recovery.
    * Finally, read the block directly from each Datanode and verify the content.
    */
+  @Test
   public void testLeaseExpireHardLimit() throws Exception {
     System.out.println("testLeaseExpireHardLimit start");
     final long leasePeriod = 1000;
@@ -895,6 +911,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   // test closing file system before all file handles are closed.
+  @Test
   public void testFsClose() throws Exception {
     System.out.println("test file system close start");
     final int DATANODE_NUM = 3;
@@ -923,6 +940,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   // test closing file after cluster is shutdown
+  @Test
   public void testFsCloseAfterClusterShutdown() throws IOException {
     System.out.println("test testFsCloseAfterClusterShutdown start");
     final int DATANODE_NUM = 3;

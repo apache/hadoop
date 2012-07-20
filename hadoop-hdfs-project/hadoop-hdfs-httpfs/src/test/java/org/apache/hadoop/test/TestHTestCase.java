@@ -18,22 +18,24 @@
 
 package org.apache.hadoop.test;
 
-import junit.framework.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
-import org.apache.hadoop.util.Time;
-import org.junit.Test;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.hadoop.util.Time;
+import org.junit.Test;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
 
 public class TestHTestCase extends HTestCase {
 
@@ -55,7 +57,7 @@ public class TestHTestCase extends HTestCase {
   @Test
   @TestDir
   public void testDirAnnotation() throws Exception {
-    Assert.assertNotNull(TestDirHelper.getTestDir());
+    assertNotNull(TestDirHelper.getTestDir());
   }
 
   @Test
@@ -67,8 +69,8 @@ public class TestHTestCase extends HTestCase {
       }
     });
     long end = Time.now();
-    Assert.assertEquals(waited, 0, 50);
-    Assert.assertEquals(end - start - waited, 0, 50);
+    assertEquals(waited, 0, 50);
+    assertEquals(end - start - waited, 0, 50);
   }
 
   @Test
@@ -81,8 +83,8 @@ public class TestHTestCase extends HTestCase {
       }
     });
     long end = Time.now();
-    Assert.assertEquals(waited, -1);
-    Assert.assertEquals(end - start, 200, 50);
+    assertEquals(waited, -1);
+    assertEquals(end - start, 200, 50);
   }
 
   @Test
@@ -95,8 +97,8 @@ public class TestHTestCase extends HTestCase {
       }
     });
     long end = Time.now();
-    Assert.assertEquals(waited, -1);
-    Assert.assertEquals(end - start, 200 * getWaitForRatio(), 50 * getWaitForRatio());
+    assertEquals(waited, -1);
+    assertEquals(end - start, 200 * getWaitForRatio(), 50 * getWaitForRatio());
   }
 
   @Test
@@ -105,7 +107,7 @@ public class TestHTestCase extends HTestCase {
     long start = Time.now();
     sleep(100);
     long end = Time.now();
-    Assert.assertEquals(end - start, 100, 50);
+    assertEquals(end - start, 100, 50);
   }
 
   @Test
@@ -114,7 +116,7 @@ public class TestHTestCase extends HTestCase {
     long start = Time.now();
     sleep(100);
     long end = Time.now();
-    Assert.assertEquals(end - start, 100 * getWaitForRatio(), 50 * getWaitForRatio());
+    assertEquals(end - start, 100 * getWaitForRatio(), 50 * getWaitForRatio());
   }
 
   public static class MyServlet extends HttpServlet {
@@ -135,9 +137,9 @@ public class TestHTestCase extends HTestCase {
     server.start();
     URL url = new URL(TestJettyHelper.getJettyURL(), "/bar");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    Assert.assertEquals(reader.readLine(), "foo");
+    assertEquals(reader.readLine(), "foo");
     reader.close();
   }
 

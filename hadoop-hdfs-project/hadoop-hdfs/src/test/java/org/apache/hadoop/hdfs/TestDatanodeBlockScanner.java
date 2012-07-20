@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -27,8 +31,6 @@ import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -40,11 +42,12 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 /**
  * This test verifies that block verification occurs on the datanode
  */
-public class TestDatanodeBlockScanner extends TestCase {
+public class TestDatanodeBlockScanner {
   
   private static final Log LOG = 
                  LogFactory.getLog(TestDatanodeBlockScanner.class);
@@ -118,6 +121,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     return verificationTime;
   }
 
+  @Test
   public void testDatanodeBlockScanner() throws IOException, TimeoutException {
     long startTime = Time.now();
     
@@ -168,6 +172,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     return MiniDFSCluster.corruptReplica(replica, blk);
   }
 
+  @Test
   public void testBlockCorruptionPolicy() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
@@ -232,12 +237,14 @@ public class TestDatanodeBlockScanner extends TestCase {
    * 4. Test again waits until the block is reported with expected number
    *    of good replicas.
    */
+  @Test
   public void testBlockCorruptionRecoveryPolicy1() throws Exception {
     // Test recovery of 1 corrupt replica
     LOG.info("Testing corrupt replica recovery for one corrupt replica");
     blockCorruptionRecoveryPolicy(4, (short)3, 1);
   }
 
+  @Test
   public void testBlockCorruptionRecoveryPolicy2() throws Exception {
     // Test recovery of 2 corrupt replicas
     LOG.info("Testing corrupt replica recovery for two corrupt replicas");
@@ -302,6 +309,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   }
   
   /** Test if NameNode handles truncated blocks in block report */
+  @Test
   public void testTruncatedBlockReport() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = (short)2;

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdfs.util;
+import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,7 +25,10 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-public class TestCyclicIteration extends junit.framework.TestCase {
+import org.junit.Test;
+
+public class TestCyclicIteration {
+  @Test
   public void testCyclicIteration() throws Exception {
     for(int n = 0; n < 5; n++) {
       checkCyclicIteration(n);

@@ -17,28 +17,35 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RemoteException;
-import junit.framework.TestCase;
+import org.junit.Test;
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
-public class TestGetBlocks extends TestCase {
+public class TestGetBlocks {
   /** test getBlocks */
+  @Test
   public void testGetBlocks() throws Exception {
     final Configuration CONF = new HdfsConfiguration();
 
@@ -141,6 +148,7 @@ public class TestGetBlocks extends TestCase {
     assertTrue(getException);
   }
  
+  @Test
   public void testBlockKey() {
     Map<Block, Long> map = new HashMap<Block, Long>();
     final Random RAN = new Random();

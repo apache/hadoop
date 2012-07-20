@@ -17,16 +17,20 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import junit.framework.TestCase;
-
-public class TestGlobPaths extends TestCase {
+public class TestGlobPaths {
   
   static class RegexPathFilter implements PathFilter {
     
@@ -48,8 +52,8 @@ public class TestGlobPaths extends TestCase {
   static final String USER_DIR = "/user/"+System.getProperty("user.name");
   private Path[] path = new Path[NUM_OF_PATHS];
   
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     try {
       Configuration conf = new HdfsConfiguration();
       dfsCluster = new MiniDFSCluster.Builder(conf).build();
@@ -59,13 +63,14 @@ public class TestGlobPaths extends TestCase {
     }
   }
   
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     if(dfsCluster!=null) {
       dfsCluster.shutdown();
     }
   }
   
+  @Test
   public void testPathFilter() throws IOException {
     try {
       String[] files = new String[] { USER_DIR + "/a", USER_DIR + "/a/b" };
@@ -78,6 +83,7 @@ public class TestGlobPaths extends TestCase {
     }
   }
   
+  @Test
   public void testPathFilterWithFixedLastComponent() throws IOException {
     try {
       String[] files = new String[] { USER_DIR + "/a", USER_DIR + "/a/b",
@@ -91,6 +97,7 @@ public class TestGlobPaths extends TestCase {
     }
   }
   
+  @Test
   public void testGlob() throws Exception {
     //pTestEscape(); // need to wait until HADOOP-1995 is fixed
     pTestJavaRegexSpecialChars();

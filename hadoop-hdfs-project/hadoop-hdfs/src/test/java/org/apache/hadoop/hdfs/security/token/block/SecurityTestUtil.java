@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.security.token.Token;
 
 /** Utilities for security tests */

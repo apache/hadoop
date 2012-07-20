@@ -19,18 +19,19 @@
 package org.apache.hadoop.lib.util;
 
 
-import junit.framework.Assert;
-import org.apache.hadoop.test.HTestCase;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+
+import org.apache.hadoop.test.HTestCase;
+import org.junit.Test;
 
 public class TestCheck extends HTestCase {
 
   @Test
   public void notNullNotNull() {
-    Assert.assertEquals(Check.notNull("value", "name"), "value");
+    assertEquals(Check.notNull("value", "name"), "value");
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -79,7 +80,7 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void notEmptyNotEmtpy() {
-    Assert.assertEquals(Check.notEmpty("value", "name"), "value");
+    assertEquals(Check.notEmpty("value", "name"), "value");
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -94,10 +95,10 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void validIdentifierValid() throws Exception {
-    Assert.assertEquals(Check.validIdentifier("a", 1, ""), "a");
-    Assert.assertEquals(Check.validIdentifier("a1", 2, ""), "a1");
-    Assert.assertEquals(Check.validIdentifier("a_", 3, ""), "a_");
-    Assert.assertEquals(Check.validIdentifier("_", 1, ""), "_");
+    assertEquals(Check.validIdentifier("a", 1, ""), "a");
+    assertEquals(Check.validIdentifier("a1", 2, ""), "a1");
+    assertEquals(Check.validIdentifier("a_", 3, ""), "a_");
+    assertEquals(Check.validIdentifier("_", 1, ""), "_");
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -117,7 +118,7 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void checkGTZeroGreater() {
-    Assert.assertEquals(Check.gt0(120, "test"), 120);
+    assertEquals(Check.gt0(120, "test"), 120);
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -132,8 +133,8 @@ public class TestCheck extends HTestCase {
 
   @Test
   public void checkGEZero() {
-    Assert.assertEquals(Check.ge0(120, "test"), 120);
-    Assert.assertEquals(Check.ge0(0, "test"), 0);
+    assertEquals(Check.ge0(120, "test"), 120);
+    assertEquals(Check.ge0(0, "test"), 0);
   }
 
   @Test(expected = IllegalArgumentException.class)

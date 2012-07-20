@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.test;
 
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.ServerSocket;
+import java.net.URL;
+
 import org.junit.Test;
 import org.junit.rules.MethodRule;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.Statement;
 import org.mortbay.jetty.Server;
-
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.ServerSocket;
-import java.net.URL;
 
 public class TestJettyHelper implements MethodRule {
 
