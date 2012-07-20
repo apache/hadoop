@@ -109,8 +109,6 @@ Trunk (unreleased changes)
 
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
-    HDFS-3583. Convert remaining tests to Junit4. (Andrew Wang via atm)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -351,6 +349,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-1249. With fuse-dfs, chown which only has owner (or only group)
     argument fails with Input/output error. (Colin Patrick McCabe via eli)
+
+    HDFS-3583. Convert remaining tests to Junit4. (Andrew Wang via atm)
 
   OPTIMIZATIONS
 
