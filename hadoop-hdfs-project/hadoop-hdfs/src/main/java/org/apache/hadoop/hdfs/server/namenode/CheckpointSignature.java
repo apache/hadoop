@@ -113,12 +113,19 @@ public class CheckpointSignature extends StorageInfo
          + blockpoolID ;
   }
 
+  boolean storageVersionMatches(StorageInfo si) throws IOException {
+    return (layoutVersion == si.layoutVersion) && (cTime == si.cTime);
+  }
+
+  boolean isSameCluster(FSImage si) {
+    return namespaceID == si.getStorage().namespaceID &&
+      clusterID.equals(si.getClusterID()) &&
+      blockpoolID.equals(si.getBlockPoolID());
+  }
+
   void validateStorageInfo(FSImage si) throws IOException {
-    if(layoutVersion != si.getStorage().layoutVersion
-       || namespaceID != si.getStorage().namespaceID 
-       || cTime != si.getStorage().cTime
-       || !clusterID.equals(si.getClusterID())
-       || !blockpoolID.equals(si.getBlockPoolID())) {
+    if (!isSameCluster(si)
+        || !storageVersionMatches(si.getStorage())) {
       throw new IOException("Inconsistent checkpoint fields.\n"
           + "LV = " + layoutVersion + " namespaceID = " + namespaceID
           + " cTime = " + cTime

@@ -518,6 +518,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3690. BlockPlacementPolicyDefault incorrectly casts LOG. (eli)
 
+    HDFS-3597. SNN fails to start after DFS upgrade. (Andy Isaacson via todd)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
