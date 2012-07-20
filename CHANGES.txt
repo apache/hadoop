@@ -222,6 +222,9 @@ Release 1.1.0 - unreleased
     HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
     (todd, backported by Brandon Li via suresh)
 
+    MAPREDUCE-4399. Change the Jetty response buffer size to improve 
+    shuffle performance. (Luke Lu via suresh)
+
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
