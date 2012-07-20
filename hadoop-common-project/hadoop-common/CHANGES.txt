@@ -379,6 +379,9 @@ Release 2.0.0-alpha - 05-23-2012
     serializer or deserializer isn't available
     (Madhukara Phatak via harsh)
 
+    HADOOP-8609. IPC server logs a useless message when shutting down socket.
+    (Jon Zuanich via atm)
+
   BUG FIXES
 
     HADOOP-8199. Fix issues in start-all.sh and stop-all.sh (Devaraj K via umamahesh)
