@@ -35,7 +35,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DNS_NAMESERVER_K
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HANDLER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTPS_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY;
@@ -374,6 +373,7 @@ public class DataNode extends Configured
   private InetSocketAddress selfAddr;
   
   private volatile String hostName; // Host name of this datanode
+  private final String confHostName; 
   
   boolean isBlockTokenEnabled;
   BlockPoolTokenSecretManager blockPoolTokenSecretManager;
@@ -414,7 +414,8 @@ public class DataNode extends Configured
     this.userWithLocalPathAccess = conf
         .get(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
     try {
-      hostName = getHostName(conf);
+      confHostName = getHostName(conf);
+      hostName = confHostName;
       startDataNode(conf, dataDirs, resources);
     } catch (IOException ie) {
       shutdown();
@@ -830,7 +831,9 @@ public class DataNode extends Configured
    * before we can load any specific block pool.
    */
   private DatanodeRegistration createUnknownBPRegistration() {
-    DatanodeRegistration reg = new DatanodeRegistration(getMachineName());
+    DatanodeRegistration reg = new DatanodeRegistration(
+        confHostName + ":" + getPort());
+      
     reg.setInfoPort(infoServer.getPort());
     reg.setIpcPort(getIpcPort());
     return reg;

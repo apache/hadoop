@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.net.InetSocketAddress;
 
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -60,6 +65,34 @@ public class TestDatanodeRegister {
            "Expected: IncorrectVersionException");
     } catch (IncorrectVersionException ie) {
       LOG.info("register() returned correct Exception: IncorrectVersionException");
+    }
+  }
+  
+  @Test
+  public void testDataNodeReregister() throws Exception {
+    
+    final String hostname = "somehostname";
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, hostname);
+    DataNode dn = new DataNode(conf, null);
+    try {
+      NamespaceInfo fakeNSInfo = mock(NamespaceInfo.class);
+      when(fakeNSInfo.getBuildVersion()).thenReturn("NSBuildVersion");
+      DatanodeRegistration bpReg = dn.createBPRegistration(fakeNSInfo);
+      assertEquals("Bad hostname in registration", hostname, bpReg.getHost());
+    
+      // set the datanode name to an IP address and verify the symbolic name
+      // is still used during registration
+      bpReg.setName("127.0.0.1:0");
+      dn.bpRegistrationSucceeded(bpReg, null);
+      bpReg = dn.createBPRegistration(fakeNSInfo);
+      assertEquals("Bad hostname in re-registration", hostname, bpReg.getHost());
+    } finally {
+      dn.shutdown();
     }
   }
 }

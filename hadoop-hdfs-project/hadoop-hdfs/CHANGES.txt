@@ -78,6 +78,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3646. LeaseRenewer can hold reference to inactive DFSClient
     instances forever (Kihwal Lee via daryn)
 
+    HDFS-3688. Namenode loses datanode hostname if datanode re-registers
+    (Jason Lowe via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
