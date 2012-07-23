@@ -99,6 +99,9 @@ Release 1.2.0 - unreleased
     HDFS-3698. TestHftpFileSystem is failing in branch-1 due to changed
     default secure port. (atm)
 
+    HADOOP-8612. Backport HADOOP-8599 to branch-1 (Non empty response
+    when read beyond eof). (Andrey Klochkov, eli via eli)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
