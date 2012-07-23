@@ -742,6 +742,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4448. Fix NM crash during app cleanup if aggregation didn't
     init. (Jason Lowe via daryn)
 
+    MAPREDUCE-3893. allow capacity scheduler configs maximum-applications and
+    maximum-am-resource-percent configurable on a per queue basis (tgraves via
+    bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
