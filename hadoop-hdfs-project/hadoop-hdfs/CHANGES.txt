@@ -363,6 +363,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3110. Use directRead API to reduce the number of buffer copies in
     libhdfs (Henry Robinson via todd)
 
+    HDFS-3697. Enable fadvise readahead by default. (todd)
+
   BUG FIXES
 
     HDFS-3385. The last block of INodeFileUnderConstruction is not
