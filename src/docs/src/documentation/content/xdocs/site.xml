@@ -35,6 +35,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <overview label="Overview"  href="index.html" />  
     <single   label="Single Node Setup"  href="single_node_setup.html" />
     <cluster  label="Cluster Setup"  href="cluster_setup.html" />
+    <cluster  label="CLI MiniCluster"  href="cli_minicluster.html" />
   </docs>  
 
    <docs label="Guides">

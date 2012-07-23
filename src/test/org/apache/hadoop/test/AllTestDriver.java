@@ -78,6 +78,9 @@ public class AllTestDriver {
       pgd.addClass("MRReliabilityTest", ReliabilityTest.class,
           "A program that tests the reliability of the MR framework by " +
           "injecting faults/failures");
+      pgd.addClass("minicluster", MiniHadoopClusterManager.class,
+          "Single process HDFS and MR cluster.");
+
       pgd.driver(argv);
     } catch(Throwable e) {
       e.printStackTrace();

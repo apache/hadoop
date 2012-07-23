@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
+
+<document>
+
+  <header>
+    <title>CLI MiniCluster</title>
+  </header>
+  <body>
+
+    <section>
+      <title>Purpose</title>
+      <p>
+         Using the CLI MiniCluster, users can simply start and stop
+         a single-node Hadoop cluster with a single command, and without the
+         need to set any environment variables or manage configuration files.
+         The CLI MiniCluster starts both a MapReduce and HDF clusters. This is
+         useful for cases where users want to quickly experiment with a real
+         Hadoop cluster or test non-Java programs that rely on significant
+         Hadoop functionality.
+      </p>
+    </section>
+
+    <section>
+      <title>Hadoop Tarball</title>
+      <p>
+         To get a Hadoop distribution, download a recent
+         <a href="ext:releases">stable release</a> from one of the Apache
+         Download Mirrors. Unpack the downloaded Hadoop distribution. In the
+         distribution, edit the file <code>conf/hadoop-env.sh</code> to define at
+         least <code>JAVA_HOME</code> to be the root of your Java installation.
+      </p>
+    </section>
+
+    <section>
+      <title>Running the MiniCluster</title>
+      <p>
+         From inside the root directory of the extracted tarball, you can start the
+         CLI MiniCluster using the following command:
+      </p>
+      <p>
+         <code>$ bin/hadoop jar hadoop-test-*.jar minicluster -jtport JT_PORT -nnport NN_PORT</code>
+      </p>
+      <p>
+         In the example command above, JT_PORT and NN_PORT should be replaced by
+         the user's choice of these port numbers. If not specified, random free
+         ports will be used.
+      </p>
+      <p>
+         There are a number of command line arguments that the users can use to
+         control which services to start, and to pass other configuration
+         properties. The available command line arguments:
+      </p>
+      <table>
+        <tr><th>Argument</th><th>Description</th></tr>
+        <tr><td><code>-D &lt;property=value&gt;</code></td><td>Options to pass into configuration object</td></tr>
+        <tr><td><code>-datanodes &lt;arg&gt;</code></td><td>How many datanodes to start (default 1)</td></tr>
+        <tr><td><code>-format</code></td><td>Format the DFS (default false)</td></tr>
+        <tr><td><code>-help</code></td><td>Prints option help.</td></tr>
+        <tr><td><code>-jhsport &lt;arg&gt;</code></td><td>JobHistoryServer port (default 0--we choose)</td></tr>
+        <tr><td><code>-namenode &lt;arg&gt;</code></td><td>URL of the namenode (default is either the DFS cluster or a temporary dir)</td></tr>
+        <tr><td><code>-nnport &lt;arg&gt;</code></td><td>NameNode port (default 0--we choose)</td></tr>
+        <tr><td><code>-nodemanagers &lt;arg&gt;</code></td><td>How many nodemanagers to start (default 1)</td></tr>
+        <tr><td><code>-nodfs</code></td><td>Don't start a mini DFS cluster</td></tr>
+        <tr><td><code>-nomr</code></td><td>Don't start a mini MR cluster</td></tr>
+        <tr><td><code>-rmport &lt;arg&gt;</code></td><td>ResourceManager port (default 0--we choose)</td></tr>
+        <tr><td><code>-writeConfig &lt;path&gt;</code></td><td>Save configuration to this XML file.</td></tr>
+        <tr><td><code>-writeDetails &lt;path&gt;</code></td><td>Write basic information to this JSON file.</td></tr>
+      </table>
+      <p>
+         To display this full list of available arguments, the user can pass the
+         <code>-help</code> argument to the above command.
+      </p>
+    </section>
+
+  </body>
+</document>
