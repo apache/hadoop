@@ -154,7 +154,9 @@ public class TestApplicationLimits {
     int expectedMaxActiveApps = 
         Math.max(1, 
             (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
-                   csConf.getMaximumApplicationMasterResourcePercent() *
+                   csConf.
+                     getMaximumApplicationMasterResourcePerQueuePercent(
+                                                        queue.getQueuePath()) *
                    queue.getAbsoluteMaximumCapacity()));
     assertEquals(expectedMaxActiveApps, 
                  queue.getMaximumActiveApplications());
@@ -179,7 +181,9 @@ public class TestApplicationLimits {
     expectedMaxActiveApps = 
         Math.max(1, 
             (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
-                   csConf.getMaximumApplicationMasterResourcePercent() *
+                   csConf.
+                     getMaximumApplicationMasterResourcePerQueuePercent(
+                                                        queue.getQueuePath()) *
                    queue.getAbsoluteMaximumCapacity()));
     assertEquals(expectedMaxActiveApps, 
                  queue.getMaximumActiveApplications());
@@ -196,6 +200,72 @@ public class TestApplicationLimits {
         (int)(clusterResource.getMemory() * queue.getAbsoluteCapacity()),
         queue.getMetrics().getAvailableMB()
         );
+
+    // should return -1 if per queue setting not set
+    assertEquals((int)csConf.UNDEFINED, csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+    int expectedMaxApps =  (int)(csConf.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * 
+        queue.getAbsoluteCapacity());
+    assertEquals(expectedMaxApps, queue.getMaxApplications());
+
+    int expectedMaxAppsPerUser = (int)(expectedMaxApps *
+        (queue.getUserLimit()/100.0f) * queue.getUserLimitFactor());
+    assertEquals(expectedMaxAppsPerUser, queue.getMaxApplicationsPerUser());
+
+    // should default to global setting if per queue setting not set
+    assertEquals((long) csConf.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT, 
+        (long) csConf.getMaximumApplicationMasterResourcePerQueuePercent(queue.getQueuePath()));
+
+    // Change the per-queue max AM resources percentage.
+    csConf.setFloat(
+      "yarn.scheduler.capacity." + 
+          queue.getQueuePath() + 
+          ".maximum-am-resource-percent",
+      0.5f);
+    // Re-create queues to get new configs.
+    queues = new HashMap<String, CSQueue>();
+    root = 
+        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
+            queues, queues, 
+            CapacityScheduler.queueComparator, 
+            CapacityScheduler.applicationComparator,
+            TestUtils.spyHook);
+    clusterResource = Resources.createResource(100 * 16 * GB);
+
+    queue = (LeafQueue)queues.get(A);
+    expectedMaxActiveApps = 
+        Math.max(1, 
+            (int)Math.ceil(((float)clusterResource.getMemory() / (1*GB)) * 
+                   csConf.
+                     getMaximumApplicationMasterResourcePerQueuePercent(
+                                                        queue.getQueuePath()) *
+                   queue.getAbsoluteMaximumCapacity()));
+
+    assertEquals((long) 0.5, 
+        (long) csConf.getMaximumApplicationMasterResourcePerQueuePercent(queue.getQueuePath()));
+    assertEquals(expectedMaxActiveApps, 
+        queue.getMaximumActiveApplications());
+
+    // Change the per-queue max applications.
+    csConf.setInt(
+      "yarn.scheduler.capacity." + 
+          queue.getQueuePath() + 
+          ".maximum-applications", 9999);
+    // Re-create queues to get new configs.
+    queues = new HashMap<String, CSQueue>();
+    root = 
+        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
+            queues, queues, 
+            CapacityScheduler.queueComparator, 
+            CapacityScheduler.applicationComparator,
+            TestUtils.spyHook);
+
+    queue = (LeafQueue)queues.get(A);
+    assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+    assertEquals(9999, queue.getMaxApplications());
+
+    expectedMaxAppsPerUser = (int)(9999 *
+        (queue.getUserLimit()/100.0f) * queue.getUserLimitFactor());
+    assertEquals(expectedMaxAppsPerUser, queue.getMaxApplicationsPerUser());
   }
   
   @Test
