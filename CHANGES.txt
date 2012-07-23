@@ -96,6 +96,9 @@ Release 1.2.0 - unreleased
     HADOOP-8423. MapFile.Reader.get() crashes jvm or throws EOFException on
     Snappy or LZO block-compressed data (todd and harsh)
 
+    HDFS-3698. TestHftpFileSystem is failing in branch-1 due to changed
+    default secure port. (atm)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
