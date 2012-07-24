@@ -17,6 +17,9 @@ Release 0.22.1 - Unreleased
     MAPREDUCE-4405. Test case for HierarchicalQueue in TestJobQueueClient.
     (Mayank Bansal via shv)
 
+    MAPREDUCE-4349. Add test to verify Distributed Cache consistency when
+    cached archives are deleted. (Mayank Bansal via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES

@@ -46,7 +46,6 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.filecache.TaskDistributedCacheManager.CacheFile;
-import org.apache.hadoop.mapreduce.filecache.TrackerDistributedCacheManager.CacheStatus;
 import org.apache.hadoop.mapreduce.filecache.TestTrackerDistributedCacheManager;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -227,7 +226,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
    * @throws InterruptedException
    */
   @SuppressWarnings("deprecation")
-  public void testCacheConsistency() throws IOException, LoginException, InterruptedException {
+  public void testCacheConsistency() throws IOException, LoginException,
+      InterruptedException {
     if (!canRun()) {
       return;
     }
@@ -238,6 +238,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     subConf.set(MRJobConfig.USER_NAME, userName);
     JobID jobid = new JobID("jt", 1);
     DistributedCache.addCacheFile(firstCacheFile.toUri(), subConf);
+    DistributedCache.addCacheArchive(secondCacheFile.toUri(), subConf);
     TrackerDistributedCacheManager.determineTimestamps(subConf);
     TrackerDistributedCacheManager.determineCacheVisibilities(subConf);
     // ****** End of imitating JobClient code
@@ -253,6 +254,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     TaskDistributedCacheManager handle = manager
         .newTaskDistributedCacheManager(jobid, subConf);
     assertNull(null, DistributedCache.getLocalCacheFiles(subConf));
+    assertNull(null, DistributedCache.getLocalCacheArchives(subConf));
     handle.setupCache(subConf, TaskTracker.getPublicDistributedCacheDir(),
         TaskTracker.getPrivateDistributedCacheDir(userName));
     JobLocalizer.downloadPrivateCache(subConf);
@@ -269,28 +271,52 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     File f1 = new File(cachedFirstFile.toString());
     assertTrue(f1.delete());
 
+    Path[] localCacheArchiveFiles = DistributedCache
+        .getLocalCacheArchives(subConf);
+    assertNotNull(null, localCacheArchiveFiles);
+    assertEquals(1, localCacheArchiveFiles.length);
+    Path cachedSecondFile = localCacheArchiveFiles[0];
+    assertFileLengthEquals(secondCacheFile, new Path(cachedSecondFile,
+        "secondcachefile"));
+    assertFalse("Paths should be different.",
+        secondCacheFile.equals(cachedSecondFile));
+    File f2 = new File(cachedSecondFile.toString());
+    FileUtil.fullyDelete(f2);
+    assertFalse(f2.exists());
     // ****** Imitate JobClient code
     // Configures a task/job with both a regular file and a "classpath" file.
     subConf = new Configuration(conf);
     userName = getJobOwnerName();
     subConf.set(MRJobConfig.USER_NAME, userName);
     DistributedCache.addCacheFile(firstCacheFile.toUri(), subConf);
+    DistributedCache.addCacheArchive(secondCacheFile.toUri(), subConf);
     TrackerDistributedCacheManager.determineTimestamps(subConf);
     TrackerDistributedCacheManager.determineCacheVisibilities(subConf);
     JobID jobidnew = new JobID("jt", 2);
     handle = manager.newTaskDistributedCacheManager(jobidnew, subConf);
     assertNull(null, DistributedCache.getLocalCacheFiles(subConf));
+    assertNull(null, DistributedCache.getLocalCacheArchives(subConf));
     handle.setupCache(subConf, TaskTracker.getPublicDistributedCacheDir(),
         TaskTracker.getPrivateDistributedCacheDir(userName));
     JobLocalizer.downloadPrivateCache(subConf);
     // ****** End of imitating TaskRunner code
     Path[] localCacheFilesagain = DistributedCache.getLocalCacheFiles(subConf);
+    Path[] localCacheArchivesagain = DistributedCache
+        .getLocalCacheArchives(subConf);
     assertNotNull(null, localCacheFilesagain);
+    assertNotNull(null, localCacheArchivesagain);
     assertEquals(1, localCacheFilesagain.length);
+    assertEquals(1, localCacheArchivesagain.length);
     Path cachedFirstFileAgain = localCacheFilesagain[0];
     assertFileLengthEquals(firstCacheFile, cachedFirstFileAgain);
     assertFalse("Paths should be different.",
         firstCacheFile.equals(cachedFirstFileAgain));
+
+    Path cachedSecondFileAgain = localCacheArchivesagain[0];
+    assertFileLengthEquals(secondCacheFile, new Path(cachedSecondFileAgain,
+        "secondcachefile"));
+    assertFalse("Paths should be different.",
+        secondCacheFile.equals(cachedSecondFileAgain));
   }
 
   /**
