@@ -67,13 +67,13 @@ class IndexCache {
     if (info == null) {
       info = readIndexFileToCache(fileName, mapId, expectedIndexOwner);
     } else {
-      while (isUnderConstruction(info)) {
-        try {
-          // In case the entry is ready after the above check but
-          // before the following wait, we do timed wait.
-          info.wait(200);
-        } catch (InterruptedException e) {
-          throw new IOException("Interrupted waiting for construction", e);
+      synchronized(info) {
+        while (isUnderConstruction(info)) {
+          try {
+            info.wait();
+          } catch (InterruptedException e) {
+            throw new IOException("Interrupted waiting for construction", e);
+          }
         }
       }
       LOG.debug("IndexCache HIT: MapId " + mapId + " found");
@@ -101,13 +101,13 @@ class IndexCache {
     IndexInformation info;
     IndexInformation newInd = new IndexInformation();
     if ((info = cache.putIfAbsent(mapId, newInd)) != null) {
-      while (isUnderConstruction(info)) {
-        try {
-          // In case the entry is ready after the above check but
-          // before the following wait, we do timed wait.
-          info.wait(200);
-        } catch (InterruptedException e) {
-          throw new IOException("Interrupted waiting for construction", e);
+      synchronized(info) {
+        while (isUnderConstruction(info)) {
+          try {
+            info.wait();
+          } catch (InterruptedException e) {
+            throw new IOException("Interrupted waiting for construction", e);
+          }
         }
       }
       LOG.debug("IndexCache HIT: MapId " + mapId + " found");

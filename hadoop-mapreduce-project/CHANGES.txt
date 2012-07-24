@@ -749,6 +749,9 @@ Release 0.23.3 - UNRELEASED
     maximum-am-resource-percent configurable on a per queue basis (tgraves via
     bobby)
 
+    MAPREDUCE-4467. IndexCache failures due to missing synchronization
+    (Kihwal Lee via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
