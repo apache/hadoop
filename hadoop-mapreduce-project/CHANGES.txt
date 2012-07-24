@@ -151,6 +151,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4407. Add hadoop-yarn-server-tests-<version>-tests.jar to hadoop dist
     package. (ahmed via tucu)
 
+    MAPREDUCE-4465. Update description of yarn.nodemanager.address property. 
+    (bowang via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
