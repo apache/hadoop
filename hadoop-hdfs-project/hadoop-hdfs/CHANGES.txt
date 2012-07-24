@@ -525,6 +525,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3608. fuse_dfs: detect changes in UID ticket cache. (Colin Patrick
     McCabe via atm)
 
+    HDFS-3709. TestStartup tests still binding to the ephemeral port. (eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
