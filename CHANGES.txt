@@ -137,6 +137,8 @@ Release 1.1.0 - 2012.07.09
     HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
     (todd via suresh)
 
+    HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh
+    (todd via mattf)
 
   BUG FIXES
 
