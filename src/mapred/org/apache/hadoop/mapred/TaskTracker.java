@@ -3790,7 +3790,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   public static class MapOutputServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private static final int MAX_BYTES_TO_READ = 64 * 1024;
-    
+    // work around jetty internal buffering issues
+    private static final int RESPONSE_BUFFER_SIZE = MAX_BYTES_TO_READ + 16;
     private static LRUCache<String, Path> fileCache = new LRUCache<String, Path>(FILE_CACHE_SIZE);
     private static LRUCache<String, Path> fileIndexCache = new LRUCache<String, Path>(FILE_CACHE_SIZE);
     
@@ -3892,10 +3893,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         //set the custom "for-reduce-task" http header to the reduce task number
         //for which this map output is being transferred
         response.setHeader(FOR_REDUCE_TASK, Integer.toString(reduce));
-        
-        //use the same buffersize as used for reading the data from disk
-        response.setBufferSize(MAX_BYTES_TO_READ);
-        
+
+        response.setBufferSize(RESPONSE_BUFFER_SIZE);
+
         /**
          * Read the data from the sigle map-output file and
          * send it to the reducer.
