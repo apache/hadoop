@@ -352,6 +352,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3583. Convert remaining tests to Junit4. (Andrew Wang via atm)
 
+    HDFS-3711. Manually convert remaining tests to JUnit4. (Andrew Wang via atm)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

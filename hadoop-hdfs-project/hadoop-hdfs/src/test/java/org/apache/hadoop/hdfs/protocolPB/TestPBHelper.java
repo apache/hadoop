@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hdfs.protocolPB;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,6 +80,12 @@ import com.google.common.collect.Lists;
  * Tests for {@link PBHelper}
  */
 public class TestPBHelper {
+
+  /**
+   * Used for asserting equality on doubles.
+   */
+  private static final double DELTA = 0.000001;
+
   @Test
   public void testConvertNamenodeRole() {
     assertEquals(NamenodeRoleProto.BACKUP,
@@ -284,11 +290,12 @@ public class TestPBHelper {
   private void compare(DatanodeInfo dn1, DatanodeInfo dn2) {
       assertEquals(dn1.getAdminState(), dn2.getAdminState());
       assertEquals(dn1.getBlockPoolUsed(), dn2.getBlockPoolUsed());
-      assertEquals(dn1.getBlockPoolUsedPercent(), dn2.getBlockPoolUsedPercent());
+      assertEquals(dn1.getBlockPoolUsedPercent(), 
+          dn2.getBlockPoolUsedPercent(), DELTA);
       assertEquals(dn1.getCapacity(), dn2.getCapacity());
       assertEquals(dn1.getDatanodeReport(), dn2.getDatanodeReport());
       assertEquals(dn1.getDfsUsed(), dn1.getDfsUsed());
-      assertEquals(dn1.getDfsUsedPercent(), dn1.getDfsUsedPercent());
+      assertEquals(dn1.getDfsUsedPercent(), dn1.getDfsUsedPercent(), DELTA);
       assertEquals(dn1.getIpAddr(), dn2.getIpAddr());
       assertEquals(dn1.getHostName(), dn2.getHostName());
       assertEquals(dn1.getInfoPort(), dn2.getInfoPort());
