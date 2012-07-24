@@ -140,6 +140,9 @@ Release 1.1.0 - 2012.07.09
     HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh
     (todd via mattf)
 
+    MAPREDUCE-4399. Change the Jetty response buffer size to improve 
+    shuffle performance. (Luke Lu via suresh)
+
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
