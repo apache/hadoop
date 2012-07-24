@@ -107,6 +107,9 @@ Release 1.2.0 - unreleased
     HADOOP-8612. Backport HADOOP-8599 to branch-1 (Non empty response
     when read beyond eof). (Andrey Klochkov, eli via eli)
 
+    HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp 
+    via bobby)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
