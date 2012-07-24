@@ -838,6 +838,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8599. Non empty response from FileSystem.getFileBlockLocations when
     asking for data beyond the end of file. (Andrey Klochkov via todd)
 
+    HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp
+    via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
