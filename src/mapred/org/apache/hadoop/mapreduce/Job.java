@@ -42,6 +42,56 @@ public class Job extends JobContext {
   private JobClient jobClient;
   private RunningJob info;
 
+  /**
+   * Creates a new {@link Job}
+   * A Job will be created with a generic {@link Configuration}.
+   *
+   * @return the {@link Job}
+   * @throws IOException
+   */
+  public static Job getInstance() throws IOException {
+    // create with a null Cluster
+    return getInstance(new Configuration());
+  }
+
+  /**
+   * Creates a new {@link Job} with a given {@link Configuration}.
+   *
+   * The <code>Job</code> makes a copy of the <code>Configuration</code> so
+   * that any necessary internal modifications do not reflect on the incoming
+   * parameter.
+   *
+   * @param conf the {@link Configuration}
+   * @return the {@link Job}
+   * @throws IOException
+   */
+  public static Job getInstance(Configuration conf) throws IOException {
+    // create with a null Cluster
+    JobConf jobConf = new JobConf(conf);
+    return new Job(jobConf);
+  }
+
+  /**
+   * Creates a new {@link Job} with a given {@link Configuration}
+   * and a given jobName.
+   *
+   * The <code>Job</code> makes a copy of the <code>Configuration</code> so
+   * that any necessary internal modifications do not reflect on the incoming
+   * parameter.
+   *
+   * @param conf the {@link Configuration}
+   * @param jobName the job instance's name
+   * @return the {@link Job}
+   * @throws IOException
+   */
+  public static Job getInstance(Configuration conf, String jobName)
+           throws IOException {
+    // create with a null Cluster
+    Job result = getInstance(conf);
+    result.setJobName(jobName);
+    return result;
+  }
+
   public Job() throws IOException {
     this(new Configuration());
   }

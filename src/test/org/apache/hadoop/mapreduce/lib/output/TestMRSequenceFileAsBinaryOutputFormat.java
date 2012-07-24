@@ -173,7 +173,8 @@ public class TestMRSequenceFileAsBinaryOutputFormat extends TestCase {
 
   public void testcheckOutputSpecsForbidRecordCompression() 
       throws IOException {
-    Job job = new Job();
+    Job job = Job.getInstance(new Configuration(),
+        "testcheckOutputSpecsForbidRecordCompression");
     FileSystem fs = FileSystem.getLocal(job.getConfiguration());
     Path outputdir = new Path(System.getProperty("test.build.data", "/tmp") 
                               + "/output");
