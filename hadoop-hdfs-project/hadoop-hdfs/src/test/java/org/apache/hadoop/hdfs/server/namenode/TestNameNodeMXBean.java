@@ -29,8 +29,6 @@ import java.util.Map;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import junit.framework.Assert;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -42,6 +40,12 @@ import org.mortbay.util.ajax.JSON;
  * Class for testing {@link NameNodeMXBean} implementation
  */
 public class TestNameNodeMXBean {
+
+  /**
+   * Used to assert equality between doubles
+   */
+  private static final double DELTA = 0.000001;
+
   @SuppressWarnings({ "unchecked", "deprecation" })
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
@@ -59,36 +63,36 @@ public class TestNameNodeMXBean {
           "Hadoop:service=NameNode,name=NameNodeInfo");
       // get attribute "ClusterId"
       String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
-      Assert.assertEquals(fsn.getClusterId(), clusterId);
+      assertEquals(fsn.getClusterId(), clusterId);
       // get attribute "BlockPoolId"
       String blockpoolId = (String) mbs.getAttribute(mxbeanName, 
           "BlockPoolId");
-      Assert.assertEquals(fsn.getBlockPoolId(), blockpoolId);
+      assertEquals(fsn.getBlockPoolId(), blockpoolId);
       // get attribute "Version"
       String version = (String) mbs.getAttribute(mxbeanName, "Version");
-      Assert.assertEquals(fsn.getVersion(), version);
-      Assert.assertTrue(version.equals(VersionInfo.getVersion()
+      assertEquals(fsn.getVersion(), version);
+      assertTrue(version.equals(VersionInfo.getVersion()
           + ", r" + VersionInfo.getRevision()));
       // get attribute "Used"
       Long used = (Long) mbs.getAttribute(mxbeanName, "Used");
-      Assert.assertEquals(fsn.getUsed(), used.longValue());
+      assertEquals(fsn.getUsed(), used.longValue());
       // get attribute "Total"
       Long total = (Long) mbs.getAttribute(mxbeanName, "Total");
-      Assert.assertEquals(fsn.getTotal(), total.longValue());
+      assertEquals(fsn.getTotal(), total.longValue());
       // get attribute "safemode"
       String safemode = (String) mbs.getAttribute(mxbeanName, "Safemode");
-      Assert.assertEquals(fsn.getSafemode(), safemode);
+      assertEquals(fsn.getSafemode(), safemode);
       // get attribute nondfs
       Long nondfs = (Long) (mbs.getAttribute(mxbeanName, "NonDfsUsedSpace"));
-      Assert.assertEquals(fsn.getNonDfsUsedSpace(), nondfs.longValue());
+      assertEquals(fsn.getNonDfsUsedSpace(), nondfs.longValue());
       // get attribute percentremaining
       Float percentremaining = (Float) (mbs.getAttribute(mxbeanName,
           "PercentRemaining"));
-      Assert.assertEquals(fsn.getPercentRemaining(), percentremaining
-          .floatValue());
+      assertEquals(fsn.getPercentRemaining(), percentremaining
+          .floatValue(), DELTA);
       // get attribute Totalblocks
       Long totalblocks = (Long) (mbs.getAttribute(mxbeanName, "TotalBlocks"));
-      Assert.assertEquals(fsn.getTotalBlocks(), totalblocks.longValue());
+      assertEquals(fsn.getTotalBlocks(), totalblocks.longValue());
       // get attribute alivenodeinfo
       String alivenodeinfo = (String) (mbs.getAttribute(mxbeanName,
           "LiveNodes"));
@@ -103,15 +107,15 @@ public class TestNameNodeMXBean {
         assertTrue(liveNode.containsKey("numBlocks"));
         assertTrue(((Long)liveNode.get("numBlocks")) == 0);
       }
-      Assert.assertEquals(fsn.getLiveNodes(), alivenodeinfo);
+      assertEquals(fsn.getLiveNodes(), alivenodeinfo);
       // get attribute deadnodeinfo
       String deadnodeinfo = (String) (mbs.getAttribute(mxbeanName,
           "DeadNodes"));
-      Assert.assertEquals(fsn.getDeadNodes(), deadnodeinfo);
+      assertEquals(fsn.getDeadNodes(), deadnodeinfo);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
-      Assert.assertEquals(fsn.getNameDirStatuses(), nameDirStatuses);
+      assertEquals(fsn.getNameDirStatuses(), nameDirStatuses);
       Map<String, Map<String, String>> statusMap =
         (Map<String, Map<String, String>>) JSON.parse(nameDirStatuses);
       Collection<URI> nameDirUris = cluster.getNameDirs(0);

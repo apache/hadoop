@@ -72,6 +72,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -498,6 +499,8 @@ public class TestFileCreation {
    * This test is currently not triggered because more HDFS work is 
    * is needed to handle persistent leases.
    */
+  @Ignore
+  @Test
   public void xxxtestFileCreationNamenodeRestart() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
