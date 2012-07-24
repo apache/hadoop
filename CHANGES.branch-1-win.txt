@@ -67,3 +67,5 @@ BUG FIXES
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
     subsequent tests to fail.  (Ivan Mitic via szetszwo)
 
+    HADOOP-8618. Fix build failures due to release 1.0.3 merge.
+    (Bikas Saha via suresh)

@@ -639,9 +639,9 @@
     </exec>
   </target>
 
-  <target name="compile-core-native" depends="create-native-configure, compile-core-classes"
-          if="compile.native">
-  	
+  <target name="compile-core-native" if="compile.native">
+    <antcall target="compile-core-classes"/>
+    <antcall target="create-native-configure"/>
     <mkdir dir="${build.native}/lib"/>
     <mkdir dir="${build.native}/src/org/apache/hadoop/io/compress/zlib"/>
     <mkdir dir="${build.native}/src/org/apache/hadoop/io/compress/snappy"/>
