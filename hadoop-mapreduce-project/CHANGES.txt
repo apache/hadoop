@@ -161,6 +161,9 @@ Release 2.1.0-alpha - Unreleased
 
     MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
 
+    MAPREDUCE-4438. Add a simple, generic client to run 'easy' AMs in YARN.
+    (Bikas Saha via acmurthy) 
+
   IMPROVEMENTS
 
     MAPREDUCE-4440. Changed SchedulerApp and SchedulerNode to be a minimal
