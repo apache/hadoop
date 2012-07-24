@@ -280,11 +280,11 @@ public abstract class FileSystem extends Configured implements Closeable {
     String scheme = uri.getScheme();
     String authority = uri.getAuthority();
 
-    if (scheme == null) {                       // no scheme: use default FS
+    if (scheme == null && authority == null) {     // use default FS
       return get(conf);
     }
 
-    if (authority == null) {                       // no authority
+    if (scheme != null && authority == null) {     // no authority
       URI defaultUri = getDefaultUri(conf);
       if (scheme.equals(defaultUri.getScheme())    // if scheme matches default
           && defaultUri.getAuthority() != null) {  // & default has authority
