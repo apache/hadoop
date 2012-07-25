@@ -64,7 +64,7 @@ public class JournalNode implements Tool, Configurable {
    */
   private int resultCode = 0;
 
-  synchronized Journal getOrCreateJournal(String jid) {
+  synchronized Journal getOrCreateJournal(String jid) throws IOException {
     QuorumJournalManager.checkJournalId(jid);
     
     Journal journal = journalsById.get(jid);

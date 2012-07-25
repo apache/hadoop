@@ -6,3 +6,5 @@ HDFS-3077. Quorum-based protocol for reading and writing edit logs. Contributed 
 HDFS-3694. Fix getEditLogManifest to fetch httpPort if necessary (todd)
 
 HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs (todd)
+
+HDFS-3693. JNStorage should read its storage info even before a writer becomes active (todd)

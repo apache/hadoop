@@ -115,7 +115,8 @@ public class JournalNodeHttpServer {
         DFSConfigKeys.DFS_JOURNALNODE_HTTP_ADDRESS_KEY);
   }
 
-  public static Journal getJournalFromContext(ServletContext context, String jid) {
+  public static Journal getJournalFromContext(ServletContext context, String jid)
+      throws IOException {
     JournalNode jn = (JournalNode)context.getAttribute(JN_ATTRIBUTE_KEY);
     return jn.getOrCreateJournal(jid);
   }

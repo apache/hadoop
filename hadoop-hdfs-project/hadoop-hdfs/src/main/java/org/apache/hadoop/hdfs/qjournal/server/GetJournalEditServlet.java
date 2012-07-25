@@ -120,12 +120,13 @@ public class GetJournalEditServlet extends HttpServlet {
     
     if (theirStorageInfoString != null
         && !myStorageInfoString.equals(theirStorageInfoString)) {
-      response.sendError(HttpServletResponse.SC_FORBIDDEN,
-              "This node has storage info " + myStorageInfoString
-                  + " but the requesting node expected "
-                  + theirStorageInfoString);
-      LOG.warn("Received an invalid request file transfer request "
-          + " with storage info " + theirStorageInfoString);
+      String msg = "This node has storage info '" + myStorageInfoString
+          + "' but the requesting node expected '"
+          + theirStorageInfoString + "'";
+      
+      response.sendError(HttpServletResponse.SC_FORBIDDEN, msg);
+      LOG.warn("Received an invalid request file transfer request from " +
+          request.getRemoteAddr() + ": " + msg);
       return false;
     }
     return true;

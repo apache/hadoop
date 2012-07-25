@@ -79,7 +79,7 @@ class Journal implements Closeable {
 
   private final FileJournalManager fjm;
 
-  Journal(File logDir, StorageErrorReporter errorReporter) {
+  Journal(File logDir, StorageErrorReporter errorReporter) throws IOException {
     storage = new JNStorage(logDir, errorReporter);
 
     File currentDir = storage.getSingularStorageDir().getCurrentDir();
@@ -152,7 +152,7 @@ class Journal implements Closeable {
 
     // If the storage is unformatted, format it with this NS.
     // Otherwise, check that the NN's nsinfo matches the storage.
-    storage.analyzeStorage(nsInfo);
+    storage.formatIfNecessary(nsInfo);
     
     if (epoch <= getLastPromisedEpoch()) {
       throw new IOException("Proposed epoch " + epoch + " <= last promise " +

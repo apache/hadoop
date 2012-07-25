@@ -28,6 +28,8 @@ import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 
+import com.google.common.base.Preconditions;
+
 /**
  * A {@link Storage} implementation for the {@link JournalNode}.
  * 
@@ -38,18 +40,21 @@ class JNStorage extends Storage {
 
   private final FileJournalManager fjm;
   private final StorageDirectory sd;
-  private boolean lazyInitted = false;
+  private StorageState state;
 
   /**
    * @param logDir the path to the directory in which data will be stored
    * @param errorReporter a callback to report errors
+   * @throws IOException 
    */
-  protected JNStorage(File logDir, StorageErrorReporter errorReporter) {
+  protected JNStorage(File logDir, StorageErrorReporter errorReporter) throws IOException {
     super(NodeType.JOURNAL_NODE);
     
     sd = new StorageDirectory(logDir);
     this.addStorageDir(sd);
     this.fjm = new FileJournalManager(sd, errorReporter);
+    
+    analyzeStorage();
   }
   
   FileJournalManager getJournalManager() {
@@ -107,34 +112,27 @@ class JNStorage extends Storage {
     }
   }
   
-  void analyzeStorage(NamespaceInfo nsInfo) throws IOException {
-    if (lazyInitted) {
-      checkConsistentNamespace(nsInfo);
-      return;
-    }
-    
-    StorageState state = sd.analyzeStorage(StartupOption.REGULAR, this);
-    switch (state) {
-    case NON_EXISTENT:
-    case NOT_FORMATTED:
+  public void formatIfNecessary(NamespaceInfo nsInfo) throws IOException {
+    if (state == StorageState.NOT_FORMATTED ||
+        state == StorageState.NON_EXISTENT) {
       format(nsInfo);
-      // In the NORMAL case below, analyzeStorage() has already locked the
-      // directory for us. But in the case that we format it, we have to
-      // lock it here.
-      // The directory is unlocked in close() when the node shuts down.
-      sd.lock();
-      break;
-    case NORMAL:
-      // Storage directory is already locked by analyzeStorage() - no
-      // need to lock it here.
-      readProperties(sd);
-      checkConsistentNamespace(nsInfo);
-      break;
+      analyzeStorage();
+      assert state == StorageState.NORMAL :
+        "Unexpected state after formatting: " + state;
+    } else {
+      Preconditions.checkState(state == StorageState.NORMAL,
+          "Unhandled storage state in %s: %s", this, state);
+      assert getNamespaceID() != 0;
       
-    default:
-      LOG.warn("TODO: unhandled state for storage dir " + sd + ": " + state);
+      checkConsistentNamespace(nsInfo);
     }
-    lazyInitted  = true;
+  }
+
+  private void analyzeStorage() throws IOException {
+    this.state = sd.analyzeStorage(StartupOption.REGULAR, this);
+    if (state == StorageState.NORMAL) {
+      readProperties(sd);
+    }
   }
 
   private void checkConsistentNamespace(NamespaceInfo nsInfo)

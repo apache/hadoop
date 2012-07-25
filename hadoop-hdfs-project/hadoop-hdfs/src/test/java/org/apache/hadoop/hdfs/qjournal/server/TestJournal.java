@@ -112,10 +112,17 @@ public class TestJournal {
         QJMTestUtil.createTxnData(1, 2));
     // Don't finalize.
     
+    String storageString = journal.getStorage().toColonSeparatedString();
+    System.err.println("storage string: " + storageString);
     journal.close(); // close to unlock the storage dir
     
     // Now re-instantiate, make sure history is still there
     journal = new Journal(TEST_LOG_DIR, mockErrorReporter);
+    
+    // The storage info should be read, even if no writer has taken over.
+    assertEquals(storageString,
+        journal.getStorage().toColonSeparatedString());
+
     assertEquals(1, journal.getLastPromisedEpoch());
     NewEpochResponseProtoOrBuilder newEpoch = journal.newEpoch(FAKE_NSINFO, 2);
     assertEquals(1, newEpoch.getLastSegmentTxId());
@@ -135,9 +142,8 @@ public class TestJournal {
     // Journal should be locked
     GenericTestUtils.assertExists(lockFile);
     
-    Journal journal2 = new Journal(TEST_LOG_DIR, mockErrorReporter);
     try {
-      journal2.newEpoch(FAKE_NSINFO, 2);
+      new Journal(TEST_LOG_DIR, mockErrorReporter);
       fail("Did not fail to create another journal in same dir");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -147,6 +153,7 @@ public class TestJournal {
     journal.close();
     
     // Journal should no longer be locked after the close() call.
+    Journal journal2 = new Journal(TEST_LOG_DIR, mockErrorReporter);
     journal2.newEpoch(FAKE_NSINFO, 2);
   }
   
