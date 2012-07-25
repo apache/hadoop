@@ -41,6 +41,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.EnumSet;
 
@@ -53,6 +55,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -69,7 +72,10 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Ignore;
@@ -93,6 +99,15 @@ public class TestFileCreation {
   static final int numBlocks = 2;
   static final int fileSize = numBlocks * blockSize + 1;
   boolean simulatedStorage = false;
+  
+  private static final String[] NON_CANONICAL_PATHS = new String[] {
+    "//foo",
+    "///foo2",
+    "//dir//file",
+    "////test2/file",
+    "/dir/./file2",
+    "/dir/../file3"
+  };
 
   // creates a file but does not close it
   public static FSDataOutputStream createFile(FileSystem fileSys, Path name, int repl)
@@ -988,4 +1003,93 @@ public class TestFileCreation {
       }
     }
   }
+
+  /**
+   * Regression test for HDFS-3626. Creates a file using a non-canonical path
+   * (i.e. with extra slashes between components) and makes sure that the NN
+   * can properly restart.
+   * 
+   * This test RPCs directly to the NN, to ensure that even an old client
+   * which passes an invalid path won't cause corrupt edits.
+   */
+  @Test
+  public void testCreateNonCanonicalPathAndRestartRpc() throws Exception {
+    doCreateTest(CreationMethod.DIRECT_NN_RPC);
+  }
+  
+  /**
+   * Another regression test for HDFS-3626. This one creates files using
+   * a Path instantiated from a string object.
+   */
+  @Test
+  public void testCreateNonCanonicalPathAndRestartFromString()
+      throws Exception {
+    doCreateTest(CreationMethod.PATH_FROM_STRING);
+  }
+
+  /**
+   * Another regression test for HDFS-3626. This one creates files using
+   * a Path instantiated from a URI object.
+   */
+  @Test
+  public void testCreateNonCanonicalPathAndRestartFromUri()
+      throws Exception {
+    doCreateTest(CreationMethod.PATH_FROM_URI);
+  }
+  
+  private static enum CreationMethod {
+    DIRECT_NN_RPC,
+    PATH_FROM_URI,
+    PATH_FROM_STRING
+  };
+  private void doCreateTest(CreationMethod method) throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      FileSystem fs = cluster.getFileSystem();
+      NamenodeProtocols nnrpc = cluster.getNameNodeRpc();
+
+      for (String pathStr : NON_CANONICAL_PATHS) {
+        System.out.println("Creating " + pathStr + " by " + method);
+        switch (method) {
+        case DIRECT_NN_RPC:
+          try {
+            nnrpc.create(pathStr, new FsPermission((short)0755), "client",
+                new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)),
+                true, (short)1, 128*1024*1024L);
+            fail("Should have thrown exception when creating '"
+                + pathStr + "'" + " by " + method);
+          } catch (InvalidPathException ipe) {
+            // When we create by direct NN RPC, the NN just rejects the
+            // non-canonical paths, rather than trying to normalize them.
+            // So, we expect all of them to fail. 
+          }
+          break;
+          
+        case PATH_FROM_URI:
+        case PATH_FROM_STRING:
+          // Unlike the above direct-to-NN case, we expect these to succeed,
+          // since the Path constructor should normalize the path.
+          Path p;
+          if (method == CreationMethod.PATH_FROM_URI) {
+            p = new Path(new URI(fs.getUri() + pathStr));
+          } else {
+            p = new Path(fs.getUri() + pathStr);  
+          }
+          FSDataOutputStream stm = fs.create(p);
+          IOUtils.closeStream(stm);
+          break;
+        default:
+          throw new AssertionError("bad method: " + method);
+        }
+      }
+      
+      cluster.restartNameNode();
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
 }

@@ -531,6 +531,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3720. hdfs.h must get packaged. (Colin Patrick McCabe via atm)
 
+    HDFS-3626. Creating file with invalid path can corrupt edit log (todd)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
