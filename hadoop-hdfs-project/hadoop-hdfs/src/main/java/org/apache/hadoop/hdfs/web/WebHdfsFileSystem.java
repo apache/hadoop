@@ -412,7 +412,6 @@ public class WebHdfsFileSystem extends FileSystem
     //Step 2) Submit another Http request with the URL from the Location header with data.
     conn = (HttpURLConnection)new URL(redirect).openConnection();
     conn.setRequestMethod(op.getType().toString());
-    conn.setChunkedStreamingMode(32 << 10); //32kB-chunk
     return conn;
   }
 
@@ -825,7 +824,8 @@ public class WebHdfsFileSystem extends FileSystem
     }
 
     private static WebHdfsFileSystem getWebHdfs(
-        final Token<?> token, final Configuration conf) throws IOException {
+        final Token<?> token, final Configuration conf
+        ) throws IOException, InterruptedException, URISyntaxException {
       
       final InetSocketAddress nnAddr = SecurityUtil.getTokenServiceAddr(token);
       final URI uri = DFSUtil.createUri(WebHdfsFileSystem.SCHEME, nnAddr);
@@ -839,7 +839,12 @@ public class WebHdfsFileSystem extends FileSystem
       // update the kerberos credentials, if they are coming from a keytab
       ugi.reloginFromKeytab();
 
-      return getWebHdfs(token, conf).renewDelegationToken(token);
+      try {
+        WebHdfsFileSystem webhdfs = getWebHdfs(token, conf);
+        return webhdfs.renewDelegationToken(token);
+      } catch (URISyntaxException e) {
+        throw new IOException(e);
+      }
     }
   
     @Override
@@ -849,7 +854,12 @@ public class WebHdfsFileSystem extends FileSystem
       // update the kerberos credentials, if they are coming from a keytab
       ugi.checkTGTAndReloginFromKeytab();
 
-      getWebHdfs(token, conf).cancelDelegationToken(token);
+      try {
+        final WebHdfsFileSystem webhdfs = getWebHdfs(token, conf);
+        webhdfs.cancelDelegationToken(token);
+      } catch (URISyntaxException e) {
+        throw new IOException(e);
+      }
     }
   }
   
