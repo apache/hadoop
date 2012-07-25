@@ -75,6 +75,11 @@ if [ "$HADOOP_HOME_WARN_SUPPRESS" = "" ] && [ "$HADOOP_HOME" != "" ]; then
   echo 1>&2
 fi
 
+# Newer versions of glibc use an arena memory allocator that causes virtual
+# memory usage to explode. This interacts badly with the many threads that
+# we use in Hadoop. Tune the variable down to prevent vmem explosion.
+export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
+
 export HADOOP_HOME=${HADOOP_PREFIX}
 export HADOOP_HOME_WARN_SUPPRESS=1
 

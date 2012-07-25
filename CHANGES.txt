@@ -137,6 +137,11 @@ Release 1.1.0 - 2012.07.09
     HDFS-2465. Add HDFS support for fadvise readahead and drop-behind.
     (todd via suresh)
 
+    HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh
+    (todd via mattf)
+
+    MAPREDUCE-4399. Change the Jetty response buffer size to improve 
+    shuffle performance. (Luke Lu via suresh)
 
   BUG FIXES
 
@@ -291,10 +296,10 @@ Release 1.1.0 - 2012.07.09
     HDFS-3551. WebHDFS CREATE should use client location for HTTP redirection.
     (szetszwo)
 
-    HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
+    HADOOP-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
     subsequent tests to fail.  (Ivan Mitic via szetszwo)
 
-    HDFS-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml
+    HADOOP-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml
     (Zhihong Ted Yu via cos)
 
     HADOOP-8399. Remove JDK5 dependency from Hadoop 1.0+ line 
