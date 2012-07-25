@@ -529,6 +529,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3709. TestStartup tests still binding to the ephemeral port. (eli)
 
+    HDFS-3720. hdfs.h must get packaged. (Colin Patrick McCabe via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
