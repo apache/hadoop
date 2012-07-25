@@ -298,7 +298,10 @@ public class QuorumJournalManager implements JournalManager {
 
   @Override
   public void purgeLogsOlderThan(long minTxIdToKeep) throws IOException {
-    // TODO Auto-generated method stub
+    // This purges asynchronously -- there's no need to wait for a quorum
+    // here, because it's always OK to fail.
+    LOG.info("Purging remote journals older than txid " + minTxIdToKeep);
+    loggers.purgeLogsOlderThan(minTxIdToKeep);
   }
 
   @Override

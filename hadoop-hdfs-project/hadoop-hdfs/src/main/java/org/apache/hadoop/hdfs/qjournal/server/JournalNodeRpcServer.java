@@ -131,6 +131,13 @@ class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
+  public void purgeLogsOlderThan(RequestInfo reqInfo, long minTxIdToKeep)
+      throws IOException {
+    jn.getOrCreateJournal(reqInfo.getJournalId())
+      .purgeLogsOlderThan(reqInfo, minTxIdToKeep);
+  }
+
+  @Override
   public GetEditLogManifestResponseProto getEditLogManifest(String jid,
       long sinceTxId) throws IOException {
     

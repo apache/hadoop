@@ -87,6 +87,17 @@ message FinalizeLogSegmentResponseProto {
 }
 
 /**
+ * purgeLogs()
+ */
+message PurgeLogsRequestProto {
+  required RequestInfoProto reqInfo = 1;
+  required uint64 minTxIdToKeep = 2;
+}
+
+message PurgeLogsResponseProto {
+}
+
+/**
  * getJournalState()
  */
 message GetJournalStateRequestProto {
@@ -174,6 +185,9 @@ service QJournalProtocolService {
 
   rpc finalizeLogSegment(FinalizeLogSegmentRequestProto)
       returns (FinalizeLogSegmentResponseProto);
+
+  rpc purgeLogs(PurgeLogsRequestProto)
+      returns (PurgeLogsResponseProto);
 
   rpc getEditLogManifest(GetEditLogManifestRequestProto)
       returns (GetEditLogManifestResponseProto);

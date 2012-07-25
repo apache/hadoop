@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.AcceptRec
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.AcceptRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PurgeLogsRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PurgeLogsResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
@@ -126,6 +128,18 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       throw new ServiceException(e);
     }
     return FinalizeLogSegmentResponseProto.newBuilder().build();
+  }
+  
+  @Override
+  public PurgeLogsResponseProto purgeLogs(RpcController controller,
+      PurgeLogsRequestProto req) throws ServiceException {
+    try {
+      impl.purgeLogsOlderThan(convert(req.getReqInfo()),
+          req.getMinTxIdToKeep());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return PurgeLogsResponseProto.getDefaultInstance();
   }
 
   @Override

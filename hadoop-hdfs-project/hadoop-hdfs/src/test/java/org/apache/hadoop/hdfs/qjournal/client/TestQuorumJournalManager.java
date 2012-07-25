@@ -346,6 +346,45 @@ public class TestQuorumJournalManager {
     checkRecovery(cluster, 1, 4);
   }
   
+  @Test
+  public void testPurgeLogs() throws Exception {
+    for (int txid = 1; txid <= 5; txid++) {
+      writeSegment(qjm, txid, 1, true);
+    }
+    File curDir = cluster.getCurrentDir(0, JID);
+    GenericTestUtils.assertGlobEquals(curDir, "edits_.*",
+        NNStorage.getFinalizedEditsFileName(1, 1),
+        NNStorage.getFinalizedEditsFileName(2, 2),
+        NNStorage.getFinalizedEditsFileName(3, 3),
+        NNStorage.getFinalizedEditsFileName(4, 4),
+        NNStorage.getFinalizedEditsFileName(5, 5));
+    File paxosDir = new File(curDir, "paxos");
+    GenericTestUtils.assertExists(paxosDir);
+
+    // Create new files in the paxos directory, which should get purged too.
+    assertTrue(new File(paxosDir, "1").createNewFile());
+    assertTrue(new File(paxosDir, "3").createNewFile());
+    
+    GenericTestUtils.assertGlobEquals(paxosDir, "\\d+",
+        "1", "3");
+    
+    qjm.purgeLogsOlderThan(3);
+    
+    // Log purging is asynchronous, so we have to wait for the calls
+    // to be sent and respond before verifying.
+    waitForAllPendingCalls(qjm.getLoggerSetForTests());
+    
+    // Older edits should be purged
+    GenericTestUtils.assertGlobEquals(curDir, "edits_.*",
+        NNStorage.getFinalizedEditsFileName(3, 3),
+        NNStorage.getFinalizedEditsFileName(4, 4),
+        NNStorage.getFinalizedEditsFileName(5, 5));
+   
+    // Older paxos files should be purged
+    GenericTestUtils.assertGlobEquals(paxosDir, "\\d+",
+        "3");
+  }
+  
   
   private QuorumJournalManager createSpyingQJM()
       throws IOException, URISyntaxException {
@@ -384,6 +423,14 @@ public class TestQuorumJournalManager {
     }
     stm.setReadyToFlush();
     stm.flush();
+  }
+  
+  private static void waitForAllPendingCalls(AsyncLoggerSet als)
+      throws InterruptedException {
+    for (AsyncLogger l : als.getLoggersForTests()) {
+      IPCLoggerChannel ch = (IPCLoggerChannel)l;
+      ch.waitForAllPendingCalls();
+    }
   }
 
   private void assertExistsInQuorum(MiniJournalCluster cluster,

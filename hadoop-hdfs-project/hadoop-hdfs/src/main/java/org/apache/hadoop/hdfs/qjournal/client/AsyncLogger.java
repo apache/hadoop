@@ -69,6 +69,12 @@ interface AsyncLogger {
       long startTxId, long endTxId);
 
   /**
+   * Allow the remote node to purge edit logs earlier than this.
+   * @param minTxIdToKeep the min txid which must be retained
+   */
+  public ListenableFuture<Void> purgeLogsOlderThan(long minTxIdToKeep);
+
+  /**
    * @return the state of the last epoch on the target node.
    */
   public ListenableFuture<GetJournalStateResponseProto> getJournalState();

@@ -292,6 +292,17 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
   
   @Override
+  public ListenableFuture<Void> purgeLogsOlderThan(final long minTxIdToKeep) {
+    return executor.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        getProxy().purgeLogsOlderThan(createReqInfo(), minTxIdToKeep);
+        return null;
+      }
+    });
+  }
+
+  @Override
   public ListenableFuture<RemoteEditLogManifest> getEditLogManifest(
       final long fromTxnId) {
     return executor.submit(new Callable<RemoteEditLogManifest>() {

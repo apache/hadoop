@@ -4,3 +4,5 @@ This will be merged into the main CHANGES.txt when the branch is merged.
 HDFS-3077. Quorum-based protocol for reading and writing edit logs. Contributed by Todd Lipcon based on initial work from Brandon Li and Hari Mankude.
 
 HDFS-3694. Fix getEditLogManifest to fetch httpPort if necessary (todd)
+
+HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs (todd)

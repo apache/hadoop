@@ -28,6 +28,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
+import org.apache.hadoop.hdfs.server.namenode.JournalManager;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -276,6 +278,41 @@ class Journal implements Closeable {
     }
   }
   
+  /**
+   * @see JournalManager#purgeLogsOlderThan(long)
+   */
+  public synchronized void purgeLogsOlderThan(RequestInfo reqInfo,
+      long minTxIdToKeep) throws IOException {
+    checkRequest(reqInfo);
+    
+    fjm.purgeLogsOlderThan(minTxIdToKeep);
+    purgePaxosDecisionsOlderThan(minTxIdToKeep);
+  }
+  
+  private void purgePaxosDecisionsOlderThan(long minTxIdToKeep)
+      throws IOException {
+    File dir = storage.getPaxosDir();
+    for (File f : FileUtil.listFiles(dir)) {
+      if (!f.isFile()) continue;
+      
+      long txid;
+      try {
+        txid = Long.valueOf(f.getName());
+      } catch (NumberFormatException nfe) {
+        LOG.warn("Unexpected non-numeric file name for " + f.getAbsolutePath());
+        continue;
+      }
+      
+      if (txid < minTxIdToKeep) {
+        if (!f.delete()) {
+          LOG.warn("Unable to delete no-longer-needed paxos decision record " +
+              f);
+        }
+      }
+    }
+  }
+
+
   /**
    * @see QJournalProtocol#getEditLogManifest(String, long)
    */

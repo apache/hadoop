@@ -92,7 +92,7 @@ class JNStorage extends Storage {
     return new File(getPaxosDir(), String.valueOf(segmentTxId));
   }
   
-  private File getPaxosDir() {
+  File getPaxosDir() {
     return new File(sd.getCurrentDir(), "paxos");
   }
 

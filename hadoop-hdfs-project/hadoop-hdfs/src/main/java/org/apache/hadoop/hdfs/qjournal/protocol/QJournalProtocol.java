@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochR
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
+import org.apache.hadoop.hdfs.server.namenode.JournalManager;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.security.KerberosInfo;
 
@@ -83,13 +84,20 @@ public interface QJournalProtocol {
    * Finalize the given log segment on the JournalNode. The segment
    * is expected to be in-progress and starting at the given startTxId.
    *
-   * @param startTxId the starting transaction ID of teh log
+   * @param startTxId the starting transaction ID of the log
    * @param endTxId the expected last transaction in the given log
    * @throws IOException if no such segment exists
    */
   public void finalizeLogSegment(RequestInfo reqInfo,
       long startTxId, long endTxId) throws IOException;
 
+  /**
+   * @throws IOException 
+   * @see JournalManager#purgeLogsOlderThan(long)
+   */
+  public void purgeLogsOlderThan(RequestInfo requestInfo, long minTxIdToKeep)
+      throws IOException;
+  
   /**
    * @param jid the journal from which to enumerate edits
    * @param sinceTxId the first transaction which the client cares about
@@ -110,5 +118,4 @@ public interface QJournalProtocol {
    */
   public void acceptRecovery(RequestInfo reqInfo,
       SegmentStateProto stateToAccept, URL fromUrl) throws IOException;
-
 }

@@ -113,6 +113,12 @@ class AsyncLoggerSet {
       logger.close();
     }
   }
+  
+  void purgeLogsOlderThan(long minTxIdToKeep) {
+    for (AsyncLogger logger : loggers) {
+      logger.purgeLogsOlderThan(minTxIdToKeep);
+    }
+  }
 
 
   /**
