@@ -51,6 +51,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
@@ -334,9 +335,9 @@ public class QuorumJournalManager implements JournalManager {
   public void selectInputStreams(Collection<EditLogInputStream> streams,
       long fromTxnId, boolean inProgressOk) {
 
-    QuorumCall<AsyncLogger,GetEditLogManifestResponseProto> q =
+    QuorumCall<AsyncLogger, RemoteEditLogManifest> q =
         loggers.getEditLogManifest(fromTxnId);
-    Map<AsyncLogger, GetEditLogManifestResponseProto> resps;
+    Map<AsyncLogger, RemoteEditLogManifest> resps;
     try {
       resps = loggers.waitForWriteQuorum(q, selectInputStreamsTimeoutMs);
     } catch (IOException ioe) {
@@ -344,16 +345,15 @@ public class QuorumJournalManager implements JournalManager {
       throw new RuntimeException(ioe);
     }
     
-    LOG.info("selectInputStream manifests:\n" +
-        QuorumCall.mapToString(resps));
+    LOG.debug("selectInputStream manifests:\n" +
+        Joiner.on("\n").withKeyValueSeparator(": ").join(resps));
     
     final PriorityQueue<EditLogInputStream> allStreams = 
         new PriorityQueue<EditLogInputStream>(64,
             JournalSet.EDIT_LOG_INPUT_STREAM_COMPARATOR);
-    for (Map.Entry<AsyncLogger, GetEditLogManifestResponseProto> e : resps.entrySet()) {
+    for (Map.Entry<AsyncLogger, RemoteEditLogManifest> e : resps.entrySet()) {
       AsyncLogger logger = e.getKey();
-      GetEditLogManifestResponseProto response = e.getValue();
-      RemoteEditLogManifest manifest = PBHelper.convert(response.getManifest());
+      RemoteEditLogManifest manifest = e.getValue();
       
       for (RemoteEditLog remoteLog : manifest.getLogs()) {
         URL url = logger.buildURLToFetchLogs(remoteLog.getStartTxId());

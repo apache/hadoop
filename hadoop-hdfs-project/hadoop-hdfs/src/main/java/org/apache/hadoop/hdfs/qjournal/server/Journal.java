@@ -281,7 +281,8 @@ class Journal implements Closeable {
    */
   public RemoteEditLogManifest getEditLogManifest(long sinceTxId)
       throws IOException {
-    // TODO: check fencing info?
+    // No need to checkRequest() here - anyone may ask for the list
+    // of segments.
     RemoteEditLogManifest manifest = new RemoteEditLogManifest(
         fjm.getRemoteEditLogs(sinceTxId));
     return manifest;

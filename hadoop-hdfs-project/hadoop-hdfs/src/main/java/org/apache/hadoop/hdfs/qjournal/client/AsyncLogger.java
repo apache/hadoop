@@ -20,12 +20,12 @@ package org.apache.hadoop.hdfs.qjournal.client;
 import java.net.URL;
 
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
-import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -81,7 +81,7 @@ interface AsyncLogger {
   /**
    * Fetch the list of edit logs available on the remote node.
    */
-  public ListenableFuture<GetEditLogManifestResponseProto> getEditLogManifest(
+  public ListenableFuture<RemoteEditLogManifest> getEditLogManifest(
       long fromTxnId);
 
   /**

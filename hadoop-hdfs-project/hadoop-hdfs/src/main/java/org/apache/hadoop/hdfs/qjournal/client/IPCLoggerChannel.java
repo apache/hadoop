@@ -28,6 +28,7 @@ import java.util.concurrent.Executors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hdfs.qjournal.protocolPB.QJournalProtocolPB;
 import org.apache.hadoop.hdfs.qjournal.protocolPB.QJournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.qjournal.server.GetJournalEditServlet;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 
@@ -290,12 +292,17 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
   
   @Override
-  public ListenableFuture<GetEditLogManifestResponseProto> getEditLogManifest(
+  public ListenableFuture<RemoteEditLogManifest> getEditLogManifest(
       final long fromTxnId) {
-    return executor.submit(new Callable<GetEditLogManifestResponseProto>() {
+    return executor.submit(new Callable<RemoteEditLogManifest>() {
       @Override
-      public GetEditLogManifestResponseProto call() throws IOException {
-        return getProxy().getEditLogManifest(journalId, fromTxnId);
+      public RemoteEditLogManifest call() throws IOException {
+        GetEditLogManifestResponseProto ret = getProxy().getEditLogManifest(
+            journalId, fromTxnId);
+        // Update the http port, since we need this to build URLs to any of the
+        // returned logs.
+        httpPort = ret.getHttpPort();
+        return PBHelper.convert(ret.getManifest());
       }
     });
   }
