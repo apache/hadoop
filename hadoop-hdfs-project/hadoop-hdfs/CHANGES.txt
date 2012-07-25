@@ -1403,6 +1403,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3646. LeaseRenewer can hold reference to inactive DFSClient
     instances forever. (Kihwal Lee via daryn)
 
+    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
+    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
