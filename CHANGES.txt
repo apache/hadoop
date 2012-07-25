@@ -299,7 +299,7 @@ Release 1.1.0 - 2012.07.09
     HADOOP-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
     subsequent tests to fail.  (Ivan Mitic via szetszwo)
 
-    HDFS-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml
+    HADOOP-8417. HADOOP-6963 didn't update hadoop-core-pom-template.xml
     (Zhihong Ted Yu via cos)
 
     HADOOP-8399. Remove JDK5 dependency from Hadoop 1.0+ line 
