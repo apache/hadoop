@@ -46,6 +46,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4415. Backport the Job.getInstance methods from
     MAPREDUCE-1505 to branch-1. (harsh)
 
+    HADOOP-8617. Backport HADOOP-6148, HADOOP-6166 and HADOOP-7333 for a pure
+    Java CRC32 calculator implementation.  (Brandon Li via szetszwo)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and

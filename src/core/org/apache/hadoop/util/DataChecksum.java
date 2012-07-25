@@ -19,8 +19,6 @@
 package org.apache.hadoop.util;
 
 import java.util.zip.Checksum;
-import java.util.zip.CRC32;
-
 import java.io.*;
 
 /**
@@ -51,7 +49,7 @@ public class DataChecksum implements Checksum {
       return new DataChecksum( CHECKSUM_NULL, new ChecksumNull(), 
                                CHECKSUM_NULL_SIZE, bytesPerChecksum );
     case CHECKSUM_CRC32 :
-      return new DataChecksum( CHECKSUM_CRC32, new CRC32(), 
+      return new DataChecksum( CHECKSUM_CRC32, new PureJavaCrc32(), 
                                CHECKSUM_CRC32_SIZE, bytesPerChecksum );
     default:
       return null;  
