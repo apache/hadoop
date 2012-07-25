@@ -129,7 +129,7 @@
     <test> <!-- TESTED -->
       <description>ls: directory using relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
         <command>-fs NAMENODE -ls </command>
       </test-commands>
       <cleanup-commands>
@@ -150,10 +150,10 @@
     <test> <!-- TESTED -->
       <description>ls: directory using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir3</command>
-        <command>-fs NAMENODE -mkdir dir4</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir3</command>
+        <command>-fs NAMENODE -mkdir -p dir4</command>
         <command>-fs NAMENODE -ls </command>
       </test-commands>
       <cleanup-commands>
@@ -308,7 +308,7 @@
     <test> <!-- TESTED -->
       <description>ls: Non-URI input dir at Namenode's path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir NAMENODE/user/dir1</command>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/user/dir1</command>
         <command>-fs NAMENODE -ls hdfs:///user/</command>
       </test-commands>
       <cleanup-commands>
@@ -329,7 +329,7 @@
     <test> <!-- TESTED -->
       <description>ls: dir at hdfs:// path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir hdfs:///user/dir1</command>
+        <command>-fs NAMENODE -mkdir -p hdfs:///user/dir1</command>
         <command>-fs NAMENODE -ls hdfs:///user/</command>
       </test-commands>
       <cleanup-commands>
@@ -350,9 +350,9 @@
     <test> <!-- TESTED -->
       <description>ls: Non-URI input dir at Namenode's path using globing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir NAMENODE/user/dir1</command>
-        <command>-fs NAMENODE -mkdir NAMENODE/user/dir2</command>
-        <command>-fs NAMENODE -mkdir NAMENODE/user/dir3</command>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/user/dir1</command>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/user/dir2</command>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/user/dir3</command>
         <command>-fs NAMENODE -ls hdfs:///user/</command>
       </test-commands>
       <cleanup-commands>
@@ -381,9 +381,9 @@
     <test> <!-- TESTED -->
       <description>ls: dir at hdfs:// path using globing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir hdfs:///user/dir1</command>
-        <command>-fs NAMENODE -mkdir hdfs:///user/dir2</command>
-        <command>-fs NAMENODE -mkdir hdfs:///user/dir3</command>
+        <command>-fs NAMENODE -mkdir -p hdfs:///user/dir1</command>
+        <command>-fs NAMENODE -mkdir -p hdfs:///user/dir2</command>
+        <command>-fs NAMENODE -mkdir -p hdfs:///user/dir3</command>
         <command>-fs NAMENODE -ls hdfs:///user/</command>
       </test-commands>
       <cleanup-commands>
@@ -533,13 +533,13 @@
     <test> <!-- TESTED -->
       <description>ls: files/directories using relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1/dir2</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2/dir2</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -621,13 +621,13 @@
     <test> <!-- TESTED -->
       <description>ls: files/directories using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1/dir2</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2/dir2</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -1045,7 +1045,7 @@
     <test> <!-- TESTED -->
       <description>du: directory using relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes dir0/data15bytes</command>
         <command>-fs NAMENODE -du dir0</command>
       </test-commands>
@@ -1352,13 +1352,13 @@
     <test> <!-- TESTED -->
       <description>dus: directories/files using relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1/dir2</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2/dir1</command>
-        <command>-fs NAMENODE -mkdir dir0/dir2/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir2/dir2</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes dir0/dir1/data15bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes dir0/dir1/data30bytes</command>
@@ -3275,7 +3275,7 @@
     <test> <!-- TESTED -->
       <description>rm: removing a directory (relative path) </description>
       <test-commands>
-        <command>-fs NAMENODE mkdir dir0</command>
+        <command>-fs NAMENODE mkdir -p dir0</command>
         <command>-fs NAMENODE -rm dir0</command>
       </test-commands>
       <cleanup-commands>
@@ -3606,7 +3606,7 @@
     <test> <!-- TESTED -->
       <description>rm: removing a directory (relative path) </description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
         <command>-fs NAMENODE -rm -r dir0</command>
       </test-commands>
       <cleanup-commands>
@@ -3655,10 +3655,10 @@
     <test> <!-- TESTED -->
       <description>rm: removing directories by globbing (relative path) </description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir1</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir3</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir3</command>
         <command>-fs NAMENODE -rm -r dir*</command>
       </test-commands>
       <cleanup-commands>
@@ -3986,7 +3986,7 @@
     <test> <!-- TESTED -->
       <description>put: putting file into a directory(absolute path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /dir0/dir1/data</command>
+        <command>-fs NAMENODE -mkdir -p /dir0/dir1/data</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes /dir0/dir1/data</command> -->
         <command>-fs NAMENODE -du /dir0/dir1/data</command>
       </test-commands>
@@ -4004,7 +4004,7 @@
     <test> <!-- TESTED -->
       <description>put: putting file into a directory(relative path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0/dir1/data</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1/data</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes dir0/dir1/data</command>
         <command>-fs NAMENODE -du dir0/dir1/data</command>
       </test-commands>
@@ -4044,7 +4044,7 @@
     <test> <!-- TESTED -->
       <description>put: putting many files into an existing directory(relative path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes CLITEST_DATA/data30bytes dir0</command>
         <command>-fs NAMENODE -du dir0</command>
       </test-commands>
@@ -4206,7 +4206,7 @@
     <test> <!-- TESTED -->
       <description>put: putting file into a directory in hdfs:// path </description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /dir1/data</command>
+        <command>-fs NAMENODE -mkdir -p /dir1/data</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes hdfs:///dir1/data</command>
         <command>-fs NAMENODE -du hdfs:///dir1/data/</command>
       </test-commands>
@@ -4329,7 +4329,7 @@
     <test> <!-- TESTED -->
       <description>put: putting file into a directory in Namenode's path </description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /dir1/data</command>
+        <command>-fs NAMENODE -mkdir -p /dir1/data</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes NAMENODE/dir1/data</command>
         <command>-fs NAMENODE -du NAMENODE/dir1/data</command>
       </test-commands>
@@ -4471,7 +4471,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying file into a directory(absolute path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /dir0/dir1/data</command>
+        <command>-fs NAMENODE -mkdir -p /dir0/dir1/data</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /dir0/dir1/data</command>
         <command>-fs NAMENODE -du /dir0/dir1/data/*</command>
       </test-commands>
@@ -4489,7 +4489,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying file into a directory(relative path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0/dir1/data</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1/data</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes dir0/dir1/data</command>
         <command>-fs NAMENODE -du dir0/dir1/data/*</command>
       </test-commands>
@@ -4529,7 +4529,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying many files into an existing directory(relative path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes CLITEST_DATA/data30bytes dir0</command>
         <command>-fs NAMENODE -du dir0</command>
       </test-commands>
@@ -5051,7 +5051,7 @@
     <test> <!-- TESTED-->
       <description>cat: contents of files(relative path) using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes dir0/data15bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes dir0/data30bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data60bytes dir0/data60bytes</command>
@@ -5093,7 +5093,7 @@
     <test> <!-- TESTED-->
       <description>cat: contents of files(relative path) without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes dir0/data15bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes dir0/data30bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data60bytes dir0/data60bytes</command>
@@ -5162,7 +5162,7 @@
     <test> <!-- TESTED -->
       <description>cat: contents of directory(relative path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
         <command>-fs NAMENODE -cat dir1</command>
       </test-commands>
       <cleanup-commands>
@@ -5444,11 +5444,30 @@
         </comparator>
       </comparators>
     </test>
+ 
+    <test> <!-- TESTED -->
+      <description>mkdir: creating directory (absolute path) </description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /dir0</command>
+        <command>-fs NAMENODE -mkdir /dir0/b/</command>
+        <command>-fs NAMENODE -du -s /dir0/b</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm /user</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^0\s+/dir0/b</expected-output>
+        </comparator>
+      </comparators>
+    </test>
     
+   
     <test> <!-- TESTED -->
       <description>mkdir: creating directory (relative path) </description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0 </command>
+        <command>-fs NAMENODE -mkdir -p dir0 </command>
         <command>-fs NAMENODE -du -s dir0</command>
       </test-commands>
       <cleanup-commands>
@@ -5497,10 +5516,10 @@
     <test> <!-- TESTED -->
       <description>mkdir: creating many directories (relative path) </description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0 </command>
-        <command>-fs NAMENODE -mkdir dir1 </command>
-        <command>-fs NAMENODE -mkdir dir2 </command>
-        <command>-fs NAMENODE -mkdir dir3 </command>
+        <command>-fs NAMENODE -mkdir -p dir0 </command>
+        <command>-fs NAMENODE -mkdir -p dir1 </command>
+        <command>-fs NAMENODE -mkdir -p dir2 </command>
+        <command>-fs NAMENODE -mkdir -p dir3 </command>
         <command>-fs NAMENODE -du -s dir*</command>
       </test-commands>
       <cleanup-commands>
@@ -5547,7 +5566,7 @@
       <description>mkdir: creating a directory with the name of an already existing file</description>
       <test-commands>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes data15bytes</command>
-        <command>-fs NAMENODE -mkdir data15bytes</command>
+        <command>-fs NAMENODE -mkdir -p data15bytes</command>
       </test-commands>
       <cleanup-commands>
         <command>-fs NAMENODE -rm -r data15bytes</command>
@@ -5721,10 +5740,27 @@
     </test>
 
     <test> <!-- TESTED -->
-      <description>mkdir: Test recreate of existing directory fails</description>
+      <description>mkdir: Test create of directory with no parent and no -p fails</description>
       <test-commands>
         <command>-fs NAMENODE -rm -r -f dir0</command>
         <command>-fs NAMENODE -mkdir dir0/dir1</command>
+      </test-commands>
+      <cleanup-commands>
+        <command>-fs NAMENODE -rm -r dir0</command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>mkdir: `dir0/dir1': No such file or directory</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+    
+    <test> <!-- TESTED -->
+      <description>mkdir: Test recreate of existing directory fails</description>
+      <test-commands>
+        <command>-fs NAMENODE -rm -r -f dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -mkdir dir0/dir1</command>
       </test-commands>
       <cleanup-commands>
@@ -5742,7 +5778,7 @@
       <description>mkdir: Test recreate of existing directory with -p succeeds</description>
       <test-commands>
         <command>-fs NAMENODE -rm -r -f dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
       </test-commands>
       <cleanup-commands>
@@ -6339,7 +6375,7 @@
     <test> <!-- TESTED -->
       <description>stat: statistics about directory(relative path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dirtest</command>
+        <command>-fs NAMENODE -mkdir -p dirtest</command>
         <command>-fs NAMENODE -stat "%n-%b-%o" dirtest</command>
       </test-commands>
       <cleanup-commands>
@@ -6399,7 +6435,7 @@
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes data30bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data60bytes data60bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data120bytes data120bytes</command>
-        <command>-fs NAMENODE -mkdir datadir</command>
+        <command>-fs NAMENODE -mkdir -p datadir</command>
         <command>-fs NAMENODE -stat "%n-%b" data*</command>
       </test-commands>
       <cleanup-commands>
@@ -6501,7 +6537,7 @@
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes hdfs:///dir0/data30bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data60bytes hdfs:///dir0/data60bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data120bytes hdfs:///dir0/data120bytes</command>
-        <command>-fs NAMENODE -mkdir hdfs:///dir0/datadir</command>
+        <command>-fs NAMENODE -mkdir -p hdfs:///dir0/datadir</command>
         <command>-fs NAMENODE -stat "%n-%b" hdfs:///dir0/data*</command>
       </test-commands>
       <cleanup-commands>
@@ -6588,7 +6624,7 @@
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes NAMENODE/dir0/data30bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data60bytes NAMENODE/dir0/data60bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data120bytes NAMENODE/dir0/data120bytes</command>
-        <command>-fs NAMENODE -mkdir NAMENODE/dir0/datadir</command>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/dir0/datadir</command>
         <command>-fs NAMENODE -stat "%n-%b" NAMENODE/dir0/data*</command>
       </test-commands>
       <cleanup-commands>
@@ -6759,7 +6795,7 @@
     <test> <!-- TESTED -->
       <description>tail: contents of directory(relative path)</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
         <command>-fs NAMENODE -tail dir1</command>
       </test-commands>
       <cleanup-commands>
@@ -6966,7 +7002,7 @@
     <test> <!-- TESTED -->
       <description>count: directory using relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
         <command>-fs NAMENODE -count dir1</command>
       </test-commands>
       <cleanup-commands>
@@ -7173,10 +7209,10 @@
     <test> <!-- TESTED -->
       <description>count: relative path to multiple directories using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir3</command>
-        <command>-fs NAMENODE -mkdir dir4</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir3</command>
+        <command>-fs NAMENODE -mkdir -p dir4</command>
         <command>-fs NAMENODE -count dir* </command>
       </test-commands>
       <cleanup-commands>
@@ -7237,10 +7273,10 @@
     <test> <!-- TESTED -->
       <description>count: relative path to multiple directories without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir3</command>
-        <command>-fs NAMENODE -mkdir dir4</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir3</command>
+        <command>-fs NAMENODE -mkdir -p dir4</command>
         <command>-fs NAMENODE -count dir1 dir2 dir3 dir4 </command>
       </test-commands>
       <cleanup-commands>
@@ -7322,7 +7358,7 @@
     <test> <!-- TESTED -->
       <description>count: directory using relative path with -q option</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
         <dfs-admin-command>-fs NAMENODE -setQuota 10 dir1 </dfs-admin-command>
         <dfs-admin-command>-fs NAMENODE -setSpaceQuota 1m dir1 </dfs-admin-command>
         <command>-fs NAMENODE -count -q dir1</command>
@@ -7539,10 +7575,10 @@
     <test> <!-- TESTED -->
       <description>count: relative path to multiple directories using globbing with -q option</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir3</command>
-        <command>-fs NAMENODE -mkdir dir4</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir3</command>
+        <command>-fs NAMENODE -mkdir -p dir4</command>
         <dfs-admin-command>-fs NAMENODE -setQuota 10 dir1 </dfs-admin-command>
         <dfs-admin-command>-fs NAMENODE -setSpaceQuota 1m dir1 </dfs-admin-command>
         <dfs-admin-command>-fs NAMENODE -setQuota 10 dir2 </dfs-admin-command>
@@ -7619,10 +7655,10 @@
     <test> <!-- TESTED -->
       <description>count: relative path to multiple directories without globbing with -q option</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir1</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir3</command>
-        <command>-fs NAMENODE -mkdir dir4</command>
+        <command>-fs NAMENODE -mkdir -p dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir3</command>
+        <command>-fs NAMENODE -mkdir -p dir4</command>
         <dfs-admin-command>-fs NAMENODE -setQuota 10 dir1 </dfs-admin-command>
         <dfs-admin-command>-fs NAMENODE -setSpaceQuota 1m dir1 </dfs-admin-command>
         <dfs-admin-command>-fs NAMENODE -setQuota 10 dir2 </dfs-admin-command>
@@ -8482,8 +8518,8 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of directory in relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -8594,8 +8630,8 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(normal mode) of directory in relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -8662,8 +8698,8 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of directory in relative path recursively</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -8730,8 +8766,8 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(normal mode) of directory in relative path recursively</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -8949,13 +8985,13 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of multiple directories in relative path using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -9125,13 +9161,13 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of multiple directories in relative path without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -9301,13 +9337,13 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(normal mode) of multiple directories in relative path using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -9477,13 +9513,13 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(normal mode) of multiple directories in relative path without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -9587,13 +9623,13 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of multiple directories in relative path recursively using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -9697,13 +9733,13 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of multiple directories in relative path recursively without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -9807,13 +9843,13 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(normal mode) of multiple directories in relative path recursively using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -9917,13 +9953,13 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(normal mode) of multiple directories in relative path recursively without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -12183,8 +12219,8 @@
     <test> <!-- TESTED -->
       <description>chown: change ownership of directory in relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -12251,8 +12287,8 @@
     <test> <!-- TESTED -->
       <description>chown: change ownership of directory in relative path recursively </description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -12438,13 +12474,13 @@
     <test> <!-- TESTED -->
       <description>chown: change ownership of multiple directories in relative path using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -12614,13 +12650,13 @@
     <test> <!-- TESTED -->
       <description>chown: change ownership of multiple directories in relative path without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -12724,13 +12760,13 @@
     <test> <!-- TESTED -->
       <description>chown: change ownership of multiple directories recursively in relative path using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -12834,13 +12870,13 @@
     <test> <!-- TESTED -->
       <description>chown: change ownership of multiple directories recursively in relative path without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -13462,8 +13498,8 @@
     <test> <!-- TESTED -->
       <description>chgrp: change group of directory in relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -13530,8 +13566,8 @@
     <test> <!-- TESTED -->
       <description>chgrp: change group of directory in relative path recursively </description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
@@ -13717,13 +13753,13 @@
     <test> <!-- TESTED -->
       <description>chgrp: change group of multiple directories in relative path using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -13893,13 +13929,13 @@
     <test> <!-- TESTED -->
       <description>chgrp: change group of multiple directories in relative path without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -14003,13 +14039,13 @@
     <test> <!-- TESTED -->
       <description>chgrp: change group of multiple directories recursively in relative path using globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
@@ -14113,13 +14149,13 @@
     <test> <!-- TESTED -->
       <description>chgrp: change group of multiple directories recursively in relative path without globbing</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir dir0</command>
-        <command>-fs NAMENODE -mkdir dir0/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
+        <command>-fs NAMENODE -mkdir -p dir0/dir1</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir0/dir1/file2</command>
-        <command>-fs NAMENODE -mkdir dir2</command>
-        <command>-fs NAMENODE -mkdir dir2/dir1</command>
+        <command>-fs NAMENODE -mkdir -p dir2</command>
+        <command>-fs NAMENODE -mkdir -p dir2/dir1</command>
         <command>-fs NAMENODE -touchz dir2/file0</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file1</command>
         <command>-fs NAMENODE -touchz dir2/dir1/file2</command>
