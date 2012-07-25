@@ -841,6 +841,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp
     via bobby)
 
+    HADOOP-8551. fs -mkdir creates parent directories without the -p option
+    (John George via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
