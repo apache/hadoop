@@ -611,7 +611,7 @@ public class FileUtil {
    */
   public static int symLink(String target, String linkname) throws IOException{
     String cmd = "ln -s " + target + " " + linkname;
-    Process p = Runtime.getRuntime().exec(new String[]{"ln","-s",target,linkname}, null);
+    Process p = Runtime.getRuntime().exec(cmd, null);
     int returnVal = -1;
     try{
       returnVal = p.waitFor();
