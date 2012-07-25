@@ -620,4 +620,12 @@ public class TestDFSUtil {
     assertEquals(1, uris.size());
     assertTrue(uris.contains(new URI("hdfs://" + NN1_SRVC_ADDR)));
   }
+  
+  @Test
+  public void testIsValidName() {
+    assertFalse(DFSUtil.isValidName("/foo/../bar"));
+    assertFalse(DFSUtil.isValidName("/foo//bar"));
+    assertTrue(DFSUtil.isValidName("/"));
+    assertTrue(DFSUtil.isValidName("/bar/"));
+  }
 }

@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
@@ -26,33 +25,38 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Test;
 
-
 /**
- * This class tests that the DFS command mkdirs cannot create subdirectories
- * from a file when passed an illegal path.  HADOOP-281.
+ * This class tests that the DFS command mkdirs only creates valid
+ * directories, and generally behaves as expected.
  */
 public class TestDFSMkdirs {
+  private Configuration conf = new HdfsConfiguration();
 
-  private void writeFile(FileSystem fileSys, Path name) throws IOException {
-    DataOutputStream stm = fileSys.create(name);
-    stm.writeBytes("wchien");
-    stm.close();
-  }
-  
+  private static final String[] NON_CANONICAL_PATHS = new String[] {
+      "//test1",
+      "/test2/..",
+      "/test2//bar",
+      "/test2/../test4",
+      "/test5/."
+  };
+
   /**
    * Tests mkdirs can create a directory that does not exist and will
-   * not create a subdirectory off a file.
+   * not create a subdirectory off a file. Regression test for HADOOP-281.
    */
   @Test
   public void testDFSMkdirs() throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
     FileSystem fileSys = cluster.getFileSystem();
     try {
       // First create a new directory with mkdirs
@@ -63,7 +67,7 @@ public class TestDFSMkdirs {
 
       // Second, create a file in that directory.
       Path myFile = new Path("/test/mkdirs/myFile");
-      writeFile(fileSys, myFile);
+      DFSTestUtil.writeFile(fileSys, myFile, "hello world");
    
       // Third, use mkdir to create a subdirectory off of that file,
       // and check that it fails.
@@ -99,7 +103,7 @@ public class TestDFSMkdirs {
       // Create a dir when parent dir exists as a file, should fail
       IOException expectedException = null;
       String filePath = "/mkdir-file-" + Time.now();
-      writeFile(dfs, new Path(filePath));
+      DFSTestUtil.writeFile(dfs, new Path(filePath), "hello world");
       try {
         dfs.mkdir(new Path(filePath + "/mkdir"), FsPermission.getDefault());
       } catch (IOException e) {
@@ -123,6 +127,31 @@ public class TestDFSMkdirs {
               && expectedException instanceof FileNotFoundException);
     } finally {
       dfs.close();
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Regression test for HDFS-3626. Creates a file using a non-canonical path
+   * (i.e. with extra slashes between components) and makes sure that the NN
+   * rejects it.
+   */
+  @Test
+  public void testMkdirRpcNonCanonicalPath() throws IOException {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+    try {
+      NamenodeProtocols nnrpc = cluster.getNameNodeRpc();
+      
+      for (String pathStr : NON_CANONICAL_PATHS) {
+        try {
+          nnrpc.mkdirs(pathStr, new FsPermission((short)0755), true);
+          fail("Did not fail when called with a non-canonicalized path: "
+             + pathStr);
+        } catch (InvalidPathException ipe) {
+          // expected
+        }
+      }
+    } finally {
       cluster.shutdown();
     }
   }

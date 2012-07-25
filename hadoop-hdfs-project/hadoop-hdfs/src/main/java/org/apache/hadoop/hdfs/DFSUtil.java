@@ -62,6 +62,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -124,7 +125,7 @@ public class DFSUtil {
   
   /**
    * Whether the pathname is valid.  Currently prohibits relative paths, 
-   * and names which contain a ":" or "/" 
+   * names which contain a ":" or "//", or other non-canonical paths.
    */
   public static boolean isValidName(String src) {
     // Path must be absolute.
@@ -133,13 +134,20 @@ public class DFSUtil {
     }
       
     // Check for ".." "." ":" "/"
-    StringTokenizer tokens = new StringTokenizer(src, Path.SEPARATOR);
-    while(tokens.hasMoreTokens()) {
-      String element = tokens.nextToken();
+    String[] components = StringUtils.split(src, '/');
+    for (int i = 0; i < components.length; i++) {
+      String element = components[i];
       if (element.equals("..") || 
           element.equals(".")  ||
           (element.indexOf(":") >= 0)  ||
           (element.indexOf("/") >= 0)) {
+        return false;
+      }
+      
+      // The string may start or end with a /, but not have
+      // "//" in the middle.
+      if (element.isEmpty() && i != components.length - 1 &&
+          i != 0) {
         return false;
       }
     }
