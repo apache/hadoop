@@ -120,6 +120,9 @@ Release 1.2.0 - unreleased
     HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp 
     via bobby)
 
+    HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
+    even for short reads.  (Brandon Li via szetszwo)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
