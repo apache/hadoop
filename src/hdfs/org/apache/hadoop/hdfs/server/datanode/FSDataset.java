@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -1062,7 +1063,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   /**
    * Get File name for a given block.
    */
-  public synchronized File getBlockFile(Block b) throws IOException {
+  public File getBlockFile(Block b) throws IOException {
     File f = validateBlockFile(b);
     if(f == null) {
       if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
@@ -1083,14 +1084,40 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return info;
   }
   
-  public synchronized InputStream getBlockInputStream(Block b) throws IOException {
-    return new FileInputStream(getBlockFile(b));
+  public InputStream getBlockInputStream(Block b) throws IOException {
+    File f = getBlockFileNoExistsCheck(b);
+    try {
+      return new FileInputStream(f);
+    } catch (FileNotFoundException fnfe) {
+      throw new IOException("Block " + b + " is not valid. "
+          + "Expected block file at " + f + " does not exist.");
+    }
   }
 
-  public synchronized InputStream getBlockInputStream(Block b, long seekOffset) throws IOException {
+  /**
+   * Return the File associated with a block, without first checking that it
+   * exists. This should be used when the next operation is going to open the
+   * file for read anyway, and thus the exists check is redundant.
+   */
+  private File getBlockFileNoExistsCheck(Block b) throws IOException {
+    File f = getFile(b);
+    if (f == null) {
+      throw new IOException("Block " + b + " is not valid");
+    }
+    return f;
+  }
 
-    File blockFile = getBlockFile(b);
-    RandomAccessFile blockInFile = new RandomAccessFile(blockFile, "r");
+  public InputStream getBlockInputStream(Block b, long seekOffset)
+      throws IOException {
+    File blockFile = getBlockFileNoExistsCheck(b);
+    RandomAccessFile blockInFile;
+    try {
+      blockInFile = new RandomAccessFile(blockFile, "r");
+    } catch (FileNotFoundException fnfe) {
+      throw new IOException("Block " + b + " is not valid. "
+          + "Expected block file at " + blockFile + " does not exist.");
+    }
+
     if (seekOffset > 0) {
       blockInFile.seek(seekOffset);
     }

@@ -51,6 +51,11 @@ Release 1.2.0 - unreleased
 
     HDFS-496. Backport: Use PureJavaCrc32 in HDFS.  (Brandon Li via szetszwo)
 
+  OPTIMIZATIONS
+
+    HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
+    methods.  (Brandon Li via szetszwo)
+
   BUG FIXES
 
     HADOOP-8460. Document proper setting of HADOOP_PID_DIR and
