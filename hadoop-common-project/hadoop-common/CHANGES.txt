@@ -74,6 +74,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8642. ProtobufRpcEngine should log all RPCs if TRACE logging is
     enabled (todd)
 
+    HADOOP-8623. hadoop jar command should respect HADOOP_OPTS.
+    (Steven Willis via suresh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
