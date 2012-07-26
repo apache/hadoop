@@ -1399,5 +1399,10 @@ public class Client {
       result = PRIME * result + ((ticket == null) ? 0 : ticket.hashCode());
       return result;
     }
+    
+    @Override
+    public String toString() {
+      return serverPrincipal + "@" + address;
+    }
   }  
 }
