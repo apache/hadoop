@@ -649,14 +649,19 @@ abstract public class Task implements Writable, Configurable {
       // get current flag value and reset it as well
       boolean sendProgress = resetProgressFlag();
       while (!taskDone.get()) {
-        synchronized(lock) {
-          done = false;
-        }
         try {
           boolean taskFound = true; // whether TT knows about this task
           // sleep for a bit
           try {
-            Thread.sleep(PROGRESS_INTERVAL);
+            synchronized(lock) {
+              done = false;
+              lock.wait(PROGRESS_INTERVAL);
+              if (taskDone.get()) {
+                done = true;
+                lock.notify();
+                return;
+              }
+            }
           } 
           catch (InterruptedException e) {
             if (LOG.isDebugEnabled()) {
@@ -724,6 +729,7 @@ abstract public class Task implements Writable, Configurable {
       // Updating resources specified in ResourceCalculatorPlugin
       if (pingThread != null) {
         synchronized(lock) {
+          lock.notify(); // wake up the wait in the while loop
           while(!done) {
             lock.wait();
           }
