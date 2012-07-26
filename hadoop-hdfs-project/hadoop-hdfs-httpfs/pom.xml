@@ -43,6 +43,8 @@
     <httpfs.tomcat.dist.dir>
       ${project.build.directory}/${project.artifactId}-${project.version}/share/hadoop/httpfs/tomcat
     </httpfs.tomcat.dist.dir>
+    <kerberos.realm>LOCALHOST</kerberos.realm>
+    <test.exclude.kerberos.test>**/TestHttpFSWithKerberos.java</test.exclude.kerberos.test>
   </properties>
 
   <dependencies>
@@ -267,6 +269,22 @@
         </excludes>
       </resource>
     </resources>
+    <testResources>
+      <testResource>
+        <directory>${basedir}/src/test/resources</directory>
+        <filtering>false</filtering>
+        <excludes>
+          <exclude>krb5.conf</exclude>
+        </excludes>
+      </testResource>
+      <testResource>
+        <directory>${basedir}/src/test/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>krb5.conf</include>
+        </includes>
+      </testResource>
+    </testResources>
 
     <plugins>
       <plugin>
@@ -281,6 +299,16 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <threadCount>1</threadCount>
+          <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
+          <systemPropertyVariables>
+            <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
+            <kerberos.realm>${kerberos.realm}</kerberos.realm>
+          </systemPropertyVariables>
+          <excludes>
+            <exclude>**/${test.exclude}.java</exclude>
+            <exclude>${test.exclude.pattern}</exclude>
+            <exclude>${test.exclude.kerberos.test}</exclude>
+          </excludes>
         </configuration>
       </plugin>
       <plugin>
@@ -395,6 +423,36 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>testKerberos</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <test.exclude.kerberos.test>_</test.exclude.kerberos.test>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <forkMode>once</forkMode>
+              <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
+              <systemPropertyVariables>
+                <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
+                <kerberos.realm>${kerberos.realm}</kerberos.realm>
+                <httpfs.http.hostname>localhost</httpfs.http.hostname>
+              </systemPropertyVariables>
+              <includes>
+                <include>**/TestHttpFSWithKerberos.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    
     <profile>
       <id>docs</id>
       <activation>

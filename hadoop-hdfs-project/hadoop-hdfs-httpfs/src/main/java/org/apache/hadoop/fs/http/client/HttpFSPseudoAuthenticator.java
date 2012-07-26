@@ -18,26 +18,28 @@
 
 package org.apache.hadoop.fs.http.client;
 
-import java.net.URI;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
-import org.apache.hadoop.test.TestJettyHelper;
-import org.junit.Assert;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import java.io.IOException;
 
-@RunWith(value = Parameterized.class)
-public class TestWebhdfsFileSystem extends TestHttpFSFileSystem {
+/**
+ * A <code>PseudoAuthenticator</code> subclass that uses FileSystemAccess's
+ * <code>UserGroupInformation</code> to obtain the client user name (the UGI's login user).
+ */
+public class HttpFSPseudoAuthenticator extends PseudoAuthenticator {
 
-  public TestWebhdfsFileSystem(TestHttpFSFileSystem.Operation operation) {
-    super(operation);
-  }
-
+  /**
+   * Return the client user name.
+   *
+   * @return the client user name.
+   */
   @Override
-  protected Class getFileSystemClass() {
-    return WebHdfsFileSystem.class;
+  protected String getUserName() {
+    try {
+      return UserGroupInformation.getLoginUser().getUserName();
+    } catch (IOException ex) {
+      throw new SecurityException("Could not obtain current user, " + ex.getMessage(), ex);
+    }
   }
-
 }

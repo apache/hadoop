@@ -70,7 +70,7 @@ public class HttpFSServerWebApp extends ServerWebApp {
   /**
    * Constructor used for testing purposes.
    */
-  protected HttpFSServerWebApp(String homeDir, String configDir, String logDir,
+  public HttpFSServerWebApp(String homeDir, String configDir, String logDir,
                                String tempDir, Configuration config) {
     super(NAME, homeDir, configDir, logDir, tempDir, config);
   }

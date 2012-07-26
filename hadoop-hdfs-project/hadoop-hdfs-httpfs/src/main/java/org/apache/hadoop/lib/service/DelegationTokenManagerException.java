@@ -15,27 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.lib.service;
 
-package org.apache.hadoop.fs.http.client;
-
-
-import org.apache.hadoop.security.authentication.client.Authenticator;
-import org.apache.hadoop.security.authentication.client.KerberosAuthenticator;
+import org.apache.hadoop.lib.lang.XException;
 
 /**
- * A <code>KerberosAuthenticator</code> subclass that fallback to
- * {@link HttpPseudoAuthenticator}.
+ * Exception thrown by the {@link DelegationTokenManager} service implementation.
  */
-public class HttpKerberosAuthenticator extends KerberosAuthenticator {
+public class DelegationTokenManagerException extends XException {
 
-  /**
-   * Returns the fallback authenticator if the server does not use
-   * Kerberos SPNEGO HTTP authentication.
-   *
-   * @return a {@link HttpPseudoAuthenticator} instance.
-   */
-  @Override
-  protected Authenticator getFallBackAuthenticator() {
-    return new HttpPseudoAuthenticator();
+  public enum ERROR implements XException.ERROR {
+    DT01("Could not verify delegation token, {0}"),
+    DT02("Could not renew delegation token, {0}"),
+    DT03("Could not cancel delegation token, {0}"),
+    DT04("Could not create delegation token, {0}");
+
+    private String template;
+
+    ERROR(String template) {
+      this.template = template;
+    }
+
+    @Override
+    public String getTemplate() {
+      return template;
+    }
   }
+
+  public DelegationTokenManagerException(ERROR error, Object... params) {
+    super(error, params);
+  }
+
 }

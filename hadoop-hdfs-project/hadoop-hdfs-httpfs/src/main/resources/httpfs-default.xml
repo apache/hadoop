@@ -35,6 +35,7 @@
       org.apache.hadoop.lib.service.scheduler.SchedulerService,
       org.apache.hadoop.lib.service.security.GroupsService,
       org.apache.hadoop.lib.service.security.ProxyUserService,
+      org.apache.hadoop.lib.service.security.DelegationTokenManagerService,
       org.apache.hadoop.lib.service.hadoop.FileSystemAccessService
     </value>
     <description>
@@ -88,12 +89,12 @@
     <description>
       Defines the authentication mechanism used by httpfs for its HTTP clients.
 
-      Valid values are 'simple' and 'kerberos'.
+      Valid values are 'simple' or 'kerberos'.
 
       If using 'simple' HTTP clients must specify the username with the
       'user.name' query string parameter.
 
-      If using 'kerberos' HTTP clients must use HTTP SPNEGO.
+      If using 'kerberos' HTTP clients must use HTTP SPNEGO or delegation tokens.
     </description>
   </property>
 
@@ -150,6 +151,32 @@
 
       For multiple users copy this property and replace the user name
       in the property name.
+    </description>
+  </property>
+
+  <!-- HttpFS Delegation Token configuration -->
+
+  <property>
+    <name>httpfs.delegation.token.manager.update.interval</name>
+    <value>86400</value>
+    <description>
+      HttpFS delegation token update interval, default 1 day, in seconds.
+    </description>
+  </property>
+
+  <property>
+    <name>httpfs.delegation.token.manager.max.lifetime</name>
+    <value>604800</value>
+    <description>
+      HttpFS delegation token maximum lifetime, default 7 days, in seconds
+    </description>
+  </property>
+
+  <property>
+    <name>httpfs.delegation.token.manager.renewal.interval</name>
+    <value>86400</value>
+    <description>
+      HttpFS delegation token update interval, default 1 day, in seconds.
     </description>
   </property>
 

@@ -199,6 +199,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3518. Add a utility method HdfsUtils.isHealthy(uri) for checking if
     the given HDFS is healthy. (szetszwo)
 
+    HDFS-3113. httpfs does not support delegation tokens. (tucu)
+
   IMPROVEMENTS
 
     HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
