@@ -181,6 +181,9 @@ Trunk (unreleased changes)
     HADOOP-8593. Add missed @Override annotations in Metric/Metrics2 package.
     (Brandon Li via suresh)
 
+    HADOOP-8623. hadoop jar command should respect HADOOP_OPTS.
+    (Steven Willis via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
