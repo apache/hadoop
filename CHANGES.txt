@@ -123,6 +123,9 @@ Release 1.2.0 - unreleased
     HDFS-2751. Backport: Datanode may incorrectly drop OS cache behind reads
     even for short reads.  (Brandon Li via szetszwo)
 
+    HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
+    principal. (atm)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
