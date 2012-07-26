@@ -39,7 +39,11 @@ public class ServerException extends XException {
     S08("Could not load service classes, {0}"),
     S09("Could not set service [{0}] programmatically -server shutting down-, {1}"),
     S10("Service [{0}] requires service [{1}]"),
-    S11("Service [{0}] exception during status change to [{1}] -server shutting down-, {2}");
+    S11("Service [{0}] exception during status change to [{1}] -server shutting down-, {2}"),
+    S12("Could not start service [{0}], {1}"),
+    S13("Missing system property [{0}]"),
+    S14("Could not initialize server, {0}")
+    ;
 
     private String msg;
 

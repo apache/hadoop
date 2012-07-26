@@ -15,31 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.fs.http.server;
 
-package org.apache.hadoop.fs.http.client;
+import javax.servlet.ServletException;
+import java.util.Properties;
 
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
+public class HttpFSKerberosAuthenticationHandlerForTesting
+  extends HttpFSKerberosAuthenticationHandler {
 
-import java.io.IOException;
-
-/**
- * A <code>PseudoAuthenticator</code> subclass that uses FileSystemAccess's
- * <code>UserGroupInformation</code> to obtain the client user name (the UGI's login user).
- */
-public class HttpPseudoAuthenticator extends PseudoAuthenticator {
-
-  /**
-   * Return the client user name.
-   *
-   * @return the client user name.
-   */
   @Override
-  protected String getUserName() {
-    try {
-      return UserGroupInformation.getLoginUser().getUserName();
-    } catch (IOException ex) {
-      throw new SecurityException("Could not obtain current user, " + ex.getMessage(), ex);
-    }
+  public void init(Properties config) throws ServletException {
+    //NOP overwrite to avoid Kerberos initialization
+  }
+
+  @Override
+  public void destroy() {
+    //NOP overwrite to avoid Kerberos initialization
   }
 }

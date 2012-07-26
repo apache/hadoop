@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
-import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
@@ -101,24 +100,16 @@ public class TestHttpFSFileSystem extends HFSTestCase {
     server.start();
   }
 
-  protected Class getFileSystemClass() {
-    return HttpFSFileSystem.class;
-  }
-
   protected FileSystem getHttpFileSystem() throws Exception {
     Configuration conf = new Configuration();
-    conf.set("fs.webhdfs.impl", getFileSystemClass().getName());
-    URI uri = new URI("webhdfs://" +
-                      TestJettyHelper.getJettyURL().toURI().getAuthority());
-    return FileSystem.get(uri, conf);
+    conf.set("fs.http.impl", HttpFSFileSystem.class.getName());
+    return FileSystem.get(TestJettyHelper.getJettyURL().toURI(), conf);
   }
 
   protected void testGet() throws Exception {
     FileSystem fs = getHttpFileSystem();
     Assert.assertNotNull(fs);
-    URI uri = new URI("webhdfs://" +
-                      TestJettyHelper.getJettyURL().toURI().getAuthority());
-    Assert.assertEquals(fs.getUri(), uri);
+    Assert.assertEquals(fs.getUri(), TestJettyHelper.getJettyURL().toURI());
     fs.close();
   }
 
@@ -483,9 +474,8 @@ public class TestHttpFSFileSystem extends HFSTestCase {
     for (int i = 0; i < Operation.values().length; i++) {
       ops[i] = new Object[]{Operation.values()[i]};
     }
-    //To test one or a subset of operations do:
-    //return Arrays.asList(new Object[][]{ new Object[]{Operation.OPEN}});
     return Arrays.asList(ops);
+//    return Arrays.asList(new Object[][]{ new Object[]{Operation.CREATE}});
   }
 
   private Operation operation;

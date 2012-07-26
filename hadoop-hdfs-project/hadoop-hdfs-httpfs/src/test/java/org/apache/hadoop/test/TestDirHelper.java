@@ -73,7 +73,7 @@ public class TestDirHelper implements MethodRule {
         System.exit(-1);
       }
 
-      TEST_DIR_ROOT = new File(TEST_DIR_ROOT, "testdir").getAbsolutePath();
+      TEST_DIR_ROOT = new File(TEST_DIR_ROOT, "test-dir").getAbsolutePath();
       System.setProperty(TEST_DIR_PROP, TEST_DIR_ROOT);
 
       File dir = new File(TEST_DIR_ROOT);
@@ -82,8 +82,6 @@ public class TestDirHelper implements MethodRule {
         System.err.println(MessageFormat.format("Could not create test dir [{0}]", TEST_DIR_ROOT));
         System.exit(-1);
       }
-
-      System.setProperty("test.circus", "true");
 
       System.out.println(">>> " + TEST_DIR_PROP + "        : " + System.getProperty(TEST_DIR_PROP));
     } catch (IOException ex) {

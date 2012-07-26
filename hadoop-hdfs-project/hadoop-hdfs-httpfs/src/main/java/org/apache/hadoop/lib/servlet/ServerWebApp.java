@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.lib.servlet;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.lib.server.ServerException;
 
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.text.MessageFormat;
 
 /**
@@ -36,8 +40,12 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
   private static final String CONFIG_DIR = ".config.dir";
   private static final String LOG_DIR = ".log.dir";
   private static final String TEMP_DIR = ".temp.dir";
+  private static final String HTTP_HOSTNAME = ".http.hostname";
+  private static final String HTTP_PORT = ".http.port";
 
   private static ThreadLocal<String> HOME_DIR_TL = new ThreadLocal<String>();
+
+  private InetSocketAddress authority;
 
   /**
    * Method for testing purposes.
@@ -147,6 +155,38 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
   }
 
   /**
+   * Resolves the host & port InetSocketAddress the web server is listening to.
+   * <p/>
+   * This implementation looks for the following 2 properties:
+   * <ul>
+   *   <li>#SERVER_NAME#.http.hostname</li>
+   *   <li>#SERVER_NAME#.http.port</li>
+   * </ul>
+   *
+   * @return the host & port InetSocketAddress the web server is listening to.
+   * @throws ServerException thrown if any of the above 2 properties is not defined.
+   */
+  protected InetSocketAddress resolveAuthority() throws ServerException {
+    String hostnameKey = getName() + HTTP_HOSTNAME;
+    String portKey = getName() + HTTP_PORT;
+    String host = System.getProperty(hostnameKey);
+    String port = System.getProperty(portKey);
+    if (host == null) {
+      throw new ServerException(ServerException.ERROR.S13, hostnameKey);
+    }
+    if (port == null) {
+      throw new ServerException(ServerException.ERROR.S13, portKey);
+    }
+    try {
+      InetAddress add = InetAddress.getByName(hostnameKey);
+      int portNum = Integer.parseInt(port);
+      return new InetSocketAddress(add, portNum);
+    } catch (UnknownHostException ex) {
+      throw new ServerException(ServerException.ERROR.S14, ex.toString(), ex);
+    }
+  }
+
+  /**
    * Destroys the <code>ServletContextListener</code> which destroys
    * the Server.
    *
@@ -156,4 +196,29 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
     destroy();
   }
 
+  /**
+   * Returns the hostname:port InetSocketAddress the webserver is listening to.
+   *
+   * @return the hostname:port InetSocketAddress the webserver is listening to.
+   */
+  public InetSocketAddress getAuthority() throws ServerException {
+    synchronized (this) {
+      if (authority == null) {
+          authority = resolveAuthority();
+      }
+    }
+    return authority;
+  }
+
+  /**
+   * Sets an alternate hostname:port InetSocketAddress to use.
+   * <p/>
+   * For testing purposes.
+   * 
+   * @param authority alterante authority.
+   */
+  @VisibleForTesting
+  public void setAuthority(InetSocketAddress authority) {
+    this.authority = authority;
+  }
 }
