@@ -55,7 +55,9 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.task.reduce.ShuffleHeader;
@@ -101,6 +103,8 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
+import org.jboss.netty.handler.ssl.SslHandler;
+import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
 
@@ -114,6 +118,8 @@ public class ShuffleHandler extends AbstractService
   private int port;
   private ChannelFactory selector;
   private final ChannelGroup accepted = new DefaultChannelGroup();
+  private HttpPipelineFactory pipelineFact;
+  private int sslFileBufferSize;
 
   public static final String MAPREDUCE_SHUFFLE_SERVICEID =
       "mapreduce.shuffle";
@@ -125,6 +131,11 @@ public class ShuffleHandler extends AbstractService
 
   public static final String SHUFFLE_PORT_CONFIG_KEY = "mapreduce.shuffle.port";
   public static final int DEFAULT_SHUFFLE_PORT = 8080;
+
+  public static final String SUFFLE_SSL_FILE_BUFFER_SIZE_KEY =
+    "mapreduce.shuffle.ssl.file.buffer.size";
+
+  public static final int DEFAULT_SUFFLE_SSL_FILE_BUFFER_SIZE = 60 * 1024;
 
   @Metrics(about="Shuffle output metrics", context="mapred")
   static class ShuffleMetrics implements ChannelFutureListener {
@@ -249,7 +260,11 @@ public class ShuffleHandler extends AbstractService
   public synchronized void start() {
     Configuration conf = getConfig();
     ServerBootstrap bootstrap = new ServerBootstrap(selector);
-    HttpPipelineFactory pipelineFact = new HttpPipelineFactory(conf);
+    try {
+      pipelineFact = new HttpPipelineFactory(conf);
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
     bootstrap.setPipelineFactory(pipelineFact);
     port = conf.getInt(SHUFFLE_PORT_CONFIG_KEY, DEFAULT_SHUFFLE_PORT);
     Channel ch = bootstrap.bind(new InetSocketAddress(port));
@@ -259,6 +274,9 @@ public class ShuffleHandler extends AbstractService
     pipelineFact.SHUFFLE.setPort(port);
     LOG.info(getName() + " listening on port " + port);
     super.start();
+
+    sslFileBufferSize = conf.getInt(SUFFLE_SSL_FILE_BUFFER_SIZE_KEY,
+                                    DEFAULT_SUFFLE_SSL_FILE_BUFFER_SIZE);
   }
 
   @Override
@@ -266,6 +284,7 @@ public class ShuffleHandler extends AbstractService
     accepted.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
     ServerBootstrap bootstrap = new ServerBootstrap(selector);
     bootstrap.releaseExternalResources();
+    pipelineFact.destroy();
     super.stop();
   }
 
@@ -283,22 +302,38 @@ public class ShuffleHandler extends AbstractService
   class HttpPipelineFactory implements ChannelPipelineFactory {
 
     final Shuffle SHUFFLE;
+    private SSLFactory sslFactory;
 
-    public HttpPipelineFactory(Configuration conf) {
+    public HttpPipelineFactory(Configuration conf) throws Exception {
       SHUFFLE = new Shuffle(conf);
+      if (conf.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY,
+                          MRConfig.SHUFFLE_SSL_ENABLED_DEFAULT)) {
+        sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
+        sslFactory.init();
+      }
+    }
+
+    public void destroy() {
+      if (sslFactory != null) {
+        sslFactory.destroy();
+      }
     }
 
     @Override
     public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(
-            new HttpRequestDecoder(),
-            new HttpChunkAggregator(1 << 16),
-            new HttpResponseEncoder(),
-            new ChunkedWriteHandler(),
-            SHUFFLE);
-        // TODO factor security manager into pipeline
-        // TODO factor out encode/decode to permit binary shuffle
-        // TODO factor out decode of index to permit alt. models
+      ChannelPipeline pipeline = Channels.pipeline();
+      if (sslFactory != null) {
+        pipeline.addLast("ssl", new SslHandler(sslFactory.createSSLEngine()));
+      }
+      pipeline.addLast("decoder", new HttpRequestDecoder());
+      pipeline.addLast("aggregator", new HttpChunkAggregator(1 << 16));
+      pipeline.addLast("encoder", new HttpResponseEncoder());
+      pipeline.addLast("chunking", new ChunkedWriteHandler());
+      pipeline.addLast("shuffle", SHUFFLE);
+      return pipeline;
+      // TODO factor security manager into pipeline
+      // TODO factor out encode/decode to permit binary shuffle
+      // TODO factor out decode of index to permit alt. models
     }
 
   }
@@ -483,17 +518,25 @@ public class ShuffleHandler extends AbstractService
         LOG.info(spillfile + " not found");
         return null;
       }
-      final FileRegion partition = new DefaultFileRegion(
-          spill.getChannel(), info.startOffset, info.partLength);
-      ChannelFuture writeFuture = ch.write(partition);
-      writeFuture.addListener(new ChannelFutureListener() {
-          // TODO error handling; distinguish IO/connection failures,
-          //      attribute to appropriate spill output
-          @Override
-          public void operationComplete(ChannelFuture future) {
-            partition.releaseExternalResources();
-          }
-        });
+      ChannelFuture writeFuture;
+      if (ch.getPipeline().get(SslHandler.class) == null) {
+        final FileRegion partition = new DefaultFileRegion(
+            spill.getChannel(), info.startOffset, info.partLength);
+        writeFuture = ch.write(partition);
+        writeFuture.addListener(new ChannelFutureListener() {
+            // TODO error handling; distinguish IO/connection failures,
+            //      attribute to appropriate spill output
+            @Override
+            public void operationComplete(ChannelFuture future) {
+              partition.releaseExternalResources();
+            }
+          });
+      } else {
+        // HTTPS cannot be done with zero copy.
+        writeFuture = ch.write(new ChunkedFile(spill, info.startOffset,
+                                               info.partLength,
+                                               sslFileBufferSize));
+      }
       metrics.shuffleConnections.incr();
       metrics.shuffleOutputBytes.incr(info.partLength); // optimistic
       return writeFuture;

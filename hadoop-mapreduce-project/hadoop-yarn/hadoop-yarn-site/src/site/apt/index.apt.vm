@@ -51,3 +51,5 @@ MapReduce NextGen aka YARN aka MRv2
 
   * {{{./CLIMiniCluster.html}CLI MiniCluster}}
 
+  * {{{./EncryptedShuffle.html}Encrypted Shuffle}}
+

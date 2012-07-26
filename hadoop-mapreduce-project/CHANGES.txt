@@ -135,6 +135,8 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process 
     command-line. (ahmed via tucu)
 
+    MAPREDUCE-4417. add support for encrypted shuffle (tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved

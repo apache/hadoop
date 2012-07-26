@@ -1026,4 +1026,51 @@
   <name>hadoop.http.staticuser.user</name>
   <value>dr.who</value>
 </property>
+
+<!-- SSLFactory configuration -->
+
+<property>
+  <name>hadoop.ssl.keystores.factory.class</name>
+  <value>org.apache.hadoop.security.ssl.FileBasedKeyStoresFactory</value>
+  <description>
+    The keystores factory to use for retrieving certificates.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.ssl.require.client.cert</name>
+  <value>false</value>
+  <description>Whether client certificates are required</description>
+</property>
+
+<property>
+  <name>hadoop.ssl.hostname.verifier</name>
+  <value>DEFAULT</value>
+  <description>
+    The hostname verifier to provide for HttpsURLConnections.
+    Valid values are: DEFAULT, STRICT, STRICT_I6, DEFAULT_AND_LOCALHOST and
+    ALLOW_ALL
+  </description>
+</property>
+
+<property>
+  <name>hadoop.ssl.server.conf</name>
+  <value>ssl-server.xml</value>
+  <description>
+    Resource file from which ssl server keystore information will be extracted.
+    This file is looked up in the classpath, typically it should be in Hadoop
+    conf/ directory.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.ssl.client.conf</name>
+  <value>ssl-client.xml</value>
+  <description>
+    Resource file from which ssl client keystore information will be extracted
+    This file is looked up in the classpath, typically it should be in Hadoop
+    conf/ directory.
+  </description>
+</property>
+
 </configuration>
