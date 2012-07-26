@@ -81,6 +81,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3688. Namenode loses datanode hostname if datanode re-registers
     (Jason Lowe via daryn)
 
+    HDFS-3626. Creating file with invalid path can corrupt edit log (todd)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

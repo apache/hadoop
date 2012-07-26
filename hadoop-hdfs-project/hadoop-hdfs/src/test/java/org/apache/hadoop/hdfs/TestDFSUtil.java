@@ -308,4 +308,11 @@ public class TestDFSUtil {
     assertEquals("0.0.0.0:50070", httpport);
   }
 
+  @Test
+  public void testIsValidName() {
+    assertFalse(DFSUtil.isValidName("/foo/../bar"));
+    assertFalse(DFSUtil.isValidName("/foo//bar"));
+    assertTrue(DFSUtil.isValidName("/"));
+    assertTrue(DFSUtil.isValidName("/bar/"));
+  }
 }

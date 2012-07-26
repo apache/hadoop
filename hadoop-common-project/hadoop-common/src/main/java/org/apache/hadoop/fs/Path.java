@@ -139,7 +139,7 @@ public class Path implements Comparable {
    * Construct a path from a URI
    */
   public Path(URI aUri) {
-    uri = aUri;
+    uri = aUri.normalize();
   }
   
   /** Construct a Path from components. */
