@@ -51,6 +51,8 @@ Release 1.2.0 - unreleased
 
     HDFS-496. Backport: Use PureJavaCrc32 in HDFS.  (Brandon Li via szetszwo)
 
+    MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. (Todd Lipcon, backport by Brandon Li via sseth)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
