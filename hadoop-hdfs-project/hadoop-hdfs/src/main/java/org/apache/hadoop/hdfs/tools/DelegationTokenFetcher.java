@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
 import org.apache.hadoop.hdfs.web.URLUtils;
+import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
@@ -207,7 +208,7 @@ public class DelegationTokenFetcher {
     InetSocketAddress serviceAddr = NetUtils.createSocketAddr(nnAddr);
     
     try {
-      StringBuffer url = new StringBuffer();
+      StringBuilder url = new StringBuilder();
       if (renewer != null) {
         url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC)
            .append("?").append(GetDelegationTokenServlet.RENEWER).append("=")
@@ -215,10 +216,7 @@ public class DelegationTokenFetcher {
       } else {
         url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC);
       }
-      URL remoteURL = new URL(url.toString());
-      SecurityUtil.fetchServiceTicket(remoteURL);
-      URLConnection connection = URLUtils.openConnection(remoteURL);
-      InputStream in = connection.getInputStream();
+      InputStream in = openConnection(url).getInputStream();
       Credentials ts = new Credentials();
       dis = new DataInputStream(in);
       ts.readFields(dis);
@@ -255,9 +253,7 @@ public class DelegationTokenFetcher {
     HttpURLConnection connection = null;
     
     try {
-      URL url = new URL(buf.toString());
-      SecurityUtil.fetchServiceTicket(url);
-      connection = (HttpURLConnection)URLUtils.openConnection(url);
+      connection = (HttpURLConnection)openConnection(buf);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error renewing token: " + 
             connection.getResponseMessage());
@@ -349,9 +345,7 @@ public class DelegationTokenFetcher {
     BufferedReader in = null;
     HttpURLConnection connection=null;
     try {
-      URL url = new URL(buf.toString());
-      SecurityUtil.fetchServiceTicket(url);
-      connection = (HttpURLConnection)URLUtils.openConnection(url);
+      connection = (HttpURLConnection)openConnection(buf);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error cancelling token: " + 
             connection.getResponseMessage());
@@ -367,6 +361,37 @@ public class DelegationTokenFetcher {
         throw e;
       }
       throw ie;
+    }
+  }
+  
+  /**
+   * Negotiate the kerberized connection via a service ticket
+   * @param uri builder used by the connection
+   * @return URLConnection negotiated by a TGS
+   * @throws IOException
+   */
+  private static URLConnection openConnection(StringBuilder uri)
+      throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    if (ugi.getRealUser() != null) {
+      // must use the real user since the proxied user has no TGT
+      uri.append(uri.toString().contains("?") ? "&" : "?"); // ick...
+      uri.append(DoAsParam.NAME).append("=").append(ugi.getShortUserName());
+      ugi = ugi.getRealUser();
+    }
+    final URL url = new URL(uri.toString());
+    try {
+      return ugi.doAs(
+          new PrivilegedExceptionAction<URLConnection>() {
+            public URLConnection run() throws IOException {
+              SecurityUtil.fetchServiceTicket(url);
+              URLConnection connection = URLUtils.openConnection(url);
+              connection.connect();
+              return connection;
+            }
+          });
+    } catch (InterruptedException ie) {
+      throw new IOException(ie);
     }
   }
 }
