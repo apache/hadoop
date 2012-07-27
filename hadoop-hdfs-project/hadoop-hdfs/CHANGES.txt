@@ -305,7 +305,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3613. GSet prints some INFO level values, which aren't
     really very useful to all (Andrew Wang via harsh)
 
-    HDFS-3611. NameNode prints unnecessary WARNs about edit log normally skipping a few bytes. (Colin Patrick McCabe via harsh)
+    HDFS-3611. NameNode prints unnecessary WARNs about edit log normally skipping 
+    a few bytes. (Colin Patrick McCabe via harsh)
 
     HDFS-3582. Hook daemon process exit for testing. (eli)
 
@@ -537,6 +538,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3720. hdfs.h must get packaged. (Colin Patrick McCabe via atm)
 
     HDFS-3626. Creating file with invalid path can corrupt edit log (todd)
+
+    HDFS-3679. fuse_dfs notrash option sets usetrash. (Conrad Meyer via suresh)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
