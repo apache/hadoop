@@ -1411,6 +1411,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
     to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
 
+    HDFS-3553. Hftp proxy tokens are broken (daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

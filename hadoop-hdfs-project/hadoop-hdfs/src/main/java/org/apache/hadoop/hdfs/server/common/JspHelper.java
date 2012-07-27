@@ -487,12 +487,17 @@ public class JspHelper {
    */
   public static UserGroupInformation getDefaultWebUser(Configuration conf
                                                        ) throws IOException {
+    return UserGroupInformation.createRemoteUser(getDefaultWebUserName(conf));
+  }
+
+  private static String getDefaultWebUserName(Configuration conf
+      ) throws IOException {
     String user = conf.get(
         HADOOP_HTTP_STATIC_USER, DEFAULT_HADOOP_HTTP_STATIC_USER);
     if (user == null || user.length() == 0) {
       throw new IOException("Cannot determine UGI from request or conf");
     }
-    return UserGroupInformation.createRemoteUser(user);
+    return user;
   }
 
   private static InetSocketAddress getNNServiceAddress(ServletContext context,
@@ -538,64 +543,45 @@ public class JspHelper {
       HttpServletRequest request, Configuration conf,
       final AuthenticationMethod secureAuthMethod,
       final boolean tryUgiParameter) throws IOException {
-    final UserGroupInformation ugi;
+    UserGroupInformation ugi = null;
     final String usernameFromQuery = getUsernameFromQuery(request, tryUgiParameter);
     final String doAsUserFromQuery = request.getParameter(DoAsParam.NAME);
-
-    if(UserGroupInformation.isSecurityEnabled()) {
-      final String remoteUser = request.getRemoteUser();
-      String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
+    final String remoteUser;
+   
+    if (UserGroupInformation.isSecurityEnabled()) {
+      remoteUser = request.getRemoteUser();
+      final String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
-        Token<DelegationTokenIdentifier> token = 
-          new Token<DelegationTokenIdentifier>();
-        token.decodeFromUrlString(tokenString);
-        InetSocketAddress serviceAddress = getNNServiceAddress(context, request);
-        if (serviceAddress != null) {
-          SecurityUtil.setTokenService(token, serviceAddress);
-          token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
-        }
-        ByteArrayInputStream buf = new ByteArrayInputStream(token
-            .getIdentifier());
-        DataInputStream in = new DataInputStream(buf);
-        DelegationTokenIdentifier id = new DelegationTokenIdentifier();
-        id.readFields(in);
-        if (context != null) {
-          final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
-          if (nn != null) {
-            // Verify the token.
-            nn.getNamesystem().verifyToken(id, token.getPassword());
-          }
-        }
-        ugi = id.getUser();
-        if (ugi.getRealUser() == null) {
-          //non-proxy case
-          checkUsername(ugi.getShortUserName(), usernameFromQuery);
-          checkUsername(null, doAsUserFromQuery);
-        } else {
-          //proxy case
-          checkUsername(ugi.getRealUser().getShortUserName(), usernameFromQuery);
-          checkUsername(ugi.getShortUserName(), doAsUserFromQuery);
-          ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
-        }
-        ugi.addToken(token);
-      } else {
-        if(remoteUser == null) {
-          throw new IOException("Security enabled but user not " +
-                                "authenticated by filter");
-        }
-        final UserGroupInformation realUgi = UserGroupInformation.createRemoteUser(remoteUser);
-        checkUsername(realUgi.getShortUserName(), usernameFromQuery);
+        // Token-based connections need only verify the effective user, and
+        // disallow proxying to different user.  Proxy authorization checks
+        // are not required since the checks apply to issuing a token.
+        ugi = getTokenUGI(context, request, tokenString, conf);
+        checkUsername(ugi.getShortUserName(), usernameFromQuery);
+        checkUsername(ugi.getShortUserName(), doAsUserFromQuery);
+      } else if (remoteUser == null) {
+        throw new IOException(
+            "Security enabled but user not authenticated by filter");
+      }
+    } else {
+      // Security's not on, pull from url or use default web user
+      remoteUser = (usernameFromQuery == null)
+          ? getDefaultWebUserName(conf) // not specified in request
+          : usernameFromQuery;
+    }
+
+    if (ugi == null) { // security is off, or there's no token
+      ugi = UserGroupInformation.createRemoteUser(remoteUser);
+      checkUsername(ugi.getShortUserName(), usernameFromQuery);
+      if (UserGroupInformation.isSecurityEnabled()) {
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter
-        realUgi.setAuthenticationMethod(secureAuthMethod);
-        ugi = initUGI(realUgi, doAsUserFromQuery, request, true, conf);
+        ugi.setAuthenticationMethod(secureAuthMethod);
       }
-    } else { // Security's not on, pull from url
-      final UserGroupInformation realUgi = usernameFromQuery == null?
-          getDefaultWebUser(conf) // not specified in request
-          : UserGroupInformation.createRemoteUser(usernameFromQuery);
-      realUgi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
-      ugi = initUGI(realUgi, doAsUserFromQuery, request, false, conf);
+      if (doAsUserFromQuery != null) {
+        // create and attempt to authorize a proxy user
+        ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, ugi);
+        ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
+      }
     }
     
     if(LOG.isDebugEnabled())
@@ -603,21 +589,34 @@ public class JspHelper {
     return ugi;
   }
 
-  private static UserGroupInformation initUGI(final UserGroupInformation realUgi,
-      final String doAsUserFromQuery, final HttpServletRequest request,
-      final boolean isSecurityEnabled, final Configuration conf
-      ) throws AuthorizationException {
-    final UserGroupInformation ugi;
-    if (doAsUserFromQuery == null) {
-      //non-proxy case
-      ugi = realUgi;
-    } else {
-      //proxy case
-      ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, realUgi);
-      ugi.setAuthenticationMethod(
-          isSecurityEnabled? AuthenticationMethod.PROXY: AuthenticationMethod.SIMPLE);
-      ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
+  private static UserGroupInformation getTokenUGI(ServletContext context,
+                                                  HttpServletRequest request,
+                                                  String tokenString,
+                                                  Configuration conf)
+                                                      throws IOException {
+    final Token<DelegationTokenIdentifier> token =
+        new Token<DelegationTokenIdentifier>();
+    token.decodeFromUrlString(tokenString);
+    InetSocketAddress serviceAddress = getNNServiceAddress(context, request);
+    if (serviceAddress != null) {
+      SecurityUtil.setTokenService(token, serviceAddress);
+      token.setKind(DelegationTokenIdentifier.HDFS_DELEGATION_KIND);
     }
+
+    ByteArrayInputStream buf =
+        new ByteArrayInputStream(token.getIdentifier());
+    DataInputStream in = new DataInputStream(buf);
+    DelegationTokenIdentifier id = new DelegationTokenIdentifier();
+    id.readFields(in);
+    if (context != null) {
+      final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
+      if (nn != null) {
+        // Verify the token.
+        nn.getNamesystem().verifyToken(id, token.getPassword());
+      }
+    }
+    UserGroupInformation ugi = id.getUser();
+    ugi.addToken(token);
     return ugi;
   }
 
