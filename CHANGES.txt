@@ -139,6 +139,8 @@ Release 1.2.0 - unreleased
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
+    HDFS-3679. fuse_dfs notrash option sets usetrash. (Conrad Meyer via suresh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
