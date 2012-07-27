@@ -94,6 +94,12 @@ dfs.datanode.sync.behind.writes - set to true to trigger dirty page writeback im
 dfs.datanode.readahead.bytes - set to a non-zero value to trigger readahead for sequential reads
 </blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-2617">HDFS-2617</a>.
+     Major improvement reported by jghoman and fixed by jghoman (security)<br>
+     <b>Replaced Kerberized SSL for image transfer and fsck with SPNEGO-based solution</b><br>
+     <blockquote>                    Due to the requirement that KSSL use weak encryption types for Kerberos tickets, HTTP authentication to the NameNode will now use SPNEGO by default. This will require users of previous branch-1 releases with security enabled to modify their configurations and create new Kerberos principals in order to use SPNEGO. The old behavior of using KSSL can optionally be enabled by setting the configuration option &quot;hadoop.security.use-weak-http-crypto&quot; to &quot;true&quot;.
+</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2741">HDFS-2741</a>.
      Minor bug reported by markus17 and fixed by  <br>
      <b>dfs.datanode.max.xcievers missing in 0.20.205.0</b><br>
@@ -795,6 +801,11 @@ dfs.datanode.readahead.bytes - set to a non-zero value to trigger readahead for 
      Major bug reported by vicaya and fixed by vicaya (performance, tasktracker)<br>
      <b>Fix performance regression in shuffle </b><br>
      <blockquote>There is a significant (up to 3x) performance regression in shuffle (vs 0.20.2) in the Hadoop 1.x series. Most noticeable with high-end switches.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4400">MAPREDUCE-4400</a>.
+     Major bug reported by vicaya and fixed by vicaya (performance, task)<br>
+     <b>Fix performance regression for small jobs/workflows</b><br>
+     <blockquote>There is a significant performance regression for small jobs/workflows (vs 0.20.2) in the Hadoop 1.x series. Most noticeable with Hive and Pig jobs. PigMix has an average 40% regression against 0.20.2.</blockquote></li>
 
 
 </ul>
