@@ -82,6 +82,7 @@ import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
@@ -318,10 +319,18 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
 
   @SuppressWarnings("deprecation")
   public static String getInfoServer(Configuration conf) {
-    String http = UserGroupInformation.isSecurityEnabled() ? "dfs.https.address"
-        : "dfs.http.address";
+    String http = SecurityUtil.useKsslAuth() ? "dfs.https.address" :
+        "dfs.http.address";
     return NetUtils.getServerAddress(conf, "dfs.info.bindAddress",
         "dfs.info.port", http);
+  }
+
+  /**
+   * @return "https" if KSSL should be used, "http" if security is disabled
+   *         or SPNEGO is enabled.
+   */
+  public static String getHttpUriScheme() {
+    return SecurityUtil.useKsslAuth() ? "https" : "http";
   }
   
   @SuppressWarnings("deprecation")
@@ -329,25 +338,18 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     final String infoAddr = NetUtils.getServerAddress(conf,
         "dfs.info.bindAddress", "dfs.info.port", "dfs.http.address");
     final InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
-    if(UserGroupInformation.isSecurityEnabled()) {
+    
+    if (SecurityUtil.useKsslAuth()) {
       String httpsUser = SecurityUtil.getServerPrincipal(conf
           .get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), infoSocAddr
           .getHostName());
-      if (httpsUser == null) {
-        LOG.warn(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY
-            + " not defined in config. Starting http server as "
-            + SecurityUtil.getServerPrincipal(conf
-                .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY), serverAddress
-                .getHostName())
-            + ": Kerberized SSL may be not function correctly.");
-      } else {
-        // Kerberized SSL servers must be run from the host principal...
-        LOG.info("Logging in as " + httpsUser + " to start http server.");
-        SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-            DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY, infoSocAddr
-                .getHostName());
-      }
+      // Kerberized SSL servers must be run from the host principal...
+      LOG.info("Logging in as " + httpsUser + " to start http server.");
+      SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+          DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY, infoSocAddr
+              .getHostName());
     }
+
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     try {
       this.httpServer = ugi.doAs(new PrivilegedExceptionAction<HttpServer>() {
@@ -359,6 +361,28 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
               infoPort == 0, conf, 
               SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN)) {
             {
+              // Add SPNEGO support to NameNode
+              if (UserGroupInformation.isSecurityEnabled() &&
+                  !SecurityUtil.useKsslAuth()) {
+                Map<String, String> params = new HashMap<String, String>();
+                String principalInConf = conf.get(
+                    DFSConfigKeys.DFS_NAMENODE_INTERNAL_SPENGO_USER_NAME_KEY);
+                if (principalInConf != null && !principalInConf.isEmpty()) {
+                  params.put("kerberos.principal",
+                      SecurityUtil.getServerPrincipal(principalInConf,
+                          serverAddress.getHostName()));
+                }
+                String httpKeytab = conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
+                if (httpKeytab != null && !httpKeytab.isEmpty()) {
+                  params.put("kerberos.keytab", httpKeytab);
+                }
+  
+                params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
+  
+                defineFilter(webAppContext, SPNEGO_FILTER,
+                    AuthenticationFilter.class.getName(), params, null);
+              }
+  
               if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
                 //add SPNEGO authentication filter for webhdfs
                 final String name = "SPNEGO";
@@ -400,8 +424,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
           };
           
           boolean certSSL = conf.getBoolean("dfs.https.enable", false);
-          boolean useKrb = UserGroupInformation.isSecurityEnabled();
-          if (certSSL || useKrb) {
+          if (certSSL || SecurityUtil.useKsslAuth()) {
             boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
             InetSocketAddress secInfoSocAddr = NetUtils.createSocketAddr(infoHost + ":"+ conf.get(
                                 "dfs.https.port", infoHost + ":" + 0));
@@ -410,7 +433,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
               sslConf.addResource(conf.get("dfs.https.server.keystore.resource",
                   "ssl-server.xml"));
             }
-            httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth, useKrb);
+            httpServer.addSslListener(secInfoSocAddr, sslConf, needClientAuth,
+                SecurityUtil.useKsslAuth());
             // assume same ssl port for all datanodes
             InetSocketAddress datanodeSslPort = NetUtils.createSocketAddr(conf.get(
                 "dfs.datanode.https.address", infoHost + ":" + 50475));
@@ -421,29 +445,32 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
           httpServer.setAttribute("name.node.address", getNameNodeAddress());
           httpServer.setAttribute("name.system.image", getFSImage());
           httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
-          httpServer.addInternalServlet("getDelegationToken", 
-                                        GetDelegationTokenServlet.PATH_SPEC, 
-                                        GetDelegationTokenServlet.class, true);
-          httpServer.addInternalServlet("renewDelegationToken", 
-                                        RenewDelegationTokenServlet.PATH_SPEC, 
-                                        RenewDelegationTokenServlet.class, true);
-          httpServer.addInternalServlet("cancelDelegationToken", 
-                                        CancelDelegationTokenServlet.PATH_SPEC, 
+          httpServer.addInternalServlet("getDelegationToken",
+                                        GetDelegationTokenServlet.PATH_SPEC,
+                                        GetDelegationTokenServlet.class, true,
+                                        SecurityUtil.useKsslAuth());
+          httpServer.addInternalServlet("renewDelegationToken",
+                                        RenewDelegationTokenServlet.PATH_SPEC,
+                                        RenewDelegationTokenServlet.class, true,
+                                        SecurityUtil.useKsslAuth());
+          httpServer.addInternalServlet("cancelDelegationToken",
+                                        CancelDelegationTokenServlet.PATH_SPEC,
                                         CancelDelegationTokenServlet.class,
-                                        true);
-          httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class, true);
-          httpServer.addInternalServlet("getimage", "/getimage", 
-              GetImageServlet.class, true);
-          httpServer.addInternalServlet("listPaths", "/listPaths/*", 
-              ListPathsServlet.class, false);
-          httpServer.addInternalServlet("data", "/data/*", 
-              FileDataServlet.class, false);
+                                        true, SecurityUtil.useKsslAuth());
+          httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class, true,
+              SecurityUtil.useKsslAuth());
+          httpServer.addInternalServlet("getimage", "/getimage",
+              GetImageServlet.class, true, SecurityUtil.useKsslAuth());
+          httpServer.addInternalServlet("listPaths", "/listPaths/*",
+              ListPathsServlet.class);
+          httpServer.addInternalServlet("data", "/data/*",
+              FileDataServlet.class);
           httpServer.addInternalServlet("checksum", "/fileChecksum/*",
-              FileChecksumServlets.RedirectServlet.class, false);
+              FileChecksumServlets.RedirectServlet.class);
           httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
-              ContentSummaryServlet.class, false);
+              ContentSummaryServlet.class);
           httpServer.start();
-      
+
           // The web-server port can be ephemeral... ensure we have the correct info
           infoPort = httpServer.getPort();
           httpAddress = new InetSocketAddress(infoHost, infoPort);
@@ -455,8 +482,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     } catch (InterruptedException e) {
       throw new IOException(e);
     } finally {
-      if(UserGroupInformation.isSecurityEnabled() && 
-          conf.get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY) != null) {
+      if (SecurityUtil.useKsslAuth()) {
         // Go back to being the correct Namenode principal
         LOG.info("Logging back in as "
             + SecurityUtil.getServerPrincipal(conf
@@ -467,7 +493,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                 .getHostName());
       }
     }
- }
+  }
 
   /**
    * Start NameNode.

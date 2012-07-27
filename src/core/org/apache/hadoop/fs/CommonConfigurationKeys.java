@@ -47,6 +47,10 @@ public class CommonConfigurationKeys {
     "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
       true;
+  public static final String HADOOP_SECURITY_USE_WEAK_HTTP_CRYPTO_KEY =
+      "hadoop.security.use-weak-http-crypto";
+  public static final boolean HADOOP_SECURITY_USE_WEAK_HTTP_CRYPTO_DEFAULT =
+      false;
   
   public static final String IPC_SERVER_RPC_READ_THREADS_KEY =
                                         "ipc.server.read.threadpool.size";

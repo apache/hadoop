@@ -66,12 +66,13 @@ public class GetImageServlet extends HttpServlet {
       final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
       final TransferFsImage ff = new TransferFsImage(pmap, request, response);
       final Configuration conf = (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+
       if(UserGroupInformation.isSecurityEnabled() && 
-          !isValidRequestor(request.getRemoteUser(), conf)) {
+          !isValidRequestor(request.getUserPrincipal().getName(), conf)) {
         response.sendError(HttpServletResponse.SC_FORBIDDEN, 
             "Only Namenode and Secondary Namenode may access this servlet");
         LOG.warn("Received non-NN/SNN request for image or edits from " 
-            + request.getRemoteHost());
+            + request.getUserPrincipal().getName() + " at " + request.getRemoteHost());
         return;
       }
       
@@ -157,11 +158,11 @@ public class GetImageServlet extends HttpServlet {
     
     for(String v : validRequestors) {
       if(v != null && v.equals(remoteUser)) {
-        if(LOG.isDebugEnabled()) LOG.debug("isValidRequestor is allowing: " + remoteUser);
+        LOG.info("GetImageServlet allowing: " + remoteUser);
         return true;
       }
     }
-    if(LOG.isDebugEnabled()) LOG.debug("isValidRequestor is rejecting: " + remoteUser);
+    LOG.info("GetImageServlet rejecting: " + remoteUser);
     return false;
   }
 }
