@@ -854,6 +854,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8551. fs -mkdir creates parent directories without the -p option
     (John George via bobby)
 
+    HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
+    auth type. (daryn)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
