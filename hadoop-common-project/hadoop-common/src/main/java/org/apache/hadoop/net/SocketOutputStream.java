@@ -31,8 +31,8 @@ import java.nio.channels.WritableByteChannel;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.metrics2.lib.MutableRate;
-import org.apache.hadoop.util.Progressable;
 
 /**
  * This implements an output stream that can have a timeout while writing.
@@ -179,9 +179,9 @@ public class SocketOutputStream extends OutputStream
    * @param fileCh FileChannel to transfer data from.
    * @param position position within the channel where the transfer begins
    * @param count number of bytes to transfer.
-   * @param waitForWritableTime updated by the nanoseconds spent waiting for 
-   * the socket to become writable
-   * @param transferTime updated by the nanoseconds spent transferring data
+   * @param waitForWritableTime nanoseconds spent waiting for the socket 
+   *        to become writable
+   * @param transferTime nanoseconds spent transferring data
    * 
    * @throws EOFException 
    *         If end of input file is reached before requested number of 
@@ -195,8 +195,8 @@ public class SocketOutputStream extends OutputStream
    *         {@link FileChannel#transferTo(long, long, WritableByteChannel)}. 
    */
   public void transferToFully(FileChannel fileCh, long position, int count,
-      MutableRate waitForWritableTime,
-      MutableRate transferToTime) throws IOException {
+      LongWritable waitForWritableTime,
+      LongWritable transferToTime) throws IOException {
     long waitTime = 0;
     long transferTime = 0;
     while (count > 0) {
@@ -236,12 +236,12 @@ public class SocketOutputStream extends OutputStream
       waitTime += wait - start;
       transferTime += transfer - wait;
     }
-
+    
     if (waitForWritableTime != null) {
-      waitForWritableTime.add(waitTime);
+      waitForWritableTime.set(waitTime);
     }
     if (transferToTime != null) {
-      transferToTime.add(transferTime);
+      transferToTime.set(transferTime);
     }
   }
 
