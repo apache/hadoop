@@ -757,6 +757,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4467. IndexCache failures due to missing synchronization
     (Kihwal Lee via tgraves)
 
+    MAPREDUCE-4423. Potential infinite fetching of map output (Robert Evans
+    via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
