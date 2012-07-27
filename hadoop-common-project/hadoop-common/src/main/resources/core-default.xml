@@ -165,7 +165,7 @@
 
 <property>
   <name>hadoop.security.group.mapping.ldap.search.filter.user</name>
-  <value>(&amp;(objectClass=user)(sAMAccountName={0})</value>
+  <value>(&amp;(objectClass=user)(sAMAccountName={0}))</value>
   <description>
     An additional filter to use when searching for LDAP users. The default will
     usually be appropriate for Active Directory installations. If connecting to
