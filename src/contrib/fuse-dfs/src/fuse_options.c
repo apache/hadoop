@@ -110,7 +110,7 @@ int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs
     options.usetrash = 1;
     break;
   case KEY_NOTRASH:
-    options.usetrash = 1;
+    options.usetrash = 0;
     break;
   case KEY_RO:
     options.read_only = 1;
