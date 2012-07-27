@@ -136,6 +136,9 @@ Release 1.2.0 - unreleased
     HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
     to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
 
+    HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
+    auth type. (daryn)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

@@ -506,7 +506,6 @@ public class JspHelper {
           ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
         }
         ugi.addToken(token);
-        ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
         if(remoteUser == null) {
           throw new IOException("Security enabled but user not " +

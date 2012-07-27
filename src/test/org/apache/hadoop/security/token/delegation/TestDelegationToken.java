@@ -39,6 +39,8 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -167,6 +169,52 @@ public class TestDelegationToken {
       LOG.info("Caught an exception: " + StringUtils.stringifyException(th));
       assertEquals("action threw wrong exception", except, th.getClass());
     }
+  }
+
+  @Test
+  public void testGetUserNullOwner() {
+    TestDelegationTokenIdentifier ident =
+        new TestDelegationTokenIdentifier(null, null, null);
+    UserGroupInformation ugi = ident.getUser();
+    assertNull(ugi);
+  }
+  
+  @Test
+  public void testGetUserWithOwner() {
+    TestDelegationTokenIdentifier ident =
+        new TestDelegationTokenIdentifier(new Text("owner"), null, null);
+    UserGroupInformation ugi = ident.getUser();
+    assertNull(ugi.getRealUser());
+    assertEquals("owner", ugi.getUserName());
+    assertEquals(AuthenticationMethod.TOKEN, ugi.getAuthenticationMethod());
+  }
+
+  @Test
+  public void testGetUserWithOwnerEqualsReal() {
+    Text owner = new Text("owner");
+    TestDelegationTokenIdentifier ident =
+        new TestDelegationTokenIdentifier(owner, null, owner);
+    UserGroupInformation ugi = ident.getUser();
+    assertNull(ugi.getRealUser());
+    assertEquals("owner", ugi.getUserName());
+    assertEquals(AuthenticationMethod.TOKEN, ugi.getAuthenticationMethod());
+  }
+
+  @Test
+  public void testGetUserWithOwnerAndReal() {
+    Text owner = new Text("owner");
+    Text realUser = new Text("realUser");
+    TestDelegationTokenIdentifier ident =
+        new TestDelegationTokenIdentifier(owner, null, realUser);
+    UserGroupInformation ugi = ident.getUser();
+    assertNotNull(ugi.getRealUser());
+    assertNull(ugi.getRealUser().getRealUser());
+    assertEquals("owner", ugi.getUserName());
+    assertEquals("realUser", ugi.getRealUser().getUserName());
+    assertEquals(AuthenticationMethod.PROXY,
+                 ugi.getAuthenticationMethod());
+    assertEquals(AuthenticationMethod.TOKEN,
+                 ugi.getRealUser().getAuthenticationMethod());
   }
 
   @Test
