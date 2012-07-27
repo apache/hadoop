@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertGauge;
+import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
 import static org.junit.Assert.assertTrue;
 
@@ -63,6 +64,9 @@ public class TestNameNodeMetrics {
   // Number of datanodes in the cluster
   private static final int DATANODE_COUNT = 3; 
   private static final int WAIT_GAUGE_VALUE_RETRIES = 20;
+  
+  // Rollover interval of percentile metrics (in seconds)
+  private static final int PERCENTILES_INTERVAL = 1;
 
   static {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 100);
@@ -71,6 +75,8 @@ public class TestNameNodeMetrics {
         DFS_REPLICATION_INTERVAL);
     CONF.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
         DFS_REPLICATION_INTERVAL);
+    CONF.set(DFSConfigKeys.DFS_METRICS_PERCENTILES_INTERVALS_KEY, 
+        "" + PERCENTILES_INTERVAL);
 
     ((Log4JLogger)LogFactory.getLog(MetricsAsserts.class))
       .getLogger().setLevel(Level.DEBUG);
@@ -351,5 +357,25 @@ public class TestNameNodeMetrics {
     assertGauge("LastWrittenTransactionId", 6L, getMetrics(NS_METRICS));
     assertGauge("TransactionsSinceLastCheckpoint", 1L, getMetrics(NS_METRICS));
     assertGauge("TransactionsSinceLastLogRoll", 1L, getMetrics(NS_METRICS));
+  }
+  
+  /**
+   * Tests that the sync and block report metrics get updated on cluster
+   * startup.
+   */
+  @Test
+  public void testSyncAndBlockReportMetric() throws Exception {
+    MetricsRecordBuilder rb = getMetrics(NN_METRICS);
+    // We have one sync when the cluster starts up, just opening the journal
+    assertCounter("SyncsNumOps", 1L, rb);
+    // Each datanode reports in when the cluster comes up
+    assertCounter("BlockReportNumOps", (long)DATANODE_COUNT, rb);
+    
+    // Sleep for an interval+slop to let the percentiles rollover
+    Thread.sleep((PERCENTILES_INTERVAL+1)*1000);
+    
+    // Check that the percentiles were updated
+    assertQuantileGauges("Syncs1s", rb);
+    assertQuantileGauges("BlockReport1s", rb);
   }
 }

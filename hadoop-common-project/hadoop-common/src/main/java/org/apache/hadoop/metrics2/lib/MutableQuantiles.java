@@ -45,7 +45,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class MutableQuantiles extends MutableMetric {
 
-  static final Quantile[] quantiles = { new Quantile(0.50, 0.050),
+  @VisibleForTesting
+  public static final Quantile[] quantiles = { new Quantile(0.50, 0.050),
       new Quantile(0.75, 0.025), new Quantile(0.90, 0.010),
       new Quantile(0.95, 0.005), new Quantile(0.99, 0.001) };
 
@@ -90,8 +91,7 @@ public class MutableQuantiles extends MutableMetric {
         "Number of %s for %s with %ds interval", lsName, desc, interval));
     // Construct the MetricsInfos for the quantiles, converting to percentiles
     quantileInfos = new MetricsInfo[quantiles.length];
-    String nameTemplate = ucName + "%dthPercentile" + interval + "sInterval"
-        + uvName;
+    String nameTemplate = ucName + "%dthPercentile" + uvName;
     String descTemplate = "%d percentile " + lvName + " with " + interval
         + " second interval for " + desc;
     for (int i = 0; i < quantiles.length; i++) {

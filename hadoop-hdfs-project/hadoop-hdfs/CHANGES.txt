@@ -356,6 +356,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3711. Manually convert remaining tests to JUnit4. (Andrew Wang via atm)
 
+    HDFS-3650. Use MutableQuantiles to provide latency histograms for various
+    operations. (Andrew Wang via atm)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
