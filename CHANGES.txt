@@ -133,6 +133,9 @@ Release 1.2.0 - unreleased
     HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
     principal. (atm)
 
+    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
+    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
