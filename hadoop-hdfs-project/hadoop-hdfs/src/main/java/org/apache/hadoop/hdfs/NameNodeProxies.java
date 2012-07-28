@@ -259,7 +259,7 @@ public class NameNodeProxies {
    *     
    * Note that dfs.client.retry.max < 0 is not allowed.
    */
-  private static RetryPolicy getDefaultRpcRetryPolicy(Configuration conf) {
+  public static RetryPolicy getDefaultRetryPolicy(Configuration conf) {
     final RetryPolicy multipleLinearRandomRetry = getMultipleLinearRandomRetry(conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("multipleLinearRandomRetry = " + multipleLinearRandomRetry);
@@ -300,6 +300,13 @@ public class NameNodeProxies {
               + p.getClass().getSimpleName() + ", exception=" + e);
           return p.shouldRetry(e, retries, failovers, isMethodIdempotent);
         }
+
+        @Override
+        public String toString() {
+          return "RetryPolicy[" + multipleLinearRandomRetry + ", "
+              + RetryPolicies.TRY_ONCE_THEN_FAIL.getClass().getSimpleName()
+              + "]";
+        }
       };
     }
   }
@@ -335,7 +342,7 @@ public class NameNodeProxies {
       boolean withRetries) throws IOException {
     RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class, ProtobufRpcEngine.class);
 
-    final RetryPolicy defaultPolicy = getDefaultRpcRetryPolicy(conf);
+    final RetryPolicy defaultPolicy = getDefaultRetryPolicy(conf);
     final long version = RPC.getProtocolVersion(ClientNamenodeProtocolPB.class);
     ClientNamenodeProtocolPB proxy = RPC.getProtocolProxy(
         ClientNamenodeProtocolPB.class, version, address, ugi, conf,

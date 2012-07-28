@@ -57,9 +57,9 @@ public abstract class ByteRangeInputStream extends FSInputStream {
       return url;
     }
 
-    protected abstract HttpURLConnection openConnection() throws IOException;
-
-    protected abstract HttpURLConnection openConnection(final long offset) throws IOException;
+    /** Connect to server with a data offset. */
+    protected abstract HttpURLConnection connect(final long offset,
+        final boolean resolved) throws IOException;
   }
 
   enum StreamStatus {
@@ -84,9 +84,6 @@ public abstract class ByteRangeInputStream extends FSInputStream {
     this.originalURL = o;
     this.resolvedURL = r;
   }
-  
-  protected abstract void checkResponseCode(final HttpURLConnection connection
-      ) throws IOException;
   
   protected abstract URL getResolvedUrl(final HttpURLConnection connection
       ) throws IOException;
@@ -113,13 +110,10 @@ public abstract class ByteRangeInputStream extends FSInputStream {
   protected InputStream openInputStream() throws IOException {
     // Use the original url if no resolved url exists, eg. if
     // it's the first time a request is made.
-    final URLOpener opener =
-      (resolvedURL.getURL() == null) ? originalURL : resolvedURL;
+    final boolean resolved = resolvedURL.getURL() != null; 
+    final URLOpener opener = resolved? resolvedURL: originalURL;
 
-    final HttpURLConnection connection = opener.openConnection(startPos);
-    connection.connect();
-    checkResponseCode(connection);
-
+    final HttpURLConnection connection = opener.connect(startPos, resolved);
     final String cl = connection.getHeaderField(StreamFile.CONTENT_LENGTH);
     if (cl == null) {
       throw new IOException(StreamFile.CONTENT_LENGTH+" header is missing");
