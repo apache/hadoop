@@ -1214,6 +1214,16 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     return true;
   }
+  
+  /**
+   * Cancel the deletion of the path when the FileSystem is closed
+   * @param f the path to cancel deletion
+   */
+  public boolean cancelDeleteOnExit(Path f) {
+    synchronized (deleteOnExit) {
+      return deleteOnExit.remove(f);
+    }
+  }
 
   /**
    * Delete all files that were marked as delete-on-exit. This recursively
