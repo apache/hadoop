@@ -135,7 +135,7 @@ int fuseConnectInit(const char *nnUri, int port)
   int ret;
 
   gTimerPeriod = FUSE_CONN_DEFAULT_TIMER_PERIOD;
-  ret = hdfsConfGetInt(HADOOP_FUSE_CONNECTION_TIMEOUT, &gTimerPeriod);
+  ret = hdfsConfGetInt(HADOOP_FUSE_TIMER_PERIOD, &gTimerPeriod);
   if (ret) {
     fprintf(stderr, "Unable to determine the configured value for %s.",
           HADOOP_FUSE_TIMER_PERIOD);

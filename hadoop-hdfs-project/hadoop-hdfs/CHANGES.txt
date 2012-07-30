@@ -543,6 +543,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3679. fuse_dfs notrash option sets usetrash. (Conrad Meyer via suresh)
 
+    HDFS-3732. fuse_dfs: incorrect configuration value checked for connection
+    expiry timer period. (Colin Patrick McCabe via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
