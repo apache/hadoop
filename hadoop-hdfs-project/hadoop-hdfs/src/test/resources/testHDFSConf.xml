@@ -55,6 +55,7 @@
     <test> <!-- TESTED -->
       <description>ls: file using relative path</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command>
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -ls file1</command>
       </test-commands>
@@ -76,6 +77,7 @@
     <test> <!-- TESTED -->
       <description>ls: files using globbing</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command>
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -touchz file2</command>
         <command>-fs NAMENODE -touchz file3</command>
@@ -937,6 +939,7 @@
         <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -mkdir /dir0/\*</command>
         <command>-fs NAMENODE -touchz /dir0/\*/file</command>
+        <command>-fs NAMENODE -mkdir /dir0/dir1/</command>
         <command>-fs NAMENODE -touchz /dir0/dir1/file1</command>
         <command>-fs NAMENODE -rm -r /dir0/\*</command>
         <command>-fs NAMENODE -ls -R /dir0</command>
@@ -977,7 +980,7 @@
     <test> <!-- TESTED -->
       <description>du: file using relative path</description>
       <test-commands>
-        <command>-fs NAMENODE -touchz test</command> <!-- make sure user home dir exists -->
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes data15bytesZZ</command>
         <command>-fs NAMENODE -du data15bytesZZ</command>
       </test-commands>
@@ -995,6 +998,7 @@
     <test> <!-- TESTED -->
       <description>du: files using globbing</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p CLITEST_DATA</command> 
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes data15bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes data30bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data60bytes data60bytes</command>
@@ -1724,6 +1728,7 @@
     <test> <!-- TESTED -->
       <description>mv: file (relative) to file (relative)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -mv file1 file2</command>
         <command>-fs NAMENODE -ls file*</command>        
@@ -2127,6 +2132,7 @@
     <test> <!-- TESTED -->
       <description>cp: file (absolute path) to file (relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz /file1</command>
         <command>-fs NAMENODE -cp /file1 file2</command>
         <command>-fs NAMENODE -ls /file1 file2</command>
@@ -2149,6 +2155,7 @@
     <test> <!-- TESTED -->
       <description>cp: file (relative path) to file (absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -cp file1 /file2</command>
         <command>-fs NAMENODE -ls file1 /file2</command>
@@ -2171,6 +2178,7 @@
     <test> <!-- TESTED -->
       <description>cp: file (relative path) to file (relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -cp file1 file2</command>
         <command>-fs NAMENODE -ls file1 file2</command>
@@ -2720,6 +2728,7 @@
     <test> <!-- TESTED -->
        <description>cp: putting file into an already existing destination with -f option(absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /user</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz /user/file0</command>
         <command>-fs NAMENODE -cp -f CLITEST_DATA/data120bytes /user/file0</command>
         <command>-fs NAMENODE -cat /user/file0</command>
@@ -3160,6 +3169,7 @@
     <test> <!-- TESTED -->
       <description>rm: removing a file (absolute path) </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -touchz /dir0/file0</command>
         <command>-fs NAMENODE -rm /dir0/file0</command>
       </test-commands>
@@ -3177,6 +3187,7 @@
     <test> <!-- TESTED -->
       <description>rm: removing a file (relative path) </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -rm file0</command>
       </test-commands>
@@ -3194,6 +3205,7 @@
     <test> <!-- TESTED -->
       <description>rm: removing files by globbing (absolute path) </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -touchz /dir0/file0</command>
         <command>-fs NAMENODE -touchz /dir0/file1</command>
         <command>-fs NAMENODE -touchz /dir0/file2</command>
@@ -3226,6 +3238,7 @@
     <test> <!-- TESTED -->
       <description>rm: removing files by globbing (relative path) </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir dir</command>
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -touchz file2</command>
@@ -3555,6 +3568,7 @@
     <test> <!-- TESTED -->
       <description>rm: removing a file (absolute path) </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -touchz /dir0/file0</command>
         <command>-fs NAMENODE -rm -r /dir0/file0</command>
       </test-commands>
@@ -3572,6 +3586,7 @@
     <test> <!-- TESTED -->
       <description>rm: removing a file (relative path) </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -rm -r file0</command>
       </test-commands>
@@ -3968,6 +3983,7 @@
     <test> <!-- TESTED -->
       <description>put: putting file into a file (relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes data15bytes</command>
         <command>-fs NAMENODE -du data15bytes</command>
@@ -4066,6 +4082,7 @@
     <test> <!-- TESTED -->
       <description>put: putting non existent file(absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -put /user/wrongdata file</command>
       </test-commands>
@@ -4083,6 +4100,7 @@
     <test> <!-- TESTED -->
       <description>put: putting non existent file(relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -put wrongdata file</command>
       </test-commands>
@@ -4100,6 +4118,7 @@
     <test> <!-- TESTED -->
       <description>put: putting file into an already existing destination(absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /user</command>
         <command>-fs NAMENODE -touchz /user/file0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes /user/file0</command>
       </test-commands>
@@ -4117,6 +4136,7 @@
     <test> <!-- TESTED -->
       <description>put: putting file into an already existing destination with -f option(absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /user</command>
         <command>-fs NAMENODE -touchz /user/file0</command>
         <command>-fs NAMENODE -put -f CLITEST_DATA/data120bytes /user/file0</command>
         <command>-fs NAMENODE -cat /user/file0</command>
@@ -4135,6 +4155,7 @@
     <test> <!-- TESTED -->
       <description>put: putting file into an already existing destination(relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes file0</command>
       </test-commands>
@@ -4154,6 +4175,7 @@
       <test-commands>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes /data15bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes /data30bytes</command>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -put /data15bytes /data30bytes file0</command>
       </test-commands>
@@ -4262,6 +4284,7 @@
     <test> <!-- TESTED -->
       <description>put: putting local file into an already existing destination in hdfs:// path </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir hdfs:///user/</command>
         <command>-fs NAMENODE -touchz hdfs:///user/file0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes hdfs:///user/file0</command>
       </test-commands>
@@ -4385,6 +4408,7 @@
     <test> <!-- TESTED -->
       <description>put: putting local file into an already existing destination in Namenode's path</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir NAMENODE/user/</command>
         <command>-fs NAMENODE -touchz NAMENODE/user/file0</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes NAMENODE/user/file0</command>
       </test-commands>
@@ -4453,6 +4477,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying file into a file (relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes data15bytes</command>
         <command>-fs NAMENODE -du data15bytes</command>
@@ -4551,6 +4576,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying non existent file(absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -copyFromLocal /user/wrongdata file</command>
       </test-commands>
@@ -4568,6 +4594,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying non existent file(relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -copyFromLocal wrongdata file</command>
       </test-commands>
@@ -4585,6 +4612,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying file into an already existing destination(absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /user</command> 
         <command>-fs NAMENODE -touchz /user/file0</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /user/file0</command>
       </test-commands>
@@ -4602,6 +4630,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: copying file into an already existing destination with -f option(absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /user</command> 
         <command>-fs NAMENODE -touchz /user/file0</command>
         <command>-fs NAMENODE -copyFromLocal -f CLITEST_DATA/data120bytes /user/file0</command>
         <command>-fs NAMENODE -cat /user/file0</command>
@@ -4621,6 +4650,7 @@
     
       <description>copyFromLocal: copying file into an already existing destination(relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes file0</command>
       </test-commands>
@@ -4640,6 +4670,7 @@
       <test-commands>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes /data15bytes</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data30bytes /data30bytes</command>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -copyFromLocal /data15bytes /data30bytes file0</command>
       </test-commands>
@@ -4750,6 +4781,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: Test for hdfs:// path - copying local file into an already existing destination</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir hdfs:///user/</command>
         <command>-fs NAMENODE -touchz hdfs:///user/file0</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes hdfs:///user/file0</command>
       </test-commands>
@@ -4876,6 +4908,7 @@
     <test> <!-- TESTED -->
       <description>copyFromLocal: Test for Namenode's path - copying local file into an already existing destination</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir NAMENODE/user/</command>
         <command>-fs NAMENODE -touchz NAMENODE/user/file0</command>
         <command>-fs NAMENODE -copyFromLocal CLITEST_DATA/data15bytes NAMENODE/user/file0</command>
       </test-commands>
@@ -5012,6 +5045,7 @@
     <test>
       <description>cat: contents of file(relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes data15bytes</command>
         <command>-fs NAMENODE -cat data15bytes</command>
@@ -5796,6 +5830,7 @@
     <test> <!-- TESTED -->
       <description>setrep: existent file (absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /dir0</command> 
         <command>-fs NAMENODE -touchz /dir0/file0</command>
         <command>-fs NAMENODE -setrep 2 /dir0/file0</command>
       </test-commands>
@@ -5813,6 +5848,7 @@
     <test> <!-- TESTED -->
       <description>setrep: existent file (relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -setrep 2 file0</command>
       </test-commands>
@@ -5830,6 +5866,7 @@
     <test> <!-- TESTED -->
       <description>setrep: existent directory (absolute path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /dir0</command>
         <command>-fs NAMENODE -touchz /dir0/file0</command>
         <command>-fs NAMENODE -touchz /dir0/file1</command>
         <command>-fs NAMENODE -setrep -R 2 /dir0</command>
@@ -5852,6 +5889,7 @@
     <test> <!-- TESTED -->
       <description>setrep: existent directory (relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir0</command>
         <command>-fs NAMENODE -touchz dir0/file0</command>
         <command>-fs NAMENODE -touchz dir0/file1</command>
         <command>-fs NAMENODE -setrep -R 2 dir0</command>
@@ -5906,6 +5944,7 @@
     <test> <!-- TESTED -->
       <description>setrep: Test for hdfs:// path - existent file</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir hdfs:///dir0/</command>
         <command>-fs NAMENODE -touchz hdfs:///dir0/file0</command>
         <command>-fs NAMENODE -setrep 2 hdfs:///dir0/file0</command>
       </test-commands>
@@ -5923,6 +5962,7 @@
     <test> <!-- TESTED -->
       <description>setrep: Test for hdfs:// path - existent directory</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir hdfs:///dir0/</command>
         <command>-fs NAMENODE -touchz hdfs:///dir0/file0</command>
         <command>-fs NAMENODE -touchz hdfs:///dir0/file1</command>
         <command>-fs NAMENODE -setrep -R 2 hdfs:///dir0</command>
@@ -5945,6 +5985,7 @@
     <test> <!-- TESTED -->
       <description>setrep: Test for hdfs:// path - non existent file</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir hdfs:///dir0/</command>
         <command>-fs NAMENODE -setrep 2 hdfs:///dir0/file</command>
       </test-commands>
       <cleanup-commands>
@@ -5961,6 +6002,7 @@
     <test> <!-- TESTED -->
       <description>setrep: Test for Namenode's path - existent file</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir NAMENODE/dir0/</command>
         <command>-fs NAMENODE -touchz NAMENODE/dir0/file0</command>
         <command>-fs NAMENODE -setrep 2 NAMENODE/dir0/file0</command>
       </test-commands>
@@ -5978,6 +6020,7 @@
     <test> <!-- TESTED -->
       <description>setrep: Test for Namenode's path - existent directory</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p NAMENODE/dir0</command>
         <command>-fs NAMENODE -touchz NAMENODE/dir0/file0</command>
         <command>-fs NAMENODE -touchz NAMENODE/dir0/file1</command>
         <command>-fs NAMENODE -setrep -R 2 NAMENODE/dir0</command>
@@ -6017,6 +6060,7 @@
     <test> <!-- TESTED -->
       <description>touchz: touching file (absolute path) </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir /user</command>
         <command>-fs NAMENODE -touchz /user/file0</command>
         <command>-fs NAMENODE -du /user/file0</command>
       </test-commands>
@@ -6030,10 +6074,26 @@
         </comparator>
       </comparators>
     </test>
-    
+ 
+    <test> <!-- TESTED -->
+      <description>touchz: touching file in non-existent directory </description>
+      <test-commands>
+        <command>-fs NAMENODE -touchz file0 </command>
+      </test-commands>
+      <cleanup-commands>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>touchz: `file0': No such file or directory</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+ 
     <test> <!-- TESTED -->
       <description>touchz: touching file(relative path) </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0 </command>
         <command>-fs NAMENODE -du file0</command>
       </test-commands>
@@ -6051,6 +6111,7 @@
     <test> <!-- TESTED -->
       <description>touchz: touching many files </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0 file1 file2</command>
         <command>-fs NAMENODE -du file*</command>
       </test-commands>
@@ -6070,6 +6131,7 @@
     <test> <!-- TESTED -->
       <description>touchz: touching already existing file </description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes data15bytes</command>
         <command>-fs NAMENODE -touchz data15bytes</command>
       </test-commands>
@@ -6087,6 +6149,7 @@
     <test> <!-- TESTED -->
       <description>touchz: Test for hdfs:// path - touching file</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p hdfs:///user/</command>
         <command>-fs NAMENODE -touchz hdfs:///user/file0</command>
         <command>-fs NAMENODE -du hdfs:///user/file0</command>
       </test-commands>
@@ -6340,6 +6403,7 @@
     <test> <!-- TESTED -->
       <description>stat: statistics about file(relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data60bytes data60bytes</command>
         <command>-fs NAMENODE -stat "%n-%b" data60bytes</command>
@@ -6430,6 +6494,7 @@
     <test> <!-- TESTED -->
       <description>stat: statistics about files (relative path) using globbing</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes data15bytes</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data30bytes data30bytes</command>
@@ -6690,6 +6755,7 @@
     <test> <!--TESTED-->
       <description>tail: contents of file(relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -put CLITEST_DATA/data15bytes data15bytes</command>
         <command>-fs NAMENODE -tail data15bytes</command>
@@ -6968,6 +7034,7 @@
     <test> <!-- TESTED -->
       <description>count: file using relative path</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -count file1</command>
       </test-commands>
@@ -7145,6 +7212,7 @@
     <test> <!-- TESTED -->
       <description>count: relative path to multiple files without globbing</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -touchz file2</command>
         <command>-fs NAMENODE -touchz file3</command>
@@ -7322,6 +7390,7 @@
     <test> <!-- TESTED -->
       <description>count: file using relative path with -q option</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -count -q file1</command>
       </test-commands>
@@ -7503,6 +7572,7 @@
     <test> <!-- TESTED -->
       <description>count: relative path to multiple files without globbing with -q option</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -touchz file2</command>
         <command>-fs NAMENODE -touchz file3</command>
@@ -8462,6 +8532,7 @@
     <test> <!-- TESTED -->
       <description>chmod: change permission(octal mode) of file in relative path</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file1</command>
         <command>-fs NAMENODE -chmod 666 file1</command>
         <command>-fs NAMENODE -ls file1</command>
@@ -15988,6 +16059,7 @@
     <test> <!-- TESTED -->
       <description>moveFromLocal: moving non existent file(relative path)</description>
       <test-commands>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz test</command>
         <command>-fs NAMENODE -moveFromLocal wrongdata file</command>
       </test-commands>
@@ -16007,6 +16079,7 @@
       <test-commands>
         <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data15bytes /data15bytes</command>
         <command>-fs NAMENODE -moveFromLocal CLITEST_DATA/data30bytes /data30bytes</command>
+        <command>-fs NAMENODE -mkdir -p dir</command> <!-- make sure user home dir exists -->
         <command>-fs NAMENODE -touchz file0</command>
         <command>-fs NAMENODE -moveFromLocal /data15bytes /data30bytes file0</command>
       </test-commands>
