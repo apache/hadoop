@@ -153,6 +153,8 @@ Release 1.1.0 - unreleased
 
     HDFS-2741. Document the max transfer threads property for branch-1. Backport of HDFS-1866. (Markus Jelsma via harsh)
 
+    HDFS-3163. TestHDFSCLI.testAll fails if user name is not all lowercase.
+    (Brandon Li via suresh)
 
 Release 1.0.3 - 2012.05.07
 
