@@ -141,6 +141,9 @@ Release 1.2.0 - unreleased
 
     HDFS-3679. fuse_dfs notrash option sets usetrash. (Conrad Meyer via suresh)
 
+    HDFS-3163. TestHDFSCLI.testAll fails if user name is not all lowercase.
+    (Brandon Li via suresh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
