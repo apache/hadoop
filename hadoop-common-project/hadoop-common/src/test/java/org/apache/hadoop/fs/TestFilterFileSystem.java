@@ -165,7 +165,9 @@ public class TestFilterFileSystem {
     public Token<?> getDelegationToken(String renewer) throws IOException {
       return null;
     }
-    
+    public boolean deleteOnExit(Path f) throws IOException {
+      return false;
+    }
   }
   
   @Test
