@@ -71,7 +71,7 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8362. Improve exception message when Configuration.set() is called with a null key or value. (Madhukara Phatak and Suresh Srinivas via harsh)
 
-    HADOOP-8642. ProtobufRpcEngine should log all RPCs if TRACE logging is
+    HADOOP-8624. ProtobufRpcEngine should log all RPCs if TRACE logging is
     enabled (todd)
 
     HADOOP-8623. hadoop jar command should respect HADOOP_OPTS.
