@@ -123,6 +123,13 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
+    HADOOP-8167. Configuration deprecation logic breaks backwards compatibility (tucu)
+
+    HADOOP-8172. Configuration no longer sets all keys in a deprecated key 
+    list. (Anupam Seth via bobby)
+
+    HADOOP-8197. Configuration logs WARNs on every use of a deprecated key (tucu)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES

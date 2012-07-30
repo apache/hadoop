@@ -20,6 +20,7 @@ package org.apache.hadoop.conf;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -27,6 +28,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
 import org.junit.After;
@@ -162,7 +164,7 @@ public class TestConfigurationDeprecation {
     conf.set("Y", "y");
     conf.set("Z", "z");
     // get old key
-    assertEquals("y", conf.get("X"));
+    assertEquals("z", conf.get("X"));
   }
 
   /**
@@ -270,4 +272,56 @@ public class TestConfigurationDeprecation {
         new String[]{ "tests.fake-default.new-key" });
     assertEquals("hello", conf.get("tests.fake-default.new-key"));
   }
+
+  @Test
+  public void testIteratorWithDeprecatedKeys() {
+    Configuration conf = new Configuration();
+    Configuration.addDeprecation("dK", new String[]{"nK"});
+    conf.set("k", "v");
+    conf.set("dK", "V");
+    assertEquals("V", conf.get("dK"));
+    assertEquals("V", conf.get("nK"));
+    conf.set("nK", "VV");
+    assertEquals("VV", conf.get("dK"));
+    assertEquals("VV", conf.get("nK"));
+    boolean kFound = false;
+    boolean dKFound = false;
+    boolean nKFound = false;
+    for (Map.Entry<String, String> entry : conf) {
+      if (entry.getKey().equals("k")) {
+        assertEquals("v", entry.getValue());
+        kFound = true;
+      }
+      if (entry.getKey().equals("dK")) {
+        assertEquals("VV", entry.getValue());
+        dKFound = true;
+      }
+      if (entry.getKey().equals("nK")) {
+        assertEquals("VV", entry.getValue());
+        nKFound = true;
+      }
+    }
+    assertTrue("regular Key not found", kFound);
+    assertTrue("deprecated Key not found", dKFound);
+    assertTrue("new Key not found", nKFound);
+  }
+  
+  @Test
+  public void testUnsetWithDeprecatedKeys() {
+    Configuration conf = new Configuration();
+    Configuration.addDeprecation("dK", new String[]{"nK"});
+    conf.set("nK", "VV");
+    assertEquals("VV", conf.get("dK"));
+    assertEquals("VV", conf.get("nK"));
+    conf.unset("dK");
+    assertNull(conf.get("dK"));
+    assertNull(conf.get("nK"));
+    conf.set("nK", "VV");
+    assertEquals("VV", conf.get("dK"));
+    assertEquals("VV", conf.get("nK"));
+    conf.unset("nK");
+    assertNull(conf.get("dK"));
+    assertNull(conf.get("nK"));
+  }
+
 }

@@ -57,20 +57,25 @@ public class TestWritableJobConf extends TestCase {
   }
 
   private void assertEquals(Configuration conf1, Configuration conf2) {
-    assertEquals(conf1.size(), conf2.size());
-
+    // We ignore deprecated keys because after deserializing, both the
+    // deprecated and the non-deprecated versions of a config are set.
+    // This is consistent with both the set and the get methods.
     Iterator<Map.Entry<String, String>> iterator1 = conf1.iterator();
     Map<String, String> map1 = new HashMap<String,String>();
     while (iterator1.hasNext()) {
       Map.Entry<String, String> entry = iterator1.next();
-      map1.put(entry.getKey(), entry.getValue());
+      if (!Configuration.isDeprecated(entry.getKey())) {
+        map1.put(entry.getKey(), entry.getValue());
+      }
     }
 
-    Iterator<Map.Entry<String, String>> iterator2 = conf1.iterator();
+    Iterator<Map.Entry<String, String>> iterator2 = conf2.iterator();
     Map<String, String> map2 = new HashMap<String,String>();
     while (iterator2.hasNext()) {
       Map.Entry<String, String> entry = iterator2.next();
-      map2.put(entry.getKey(), entry.getValue());
+      if (!Configuration.isDeprecated(entry.getKey())) {
+        map2.put(entry.getKey(), entry.getValue());
+      }
     }
 
     assertEquals(map1, map2);
