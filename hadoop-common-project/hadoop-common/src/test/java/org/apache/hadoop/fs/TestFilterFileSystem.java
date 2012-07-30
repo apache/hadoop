@@ -168,6 +168,9 @@ public class TestFilterFileSystem {
     public boolean deleteOnExit(Path f) throws IOException {
       return false;
     }
+    public boolean cancelDeleteOnExit(Path f) throws IOException {
+      return false;
+    }
   }
   
   @Test
