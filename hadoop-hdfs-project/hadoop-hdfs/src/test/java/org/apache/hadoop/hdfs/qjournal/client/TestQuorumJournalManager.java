@@ -23,12 +23,15 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.client.AsyncLogger;
 import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
@@ -43,7 +46,9 @@ import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,10 +72,17 @@ public class TestQuorumJournalManager {
   private Configuration conf;
   private QuorumJournalManager qjm;
   private List<AsyncLogger> spies;
+  
+  static {
+    ((Log4JLogger)ProtobufRpcEngine.LOG).getLogger().setLevel(Level.ALL);
+  }
 
   @Before
   public void setup() throws Exception {
     conf = new Configuration();
+    // Don't retry connections - it just slows down the tests.
+    conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);
+    
     cluster = new MiniJournalCluster.Builder(conf)
       .build();
     
@@ -117,11 +129,7 @@ public class TestQuorumJournalManager {
       assertEquals(1, stream.getFirstTxId());
       assertEquals(3, stream.getLastTxId());
       
-      for (int i = 1; i <= 3; i++) {
-        FSEditLogOp op = stream.readOp();
-        assertEquals(FSEditLogOpCodes.OP_MKDIR, op.opCode);
-        assertEquals(i, op.getTransactionId());
-      }
+      verifyEdits(streams, 1, 3);
       assertNull(stream.readOp());
     } finally {
       IOUtils.cleanup(LOG, streams.toArray(new Closeable[0]));
@@ -137,6 +145,7 @@ public class TestQuorumJournalManager {
       EditLogInputStream stream = streams.get(0);
       assertEquals(1, stream.getFirstTxId());
       assertEquals(3, stream.getLastTxId());
+      verifyEdits(streams, 1, 3);
     } finally {
       IOUtils.cleanup(LOG, streams.toArray(new Closeable[0]));
       streams.clear();
@@ -153,9 +162,40 @@ public class TestQuorumJournalManager {
       assertEquals(2, streams.size());
       assertEquals(4, streams.get(1).getFirstTxId());
       assertEquals(6, streams.get(1).getLastTxId());
+
+      verifyEdits(streams, 1, 6);
     } finally {
       IOUtils.cleanup(LOG, streams.toArray(new Closeable[0]));
       streams.clear();
+    }
+  }
+  
+  /**
+   * Regression test for HDFS-3725. One of the journal nodes is down
+   * during the writing of one segment, then comes back up later to
+   * take part in a later segment. Thus, its local edits are
+   * not a contiguous sequence. This should be handled correctly.
+   */
+  @Test
+  public void testOneJNMissingSegments() throws Exception {
+    writeSegment(qjm, 1, 3, true);
+    waitForAllPendingCalls(qjm.getLoggerSetForTests());
+    cluster.getJournalNode(0).stopAndJoin(0);
+    writeSegment(qjm, 4, 3, true);
+    waitForAllPendingCalls(qjm.getLoggerSetForTests());
+    cluster.restartJournalNode(0);
+    writeSegment(qjm, 7, 3, true);
+    waitForAllPendingCalls(qjm.getLoggerSetForTests());
+    cluster.getJournalNode(1).stopAndJoin(0);
+    
+    QuorumJournalManager readerQjm = createSpyingQJM();
+    List<EditLogInputStream> streams = Lists.newArrayList();
+    try {
+      readerQjm.selectInputStreams(streams, 1, false);
+      verifyEdits(streams, 1, 9);
+    } finally {
+      IOUtils.cleanup(LOG, streams.toArray(new Closeable[0]));
+      readerQjm.close();
     }
   }
   
@@ -424,6 +464,41 @@ public class TestQuorumJournalManager {
     stm.setReadyToFlush();
     stm.flush();
   }
+  
+  /**
+   * Verify that the given list of streams contains exactly the range of
+   * transactions specified, inclusive.
+   */
+  private void verifyEdits(List<EditLogInputStream> streams,
+      int firstTxnId, int lastTxnId) throws IOException {
+    
+    Iterator<EditLogInputStream> iter = streams.iterator();
+    assertTrue(iter.hasNext());
+    EditLogInputStream stream = iter.next();
+    
+    for (int expected = firstTxnId;
+        expected <= lastTxnId;
+        expected++) {
+      
+      FSEditLogOp op = stream.readOp();
+      while (op == null) {
+        assertTrue("Expected to find txid " + expected + ", " +
+            "but no more streams available to read from",
+            iter.hasNext());
+        stream = iter.next();
+        op = stream.readOp();
+      }
+      
+      assertEquals(FSEditLogOpCodes.OP_MKDIR, op.opCode);
+      assertEquals(expected, op.getTransactionId());
+    }
+    
+    assertNull(stream.readOp());
+    assertFalse("Expected no more txns after " + lastTxnId +
+        " but more streams are available", iter.hasNext());
+  }
+
+
   
   private static void waitForAllPendingCalls(AsyncLoggerSet als)
       throws InterruptedException {
