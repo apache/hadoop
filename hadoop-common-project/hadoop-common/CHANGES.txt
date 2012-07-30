@@ -857,6 +857,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
+    HADOOP-8627. FS deleteOnExit may delete the wrong path (daryn via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
