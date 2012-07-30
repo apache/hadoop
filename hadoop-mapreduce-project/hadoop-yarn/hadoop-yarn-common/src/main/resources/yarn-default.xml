@@ -241,7 +241,7 @@
 
   <!-- Node Manager Configs -->
   <property>
-    <description>address of node manager IPC.</description>
+    <description>The address of the container manager in the NM.</description>
     <name>yarn.nodemanager.address</name>
     <value>0.0.0.0:0</value>
   </property>

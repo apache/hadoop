@@ -332,13 +332,12 @@ package org.apache.hadoop.fs;
 
 import org.junit.Test;
 import org.junit.Before;
-import junit.framework.TestCase;
 
-public class DemoFiTest extends TestCase {
+public class DemoFiTest {
   public static final String BLOCK_RECEIVER_FAULT="hdfs.datanode.BlockReceiver";
   @Override
   @Before
-  public void setUp(){
+  public void setUp() {
     //Setting up the test's environment as required
   }
 

@@ -78,8 +78,20 @@ void init_protectedpaths(dfs_context *dfs) {
   dfs->protectedpaths[j] = NULL;
 }
 
+static void dfsPrintOptions(FILE *fp, const struct options *o)
+{
+  fprintf(fp, "[ protected=%s, nn_uri=%s, nn_port=%d, "
+          "debug=%d, read_only=%d, initchecks=%d, "
+          "no_permissions=%d, usetrash=%d, entry_timeout=%d, "
+          "attribute_timeout=%d, rdbuffer_size=%Zd, direct_io=%d ]",
+          (o->protected ? o->protected : "(NULL)"), o->nn_uri, o->nn_port, 
+          o->debug, o->read_only, o->initchecks,
+          o->no_permissions, o->usetrash, o->entry_timeout,
+          o->attribute_timeout, o->rdbuffer_size, o->direct_io);
+}
 
-void *dfs_init(void) {
+void *dfs_init(void)
+{
   //
   // Create a private struct of data we will pass to fuse here and which
   // will then be accessible on every call.
@@ -92,15 +104,15 @@ void *dfs_init(void) {
 
   // initialize the context
   dfs->debug                 = options.debug;
-  dfs->nn_uri                = options.nn_uri;
-  dfs->nn_port               = options.nn_port;
   dfs->read_only             = options.read_only;
   dfs->usetrash              = options.usetrash;
   dfs->protectedpaths        = NULL;
   dfs->rdbuffer_size         = options.rdbuffer_size;
   dfs->direct_io             = options.direct_io;
 
-  INFO("Mounting.  nn_uri=%s, nn_port=%d", dfs->nn_uri, dfs->nn_port);
+  fprintf(stderr, "Mounting with options ");
+  dfsPrintOptions(stderr, &options);
+  fprintf(stderr, "\n");
 
   init_protectedpaths(dfs);
   assert(dfs->protectedpaths != NULL);
@@ -109,12 +121,6 @@ void *dfs_init(void) {
     DEBUG("dfs->rdbuffersize <= 0 = %ld", dfs->rdbuffer_size);
     dfs->rdbuffer_size = 32768;
   }
-
-  if (0 != allocFsTable()) {
-    ERROR("FATAL: could not allocate ");
-    exit(1);
-  }
-
   return (void*)dfs;
 }
 

@@ -25,12 +25,12 @@
 
 int dfs_chown(const char *path, uid_t uid, gid_t gid)
 {
-  TRACE1("chown", path)
-
+  struct hdfsConn *conn = NULL;
   int ret = 0;
   char *user = NULL;
   char *group = NULL;
-  hdfsFS userFS = NULL;
+
+  TRACE1("chown", path)
 
   // retrieve dfs specific data
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
@@ -61,14 +61,15 @@ int dfs_chown(const char *path, uid_t uid, gid_t gid)
     }
   }
 
-  userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (userFS == NULL) {
-    ERROR("Could not connect to HDFS");
+  ret = fuseConnect(user, fuse_get_context(), &conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnect: failed to open a libhdfs connection!  "
+            "error %d.\n", ret);
     ret = -EIO;
     goto cleanup;
   }
 
-  if (hdfsChown(userFS, path, user, group)) {
+  if (hdfsChown(hdfsConnGetFs(conn), path, user, group)) {
     ret = errno;
     ERROR("Could not chown %s to %d:%d: error %d", path, (int)uid, gid, ret);
     ret = (ret > 0) ? -ret : -EIO;
@@ -76,16 +77,11 @@ int dfs_chown(const char *path, uid_t uid, gid_t gid)
   }
 
 cleanup:
-  if (userFS && doDisconnect(userFS)) {
-    ret = -EIO;
+  if (conn) {
+    hdfsConnRelease(conn);
   }
-  if (user) {
-    free(user);
-  }
-  if (group) {
-    free(group);
-  }
+  free(user);
+  free(group);
 
   return ret;
-
 }

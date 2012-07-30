@@ -65,8 +65,19 @@ static struct fuse_operations dfs_oper = {
   .truncate = dfs_truncate,
 };
 
+static void print_env_vars(void)
+{
+  const char *cp = getenv("CLASSPATH");
+  const char *ld = getenv("LD_LIBRARY_PATH");
+
+  fprintf(stderr, "LD_LIBRARY_PATH=%s",ld == NULL ? "NULL" : ld);
+  fprintf(stderr, "CLASSPATH=%s",cp == NULL ? "NULL" : cp);
+}
+
 int main(int argc, char *argv[])
 {
+  int ret;
+
   umask(0);
 
   extern const char *program;  
@@ -106,24 +117,22 @@ int main(int argc, char *argv[])
     exit(0);
   }
 
-  // Check connection as root
+  ret = fuseConnectInit(options.nn_uri, options.nn_port);
+  if (ret) {
+    ERROR("FATAL: dfs_init: fuseConnInit failed with error %d!", ret);
+    print_env_vars();
+    exit(EXIT_FAILURE);
+  }
   if (options.initchecks == 1) {
-    hdfsFS tempFS = hdfsConnectAsUser(options.nn_uri, options.nn_port, "root");
-    if (NULL == tempFS) {
-      const char *cp = getenv("CLASSPATH");
-      const char *ld = getenv("LD_LIBRARY_PATH");
-      ERROR("FATAL: misconfiguration - cannot connect to HDFS");
-      ERROR("LD_LIBRARY_PATH=%s",ld == NULL ? "NULL" : ld);
-      ERROR("CLASSPATH=%s",cp == NULL ? "NULL" : cp);
-      exit(1);
-    }
-    if (doDisconnect(tempFS)) {
-      ERROR("FATAL: unable to disconnect from test filesystem.");
-      exit(1);
+    ret = fuseConnectTest();
+    if (ret) {
+      ERROR("FATAL: dfs_init: fuseConnTest failed with error %d!", ret);
+      print_env_vars();
+      exit(EXIT_FAILURE);
     }
   }
 
-  int ret = fuse_main(args.argc, args.argv, &dfs_oper, NULL);
+  ret = fuse_main(args.argc, args.argv, &dfs_oper, NULL);
   fuse_opt_free_args(&args);
   return ret;
 }

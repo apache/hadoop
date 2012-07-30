@@ -66,6 +66,7 @@
       <item name="Writing Yarn Applications" href="hadoop-yarn/hadoop-yarn-site/WritingYarnApplications.html"/>
       <item name="Capacity Scheduler" href="hadoop-yarn/hadoop-yarn-site/CapacityScheduler.html"/>
       <item name="Web Application Proxy" href="hadoop-yarn/hadoop-yarn-site/WebApplicationProxy.html"/>
+      <item name="Encrypted Shuffle" href="hadoop-yarn/hadoop-yarn-site/EncryptedShuffle.html"/>
       <item name="Yarn Commands" href="hadoop-yarn/hadoop-yarn-site/YarnCommands.html"/>
     </menu>
 

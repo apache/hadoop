@@ -132,6 +132,11 @@ Branch-2 ( Unreleased changes )
 
   NEW FEATURES
 
+    MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process 
+    command-line. (ahmed via tucu)
+
+    MAPREDUCE-4417. add support for encrypted shuffle (tucu)
+
   IMPROVEMENTS
 
     MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved
@@ -148,6 +153,12 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4407. Add hadoop-yarn-server-tests-<version>-tests.jar to hadoop dist
     package. (ahmed via tucu)
 
+    MAPREDUCE-4465. Update description of yarn.nodemanager.address property. 
+    (bowang via tucu)
+
+    MAPREDUCE-4342. Distributed Cache gives inconsistent result if cache files 
+    get deleted from tasktracker. (mayank_bansal via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -157,6 +168,9 @@ Release 2.1.0-alpha - Unreleased
     MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
 
     MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
+
+    MAPREDUCE-4438. Add a simple, generic client to run 'easy' AMs in YARN.
+    (Bikas Saha via acmurthy) 
 
   IMPROVEMENTS
 
@@ -738,6 +752,13 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4448. Fix NM crash during app cleanup if aggregation didn't
     init. (Jason Lowe via daryn)
+
+    MAPREDUCE-3893. allow capacity scheduler configs maximum-applications and
+    maximum-am-resource-percent configurable on a per queue basis (tgraves via
+    bobby)
+
+    MAPREDUCE-4467. IndexCache failures due to missing synchronization
+    (Kihwal Lee via tgraves)
 
     MAPREDUCE-4423. Potential infinite fetching of map output (Robert Evans
     via tgraves)

@@ -21,15 +21,18 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.HttpURLConnection;
 import java.net.URLConnection;
+import java.security.GeneralSecurityException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.crypto.SecretKey;
+import javax.net.ssl.HttpsURLConnection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,9 +45,11 @@ import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.IFileInputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.mapreduce.task.reduce.MapOutput.Type;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -93,6 +98,9 @@ class Fetcher<K,V> extends Thread {
 
   private volatile boolean stopped = false;
 
+  private static boolean sslShuffle;
+  private static SSLFactory sslFactory;
+
   public Fetcher(JobConf job, TaskAttemptID reduceId, 
                  ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
@@ -136,6 +144,20 @@ class Fetcher<K,V> extends Thread {
     
     setName("fetcher#" + id);
     setDaemon(true);
+
+    synchronized (Fetcher.class) {
+      sslShuffle = job.getBoolean(MRConfig.SHUFFLE_SSL_ENABLED_KEY,
+                                  MRConfig.SHUFFLE_SSL_ENABLED_DEFAULT);
+      if (sslShuffle && sslFactory == null) {
+        sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, job);
+        try {
+          sslFactory.init();
+        } catch (Exception ex) {
+          sslFactory.destroy();
+          throw new RuntimeException(ex);
+        }
+      }
+    }
   }
   
   public void run() {
@@ -174,11 +196,24 @@ class Fetcher<K,V> extends Thread {
     } catch (InterruptedException ie) {
       LOG.warn("Got interrupt while joining " + getName(), ie);
     }
+    if (sslFactory != null) {
+      sslFactory.destroy();
+    }
   }
 
   @VisibleForTesting
   protected HttpURLConnection openConnection(URL url) throws IOException {
-    return (HttpURLConnection)url.openConnection();
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    if (sslShuffle) {
+      HttpsURLConnection httpsConn = (HttpsURLConnection) conn;
+      try {
+        httpsConn.setSSLSocketFactory(sslFactory.createSSLSocketFactory());
+      } catch (GeneralSecurityException ex) {
+        throw new IOException(ex);
+      }
+      httpsConn.setHostnameVerifier(sslFactory.getHostnameVerifier());
+    }
+    return conn;
   }
   
   /**
@@ -187,6 +222,7 @@ class Fetcher<K,V> extends Thread {
    * @param host {@link MapHost} from which we need to  
    *              shuffle available map-outputs.
    */
+  @VisibleForTesting
   protected void copyFromHost(MapHost host) throws IOException {
     // Get completed maps on 'host'
     List<TaskAttemptID> maps = scheduler.getMapsForHost(host);
@@ -198,10 +234,8 @@ class Fetcher<K,V> extends Thread {
     }
     
     if(LOG.isDebugEnabled()) {
-      LOG.debug("Fetcher " + id + " going to fetch from " + host);
-      for (TaskAttemptID tmp: maps) {
-        LOG.debug(tmp);
-      }
+      LOG.debug("Fetcher " + id + " going to fetch from " + host + " for: "
+        + maps);
     }
     
     // List of maps to be fetched yet
@@ -282,7 +316,8 @@ class Fetcher<K,V> extends Thread {
         failedTasks = copyMapOutput(host, input, remaining);
       }
       
-      if(failedTasks != null) {
+      if(failedTasks != null && failedTasks.length > 0) {
+        LOG.warn("copyMapOutput failed for tasks "+Arrays.toString(failedTasks));
         for(TaskAttemptID left: failedTasks) {
           scheduler.copyFailed(left, host, true);
         }
@@ -301,6 +336,8 @@ class Fetcher<K,V> extends Thread {
       }
     }
   }
+  
+  private static TaskAttemptID[] EMPTY_ATTEMPT_ID_ARRAY = new TaskAttemptID[0];
   
   private TaskAttemptID[] copyMapOutput(MapHost host,
                                 DataInputStream input,
@@ -335,8 +372,10 @@ class Fetcher<K,V> extends Thread {
         return new TaskAttemptID[] {mapId};
       }
       
-      LOG.debug("header: " + mapId + ", len: " + compressedLength + 
-               ", decomp len: " + decompressedLength);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("header: " + mapId + ", len: " + compressedLength + 
+            ", decomp len: " + decompressedLength);
+      }
       
       // Get the location for the map output - either in-memory or on-disk
       mapOutput = merger.reserve(mapId, decompressedLength, id);
@@ -344,7 +383,8 @@ class Fetcher<K,V> extends Thread {
       // Check if we can shuffle *now* ...
       if (mapOutput.getType() == Type.WAIT) {
         LOG.info("fetcher#" + id + " - MergerManager returned Status.WAIT ...");
-        return new TaskAttemptID[] {mapId};
+        //Not an error but wait to process data.
+        return EMPTY_ATTEMPT_ID_ARRAY;
       } 
       
       // Go!
@@ -380,7 +420,7 @@ class Fetcher<K,V> extends Thread {
         }
       }
       
-      LOG.info("Failed to shuffle output of " + mapId + 
+      LOG.warn("Failed to shuffle output of " + mapId + 
                " from " + host.getHostName(), ioe); 
 
       // Inform the shuffle-scheduler

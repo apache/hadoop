@@ -36,20 +36,8 @@ public class TestWebhdfsFileSystem extends TestHttpFSFileSystem {
   }
 
   @Override
-  protected FileSystem getHttpFileSystem() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set("fs.webhdfs.impl", WebHdfsFileSystem.class.getName());
-    URI uri = new URI("webhdfs://" + TestJettyHelper.getJettyURL().toURI().getAuthority());
-    return FileSystem.get(uri, conf);
-  }
-
-  @Override
-  protected void testGet() throws Exception {
-    FileSystem fs = getHttpFileSystem();
-    Assert.assertNotNull(fs);
-    URI uri = new URI("webhdfs://" + TestJettyHelper.getJettyURL().toURI().getAuthority());
-    Assert.assertEquals(fs.getUri(), uri);
-    fs.close();
+  protected Class getFileSystemClass() {
+    return WebHdfsFileSystem.class;
   }
 
 }

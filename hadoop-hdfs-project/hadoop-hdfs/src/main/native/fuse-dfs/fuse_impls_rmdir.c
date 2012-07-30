@@ -25,9 +25,14 @@ extern const char *const TrashPrefixDir;
 
 int dfs_rmdir(const char *path)
 {
-  TRACE1("rmdir", path)
-
+  struct hdfsConn *conn = NULL;
+  hdfsFS fs;
+  int ret;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+  int numEntries = 0;
+  hdfsFileInfo *info = NULL;
+
+  TRACE1("rmdir", path)
 
   assert(path);
   assert(dfs);
@@ -35,42 +40,43 @@ int dfs_rmdir(const char *path)
 
   if (is_protected(path)) {
     ERROR("Trying to delete protected directory %s", path);
-    return -EACCES;
+    ret = -EACCES;
+    goto cleanup;
   }
 
   if (dfs->read_only) {
     ERROR("HDFS configured read-only, cannot delete directory %s", path);
-    return -EACCES;
+    ret = -EACCES;
+    goto cleanup;
   }
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (userFS == NULL) {
-    ERROR("Could not connect");
-    return -EIO;
+  ret = fuseConnectAsThreadUid(&conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
+    ret = -EIO;
+    goto cleanup;
   }
-
-  int ret = 0;
-  int numEntries = 0;
-  hdfsFileInfo *info = hdfsListDirectory(userFS,path,&numEntries);
-
-  if (info) {
-    hdfsFreeFileInfo(info, numEntries);
-  }
-
+  fs = hdfsConnGetFs(conn);
+  info = hdfsListDirectory(fs, path, &numEntries);
   if (numEntries) {
     ret = -ENOTEMPTY;
     goto cleanup;
   }
 
-  if (hdfsDeleteWithTrash(userFS, path, dfs->usetrash)) {
+  if (hdfsDeleteWithTrash(fs, path, dfs->usetrash)) {
     ERROR("Error trying to delete directory %s", path);
     ret = -EIO;
     goto cleanup;
   }
+  ret = 0;
 
 cleanup:
-  if (doDisconnect(userFS)) {
-    ret = -EIO;
+  if (info) {
+    hdfsFreeFileInfo(info, numEntries);
+  }
+  if (conn) {
+    hdfsConnRelease(conn);
   }
   return ret;
 }

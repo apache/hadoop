@@ -437,18 +437,16 @@ public class SecondaryNameNode implements Runnable {
     // Returns a token that would be used to upload the merged image.
     CheckpointSignature sig = namenode.rollEditLog();
     
-    // Make sure we're talking to the same NN!
-    if (checkpointImage.getNamespaceID() != 0) {
-      // If the image actually has some data, make sure we're talking
-      // to the same NN as we did before.
-      sig.validateStorageInfo(checkpointImage);
-    } else {
-      // if we're a fresh 2NN, just take the storage info from the server
-      // we first talk to.
+    if ((checkpointImage.getNamespaceID() == 0) ||
+        (sig.isSameCluster(checkpointImage) &&
+         !sig.storageVersionMatches(checkpointImage.getStorage()))) {
+      // if we're a fresh 2NN, or if we're on the same cluster and our storage
+      // needs an upgrade, just take the storage info from the server.
       dstStorage.setStorageInfo(sig);
       dstStorage.setClusterID(sig.getClusterID());
       dstStorage.setBlockPoolID(sig.getBlockpoolID());
     }
+    sig.validateStorageInfo(checkpointImage);
 
     // error simulation code for junit test
     CheckpointFaultInjector.getInstance().afterSecondaryCallsRollEditLog();
@@ -703,7 +701,7 @@ public class SecondaryNameNode implements Runnable {
     /**
      * Analyze checkpoint directories.
      * Create directories if they do not exist.
-     * Recover from an unsuccessful checkpoint is necessary.
+     * Recover from an unsuccessful checkpoint if necessary.
      *
      * @throws IOException
      */

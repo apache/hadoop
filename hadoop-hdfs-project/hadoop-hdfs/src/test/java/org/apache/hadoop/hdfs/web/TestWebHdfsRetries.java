@@ -16,30 +16,22 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.http.client;
+package org.apache.hadoop.hdfs.web;
 
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.TestDFSClientRetries;
+import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.log4j.Level;
+import org.junit.Test;
 
-import java.io.IOException;
-
-/**
- * A <code>PseudoAuthenticator</code> subclass that uses FileSystemAccess's
- * <code>UserGroupInformation</code> to obtain the client user name (the UGI's login user).
- */
-public class HttpPseudoAuthenticator extends PseudoAuthenticator {
-
-  /**
-   * Return the client user name.
-   *
-   * @return the client user name.
-   */
-  @Override
-  protected String getUserName() {
-    try {
-      return UserGroupInformation.getLoginUser().getUserName();
-    } catch (IOException ex) {
-      throw new SecurityException("Could not obtain current user, " + ex.getMessage(), ex);
-    }
+/** Test WebHdfsFileSystem retry on failures. */
+public class TestWebHdfsRetries {
+  /** Test client retry with namenode restarting. */
+  @Test
+  public void testNamenodeRestart() throws Exception {
+    ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    TestDFSClientRetries.namenodeRestartTest(conf, true);
   }
 }

@@ -15,11 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.fs.http.server;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.junit.Assert;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -39,9 +37,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;
 import org.apache.hadoop.lib.server.Service;
 import org.apache.hadoop.lib.server.ServiceException;
 import org.apache.hadoop.lib.service.Groups;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.server.AuthenticationToken;
+import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 import org.apache.hadoop.test.TestDir;
@@ -50,6 +52,8 @@ import org.apache.hadoop.test.TestHdfs;
 import org.apache.hadoop.test.TestHdfsHelper;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.junit.Test;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
@@ -103,11 +107,13 @@ public class TestHttpFSServer extends HFSTestCase {
     }
 
   }
-  private void createHttpFSServer() throws Exception {
+
+  private void createHttpFSServer(boolean addDelegationTokenAuthHandler)
+    throws Exception {
     File homeDir = TestDirHelper.getTestDir();
-    assertTrue(new File(homeDir, "conf").mkdir());
-    assertTrue(new File(homeDir, "log").mkdir());
-    assertTrue(new File(homeDir, "temp").mkdir());
+    Assert.assertTrue(new File(homeDir, "conf").mkdir());
+    Assert.assertTrue(new File(homeDir, "log").mkdir());
+    Assert.assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
     File secretFile = new File(new File(homeDir, "conf"), "secret");
@@ -128,6 +134,10 @@ public class TestHttpFSServer extends HFSTestCase {
 
     //HTTPFS configuration
     conf = new Configuration(false);
+    if (addDelegationTokenAuthHandler) {
+     conf.set("httpfs.authentication.type",
+              HttpFSKerberosAuthenticationHandlerForTesting.class.getName());
+    }
     conf.set("httpfs.services.ext", MockGroups.class.getName());
     conf.set("httpfs.admin.group", HadoopUsersConfTestHelper.
       getHadoopUserGroups(HadoopUsersConfTestHelper.getHadoopUsers()[0])[0]);
@@ -147,6 +157,9 @@ public class TestHttpFSServer extends HFSTestCase {
     Server server = TestJettyHelper.getJettyServer();
     server.addHandler(context);
     server.start();
+    if (addDelegationTokenAuthHandler) {
+      HttpFSServerWebApp.get().setAuthority(TestJettyHelper.getAuthority());
+    }
   }
 
   @Test
@@ -154,28 +167,28 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestJetty
   @TestHdfs
   public void instrumentation() throws Exception {
-    createHttpFSServer();
+    createHttpFSServer(false);
 
     URL url = new URL(TestJettyHelper.getJettyURL(),
                       MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation", "nobody"));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_UNAUTHORIZED);
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_UNAUTHORIZED);
 
     url = new URL(TestJettyHelper.getJettyURL(),
                   MessageFormat.format("/webhdfs/v1?user.name={0}&op=instrumentation",
                                        HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
     String line = reader.readLine();
     reader.close();
-    assertTrue(line.contains("\"counters\":{"));
+    Assert.assertTrue(line.contains("\"counters\":{"));
 
     url = new URL(TestJettyHelper.getJettyURL(),
                   MessageFormat.format("/webhdfs/v1/foo?user.name={0}&op=instrumentation",
                                        HadoopUsersConfTestHelper.getHadoopUsers()[0]));
     conn = (HttpURLConnection) url.openConnection();
-    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
   }
 
   @Test
@@ -183,13 +196,13 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestJetty
   @TestHdfs
   public void testHdfsAccess() throws Exception {
-    createHttpFSServer();
+    createHttpFSServer(false);
 
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(),
                       MessageFormat.format("/webhdfs/v1/?user.name={0}&op=liststatus", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
@@ -200,7 +213,7 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestJetty
   @TestHdfs
   public void testGlobFilter() throws Exception {
-    createHttpFSServer();
+    createHttpFSServer(false);
 
     FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
     fs.mkdirs(new Path("/tmp"));
@@ -210,7 +223,7 @@ public class TestHttpFSServer extends HFSTestCase {
     URL url = new URL(TestJettyHelper.getJettyURL(),
                       MessageFormat.format("/webhdfs/v1/tmp?user.name={0}&op=liststatus&filter=f*", user));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_OK);
     BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
     reader.readLine();
     reader.close();
@@ -221,7 +234,7 @@ public class TestHttpFSServer extends HFSTestCase {
   @TestJetty
   @TestHdfs
   public void testPutNoOperation() throws Exception {
-    createHttpFSServer();
+    createHttpFSServer(false);
 
     String user = HadoopUsersConfTestHelper.getHadoopUsers()[0];
     URL url = new URL(TestJettyHelper.getJettyURL(),
@@ -230,7 +243,87 @@ public class TestHttpFSServer extends HFSTestCase {
     conn.setDoInput(true);
     conn.setDoOutput(true);
     conn.setRequestMethod("PUT");
-    assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
+    Assert.assertEquals(conn.getResponseCode(), HttpURLConnection.HTTP_BAD_REQUEST);
+  }
+
+  @Test
+  @TestDir
+  @TestJetty
+  @TestHdfs
+  public void testDelegationTokenOperations() throws Exception {
+    createHttpFSServer(true);
+
+    URL url = new URL(TestJettyHelper.getJettyURL(),
+                      "/webhdfs/v1/?op=GETHOMEDIRECTORY");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+                        conn.getResponseCode());
+
+
+    AuthenticationToken token =
+      new AuthenticationToken("u", "p",
+        HttpFSKerberosAuthenticationHandlerForTesting.TYPE);
+    token.setExpires(System.currentTimeMillis() + 100000000);
+    Signer signer = new Signer("secret".getBytes());
+    String tokenSigned = signer.sign(token.toString());
+
+    url = new URL(TestJettyHelper.getJettyURL(),
+                  "/webhdfs/v1/?op=GETHOMEDIRECTORY");
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestProperty("Cookie",
+                            AuthenticatedURL.AUTH_COOKIE  + "=" + tokenSigned);
+    Assert.assertEquals(HttpURLConnection.HTTP_OK,
+                        conn.getResponseCode());
+
+    url = new URL(TestJettyHelper.getJettyURL(),
+                  "/webhdfs/v1/?op=GETDELEGATIONTOKEN");
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestProperty("Cookie",
+                            AuthenticatedURL.AUTH_COOKIE  + "=" + tokenSigned);
+    Assert.assertEquals(HttpURLConnection.HTTP_OK,
+                        conn.getResponseCode());
+
+    JSONObject json = (JSONObject)
+      new JSONParser().parse(new InputStreamReader(conn.getInputStream()));
+    json = (JSONObject)
+      json.get(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_JSON);
+    String tokenStr = (String)
+        json.get(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON);
+
+    url = new URL(TestJettyHelper.getJettyURL(),
+                  "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" + tokenStr);
+    conn = (HttpURLConnection) url.openConnection();
+    Assert.assertEquals(HttpURLConnection.HTTP_OK,
+                        conn.getResponseCode());
+
+    url = new URL(TestJettyHelper.getJettyURL(),
+                  "/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&token=" + tokenStr);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+                        conn.getResponseCode());
+
+    url = new URL(TestJettyHelper.getJettyURL(),
+                  "/webhdfs/v1/?op=RENEWDELEGATIONTOKEN&token=" + tokenStr);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    conn.setRequestProperty("Cookie",
+                            AuthenticatedURL.AUTH_COOKIE  + "=" + tokenSigned);
+    Assert.assertEquals(HttpURLConnection.HTTP_OK,
+                        conn.getResponseCode());
+
+    url = new URL(TestJettyHelper.getJettyURL(),
+                  "/webhdfs/v1/?op=CANCELDELEGATIONTOKEN&token=" + tokenStr);
+    conn = (HttpURLConnection) url.openConnection();
+    conn.setRequestMethod("PUT");
+    Assert.assertEquals(HttpURLConnection.HTTP_OK,
+                        conn.getResponseCode());
+
+    url = new URL(TestJettyHelper.getJettyURL(),
+                  "/webhdfs/v1/?op=GETHOMEDIRECTORY&delegation=" + tokenStr);
+    conn = (HttpURLConnection) url.openConnection();
+    Assert.assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+                        conn.getResponseCode());
   }
 
 }

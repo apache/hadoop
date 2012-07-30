@@ -513,6 +513,21 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Whether to use SSL for for the Shuffle HTTP endpoints.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.ssl.file.buffer.size</name>
+  <value>65536</value>
+  <description>Buffer size for reading spills from file when using SSL.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.markreset.buffer.percent</name>
   <value>0.0</value>
   <description>The percentage of memory -relative to the maximum heap size- to

@@ -150,7 +150,7 @@ public class TestMutableMetrics {
         info("FooNumOps", "Number of ops for stat with 5s interval"),
         (long) 2000);
     Quantile[] quants = MutableQuantiles.quantiles;
-    String name = "Foo%dthPercentile5sIntervalLatency";
+    String name = "Foo%dthPercentileLatency";
     String desc = "%d percentile latency with 5 second interval for stat";
     for (Quantile q : quants) {
       int percentile = (int) (100 * q.quantile);
@@ -176,7 +176,7 @@ public class TestMutableMetrics {
         "Latency", 5);
 
     Quantile[] quants = MutableQuantiles.quantiles;
-    String name = "Foo%dthPercentile5sIntervalLatency";
+    String name = "Foo%dthPercentileLatency";
     String desc = "%d percentile latency with 5 second interval for stat";
 
     // Push values for three intervals

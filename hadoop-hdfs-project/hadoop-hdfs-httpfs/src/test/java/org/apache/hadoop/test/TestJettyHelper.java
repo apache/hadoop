@@ -18,9 +18,11 @@
 package org.apache.hadoop.test;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.URL;
+import java.net.UnknownHostException;
 
 import org.junit.Test;
 import org.junit.rules.MethodRule;
@@ -65,9 +67,9 @@ public class TestJettyHelper implements MethodRule {
 
   private Server createJettyServer() {
     try {
-
-      String host = InetAddress.getLocalHost().getHostName();
-      ServerSocket ss = new ServerSocket(0);
+      InetAddress localhost = InetAddress.getByName("localhost");
+      String host = "localhost";
+      ServerSocket ss = new ServerSocket(0, 50, localhost);
       int port = ss.getLocalPort();
       ss.close();
       Server server = new Server(0);
@@ -76,6 +78,23 @@ public class TestJettyHelper implements MethodRule {
       return server;
     } catch (Exception ex) {
       throw new RuntimeException("Could not stop embedded servlet container, " + ex.getMessage(), ex);
+    }
+  }
+
+  /**
+   * Returns the authority (hostname & port) used by the JettyServer.
+   *
+   * @return an <code>InetSocketAddress</code> with the corresponding authority.
+   */
+  public static InetSocketAddress getAuthority() {
+    Server server = getJettyServer();
+    try {
+      InetAddress add =
+        InetAddress.getByName(server.getConnectors()[0].getHost());
+      int port = server.getConnectors()[0].getPort();
+      return new InetSocketAddress(add, port);
+    } catch (UnknownHostException ex) {
+      throw new RuntimeException(ex);
     }
   }
 

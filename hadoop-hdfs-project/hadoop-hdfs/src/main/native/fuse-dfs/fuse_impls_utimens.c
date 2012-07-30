@@ -22,9 +22,12 @@
 
 int dfs_utimens(const char *path, const struct timespec ts[2])
 {
-  TRACE1("utimens", path)
+  struct hdfsConn *conn = NULL;
+  hdfsFS fs;
   int ret = 0;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+
+  TRACE1("utimens", path)
 
   assert(path);
   assert(dfs);
@@ -33,14 +36,17 @@ int dfs_utimens(const char *path, const struct timespec ts[2])
   time_t aTime = ts[0].tv_sec;
   time_t mTime = ts[1].tv_sec;
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (userFS == NULL) {
-    ERROR("Could not connect");
-    return -EIO;
+  ret = fuseConnectAsThreadUid(&conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
+    ret = -EIO;
+    goto cleanup;
   }
+  fs = hdfsConnGetFs(conn);
 
-  if (hdfsUtime(userFS, path, mTime, aTime)) {
-    hdfsFileInfo *info = hdfsGetPathInfo(userFS, path);
+  if (hdfsUtime(fs, path, mTime, aTime)) {
+    hdfsFileInfo *info = hdfsGetPathInfo(fs, path);
     if (info == NULL) {
       ret = (errno > 0) ? -errno : -ENOENT;
       goto cleanup;
@@ -54,10 +60,11 @@ int dfs_utimens(const char *path, const struct timespec ts[2])
     }
     goto cleanup;
   }
+  ret = 0;
 
 cleanup:
-  if (doDisconnect(userFS)) {
-    ret = -EIO;
+  if (conn) {
+    hdfsConnRelease(conn);
   }
   return ret;
 }

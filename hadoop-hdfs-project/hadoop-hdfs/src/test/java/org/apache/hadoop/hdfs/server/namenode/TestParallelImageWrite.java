@@ -26,8 +26,6 @@ import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
-import junit.framework.AssertionFailedError;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -132,7 +130,7 @@ public class TestParallelImageWrite {
    * @param fsn - the FSNamesystem being checked.
    * @param numImageDirs - the configured number of StorageDirectory of type IMAGE. 
    * @return - the md5 hash of the most recent FSImage files, which must all be the same.
-   * @throws AssertionFailedError if image files are empty or different,
+   * @throws AssertionError if image files are empty or different,
    *     if less than two StorageDirectory are provided, or if the
    *     actual number of StorageDirectory is less than configured.
    */

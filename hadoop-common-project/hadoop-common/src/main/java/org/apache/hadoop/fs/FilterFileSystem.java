@@ -191,23 +191,6 @@ public class FilterFileSystem extends FileSystem {
     return fs.delete(f, recursive);
   }
   
-  /**
-   * Mark a path to be deleted when FileSystem is closed.
-   * When the JVM shuts down,
-   * all FileSystem objects will be closed automatically.
-   * Then,
-   * the marked path will be deleted as a result of closing the FileSystem.
-   *
-   * The path has to exist in the file system.
-   * 
-   * @param f the path to delete.
-   * @return  true if deleteOnExit is successful, otherwise false.
-   * @throws IOException
-   */
-  public boolean deleteOnExit(Path f) throws IOException {
-    return fs.deleteOnExit(f);
-  }    
-
   /** List files in a directory. */
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f);

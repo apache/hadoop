@@ -220,21 +220,33 @@ extern  "C" {
      * Get a configuration string.
      *
      * @param key      The key to find
-     * @param val      (out param) The value.  This will be NULL if the
+     * @param val      (out param) The value.  This will be set to NULL if the
      *                 key isn't found.  You must free this string with
-     *                 hdfsConfFree.
+     *                 hdfsConfStrFree.
      *
      * @return         0 on success; nonzero error code otherwise.
      *                 Failure to find the key is not an error.
      */
-    int hdfsConfGet(const char *key, char **val);
+    int hdfsConfGetStr(const char *key, char **val);
 
     /**
-     * Free a configuration string found with hdfsConfGet. 
+     * Get a configuration integer.
      *
-     * @param val      A configuration string obtained from hdfsConfGet
+     * @param key      The key to find
+     * @param val      (out param) The value.  This will NOT be changed if the
+	 *                 key isn't found.
+     *
+     * @return         0 on success; nonzero error code otherwise.
+     *                 Failure to find the key is not an error.
      */
-    void hdfsConfFree(char *val);
+    int hdfsConfGetInt(const char *key, int32_t *val);
+
+    /**
+     * Free a configuration string found with hdfsConfGetStr. 
+     *
+     * @param val      A configuration string obtained from hdfsConfGetStr
+     */
+    void hdfsConfStrFree(char *val);
 
     /** 
      * hdfsDisconnect - Disconnect from the hdfs file system.

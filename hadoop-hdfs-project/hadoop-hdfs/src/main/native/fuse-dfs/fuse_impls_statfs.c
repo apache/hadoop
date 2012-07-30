@@ -23,9 +23,12 @@
 
 int dfs_statfs(const char *path, struct statvfs *st)
 {
-  TRACE1("statfs",path)
-
+  struct hdfsConn *conn = NULL;
+  hdfsFS fs;
   dfs_context *dfs = (dfs_context*)fuse_get_context()->private_data;
+  int ret;
+
+  TRACE1("statfs",path)
 
   assert(path);
   assert(st);
@@ -33,19 +36,18 @@ int dfs_statfs(const char *path, struct statvfs *st)
 
   memset(st,0,sizeof(struct statvfs));
 
-  hdfsFS userFS = doConnectAsUser(dfs->nn_uri, dfs->nn_port);
-  if (userFS == NULL) {
-    ERROR("Could not connect");
-    return -EIO;
+  ret = fuseConnectAsThreadUid(&conn);
+  if (ret) {
+    fprintf(stderr, "fuseConnectAsThreadUid: failed to open a libhdfs "
+            "connection!  error %d.\n", ret);
+    ret = -EIO;
+    goto cleanup;
   }
+  fs = hdfsConnGetFs(conn);
 
-  const tOffset cap   = hdfsGetCapacity(userFS);
-  const tOffset used  = hdfsGetUsed(userFS);
-  const tOffset bsize = hdfsGetDefaultBlockSize(userFS);
-
-  if (doDisconnect(userFS)) {
-    return -EIO;
-  }
+  const tOffset cap   = hdfsGetCapacity(fs);
+  const tOffset used  = hdfsGetUsed(fs);
+  const tOffset bsize = hdfsGetDefaultBlockSize(fs);
 
   st->f_bsize   =  bsize;
   st->f_frsize  =  bsize;
@@ -58,6 +60,11 @@ int dfs_statfs(const char *path, struct statvfs *st)
   st->f_fsid    =  1023;
   st->f_flag    =  ST_RDONLY | ST_NOSUID;
   st->f_namemax =  1023;
+  ret = 0;
 
-  return 0;
+cleanup:
+  if (conn) {
+    hdfsConnRelease(conn);
+  }
+  return ret;
 }

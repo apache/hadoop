@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
+import java.io.File;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,6 +31,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceEventType;
 
 /**
  * A collection of {@link LocalizedResource}s all of same
@@ -67,6 +69,12 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
     switch (event.getType()) {
     case REQUEST:
     case LOCALIZED:
+      if (rsrc != null && (!isResourcePresent(rsrc))) {
+        LOG.info("Resource " + rsrc.getLocalPath()
+            + " is missing, localizing it again");
+        localrsrc.remove(req);
+        rsrc = null;
+      }
       if (null == rsrc) {
         rsrc = new LocalizedResource(req, dispatcher);
         localrsrc.put(req, rsrc);
@@ -82,6 +90,24 @@ class LocalResourcesTrackerImpl implements LocalResourcesTracker {
     rsrc.handle(event);
   }
 
+  /**
+   * This module checks if the resource which was localized is already present
+   * or not
+   * 
+   * @param rsrc
+   * @return true/false based on resource is present or not
+   */
+  public boolean isResourcePresent(LocalizedResource rsrc) {
+    boolean ret = true;
+    if (rsrc.getState() == ResourceState.LOCALIZED) {
+      File file = new File(rsrc.getLocalPath().toUri().getRawPath().toString());
+      if (!file.exists()) {
+        ret = false;
+      }
+    }
+    return ret;
+  }
+  
   @Override
   public boolean contains(LocalResourceRequest resource) {
     return localrsrc.containsKey(resource);

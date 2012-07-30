@@ -899,6 +899,25 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     return Integer.parseInt(valueString);
   }
+  
+  /**
+   * Get the value of the <code>name</code> property as a set of comma-delimited
+   * <code>int</code> values.
+   * 
+   * If no such property exists, an empty array is returned.
+   * 
+   * @param name property name
+   * @return property value interpreted as an array of comma-delimited
+   *         <code>int</code> values
+   */
+  public int[] getInts(String name) {
+    String[] strings = getTrimmedStrings(name);
+    int[] ints = new int[strings.length];
+    for (int i = 0; i < strings.length; i++) {
+      ints[i] = Integer.parseInt(strings[i]);
+    }
+    return ints;
+  }
 
   /** 
    * Set the value of the <code>name</code> property to an <code>int</code>.

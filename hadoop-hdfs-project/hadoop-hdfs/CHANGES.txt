@@ -109,8 +109,6 @@ Trunk (unreleased changes)
 
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
-    HDFS-3583. Convert remaining tests to Junit4. (Andrew Wang via atm)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -200,6 +198,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3518. Add a utility method HdfsUtils.isHealthy(uri) for checking if
     the given HDFS is healthy. (szetszwo)
+
+    HDFS-3113. httpfs does not support delegation tokens. (tucu)
 
   IMPROVEMENTS
 
@@ -305,7 +305,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3613. GSet prints some INFO level values, which aren't
     really very useful to all (Andrew Wang via harsh)
 
-    HDFS-3611. NameNode prints unnecessary WARNs about edit log normally skipping a few bytes. (Colin Patrick McCabe via harsh)
+    HDFS-3611. NameNode prints unnecessary WARNs about edit log normally skipping 
+    a few bytes. (Colin Patrick McCabe via harsh)
 
     HDFS-3582. Hook daemon process exit for testing. (eli)
 
@@ -352,6 +353,13 @@ Branch-2 ( Unreleased changes )
     HDFS-1249. With fuse-dfs, chown which only has owner (or only group)
     argument fails with Input/output error. (Colin Patrick McCabe via eli)
 
+    HDFS-3583. Convert remaining tests to Junit4. (Andrew Wang via atm)
+
+    HDFS-3711. Manually convert remaining tests to JUnit4. (Andrew Wang via atm)
+
+    HDFS-3650. Use MutableQuantiles to provide latency histograms for various
+    operations. (Andrew Wang via atm)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
@@ -362,6 +370,10 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3110. Use directRead API to reduce the number of buffer copies in
     libhdfs (Henry Robinson via todd)
+
+    HDFS-3697. Enable fadvise readahead by default. (todd)
+
+    HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
 
   BUG FIXES
 
@@ -517,6 +529,22 @@ Branch-2 ( Unreleased changes )
     phase of failover. (todd and Brahma Reddy Battula via todd)
 
     HDFS-3690. BlockPlacementPolicyDefault incorrectly casts LOG. (eli)
+
+    HDFS-3597. SNN fails to start after DFS upgrade. (Andy Isaacson via todd)
+
+    HDFS-3608. fuse_dfs: detect changes in UID ticket cache. (Colin Patrick
+    McCabe via atm)
+
+    HDFS-3709. TestStartup tests still binding to the ephemeral port. (eli)
+
+    HDFS-3720. hdfs.h must get packaged. (Colin Patrick McCabe via atm)
+
+    HDFS-3626. Creating file with invalid path can corrupt edit log (todd)
+
+    HDFS-3679. fuse_dfs notrash option sets usetrash. (Conrad Meyer via suresh)
+
+    HDFS-3732. fuse_dfs: incorrect configuration value checked for connection
+    expiry timer period. (Colin Patrick McCabe via atm)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
@@ -1387,6 +1415,11 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3646. LeaseRenewer can hold reference to inactive DFSClient
     instances forever. (Kihwal Lee via daryn)
+
+    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
+    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
+
+    HDFS-3553. Hftp proxy tokens are broken (daryn)
 
 Release 0.23.2 - UNRELEASED
 

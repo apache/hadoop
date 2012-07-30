@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HADOOP-8523. test-patch.sh doesn't validate patches before building
     (Jack Dintruff via jeagles)
 
+    HADOOP-8624. ProtobufRpcEngine should log all RPCs if TRACE logging is
+    enabled (todd)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -181,6 +184,9 @@ Trunk (unreleased changes)
     HADOOP-8593. Add missed @Override annotations in Metric/Metrics2 package.
     (Brandon Li via suresh)
 
+    HADOOP-8623. hadoop jar command should respect HADOOP_OPTS.
+    (Steven Willis via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -267,6 +273,9 @@ Branch-2 ( Unreleased changes )
     HADOOP-8531. SequenceFile Writer can throw out a better error if a
     serializer or deserializer isn't available
     (Madhukara Phatak via harsh)
+
+    HADOOP-8609. IPC server logs a useless message when shutting down socket.
+    (Jon Zuanich via atm)
 
   BUG FIXES
 
@@ -357,6 +366,10 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8537. Fix TFile tests to pass even when native zlib support is not
     compiled. (todd)
+
+    HADOOP-8626. Typo in default setting for
+    hadoop.security.group.mapping.ldap.search.filter.user. (Jonathan Natkins
+    via atm)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
@@ -834,6 +847,25 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8599. Non empty response from FileSystem.getFileBlockLocations when
     asking for data beyond the end of file. (Andrey Klochkov via todd)
+
+    HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp
+    via bobby)
+
+    HADOOP-8551. fs -mkdir creates parent directories without the -p option
+    (John George via bobby)
+
+    HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
+    auth type. (daryn)
+
+    HADOOP-8627. FS deleteOnExit may delete the wrong path (daryn via bobby)
+
+    HADOOP-8634. Ensure FileSystem#close doesn't squawk for deleteOnExit paths 
+    (daryn via bobby)
+
+    HADOOP-8550. hadoop fs -touchz automatically created parent directories
+    (John George via bobby)
+
+    HADOOP-8635. Cannot cancel paths registered deleteOnExit (daryn via bobby)
 
 Release 0.23.2 - UNRELEASED 
 
