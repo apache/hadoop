@@ -1165,7 +1165,9 @@ public abstract class FileSystem extends Configured implements Closeable {
       for (Iterator<Path> iter = deleteOnExit.iterator(); iter.hasNext();) {
         Path path = iter.next();
         try {
-          delete(path, true);
+          if (exists(path)) {
+            delete(path, true);
+          }
         }
         catch (IOException e) {
           LOG.info("Ignoring failure to deleteOnExit for path " + path);

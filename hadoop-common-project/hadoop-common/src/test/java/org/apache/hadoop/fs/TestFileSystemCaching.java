@@ -35,7 +35,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Semaphore;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 
 public class TestFileSystemCaching {
@@ -266,5 +266,29 @@ public class TestFileSystemCaching {
       }
     });
     assertNotSame(fsA, fsA1);
+  }
+  
+  @Test
+  public void testDeleteOnExitChecksExists() throws Exception {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+    Path p = new Path("/a");
+    
+    // path has to exist for deleteOnExit to register it
+    when(mockFs.getFileStatus(p)).thenReturn(new FileStatus());
+    fs.deleteOnExit(p);
+    verify(mockFs).getFileStatus(eq(p));
+    fs.close();
+    verify(mockFs).delete(eq(p), anyBoolean());
+    reset(mockFs);
+    
+    // make sure it doesn't try to delete a file that doesn't exist
+    when(mockFs.getFileStatus(p)).thenReturn(new FileStatus());
+    fs.deleteOnExit(p);
+    verify(mockFs).getFileStatus(eq(p));
+    reset(mockFs);
+    fs.close();
+    verify(mockFs).getFileStatus(eq(p));
+    verify(mockFs, never()).delete(any(Path.class), anyBoolean());
   }
 }
