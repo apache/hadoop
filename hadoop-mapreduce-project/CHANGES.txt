@@ -156,6 +156,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4465. Update description of yarn.nodemanager.address property. 
     (bowang via tucu)
 
+    MAPREDUCE-4342. Distributed Cache gives inconsistent result if cache files 
+    get deleted from tasktracker. (mayank_bansal via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
