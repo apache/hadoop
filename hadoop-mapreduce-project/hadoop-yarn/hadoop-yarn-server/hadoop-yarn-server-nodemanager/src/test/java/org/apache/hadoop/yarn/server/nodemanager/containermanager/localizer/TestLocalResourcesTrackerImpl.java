@@ -5,6 +5,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,6 +32,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ResourceRequestEvent;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
+import org.mortbay.log.Log;
 
 public class TestLocalResourcesTrackerImpl {
 
@@ -131,6 +134,86 @@ public class TestLocalResourcesTrackerImpl {
     }
   }
 
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testConsistency() {
+    String user = "testuser";
+    DrainDispatcher dispatcher = null;
+    try {
+      dispatcher = createDispatcher(new Configuration());
+      EventHandler<LocalizerEvent> localizerEventHandler = mock(EventHandler.class);
+      EventHandler<LocalizerEvent> containerEventHandler = mock(EventHandler.class);
+      dispatcher.register(LocalizerEventType.class, localizerEventHandler);
+      dispatcher.register(ContainerEventType.class, containerEventHandler);
+
+      ContainerId cId1 = BuilderUtils.newContainerId(1, 1, 1, 1);
+      LocalizerContext lc1 = new LocalizerContext(user, cId1, null);
+      LocalResourceRequest req1 = createLocalResourceRequest(user, 1, 1,
+          LocalResourceVisibility.PUBLIC);
+      LocalizedResource lr1 = createLocalizedResource(req1, dispatcher);
+      ConcurrentMap<LocalResourceRequest, LocalizedResource> localrsrc = new ConcurrentHashMap<LocalResourceRequest, LocalizedResource>();
+      localrsrc.put(req1, lr1);
+      LocalResourcesTracker tracker = new LocalResourcesTrackerImpl(user,
+          dispatcher, localrsrc);
+
+      ResourceEvent req11Event = new ResourceRequestEvent(req1,
+          LocalResourceVisibility.PUBLIC, lc1);
+
+      ResourceEvent rel11Event = new ResourceReleaseEvent(req1, cId1);
+
+      // Localize R1 for C1
+      tracker.handle(req11Event);
+
+      dispatcher.await();
+
+      // Verify refCount for R1 is 1
+      Assert.assertEquals(1, lr1.getRefCount());
+
+      dispatcher.await();
+      verifyTrackedResourceCount(tracker, 1);
+
+      // Localize resource1
+      ResourceLocalizedEvent rle = new ResourceLocalizedEvent(req1, new Path(
+          "file:///tmp/r1"), 1);
+      lr1.handle(rle);
+      Assert.assertTrue(lr1.getState().equals(ResourceState.LOCALIZED));
+      Assert.assertTrue(createdummylocalizefile(new Path("file:///tmp/r1")));
+      LocalizedResource rsrcbefore = tracker.iterator().next();
+      File resFile = new File(lr1.getLocalPath().toUri().getRawPath()
+          .toString());
+      Assert.assertTrue(resFile.exists());
+      Assert.assertTrue(resFile.delete());
+
+      // Localize R1 for C1
+      tracker.handle(req11Event);
+
+      dispatcher.await();
+      lr1.handle(rle);
+      Assert.assertTrue(lr1.getState().equals(ResourceState.LOCALIZED));
+      LocalizedResource rsrcafter = tracker.iterator().next();
+      if (rsrcbefore == rsrcafter) {
+        Assert.fail("Localized resource should not be equal");
+      }
+      // Release resource1
+      tracker.handle(rel11Event);
+    } finally {
+      if (dispatcher != null) {
+        dispatcher.stop();
+      }
+    }
+  }
+
+  private boolean createdummylocalizefile(Path path) {
+    boolean ret = false;
+    File file = new File(path.toUri().getRawPath().toString());
+    try {
+      ret = file.createNewFile();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    return ret;
+  }
+  
   private void verifyTrackedResourceCount(LocalResourcesTracker tracker,
       int expected) {
     int count = 0;
