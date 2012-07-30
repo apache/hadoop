@@ -862,6 +862,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8634. Ensure FileSystem#close doesn't squawk for deleteOnExit paths 
     (daryn via bobby)
 
+    HADOOP-8550. hadoop fs -touchz automatically created parent directories
+    (John George via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
