@@ -859,6 +859,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8627. FS deleteOnExit may delete the wrong path (daryn via bobby)
 
+    HADOOP-8634. Ensure FileSystem#close doesn't squawk for deleteOnExit paths 
+    (daryn via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
