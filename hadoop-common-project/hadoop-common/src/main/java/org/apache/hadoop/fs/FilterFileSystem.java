@@ -376,7 +376,7 @@ public class FilterFileSystem extends FileSystem {
   
   @Override
   public void setWriteChecksum(boolean writeChecksum) {
-    fs.setVerifyChecksum(writeChecksum);
+    fs.setWriteChecksum(writeChecksum);
   }
 
   @Override

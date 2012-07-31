@@ -867,6 +867,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8635. Cannot cancel paths registered deleteOnExit (daryn via bobby)
 
+    HADOOP-8637. FilterFileSystem#setWriteChecksum is broken (daryn via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   INCOMPATIBLE CHANGES
