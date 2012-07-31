@@ -150,7 +150,6 @@ public class TestLocalDistributedCacheManager {
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "201");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "false");
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
-    conf.set(MRJobConfig.CACHE_SYMLINK, "yes");
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
     try {
       manager.setup(conf);
@@ -197,7 +196,6 @@ public class TestLocalDistributedCacheManager {
     
     conf.set(MRJobConfig.CACHE_FILES, "");
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
-    conf.set(MRJobConfig.CACHE_SYMLINK, "yes");
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
     try {
       manager.setup(conf);
@@ -268,7 +266,6 @@ public class TestLocalDistributedCacheManager {
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "201,201");
     conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "false,false");
     conf.set(MRConfig.LOCAL_DIR, localDir.getAbsolutePath());
-    conf.set(MRJobConfig.CACHE_SYMLINK, "yes");
     LocalDistributedCacheManager manager = new LocalDistributedCacheManager();
     try {
       manager.setup(conf);

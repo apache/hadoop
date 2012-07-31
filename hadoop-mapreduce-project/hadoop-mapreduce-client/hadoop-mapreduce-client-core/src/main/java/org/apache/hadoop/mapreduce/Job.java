@@ -1049,9 +1049,10 @@ public class Job extends JobContextImpl implements JobContext {
   }
 
   /**
-   * This method allows you to create symlinks in the current working directory
-   * of the task to all the cache files/archives
+   * Originally intended to enable symlinks, but currently symlinks cannot be
+   * disabled.
    */
+  @Deprecated
   public void createSymlink() {
     ensureState(JobState.DEFINE);
     DistributedCache.createSymlink(conf);

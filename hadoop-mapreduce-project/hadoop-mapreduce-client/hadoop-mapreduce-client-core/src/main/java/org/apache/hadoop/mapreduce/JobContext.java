@@ -221,10 +221,11 @@ public interface JobContext extends MRJobConfig {
   public String getUser();
   
   /**
-   * This method checks to see if symlinks are to be create for the 
-   * localized cache files in the current working directory 
-   * @return true if symlinks are to be created- else return false
+   * Originally intended to check if symlinks should be used, but currently
+   * symlinks cannot be disabled.
+   * @return true
    */
+  @Deprecated
   public boolean getSymlink();
   
   /**
@@ -251,14 +252,22 @@ public interface JobContext extends MRJobConfig {
    * Return the path array of the localized caches
    * @return A path array of localized caches
    * @throws IOException
+   * @deprecated the array returned only includes the items the were 
+   * downloaded. There is no way to map this to what is returned by
+   * {@link #getCacheArchives()}.
    */
+  @Deprecated
   public Path[] getLocalCacheArchives() throws IOException;
 
   /**
    * Return the path array of the localized files
    * @return A path array of localized files
    * @throws IOException
+   * @deprecated the array returned only includes the items the were 
+   * downloaded. There is no way to map this to what is returned by
+   * {@link #getCacheFiles()}.
    */
+  @Deprecated
   public Path[] getLocalCacheFiles() throws IOException;
 
   /**
