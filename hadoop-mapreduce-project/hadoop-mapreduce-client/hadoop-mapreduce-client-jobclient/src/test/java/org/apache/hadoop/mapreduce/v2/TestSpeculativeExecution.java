@@ -301,7 +301,6 @@ public class TestSpeculativeExecution {
 
     // Creates the Job Configuration
     job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
-    job.createSymlink();
     job.setMaxMapAttempts(2);
 
     job.submit();

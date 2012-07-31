@@ -771,6 +771,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4496. AM logs link is missing user name (Jason Lowe via bobby)
 
+    MAPREDUCE-4493. Distibuted Cache Compatability Issues (Robert Evans
+    via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

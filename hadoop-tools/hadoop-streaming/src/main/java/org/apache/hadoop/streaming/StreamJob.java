@@ -958,7 +958,6 @@ public class StreamJob implements Tool {
       if (!b)
         fail(LINK_URI);
     }
-    DistributedCache.createSymlink(jobConf_);
     // set the jobconf for the caching parameters
     if (cacheArchives != null)
       DistributedCache.setCacheArchives(archiveURIs, jobConf_);
