@@ -44,11 +44,6 @@ public class DeleteOpParam extends HttpOpParam<DeleteOpParam.Op> {
     }
 
     @Override
-    public boolean getRedirect() {
-      return false;
-    }
-
-    @Override
     public int getExpectedHttpResponseCode() {
       return expectedHttpResponseCode;
     }
