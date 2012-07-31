@@ -688,6 +688,10 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8637. FilterFileSystem#setWriteChecksum is broken (daryn via bobby)
 
+    HADOOP-8370. Native build failure: javah: class file for 
+    org.apache.hadoop.classification.InterfaceAudience not found  (Trevor
+    Robinson via tgraves)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
