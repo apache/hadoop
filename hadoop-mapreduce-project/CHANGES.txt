@@ -337,6 +337,8 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
     (szetszwo)
 
+    MAPREDUCE-4483. 2.0 build does not work (John George via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
