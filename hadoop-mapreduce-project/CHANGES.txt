@@ -769,6 +769,8 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4456. LocalDistributedCacheManager can get an 
     ArrayIndexOutOfBounds when creating symlinks (Robert Evans via tgraves)
 
+    MAPREDUCE-4496. AM logs link is missing user name (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
