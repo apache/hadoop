@@ -84,7 +84,6 @@ class LocalDistributedCacheManager {
    * @throws IOException
    */
   public void setup(JobConf conf) throws IOException {
-    boolean mkLinks = DistributedCache.getSymlink(conf);
     File workDir = new File(System.getProperty("user.dir"));
     
     // Generate YARN local resources objects corresponding to the distributed
@@ -145,11 +144,9 @@ class LocalDistributedCacheManager {
           throw new IOException(e);
         }
         String pathString = path.toUri().toString();
-        if(mkLinks) {
-          String link = entry.getKey();
-          String target = new File(path.toUri()).getPath();
-          symlink(workDir, target, link);
-        }
+        String link = entry.getKey();
+        String target = new File(path.toUri()).getPath();
+        symlink(workDir, target, link);
         
         if (resource.getType() == LocalResourceType.ARCHIVE) {
           localArchives.add(pathString);
