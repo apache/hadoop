@@ -56,6 +56,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in
     mapred-default.xml (Rui Kubo via harsh)
 
+    MAPREDUCE-4375. Show Configuration Tracability in MR UI (bobby 
+    via tgraves)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
