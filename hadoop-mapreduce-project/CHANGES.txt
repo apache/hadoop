@@ -655,6 +655,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4492. Configuring total queue capacity between 100.5 and 99.5 at
     perticular level is sucessfull (Mayank Bansal via bobby)
 
+    MAPREDUCE-4457. mr job invalid transition TA_TOO_MANY_FETCH_FAILURE at 
+    FAILED  (Robert Evans via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
