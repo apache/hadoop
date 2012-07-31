@@ -93,23 +93,7 @@ public class LocalDirsHandlerService extends AbstractService {
 
     @Override
     public void run() {
-      boolean newFailure = false;
-      if (localDirs.checkDirs()) {
-        newFailure = true;
-      }
-      if (logDirs.checkDirs()) {
-        newFailure = true;
-      }
-
-      if (newFailure) {
-        LOG.info("Disk(s) failed. " + getDisksHealthReport());
-        updateDirsInConfiguration();
-        if (!areDisksHealthy()) {
-          // Just log.
-          LOG.error("Most of the disks failed. " + getDisksHealthReport());
-        }
-      }
-      lastDisksCheckTime = System.currentTimeMillis();
+      checkDirs();
     }
   }
 
@@ -135,6 +119,10 @@ public class LocalDirsHandlerService extends AbstractService {
         YarnConfiguration.DEFAULT_NM_MIN_HEALTHY_DISKS_FRACTION);
     lastDisksCheckTime = System.currentTimeMillis();
     super.init(conf);
+
+    // Check the disk health immediately to weed out bad directories
+    // before other init code attempts to use them.
+    checkDirs();
   }
 
   /**
@@ -144,10 +132,8 @@ public class LocalDirsHandlerService extends AbstractService {
   public void start() {
     if (isDiskHealthCheckerEnabled) {
       dirsHandlerScheduler = new Timer("DiskHealthMonitor-Timer", true);
-      // Start the timer task for disk health checking immediately and
-      // then run periodically at interval time.
-      dirsHandlerScheduler.scheduleAtFixedRate(monitoringTimerTask, 0,
-                                                   diskHealthCheckInterval);
+      dirsHandlerScheduler.scheduleAtFixedRate(monitoringTimerTask,
+          diskHealthCheckInterval, diskHealthCheckInterval);
     }
     super.start();
   }
@@ -251,6 +237,26 @@ public class LocalDirsHandlerService extends AbstractService {
     List<String> logDirs = getLogDirs();
     conf.setStrings(YarnConfiguration.NM_LOG_DIRS,
                       logDirs.toArray(new String[logDirs.size()]));
+  }
+
+  private void checkDirs() {
+      boolean newFailure = false;
+      if (localDirs.checkDirs()) {
+        newFailure = true;
+      }
+      if (logDirs.checkDirs()) {
+        newFailure = true;
+      }
+
+      if (newFailure) {
+        LOG.info("Disk(s) failed. " + getDisksHealthReport());
+        updateDirsInConfiguration();
+        if (!areDisksHealthy()) {
+          // Just log.
+          LOG.error("Most of the disks failed. " + getDisksHealthReport());
+        }
+      }
+      lastDisksCheckTime = System.currentTimeMillis();
   }
 
   public Path getLocalPathForWrite(String pathStr) throws IOException {

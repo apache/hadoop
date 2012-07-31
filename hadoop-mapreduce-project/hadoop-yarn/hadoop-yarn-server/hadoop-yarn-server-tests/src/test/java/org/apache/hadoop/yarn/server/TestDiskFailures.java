@@ -110,6 +110,35 @@ public class TestDiskFailures {
     testDirsFailures(false);
   }
 
+  /**
+   * Make a local and log directory inaccessible during initialization
+   * and verify those bad directories are recognized and removed from
+   * the list of available local and log directories.
+   * @throws IOException
+   */
+  @Test
+  public void testDirFailuresOnStartup() throws IOException {
+    Configuration conf = new YarnConfiguration();
+    String localDir1 = new File(testDir, "localDir1").getPath();
+    String localDir2 = new File(testDir, "localDir2").getPath();
+    String logDir1 = new File(testDir, "logDir1").getPath();
+    String logDir2 = new File(testDir, "logDir2").getPath();
+    conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir1 + "," + localDir2);
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir1 + "," + logDir2);
+
+    prepareDirToFail(localDir1);
+    prepareDirToFail(logDir2);
+
+    LocalDirsHandlerService dirSvc = new LocalDirsHandlerService();
+    dirSvc.init(conf);
+    List<String> localDirs = dirSvc.getLocalDirs();
+    Assert.assertEquals(1, localDirs.size());
+    Assert.assertEquals(localDir2, localDirs.get(0));
+    List<String> logDirs = dirSvc.getLogDirs();
+    Assert.assertEquals(1, logDirs.size());
+    Assert.assertEquals(logDir1, logDirs.get(0));
+  }
+
   private void testDirsFailures(boolean localORLogDirs) throws IOException {
     String dirType = localORLogDirs ? "local" : "log";
     String dirsProperty = localORLogDirs ? YarnConfiguration.NM_LOCAL_DIRS
