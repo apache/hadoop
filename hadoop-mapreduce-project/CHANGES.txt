@@ -339,6 +339,9 @@ Release 2.0.0-alpha - 05-23-2012
 
     MAPREDUCE-4483. 2.0 build does not work (John George via bobby)
 
+    MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
+    bad (Jason Lowe via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
