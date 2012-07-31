@@ -1561,7 +1561,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     Path confPath = getConfFile();
     FileContext fc = FileContext.getFileContext(confPath.toUri(), conf);
     Configuration jobConf = new Configuration(false);
-    jobConf.addResource(fc.open(confPath));
+    jobConf.addResource(fc.open(confPath), confPath.toString());
     return jobConf;
   }
 }
