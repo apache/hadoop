@@ -358,6 +358,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4010.  TestWritableJobConf fails on trunk (tucu via bobby)
 
+    MAPREDUCE-4456. LocalDistributedCacheManager can get an 
+    ArrayIndexOutOfBounds when creating symlinks (Robert Evans via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
