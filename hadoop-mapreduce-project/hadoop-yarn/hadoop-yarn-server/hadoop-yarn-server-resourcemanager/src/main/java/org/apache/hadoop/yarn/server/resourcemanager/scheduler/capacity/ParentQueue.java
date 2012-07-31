@@ -193,7 +193,7 @@ public class ParentQueue implements CSQueue {
         ", acls=" + aclsString);
   }
 
-  private static float PRECISION = 0.005f; // 0.05% precision
+  private static float PRECISION = 0.0005f; // 0.05% precision
   void setChildQueues(Collection<CSQueue> childQueues) {
     
     // Validate

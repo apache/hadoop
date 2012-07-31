@@ -34,6 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -270,6 +272,61 @@ public class TestParentQueue {
     verifyQueueMetrics(b, 9*GB, clusterResource);
   }
 
+  @Test
+  public void testSingleLevelQueuesPrecision() throws Exception {
+    // Setup queue configs
+    setupSingleLevelQueues(csConf);
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + "a";
+    csConf.setCapacity(Q_A, 30);
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + "b";
+    csConf.setCapacity(Q_B, 70.5F);
+
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    boolean exceptionOccured = false;
+    try {
+      CapacityScheduler.parseQueue(csContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          CapacityScheduler.queueComparator,
+          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+    } catch (IllegalArgumentException ie) {
+      exceptionOccured = true;
+    }
+    if (!exceptionOccured) {
+      Assert.fail("Capacity is more then 100% so should be failed.");
+    }
+    csConf.setCapacity(Q_A, 30);
+    csConf.setCapacity(Q_B, 70);
+    exceptionOccured = false;
+    queues.clear();
+    try {
+      CapacityScheduler.parseQueue(csContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          CapacityScheduler.queueComparator,
+          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+    } catch (IllegalArgumentException ie) {
+      exceptionOccured = true;
+    }
+    if (exceptionOccured) {
+      Assert.fail("Capacity is 100% so should not be failed.");
+    }
+    csConf.setCapacity(Q_A, 30);
+    csConf.setCapacity(Q_B, 70.005F);
+    exceptionOccured = false;
+    queues.clear();
+    try {
+      CapacityScheduler.parseQueue(csContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          CapacityScheduler.queueComparator,
+          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+    } catch (IllegalArgumentException ie) {
+      exceptionOccured = true;
+    }
+    if (exceptionOccured) {
+      Assert
+          .fail("Capacity is under PRECISION which is .05% so should not be failed.");
+    }
+  }
+  
   private static final String C = "c";
   private static final String C1 = "c1";
   private static final String C11 = "c11";
