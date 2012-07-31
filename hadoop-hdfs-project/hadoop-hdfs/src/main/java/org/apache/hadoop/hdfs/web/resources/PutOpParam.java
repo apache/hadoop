@@ -39,11 +39,11 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
     
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
-    final boolean doOutputAndRedirect;
+    final boolean doOutput;
     final int expectedHttpResponseCode;
 
-    Op(final boolean doOutputAndRedirect, final int expectedHttpResponseCode) {
-      this.doOutputAndRedirect = doOutputAndRedirect;
+    Op(final boolean doOutput, final int expectedHttpResponseCode) {
+      this.doOutput = doOutput;
       this.expectedHttpResponseCode = expectedHttpResponseCode;
     }
 
@@ -54,12 +54,7 @@ public class PutOpParam extends HttpOpParam<PutOpParam.Op> {
 
     @Override
     public boolean getDoOutput() {
-      return doOutputAndRedirect;
-    }
-
-    @Override
-    public boolean getRedirect() {
-      return doOutputAndRedirect;
+      return doOutput;
     }
 
     @Override
