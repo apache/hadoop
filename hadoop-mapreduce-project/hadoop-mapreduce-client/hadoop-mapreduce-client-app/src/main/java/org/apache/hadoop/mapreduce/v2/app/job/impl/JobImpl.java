@@ -1370,7 +1370,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           }
         }
         
-        float failureRate = (float) fetchFailures / runningReduceTasks;
+        float failureRate = runningReduceTasks == 0 ? 1.0f : 
+          (float) fetchFailures / runningReduceTasks;
         // declare faulty if fetch-failures >= max-allowed-failures
         boolean isMapFaulty =
             (failureRate >= MAX_ALLOWED_FETCH_FAILURES_FRACTION);
