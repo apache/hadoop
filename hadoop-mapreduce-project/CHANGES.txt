@@ -661,6 +661,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4457. mr job invalid transition TA_TOO_MANY_FETCH_FAILURE at 
     FAILED  (Robert Evans via tgraves)
 
+    MAPREDUCE-4234. SortValidator.java is incompatible with multi-user or
+    parallel use (due to a /tmp file with static name) (Robert Evans via
+    jeagles)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
