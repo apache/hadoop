@@ -505,6 +505,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4267. mavenize pipes (tgraves via bobby)
 
+    MAPREDUCE-4375. Show Configuration Tracability in MR UI (bobby 
+    via tgraves)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn

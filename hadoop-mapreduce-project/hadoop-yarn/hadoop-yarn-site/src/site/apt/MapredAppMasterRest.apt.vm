@@ -1296,6 +1296,8 @@ MapReduce Application Master REST API's.
 *---------------+--------------+-------------------------------+
 | value | string | The value of the configuration property |
 *---------------+--------------+-------------------------------+
+| source | string | The location this configuration object came from. If there is more then one of these it shows the history with the latest source at the end of the list. |
+*---------------+--------------+-------------------------------+
 
 ** Response Examples
 
@@ -1327,15 +1329,18 @@ MapReduce Application Master REST API's.
       "property" : [
          {  
             "value" : "/home/hadoop/hdfs/data",
-            "name" : "dfs.datanode.data.dir"
+            "name" : "dfs.datanode.data.dir",
+            "source" : ["hdfs-site.xml", "job.xml"]
          },
          {
             "value" : "org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer",
             "name" : "hadoop.http.filter.initializers"
+            "source" : ["programatically", "job.xml"]
          },
          {
             "value" : "/home/hadoop/tmp",
             "name" : "mapreduce.cluster.temp.dir"
+            "source" : ["mapred-site.xml"]
          },
          ...
       ]
@@ -1370,14 +1375,19 @@ MapReduce Application Master REST API's.
   <property>
     <name>dfs.datanode.data.dir</name>
     <value>/home/hadoop/hdfs/data</value>
+    <source>hdfs-site.xml</source>
+    <source>job.xml</source>
   </property>
   <property>
     <name>hadoop.http.filter.initializers</name>
     <value>org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer</value>
+    <source>programatically</source>
+    <source>job.xml</source>
   </property>
   <property>
     <name>mapreduce.cluster.temp.dir</name>
     <value>/home/hadoop/tmp</value>
+    <source>mapred-site.xml</source>
   </property>
   ...
 </conf>
