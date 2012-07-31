@@ -33,7 +33,6 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
-import org.apache.hadoop.mapreduce.server.jobtracker.JTConfig;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.fs.*;
@@ -345,7 +344,8 @@ public class SortValidator extends Configured implements Tool {
 
       FileInputFormat.setInputPaths(jobConf, sortInput);
       FileInputFormat.addInputPath(jobConf, sortOutput);
-      Path outputPath = new Path("/tmp/sortvalidate/recordstatschecker");
+      Path outputPath = new Path(new Path(jobConf.get("hadoop.tmp.dir", "/tmp"),
+           "sortvalidate"), UUID.randomUUID().toString());
       if (defaultfs.exists(outputPath)) {
         defaultfs.delete(outputPath, true);
       }
@@ -365,31 +365,44 @@ public class SortValidator extends Configured implements Tool {
       Date startTime = new Date();
       System.out.println("Job started: " + startTime);
       JobClient.runJob(jobConf);
-      Date end_time = new Date();
-      System.out.println("Job ended: " + end_time);
-      System.out.println("The job took " + 
-                         (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
-      
-      // Check to ensure that the statistics of the 
-      // framework's sort-input and sort-output match
-      SequenceFile.Reader stats = new SequenceFile.Reader(defaultfs,
-                                                          new Path(outputPath, "part-00000"), defaults);
-      IntWritable k1 = new IntWritable();
-      IntWritable k2 = new IntWritable();
-      RecordStatsWritable v1 = new RecordStatsWritable();
-      RecordStatsWritable v2 = new RecordStatsWritable();
-      if (!stats.next(k1, v1)) {
-        throw new IOException("Failed to read record #1 from reduce's output");
-      }
-      if (!stats.next(k2, v2)) {
-        throw new IOException("Failed to read record #2 from reduce's output");
-      }
+      try {
+        Date end_time = new Date();
+        System.out.println("Job ended: " + end_time);
+        System.out.println("The job took " + 
+            (end_time.getTime() - startTime.getTime()) /1000 + " seconds.");
 
-      if ((v1.getBytes() != v2.getBytes()) || (v1.getRecords() != v2.getRecords()) || 
-          v1.getChecksum() != v2.getChecksum()) {
-        throw new IOException("(" + 
-                              v1.getBytes() + ", " + v1.getRecords() + ", " + v1.getChecksum() + ") v/s (" +
-                              v2.getBytes() + ", " + v2.getRecords() + ", " + v2.getChecksum() + ")");
+        // Check to ensure that the statistics of the 
+        // framework's sort-input and sort-output match
+        SequenceFile.Reader stats = new SequenceFile.Reader(defaultfs,
+            new Path(outputPath, "part-00000"), defaults);
+        try {
+          IntWritable k1 = new IntWritable();
+          IntWritable k2 = new IntWritable();
+          RecordStatsWritable v1 = new RecordStatsWritable();
+          RecordStatsWritable v2 = new RecordStatsWritable();
+          if (!stats.next(k1, v1)) {
+            throw new IOException(
+                "Failed to read record #1 from reduce's output");
+          }
+          if (!stats.next(k2, v2)) {
+            throw new IOException(
+                "Failed to read record #2 from reduce's output");
+          }
+
+          if ((v1.getBytes() != v2.getBytes()) || 
+              (v1.getRecords() != v2.getRecords()) || 
+              v1.getChecksum() != v2.getChecksum()) {
+            throw new IOException("(" + 
+                v1.getBytes() + ", " + v1.getRecords() + ", " + v1.getChecksum()
+                + ") v/s (" +
+                v2.getBytes() + ", " + v2.getRecords() + ", " + v2.getChecksum()
+                + ")");
+          }
+        } finally {
+          stats.close();
+        }
+      } finally {
+        defaultfs.delete(outputPath, true);
       }
     }
 
