@@ -546,6 +546,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3732. fuse_dfs: incorrect configuration value checked for connection
     expiry timer period. (Colin Patrick McCabe via atm)
 
+    HDFS-3738. TestDFSClientRetries#testFailuresArePerOperation sets incorrect
+    timeout config. (atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
