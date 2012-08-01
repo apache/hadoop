@@ -665,6 +665,9 @@ Release 0.23.3 - UNRELEASED
     parallel use (due to a /tmp file with static name) (Robert Evans via
     jeagles)
 
+    MAPREDUCE-4504. SortValidator writes to wrong directory (Robert Evans 
+    via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
