@@ -344,7 +344,7 @@ public class SortValidator extends Configured implements Tool {
 
       FileInputFormat.setInputPaths(jobConf, sortInput);
       FileInputFormat.addInputPath(jobConf, sortOutput);
-      Path outputPath = new Path(new Path(jobConf.get("hadoop.tmp.dir", "/tmp"),
+      Path outputPath = new Path(new Path("/tmp",
            "sortvalidate"), UUID.randomUUID().toString());
       if (defaultfs.exists(outputPath)) {
         defaultfs.delete(outputPath, true);
