@@ -210,4 +210,20 @@
     </description>
   </property>
 
+  <property>
+    <name>httpfs.hadoop.filesystem.cache.purge.frequency</name>
+    <value>60</value>
+    <description>
+      Frequency, in seconds, for the idle filesystem purging daemon runs.
+    </description>
+  </property>
+
+  <property>
+    <name>httpfs.hadoop.filesystem.cache.purge.timeout</name>
+    <value>60</value>
+    <description>
+      Timeout, in seconds, for an idle filesystem to be purged.
+    </description>
+  </property>
+
 </configuration>

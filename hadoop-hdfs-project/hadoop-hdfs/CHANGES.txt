@@ -19,6 +19,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3113. httpfs does not support delegation tokens. (tucu)
 
+    HDFS-3513. HttpFS should cache filesystems. (tucu)
+
   IMPROVEMENTS
 
     HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
