@@ -692,6 +692,9 @@ Release 0.23.3 - UNRELEASED
     org.apache.hadoop.classification.InterfaceAudience not found  (Trevor
     Robinson via tgraves)
 
+    HADOOP-8633. Interrupted FsShell copies may leave tmp files (Daryn Sharp
+    via tgraves)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
