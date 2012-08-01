@@ -46,7 +46,7 @@ public class TestUlimit extends TestCase {
   MiniDFSCluster dfs = null;
   MiniMRCluster mr = null;
   FileSystem fs = null;
-  private static String SET_MEMORY_LIMIT = "786432"; // 768MB
+  private static String SET_MEMORY_LIMIT = "1786432"; // 1768MB
 
   String[] genArgs(String memLimit) {
     return new String[] {
@@ -57,6 +57,8 @@ public class TestUlimit extends TestCase {
       "-numReduceTasks", "0",
       "-jobconf", "mapred.map.tasks=1",
       "-jobconf", JobConf.MAPRED_MAP_TASK_ULIMIT + "=" + memLimit,
+      "-jobconf", "mapred.child.java.opts=-Xmx512m",
+      "-jobconf", "mapred.child.env=MALLOC_ARENA_MAX=1",
       "-jobconf", "mapred.job.tracker=" + "localhost:" +
                                            mr.getJobTrackerPort(),
       "-jobconf", "fs.default.name=" + "hdfs://localhost:" 

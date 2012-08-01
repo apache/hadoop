@@ -144,6 +144,8 @@ Release 1.2.0 - unreleased
     HDFS-3163. TestHDFSCLI.testAll fails if user name is not all lowercase.
     (Brandon Li via suresh)
 
+    MAPREDUCE-4036. Streaming TestUlimit fails on CentOS 6. (tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
