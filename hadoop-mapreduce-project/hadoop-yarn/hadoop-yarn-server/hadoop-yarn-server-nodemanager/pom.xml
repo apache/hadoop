@@ -49,6 +49,9 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-antrun-plugin</artifactId>
+            <configuration>
+              <skipTests>false</skipTests>
+            </configuration>
             <executions>
               <execution>
                 <id>make</id>
@@ -72,7 +75,10 @@
                 <phase>test</phase>
                 <configuration>
                   <target>
-                    <exec executable="test-container-executor" dir="${project.build.directory}/native" failonerror="true">
+                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native">
+                      <arg value="-c"/>
+                      <arg value="[ x$SKIPTESTS = xtrue ] || test-container-executor"/>
+                      <env key="SKIPTESTS" value="${skipTests}"/>
                     </exec>
                   </target>
                 </configuration>
