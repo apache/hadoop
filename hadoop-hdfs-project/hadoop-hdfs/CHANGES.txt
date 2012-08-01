@@ -178,6 +178,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3650. Use MutableQuantiles to provide latency histograms for various
     operations. (Andrew Wang via atm)
 
+    HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
