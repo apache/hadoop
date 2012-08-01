@@ -24,6 +24,7 @@ import com.sun.jersey.core.spi.component.ComponentScope;
 import com.sun.jersey.server.impl.inject.AbstractHttpContextInjectable;
 import com.sun.jersey.spi.inject.Injectable;
 import com.sun.jersey.spi.inject.InjectableProvider;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
@@ -36,6 +37,7 @@ import java.util.Map;
  * Jersey provider that parses the request parameters based on the
  * given parameter definition. 
  */
+@InterfaceAudience.Private
 public class ParametersProvider
   extends AbstractHttpContextInjectable<Parameters>
   implements InjectableProvider<Context, Type> {

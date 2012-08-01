@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.lib.wsrs;
 
-import org.apache.hadoop.lib.util.Check;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 import java.text.MessageFormat;
 
+@InterfaceAudience.Private
 public abstract class Param<T> {
   private String name;
   protected T value;

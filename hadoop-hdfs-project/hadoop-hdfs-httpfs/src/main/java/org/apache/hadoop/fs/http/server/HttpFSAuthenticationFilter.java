@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import javax.servlet.FilterConfig;
@@ -30,6 +31,7 @@ import java.util.Properties;
  * Subclass of hadoop-auth <code>AuthenticationFilter</code> that obtains its configuration
  * from HttpFSServer's server configuration.
  */
+@InterfaceAudience.Private
 public class HttpFSAuthenticationFilter extends AuthenticationFilter {
   private static final String CONF_PREFIX = "httpfs.authentication.";
 

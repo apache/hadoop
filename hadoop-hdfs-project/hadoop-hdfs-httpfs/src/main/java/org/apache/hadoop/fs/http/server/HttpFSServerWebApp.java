@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.http.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.lib.server.ServerException;
@@ -39,6 +40,7 @@ import java.io.IOException;
  * All the configuration is loaded from configuration properties prefixed
  * with <code>httpfs.</code>.
  */
+@InterfaceAudience.Private
 public class HttpFSServerWebApp extends ServerWebApp {
   private static final Logger LOG =
     LoggerFactory.getLogger(HttpFSServerWebApp.class);

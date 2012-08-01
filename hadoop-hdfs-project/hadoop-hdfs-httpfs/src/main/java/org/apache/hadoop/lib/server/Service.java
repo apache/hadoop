@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.lib.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Service interface for components to be managed by the {@link Server} class.
  */
+@InterfaceAudience.Private
 public interface Service {
 
   /**

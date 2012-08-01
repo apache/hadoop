@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.util;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -37,6 +38,7 @@ import java.util.Map;
 /**
  * Configuration utilities.
  */
+@InterfaceAudience.Private
 public abstract class ConfigurationUtils {
 
   /**

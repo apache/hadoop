@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.lib.service;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
@@ -24,6 +25,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 /**
  * HttpFS <code>DelegationTokenIdentifier</code> implementation.
  */
+@InterfaceAudience.Private
 public class DelegationTokenIdentifier
   extends AbstractDelegationTokenIdentifier {
 
