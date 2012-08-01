@@ -24,6 +24,8 @@ import java.io.InputStream;
 import java.util.LinkedList;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.shell.PathExceptions.PathExistsException;
 import org.apache.hadoop.fs.shell.PathExceptions.PathIOException;
@@ -232,31 +234,65 @@ abstract class CommandWithDestination extends FsCommand {
     if (target.exists && (target.stat.isDirectory() || !overwrite)) {
       throw new PathExistsException(target.toString());
     }
-    target.fs.setWriteChecksum(writeChecksum);
-    PathData tempFile = null;
+    TargetFileSystem targetFs = new TargetFileSystem(target.fs);
     try {
-      tempFile = target.createTempFile(target+"._COPYING_");
-      FSDataOutputStream out = target.fs.create(tempFile.path, true);
-      IOUtils.copyBytes(in, out, getConf(), true);
+      PathData tempTarget = target.suffix("._COPYING_");
+      targetFs.setWriteChecksum(writeChecksum);
+      targetFs.writeStreamToFile(in, tempTarget);
+      targetFs.rename(tempTarget, target);
+    } finally {
+      targetFs.close(); // last ditch effort to ensure temp file is removed
+    }
+  }
+
+  // Helper filter filesystem that registers created files as temp files to
+  // be deleted on exit unless successfully renamed
+  private static class TargetFileSystem extends FilterFileSystem {
+    TargetFileSystem(FileSystem fs) {
+      super(fs);
+    }
+
+    void writeStreamToFile(InputStream in, PathData target) throws IOException {
+      FSDataOutputStream out = null;
+      try {
+        out = create(target);
+        IOUtils.copyBytes(in, out, getConf(), true);
+      } finally {
+        IOUtils.closeStream(out); // just in case copyBytes didn't
+      }
+    }
+    
+    // tag created files as temp files
+    FSDataOutputStream create(PathData item) throws IOException {
+      try {
+        return create(item.path, true);
+      } finally { // might have been created but stream was interrupted
+        deleteOnExit(item.path);
+      }
+    }
+
+    void rename(PathData src, PathData target) throws IOException {
       // the rename method with an option to delete the target is deprecated
-      if (target.exists && !target.fs.delete(target.path, false)) {
+      if (target.exists && !delete(target.path, false)) {
         // too bad we don't know why it failed
         PathIOException e = new PathIOException(target.toString());
         e.setOperation("delete");
         throw e;
       }
-      if (!tempFile.fs.rename(tempFile.path, target.path)) {
+      if (!rename(src.path, target.path)) {
         // too bad we don't know why it failed
-        PathIOException e = new PathIOException(tempFile.toString());
+        PathIOException e = new PathIOException(src.toString());
         e.setOperation("rename");
         e.setTargetPath(target.toString());
         throw e;
       }
-      tempFile = null;
-    } finally {
-      if (tempFile != null) {
-        tempFile.fs.delete(tempFile.path, false);
-      }
+      // cancel delete on exit if rename is successful
+      cancelDeleteOnExit(src.path);
+    }
+    @Override
+    public void close() {
+      // purge any remaining temp files, but don't close underlying fs
+      processDeleteOnExit();
     }
   }
 }
