@@ -31,10 +31,6 @@
   <packaging>jar</packaging>
 
   <properties>
-    <snappy.prefix>/usr/local</snappy.prefix>
-    <snappy.lib>${snappy.prefix}/lib</snappy.lib>
-    <bundle.snappy>false</bundle.snappy>
-    
     <hadoop.component>common</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
@@ -524,10 +520,10 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <snappy.prefix>/usr/local</snappy.prefix>
-        <snappy.lib>${snappy.prefix}/lib</snappy.lib>
-        <snappy.include>${snappy.prefix}/include</snappy.include>
-        <runas.home></runas.home>
+        <snappy.prefix></snappy.prefix>
+        <snappy.lib></snappy.lib>
+        <snappy.include></snappy.include>
+        <require.snappy>false</require.snappy>
       </properties>
       <build>
         <plugins>
@@ -570,9 +566,7 @@
                 <configuration>
                   <target>
                     <exec executable="cmake" dir="${project.build.directory}/native" failonerror="true">
-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
-                      <env key="CFLAGS" value="-I${snappy.include}"/>
-                      <env key="LDFLAGS" value="-L${snappy.lib}"/>
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_SNAPPY=${require.snappy} -DCUSTOM_SNAPPY_PREFIX=${snappy.prefix} -DCUSTOM_SNAPPY_LIB=${snappy.lib} -DCUSTOM_SNAPPY_INCLUDE=${snappy.include}"/>
                     </exec>
                     <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
                       <arg line="VERBOSE=1"/>

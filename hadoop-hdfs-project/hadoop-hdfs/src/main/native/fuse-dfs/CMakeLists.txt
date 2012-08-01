@@ -71,4 +71,8 @@ IF(FUSE_FOUND)
         m
         pthread
     )
+ELSE(FUSE_FOUND)
+    IF(REQUIRE_FUSE)
+        MESSAGE(FATAL_ERROR "Required component fuse_dfs could not be built.")
+    ENDIF(REQUIRE_FUSE)
 ENDIF(FUSE_FOUND)

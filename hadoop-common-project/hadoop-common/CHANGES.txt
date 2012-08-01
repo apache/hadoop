@@ -377,6 +377,9 @@ Release 2.0.0-alpha - 05-23-2012
 
     HADOOP-8366 Use ProtoBuf for RpcResponseHeader (sanjay radia)
 
+    HADOOP-8620. Add -Drequire.fuse and -Drequire.snappy. (Colin
+    Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HADOOP-8422. Deprecate FileSystem#getDefault* and getServerDefault

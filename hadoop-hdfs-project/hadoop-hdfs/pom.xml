@@ -33,6 +33,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <properties>
     <hadoop.component>hdfs</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
+    <require.fuse>false</require.fuse>
   </properties>
 
   <dependencies>
@@ -403,7 +404,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                     <mkdir dir="${project.build.directory}/native"/>
                     <exec executable="cmake" dir="${project.build.directory}/native" 
                         failonerror="true">
-                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model}"/>
+                      <arg line="${basedir}/src/ -DGENERATED_JAVAH=${project.build.directory}/native/javah -DJVM_ARCH_DATA_MODEL=${sun.arch.data.model} -DREQUIRE_FUSE=${require.fuse}"/>
                     </exec>
                     <exec executable="make" dir="${project.build.directory}/native" failonerror="true">
                       <arg line="VERBOSE=1"/>
