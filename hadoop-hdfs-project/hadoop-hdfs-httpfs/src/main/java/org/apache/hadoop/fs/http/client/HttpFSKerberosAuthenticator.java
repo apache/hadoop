@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.http.client;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
@@ -43,6 +44,7 @@ import java.util.Map;
  * A <code>KerberosAuthenticator</code> subclass that fallback to
  * {@link HttpFSPseudoAuthenticator}.
  */
+@InterfaceAudience.Private
 public class HttpFSKerberosAuthenticator extends KerberosAuthenticator {
 
   /**
@@ -71,6 +73,7 @@ public class HttpFSKerberosAuthenticator extends KerberosAuthenticator {
   /**
    * DelegationToken operations.
    */
+  @InterfaceAudience.Private
   public static enum DelegationTokenOperation {
     GETDELEGATIONTOKEN(HTTP_GET, true),
     GETDELEGATIONTOKENS(HTTP_GET, true),

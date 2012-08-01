@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.http.server;
 
 import com.sun.jersey.api.container.ContainerException;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.wsrs.ExceptionProvider;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ import java.io.IOException;
  * exceptions to HTTP status codes.
  */
 @Provider
+@InterfaceAudience.Private
 public class HttpFSExceptionProvider extends ExceptionProvider {
   private static Logger AUDIT_LOG = LoggerFactory.getLogger("httpfsaudit");
   private static Logger LOG = LoggerFactory.getLogger(HttpFSExceptionProvider.class);

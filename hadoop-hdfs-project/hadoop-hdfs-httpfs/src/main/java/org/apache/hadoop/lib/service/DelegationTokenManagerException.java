@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.lib.service;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.lang.XException;
 
 /**
  * Exception thrown by the {@link DelegationTokenManager} service implementation.
  */
+@InterfaceAudience.Private
 public class DelegationTokenManagerException extends XException {
 
   public enum ERROR implements XException.ERROR {

@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.http.server;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 
 import javax.servlet.Filter;
@@ -37,6 +38,7 @@ import java.util.Set;
  * Filter that Enforces the content-type to be application/octet-stream for
  * POST and PUT requests.
  */
+@InterfaceAudience.Private
 public class CheckUploadContentTypeFilter implements Filter {
 
   private static final Set<String> UPLOAD_OPERATIONS = new HashSet<String>();

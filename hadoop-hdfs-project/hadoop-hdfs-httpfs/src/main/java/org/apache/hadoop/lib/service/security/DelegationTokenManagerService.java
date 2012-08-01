@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.lib.service.security;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.lib.server.BaseService;
@@ -37,6 +38,7 @@ import java.io.IOException;
 /**
  * DelegationTokenManager service implementation.
  */
+@InterfaceAudience.Private
 public class DelegationTokenManagerService extends BaseService
   implements DelegationTokenManager {
 

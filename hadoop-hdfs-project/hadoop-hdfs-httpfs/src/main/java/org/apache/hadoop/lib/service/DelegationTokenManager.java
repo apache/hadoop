@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.lib.service;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
 /**
  * Service interface to manage HttpFS delegation tokens.
  */
+@InterfaceAudience.Private
 public interface DelegationTokenManager {
 
   /**
