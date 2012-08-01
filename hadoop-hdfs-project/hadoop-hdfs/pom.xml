@@ -227,6 +227,9 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
+        <configuration>
+          <skipTests>false</skipTests>
+        </configuration>
         <executions>
           <execution>
             <id>compile-proto</id>
@@ -420,11 +423,17 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
                   <target>
                     <property name="compile_classpath" refid="maven.compile.classpath"/>
                     <property name="test_classpath" refid="maven.test.classpath"/>
-                    <exec executable="${project.build.directory}/native/test_libhdfs_threaded" dir="${project.build.directory}/native/" failonerror="true">
+                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native/">
+                      <arg value="-c"/>
+                      <arg value="[ x$SKIPTESTS = xtrue ] || ${project.build.directory}/native/test_libhdfs_threaded"/>
                       <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
+                      <env key="SKIPTESTS" value="${skipTests}"/>
                     </exec>
-                    <exec executable="${project.build.directory}/native/test_native_mini_dfs" dir="${project.build.directory}/native/" failonerror="true">
+                    <exec executable="sh" failonerror="true" dir="${project.build.directory}/native/">
+                        <arg value="-c"/>
+                        <arg value="[ x$SKIPTESTS = xtrue ] || ${project.build.directory}/native/test_libhdfs_threaded"/>
                       <env key="CLASSPATH" value="${test_classpath}:${compile_classpath}"/>
+                      <env key="SKIPTESTS" value="${skipTests}"/>
                     </exec>
                   </target>
                 </configuration>
