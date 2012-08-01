@@ -30,4 +30,9 @@
     <Field name="authority" />
     <Bug pattern="IS2_INCONSISTENT_SYNC" />
   </Match>
+  <Match>
+    <Class name="org.apache.hadoop.lib.service.hadoop.FileSystemAccessService" />
+    <Method name="closeFileSystem" />
+    <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE" />
+  </Match>
 </FindBugsFilter>
