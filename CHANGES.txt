@@ -63,6 +63,8 @@ Release 1.2.0 - unreleased
 
     HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
 
+    HDFS-3697. Enable fadvise readahead by default. (todd via eli)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
