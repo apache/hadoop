@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
@@ -86,9 +87,7 @@ import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.DefaultFileRegion;
 import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.FileRegion;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
@@ -104,7 +103,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseEncoder;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.QueryStringDecoder;
 import org.jboss.netty.handler.ssl.SslHandler;
-import org.jboss.netty.handler.stream.ChunkedFile;
 import org.jboss.netty.handler.stream.ChunkedWriteHandler;
 import org.jboss.netty.util.CharsetUtil;
 
@@ -114,12 +112,27 @@ public class ShuffleHandler extends AbstractService
     implements AuxServices.AuxiliaryService {
 
   private static final Log LOG = LogFactory.getLog(ShuffleHandler.class);
+  
+  public static final String SHUFFLE_MANAGE_OS_CACHE = "mapreduce.shuffle.manage.os.cache";
+  public static final boolean DEFAULT_SHUFFLE_MANAGE_OS_CACHE = true;
+
+  public static final String SHUFFLE_READAHEAD_BYTES = "mapreduce.shuffle.readahead.bytes";
+  public static final int DEFAULT_SHUFFLE_READAHEAD_BYTES = 4 * 1024 * 1024;
 
   private int port;
   private ChannelFactory selector;
   private final ChannelGroup accepted = new DefaultChannelGroup();
   private HttpPipelineFactory pipelineFact;
   private int sslFileBufferSize;
+
+  /**
+   * Should the shuffle use posix_fadvise calls to manage the OS cache during
+   * sendfile
+   */
+  private boolean manageOsCache;
+  private int readaheadLength;
+  private ReadaheadPool readaheadPool = ReadaheadPool.getInstance();
+   
 
   public static final String MAPREDUCE_SHUFFLE_SERVICEID =
       "mapreduce.shuffle";
@@ -242,6 +255,12 @@ public class ShuffleHandler extends AbstractService
 
   @Override
   public synchronized void init(Configuration conf) {
+    manageOsCache = conf.getBoolean(SHUFFLE_MANAGE_OS_CACHE,
+        DEFAULT_SHUFFLE_MANAGE_OS_CACHE);
+
+    readaheadLength = conf.getInt(SHUFFLE_READAHEAD_BYTES,
+        DEFAULT_SHUFFLE_READAHEAD_BYTES);
+    
     ThreadFactory bossFactory = new ThreadFactoryBuilder()
       .setNameFormat("ShuffleHandler Netty Boss #%d")
       .build();
@@ -503,14 +522,14 @@ public class ShuffleHandler extends AbstractService
           base + "/file.out", conf);
       LOG.debug("DEBUG1 " + base + " : " + mapOutputFileName + " : " +
           indexFileName);
-      IndexRecord info = 
+      final IndexRecord info = 
         indexCache.getIndexInformation(mapId, reduce, indexFileName, user);
       final ShuffleHeader header =
         new ShuffleHeader(mapId, info.partLength, info.rawLength, reduce);
       final DataOutputBuffer dob = new DataOutputBuffer();
       header.write(dob);
       ch.write(wrappedBuffer(dob.getData(), 0, dob.getLength()));
-      File spillfile = new File(mapOutputFileName.toString());
+      final File spillfile = new File(mapOutputFileName.toString());
       RandomAccessFile spill;
       try {
         spill = new RandomAccessFile(spillfile, "r");
@@ -520,22 +539,25 @@ public class ShuffleHandler extends AbstractService
       }
       ChannelFuture writeFuture;
       if (ch.getPipeline().get(SslHandler.class) == null) {
-        final FileRegion partition = new DefaultFileRegion(
-            spill.getChannel(), info.startOffset, info.partLength);
+        final FadvisedFileRegion partition = new FadvisedFileRegion(spill,
+            info.startOffset, info.partLength, manageOsCache, readaheadLength,
+            readaheadPool, spillfile.getAbsolutePath());
         writeFuture = ch.write(partition);
         writeFuture.addListener(new ChannelFutureListener() {
             // TODO error handling; distinguish IO/connection failures,
             //      attribute to appropriate spill output
-            @Override
-            public void operationComplete(ChannelFuture future) {
-              partition.releaseExternalResources();
-            }
-          });
+          @Override
+          public void operationComplete(ChannelFuture future) {
+            partition.releaseExternalResources();
+          }
+        });
       } else {
         // HTTPS cannot be done with zero copy.
-        writeFuture = ch.write(new ChunkedFile(spill, info.startOffset,
-                                               info.partLength,
-                                               sslFileBufferSize));
+        final FadvisedChunkedFile chunk = new FadvisedChunkedFile(spill,
+            info.startOffset, info.partLength, sslFileBufferSize,
+            manageOsCache, readaheadLength, readaheadPool,
+            spillfile.getAbsolutePath());
+        writeFuture = ch.write(chunk);
       }
       metrics.shuffleConnections.incr();
       metrics.shuffleOutputBytes.incr(info.partLength); // optimistic

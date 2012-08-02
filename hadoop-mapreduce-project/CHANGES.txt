@@ -68,6 +68,9 @@ Release 2.1.0-alpha - Unreleased
     MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
     development of new applications. (Bikas Saha via acmurthy) 
 
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Siddharth Seth via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
