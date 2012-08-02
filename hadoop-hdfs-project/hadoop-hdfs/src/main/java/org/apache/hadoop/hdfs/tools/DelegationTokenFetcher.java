@@ -251,7 +251,6 @@ public class DelegationTokenFetcher {
     try {
       URL url = new URL(buf.toString());
       connection = (HttpURLConnection) SecurityUtil.openSecureHttpConnection(url);
-      connection = (HttpURLConnection)URLUtils.openConnection(url);
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
         throw new IOException("Error renewing token: " + 
             connection.getResponseMessage());

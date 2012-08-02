@@ -397,6 +397,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3738. TestDFSClientRetries#testFailuresArePerOperation sets incorrect
     timeout config. (atm)
 
+    HDFS-3756. DelegationTokenFetcher creates 2 HTTP connections, the second 
+    one not properly configured. (tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
