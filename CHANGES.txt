@@ -65,6 +65,9 @@ Release 1.2.0 - unreleased
 
     HDFS-3697. Enable fadvise readahead by default. (todd via eli)
 
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Brandon Li via sseth)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
