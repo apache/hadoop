@@ -23,24 +23,26 @@ import java.net.HttpURLConnection;
 public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
   /** Get operations. */
   public static enum Op implements HttpOpParam.Op {
-    OPEN(HttpURLConnection.HTTP_OK),
+    OPEN(true, HttpURLConnection.HTTP_OK),
 
-    GETFILESTATUS(HttpURLConnection.HTTP_OK),
-    LISTSTATUS(HttpURLConnection.HTTP_OK),
-    GETCONTENTSUMMARY(HttpURLConnection.HTTP_OK),
-    GETFILECHECKSUM(HttpURLConnection.HTTP_OK),
+    GETFILESTATUS(false, HttpURLConnection.HTTP_OK),
+    LISTSTATUS(false, HttpURLConnection.HTTP_OK),
+    GETCONTENTSUMMARY(false, HttpURLConnection.HTTP_OK),
+    GETFILECHECKSUM(true, HttpURLConnection.HTTP_OK),
 
-    GETHOMEDIRECTORY(HttpURLConnection.HTTP_OK),
-    GETDELEGATIONTOKEN(HttpURLConnection.HTTP_OK),
+    GETHOMEDIRECTORY(false, HttpURLConnection.HTTP_OK),
+    GETDELEGATIONTOKEN(false, HttpURLConnection.HTTP_OK),
 
     /** GET_BLOCK_LOCATIONS is a private unstable op. */
-    GET_BLOCK_LOCATIONS(HttpURLConnection.HTTP_OK),
+    GET_BLOCK_LOCATIONS(false, HttpURLConnection.HTTP_OK),
 
-    NULL(HttpURLConnection.HTTP_NOT_IMPLEMENTED);
+    NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);
 
+    final boolean redirect;
     final int expectedHttpResponseCode;
 
-    Op(final int expectedHttpResponseCode) {
+    Op(final boolean redirect, final int expectedHttpResponseCode) {
+      this.redirect = redirect;
       this.expectedHttpResponseCode = expectedHttpResponseCode;
     }
 
@@ -52,6 +54,11 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     @Override
     public boolean getDoOutput() {
       return false;
+    }
+
+    @Override
+    public boolean getRedirect() {
+      return redirect;
     }
 
     @Override

@@ -58,6 +58,8 @@ Release 1.2.0 - unreleased
     JobTracker for smaller clusters. (Todd Lipcon, backport by 
     Brandon Li via sseth)
 
+    HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

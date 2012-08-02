@@ -206,7 +206,7 @@ public class TestDelegationTokenForProxyUser {
       final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
       WebHdfsTestUtil.LOG.info("url=" + url);
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn = WebHdfsTestUtil.twoStepWrite(conn, op);
+      conn = WebHdfsTestUtil.twoStepWrite(webhdfs, op, conn);
       final FSDataOutputStream out = WebHdfsTestUtil.write(webhdfs, op, conn, 4096);
       out.write("Hello, webhdfs user!".getBytes());
       out.close();
@@ -221,7 +221,7 @@ public class TestDelegationTokenForProxyUser {
       final PostOpParam.Op op = PostOpParam.Op.APPEND;
       final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn = WebHdfsTestUtil.twoStepWrite(conn, op);
+      conn = WebHdfsTestUtil.twoStepWrite(webhdfs, op, conn);
       final FSDataOutputStream out = WebHdfsTestUtil.write(webhdfs, op, conn, 4096);
       out.write("\nHello again!".getBytes());
       out.close();
