@@ -206,6 +206,9 @@ Release 2.1.0-alpha - Unreleased
 
     MAPREDUCE-4447. Remove aop from cruft from the ant build. (eli)
 
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Siddharth Seth via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
