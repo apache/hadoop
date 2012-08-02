@@ -2532,6 +2532,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       // no need to update its timestamp
       // because its is done when the descriptor is created
     }
+
+    if (safeMode != null) {
+      safeMode.checkMode();
+    }
     return;
   }
     
@@ -3321,6 +3325,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     unprotectedRemoveDatanode(nodeInfo);
     clusterMap.remove(nodeInfo);
+
+    if (safeMode != null) {
+      safeMode.checkMode();
+    }
   }
 
   void unprotectedRemoveDatanode(DatanodeDescriptor nodeDescr) {
@@ -4199,6 +4207,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
   }
 
+  int getNumLiveDataNodes() {
+    return getNumberOfDatanodes(DatanodeReportType.LIVE);
+  }
+
   int getNumberOfDatanodes(DatanodeReportType type) {
     return getDatanodeListForReport(type).size(); 
   }
@@ -4733,6 +4745,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     // configuration fields
     /** Safe mode threshold condition %.*/
     private double threshold;
+    /** Safe mode minimum number of datanodes alive */
+    private int datanodeThreshold;
     /** Safe mode extension after the threshold. */
     private int extension;
     /** Min replication required by safe mode. */
@@ -4760,6 +4774,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
      */
     SafeModeInfo(Configuration conf) {
       this.threshold = conf.getFloat("dfs.safemode.threshold.pct", 0.95f);
+      this.datanodeThreshold = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY,
+          DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_DEFAULT);
       this.extension = conf.getInt("dfs.safemode.extension", 0);
       this.safeReplication = conf.getInt("dfs.replication.min", 1);
       this.blockTotal = 0; 
@@ -4776,6 +4793,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
      */
     private SafeModeInfo() {
       this.threshold = 1.5f;  // this threshold can never be reached
+      this.datanodeThreshold = Integer.MAX_VALUE;
       this.extension = Integer.MAX_VALUE;
       this.safeReplication = Short.MAX_VALUE + 1; // more than maxReplication
       this.blockTotal = -1;
@@ -4874,7 +4892,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
      * if DFS is empty or {@link #threshold} == 0
      */
     boolean needEnter() {
-      return getSafeBlockRatio() < threshold;
+      return getSafeBlockRatio() < threshold ||
+          getNumLiveDataNodes() < datanodeThreshold;
     }
       
     /**
@@ -4971,15 +4990,44 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       }
       if(blockTotal < 0)
         return leaveMsg + ".";
-      String safeBlockRatioMsg = 
-        String.format("The ratio of reported blocks %.4f has " +
-          (reached == 0 ? "not " : "") + "reached the threshold %.4f. ",
-          getSafeBlockRatio(), threshold) + leaveMsg;
-      if(reached == 0 || isManual())  // threshold is not reached or manual
-        return safeBlockRatioMsg + ".";
+
+      int numLive = getNumLiveDataNodes();
+      String msg = "";
+      if (reached == 0) {
+        if (getSafeBlockRatio() < threshold) {
+          msg += String.format(
+            "The reported blocks is only %d"
+            + " but the threshold is %.4f and the total blocks %d.",
+            blockSafe, threshold, blockTotal);
+        }
+        if (numLive < datanodeThreshold) {
+          if (!"".equals(msg)) {
+            msg += "\n";
+          }
+          msg += String.format(
+            "The number of live datanodes %d needs an additional %d live "
+            + "datanodes to reach the minimum number %d.",
+            numLive, (datanodeThreshold - numLive), datanodeThreshold);
+        }
+        msg += " " + leaveMsg;
+      } else {
+        msg = String.format("The reported blocks %d has reached the threshold"
+            + " %.4f of total blocks %d.", blockSafe, threshold, 
+            blockTotal);
+
+        if (datanodeThreshold > 0) {
+          msg += String.format(" The number of live datanodes %d has reached "
+                               + "the minimum number %d.",
+                               numLive, datanodeThreshold);
+        }
+        msg += " " + leaveMsg;
+      }
+      if(reached == 0 || isManual()) {  // threshold is not reached or manual       
+        return msg + ".";
+      }
       // extension period is in progress
-      return safeBlockRatioMsg + " in " 
-            + Math.abs(reached + extension - now())/1000 + " seconds.";
+      return msg + " in " + Math.abs(reached + extension - now()) / 1000
+          + " seconds.";
     }
 
     /**
@@ -5157,7 +5205,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     safeMode.leave(checkForUpgrades);
   }
     
-  String getSafeModeTip() {
+  public String getSafeModeTip() {
     if (!isInSafeMode())
       return "";
     return safeMode.getTurnOffTip();

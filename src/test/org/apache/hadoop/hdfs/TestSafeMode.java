@@ -99,6 +99,50 @@ public class TestSafeMode {
     }
   }
 
+  /**
+   * Verify that the NameNode stays in safemode when dfs.safemode.datanode.min
+   * is set to a number greater than the number of live datanodes.
+   */
+  @Test
+  public void testDatanodeThreshold() throws IOException {
+    MiniDFSCluster cluster = null;
+    DistributedFileSystem fs = null;
+    try {
+      Configuration conf = new Configuration();
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 1);
+
+      // bring up a cluster with no datanodes
+      cluster = new MiniDFSCluster(conf, 0, true, null);
+      cluster.waitActive();
+      fs = (DistributedFileSystem)cluster.getFileSystem();
+
+      assertTrue("No datanode started, but we require one - safemode expected",
+                 fs.setSafeMode(SafeModeAction.SAFEMODE_GET));
+
+      String tipMsg = cluster.getNameNode().getNamesystem().getSafeModeTip();
+      assertTrue("Safemode tip message looks right",
+                 tipMsg.contains("The number of live datanodes 0 needs an " +
+                                 "additional 1 live"));
+
+      // Start a datanode
+      cluster.startDataNodes(conf, 1, true, null, null);
+
+      // Wait long enough for safemode check to refire
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException ignored) {}
+
+      // We now should be out of safe mode.
+      assertFalse(
+        "Out of safe mode after starting datanode.",
+        fs.setSafeMode(SafeModeAction.SAFEMODE_GET));
+    } finally {
+      if (fs != null) fs.close();
+      if (cluster != null) cluster.shutdown();
+    }
+  }
+
   @Test
   public void testSafeModeWhenZeroBlockLocations() throws IOException {
     MiniDFSCluster cluster = null;
