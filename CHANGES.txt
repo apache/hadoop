@@ -17,7 +17,8 @@ Release 1.2.0 - unreleased
     HADOOP-7823. Port HADOOP-4012 providing split support for bzip2 compressed
     files to branch-1. (Andrew Purtell via cdouglas)
 
-    MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process command-line (philip and ahmed via tucu)
+    MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process 
+    command-line (philip and ahmed via tucu)
 
     HDFS-528. Backport: Add ability for safemode to wait for a minimum number
     of live datanodes.  (szetszwo)
