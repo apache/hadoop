@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -56,6 +57,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * Helper class for MR applications
@@ -264,6 +266,13 @@ public class MRApps extends Apps {
         DistributedCache.getFileClassPaths(conf));
   }
 
+  private static String getResourceDescription(LocalResourceType type) {
+    if(type == LocalResourceType.ARCHIVE) {
+      return "cache archive (" + MRJobConfig.CACHE_ARCHIVES + ") ";
+    }
+    return "cache file (" + MRJobConfig.CACHE_FILES + ") ";
+  }
+  
   // TODO - Move this to MR!
   // Use TaskDistributedCacheManager.CacheFiles.makeCacheFiles(URI[], 
   // long[], boolean[], Path[], FileType)
@@ -309,6 +318,13 @@ public class MRApps extends Apps {
           throw new IllegalArgumentException("Resource name must be relative");
         }
         String linkName = name.toUri().getPath();
+        LocalResource orig = localResources.get(linkName);
+        if(orig != null && !orig.getResource().equals(
+            ConverterUtils.getYarnUrlFromURI(p.toUri()))) {
+          throw new InvalidJobConfException(
+              getResourceDescription(orig.getType()) + orig.getResource() + 
+              " conflicts with " + getResourceDescription(type) + u);
+        }
         localResources.put(
             linkName,
             BuilderUtils.newLocalResource(
