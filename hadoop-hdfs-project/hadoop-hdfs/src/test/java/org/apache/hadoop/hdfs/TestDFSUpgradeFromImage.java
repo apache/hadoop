@@ -18,13 +18,22 @@
 
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TreeMap;
 import java.util.zip.CRC32;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -34,8 +43,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.junit.Test;
 
 /**
  * This tests data transfer protocol handling in the Datanode. It sends
@@ -46,7 +54,7 @@ import org.apache.commons.logging.LogFactory;
  *   2) hadoop-dfs-dir.txt : checksums that are compared in this test.
  * Please read hadoop-dfs-dir.txt for more information.  
  */
-public class TestDFSUpgradeFromImage extends TestCase {
+public class TestDFSUpgradeFromImage {
   
   private static final Log LOG = LogFactory
       .getLog(TestDFSUpgradeFromImage.class);
@@ -182,6 +190,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
    * Test that sets up a fake image from Hadoop 0.3.0 and tries to start a
    * NN, verifying that the correct error message is thrown.
    */
+  @Test
   public void testFailOnPreUpgradeImage() throws IOException {
     Configuration conf = new HdfsConfiguration();
 
@@ -225,6 +234,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
   /**
    * Test upgrade from 0.22 image
    */
+  @Test
   public void testUpgradeFromRel22Image() throws IOException {
     unpackStorage(HADOOP22_IMAGE);
     upgradeAndVerify();
@@ -234,6 +244,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
    * Test upgrade from 0.22 image with corrupt md5, make sure it
    * fails to upgrade
    */
+  @Test
   public void testUpgradeFromCorruptRel22Image() throws IOException {
     unpackStorage(HADOOP22_IMAGE);
     

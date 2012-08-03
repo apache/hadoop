@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 
-import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogTestUtil;
@@ -42,18 +41,14 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.util.ExitUtil.ExitException;
+
 import org.apache.bookkeeper.proto.BookieServer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
-
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.verify;
 
 /**
  * Integration test to ensure that the BookKeeper JournalManager
@@ -83,8 +78,6 @@ public class TestBookKeeperAsHASharedDir {
    */
   @Test
   public void testFailoverWithBK() throws Exception {
-    Runtime mockRuntime1 = mock(Runtime.class);
-    Runtime mockRuntime2 = mock(Runtime.class);
     MiniDFSCluster cluster = null;
     try {
       Configuration conf = new Configuration();
@@ -100,8 +93,6 @@ public class TestBookKeeperAsHASharedDir {
         .build();
       NameNode nn1 = cluster.getNameNode(0);
       NameNode nn2 = cluster.getNameNode(1);
-      FSEditLogTestUtil.setRuntimeForEditLog(nn1, mockRuntime1);
-      FSEditLogTestUtil.setRuntimeForEditLog(nn2, mockRuntime2);
 
       cluster.waitActive();
       cluster.transitionToActive(0);
@@ -117,9 +108,6 @@ public class TestBookKeeperAsHASharedDir {
 
       assertTrue(fs.exists(p));
     } finally {
-      verify(mockRuntime1, times(0)).exit(anyInt());
-      verify(mockRuntime2, times(0)).exit(anyInt());
-
       if (cluster != null) {
         cluster.shutdown();
       }
@@ -141,9 +129,6 @@ public class TestBookKeeperAsHASharedDir {
 
     BookieServer replacementBookie = null;
 
-    Runtime mockRuntime1 = mock(Runtime.class);
-    Runtime mockRuntime2 = mock(Runtime.class);
-
     MiniDFSCluster cluster = null;
 
     try {
@@ -161,11 +146,10 @@ public class TestBookKeeperAsHASharedDir {
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(0)
         .manageNameDfsSharedDirs(false)
+        .checkExitOnShutdown(false)
         .build();
       NameNode nn1 = cluster.getNameNode(0);
       NameNode nn2 = cluster.getNameNode(1);
-      FSEditLogTestUtil.setRuntimeForEditLog(nn1, mockRuntime1);
-      FSEditLogTestUtil.setRuntimeForEditLog(nn2, mockRuntime2);
 
       cluster.waitActive();
       cluster.transitionToActive(0);
@@ -180,20 +164,22 @@ public class TestBookKeeperAsHASharedDir {
       assertEquals("New bookie didn't stop",
                    numBookies, bkutil.checkBookiesUp(numBookies, 10));
 
-      // mkdirs will "succeed", but nn have called runtime.exit
-      fs.mkdirs(p2);
-      verify(mockRuntime1, atLeastOnce()).exit(anyInt());
-      verify(mockRuntime2, times(0)).exit(anyInt());
+      try {
+        fs.mkdirs(p2);
+        fail("mkdirs should result in the NN exiting");
+      } catch (RemoteException re) {
+        assertTrue(re.getClassName().contains("ExitException"));
+      }
       cluster.shutdownNameNode(0);
 
       try {
         cluster.transitionToActive(1);
         fail("Shouldn't have been able to transition with bookies down");
-      } catch (ServiceFailedException e) {
-        assertTrue("Wrong exception",
-            e.getMessage().contains("Failed to start active services"));
+      } catch (ExitException ee) {
+        assertTrue("Should shutdown due to required journal failure",
+            ee.getMessage().contains(
+                "starting log segment 3 failed for required journal"));
       }
-      verify(mockRuntime2, atLeastOnce()).exit(anyInt());
 
       replacementBookie = bkutil.newBookie();
       assertEquals("Replacement bookie didn't start",
@@ -219,8 +205,6 @@ public class TestBookKeeperAsHASharedDir {
    */
   @Test
   public void testMultiplePrimariesStarted() throws Exception {
-    Runtime mockRuntime1 = mock(Runtime.class);
-    Runtime mockRuntime2 = mock(Runtime.class);
     Path p1 = new Path("/testBKJMMultiplePrimary");
 
     MiniDFSCluster cluster = null;
@@ -235,11 +219,10 @@ public class TestBookKeeperAsHASharedDir {
         .nnTopology(MiniDFSNNTopology.simpleHATopology())
         .numDataNodes(0)
         .manageNameDfsSharedDirs(false)
+        .checkExitOnShutdown(false)
         .build();
       NameNode nn1 = cluster.getNameNode(0);
       NameNode nn2 = cluster.getNameNode(1);
-      FSEditLogTestUtil.setRuntimeForEditLog(nn1, mockRuntime1);
-      FSEditLogTestUtil.setRuntimeForEditLog(nn2, mockRuntime2);
       cluster.waitActive();
       cluster.transitionToActive(0);
 
@@ -248,11 +231,13 @@ public class TestBookKeeperAsHASharedDir {
       nn1.getRpcServer().rollEditLog();
       cluster.transitionToActive(1);
       fs = cluster.getFileSystem(0); // get the older active server.
-      // This edit log updation on older active should make older active
-      // shutdown.
-      fs.delete(p1, true);
-      verify(mockRuntime1, atLeastOnce()).exit(anyInt());
-      verify(mockRuntime2, times(0)).exit(anyInt());
+
+      try {
+        fs.delete(p1, true);
+        fail("Log update on older active should cause it to exit");
+      } catch (RemoteException re) {
+        assertTrue(re.getClassName().contains("ExitException"));
+      }
     } finally {
       if (cluster != null) {
         cluster.shutdown();

@@ -92,6 +92,23 @@ public class AggregatedLogFormat {
     }
     
     @Override
+    public int hashCode() {
+      return keyString == null ? 0 : keyString.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (obj instanceof LogKey) {
+        LogKey other = (LogKey) obj;
+        if (this.keyString == null) {
+          return other.keyString == null;
+        }
+        return this.keyString.equals(other.keyString);
+      }
+      return false;
+    }
+
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeUTF(this.keyString);
     }
@@ -360,7 +377,33 @@ public class AggregatedLogFormat {
       return valueStream;
     }
 
-    
+    /**
+     * Get a ContainerLogsReader to read the logs for
+     * the specified container.
+     *
+     * @param containerId
+     * @return object to read the container's logs or null if the
+     *         logs could not be found
+     * @throws IOException
+     */
+    public ContainerLogsReader getContainerLogsReader(
+        ContainerId containerId) throws IOException {
+      ContainerLogsReader logReader = null;
+
+      final LogKey containerKey = new LogKey(containerId);
+      LogKey key = new LogKey();
+      DataInputStream valueStream = next(key);
+      while (valueStream != null && !key.equals(containerKey)) {
+        valueStream = next(key);
+      }
+
+      if (valueStream != null) {
+        logReader = new ContainerLogsReader(valueStream);
+      }
+
+      return logReader;
+    }
+
     //TODO  Change Log format and interfaces to be containerId specific.
     // Avoid returning completeValueStreams.
 //    public List<String> getTypesForContainer(DataInputStream valueStream){}
@@ -487,6 +530,69 @@ public class AggregatedLogFormat {
     public void close() throws IOException {
       this.scanner.close();
       this.fsDataIStream.close();
+    }
+  }
+
+  public static class ContainerLogsReader {
+    private DataInputStream valueStream;
+    private String currentLogType = null;
+    private long currentLogLength = 0;
+    private BoundedInputStream currentLogData = null;
+    private InputStreamReader currentLogISR;
+
+    public ContainerLogsReader(DataInputStream stream) {
+      valueStream = stream;
+    }
+
+    public String nextLog() throws IOException {
+      if (currentLogData != null && currentLogLength > 0) {
+        // seek to the end of the current log, relying on BoundedInputStream
+        // to prevent seeking past the end of the current log
+        do {
+          if (currentLogData.skip(currentLogLength) < 0) {
+            break;
+          }
+        } while (currentLogData.read() != -1);
+      }
+
+      currentLogType = null;
+      currentLogLength = 0;
+      currentLogData = null;
+      currentLogISR = null;
+
+      try {
+        String logType = valueStream.readUTF();
+        String logLengthStr = valueStream.readUTF();
+        currentLogLength = Long.parseLong(logLengthStr);
+        currentLogData =
+            new BoundedInputStream(valueStream, currentLogLength);
+        currentLogData.setPropagateClose(false);
+        currentLogISR = new InputStreamReader(currentLogData);
+        currentLogType = logType;
+      } catch (EOFException e) {
+      }
+
+      return currentLogType;
+    }
+
+    public String getCurrentLogType() {
+      return currentLogType;
+    }
+
+    public long getCurrentLogLength() {
+      return currentLogLength;
+    }
+
+    public long skip(long n) throws IOException {
+      return currentLogData.skip(n);
+    }
+
+    public int read(byte[] buf, int off, int len) throws IOException {
+      return currentLogData.read(buf, off, len);
+    }
+
+    public int read(char[] buf, int off, int len) throws IOException {
+      return currentLogISR.read(buf, off, len);
     }
   }
 }

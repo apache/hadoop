@@ -34,6 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -44,8 +46,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -99,22 +101,22 @@ public class TestParentQueue {
     LOG.info("Setup top-level queues a and b");
   }
 
-  private SchedulerApp getMockApplication(int appId, String user) {
-    SchedulerApp application = mock(SchedulerApp.class);
+  private FiCaSchedulerApp getMockApplication(int appId, String user) {
+    FiCaSchedulerApp application = mock(FiCaSchedulerApp.class);
     doReturn(user).when(application).getUser();
     doReturn(Resources.createResource(0)).when(application).getHeadroom();
     return application;
   }
 
   private void stubQueueAllocation(final CSQueue queue, 
-      final Resource clusterResource, final SchedulerNode node, 
+      final Resource clusterResource, final FiCaSchedulerNode node, 
       final int allocation) {
     stubQueueAllocation(queue, clusterResource, node, allocation, 
         NodeType.NODE_LOCAL);
   }
   
   private void stubQueueAllocation(final CSQueue queue, 
-      final Resource clusterResource, final SchedulerNode node, 
+      final Resource clusterResource, final FiCaSchedulerNode node, 
       final int allocation, final NodeType type) {
     
     // Simulate the queue allocation
@@ -132,7 +134,7 @@ public class TestParentQueue {
           ((ParentQueue)queue).allocateResource(clusterResource, 
               allocatedResource);
         } else {
-          SchedulerApp app1 = getMockApplication(0, "");
+          FiCaSchedulerApp app1 = getMockApplication(0, "");
           ((LeafQueue)queue).allocateResource(clusterResource, app1, 
               allocatedResource);
         }
@@ -198,9 +200,9 @@ public class TestParentQueue {
     final int memoryPerNode = 10;
     final int numNodes = 2;
     
-    SchedulerNode node_0 = 
+    FiCaSchedulerNode node_0 = 
         TestUtils.getMockNode("host_0", DEFAULT_RACK, 0, memoryPerNode*GB);
-    SchedulerNode node_1 = 
+    FiCaSchedulerNode node_1 = 
         TestUtils.getMockNode("host_1", DEFAULT_RACK, 0, memoryPerNode*GB);
     
     final Resource clusterResource = 
@@ -224,9 +226,9 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_1);
     InOrder allocationOrder = inOrder(a, b);
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(a, 2*GB, clusterResource);
     verifyQueueMetrics(b, 2*GB, clusterResource);
 
@@ -237,9 +239,9 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0);
     allocationOrder = inOrder(b, a);
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(a, 3*GB, clusterResource);
     verifyQueueMetrics(b, 4*GB, clusterResource);
 
@@ -250,9 +252,9 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0);
     allocationOrder = inOrder(b, a);
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(a, 3*GB, clusterResource);
     verifyQueueMetrics(b, 8*GB, clusterResource);
 
@@ -263,13 +265,68 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_1);
     allocationOrder = inOrder(a, b);
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(a, 4*GB, clusterResource);
     verifyQueueMetrics(b, 9*GB, clusterResource);
   }
 
+  @Test
+  public void testSingleLevelQueuesPrecision() throws Exception {
+    // Setup queue configs
+    setupSingleLevelQueues(csConf);
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + "a";
+    csConf.setCapacity(Q_A, 30);
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + "b";
+    csConf.setCapacity(Q_B, 70.5F);
+
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>();
+    boolean exceptionOccured = false;
+    try {
+      CapacityScheduler.parseQueue(csContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          CapacityScheduler.queueComparator,
+          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+    } catch (IllegalArgumentException ie) {
+      exceptionOccured = true;
+    }
+    if (!exceptionOccured) {
+      Assert.fail("Capacity is more then 100% so should be failed.");
+    }
+    csConf.setCapacity(Q_A, 30);
+    csConf.setCapacity(Q_B, 70);
+    exceptionOccured = false;
+    queues.clear();
+    try {
+      CapacityScheduler.parseQueue(csContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          CapacityScheduler.queueComparator,
+          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+    } catch (IllegalArgumentException ie) {
+      exceptionOccured = true;
+    }
+    if (exceptionOccured) {
+      Assert.fail("Capacity is 100% so should not be failed.");
+    }
+    csConf.setCapacity(Q_A, 30);
+    csConf.setCapacity(Q_B, 70.005F);
+    exceptionOccured = false;
+    queues.clear();
+    try {
+      CapacityScheduler.parseQueue(csContext, csConf, null,
+          CapacitySchedulerConfiguration.ROOT, queues, queues,
+          CapacityScheduler.queueComparator,
+          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+    } catch (IllegalArgumentException ie) {
+      exceptionOccured = true;
+    }
+    if (exceptionOccured) {
+      Assert
+          .fail("Capacity is under PRECISION which is .05% so should not be failed.");
+    }
+  }
+  
   private static final String C = "c";
   private static final String C1 = "c1";
   private static final String C11 = "c11";
@@ -346,11 +403,11 @@ public class TestParentQueue {
     final int memoryPerNode = 10;
     final int numNodes = 3;
     
-    SchedulerNode node_0 = 
+    FiCaSchedulerNode node_0 = 
         TestUtils.getMockNode("host_0", DEFAULT_RACK, 0, memoryPerNode*GB);
-    SchedulerNode node_1 = 
+    FiCaSchedulerNode node_1 = 
         TestUtils.getMockNode("host_1", DEFAULT_RACK, 0, memoryPerNode*GB);
-    SchedulerNode node_2 = 
+    FiCaSchedulerNode node_2 = 
         TestUtils.getMockNode("host_2", DEFAULT_RACK, 0, memoryPerNode*GB);
     
     final Resource clusterResource = 
@@ -401,11 +458,11 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0);
     InOrder allocationOrder = inOrder(a, c, b);
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(c).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(a, 1*GB, clusterResource);
     verifyQueueMetrics(b, 6*GB, clusterResource);
     verifyQueueMetrics(c, 3*GB, clusterResource);
@@ -427,13 +484,13 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_2);
     allocationOrder = inOrder(a, a2, a1, b, c);
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(a2).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(c).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(a, 3*GB, clusterResource);
     verifyQueueMetrics(b, 8*GB, clusterResource);
     verifyQueueMetrics(c, 4*GB, clusterResource);
@@ -457,9 +514,9 @@ public class TestParentQueue {
     final int memoryPerNode = 10;
     final int numNodes = 2;
     
-    SchedulerNode node_0 = 
+    FiCaSchedulerNode node_0 = 
         TestUtils.getMockNode("host_0", DEFAULT_RACK, 0, memoryPerNode*GB);
-    SchedulerNode node_1 = 
+    FiCaSchedulerNode node_1 = 
         TestUtils.getMockNode("host_1", DEFAULT_RACK, 0, memoryPerNode*GB);
     
     final Resource clusterResource = 
@@ -484,9 +541,9 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_1);
     InOrder allocationOrder = inOrder(a, b);
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(a, 2*GB, clusterResource);
     verifyQueueMetrics(b, 2*GB, clusterResource);
     
@@ -498,9 +555,9 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0);
     allocationOrder = inOrder(b, a);
     allocationOrder.verify(b).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(a).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(a, 2*GB, clusterResource);
     verifyQueueMetrics(b, 4*GB, clusterResource);
 
@@ -523,9 +580,9 @@ public class TestParentQueue {
     final int memoryPerNode = 10;
     final int numNodes = 2;
     
-    SchedulerNode node_0 = 
+    FiCaSchedulerNode node_0 = 
         TestUtils.getMockNode("host_0", DEFAULT_RACK, 0, memoryPerNode*GB);
-    SchedulerNode node_1 = 
+    FiCaSchedulerNode node_1 = 
         TestUtils.getMockNode("host_1", DEFAULT_RACK, 0, memoryPerNode*GB);
     
     final Resource clusterResource = 
@@ -550,9 +607,9 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_1);
     InOrder allocationOrder = inOrder(b2, b3);
     allocationOrder.verify(b2).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(b3).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(b2, 1*GB, clusterResource);
     verifyQueueMetrics(b3, 2*GB, clusterResource);
     
@@ -564,9 +621,9 @@ public class TestParentQueue {
     root.assignContainers(clusterResource, node_0);
     allocationOrder = inOrder(b3, b2);
     allocationOrder.verify(b3).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     allocationOrder.verify(b2).assignContainers(eq(clusterResource), 
-        any(SchedulerNode.class));
+        any(FiCaSchedulerNode.class));
     verifyQueueMetrics(b2, 1*GB, clusterResource);
     verifyQueueMetrics(b3, 3*GB, clusterResource);
 

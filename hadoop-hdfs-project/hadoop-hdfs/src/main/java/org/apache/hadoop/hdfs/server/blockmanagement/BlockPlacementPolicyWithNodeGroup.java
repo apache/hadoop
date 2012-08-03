@@ -52,6 +52,7 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
   BlockPlacementPolicyWithNodeGroup() {
   }
 
+  @Override
   public void initialize(Configuration conf,  FSClusterStats stats,
           NetworkTopology clusterMap) {
     super.initialize(conf, stats, clusterMap);

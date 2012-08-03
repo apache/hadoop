@@ -47,12 +47,20 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public static final String DOT = ".";
   
   @Private
+  public static final String MAXIMUM_APPLICATIONS_SUFFIX =
+    "maximum-applications";
+  
+  @Private
   public static final String MAXIMUM_SYSTEM_APPLICATIONS =
-    PREFIX + "maximum-applications";
+    PREFIX + MAXIMUM_APPLICATIONS_SUFFIX;
+  
+  @Private
+  public static final String MAXIMUM_AM_RESOURCE_SUFFIX =
+    "maximum-am-resource-percent";
   
   @Private
   public static final String MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT =
-    PREFIX + "maximum-am-resource-percent";
+    PREFIX + MAXIMUM_AM_RESOURCE_SUFFIX;
   
   @Private
   public static final String QUEUES = "queues";
@@ -130,6 +138,30 @@ public class CapacitySchedulerConfiguration extends Configuration {
   public float getMaximumApplicationMasterResourcePercent() {
     return getFloat(MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 
         DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT);
+  }
+
+
+  /**
+   * Get the maximum applications per queue setting.
+   * @param queue name of the queue
+   * @return setting specified or -1 if not set
+   */
+  public int getMaximumApplicationsPerQueue(String queue) {
+    int maxApplicationsPerQueue = 
+      getInt(getQueuePrefix(queue) + MAXIMUM_APPLICATIONS_SUFFIX, 
+          (int)UNDEFINED);
+    return maxApplicationsPerQueue;
+  }
+
+  /**
+   * Get the maximum am resource percent per queue setting.
+   * @param queue name of the queue
+   * @return per queue setting or defaults to the global am-resource-percent 
+   *         setting if per queue setting not present
+   */
+  public float getMaximumApplicationMasterResourcePerQueuePercent(String queue) {
+    return getFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX, 
+    		getMaximumApplicationMasterResourcePercent());
   }
   
   public float getCapacity(String queue) {

@@ -113,6 +113,7 @@ public class HftpFileSystem extends FileSystem
 
   protected static final ThreadLocal<SimpleDateFormat> df =
     new ThreadLocal<SimpleDateFormat>() {
+    @Override
     protected SimpleDateFormat initialValue() {
       return getDateFormat();
     }
@@ -240,6 +241,7 @@ public class HftpFileSystem extends FileSystem
       //Renew TGT if needed
       ugi.reloginFromKeytab();
       return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
+        @Override
         public Token<?> run() throws IOException {
           final String nnHttpUrl = nnSecureUri.toString();
           Credentials c;
@@ -340,18 +342,27 @@ public class HftpFileSystem extends FileSystem
       super(url);
     }
 
-    @Override
     protected HttpURLConnection openConnection() throws IOException {
       return (HttpURLConnection)URLUtils.openConnection(url);
     }
 
     /** Use HTTP Range header for specifying offset. */
     @Override
-    protected HttpURLConnection openConnection(final long offset) throws IOException {
+    protected HttpURLConnection connect(final long offset,
+        final boolean resolved) throws IOException {
       final HttpURLConnection conn = openConnection();
       conn.setRequestMethod("GET");
       if (offset != 0L) {
         conn.setRequestProperty("Range", "bytes=" + offset + "-");
+      }
+      conn.connect();
+
+      //Expects HTTP_OK or HTTP_PARTIAL response codes. 
+      final int code = conn.getResponseCode();
+      if (offset != 0L && code != HttpURLConnection.HTTP_PARTIAL) {
+        throw new IOException("HTTP_PARTIAL expected, received " + code);
+      } else if (offset == 0L && code != HttpURLConnection.HTTP_OK) {
+        throw new IOException("HTTP_OK expected, received " + code);
       }
       return conn;
     }  
@@ -364,22 +375,6 @@ public class HftpFileSystem extends FileSystem
 
     RangeHeaderInputStream(final URL url) {
       this(new RangeHeaderUrlOpener(url), new RangeHeaderUrlOpener(null));
-    }
-
-    /** Expects HTTP_OK and HTTP_PARTIAL response codes. */
-    @Override
-    protected void checkResponseCode(final HttpURLConnection connection
-        ) throws IOException {
-      final int code = connection.getResponseCode();
-      if (startPos != 0 && code != HttpURLConnection.HTTP_PARTIAL) {
-        // We asked for a byte range but did not receive a partial content
-        // response...
-        throw new IOException("HTTP_PARTIAL expected, received " + code);
-      } else if (startPos == 0 && code != HttpURLConnection.HTTP_OK) {
-        // We asked for all bytes from the beginning but didn't receive a 200
-        // response (none of the other 2xx codes are valid here)
-        throw new IOException("HTTP_OK expected, received " + code);
-      }
     }
 
     @Override
@@ -402,6 +397,7 @@ public class HftpFileSystem extends FileSystem
 
     ArrayList<FileStatus> fslist = new ArrayList<FileStatus>();
 
+    @Override
     public void startElement(String ns, String localname, String qname,
                 Attributes attrs) throws SAXException {
       if ("listing".equals(qname)) return;
@@ -541,6 +537,7 @@ public class HftpFileSystem extends FileSystem
   public void setWorkingDirectory(Path f) { }
 
   /** This optional operation is not yet supported. */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     throw new IOException("Not supported");

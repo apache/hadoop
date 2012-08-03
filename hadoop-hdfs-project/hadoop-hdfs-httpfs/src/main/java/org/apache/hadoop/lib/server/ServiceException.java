@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.lib.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.lang.XException;
 
 /**
  * Exception thrown by {@link Service} implementations.
  */
+@InterfaceAudience.Private
 public class ServiceException extends ServerException {
 
   /**

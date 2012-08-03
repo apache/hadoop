@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.api.impl.pb.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.io.Closeable;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
@@ -49,7 +50,8 @@ import org.apache.hadoop.yarn.proto.YarnServiceProtos.StopContainerRequestProto;
 
 import com.google.protobuf.ServiceException;
 
-public class ContainerManagerPBClientImpl implements ContainerManager {
+public class ContainerManagerPBClientImpl implements ContainerManager,
+    Closeable {
 
   // Not a documented config. Only used for tests
   static final String NM_COMMAND_TIMEOUT = YarnConfiguration.YARN_PREFIX

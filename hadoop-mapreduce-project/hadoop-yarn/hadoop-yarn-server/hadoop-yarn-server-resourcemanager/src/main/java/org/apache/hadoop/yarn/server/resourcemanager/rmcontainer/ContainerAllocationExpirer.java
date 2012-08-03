@@ -27,6 +27,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
 import org.apache.hadoop.yarn.util.AbstractLivelinessMonitor;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class ContainerAllocationExpirer extends
     AbstractLivelinessMonitor<ContainerId> {
 

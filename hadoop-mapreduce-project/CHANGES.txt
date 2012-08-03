@@ -132,9 +132,50 @@ Branch-2 ( Unreleased changes )
 
   NEW FEATURES
 
-    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+    MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process 
+    command-line. (ahmed via tucu)
+
+    MAPREDUCE-4417. add support for encrypted shuffle (tucu)
 
   IMPROVEMENTS
+
+    MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved
+    (Jason Lowe via bobby)
+
+  BUG FIXES
+
+    MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
+    YarnConfiguration. (ahmed via tucu)
+
+    MAPREDUCE-4406. Users should be able to specify the MiniCluster ResourceManager 
+    and JobHistoryServer ports. (ahmed via tucu)
+
+    MAPREDUCE-4407. Add hadoop-yarn-server-tests-<version>-tests.jar to hadoop dist
+    package. (ahmed via tucu)
+
+    MAPREDUCE-4465. Update description of yarn.nodemanager.address property. 
+    (bowang via tucu)
+
+    MAPREDUCE-4342. Distributed Cache gives inconsistent result if cache files 
+    get deleted from tasktracker. (mayank_bansal via tucu)
+
+Release 2.1.0-alpha - Unreleased 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+
+    MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
+
+    MAPREDUCE-4438. Add a simple, generic client to run 'easy' AMs in YARN.
+    (Bikas Saha via acmurthy) 
+
+  IMPROVEMENTS
+
+    MAPREDUCE-4440. Changed SchedulerApp and SchedulerNode to be a minimal
+    interface to allow schedulers to maintain their own. (acmurthy) 
 
     MAPREDUCE-4146. Support limits on task status string length and number of
     block locations in branch-2. (Ahmed Radwan via tomwhite)
@@ -147,6 +188,26 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4253. Tests for mapreduce-client-core are lying under
     mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
+
+    MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in
+    mapred-default.xml (Rui Kubo via harsh)
+
+    MAPREDUCE-3907. Document entries mapred-default.xml for the
+    jobhistory server. (Eugene Koontz via harsh)
+
+    MAPREDUCE-3906. Fix inconsistency in documentation regarding
+    mapreduce.jobhistory.principal. (Eugene Koontz via harsh)
+
+    MAPREDUCE-4432. Confusing warning message when GenericOptionsParser
+    is not used. (Gabriel Reid via harsh)
+
+    MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
+    development of new applications. (Bikas Saha via acmurthy) 
+
+    MAPREDUCE-4447. Remove aop from cruft from the ant build. (eli)
+
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Siddharth Seth via sseth)
 
   OPTIMIZATIONS
 
@@ -206,6 +267,24 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4383. HadoopPipes.cc needs to include unistd.h.
     (Andy Isaacson via eli)
+
+    MAPREDUCE-2739. Update installation docs (remove YarnClientFactory) (bowang via tucu)
+
+    MAPREDUCE-3993. Graceful handling of codec errors during decompression 
+    (kkambatl via tucu)
+
+    MAPREDUCE-4416. Some tests fail if Clover is enabled (Kihwal Lee via bobby)
+
+    MAPREDUCE-4441. Fix build issue caused by MR-3451 (kkambatl via tucu)
+
+    HADOOP-8499. Lower min.user.id to 500 for the tests.
+    (Colin Patrick McCabe via eli)
+
+    MAPREDUCE-4395. Possible NPE at ClientDistributedCacheManager
+    #determineTimestamps (Bhallamudi via bobby)
+
+    MAPREDUCE-4380. Empty Userlogs directory is getting created under logs
+    directory (Devaraj K via bobby)
 
 Release 2.0.0-alpha - 05-23-2012
 
@@ -385,6 +464,11 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
     (szetszwo)
 
+    MAPREDUCE-4483. 2.0 build does not work (John George via bobby)
+
+    MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
+    bad (Jason Lowe via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -428,6 +512,9 @@ Release 0.23.3 - UNRELEASED
     (bobby via tgraves)
 
     MAPREDUCE-4267. mavenize pipes (tgraves via bobby)
+
+    MAPREDUCE-4375. Show Configuration Tracability in MR UI (bobby 
+    via tgraves)
 
   OPTIMIZATIONS
 
@@ -646,6 +733,67 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4379. Node Manager throws java.lang.OutOfMemoryError: Java heap
     space due to org.apache.hadoop.fs.LocalDirAllocator.contexts (Devaraj K
     via bobby)
+
+    MAPREDUCE-4402. TestFileInputFormat fails intermittently (Jason Lowe via
+    bobby)
+
+    MAPREDUCE-4300. OOM in AM can turn it into a zombie. (Robert Evans via
+    tgraves)
+
+    MAPREDUCE-4252. MR2 job never completes with 1 pending task (Tom White via
+    bobby)
+
+    MAPREDUCE-3940. ContainerTokens should have an expiry interval. (Siddharth
+    Seth and Vinod Kumar Vavilapalli via vinodkv)
+
+    MAPREDUCE-4419. ./mapred queue -info <queuename> -showJobs displays all
+    the jobs irrespective of <queuename> (Devaraj K via bobby)
+
+    MAPREDUCE-4299. Terasort hangs with MR2 FifoScheduler (Tom White via
+    bobby)
+
+    MAPREDUCE-4437. Race in MR ApplicationMaster can cause reducers to never be
+    scheduled (Jason Lowe via bobby)
+
+    MAPREDUCE-4449. Incorrect MR_HISTORY_STORAGE property name in JHAdminConfig
+    (Ahmed Radwan via bobby)
+
+    MAPREDUCE-4283. Display tail of aggregated logs by default (Jason Lowe via
+    bobby)
+
+    MAPREDUCE-4448. Fix NM crash during app cleanup if aggregation didn't
+    init. (Jason Lowe via daryn)
+
+    MAPREDUCE-3893. allow capacity scheduler configs maximum-applications and
+    maximum-am-resource-percent configurable on a per queue basis (tgraves via
+    bobby)
+
+    MAPREDUCE-4467. IndexCache failures due to missing synchronization
+    (Kihwal Lee via tgraves)
+
+    MAPREDUCE-4423. Potential infinite fetching of map output (Robert Evans
+    via tgraves)
+
+    MAPREDUCE-4456. LocalDistributedCacheManager can get an 
+    ArrayIndexOutOfBounds when creating symlinks (Robert Evans via tgraves)
+
+    MAPREDUCE-4496. AM logs link is missing user name (Jason Lowe via bobby)
+
+    MAPREDUCE-4493. Distibuted Cache Compatability Issues (Robert Evans
+    via tgraves)
+
+    MAPREDUCE-4492. Configuring total queue capacity between 100.5 and 99.5 at
+    perticular level is sucessfull (Mayank Bansal via bobby)
+
+    MAPREDUCE-4457. mr job invalid transition TA_TOO_MANY_FETCH_FAILURE at 
+    FAILED  (Robert Evans via tgraves)
+
+    MAPREDUCE-4234. SortValidator.java is incompatible with multi-user or
+    parallel use (due to a /tmp file with static name) (Robert Evans via
+    jeagles)
+
+    MAPREDUCE-4504. SortValidator writes to wrong directory (Robert Evans 
+    via tgraves)
 
 Release 0.23.2 - UNRELEASED
 

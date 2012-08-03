@@ -246,8 +246,6 @@ public class ConfigUtil {
       new String[] {MRJobConfig.CACHE_FILE_TIMESTAMPS});
     Configuration.addDeprecation("mapred.cache.archives.timestamps", 
       new String[] {MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS});
-    Configuration.addDeprecation("mapred.create.symlink", 
-      new String[] {MRJobConfig.CACHE_SYMLINK});
     Configuration.addDeprecation("mapred.working.dir", 
       new String[] {MRJobConfig.WORKING_DIR});
     Configuration.addDeprecation("user.name", 

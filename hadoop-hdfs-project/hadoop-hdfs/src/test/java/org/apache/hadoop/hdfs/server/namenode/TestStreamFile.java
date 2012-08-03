@@ -53,21 +53,26 @@ import org.mortbay.jetty.InclusiveByteRange;
  */
 class MockFSInputStream extends FSInputStream {
   long currentPos = 0;
+  @Override
   public int read() throws IOException {
     return (int)(currentPos++);
   }
 
+  @Override
   public void close() throws IOException {
   }
 
+  @Override
   public void seek(long pos) throws IOException {
     currentPos = pos;
   }
   
+  @Override
   public long getPos() throws IOException {
     return currentPos;
   }
 
+  @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
     return false;
   }
@@ -87,6 +92,7 @@ public class TestStreamFile {
   StreamFile sfile = new StreamFile() {
     private static final long serialVersionUID = -5513776238875189473L;
   
+    @Override
     public ServletContext getServletContext() {
       return mockServletContext;
     }
@@ -216,6 +222,7 @@ public class TestStreamFile {
 
         private static final long serialVersionUID = 7715590481809562722L;
 
+        @Override
         public ServletContext getServletContext() {
           return mockServletContext;
         }

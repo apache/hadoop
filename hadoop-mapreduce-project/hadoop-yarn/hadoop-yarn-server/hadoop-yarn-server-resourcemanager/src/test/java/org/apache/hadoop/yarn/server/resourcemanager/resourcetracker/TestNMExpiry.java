@@ -52,8 +52,6 @@ public class TestNMExpiry {
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   
   ResourceTrackerService resourceTrackerService;
-  ContainerTokenSecretManager containerTokenSecretManager = 
-    new ContainerTokenSecretManager();
 
   private class TestNmLivelinessMonitor extends NMLivelinessMonitor {
     public TestNmLivelinessMonitor(Dispatcher dispatcher) {
@@ -73,7 +71,7 @@ public class TestNMExpiry {
     // Dispatcher that processes events inline
     Dispatcher dispatcher = new InlineDispatcher();
     RMContext context = new RMContextImpl(new MemStore(), dispatcher, null,
-        null, null, null);
+        null, null, null, null);
     dispatcher.register(SchedulerEventType.class,
         new InlineDispatcher.EmptyEventHandler());
     dispatcher.register(RMNodeEventType.class,
@@ -84,6 +82,8 @@ public class TestNMExpiry {
     nmLivelinessMonitor.start();
     NodesListManager nodesListManager = new NodesListManager(context);
     nodesListManager.init(conf);
+    ContainerTokenSecretManager containerTokenSecretManager =
+        new ContainerTokenSecretManager(conf);
     resourceTrackerService = new ResourceTrackerService(context,
         nodesListManager, nmLivelinessMonitor, containerTokenSecretManager);
     

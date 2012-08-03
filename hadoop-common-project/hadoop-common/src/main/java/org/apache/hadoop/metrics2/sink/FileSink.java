@@ -48,8 +48,7 @@ public class FileSink implements MetricsSink {
       writer = filename == null
           ? new PrintWriter(System.out)
           : new PrintWriter(new FileWriter(new File(filename), true));
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       throw new MetricsException("Error creating "+ filename, e);
     }
   }

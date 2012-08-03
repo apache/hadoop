@@ -17,25 +17,32 @@
 */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
-import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
-
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
 * This test ensures the appropriate response (successful or failure) from
 * the system when the system is started under various storage state and
 * version conditions.
 */
-public class TestDFSStorageStateRecovery extends TestCase {
+public class TestDFSStorageStateRecovery {
  
   private static final Log LOG = LogFactory.getLog(
                                                    "org.apache.hadoop.hdfs.TestDFSStorageStateRecovery");
@@ -311,6 +318,7 @@ public class TestDFSStorageStateRecovery extends TestCase {
    * This test iterates over the testCases table and attempts
    * to startup the NameNode normally.
    */
+  @Test
   public void testNNStorageStates() throws Exception {
     String[] baseDirs;
 
@@ -354,6 +362,7 @@ public class TestDFSStorageStateRecovery extends TestCase {
    * This test iterates over the testCases table for Datanode storage and
    * attempts to startup the DataNode normally.
    */
+  @Test
   public void testDNStorageStates() throws Exception {
     String[] baseDirs;
 
@@ -394,6 +403,7 @@ public class TestDFSStorageStateRecovery extends TestCase {
    * This test iterates over the testCases table for block pool storage and
    * attempts to startup the DataNode normally.
    */
+  @Test
   public void testBlockPoolStorageStates() throws Exception {
     String[] baseDirs;
 
@@ -431,12 +441,14 @@ public class TestDFSStorageStateRecovery extends TestCase {
     } // end numDirs loop
   }
 
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     LOG.info("Setting up the directory structures.");
     UpgradeUtilities.initialize();
   }
 
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();
   }

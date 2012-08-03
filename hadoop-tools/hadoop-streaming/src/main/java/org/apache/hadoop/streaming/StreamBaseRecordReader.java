@@ -126,7 +126,7 @@ public abstract class StreamBaseRecordReader implements RecordReader<Text, Text>
     }
     String unqualSplit = split_.getPath().getName() + ":" +
                          split_.getStart() + "+" + split_.getLength();
-    String status = "HSTR " + StreamUtil.HOST + " " + numRec_ + ". pos=" + pos + " " + unqualSplit
+    String status = "HSTR " + StreamUtil.getHost() + " " + numRec_ + ". pos=" + pos + " " + unqualSplit
       + " Processing record=" + recStr;
     status += " " + splitName_;
     return status;

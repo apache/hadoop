@@ -97,6 +97,7 @@ public class MetricsTimeVaryingLong extends MetricsBase{
    *
    * @param mr
    */
+  @Override
   public synchronized void pushMetric(final MetricsRecord mr) {
     intervalHeartBeat();
     try {

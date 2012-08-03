@@ -77,6 +77,7 @@ public class NamespaceInfo extends StorageInfo {
     return softwareVersion;
   }
 
+  @Override
   public String toString(){
     return super.toString() + ";bpid=" + blockPoolID;
   }

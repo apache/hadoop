@@ -55,6 +55,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
       this.hashCode = hash;
     }
 
+    @Override
     public String toString() {
       return element.toString();
     }
@@ -142,6 +143,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
    *
    * @return true is set empty, false otherwise
    */
+  @Override
   public boolean isEmpty() {
     return size == 0;
   }
@@ -156,6 +158,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
   /**
    * Return the number of stored elements.
    */
+  @Override
   public int size() {
     return size;
   }
@@ -217,6 +220,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
    * @param toAdd - elements to add.
    * @return true if the set has changed, false otherwise
    */
+  @Override
   public boolean addAll(Collection<? extends T> toAdd) {
     boolean changed = false;
     for (T elem : toAdd) {
@@ -231,6 +235,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
    *
    * @return true if the element was not present in the table, false otherwise
    */
+  @Override
   public boolean add(final T element) {
     boolean added = addElem(element);
     expandIfNecessary();
@@ -270,6 +275,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
    *
    * @return If such element exists, return true. Otherwise, return false.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public boolean remove(final Object key) {
     // validate key
@@ -489,6 +495,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
     }
   }
 
+  @Override
   public Iterator<T> iterator() {
     return new LinkedSetIterator();
   }
@@ -560,6 +567,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
   /**
    * Clear the set. Resize it to the original capacity.
    */
+  @Override
   @SuppressWarnings("unchecked")
   public void clear() {
     this.capacity = this.initialCapacity;

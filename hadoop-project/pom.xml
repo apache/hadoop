@@ -197,6 +197,12 @@
         <type>test-jar</type>
       </dependency>
 
+     <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-applications-distributedshell</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
       <dependency>
         <groupId>org.apache.hadoop</groupId>
          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
@@ -255,11 +261,6 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-client</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-hdfs-raid</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -648,7 +649,12 @@
         <version>4.0.0</version>
         <scope>compile</scope>
       </dependency>
-
+      <dependency>
+        <groupId>com.cenqua.clover</groupId>
+        <artifactId>clover</artifactId>
+        <!-- Use the version needed by maven-clover-plugin -->
+        <version>3.0.2</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 

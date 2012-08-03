@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.io.nativeio.NativeIO;
@@ -329,6 +331,7 @@ class BlockSender implements java.io.Closeable {
   /**
    * close opened files.
    */
+  @Override
   public void close() throws IOException {
     if (blockInFd != null && shouldDropCacheBehindRead && isLongRead()) {
       // drop the last few MB of the file from cache
@@ -484,27 +487,39 @@ class BlockSender implements java.io.Closeable {
         
         // no need to flush since we know out is not a buffered stream
         FileChannel fileCh = ((FileInputStream)blockIn).getChannel();
+        LongWritable waitTime = new LongWritable();
+        LongWritable transferTime = new LongWritable();
         sockOut.transferToFully(fileCh, blockInPosition, dataLen, 
-            datanode.metrics.getSendDataPacketBlockedOnNetworkNanos(),
-            datanode.metrics.getSendDataPacketTransferNanos());
+            waitTime, transferTime);
+        datanode.metrics.addSendDataPacketBlockedOnNetworkNanos(waitTime.get());
+        datanode.metrics.addSendDataPacketTransferNanos(transferTime.get());
         blockInPosition += dataLen;
-      } else { 
+      } else {
         // normal transfer
         out.write(buf, 0, dataOff + dataLen);
       }
     } catch (IOException e) {
-      /* Exception while writing to the client. Connection closure from
-       * the other end is mostly the case and we do not care much about
-       * it. But other things can go wrong, especially in transferTo(),
-       * which we do not want to ignore.
-       *
-       * The message parsing below should not be considered as a good
-       * coding example. NEVER do it to drive a program logic. NEVER.
-       * It was done here because the NIO throws an IOException for EPIPE.
-       */
-      String ioem = e.getMessage();
-      if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
-        LOG.error("BlockSender.sendChunks() exception: ", e);
+      if (e instanceof SocketTimeoutException) {
+        /*
+         * writing to client timed out.  This happens if the client reads
+         * part of a block and then decides not to read the rest (but leaves
+         * the socket open).
+         */
+          LOG.info("BlockSender.sendChunks() exception: ", e);
+      } else {
+        /* Exception while writing to the client. Connection closure from
+         * the other end is mostly the case and we do not care much about
+         * it. But other things can go wrong, especially in transferTo(),
+         * which we do not want to ignore.
+         *
+         * The message parsing below should not be considered as a good
+         * coding example. NEVER do it to drive a program logic. NEVER.
+         * It was done here because the NIO throws an IOException for EPIPE.
+         */
+        String ioem = e.getMessage();
+        if (!ioem.startsWith("Broken pipe") && !ioem.startsWith("Connection reset")) {
+          LOG.error("BlockSender.sendChunks() exception: ", e);
+        }
       }
       throw ioeToSocketException(e);
     }

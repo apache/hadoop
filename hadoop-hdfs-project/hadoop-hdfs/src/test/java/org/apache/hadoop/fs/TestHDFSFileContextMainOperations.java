@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs;
 
+import static org.apache.hadoop.fs.FileContextTestHelper.exists;
+import static org.apache.hadoop.fs.FileContextTestHelper.getTestRootPath;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 
@@ -27,8 +30,8 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -36,8 +39,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
 public class TestHDFSFileContextMainOperations extends
     FileContextMainOperationsBaseTest {
@@ -75,6 +76,7 @@ public class TestHDFSFileContextMainOperations extends
     cluster.shutdown();   
   }
   
+  @Override
   @Before
   public void setUp() throws Exception {
     super.setUp();

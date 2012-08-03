@@ -179,7 +179,12 @@ public class TestFilterFileSystem {
     public Token<?> getDelegationToken(String renewer) throws IOException {
       return null;
     }
-
+    public boolean deleteOnExit(Path f) throws IOException {
+      return false;
+    }
+    public boolean cancelDeleteOnExit(Path f) throws IOException {
+      return false;
+    }
     public String getScheme() {
       return "dontcheck";
     }
@@ -279,6 +284,30 @@ public class TestFilterFileSystem {
     checkFsConf(flfs, null, 3);
     flfs.initialize(URI.create("flfs:/"), conf);
     checkFsConf(flfs, conf, 3);
+  }
+
+  @Test
+  public void testVerifyChecksumPassthru() {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+
+    fs.setVerifyChecksum(false);
+    verify(mockFs).setVerifyChecksum(eq(false));
+    reset(mockFs);
+    fs.setVerifyChecksum(true);
+    verify(mockFs).setVerifyChecksum(eq(true));
+  }
+
+  @Test
+  public void testWriteChecksumPassthru() {
+    FileSystem mockFs = mock(FileSystem.class);
+    FileSystem fs = new FilterFileSystem(mockFs);
+
+    fs.setWriteChecksum(false);
+    verify(mockFs).setWriteChecksum(eq(false));
+    reset(mockFs);
+    fs.setWriteChecksum(true);
+    verify(mockFs).setWriteChecksum(eq(true));
   }
 
   private void checkInit(FilterFileSystem fs, boolean expectInit)

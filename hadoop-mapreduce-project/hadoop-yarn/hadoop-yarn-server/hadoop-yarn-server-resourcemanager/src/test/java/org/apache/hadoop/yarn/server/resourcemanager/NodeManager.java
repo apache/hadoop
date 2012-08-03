@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequ
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
@@ -72,7 +72,7 @@ public class NodeManager implements ContainerManager {
   Resource used = recordFactory.newRecordInstance(Resource.class);
 
   final ResourceTrackerService resourceTrackerService;
-  final SchedulerNode schedulerNode;
+  final FiCaSchedulerNode schedulerNode;
   final Map<ApplicationId, List<Container>> containers = 
     new HashMap<ApplicationId, List<Container>>();
   
@@ -98,7 +98,7 @@ public class NodeManager implements ContainerManager {
     request.setNodeId(this.nodeId);
     resourceTrackerService.registerNodeManager(request)
         .getRegistrationResponse();
-    this.schedulerNode = new SchedulerNode(rmContext.getRMNodes().get(
+    this.schedulerNode = new FiCaSchedulerNode(rmContext.getRMNodes().get(
         this.nodeId));
    
     // Sanity check

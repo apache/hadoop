@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -28,8 +32,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,11 +41,13 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 /**
  * This test verifies that block verification occurs on the datanode
  */
-public class TestDatanodeBlockScanner extends TestCase {
+public class TestDatanodeBlockScanner {
   
   private static final Log LOG = 
                  LogFactory.getLog(TestDatanodeBlockScanner.class);
@@ -72,15 +76,15 @@ public class TestDatanodeBlockScanner extends TestCase {
   throws IOException, TimeoutException {
     URL url = new URL("http://localhost:" + infoPort +
                       "/blockScannerReport?listblocks");
-    long lastWarnTime = System.currentTimeMillis();
+    long lastWarnTime = Time.now();
     if (newTime <= 0) newTime = 1L;
     long verificationTime = 0;
     
     String block = DFSTestUtil.getFirstBlock(fs, file).getBlockName();
     long failtime = (timeout <= 0) ? Long.MAX_VALUE 
-        : System.currentTimeMillis() + timeout;
+        : Time.now() + timeout;
     while (verificationTime < newTime) {
-      if (failtime < System.currentTimeMillis()) {
+      if (failtime < Time.now()) {
         throw new TimeoutException("failed to achieve block verification after "
             + timeout + " msec.  Current verification timestamp = "
             + verificationTime + ", requested verification time > " 
@@ -103,7 +107,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       }
       
       if (verificationTime < newTime) {
-        long now = System.currentTimeMillis();
+        long now = Time.now();
         if ((now - lastWarnTime) >= 5*1000) {
           LOG.info("Waiting for verification of " + block);
           lastWarnTime = now; 
@@ -117,8 +121,9 @@ public class TestDatanodeBlockScanner extends TestCase {
     return verificationTime;
   }
 
+  @Test
   public void testDatanodeBlockScanner() throws IOException, TimeoutException {
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.now();
     
     Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
@@ -167,6 +172,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     return MiniDFSCluster.corruptReplica(replica, blk);
   }
 
+  @Test
   public void testBlockCorruptionPolicy() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCKREPORT_INTERVAL_MSEC_KEY, 1000L);
@@ -231,12 +237,14 @@ public class TestDatanodeBlockScanner extends TestCase {
    * 4. Test again waits until the block is reported with expected number
    *    of good replicas.
    */
+  @Test
   public void testBlockCorruptionRecoveryPolicy1() throws Exception {
     // Test recovery of 1 corrupt replica
     LOG.info("Testing corrupt replica recovery for one corrupt replica");
     blockCorruptionRecoveryPolicy(4, (short)3, 1);
   }
 
+  @Test
   public void testBlockCorruptionRecoveryPolicy2() throws Exception {
     // Test recovery of 2 corrupt replicas
     LOG.info("Testing corrupt replica recovery for two corrupt replicas");
@@ -301,6 +309,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   }
   
   /** Test if NameNode handles truncated blocks in block report */
+  @Test
   public void testTruncatedBlockReport() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = (short)2;
@@ -311,7 +320,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3L);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
 
-    long startTime = System.currentTimeMillis();
+    long startTime = Time.now();
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
                                                .numDataNodes(REPLICATION_FACTOR)
                                                .build();
@@ -395,10 +404,10 @@ public class TestDatanodeBlockScanner extends TestCase {
   private static void waitForBlockDeleted(ExtendedBlock blk, int dnIndex,
       long timeout) throws TimeoutException, InterruptedException {
     File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
-    long failtime = System.currentTimeMillis() 
+    long failtime = Time.now() 
                     + ((timeout > 0) ? timeout : Long.MAX_VALUE);
     while (blockFile != null && blockFile.exists()) {
-      if (failtime < System.currentTimeMillis()) {
+      if (failtime < Time.now()) {
         throw new TimeoutException("waited too long for blocks to be deleted: "
             + blockFile.getPath() + (blockFile.exists() ? " still exists; " : " is absent; "));
       }

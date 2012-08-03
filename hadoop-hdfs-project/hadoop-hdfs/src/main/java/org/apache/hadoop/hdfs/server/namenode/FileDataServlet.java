@@ -106,6 +106,7 @@ public class FileDataServlet extends DfsServlet {
    * GET http://<nn>:<port>/data[/<path>] HTTP/1.1
    * }
    */
+  @Override
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response)
       throws IOException {

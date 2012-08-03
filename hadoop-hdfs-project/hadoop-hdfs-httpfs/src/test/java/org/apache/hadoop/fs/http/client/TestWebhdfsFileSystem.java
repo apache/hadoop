@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.http.client;
 
+import java.net.URI;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
@@ -25,8 +27,6 @@ import org.apache.hadoop.test.TestJettyHelper;
 import org.junit.Assert;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import java.net.URI;
 
 @RunWith(value = Parameterized.class)
 public class TestWebhdfsFileSystem extends TestHttpFSFileSystem {
@@ -36,20 +36,8 @@ public class TestWebhdfsFileSystem extends TestHttpFSFileSystem {
   }
 
   @Override
-  protected FileSystem getHttpFileSystem() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set("fs.webhdfs.impl", WebHdfsFileSystem.class.getName());
-    URI uri = new URI("webhdfs://" + TestJettyHelper.getJettyURL().toURI().getAuthority());
-    return FileSystem.get(uri, conf);
-  }
-
-  @Override
-  protected void testGet() throws Exception {
-    FileSystem fs = getHttpFileSystem();
-    Assert.assertNotNull(fs);
-    URI uri = new URI("webhdfs://" + TestJettyHelper.getJettyURL().toURI().getAuthority());
-    Assert.assertEquals(fs.getUri(), uri);
-    fs.close();
+  protected Class getFileSystemClass() {
+    return WebHdfsFileSystem.class;
   }
 
 }

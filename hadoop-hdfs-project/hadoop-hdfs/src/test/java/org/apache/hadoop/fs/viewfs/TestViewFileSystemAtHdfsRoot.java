@@ -62,6 +62,7 @@ public class TestViewFileSystemAtHdfsRoot extends ViewFileSystemBaseTest {
     cluster.shutdown();   
   }
 
+  @Override
   @Before
   public void setUp() throws Exception {
     fsTarget = fHdfs;

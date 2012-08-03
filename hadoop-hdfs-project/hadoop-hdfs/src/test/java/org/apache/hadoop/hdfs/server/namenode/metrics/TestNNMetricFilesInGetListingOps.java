@@ -17,25 +17,28 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
+import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+
 import java.io.IOException;
 import java.util.Random;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import static org.apache.hadoop.test.MetricsAsserts.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * Test case for FilesInGetListingOps metric in Namenode
  */
-public class TestNNMetricFilesInGetListingOps extends TestCase {
+public class TestNNMetricFilesInGetListingOps {
   private static final Configuration CONF = new HdfsConfiguration();
   private static final String NN_METRICS = "NameNodeActivity";
   static {
@@ -49,16 +52,16 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
   private DistributedFileSystem fs;
   private Random rand = new Random();
 
-  @Override
-  protected void setUp() throws Exception {
+  @Before
+  public void setUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(CONF).build();
     cluster.waitActive();
     cluster.getNameNode();
     fs = (DistributedFileSystem) cluster.getFileSystem();
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     cluster.shutdown();
   }
 
@@ -69,6 +72,7 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
   }
      
 
+  @Test
   public void testFilesInGetListingOps() throws Exception {
     createFile("/tmp1/t1", 3200, (short)3);
     createFile("/tmp1/t2", 3200, (short)3);

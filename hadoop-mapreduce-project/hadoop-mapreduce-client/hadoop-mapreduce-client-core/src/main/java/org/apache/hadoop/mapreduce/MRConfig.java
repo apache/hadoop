@@ -79,4 +79,9 @@ public interface MRConfig {
   public static final int MAX_BLOCK_LOCATIONS_DEFAULT = 10;
   public static final String MAX_BLOCK_LOCATIONS_KEY =
     "mapreduce.job.max.split.locations";
+
+  public static final String SHUFFLE_SSL_ENABLED_KEY =
+    "mapreduce.shuffle.ssl.enabled";
+
+  public static final boolean SHUFFLE_SSL_ENABLED_DEFAULT = false;
 }

@@ -97,7 +97,7 @@ int write_config_file(char *file_name) {
     return EXIT_FAILURE;
   }
   fprintf(file, "banned.users=bannedUser\n");
-  fprintf(file, "min.user.id=1000\n");
+  fprintf(file, "min.user.id=500\n");
   fclose(file);
   return 0;
 }

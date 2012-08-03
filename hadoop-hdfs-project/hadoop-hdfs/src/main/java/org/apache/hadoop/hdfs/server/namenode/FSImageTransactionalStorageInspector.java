@@ -114,6 +114,7 @@ class FSImageTransactionalStorageInspector extends FSImageStorageInspector {
    * 
    * @throws FileNotFoundException if not images are found.
    */
+  @Override
   FSImageFile getLatestImage() throws IOException {
     if (foundImages.isEmpty()) {
       throw new FileNotFoundException("No valid image files found");

@@ -17,27 +17,28 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Random;
-
-import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.junit.Test;
 
 
 /**
  * This class tests that a file system adheres to the limit of
  * maximum number of files that is configured.
  */
-public class TestFileLimit extends TestCase {
+public class TestFileLimit {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   boolean simulatedStorage = false;
@@ -75,6 +76,7 @@ public class TestFileLimit extends TestCase {
   /**
    * Test that file data becomes available before file is closed.
    */
+  @Test
   public void testFileLimit() throws IOException {
     Configuration conf = new HdfsConfiguration();
     int maxObjects = 5;
@@ -166,6 +168,7 @@ public class TestFileLimit extends TestCase {
     }
   }
 
+  @Test
   public void testFileLimitSimulated() throws IOException {
     simulatedStorage = true;
     testFileLimit();

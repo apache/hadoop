@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -187,6 +187,7 @@ public class FSDirectory implements Closeable {
   /**
    * Shutdown the filestore
    */
+  @Override
   public void close() throws IOException {
     fsImage.close();
   }
@@ -229,8 +230,15 @@ public class FSDirectory implements Closeable {
 
     // Always do an implicit mkdirs for parent directory tree.
     long modTime = now();
-    if (!mkdirs(new Path(path).getParent().toString(), permissions, true,
-        modTime)) {
+    
+    Path parent = new Path(path).getParent();
+    if (parent == null) {
+      // Trying to add "/" as a file - this path has no
+      // parent -- avoids an NPE below.
+      return null;
+    }
+    
+    if (!mkdirs(parent.toString(), permissions, true, modTime)) {
       return null;
     }
     INodeFileUnderConstruction newNode = new INodeFileUnderConstruction(

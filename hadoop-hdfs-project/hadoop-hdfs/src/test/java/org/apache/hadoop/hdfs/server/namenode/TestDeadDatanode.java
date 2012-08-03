@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.util.concurrent.TimeoutException;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Test;
 
@@ -64,10 +66,10 @@ public class TestDeadDatanode {
    */
   private void waitForDatanodeState(String nodeID, boolean alive, int waitTime)
       throws TimeoutException, InterruptedException {
-    long stopTime = System.currentTimeMillis() + waitTime;
+    long stopTime = Time.now() + waitTime;
     FSNamesystem namesystem = cluster.getNamesystem();
     String state = alive ? "alive" : "dead";
-    while (System.currentTimeMillis() < stopTime) {
+    while (Time.now() < stopTime) {
       final DatanodeDescriptor dd = BlockManagerTestUtil.getDatanode(
           namesystem, nodeID);
       if (dd.isAlive == alive) {
@@ -120,7 +122,7 @@ public class TestDeadDatanode {
     // Ensure blockReceived call from dead datanode is rejected with IOException
     try {
       dnp.blockReceivedAndDeleted(reg, poolId, storageBlocks);
-      Assert.fail("Expected IOException is not thrown");
+      fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected
     }
@@ -131,7 +133,7 @@ public class TestDeadDatanode {
         new long[] { 0L, 0L, 0L }) };
     try {
       dnp.blockReport(reg, poolId, report);
-      Assert.fail("Expected IOException is not thrown");
+      fail("Expected IOException is not thrown");
     } catch (IOException ex) {
       // Expected
     }
@@ -141,8 +143,8 @@ public class TestDeadDatanode {
     StorageReport[] rep = { new StorageReport(reg.getStorageID(), false, 0, 0,
         0, 0) };
     DatanodeCommand[] cmd = dnp.sendHeartbeat(reg, rep, 0, 0, 0).getCommands();
-    Assert.assertEquals(1, cmd.length);
-    Assert.assertEquals(cmd[0].getAction(), RegisterCommand.REGISTER
+    assertEquals(1, cmd.length);
+    assertEquals(cmd[0].getAction(), RegisterCommand.REGISTER
         .getAction());
   }
 }

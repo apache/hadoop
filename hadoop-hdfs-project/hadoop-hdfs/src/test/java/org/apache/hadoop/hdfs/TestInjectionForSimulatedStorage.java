@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
+import static org.junit.Assert.assertEquals;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.Set;
-import java.net.*;
-
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,12 +36,14 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 
 /**
  * This class tests the replication and injection of blocks of a DFS file for simulated storage.
  */
-public class TestInjectionForSimulatedStorage extends TestCase {
+public class TestInjectionForSimulatedStorage {
   private int checksumSize = 16;
   private int blockSize = checksumSize*2;
   private int numBlocks = 4;
@@ -72,7 +74,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
                                        ClientProtocol namenode,
                                        int expected, long maxWaitSec) 
                                        throws IOException {
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     
     //wait for all the blocks to be replicated;
     LOG.info("Checking for block replication for " + filename);
@@ -97,7 +99,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
                                actual + ".");
       
         if (maxWaitSec > 0 && 
-            (System.currentTimeMillis() - start) > (maxWaitSec * 1000)) {
+            (Time.now() - start) > (maxWaitSec * 1000)) {
           throw new IOException("Timedout while waiting for all blocks to " +
                                 " be replicated for " + filename);
         }
@@ -121,6 +123,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
    * The blocks are then injected in one of the DNs. The  expected behaviour is
    * that the NN will arrange for themissing replica will be copied from a valid source.
    */
+  @Test
   public void testInjection() throws IOException {
     
     MiniDFSCluster cluster = null;

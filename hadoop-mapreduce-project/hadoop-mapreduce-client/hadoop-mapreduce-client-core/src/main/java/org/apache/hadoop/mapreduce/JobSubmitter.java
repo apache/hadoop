@@ -135,8 +135,9 @@ class JobSubmitter {
       short replication) throws IOException {
     Configuration conf = job.getConfiguration();
     if (!(conf.getBoolean(Job.USED_GENERIC_PARSER, false))) {
-      LOG.warn("Use GenericOptionsParser for parsing the arguments. " +
-               "Applications should implement Tool for the same.");
+      LOG.warn("Hadoop command-line option parsing not performed. " +
+               "Implement the Tool interface and execute your application " +
+               "with ToolRunner to remedy this.");
     }
 
     // get all the command line arguments passed in by the user conf
@@ -189,7 +190,6 @@ class JobSubmitter {
           //should not throw a uri exception 
           throw new IOException("Failed to create uri for " + tmpFile, ue);
         }
-        DistributedCache.createSymlink(conf);
       }
     }
       
@@ -224,7 +224,6 @@ class JobSubmitter {
           //should not throw an uri excpetion
           throw new IOException("Failed to create uri for " + tmpArchives, ue);
         }
-        DistributedCache.createSymlink(conf);
       }
     }
 

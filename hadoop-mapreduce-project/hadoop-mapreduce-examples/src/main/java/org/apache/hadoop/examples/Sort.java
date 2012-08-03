@@ -167,7 +167,6 @@ public class Sort<K,V> extends Configured implements Tool {
       URI partitionUri = new URI(partitionFile.toString() +
                                  "#" + "_sortPartitioning");
       DistributedCache.addCacheFile(partitionUri, conf);
-      DistributedCache.createSymlink(conf);
     }
 
     System.out.println("Running on " +

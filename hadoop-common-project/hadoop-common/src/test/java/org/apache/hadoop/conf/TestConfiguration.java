@@ -18,10 +18,12 @@
 package org.apache.hadoop.conf;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -76,6 +78,22 @@ public class TestConfiguration extends TestCase {
 
   private void addInclude(String filename) throws IOException{
     out.write("<xi:include href=\"" + filename + "\" xmlns:xi=\"http://www.w3.org/2001/XInclude\"  />\n ");
+  }
+  
+  public void testInputStreamResource() throws Exception {
+    StringWriter writer = new StringWriter();
+    out = new BufferedWriter(writer);
+    startConfig();
+    declareProperty("prop", "A", "A");
+    endConfig();
+    
+    InputStream in1 = new ByteArrayInputStream(writer.toString().getBytes());
+    Configuration conf = new Configuration(false);
+    conf.addResource(in1);
+    assertEquals("A", conf.get("prop"));
+    InputStream in2 = new ByteArrayInputStream(writer.toString().getBytes());
+    conf.addResource(in2);
+    assertEquals("A", conf.get("prop"));
   }
 
   public void testVariableSubstitution() throws IOException {
@@ -168,7 +186,8 @@ public class TestConfiguration extends TestCase {
     appendProperty(name, val, false);
   }
  
-  void appendProperty(String name, String val, boolean isFinal)
+  void appendProperty(String name, String val, boolean isFinal, 
+      String ... sources)
     throws IOException {
     out.write("<property>");
     out.write("<name>");
@@ -179,6 +198,11 @@ public class TestConfiguration extends TestCase {
     out.write("</value>");
     if (isFinal) {
       out.write("<final>true</final>");
+    }
+    for(String s : sources) {
+      out.write("<source>");
+      out.write(s);
+      out.write("</source>");
     }
     out.write("</property>\n");
   }
@@ -671,16 +695,38 @@ public class TestConfiguration extends TestCase {
     Path fileResource = new Path(CONFIG);
     conf.addResource(fileResource);
     conf.set("fs.defaultFS", "value");
+    String [] sources = conf.getPropertySources("test.foo");
+    assertEquals(1, sources.length);
     assertEquals(
         "Resource string returned for a file-loaded property" +
         " must be a proper absolute path",
         fileResource,
-        new Path(conf.getPropertySource("test.foo")));
-    assertEquals("Resource string returned for a set() property must be null",
-        null,
-        conf.getPropertySource("fs.defaultFS"));
+        new Path(sources[0]));
+    assertArrayEquals("Resource string returned for a set() property must be " +
+    		"\"programatically\"",
+        new String[]{"programatically"},
+        conf.getPropertySources("fs.defaultFS"));
     assertEquals("Resource string returned for an unset property must be null",
-        null, conf.getPropertySource("fs.defaultFoo"));
+        null, conf.getPropertySources("fs.defaultFoo"));
+  }
+  
+  public void testMultiplePropertySource() throws IOException {
+    out = new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.foo", "bar", false, "a", "b", "c");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    String [] sources = conf.getPropertySources("test.foo");
+    assertEquals(4, sources.length);
+    assertEquals("a", sources[0]);
+    assertEquals("b", sources[1]);
+    assertEquals("c", sources[2]);
+    assertEquals(
+        "Resource string returned for a file-loaded property" +
+        " must be a proper absolute path",
+        fileResource,
+        new Path(sources[3]));
   }
 
   public void testSocketAddress() {
@@ -929,7 +975,7 @@ public class TestConfiguration extends TestCase {
       confDump.put(prop.getKey(), prop);
     }
     assertEquals("value5",confDump.get("test.key6").getValue());
-    assertEquals("Unknown", confDump.get("test.key4").getResource());
+    assertEquals("programatically", confDump.get("test.key4").getResource());
     outWriter.close();
   }
   
@@ -1018,6 +1064,26 @@ public class TestConfiguration extends TestCase {
     assertEquals(
         "Not returning expected number of classes. Number of returned classes ="
             + classes.length, 0, classes.length);
+  }
+  
+  public void testSettingValueNull() throws Exception {
+    Configuration config = new Configuration();
+    try {
+      config.set("testClassName", null);
+      fail("Should throw an IllegalArgumentException exception ");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
+  }
+
+  public void testSettingKeyNull() throws Exception {
+    Configuration config = new Configuration();
+    try {
+      config.set(null, "test");
+      fail("Should throw an IllegalArgumentException exception ");
+    } catch (Exception e) {
+      assertTrue(e instanceof IllegalArgumentException);
+    }
   }
 
   public void testInvalidSubstitutation() {

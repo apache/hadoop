@@ -18,7 +18,16 @@
 
 package org.apache.hadoop.lib.service.instrumentation;
 
-import junit.framework.Assert;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.StringWriter;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.lib.server.Server;
 import org.apache.hadoop.lib.service.Instrumentation;
@@ -27,14 +36,10 @@ import org.apache.hadoop.test.HTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.Test;
-
-import java.io.StringWriter;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestInstrumentationService extends HTestCase {
 
@@ -46,51 +51,51 @@ public class TestInstrumentationService extends HTestCase {
   @Test
   public void cron() {
     InstrumentationService.Cron cron = new InstrumentationService.Cron();
-    Assert.assertEquals(cron.start, 0);
-    Assert.assertEquals(cron.lapStart, 0);
-    Assert.assertEquals(cron.own, 0);
-    Assert.assertEquals(cron.total, 0);
-    long begin = System.currentTimeMillis();
-    Assert.assertEquals(cron.start(), cron);
-    Assert.assertEquals(cron.start(), cron);
-    Assert.assertEquals(cron.start, begin, 20);
-    Assert.assertEquals(cron.start, cron.lapStart);
+    assertEquals(cron.start, 0);
+    assertEquals(cron.lapStart, 0);
+    assertEquals(cron.own, 0);
+    assertEquals(cron.total, 0);
+    long begin = Time.now();
+    assertEquals(cron.start(), cron);
+    assertEquals(cron.start(), cron);
+    assertEquals(cron.start, begin, 20);
+    assertEquals(cron.start, cron.lapStart);
     sleep(100);
-    Assert.assertEquals(cron.stop(), cron);
-    long end = System.currentTimeMillis();
+    assertEquals(cron.stop(), cron);
+    long end = Time.now();
     long delta = end - begin;
-    Assert.assertEquals(cron.own, delta, 20);
-    Assert.assertEquals(cron.total, 0);
-    Assert.assertEquals(cron.lapStart, 0);
+    assertEquals(cron.own, delta, 20);
+    assertEquals(cron.total, 0);
+    assertEquals(cron.lapStart, 0);
     sleep(100);
-    long reStart = System.currentTimeMillis();
+    long reStart = Time.now();
     cron.start();
-    Assert.assertEquals(cron.start, begin, 20);
-    Assert.assertEquals(cron.lapStart, reStart, 20);
+    assertEquals(cron.start, begin, 20);
+    assertEquals(cron.lapStart, reStart, 20);
     sleep(100);
     cron.stop();
-    long reEnd = System.currentTimeMillis();
+    long reEnd = Time.now();
     delta += reEnd - reStart;
-    Assert.assertEquals(cron.own, delta, 20);
-    Assert.assertEquals(cron.total, 0);
-    Assert.assertEquals(cron.lapStart, 0);
+    assertEquals(cron.own, delta, 20);
+    assertEquals(cron.total, 0);
+    assertEquals(cron.lapStart, 0);
     cron.end();
-    Assert.assertEquals(cron.total, reEnd - begin, 20);
+    assertEquals(cron.total, reEnd - begin, 20);
 
     try {
       cron.start();
-      Assert.fail();
+      fail();
     } catch (IllegalStateException ex) {
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
 
     try {
       cron.stop();
-      Assert.fail();
+      fail();
     } catch (IllegalStateException ex) {
     } catch (Exception ex) {
-      Assert.fail();
+      fail();
     }
   }
 
@@ -109,22 +114,22 @@ public class TestInstrumentationService extends HTestCase {
     long avgOwn;
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     totalStart = ownStart;
     ownDelta = 0;
     sleep(100);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     sleep(100);
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     sleep(100);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     totalEnd = ownEnd;
     totalDelta = totalEnd - totalStart;
@@ -134,30 +139,30 @@ public class TestInstrumentationService extends HTestCase {
 
     timer.addCron(cron);
     long[] values = timer.getValues();
-    Assert.assertEquals(values[InstrumentationService.Timer.LAST_TOTAL], totalDelta, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.LAST_OWN], ownDelta, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.AVG_TOTAL], avgTotal, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.AVG_OWN], avgOwn, 20);
+    assertEquals(values[InstrumentationService.Timer.LAST_TOTAL], totalDelta, 20);
+    assertEquals(values[InstrumentationService.Timer.LAST_OWN], ownDelta, 20);
+    assertEquals(values[InstrumentationService.Timer.AVG_TOTAL], avgTotal, 20);
+    assertEquals(values[InstrumentationService.Timer.AVG_OWN], avgOwn, 20);
 
     cron = new InstrumentationService.Cron();
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     totalStart = ownStart;
     ownDelta = 0;
     sleep(200);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     sleep(200);
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     sleep(200);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     totalEnd = ownEnd;
     totalDelta = totalEnd - totalStart;
@@ -167,10 +172,10 @@ public class TestInstrumentationService extends HTestCase {
 
     timer.addCron(cron);
     values = timer.getValues();
-    Assert.assertEquals(values[InstrumentationService.Timer.LAST_TOTAL], totalDelta, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.LAST_OWN], ownDelta, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.AVG_TOTAL], avgTotal, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.AVG_OWN], avgOwn, 20);
+    assertEquals(values[InstrumentationService.Timer.LAST_TOTAL], totalDelta, 20);
+    assertEquals(values[InstrumentationService.Timer.LAST_OWN], ownDelta, 20);
+    assertEquals(values[InstrumentationService.Timer.AVG_TOTAL], avgTotal, 20);
+    assertEquals(values[InstrumentationService.Timer.AVG_OWN], avgOwn, 20);
 
     avgTotal = totalDelta;
     avgOwn = ownDelta;
@@ -178,22 +183,22 @@ public class TestInstrumentationService extends HTestCase {
     cron = new InstrumentationService.Cron();
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     totalStart = ownStart;
     ownDelta = 0;
     sleep(300);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     sleep(300);
 
     cron.start();
-    ownStart = System.currentTimeMillis();
+    ownStart = Time.now();
     sleep(300);
 
     cron.stop();
-    ownEnd = System.currentTimeMillis();
+    ownEnd = Time.now();
     ownDelta += ownEnd - ownStart;
     totalEnd = ownEnd;
     totalDelta = totalEnd - totalStart;
@@ -204,27 +209,27 @@ public class TestInstrumentationService extends HTestCase {
     cron.stop();
     timer.addCron(cron);
     values = timer.getValues();
-    Assert.assertEquals(values[InstrumentationService.Timer.LAST_TOTAL], totalDelta, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.LAST_OWN], ownDelta, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.AVG_TOTAL], avgTotal, 20);
-    Assert.assertEquals(values[InstrumentationService.Timer.AVG_OWN], avgOwn, 20);
+    assertEquals(values[InstrumentationService.Timer.LAST_TOTAL], totalDelta, 20);
+    assertEquals(values[InstrumentationService.Timer.LAST_OWN], ownDelta, 20);
+    assertEquals(values[InstrumentationService.Timer.AVG_TOTAL], avgTotal, 20);
+    assertEquals(values[InstrumentationService.Timer.AVG_OWN], avgOwn, 20);
 
     JSONObject json = (JSONObject) new JSONParser().parse(timer.toJSONString());
-    Assert.assertEquals(json.size(), 4);
-    Assert.assertEquals(json.get("lastTotal"), values[InstrumentationService.Timer.LAST_TOTAL]);
-    Assert.assertEquals(json.get("lastOwn"), values[InstrumentationService.Timer.LAST_OWN]);
-    Assert.assertEquals(json.get("avgTotal"), values[InstrumentationService.Timer.AVG_TOTAL]);
-    Assert.assertEquals(json.get("avgOwn"), values[InstrumentationService.Timer.AVG_OWN]);
+    assertEquals(json.size(), 4);
+    assertEquals(json.get("lastTotal"), values[InstrumentationService.Timer.LAST_TOTAL]);
+    assertEquals(json.get("lastOwn"), values[InstrumentationService.Timer.LAST_OWN]);
+    assertEquals(json.get("avgTotal"), values[InstrumentationService.Timer.AVG_TOTAL]);
+    assertEquals(json.get("avgOwn"), values[InstrumentationService.Timer.AVG_OWN]);
 
     StringWriter writer = new StringWriter();
     timer.writeJSONString(writer);
     writer.close();
     json = (JSONObject) new JSONParser().parse(writer.toString());
-    Assert.assertEquals(json.size(), 4);
-    Assert.assertEquals(json.get("lastTotal"), values[InstrumentationService.Timer.LAST_TOTAL]);
-    Assert.assertEquals(json.get("lastOwn"), values[InstrumentationService.Timer.LAST_OWN]);
-    Assert.assertEquals(json.get("avgTotal"), values[InstrumentationService.Timer.AVG_TOTAL]);
-    Assert.assertEquals(json.get("avgOwn"), values[InstrumentationService.Timer.AVG_OWN]);
+    assertEquals(json.size(), 4);
+    assertEquals(json.get("lastTotal"), values[InstrumentationService.Timer.LAST_TOTAL]);
+    assertEquals(json.get("lastOwn"), values[InstrumentationService.Timer.LAST_OWN]);
+    assertEquals(json.get("avgTotal"), values[InstrumentationService.Timer.AVG_TOTAL]);
+    assertEquals(json.get("avgOwn"), values[InstrumentationService.Timer.AVG_OWN]);
   }
 
   @Test
@@ -239,34 +244,34 @@ public class TestInstrumentationService extends HTestCase {
 
     InstrumentationService.Sampler sampler = new InstrumentationService.Sampler();
     sampler.init(4, var);
-    Assert.assertEquals(sampler.getRate(), 0f, 0.0001);
+    assertEquals(sampler.getRate(), 0f, 0.0001);
     sampler.sample();
-    Assert.assertEquals(sampler.getRate(), 0f, 0.0001);
+    assertEquals(sampler.getRate(), 0f, 0.0001);
     value[0] = 1;
     sampler.sample();
-    Assert.assertEquals(sampler.getRate(), (0d + 1) / 2, 0.0001);
+    assertEquals(sampler.getRate(), (0d + 1) / 2, 0.0001);
     value[0] = 2;
     sampler.sample();
-    Assert.assertEquals(sampler.getRate(), (0d + 1 + 2) / 3, 0.0001);
+    assertEquals(sampler.getRate(), (0d + 1 + 2) / 3, 0.0001);
     value[0] = 3;
     sampler.sample();
-    Assert.assertEquals(sampler.getRate(), (0d + 1 + 2 + 3) / 4, 0.0001);
+    assertEquals(sampler.getRate(), (0d + 1 + 2 + 3) / 4, 0.0001);
     value[0] = 4;
     sampler.sample();
-    Assert.assertEquals(sampler.getRate(), (4d + 1 + 2 + 3) / 4, 0.0001);
+    assertEquals(sampler.getRate(), (4d + 1 + 2 + 3) / 4, 0.0001);
 
     JSONObject json = (JSONObject) new JSONParser().parse(sampler.toJSONString());
-    Assert.assertEquals(json.size(), 2);
-    Assert.assertEquals(json.get("sampler"), sampler.getRate());
-    Assert.assertEquals(json.get("size"), 4L);
+    assertEquals(json.size(), 2);
+    assertEquals(json.get("sampler"), sampler.getRate());
+    assertEquals(json.get("size"), 4L);
 
     StringWriter writer = new StringWriter();
     sampler.writeJSONString(writer);
     writer.close();
     json = (JSONObject) new JSONParser().parse(writer.toString());
-    Assert.assertEquals(json.size(), 2);
-    Assert.assertEquals(json.get("sampler"), sampler.getRate());
-    Assert.assertEquals(json.get("size"), 4L);
+    assertEquals(json.size(), 2);
+    assertEquals(json.get("sampler"), sampler.getRate());
+    assertEquals(json.get("size"), 4L);
   }
 
   @Test
@@ -282,15 +287,15 @@ public class TestInstrumentationService extends HTestCase {
     };
 
     JSONObject json = (JSONObject) new JSONParser().parse(variableHolder.toJSONString());
-    Assert.assertEquals(json.size(), 1);
-    Assert.assertEquals(json.get("value"), "foo");
+    assertEquals(json.size(), 1);
+    assertEquals(json.get("value"), "foo");
 
     StringWriter writer = new StringWriter();
     variableHolder.writeJSONString(writer);
     writer.close();
     json = (JSONObject) new JSONParser().parse(writer.toString());
-    Assert.assertEquals(json.size(), 1);
-    Assert.assertEquals(json.get("value"), "foo");
+    assertEquals(json.size(), 1);
+    assertEquals(json.get("value"), "foo");
   }
 
   @Test
@@ -305,7 +310,7 @@ public class TestInstrumentationService extends HTestCase {
     server.init();
 
     Instrumentation instrumentation = server.get(Instrumentation.class);
-    Assert.assertNotNull(instrumentation);
+    assertNotNull(instrumentation);
     instrumentation.incr("g", "c", 1);
     instrumentation.incr("g", "c", 2);
     instrumentation.incr("g", "c1", 2);
@@ -338,27 +343,27 @@ public class TestInstrumentationService extends HTestCase {
     instrumentation.addSampler("g", "s", 10, varToSample);
 
     Map<String, ?> snapshot = instrumentation.getSnapshot();
-    Assert.assertNotNull(snapshot.get("os-env"));
-    Assert.assertNotNull(snapshot.get("sys-props"));
-    Assert.assertNotNull(snapshot.get("jvm"));
-    Assert.assertNotNull(snapshot.get("counters"));
-    Assert.assertNotNull(snapshot.get("timers"));
-    Assert.assertNotNull(snapshot.get("variables"));
-    Assert.assertNotNull(snapshot.get("samplers"));
-    Assert.assertNotNull(((Map<String, String>) snapshot.get("os-env")).get("PATH"));
-    Assert.assertNotNull(((Map<String, String>) snapshot.get("sys-props")).get("java.version"));
-    Assert.assertNotNull(((Map<String, ?>) snapshot.get("jvm")).get("free.memory"));
-    Assert.assertNotNull(((Map<String, ?>) snapshot.get("jvm")).get("max.memory"));
-    Assert.assertNotNull(((Map<String, ?>) snapshot.get("jvm")).get("total.memory"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("counters")).get("g"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("timers")).get("g"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("variables")).get("g"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("samplers")).get("g"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("counters")).get("g").get("c"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("counters")).get("g").get("c1"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("timers")).get("g").get("t"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("variables")).get("g").get("v"));
-    Assert.assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("samplers")).get("g").get("s"));
+    assertNotNull(snapshot.get("os-env"));
+    assertNotNull(snapshot.get("sys-props"));
+    assertNotNull(snapshot.get("jvm"));
+    assertNotNull(snapshot.get("counters"));
+    assertNotNull(snapshot.get("timers"));
+    assertNotNull(snapshot.get("variables"));
+    assertNotNull(snapshot.get("samplers"));
+    assertNotNull(((Map<String, String>) snapshot.get("os-env")).get("PATH"));
+    assertNotNull(((Map<String, String>) snapshot.get("sys-props")).get("java.version"));
+    assertNotNull(((Map<String, ?>) snapshot.get("jvm")).get("free.memory"));
+    assertNotNull(((Map<String, ?>) snapshot.get("jvm")).get("max.memory"));
+    assertNotNull(((Map<String, ?>) snapshot.get("jvm")).get("total.memory"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("counters")).get("g"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("timers")).get("g"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("variables")).get("g"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("samplers")).get("g"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("counters")).get("g").get("c"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("counters")).get("g").get("c1"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("timers")).get("g").get("t"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("variables")).get("g").get("v"));
+    assertNotNull(((Map<String, Map<String, Object>>) snapshot.get("samplers")).get("g").get("s"));
 
     StringWriter writer = new StringWriter();
     JSONObject.writeJSONString(snapshot, writer);
@@ -391,12 +396,12 @@ public class TestInstrumentationService extends HTestCase {
 
     sleep(2000);
     int i = count.get();
-    Assert.assertTrue(i > 0);
+    assertTrue(i > 0);
 
     Map<String, Map<String, ?>> snapshot = instrumentation.getSnapshot();
     Map<String, Map<String, Object>> samplers = (Map<String, Map<String, Object>>) snapshot.get("samplers");
     InstrumentationService.Sampler sampler = (InstrumentationService.Sampler) samplers.get("g").get("s");
-    Assert.assertTrue(sampler.getRate() > 0);
+    assertTrue(sampler.getRate() > 0);
 
     server.destroy();
   }

@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -615,12 +616,12 @@ public class TestBlockReport {
     final DataNode dn1 = cluster.getDataNodes().get(DN_N1);
     String bpid = cluster.getNamesystem().getBlockPoolId();
     Replica r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
-    long start = System.currentTimeMillis();
+    long start = Time.now();
     int count = 0;
     while (r == null) {
       waitTil(5);
       r = DataNodeTestUtils.fetchReplicaInfo(dn1, bpid, bl.getBlockId());
-      long waiting_period = System.currentTimeMillis() - start;
+      long waiting_period = Time.now() - start;
       if (count++ % 100 == 0)
         if(LOG.isDebugEnabled()) {
           LOG.debug("Has been waiting for " + waiting_period + " ms.");
@@ -634,7 +635,7 @@ public class TestBlockReport {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Replica state before the loop " + state.getValue());
     }
-    start = System.currentTimeMillis();
+    start = Time.now();
     while (state != HdfsServerConstants.ReplicaState.TEMPORARY) {
       waitTil(5);
       state = r.getState();
@@ -642,7 +643,7 @@ public class TestBlockReport {
         LOG.debug("Keep waiting for " + bl.getBlockName() +
             " is in state " + state.getValue());
       }
-      if (System.currentTimeMillis() - start > TIMEOUT)
+      if (Time.now() - start > TIMEOUT)
         assertTrue("Was waiting too long for a replica to become TEMPORARY",
           tooLongWait);
     }
@@ -761,6 +762,7 @@ public class TestBlockReport {
       this.all = all;
     }
 
+    @Override
     public boolean accept(File file, String s) {
       if (all)
         return s != null && s.startsWith(nameToAccept);
@@ -830,6 +832,7 @@ public class TestBlockReport {
       this.filePath = filePath;
     }
     
+    @Override
     public void run() {
       try {
         startDNandWait(filePath, true);

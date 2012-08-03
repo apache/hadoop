@@ -39,6 +39,7 @@ import org.apache.hadoop.security.HadoopKerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
 
@@ -165,7 +166,7 @@ extends AbstractDelegationTokenIdentifier>
     synchronized (this) {
       removeExpiredKeys();
       /* set final expiry date for retiring currentKey */
-      currentKey.setExpiryDate(System.currentTimeMillis() + tokenMaxLifetime);
+      currentKey.setExpiryDate(Time.now() + tokenMaxLifetime);
       /*
        * currentKey might have been removed by removeExpiredKeys(), if
        * updateMasterKey() isn't called at expected interval. Add it back to
@@ -177,7 +178,7 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   private synchronized void removeExpiredKeys() {
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     for (Iterator<Map.Entry<Integer, DelegationKey>> it = allKeys.entrySet()
         .iterator(); it.hasNext();) {
       Map.Entry<Integer, DelegationKey> e = it.next();
@@ -191,7 +192,7 @@ extends AbstractDelegationTokenIdentifier>
   protected synchronized byte[] createPassword(TokenIdent identifier) {
     LOG.info("Creating password for identifier: "+identifier);
     int sequenceNum;
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     sequenceNum = ++delegationTokenSequenceNumber;
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
@@ -211,7 +212,7 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("token (" + identifier.toString()
           + ") can't be found in cache");
     }
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     if (info.getRenewDate() < now) {
       throw new InvalidToken("token (" + identifier.toString() + ") is expired");
     }
@@ -243,7 +244,7 @@ extends AbstractDelegationTokenIdentifier>
    */
   public synchronized long renewToken(Token<TokenIdent> token,
                          String renewer) throws InvalidToken, IOException {
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
@@ -353,7 +354,7 @@ extends AbstractDelegationTokenIdentifier>
   
   /** Remove expired delegation tokens from cache */
   private synchronized void removeExpiredToken() {
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     Iterator<DelegationTokenInformation> i = currentTokens.values().iterator();
     while (i.hasNext()) {
       long renewDate = i.next().getRenewDate();
@@ -399,7 +400,7 @@ extends AbstractDelegationTokenIdentifier>
           / (60 * 1000) + " min(s)");
       try {
         while (running) {
-          long now = System.currentTimeMillis();
+          long now = Time.now();
           if (lastMasterKeyUpdate + keyUpdateInterval < now) {
             try {
               rollMasterKey();

@@ -21,6 +21,7 @@ import java.util.Random;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -61,11 +62,11 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
   @Test(timeout=(STRESS_RUNTIME_SECS + EXTRA_TIMEOUT_SECS) * 1000)
   public void testExpireBackAndForth() throws Exception {
     cluster.start();
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     long runFor = STRESS_RUNTIME_SECS * 1000;
 
     int i = 0;
-    while (System.currentTimeMillis() - st < runFor) {
+    while (Time.now() - st < runFor) {
       // flip flop the services back and forth
       int from = i % 2;
       int to = (i + 1) % 2;
@@ -87,11 +88,11 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
   @Test(timeout=(STRESS_RUNTIME_SECS + EXTRA_TIMEOUT_SECS) * 1000)
   public void testRandomExpirations() throws Exception {
     cluster.start();
-    long st = System.currentTimeMillis();
+    long st = Time.now();
     long runFor = STRESS_RUNTIME_SECS * 1000;
 
     Random r = new Random();
-    while (System.currentTimeMillis() - st < runFor) {
+    while (Time.now() - st < runFor) {
       cluster.getTestContext().checkException();
       int targetIdx = r.nextInt(2);
       ActiveStandbyElector target = cluster.getElector(targetIdx);
@@ -125,8 +126,8 @@ public class TestZKFailoverControllerStress extends ClientBaseWithFixes {
     // setting up the mock.
     cluster.start();
     
-    long st = System.currentTimeMillis();
-    while (System.currentTimeMillis() - st < runFor) {
+    long st = Time.now();
+    while (Time.now() - st < runFor) {
       cluster.getTestContext().checkException();
       serverFactory.closeAll();
       Thread.sleep(50);

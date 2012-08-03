@@ -82,9 +82,6 @@ Trunk (unreleased changes)
 
     HDFS-3197. Incorrect class comments in a few tests. (Andy Isaacson via eli)
 
-    HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
-    (harsh)
-
     HDFS-3476. Correct the default used in TestDFSClientRetries.busyTest()
     after HDFS-3462 (harsh)
 
@@ -109,6 +106,8 @@ Trunk (unreleased changes)
 
     HDFS-3190. Simple refactors in existing NN code to assist
     QuorumJournalManager extension. (todd)
+
+    HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
   OPTIMIZATIONS
 
@@ -144,9 +143,6 @@ Trunk (unreleased changes)
 
     HDFS-2966. TestNameNodeMetrics tests can fail under load. (stevel)
 
-    HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
-    corrupted block. (Henry Robinson via atm)
-
     HDFS-3116. Typo in fetchdt error message. (AOE Takashi via atm)
 
     HDFS-3126. Journal stream from Namenode to BackupNode needs to have 
@@ -175,8 +171,19 @@ Trunk (unreleased changes)
 
     HDFS-3549. Fix dist tar build fails in hadoop-hdfs-raid project. (Jason Lowe via daryn)
 
+    HDFS-3541. Deadlock between recovery, xceiver and packet responder (Vinay via umamahesh)
+
+    HDFS-3482. hdfs balancer throws ArrayIndexOutOfBoundsException 
+    if option is specified without values. ( Madhukara Phatak via umamahesh) 
+
+    HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049.
+    (acmurthy via eli)
+
+    HDFS-3625. Fix TestBackupNode by properly initializing edit log during
+    startup. (Junping Du via todd)
+
 Branch-2 ( Unreleased changes )
- 
+
   INCOMPATIBLE CHANGES
 
     HDFS-3446. HostsFileReader silently ignores bad includes/excludes
@@ -191,6 +198,10 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3518. Add a utility method HdfsUtils.isHealthy(uri) for checking if
     the given HDFS is healthy. (szetszwo)
+
+    HDFS-3113. httpfs does not support delegation tokens. (tucu)
+
+    HDFS-3513. HttpFS should cache filesystems. (tucu)
 
   IMPROVEMENTS
 
@@ -274,6 +285,85 @@ Branch-2 ( Unreleased changes )
     HDFS-3170. Add more useful metrics for write latency (Matthew Jacobs via
     todd)
 
+    HDFS-3604. Add dfs.webhdfs.enabled to hdfs-default.xml. (eli)
+
+    HDFS-2988. Improve error message when storage directory lock fails
+    (Miomir Boljanovic via harsh)
+
+    HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere.
+    (harsh)
+
+    HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on
+    corrupted block. (Henry Robinson via atm)
+
+    HDFS-3555. idle client socket triggers DN ERROR log
+    (should be INFO or DEBUG). (Andy Isaacson via harsh)
+
+    HDFS-3568. fuse_dfs: add support for security. (Colin McCabe via atm)
+
+    HDFS-3629. Fix the typo in the error message about inconsistent
+    storage layout version. (Brandon Li via harsh)
+
+    HDFS-3613. GSet prints some INFO level values, which aren't
+    really very useful to all (Andrew Wang via harsh)
+
+    HDFS-3611. NameNode prints unnecessary WARNs about edit log normally skipping 
+    a few bytes. (Colin Patrick McCabe via harsh)
+
+    HDFS-3582. Hook daemon process exit for testing. (eli)
+
+    HDFS-3641. Move server Util time methods to common and use now
+    instead of System#currentTimeMillis. (eli)
+
+    HDFS-3633. libhdfs: hdfsDelete should pass JNI_FALSE or JNI_TRUE.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-799. libhdfs must call DetachCurrentThread when a thread is destroyed.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3306. fuse_dfs: don't lock release operations.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3612. Single namenode image directory config warning can
+    be improved. (Andy Isaacson via harsh)
+
+    HDFS-3606. libhdfs: create self-contained unit test.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3539. libhdfs code cleanups. (Colin Patrick McCabe via eli)
+
+    HDFS-3610. fuse_dfs: Provide a way to use the default (configured) NN URI.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3663. MiniDFSCluster should capture the code path that led to
+    the first ExitException. (eli)
+
+    HDFS-3659. Add missing @Override to methods across the hadoop-hdfs
+    project. (Brandon Li via harsh)
+
+    HDFS-3537. Move libhdfs and fuse-dfs source to native subdirectories.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3665. Add a test for renaming across file systems via a symlink. (eli)
+
+    HDFS-3666. Plumb more exception messages to terminate. (eli)
+
+    HDFS-3673. libhdfs: fix some compiler warnings. (Colin Patrick McCabe via eli)
+
+    HDFS-3675. libhdfs: follow documented return codes. (Colin Patrick McCabe via eli)
+
+    HDFS-1249. With fuse-dfs, chown which only has owner (or only group)
+    argument fails with Input/output error. (Colin Patrick McCabe via eli)
+
+    HDFS-3583. Convert remaining tests to Junit4. (Andrew Wang via atm)
+
+    HDFS-3711. Manually convert remaining tests to JUnit4. (Andrew Wang via atm)
+
+    HDFS-3650. Use MutableQuantiles to provide latency histograms for various
+    operations. (Andrew Wang via atm)
+
+    HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
@@ -284,6 +374,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3110. Use directRead API to reduce the number of buffer copies in
     libhdfs (Henry Robinson via todd)
+
+    HDFS-3697. Enable fadvise readahead by default. (todd)
 
   BUG FIXES
 
@@ -408,6 +500,60 @@ Branch-2 ( Unreleased changes )
     HDFS-3581. FSPermissionChecker#checkPermission sticky bit check
     missing range check. (eli)
 
+    HDFS-3428. Move DelegationTokenRenewer to common (tucu)
+
+    HDFS-3491. HttpFs does not set permissions correctly (tucu)
+
+    HDFS-3580. incompatible types; no instance(s) of type variable(s) V exist 
+    so that V conforms to boolean compiling HttpFSServer.java with OpenJDK 
+    (adi2 via tucu)
+
+    HDFS-3603. Decouple TestHDFSTrash from TestTrash. (Jason Lowe via eli)
+
+    HDFS-711. hdfsUtime does not handle atime = 0 or mtime = 0 correctly.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3548. NamenodeFsck.copyBlock fails to create a Block Reader.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3615. Two BlockTokenSecretManager findbugs warnings. (atm)
+
+    HDFS-470. libhdfs should handle 0-length reads from FSInputStream
+    correctly. (Colin Patrick McCabe via eli)
+
+    HDFS-3492. fix some misuses of InputStream#skip.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3609. libhdfs: don't force the URI to look like hdfs://hostname:port.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3605. Block mistakenly marked corrupt during edit log catchup
+    phase of failover. (todd and Brahma Reddy Battula via todd)
+
+    HDFS-3690. BlockPlacementPolicyDefault incorrectly casts LOG. (eli)
+
+    HDFS-3597. SNN fails to start after DFS upgrade. (Andy Isaacson via todd)
+
+    HDFS-3608. fuse_dfs: detect changes in UID ticket cache. (Colin Patrick
+    McCabe via atm)
+
+    HDFS-3709. TestStartup tests still binding to the ephemeral port. (eli)
+
+    HDFS-3720. hdfs.h must get packaged. (Colin Patrick McCabe via atm)
+
+    HDFS-3626. Creating file with invalid path can corrupt edit log (todd)
+
+    HDFS-3679. fuse_dfs notrash option sets usetrash. (Conrad Meyer via suresh)
+
+    HDFS-3732. fuse_dfs: incorrect configuration value checked for connection
+    expiry timer period. (Colin Patrick McCabe via atm)
+
+    HDFS-3738. TestDFSClientRetries#testFailuresArePerOperation sets incorrect
+    timeout config. (atm)
+
+    HDFS-3756. DelegationTokenFetcher creates 2 HTTP connections, the second 
+    one not properly configured. (tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
@@ -423,14 +569,6 @@ Branch-2 ( Unreleased changes )
     HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
-
-    HDFS-3428. Move DelegationTokenRenewer to common (tucu)
-
-    HDFS-3491. HttpFs does not set permissions correctly (tucu)
-
-    HDFS-3580. incompatible types; no instance(s) of type variable(s) V exist 
-    so that V conforms to boolean compiling HttpFSServer.java with OpenJDK 
-    (adi2 via tucu)
 
 Release 2.0.0-alpha - 05-23-2012
 
@@ -1278,6 +1416,18 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3331. In namenode, check superuser privilege for setBalancerBandwidth
     and acquire the write lock for finalizeUpgrade.  (szetszwo)
+
+    HDFS-3577. In DatanodeWebHdfsMethods, use MessageBodyWriter instead of
+    StreamingOutput, otherwise, it will fail to transfer large files.
+    (szetszwo)
+
+    HDFS-3646. LeaseRenewer can hold reference to inactive DFSClient
+    instances forever. (Kihwal Lee via daryn)
+
+    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
+    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
+
+    HDFS-3553. Hftp proxy tokens are broken (daryn)
 
 Release 0.23.2 - UNRELEASED
 

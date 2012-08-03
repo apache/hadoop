@@ -115,6 +115,7 @@ public class DFSck extends Configured implements Tool {
   /**
    * @param args
    */
+  @Override
   public int run(final String[] args) throws IOException {
     if (args.length == 0) {
       printUsage();

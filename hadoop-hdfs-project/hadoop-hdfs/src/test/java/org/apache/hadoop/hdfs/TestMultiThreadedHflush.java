@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
-import org.junit.Test;
-
-import java.io.*;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -28,15 +26,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * This class tests hflushing concurrently from many threads.
@@ -92,6 +91,7 @@ public class TestMultiThreadedHflush {
       this.countdown = countdown;
     }
 
+    @Override
     public void run() {
       try {
         countdown.await();
@@ -151,6 +151,7 @@ public class TestMultiThreadedHflush {
     try {
       for (int i = 0; i < 10; i++) {
         Thread flusher = new Thread() {
+            @Override
             public void run() {
               try {
                 while (true) {

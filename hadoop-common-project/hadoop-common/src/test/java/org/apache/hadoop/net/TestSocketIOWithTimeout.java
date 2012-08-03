@@ -31,6 +31,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.MultithreadedTestUtil;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.test.MultithreadedTestUtil.TestingThread;
+import org.apache.hadoop.util.Time;
 
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -59,7 +60,7 @@ public class TestSocketIOWithTimeout {
     byte buf[] = new byte[4192];
     
     while (true) {
-      long start = System.currentTimeMillis();
+      long start = Time.now();
       try {
         if (in != null) {
           in.read(buf);
@@ -67,7 +68,7 @@ public class TestSocketIOWithTimeout {
           out.write(buf);
         }
       } catch (SocketTimeoutException e) {
-        long diff = System.currentTimeMillis() - start;
+        long diff = Time.now() - start;
         LOG.info("Got SocketTimeoutException as expected after " + 
                  diff + " millis : " + e.getMessage());
         assertTrue(Math.abs(expectedTimeout - diff) <=

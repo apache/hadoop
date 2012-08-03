@@ -541,14 +541,39 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_PROCESS_KILL_WAIT_MS =
       2000;
 
-  /** Standard Hadoop classes */
+  /**
+   * CLASSPATH for YARN applications. A comma-separated list of CLASSPATH
+   * entries
+   */
   public static final String YARN_APPLICATION_CLASSPATH = YARN_PREFIX
       + "application.classpath";
+
+  /**
+   * Default CLASSPATH for YARN applications. A comma-separated list of
+   * CLASSPATH entries
+   */
+  public static final String[] DEFAULT_YARN_APPLICATION_CLASSPATH = {
+      "$HADOOP_CONF_DIR", "$HADOOP_COMMON_HOME/share/hadoop/common/*",
+      "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
+      "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
+      "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
+      "$YARN_HOME/share/hadoop/mapreduce/*",
+      "$YARN_HOME/share/hadoop/mapreduce/lib/*"};
 
   /** Container temp directory */
   public static final String DEFAULT_CONTAINER_TEMP_DIR = "./tmp";
 
   public static final String IS_MINI_YARN_CLUSTER = YARN_PREFIX + ".is.minicluster";
+
+  /** Whether to use fixed ports with the minicluster. */
+  public static final String YARN_MINICLUSTER_FIXED_PORTS = YARN_PREFIX
+      + "minicluster.fixed.ports";
+
+  /**
+   * Default is false to be able to run tests concurrently without port
+   * conflicts.
+   */
+  public static boolean DEFAULT_YARN_MINICLUSTER_FIXED_PORTS = false;
 
   public YarnConfiguration() {
     super();

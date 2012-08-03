@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.PrintWriter;
 import java.sql.Time;
@@ -192,6 +192,7 @@ class PendingReplicationBlocks {
    * their replication request.
    */
   class PendingReplicationMonitor implements Runnable {
+    @Override
     public void run() {
       while (fsRunning) {
         long period = Math.min(defaultRecheckInterval, timeout);

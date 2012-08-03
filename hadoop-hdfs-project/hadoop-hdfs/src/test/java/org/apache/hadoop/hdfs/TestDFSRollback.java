@@ -19,22 +19,25 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.NAME_NODE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.After;
+import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
@@ -44,7 +47,7 @@ import com.google.common.collect.Lists;
 * the system when the system is rolled back under various storage state and
 * version conditions.
 */
-public class TestDFSRollback extends TestCase {
+public class TestDFSRollback {
  
   private static final Log LOG = LogFactory.getLog(
                                                    "org.apache.hadoop.hdfs.TestDFSRollback");
@@ -131,6 +134,7 @@ public class TestDFSRollback extends TestCase {
    * This test attempts to rollback the NameNode and DataNode under
    * a number of valid and invalid conditions.
    */
+  @Test
   public void testRollback() throws Exception {
     File[] baseDirs;
     UpgradeUtilities.initialize();
@@ -299,7 +303,8 @@ public class TestDFSRollback extends TestCase {
     }
   }
 
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();
   }

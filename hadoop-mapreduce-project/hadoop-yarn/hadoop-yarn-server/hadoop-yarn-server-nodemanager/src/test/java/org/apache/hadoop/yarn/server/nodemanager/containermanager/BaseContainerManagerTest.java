@@ -70,7 +70,8 @@ public abstract class BaseContainerManagerTest {
   protected static File localLogDir;
   protected static File remoteLogDir;
   protected static File tmpDir;
-  protected ContainerTokenSecretManager containerTokenSecretManager = new ContainerTokenSecretManager();
+  protected ContainerTokenSecretManager containerTokenSecretManager =
+      new ContainerTokenSecretManager(new Configuration());
 
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
 

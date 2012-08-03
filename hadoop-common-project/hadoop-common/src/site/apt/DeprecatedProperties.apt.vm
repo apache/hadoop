@@ -196,7 +196,9 @@ Deprecated Properties
 *---+---+
 |mapred.compress.map.output | mapreduce.map.output.compress
 *---+---+
-|mapred.create.symlink | mapreduce.job.cache.symlink.create
+|mapred.create.symlink | NONE - symlinking is always on
+*---+---+
+|mapreduce.job.cache.symlink.create | NONE - symlinking is always on
 *---+---+
 |mapred.data.field.separator | mapreduce.fieldsel.data.field.separator
 *---+---+

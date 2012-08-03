@@ -17,17 +17,21 @@
 */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
 
-import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NodeType.DATA_NODE;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
+import org.junit.After;
+import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
@@ -35,7 +39,7 @@ import com.google.common.collect.Lists;
  * This test ensures the appropriate response from the system when 
  * the system is finalized.
  */
-public class TestDFSFinalize extends TestCase {
+public class TestDFSFinalize {
  
   private static final Log LOG = LogFactory.getLog(
                                                    "org.apache.hadoop.hdfs.TestDFSFinalize");
@@ -86,6 +90,7 @@ public class TestDFSFinalize extends TestCase {
   /**
    * This test attempts to finalize the NameNode and DataNode.
    */
+  @Test
   public void testFinalize() throws Exception {
     UpgradeUtilities.initialize();
     
@@ -125,7 +130,8 @@ public class TestDFSFinalize extends TestCase {
     } // end numDir loop
   }
  
-  protected void tearDown() throws Exception {
+  @After
+  public void tearDown() throws Exception {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();
   }

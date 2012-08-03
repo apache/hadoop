@@ -23,7 +23,6 @@ import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReplicaMap;
 import org.junit.Before;
 import org.junit.Test;
 

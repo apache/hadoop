@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.http.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
@@ -82,6 +83,7 @@ import java.util.Map;
  * different operations.
  */
 @Path(HttpFSFileSystem.SERVICE_VERSION)
+@InterfaceAudience.Private
 public class HttpFSServer {
   private static Logger AUDIT_LOG = LoggerFactory.getLogger("httpfsaudit");
 

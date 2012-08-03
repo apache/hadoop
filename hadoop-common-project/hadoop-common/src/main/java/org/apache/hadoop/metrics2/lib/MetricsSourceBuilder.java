@@ -95,8 +95,7 @@ public class MetricsSourceBuilder {
         r = (MetricsRegistry) field.get(source);
         hasRegistry = r != null;
         break;
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         LOG.warn("Error accessing field "+ field, e);
         continue;
       }
@@ -123,8 +122,7 @@ public class MetricsSourceBuilder {
         // skip fields already set
         field.setAccessible(true);
         if (field.get(source) != null) continue;
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         LOG.warn("Error accessing field "+ field +" annotated with"+
                  annotation, e);
         continue;
@@ -135,8 +133,7 @@ public class MetricsSourceBuilder {
         try {
           field.set(source, mutable);
           hasAtMetric = true;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
           throw new MetricsException("Error setting field "+ field +
                                      " annotated with "+ annotation, e);
         }

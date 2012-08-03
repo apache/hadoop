@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Time;
 
 /**
  * A daemon thread that waits for the next file system to renew.
@@ -62,7 +63,7 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
     /** Get the delay until this event should happen. */
     @Override
     public long getDelay(final TimeUnit unit) {
-      final long millisLeft = renewalTime - System.currentTimeMillis();
+      final long millisLeft = renewalTime - Time.now();
       return unit.convert(millisLeft, TimeUnit.MILLISECONDS);
     }
 
@@ -92,7 +93,7 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
      * @param newTime the new time
      */
     private void updateRenewalTime() {
-      renewalTime = RENEW_CYCLE + System.currentTimeMillis();
+      renewalTime = RENEW_CYCLE + Time.now();
     }
 
     /**

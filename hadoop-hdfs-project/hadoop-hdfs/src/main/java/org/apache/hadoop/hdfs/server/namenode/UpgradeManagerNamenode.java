@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
  * and updates its status.
  */
 class UpgradeManagerNamenode extends UpgradeManager {
+  @Override
   public HdfsServerConstants.NodeType getType() {
     return HdfsServerConstants.NodeType.NAME_NODE;
   }
@@ -55,6 +56,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
    * @return true if distributed upgrade is required or false otherwise
    * @throws IOException
    */
+  @Override
   public synchronized boolean startUpgrade() throws IOException {
     if(!upgradeState) {
       initializeUpgrade();
@@ -108,6 +110,7 @@ class UpgradeManagerNamenode extends UpgradeManager {
     return reply;
   }
 
+  @Override
   public synchronized void completeUpgrade() throws IOException {
     // set and write new upgrade state into disk
     setUpgradeState(false, HdfsConstants.LAYOUT_VERSION);

@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -138,10 +137,9 @@ public class TestDelegationTokenForProxyUser {
     try {
       Token<DelegationTokenIdentifier> token = proxyUgi
           .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
+            @Override
             public Token<DelegationTokenIdentifier> run() throws IOException {
-              DistributedFileSystem dfs = (DistributedFileSystem) cluster
-                  .getFileSystem();
-              return dfs.getDelegationToken("RenewerUser");
+              return cluster.getFileSystem().getDelegationToken("RenewerUser");
             }
           });
       DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
@@ -205,7 +203,7 @@ public class TestDelegationTokenForProxyUser {
       final PutOpParam.Op op = PutOpParam.Op.CREATE;
       final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn = WebHdfsTestUtil.twoStepWrite(conn, op);
+      conn = WebHdfsTestUtil.twoStepWrite(webhdfs, op, conn);
       final FSDataOutputStream out = WebHdfsTestUtil.write(webhdfs, op, conn, 4096);
       out.write("Hello, webhdfs user!".getBytes());
       out.close();
@@ -220,7 +218,7 @@ public class TestDelegationTokenForProxyUser {
       final PostOpParam.Op op = PostOpParam.Op.APPEND;
       final URL url = WebHdfsTestUtil.toUrl(webhdfs, op,  f, new DoAsParam(PROXY_USER));
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-      conn = WebHdfsTestUtil.twoStepWrite(conn, op);
+      conn = WebHdfsTestUtil.twoStepWrite(webhdfs, op, conn);
       final FSDataOutputStream out = WebHdfsTestUtil.write(webhdfs, op, conn, 4096);
       out.write("\nHello again!".getBytes());
       out.close();

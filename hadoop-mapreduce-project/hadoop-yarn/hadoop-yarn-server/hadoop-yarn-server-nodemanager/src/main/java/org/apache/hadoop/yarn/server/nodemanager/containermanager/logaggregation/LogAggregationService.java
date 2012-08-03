@@ -342,14 +342,14 @@ public class LogAggregationService extends AbstractService implements
     // A container is complete. Put this containers' logs up for aggregation if
     // this containers' logs are needed.
 
-    if (!this.appLogAggregators.containsKey(
-        containerId.getApplicationAttemptId().getApplicationId())) {
-      throw new YarnException("Application is not initialized yet for "
-          + containerId);
+    AppLogAggregator aggregator = this.appLogAggregators.get(
+        containerId.getApplicationAttemptId().getApplicationId());
+    if (aggregator == null) {
+      LOG.warn("Log aggregation is not initialized for " + containerId
+          + ", did it fail to start?");
+      return;
     }
-    this.appLogAggregators.get(
-        containerId.getApplicationAttemptId().getApplicationId())
-        .startContainerLogAggregation(containerId, exitCode == 0);
+    aggregator.startContainerLogAggregation(containerId, exitCode == 0);
   }
 
   private void stopApp(ApplicationId appId) {
@@ -357,11 +357,13 @@ public class LogAggregationService extends AbstractService implements
     // App is complete. Finish up any containers' pending log aggregation and
     // close the application specific logFile.
 
-    if (!this.appLogAggregators.containsKey(appId)) {
-      throw new YarnException("Application is not initialized yet for "
-          + appId);
+    AppLogAggregator aggregator = this.appLogAggregators.get(appId);
+    if (aggregator == null) {
+      LOG.warn("Log aggregation is not initialized for " + appId
+          + ", did it fail to start?");
+      return;
     }
-    this.appLogAggregators.get(appId).finishLogAggregation();
+    aggregator.finishLogAggregation();
   }
 
   @Override

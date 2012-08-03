@@ -17,18 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.junit.Test;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
-import static org.junit.Assert.*;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
-import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.junit.Test;
 
 public class TestGenericJournalConf {
   private static final String DUMMY_URI = "dummy://test";

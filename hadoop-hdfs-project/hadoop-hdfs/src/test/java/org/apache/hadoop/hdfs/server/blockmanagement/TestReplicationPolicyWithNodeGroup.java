@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,7 +42,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.junit.Test;
 
-public class TestReplicationPolicyWithNodeGroup extends TestCase {
+public class TestReplicationPolicyWithNodeGroup {
   private static final int BLOCK_SIZE = 1024;
   private static final int NUM_OF_DATANODES = 8;
   private static final Configuration CONF = new HdfsConfiguration();
@@ -104,6 +107,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the 1st is on dataNodes[0] and the 2nd is on a different rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget1() throws Exception {
     dataNodes[0].updateHeartbeat(
         2*HdfsConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 
@@ -164,6 +168,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * node group, and the rest should be placed on a third rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget2() throws Exception { 
     HashMap<Node, Node> excludedNodes;
     DatanodeDescriptor[] targets;
@@ -207,6 +212,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * and the rest should be placed on the third rack.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget3() throws Exception {
     // make data node 0 to be not qualified to choose
     dataNodes[0].updateHeartbeat(
@@ -259,6 +265,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * in different node group.
    * @throws Exception
    */
+  @Test
   public void testChooseTarget4() throws Exception {
     // make data node 0-2 to be not qualified to choose: not enough disk space
     for(int i=0; i<3; i++) {
@@ -302,6 +309,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the 3rd replica should be placed on the same rack as the 2nd replica,
    * @throws Exception
    */
+  @Test
   public void testChooseTarget5() throws Exception {
     setupDataNodeCapacity();
     DatanodeDescriptor[] targets;
@@ -333,6 +341,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the 1st replica. The 3rd replica can be placed randomly.
    * @throws Exception
    */
+  @Test
   public void testRereplicate1() throws Exception {
     setupDataNodeCapacity();
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
@@ -369,6 +378,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the rest replicas can be placed randomly,
    * @throws Exception
    */
+  @Test
   public void testRereplicate2() throws Exception {
     setupDataNodeCapacity();
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();
@@ -399,6 +409,7 @@ public class TestReplicationPolicyWithNodeGroup extends TestCase {
    * the rest replicas can be placed randomly,
    * @throws Exception
    */
+  @Test
   public void testRereplicate3() throws Exception {
     setupDataNodeCapacity();
     List<DatanodeDescriptor> chosenNodes = new ArrayList<DatanodeDescriptor>();

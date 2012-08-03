@@ -55,7 +55,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSTestUtil.Builder;
 import org.apache.hadoop.hdfs.MiniDFSCluster.NameNodeInfo;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -110,6 +109,22 @@ public class DFSTestUtil {
    * @param maxSize Maximum size for file
    */
   private DFSTestUtil(int nFiles, int maxLevels, int maxSize, int minSize) {
+    this.nFiles = nFiles;
+    this.maxLevels = maxLevels;
+    this.maxSize = maxSize;
+    this.minSize = minSize;
+  }
+
+  /** Creates a new instance of DFSTestUtil
+   *
+   * @param testName Name of the test from where this utility is used
+   * @param nFiles Number of files to be created
+   * @param maxLevels Maximum number of directory levels
+   * @param maxSize Maximum size for file
+   * @param minSize Minimum size for file
+   */
+  public DFSTestUtil(String testName, int nFiles, int maxLevels, int maxSize,
+      int minSize) {
     this.nFiles = nFiles;
     this.maxLevels = maxLevels;
     this.maxSize = maxSize;

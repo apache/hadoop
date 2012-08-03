@@ -96,6 +96,7 @@ public class TestFSMainOperationsWebHdfs extends FSMainOperationsBaseTest {
     return defaultWorkingDirectory;
   }
 
+  @Override
   @Test
   public void testMkdirsFailsForSubdirectoryOfExistingFile() throws Exception {
     Path testDir = getTestRootPath(fSys, "test/hadoop");

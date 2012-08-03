@@ -36,6 +36,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
   private DataNode dataNode = null;
   private String bpid = null;
 
+  @Override
   public HdfsServerConstants.NodeType getType() {
     return HdfsServerConstants.NodeType.DATA_NODE;
   }
@@ -96,6 +97,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
     throw new IOException(errorMsg);
   }
 
+  @Override
   public void run() {
     assert dataNode != null : "UpgradeObjectDatanode.dataNode is null";
     while(dataNode.shouldRun) {
@@ -132,6 +134,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
    * The data-node needs to re-confirm with the name-node that the upgrade
    * is complete while other nodes are still upgrading.
    */
+  @Override
   public UpgradeCommand completeUpgrade() throws IOException {
     return new UpgradeCommand(UpgradeCommand.UC_ACTION_REPORT_STATUS,
                               getVersion(), (short)100);

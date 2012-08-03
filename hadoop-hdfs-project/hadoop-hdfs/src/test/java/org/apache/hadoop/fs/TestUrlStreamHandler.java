@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,19 +28,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsUrlStreamHandlerFactory;
-import org.apache.hadoop.fs.Path;
+import org.junit.Test;
 
 /**
  * Test of the URL stream handler factory.
  */
-public class TestUrlStreamHandler extends TestCase {
+public class TestUrlStreamHandler {
 
   /**
    * Test opening and reading from an InputStream through a hdfs:// URL.
@@ -47,6 +46,7 @@ public class TestUrlStreamHandler extends TestCase {
    * 
    * @throws IOException
    */
+  @Test
   public void testDfsUrls() throws IOException {
 
     Configuration conf = new HdfsConfiguration();
@@ -105,6 +105,7 @@ public class TestUrlStreamHandler extends TestCase {
    * @throws IOException
    * @throws URISyntaxException
    */
+  @Test
   public void testFileUrls() throws IOException, URISyntaxException {
     // URLStreamHandler is already set in JVM by testDfsUrls() 
     Configuration conf = new HdfsConfiguration();

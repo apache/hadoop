@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hdfs.server.journalservice;
 
+import static org.junit.Assert.assertNotNull;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
-
-import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -122,6 +122,6 @@ public class TestJournalService {
     
     // New epoch higher than the current epoch is successful
     FenceResponse resp = s.fence(info, currentEpoch+1, "fencer");
-    Assert.assertNotNull(resp);
+    assertNotNull(resp);
   }
 }

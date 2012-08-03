@@ -17,26 +17,33 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
-import java.io.*;
-import java.util.Random;
-import java.net.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileStatus;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Random;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.util.Time;
+import org.junit.Test;
 
 /**
  * This class tests the access time on files.
  *
  */
-public class TestSetTimes extends TestCase {
+public class TestSetTimes {
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int fileSize = 16384;
@@ -77,6 +84,7 @@ public class TestSetTimes extends TestCase {
   /**
    * Tests mod & access time in DFS.
    */
+  @Test
   public void testTimes() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s
@@ -159,8 +167,8 @@ public class TestSetTimes extends TestCase {
       assertTrue(atime2 == stat.getAccessTime());
       assertTrue(mtime2 == mtime3);
 
-      long mtime4 = System.currentTimeMillis() - (3600L * 1000L);
-      long atime4 = System.currentTimeMillis();
+      long mtime4 = Time.now() - (3600L * 1000L);
+      long atime4 = Time.now();
       fileSys.setTimes(dir1, mtime4, atime4);
       // check new modification time on file
       stat = fileSys.getFileStatus(dir1);
@@ -208,6 +216,7 @@ public class TestSetTimes extends TestCase {
   /**
    * Tests mod time change at close in DFS.
    */
+  @Test
   public void testTimesAtClose() throws IOException {
     Configuration conf = new HdfsConfiguration();
     final int MAX_IDLE_TIME = 2000; // 2s

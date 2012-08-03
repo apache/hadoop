@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.URI;
-import java.security.Permission;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -43,6 +42,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -69,7 +70,7 @@ public class TestClusterId {
 
   @Before
   public void setUp() throws IOException {
-    System.setSecurityManager(new NoExitSecurityManager());
+    ExitUtil.disableSystemExit();
 
     String baseDir = System.getProperty("test.build.data", "build/test/data");
 
@@ -90,8 +91,6 @@ public class TestClusterId {
 
   @After
   public void tearDown() throws IOException {
-    System.setSecurityManager(null);
-
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
       throw new IOException("Could not tearDown test directory '" + hdfsDir
           + "'");
@@ -445,33 +444,5 @@ public class TestClusterId {
     // check if the version file does not exists.
     File version = new File(hdfsDir, "current/VERSION");
     assertFalse("Check version should not exist", version.exists());
-  }
-
-  private static class ExitException extends SecurityException {
-    private static final long serialVersionUID = 1L;
-    public final int status;
-
-    public ExitException(int status) {
-      super("There is no escape!");
-      this.status = status;
-    }
-  }
-
-  private static class NoExitSecurityManager extends SecurityManager {
-    @Override
-    public void checkPermission(Permission perm) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkPermission(Permission perm, Object context) {
-      // allow anything.
-    }
-
-    @Override
-    public void checkExit(int status) {
-      super.checkExit(status);
-      throw new ExitException(status);
-    }
   }
 }

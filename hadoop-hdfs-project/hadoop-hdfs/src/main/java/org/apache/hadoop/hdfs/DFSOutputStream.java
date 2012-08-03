@@ -74,6 +74,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Time;
+
+import com.google.common.annotations.VisibleForTesting;
 
 
 /****************************************************************
@@ -267,6 +270,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       return seqno == HEART_BEAT_SEQNO;
     }
     
+    @Override
     public String toString() {
       return "packet seqno:" + this.seqno +
       " offsetInBlock:" + this.offsetInBlock + 
@@ -395,8 +399,9 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
      * streamer thread is the only thread that opens streams to datanode, 
      * and closes them. Any error recovery is also done by this thread.
      */
+    @Override
     public void run() {
-      long lastPacket = System.currentTimeMillis();
+      long lastPacket = Time.now();
       while (!streamerClosed && dfsClient.clientRunning) {
 
         // if the Responder encountered an error, shutdown Responder
@@ -420,7 +425,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
 
           synchronized (dataQueue) {
             // wait for a packet to be sent.
-            long now = System.currentTimeMillis();
+            long now = Time.now();
             while ((!streamerClosed && !hasError && dfsClient.clientRunning 
                 && dataQueue.size() == 0 && 
                 (stage != BlockConstructionStage.DATA_STREAMING || 
@@ -435,7 +440,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
               } catch (InterruptedException  e) {
               }
               doSleep = false;
-              now = System.currentTimeMillis();
+              now = Time.now();
             }
             if (streamerClosed || hasError || !dfsClient.clientRunning) {
               continue;
@@ -518,7 +523,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
             errorIndex = 0;
             throw e;
           }
-          lastPacket = System.currentTimeMillis();
+          lastPacket = Time.now();
           
           if (one.isHeartbeatPacket()) {  //heartbeat packet
           }
@@ -653,6 +658,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         this.targets = targets;
       }
 
+      @Override
       public void run() {
 
         setName("ResponseProcessor for block " + block);
@@ -981,7 +987,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         errorIndex = -1;
         success = false;
 
-        long startTime = System.currentTimeMillis();
+        long startTime = Time.now();
         DatanodeInfo[] excluded = excludedNodes.toArray(
             new DatanodeInfo[excludedNodes.size()]);
         block = oldBlock;
@@ -1107,7 +1113,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
       long sleeptime = 400;
       while (true) {
-        long localstart = System.currentTimeMillis();
+        long localstart = Time.now();
         while (true) {
           try {
             return dfsClient.namenode.addBlock(src, dfsClient.clientName, block, excludedNodes);
@@ -1130,9 +1136,9 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
               } else {
                 --retries;
                 DFSClient.LOG.info("Exception while adding a block", e);
-                if (System.currentTimeMillis() - localstart > 5000) {
+                if (Time.now() - localstart > 5000) {
                   DFSClient.LOG.info("Waiting for replication for "
-                      + (System.currentTimeMillis() - localstart) / 1000
+                      + (Time.now() - localstart) / 1000
                       + " seconds");
                 }
                 try {
@@ -1206,7 +1212,8 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   //
   // returns the list of targets, if any, that is being currently used.
   //
-  synchronized DatanodeInfo[] getPipeline() {
+  @VisibleForTesting
+  public synchronized DatanodeInfo[] getPipeline() {
     if (streamer == null) {
       return null;
     }
@@ -1658,6 +1665,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     streamer.setLastException(new IOException("Lease timeout of " +
                              (dfsClient.hdfsTimeout/1000) + " seconds expired."));
     closeThreads(true);
+    dfsClient.endFileLease(src);
   }
 
   // shutdown datastreamer and responseprocessor threads.
@@ -1712,7 +1720,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       ExtendedBlock lastBlock = streamer.getBlock();
       closeThreads(false);
       completeFile(lastBlock);
-      dfsClient.leaserenewer.closeFile(src, dfsClient);
+      dfsClient.endFileLease(src);
     } finally {
       closed = true;
     }
@@ -1721,14 +1729,14 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   // should be called holding (this) lock since setTestFilename() may 
   // be called during unit tests
   private void completeFile(ExtendedBlock last) throws IOException {
-    long localstart = System.currentTimeMillis();
+    long localstart = Time.now();
     boolean fileComplete = false;
     while (!fileComplete) {
       fileComplete = dfsClient.namenode.complete(src, dfsClient.clientName, last);
       if (!fileComplete) {
         if (!dfsClient.clientRunning ||
               (dfsClient.hdfsTimeout > 0 &&
-               localstart + dfsClient.hdfsTimeout < System.currentTimeMillis())) {
+               localstart + dfsClient.hdfsTimeout < Time.now())) {
             String msg = "Unable to close file because dfsclient " +
                           " was unable to contact the HDFS servers." +
                           " clientRunning " + dfsClient.clientRunning +
@@ -1738,7 +1746,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         }
         try {
           Thread.sleep(400);
-          if (System.currentTimeMillis() - localstart > 5000) {
+          if (Time.now() - localstart > 5000) {
             DFSClient.LOG.info("Could not complete file " + src + " retrying...");
           }
         } catch (InterruptedException ie) {
@@ -1747,11 +1755,13 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     }
   }
 
-  void setArtificialSlowdown(long period) {
+  @VisibleForTesting
+  public void setArtificialSlowdown(long period) {
     artificialSlowdown = period;
   }
 
-  synchronized void setChunksPerPacket(int value) {
+  @VisibleForTesting
+  public synchronized void setChunksPerPacket(int value) {
     chunksPerPacket = Math.min(chunksPerPacket, value);
     packetSize = PacketHeader.PKT_HEADER_LEN +
                  (checksum.getBytesPerChecksum() + 

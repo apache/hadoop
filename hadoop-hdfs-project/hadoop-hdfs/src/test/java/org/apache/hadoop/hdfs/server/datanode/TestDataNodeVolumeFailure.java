@@ -375,6 +375,7 @@ public class TestDataNodeVolumeFailure {
   private String [] metaFilesInDir(File dir) {
     String [] res = dir.list(
         new FilenameFilter() {
+          @Override
           public boolean accept(File dir, String name) {
             return name.startsWith("blk_") &&
             name.endsWith(Block.METADATA_EXTENSION);

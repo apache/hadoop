@@ -19,7 +19,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -54,7 +53,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerEventType;
@@ -63,9 +61,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
@@ -87,7 +85,7 @@ public class LeafQueue implements CSQueue {
   private int maxApplications;
   private int maxApplicationsPerUser;
   
-  private float maxAMResourcePercent;
+  private float maxAMResourcePerQueuePercent;
   private int maxActiveApplications; // Based on absolute max capacity
   private int maxActiveAppsUsingAbsCap; // Based on absolute capacity
   private int maxActiveApplicationsPerUser;
@@ -96,11 +94,11 @@ public class LeafQueue implements CSQueue {
   private float usedCapacity = 0.0f;
   private volatile int numContainers;
 
-  Set<SchedulerApp> activeApplications;
-  Map<ApplicationAttemptId, SchedulerApp> applicationsMap = 
-      new HashMap<ApplicationAttemptId, SchedulerApp>();
+  Set<FiCaSchedulerApp> activeApplications;
+  Map<ApplicationAttemptId, FiCaSchedulerApp> applicationsMap = 
+      new HashMap<ApplicationAttemptId, FiCaSchedulerApp>();
   
-  Set<SchedulerApp> pendingApplications;
+  Set<FiCaSchedulerApp> pendingApplications;
   
   private final Resource minimumAllocation;
   private final Resource maximumAllocation;
@@ -128,7 +126,7 @@ public class LeafQueue implements CSQueue {
   
   public LeafQueue(CapacitySchedulerContext cs, 
       String queueName, CSQueue parent, 
-      Comparator<SchedulerApp> applicationComparator, CSQueue old) {
+      Comparator<FiCaSchedulerApp> applicationComparator, CSQueue old) {
     this.scheduler = cs;
     this.queueName = queueName;
     this.parent = parent;
@@ -158,21 +156,25 @@ public class LeafQueue implements CSQueue {
     float userLimitFactor = 
       cs.getConfiguration().getUserLimitFactor(getQueuePath());
 
-    int maxSystemJobs = cs.getConfiguration().getMaximumSystemApplications();
-    int maxApplications = (int)(maxSystemJobs * absoluteCapacity);
-    int maxApplicationsPerUser = 
+    int maxApplications = cs.getConfiguration().getMaximumApplicationsPerQueue(getQueuePath());
+    if (maxApplications < 0) {
+      int maxSystemApps = cs.getConfiguration().getMaximumSystemApplications();
+      maxApplications = (int)(maxSystemApps * absoluteCapacity);
+    }
+    maxApplicationsPerUser = 
       (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor);
 
-    this.maxAMResourcePercent = 
-        cs.getConfiguration().getMaximumApplicationMasterResourcePercent();
+    this.maxAMResourcePerQueuePercent = 
+        cs.getConfiguration().
+            getMaximumApplicationMasterResourcePerQueuePercent(getQueuePath());
     int maxActiveApplications = 
         CSQueueUtils.computeMaxActiveApplications(
             cs.getClusterResources(), this.minimumAllocation,
-            maxAMResourcePercent, absoluteMaxCapacity);
+            maxAMResourcePerQueuePercent, absoluteMaxCapacity);
     this.maxActiveAppsUsingAbsCap = 
             CSQueueUtils.computeMaxActiveApplications(
                 cs.getClusterResources(), this.minimumAllocation,
-                maxAMResourcePercent, absoluteCapacity);
+                maxAMResourcePerQueuePercent, absoluteCapacity);
     int maxActiveApplicationsPerUser = 
         CSQueueUtils.computeMaxActiveApplicationsPerUser(maxActiveAppsUsingAbsCap, userLimit, 
             userLimitFactor);
@@ -201,8 +203,8 @@ public class LeafQueue implements CSQueue {
     }
 
     this.pendingApplications = 
-        new TreeSet<SchedulerApp>(applicationComparator);
-    this.activeApplications = new TreeSet<SchedulerApp>(applicationComparator);
+        new TreeSet<FiCaSchedulerApp>(applicationComparator);
+    this.activeApplications = new TreeSet<FiCaSchedulerApp>(applicationComparator);
   }
 
   private synchronized void setupQueueConfigs(
@@ -267,15 +269,16 @@ public class LeafQueue implements CSQueue {
         "userLimitFactor = " + userLimitFactor +
         " [= configuredUserLimitFactor ]" + "\n" +
         "maxApplications = " + maxApplications +
-        " [= (int)(configuredMaximumSystemApplications * absoluteCapacity) ]" + 
+        " [= configuredMaximumSystemApplicationsPerQueue or" + 
+        " (int)(configuredMaximumSystemApplications * absoluteCapacity)]" + 
         "\n" +
         "maxApplicationsPerUser = " + maxApplicationsPerUser +
         " [= (int)(maxApplications * (userLimit / 100.0f) * " +
         "userLimitFactor) ]" + "\n" +
         "maxActiveApplications = " + maxActiveApplications +
         " [= max(" + 
-        "(int)ceil((clusterResourceMemory / minimumAllocation) *" + 
-        "maxAMResourcePercent * absoluteMaxCapacity)," + 
+        "(int)ceil((clusterResourceMemory / minimumAllocation) * " + 
+        "maxAMResourcePerQueuePercent * absoluteMaxCapacity)," + 
         "1) ]" + "\n" +
         "maxActiveAppsUsingAbsCap = " + maxActiveAppsUsingAbsCap +
         " [= max(" + 
@@ -292,7 +295,7 @@ public class LeafQueue implements CSQueue {
         "(clusterResourceMemory * absoluteCapacity)]" + "\n" +
         "absoluteUsedCapacity = " + absoluteUsedCapacity +
         " [= usedResourcesMemory / clusterResourceMemory]" + "\n" +
-        "maxAMResourcePercent = " + maxAMResourcePercent +
+        "maxAMResourcePerQueuePercent = " + maxAMResourcePerQueuePercent +
         " [= configuredMaximumAMResourcePercent ]" + "\n" +
         "minimumAllocationFactor = " + minimumAllocationFactor +
         " [= (float)(maximumAllocationMemory - minimumAllocationMemory) / " +
@@ -582,7 +585,7 @@ public class LeafQueue implements CSQueue {
   }
 
   @Override
-  public void submitApplication(SchedulerApp application, String userName,
+  public void submitApplication(FiCaSchedulerApp application, String userName,
       String queue)  throws AccessControlException {
     // Careful! Locking order is important!
 
@@ -646,9 +649,9 @@ public class LeafQueue implements CSQueue {
   }
 
   private synchronized void activateApplications() {
-    for (Iterator<SchedulerApp> i=pendingApplications.iterator(); 
+    for (Iterator<FiCaSchedulerApp> i=pendingApplications.iterator(); 
          i.hasNext(); ) {
-      SchedulerApp application = i.next();
+      FiCaSchedulerApp application = i.next();
       
       // Check queue limit
       if (getNumActiveApplications() >= getMaximumActiveApplications()) {
@@ -668,7 +671,7 @@ public class LeafQueue implements CSQueue {
     }
   }
   
-  private synchronized void addApplication(SchedulerApp application, User user) {
+  private synchronized void addApplication(FiCaSchedulerApp application, User user) {
     // Accept 
     user.submitApplication();
     pendingApplications.add(application);
@@ -688,7 +691,7 @@ public class LeafQueue implements CSQueue {
   }
 
   @Override
-  public void finishApplication(SchedulerApp application, String queue) {
+  public void finishApplication(FiCaSchedulerApp application, String queue) {
     // Careful! Locking order is important!
     synchronized (this) {
       removeApplication(application, getUser(application.getUser()));
@@ -698,7 +701,7 @@ public class LeafQueue implements CSQueue {
     parent.finishApplication(application, queue);
   }
 
-  public synchronized void removeApplication(SchedulerApp application, User user) {
+  public synchronized void removeApplication(FiCaSchedulerApp application, User user) {
     boolean wasActive = activeApplications.remove(application);
     if (!wasActive) {
       pendingApplications.remove(application);
@@ -730,7 +733,7 @@ public class LeafQueue implements CSQueue {
         );
   }
   
-  private synchronized SchedulerApp getApplication(
+  private synchronized FiCaSchedulerApp getApplication(
       ApplicationAttemptId applicationAttemptId) {
     return applicationsMap.get(applicationAttemptId);
   }
@@ -740,7 +743,7 @@ public class LeafQueue implements CSQueue {
   
   @Override
   public synchronized CSAssignment 
-  assignContainers(Resource clusterResource, SchedulerNode node) {
+  assignContainers(Resource clusterResource, FiCaSchedulerNode node) {
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("assignContainers: node=" + node.getHostName()
@@ -750,7 +753,7 @@ public class LeafQueue implements CSQueue {
     // Check for reserved resources
     RMContainer reservedContainer = node.getReservedContainer();
     if (reservedContainer != null) {
-      SchedulerApp application = 
+      FiCaSchedulerApp application = 
           getApplication(reservedContainer.getApplicationAttemptId());
       return new CSAssignment(
           assignReservedContainer(application, node, reservedContainer, 
@@ -760,7 +763,7 @@ public class LeafQueue implements CSQueue {
     }
     
     // Try to assign containers to applications in order
-    for (SchedulerApp application : activeApplications) {
+    for (FiCaSchedulerApp application : activeApplications) {
       
       if(LOG.isDebugEnabled()) {
         LOG.debug("pre-assignContainers for application "
@@ -838,8 +841,8 @@ public class LeafQueue implements CSQueue {
 
   }
 
-  private synchronized Resource assignReservedContainer(SchedulerApp application, 
-      SchedulerNode node, RMContainer rmContainer, Resource clusterResource) {
+  private synchronized Resource assignReservedContainer(FiCaSchedulerApp application, 
+      FiCaSchedulerNode node, RMContainer rmContainer, Resource clusterResource) {
     // Do we still need this reservation?
     Priority priority = rmContainer.getReservedPriority();
     if (application.getTotalRequiredResources(priority) == 0) {
@@ -882,9 +885,9 @@ public class LeafQueue implements CSQueue {
     return true;
   }
 
-  @Lock({LeafQueue.class, SchedulerApp.class})
+  @Lock({LeafQueue.class, FiCaSchedulerApp.class})
   private Resource computeUserLimitAndSetHeadroom(
-      SchedulerApp application, Resource clusterResource, Resource required) {
+      FiCaSchedulerApp application, Resource clusterResource, Resource required) {
     
     String user = application.getUser();
     
@@ -921,7 +924,7 @@ public class LeafQueue implements CSQueue {
   }
   
   @Lock(NoLock.class)
-  private Resource computeUserLimit(SchedulerApp application, 
+  private Resource computeUserLimit(FiCaSchedulerApp application, 
       Resource clusterResource, Resource required) {
     // What is our current capacity? 
     // * It is equal to the max(required, queue-capacity) if
@@ -1009,7 +1012,7 @@ public class LeafQueue implements CSQueue {
     return (a + (b - 1)) / b;
   }
 
-  boolean needContainers(SchedulerApp application, Priority priority, Resource required) {
+  boolean needContainers(FiCaSchedulerApp application, Priority priority, Resource required) {
     int requiredContainers = application.getTotalRequiredResources(priority);
     int reservedContainers = application.getNumReservedContainers(priority);
     int starvation = 0;
@@ -1038,7 +1041,7 @@ public class LeafQueue implements CSQueue {
   }
 
   private CSAssignment assignContainersOnNode(Resource clusterResource, 
-      SchedulerNode node, SchedulerApp application, 
+      FiCaSchedulerNode node, FiCaSchedulerApp application, 
       Priority priority, RMContainer reservedContainer) {
 
     Resource assigned = Resources.none();
@@ -1067,7 +1070,7 @@ public class LeafQueue implements CSQueue {
   }
 
   private Resource assignNodeLocalContainers(Resource clusterResource, 
-      SchedulerNode node, SchedulerApp application, 
+      FiCaSchedulerNode node, FiCaSchedulerApp application, 
       Priority priority, RMContainer reservedContainer) {
     ResourceRequest request = 
         application.getResourceRequest(priority, node.getHostName());
@@ -1083,7 +1086,7 @@ public class LeafQueue implements CSQueue {
   }
 
   private Resource assignRackLocalContainers(Resource clusterResource,  
-      SchedulerNode node, SchedulerApp application, Priority priority,
+      FiCaSchedulerNode node, FiCaSchedulerApp application, Priority priority,
       RMContainer reservedContainer) {
     ResourceRequest request = 
       application.getResourceRequest(priority, node.getRackName());
@@ -1097,8 +1100,8 @@ public class LeafQueue implements CSQueue {
     return Resources.none();
   }
 
-  private Resource assignOffSwitchContainers(Resource clusterResource, SchedulerNode node, 
-      SchedulerApp application, Priority priority, 
+  private Resource assignOffSwitchContainers(Resource clusterResource, FiCaSchedulerNode node, 
+      FiCaSchedulerApp application, Priority priority, 
       RMContainer reservedContainer) {
     ResourceRequest request = 
       application.getResourceRequest(priority, RMNode.ANY);
@@ -1113,8 +1116,8 @@ public class LeafQueue implements CSQueue {
     return Resources.none();
   }
 
-  boolean canAssign(SchedulerApp application, Priority priority, 
-      SchedulerNode node, NodeType type, RMContainer reservedContainer) {
+  boolean canAssign(FiCaSchedulerApp application, Priority priority, 
+      FiCaSchedulerNode node, NodeType type, RMContainer reservedContainer) {
 
     // Clearly we need containers for this application...
     if (type == NodeType.OFF_SWITCH) {
@@ -1161,14 +1164,14 @@ public class LeafQueue implements CSQueue {
   }
   
   private Container getContainer(RMContainer rmContainer, 
-      SchedulerApp application, SchedulerNode node, 
+      FiCaSchedulerApp application, FiCaSchedulerNode node, 
       Resource capability, Priority priority) {
     return (rmContainer != null) ? rmContainer.getContainer() :
       createContainer(application, node, capability, priority);
   }
   
 
-  public Container createContainer(SchedulerApp application, SchedulerNode node, 
+  public Container createContainer(FiCaSchedulerApp application, FiCaSchedulerNode node, 
       Resource capability, Priority priority) {
 
     NodeId nodeId = node.getRMNode().getNodeID();
@@ -1178,17 +1181,11 @@ public class LeafQueue implements CSQueue {
 
     // If security is enabled, send the container-tokens too.
     if (UserGroupInformation.isSecurityEnabled()) {
-      ContainerTokenIdentifier tokenIdentifier = new ContainerTokenIdentifier(
-          containerId, nodeId.toString(), capability);
-      try {
-        containerToken = BuilderUtils.newContainerToken(nodeId, ByteBuffer
-            .wrap(containerTokenSecretManager
-                .createPassword(tokenIdentifier)), tokenIdentifier);
-      } catch (IllegalArgumentException e) {
-         // this could be because DNS is down - in which case we just want
-         // to retry and not bring RM down
-         LOG.error("Error trying to create new container", e);
-         return null;
+      containerToken =
+          containerTokenSecretManager.createContainerToken(containerId, nodeId,
+            capability);
+      if (containerToken == null) {
+        return null; // Try again later.
       }
     }
 
@@ -1200,8 +1197,8 @@ public class LeafQueue implements CSQueue {
     return container;
   }
   
-  private Resource assignContainer(Resource clusterResource, SchedulerNode node, 
-      SchedulerApp application, Priority priority, 
+  private Resource assignContainer(Resource clusterResource, FiCaSchedulerNode node, 
+      FiCaSchedulerApp application, Priority priority, 
       ResourceRequest request, NodeType type, RMContainer rmContainer) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("assignContainers: node=" + node.getHostName()
@@ -1275,8 +1272,8 @@ public class LeafQueue implements CSQueue {
     }
   }
 
-  private void reserve(SchedulerApp application, Priority priority, 
-      SchedulerNode node, RMContainer rmContainer, Container container) {
+  private void reserve(FiCaSchedulerApp application, Priority priority, 
+      FiCaSchedulerNode node, RMContainer rmContainer, Container container) {
     // Update reserved metrics if this is the first reservation
     if (rmContainer == null) {
       getMetrics().reserveResource(
@@ -1290,8 +1287,8 @@ public class LeafQueue implements CSQueue {
     node.reserveResource(application, priority, rmContainer);
   }
 
-  private void unreserve(SchedulerApp application, Priority priority, 
-      SchedulerNode node, RMContainer rmContainer) {
+  private void unreserve(FiCaSchedulerApp application, Priority priority, 
+      FiCaSchedulerNode node, RMContainer rmContainer) {
     // Done with the reservation?
     application.unreserve(node, priority);
     node.unreserveResource(application);
@@ -1304,7 +1301,7 @@ public class LeafQueue implements CSQueue {
 
   @Override
   public void completedContainer(Resource clusterResource, 
-      SchedulerApp application, SchedulerNode node, RMContainer rmContainer, 
+      FiCaSchedulerApp application, FiCaSchedulerNode node, RMContainer rmContainer, 
       ContainerStatus containerStatus, RMContainerEventType event) {
     if (application != null) {
       // Careful! Locking order is important!
@@ -1346,7 +1343,7 @@ public class LeafQueue implements CSQueue {
   }
 
   synchronized void allocateResource(Resource clusterResource, 
-      SchedulerApp application, Resource resource) {
+      FiCaSchedulerApp application, Resource resource) {
     // Update queue metrics
     Resources.addTo(usedResources, resource);
     CSQueueUtils.updateQueueStatistics(
@@ -1371,7 +1368,7 @@ public class LeafQueue implements CSQueue {
   }
 
   synchronized void releaseResource(Resource clusterResource, 
-      SchedulerApp application, Resource resource) {
+      FiCaSchedulerApp application, Resource resource) {
     // Update queue metrics
     Resources.subtractFrom(usedResources, resource);
     CSQueueUtils.updateQueueStatistics(
@@ -1395,11 +1392,11 @@ public class LeafQueue implements CSQueue {
     maxActiveApplications = 
         CSQueueUtils.computeMaxActiveApplications(
             clusterResource, minimumAllocation, 
-            maxAMResourcePercent, absoluteMaxCapacity);
+            maxAMResourcePerQueuePercent, absoluteMaxCapacity);
     maxActiveAppsUsingAbsCap = 
-            CSQueueUtils.computeMaxActiveApplications(
-                clusterResource, minimumAllocation, 
-                maxAMResourcePercent, absoluteCapacity);
+        CSQueueUtils.computeMaxActiveApplications(
+            clusterResource, minimumAllocation, 
+            maxAMResourcePerQueuePercent, absoluteCapacity);
     maxActiveApplicationsPerUser = 
         CSQueueUtils.computeMaxActiveApplicationsPerUser(
             maxActiveAppsUsingAbsCap, userLimit, userLimitFactor);
@@ -1409,7 +1406,7 @@ public class LeafQueue implements CSQueue {
         this, parent, clusterResource, minimumAllocation);
     
     // Update application properties
-    for (SchedulerApp application : activeApplications) {
+    for (FiCaSchedulerApp application : activeApplications) {
       synchronized (application) {
         computeUserLimitAndSetHeadroom(application, clusterResource, 
             Resources.none());
@@ -1472,7 +1469,7 @@ public class LeafQueue implements CSQueue {
 
   @Override
   public void recoverContainer(Resource clusterResource,
-      SchedulerApp application, Container container) {
+      FiCaSchedulerApp application, Container container) {
     // Careful! Locking order is important! 
     synchronized (this) {
       allocateResource(clusterResource, application, container.getResource());

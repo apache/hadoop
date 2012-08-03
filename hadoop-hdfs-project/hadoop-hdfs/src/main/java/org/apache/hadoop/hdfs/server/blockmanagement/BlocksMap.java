@@ -37,15 +37,18 @@ class BlocksMap {
       this.blockInfo = blkInfo;
     }
 
+    @Override
     public boolean hasNext() {
       return blockInfo != null && nextIdx < blockInfo.getCapacity()
               && blockInfo.getDatanode(nextIdx) != null;
     }
 
+    @Override
     public DatanodeDescriptor next() {
       return blockInfo.getDatanode(nextIdx++);
     }
 
+    @Override
     public void remove()  {
       throw new UnsupportedOperationException("Sorry. can't remove.");
     }
@@ -81,10 +84,12 @@ class BlocksMap {
     final int exponent = e2 < 0? 0: e2 > 30? 30: e2;
     final int c = 1 << exponent;
 
-    LightWeightGSet.LOG.info("VM type       = " + vmBit + "-bit");
-    LightWeightGSet.LOG.info("2% max memory = " + twoPC/(1 << 20) + " MB");
-    LightWeightGSet.LOG.info("capacity      = 2^" + exponent
-        + " = " + c + " entries");
+    if (LightWeightGSet.LOG.isDebugEnabled()) {
+      LightWeightGSet.LOG.debug("VM type       = " + vmBit + "-bit");
+      LightWeightGSet.LOG.debug("2% max memory = " + twoPC/(1 << 20) + " MB");
+      LightWeightGSet.LOG.debug("capacity      = 2^" + exponent
+          + " = " + c + " entries");
+    }
     return c;
   }
 

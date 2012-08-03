@@ -83,6 +83,7 @@ public interface JournalManager extends Closeable {
   /**
    * Close the journal manager, freeing any resources it may hold.
    */
+  @Override
   void close() throws IOException;
   
   /** 

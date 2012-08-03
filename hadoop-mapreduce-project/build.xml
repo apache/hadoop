@@ -31,7 +31,6 @@
   <property name="module" value="mapreduce"/> 
   <property name="Name" value="Hadoop-Mapred"/>
   <property name="name" value="hadoop-${module}"/>
-  <!-- Need to change aop.xml project.version prop. synchronously -->
   <property name="_version" value="3.0.0"/>
   <property name="version" value="${_version}-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
@@ -204,7 +203,6 @@
   <property name="hadoop-mapred-test.jar" location="${build.dir}/${test.final.name}.jar" />
   <property name="hadoop-mapred-examples.jar" location="${build.dir}/${examples.final.name}.jar" />
   <property name="hadoop-mapred-tools.jar" location="${build.dir}/${tools.final.name}.jar" />
-  <property name="hadoop-mapred-fi.jar" location="${build.dir}/${final.name}-fi.jar" />
   <property name="hadoop-mapred-sources.jar" location="${build.dir}/${final.name}-sources.jar" />
   <property name="hadoop-mapred-test-sources.jar" location="${build.dir}/${test.final.name}-sources.jar" />
   <property name="hadoop-mapred-examples-sources.jar" location="${build.dir}/${examples.final.name}-sources.jar" />
@@ -661,17 +659,11 @@
           <propertyref name="compile.c++"/>
         </syspropertyset>
         
-        <!-- Pass probability specifications to the spawn JVM -->
-        <syspropertyset id="FaultProbabilityProperties">
-          <propertyref regex="fi.*"/>
-        </syspropertyset>
-        <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
-                     value="@{hadoop.conf.dir.deployed}" />
         <classpath refid="@{classpath}"/>
         <formatter type="${test.junit.output.format}" />
         <batchtest todir="@{test.dir}" unless="testcase">
           <fileset dir="@{fileset.dir}/@{suite.type}"
-            excludes="**/${test.exclude}.java aop/** system/**">
+            excludes="**/${test.exclude}.java">
             <patternset>
               <includesfile name="@{test.file}"/>
               <excludesfile name="${test.exclude.file}" />
@@ -682,26 +674,6 @@
         <batchtest todir="@{test.dir}" if="testcase">
           <fileset dir="@{fileset.dir}/mapred" includes="**/${testcase}.java"/>
           <fileset dir="@{fileset.dir}/unit" includes="**/${testcase}.java"/>
-          <fileset dir="@{fileset.dir}/system/test" includes="**/${testcase}.java"/>
-        </batchtest>
-        <!--batch test to test all the testcases in aop folder with fault 
-        injection-->
-        <batchtest todir="@{test.dir}" if="tests.notestcase.fi">
-          <fileset dir="@{fileset.dir}/aop"
-            includes="**/${test.include}.java"
-            excludes="**/${test.exclude}.java"
-            excludesfile="${test.exclude.file}" />
-        </batchtest>
-        <!-- batch test for testing a single test case in aop folder with
-        fault injection-->
-        <batchtest todir="@{test.dir}" if="tests.testcase.fi">
-         <fileset dir="@{fileset.dir}/aop" includes="**/${testcase}.java"/>
-        </batchtest>
-         <!--The following batch is for very special occasions only when
-         a non-FI tests are needed to be executed against FI-environment -->
-         <batchtest todir="@{test.dir}" if="tests.testcaseonly.fi">
-          <fileset dir="@{fileset.dir}/mapred" 
-            includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
       <antcall target="checkfailure"/>
@@ -710,7 +682,7 @@
 
   <target name="run-test-mapred" depends="run-commit-test, run-smoke-test,
     run-test-mapred-excluding-commit-and-smoke, run-test-mapred-all-withtestcaseonly"
-    description="Run mapred functional and system tests">
+    description="Run mapred functional tests">
   </target>
 
   <target name="run-test-mapred-all-withtestcaseonly"
@@ -1192,7 +1164,7 @@
     <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-test"/>
   </target>
 
-  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version"
       description="To install hadoop mapreduce and test jars to local filesystem's m2 cache">
     <artifact:pom file="${hadoop-mapred.pom}" id="hadoop.mapred"/>
     <artifact:pom file="${hadoop-mapred-test.pom}" id="hadoop.mapred.test"/>
@@ -1207,7 +1179,7 @@
   </target>
 
   <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test,
-    jar-system, jar-test-system, set-version, signanddeploy, simpledeploy"
+    set-version, signanddeploy, simpledeploy"
     description="To deploy hadoop mapredice and test jar's to apache
     snapshot's repository"/>
 
@@ -1400,7 +1372,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-fi, clean-sign" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-sign" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete file="${hadoop-mapred.pom}"/>
@@ -1721,8 +1693,6 @@
                 output="${build.dir.eclipse-main-generated-classes}" />
         <source path="${test.src.dir}/mapred"
                 output="${build.dir.eclipse-test-classes}" />
-        <source path="${test.src.dir}/aop"
-                output="${build.dir.eclipse-test-classes}" />
         <source path="${test.src.dir}/unit"
                 output="${build.dir.eclipse-test-classes}" />
         <source path="${examples.dir}"
@@ -1741,10 +1711,6 @@
                 output="${build.dir.eclipse-contrib-classes}/gridmix/main" />
         <source path="${contrib.dir}/gridmix/src/test"
                 output="${build.dir.eclipse-contrib-classes}/gridmix/test" />
-        <source path="${contrib.dir}/raid/src/java"
-                output="${build.dir.eclipse-contrib-classes}/raid/main" />
-        <source path="${contrib.dir}/raid/src/test"
-                output="${build.dir.eclipse-contrib-classes}/raid/test" />
         <source path="${contrib.dir}/vaidya/src/java"
                 output="${build.dir.eclipse-contrib-classes}/vaidya/main" />
         <source path="${contrib.dir}/vertica/src/java"
@@ -1864,11 +1830,6 @@
       log="${ivyresolvelog}"/>
   </target>
 
-  <target name="ivy-resolve-system" depends="ivy-init">
-    <ivy:resolve settingsRef="${ant.project.name}.ivy.settings" conf="system"
-      log="${ivyresolvelog}"/>
-  </target>
-
   <target name="ivy-retrieve" depends="ivy-resolve"
     description="Retrieve Ivy-managed artifacts">
     <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
@@ -1940,14 +1901,6 @@
     <ivy:cachepath pathid="releaseaudit-classpath" conf="releaseaudit"/>
   </target>
 
-  <target name="ivy-retrieve-system" depends="ivy-resolve-system"
-    description="Retrieve Ivy-managed artifacts for the system tests">
-    <ivy:retrieve settingsRef="${ant.project.name}.ivy.settings"
-      pattern="${build.ivy.lib.dir}/${ivy.artifact.retrieve.pattern}"
-        log="${ivyresolvelog}"/>
-    <ivy:cachepath pathid="ivy-system.classpath" conf="system"/>
-  </target>
-
   <target name="ivy-report" depends="ivy-resolve-releaseaudit"
     description="Generate">
     <ivy:report todir="${build.ivy.report.dir}" settingsRef="${ant.project.name}.ivy.settings"/>
@@ -1956,85 +1909,4 @@
     </echo>
   </target>
 
-  <!-- Begining of fault-injection targets-->
-  <import file="${test.src.dir}/aop/build/aop.xml"/>
-  
-  <!-- declaring mapred.src.dir as java.src.dir for aop.xml -->
-  <property name="java.src.dir" value="${src.dir}/java"/>
-  
-  <!-- target dependency from aop.xml -->
-  <target name="-classes-compilation" 
-    depends="compile-mapred-classes, compile-mapred-test"/>
-  
-  <target name="jar-test-fault-inject" depends="jar-mapred-test-fault-inject"
-            description="Make hadoop-mapred-test-fi.jar files"/>
-  
-  <!-- target to build test-fi.jar-->
-  <target name="jar-mapred-test-fault-inject" depends="injectfaults"
-    description="Make hadoop-mapred-test-fi.jar">
-    <macro-jar-test-fault-inject target.name="jar-test" 
-      jar.final.name="test.final.name"
-      jar.final.value="${name}-test-${version}-fi"/>
-  </target>
-  
-  <!-- target to build the hadoop-fi.jar -->
-  <target name="jar-fault-inject" depends="injectfaults"
-    description="Make hadoop-fi.jar">
-    <macro-jar-fault-inject
-      target.name="jar"
-      build.dir="${build-fi.dir}"
-      jar.final.name="final.name"
-      jar.final.value="${final.name}-fi" />
-  </target>
-  
-  <!-- target to run fault injected test cases will run entire mapred test 
-       suite-->
-  <target name="run-test-mapred-fault-inject" depends="injectfaults"
-    description="Run full suite of unit tests with fault injection">
-    <macro-run-tests-fault-inject target.name="run-test-mapred"
-      testcasesonly="false"/>
-  </target>
-
-  <!-- target to run non-FI tests in a FI environment-->
-  <target name="run-fault-inject-with-testcaseonly" depends="injectfaults">
-    <fail unless="testcase">
-    Can't run this target without -Dtestcase setting!
-    </fail>
-    <macro-run-tests-fault-inject target.name="run-test-mapred"
-      testcasesonly="true"/>
-  </target>
-  <condition property="tests.notestcase">
-    <and>
-      <isfalse value="${test.fault.inject}"/>
-      <not>
-        <isset property="testcase"/>
-      </not>
-    </and>
-  </condition>
-  <condition property="tests.notestcase.fi">
-    <and>
-      <not>
-        <isset property="testcase"/>
-      </not>
-      <istrue value="${test.fault.inject}"/>
-    </and>
-  </condition>
-  <condition property="test.testcase">
-    <and>
-      <isfalse value="${test.fault.inject}"/>
-      <isset property="testcase"/>
-    </and>
-  </condition>
-  <condition property="tests.testcaseonly.fi">
-    <istrue value="${special.fi.testcasesonly}" />
-  </condition>
-  <condition property="tests.testcase.fi">
-    <and>
-      <istrue value="${test.fault.inject}" />
-      <isset property="testcase" />
-      <isfalse value="${special.fi.testcasesonly}" />
-    </and>
-  </condition>
-  <!-- End of fault injection targets-->
-  
 </project>

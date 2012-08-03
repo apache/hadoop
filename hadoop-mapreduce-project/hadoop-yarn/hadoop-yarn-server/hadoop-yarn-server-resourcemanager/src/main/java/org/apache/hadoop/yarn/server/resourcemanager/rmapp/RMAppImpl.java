@@ -147,6 +147,8 @@ public class RMAppImpl implements RMApp {
      // Transitions from RUNNING state
     .addTransition(RMAppState.RUNNING, RMAppState.RUNNING,
         RMAppEventType.NODE_UPDATE, new RMAppNodeUpdateTransition())
+    .addTransition(RMAppState.RUNNING, RMAppState.FINISHING,
+        RMAppEventType.ATTEMPT_FINISHING, new RMAppFinishingTransition())
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
         RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
     .addTransition(RMAppState.RUNNING,
@@ -156,12 +158,24 @@ public class RMAppImpl implements RMApp {
     .addTransition(RMAppState.RUNNING, RMAppState.KILLED,
         RMAppEventType.KILL, new KillAppAndAttemptTransition())
 
+     // Transitions from FINISHING state
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
+        RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
+        RMAppEventType.KILL, new KillAppAndAttemptTransition())
+    // ignorable transitions
+    .addTransition(RMAppState.FINISHING, RMAppState.FINISHING,
+        RMAppEventType.NODE_UPDATE)
+
      // Transitions from FINISHED state
     .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
         RMAppEventType.KILL)
      // ignorable transitions
     .addTransition(RMAppState.FINISHED, RMAppState.FINISHED,
-        RMAppEventType.NODE_UPDATE)
+        EnumSet.of(
+            RMAppEventType.NODE_UPDATE,
+            RMAppEventType.ATTEMPT_FINISHING,
+            RMAppEventType.ATTEMPT_FINISHED))
 
      // Transitions from FAILED state
     .addTransition(RMAppState.FAILED, RMAppState.FAILED,
@@ -192,7 +206,8 @@ public class RMAppImpl implements RMApp {
       BuilderUtils.newApplicationResourceUsageReport(-1, -1,
           Resources.createResource(-1), Resources.createResource(-1),
           Resources.createResource(-1));
-
+  private static final int DUMMY_APPLICATION_ATTEMPT_NUMBER = -1;
+  
   public RMAppImpl(ApplicationId applicationId, RMContext rmContext,
       Configuration config, String name, String user, String queue,
       ApplicationSubmissionContext submissionContext, String clientTokenStr,
@@ -333,10 +348,12 @@ public class RMAppImpl implements RMApp {
     case NEW:
       return YarnApplicationState.NEW;
     case SUBMITTED:
-    case ACCEPTED:
       return YarnApplicationState.SUBMITTED;
+    case ACCEPTED:
+      return YarnApplicationState.ACCEPTED;
     case RUNNING:
       return YarnApplicationState.RUNNING;
+    case FINISHING:
     case FINISHED:
       return YarnApplicationState.FINISHED;
     case KILLED:
@@ -355,6 +372,7 @@ public class RMAppImpl implements RMApp {
     case RUNNING:
       return FinalApplicationStatus.UNDEFINED;    
     // finished without a proper final state is the same as failed  
+    case FINISHING:
     case FINISHED:
     case FAILED:
       return FinalApplicationStatus.FAILED;
@@ -382,6 +400,7 @@ public class RMAppImpl implements RMApp {
     this.readLock.lock();
 
     try {
+      ApplicationAttemptId currentApplicationAttemptId = null;
       String clientToken = UNAVAILABLE;
       String trackingUrl = UNAVAILABLE;
       String host = UNAVAILABLE;
@@ -392,23 +411,31 @@ public class RMAppImpl implements RMApp {
       String diags = UNAVAILABLE;
       if (allowAccess) {
         if (this.currentAttempt != null) {
+          currentApplicationAttemptId = this.currentAttempt.getAppAttemptId();
           trackingUrl = this.currentAttempt.getTrackingUrl();
           origTrackingUrl = this.currentAttempt.getOriginalTrackingUrl();
           clientToken = this.currentAttempt.getClientToken();
           host = this.currentAttempt.getHost();
           rpcPort = this.currentAttempt.getRpcPort();
           appUsageReport = currentAttempt.getApplicationResourceUsageReport();
+        } else {
+          currentApplicationAttemptId = 
+              BuilderUtils.newApplicationAttemptId(this.applicationId, 
+                  DUMMY_APPLICATION_ATTEMPT_NUMBER);
         }
         diags = this.diagnostics.toString();
       } else {
         appUsageReport = DUMMY_APPLICATION_RESOURCE_USAGE_REPORT;
+        currentApplicationAttemptId = 
+            BuilderUtils.newApplicationAttemptId(this.applicationId, 
+                DUMMY_APPLICATION_ATTEMPT_NUMBER);
       }
-      return BuilderUtils.newApplicationReport(this.applicationId, this.user,
-          this.queue, this.name, host, rpcPort, clientToken,
-          createApplicationState(this.stateMachine.getCurrentState()),
-          diags, trackingUrl,
-          this.startTime, this.finishTime, finishState, appUsageReport,
-          origTrackingUrl);
+      return BuilderUtils.newApplicationReport(this.applicationId,
+          currentApplicationAttemptId, this.user, this.queue,
+          this.name, host, rpcPort, clientToken,
+          createApplicationState(this.stateMachine.getCurrentState()), diags,
+          trackingUrl, this.startTime, this.finishTime, finishState,
+          appUsageReport, origTrackingUrl);
     } finally {
       this.readLock.unlock();
     }
@@ -537,6 +564,14 @@ public class RMAppImpl implements RMApp {
     };
   }
 
+  private static final class RMAppFinishingTransition extends
+      RMAppTransition {
+    @Override
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      app.finishTime = System.currentTimeMillis();
+    }
+  }
+
   private static class AppKilledTransition extends FinalTransition {
     @Override
     public void transition(RMAppImpl app, RMAppEvent event) {
@@ -580,7 +615,9 @@ public class RMAppImpl implements RMApp {
         app.handler.handle(
             new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
-      app.finishTime = System.currentTimeMillis();
+      if (app.getState() != RMAppState.FINISHING) {
+        app.finishTime = System.currentTimeMillis();
+      }
       app.handler.handle(
           new RMAppManagerEvent(app.applicationId,
           RMAppManagerEventType.APP_COMPLETED));
@@ -599,21 +636,32 @@ public class RMAppImpl implements RMApp {
     @Override
     public RMAppState transition(RMAppImpl app, RMAppEvent event) {
 
-      RMAppFailedAttemptEvent failedEvent = ((RMAppFailedAttemptEvent)event);
-      if (app.attempts.size() == app.maxRetries) {
-        String msg = "Application " + app.getApplicationId()
-        + " failed " + app.maxRetries
-        + " times due to " + failedEvent.getDiagnostics()
-        + ". Failing the application.";
+      RMAppFailedAttemptEvent failedEvent = ((RMAppFailedAttemptEvent) event);
+      boolean retryApp = true;
+      String msg = null;
+      if (app.submissionContext.getUnmanagedAM()) {
+        // RM does not manage the AM. Do not retry
+        retryApp = false;
+        msg = "Unmanaged application " + app.getApplicationId()
+            + " failed due to " + failedEvent.getDiagnostics()
+            + ". Failing the application.";
+      } else if (app.attempts.size() == app.maxRetries) {
+        retryApp = false;
+        msg = "Application " + app.getApplicationId() + " failed "
+            + app.maxRetries + " times due to " + failedEvent.getDiagnostics()
+            + ". Failing the application.";
+      }
+
+      if (retryApp) {
+        app.createNewAttempt();
+        return initialState;
+      } else {
         LOG.info(msg);
         app.diagnostics.append(msg);
         // Inform the node for app-finish
         FINAL_TRANSITION.transition(app, event);
         return RMAppState.FAILED;
       }
-
-      app.createNewAttempt();
-      return initialState;
     }
 
   }

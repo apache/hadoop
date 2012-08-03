@@ -44,11 +44,17 @@ public class PostOpParam extends HttpOpParam<PostOpParam.Op> {
     }
 
     @Override
+    public boolean getRedirect() {
+      return true;
+    }
+
+    @Override
     public int getExpectedHttpResponseCode() {
       return expectedHttpResponseCode;
     }
 
     /** @return a URI query string. */
+    @Override
     public String toQueryString() {
       return NAME + "=" + this;
     }

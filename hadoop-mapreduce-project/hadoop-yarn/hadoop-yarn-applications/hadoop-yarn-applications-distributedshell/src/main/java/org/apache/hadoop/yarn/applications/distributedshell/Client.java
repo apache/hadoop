@@ -508,8 +508,9 @@ public class Client {
     // For now setting all required classpaths including
     // the classpath to "." for the application jar
     StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
-    for (String c : conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH)
-        .split(",")) {
+    for (String c : conf.getStrings(
+        YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+        YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
       classPathEnv.append(':');
       classPathEnv.append(c.trim());
     }

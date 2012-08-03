@@ -17,24 +17,32 @@
  */
 package org.apache.hadoop.security;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.util.StringUtils;
-
-import junit.framework.TestCase;
+import org.junit.Test;
 
 /** Unit tests for permission */
-public class TestPermission extends TestCase {
+public class TestPermission {
   public static final Log LOG = LogFactory.getLog(TestPermission.class);
 
   final private static Path ROOT_PATH = new Path("/data");
@@ -65,6 +73,7 @@ public class TestPermission extends TestCase {
    * either set with old param dfs.umask that takes decimal umasks
    * or dfs.umaskmode that takes symbolic or octal umask.
    */
+  @Test
   public void testBackwardCompatibility() {
     // Test 1 - old configuration key with decimal 
     // umask value should be handled when set using 
@@ -93,6 +102,7 @@ public class TestPermission extends TestCase {
     assertEquals(18, FsPermission.getUMask(conf).toShort());
   }
 
+  @Test
   public void testCreate() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
@@ -155,6 +165,7 @@ public class TestPermission extends TestCase {
     }
   }
 
+  @Test
   public void testFilePermision() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);

@@ -62,7 +62,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_KEY;
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -190,6 +190,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
@@ -232,6 +233,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
   private static final ThreadLocal<StringBuilder> auditBuffer =
     new ThreadLocal<StringBuilder>() {
+      @Override
       protected StringBuilder initialValue() {
         return new StringBuilder();
       }
@@ -392,12 +394,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       throws IOException {
 
     if (namespaceDirs.size() == 1) {
-      LOG.warn("Only one " + DFS_NAMENODE_NAME_DIR_KEY
-          + " directory configured , beware data loss!");
+      LOG.warn("Only one image storage directory ("
+          + DFS_NAMENODE_NAME_DIR_KEY + ") configured. Beware of dataloss"
+          + " due to lack of redundant storage directories!");
     }
     if (namespaceEditsDirs.size() == 1) {
-      LOG.warn("Only one " + DFS_NAMENODE_EDITS_DIR_KEY
-          + " directory configured , beware data loss!");
+      LOG.warn("Only one namespace edits storage directory ("
+          + DFS_NAMENODE_EDITS_DIR_KEY + ") configured. Beware of dataloss"
+          + " due to lack of redundant storage directories!");
     }
 
     FSImage fsImage = new FSImage(conf, namespaceDirs, namespaceEditsDirs);
@@ -619,6 +623,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.info("Catching up to latest edits from old active before " +
             "taking over writer role in edits logs.");
         editLogTailer.catchupDuringFailover();
+        blockManager.setPostponeBlocksFromFuture(false);
         
         LOG.info("Reprocessing replication and invalidation queues...");
         blockManager.getDatanodeManager().markAllDatanodesStale();
@@ -702,6 +707,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // During startup, we're already open for read.
       dir.fsImage.editLog.initSharedJournalsForRead();
     }
+    
+    blockManager.setPostponeBlocksFromFuture(true);
+
     editLogTailer = new EditLogTailer(this, conf);
     editLogTailer.start();
     if (standbyShouldCheckpoint) {
@@ -4137,6 +4145,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       
     /**
      */
+    @Override
     public void run() {
       while (fsRunning && (safeMode != null && !safeMode.canLeave())) {
         try {
@@ -4241,6 +4250,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param deltaSafe the change in number of safe blocks
    * @param deltaTotal the change i nnumber of total blocks expected
    */
+  @Override
   public void adjustSafeModeBlockTotals(int deltaSafe, int deltaTotal) {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
@@ -4963,6 +4973,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       block = b;
     }
     
+    @Override
     public String toString() {
       return block.getBlockName() + "\t" + path;
     }
@@ -5411,7 +5422,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   private long getLastContact(DatanodeDescriptor alivenode) {
-    return (System.currentTimeMillis() - alivenode.getLastUpdate())/1000;
+    return (Time.now() - alivenode.getLastUpdate())/1000;
   }
 
   private long getDfsUsed(DatanodeDescriptor alivenode) {
@@ -5468,6 +5479,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     getDelegationTokenSecretManager().verifyToken(identifier, password);
   }
   
+  @Override
   public boolean isGenStampInFuture(long genStamp) {
     return (genStamp > getGenerationStamp());
   }

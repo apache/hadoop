@@ -136,6 +136,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -173,7 +174,7 @@ public class DFSClient implements java.io.Closeable {
   final ReplaceDatanodeOnFailure dtpReplaceDatanodeOnFailure;
   final FileSystem.Statistics stats;
   final int hdfsTimeout;    // timeout value for a DFS operation.
-  final LeaseRenewer leaserenewer;
+  private final String authority;
   final SocketCache socketCache;
   final Conf dfsClientConf;
   private Random r = new Random();
@@ -343,9 +344,9 @@ public class DFSClient implements java.io.Closeable {
     this.hdfsTimeout = Client.getTimeout(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     
-    final String authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
-    this.leaserenewer = LeaseRenewer.getInstance(authority, ugi, this);
-    this.clientName = leaserenewer.getClientName(dfsClientConf.taskId);
+    this.authority = nameNodeUri == null? "null": nameNodeUri.getAuthority();
+    this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
+        DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
     
     this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
     
@@ -473,7 +474,30 @@ public class DFSClient implements java.io.Closeable {
     }
   }
 
-  /** Put a file. */
+  /** Return the lease renewer instance. The renewer thread won't start
+   *  until the first output stream is created. The same instance will
+   *  be returned until all output streams are closed.
+   */
+  public synchronized LeaseRenewer getLeaseRenewer() throws IOException {
+      return LeaseRenewer.getInstance(authority, ugi, this);
+  }
+
+  /** Get a lease and start automatic renewal */
+  private void beginFileLease(final String src, final DFSOutputStream out) 
+      throws IOException {
+    getLeaseRenewer().put(src, out, this);
+  }
+
+  /** Stop renewal of lease for the file. */
+  void endFileLease(final String src) throws IOException {
+    getLeaseRenewer().closeFile(src, this);
+  }
+    
+
+  /** Put a file. Only called from LeaseRenewer, where proper locking is
+   *  enforced to consistently update its local dfsclients array and 
+   *  client's filesBeingWritten map.
+   */
   void putFileBeingWritten(final String src, final DFSOutputStream out) {
     synchronized(filesBeingWritten) {
       filesBeingWritten.put(src, out);
@@ -486,7 +510,7 @@ public class DFSClient implements java.io.Closeable {
     }
   }
 
-  /** Remove a file. */
+  /** Remove a file. Only called from LeaseRenewer. */
   void removeFileBeingWritten(final String src) {
     synchronized(filesBeingWritten) {
       filesBeingWritten.remove(src);
@@ -517,7 +541,7 @@ public class DFSClient implements java.io.Closeable {
       if (filesBeingWritten.isEmpty()) {
         return;
       }
-      lastLeaseRenewal = System.currentTimeMillis();
+      lastLeaseRenewal = Time.now();
     }
   }
 
@@ -534,7 +558,7 @@ public class DFSClient implements java.io.Closeable {
         return true;
       } catch (IOException e) {
         // Abort if the lease has already expired. 
-        final long elapsed = System.currentTimeMillis() - getLastLeaseRenewal();
+        final long elapsed = Time.now() - getLastLeaseRenewal();
         if (elapsed > HdfsConstants.LEASE_SOFTLIMIT_PERIOD) {
           LOG.warn("Failed to renew lease for " + clientName + " for "
               + (elapsed/1000) + " seconds (>= soft-limit ="
@@ -562,6 +586,14 @@ public class DFSClient implements java.io.Closeable {
     clientRunning = false;
     closeAllFilesBeingWritten(true);
     socketCache.clear();
+
+    try {
+      // remove reference to this client and stop the renewer,
+      // if there is no more clients under the renewer.
+      getLeaseRenewer().closeClient(this);
+    } catch (IOException ioe) {
+       LOG.info("Exception occurred while aborting the client. " + ioe);
+    }
     closeConnectionToNamenode();
   }
 
@@ -596,12 +628,13 @@ public class DFSClient implements java.io.Closeable {
    * Close the file system, abandoning all of the leases and files being
    * created and close connections to the namenode.
    */
+  @Override
   public synchronized void close() throws IOException {
     if(clientRunning) {
       closeAllFilesBeingWritten(false);
       socketCache.clear();
       clientRunning = false;
-      leaserenewer.closeClient(this);
+      getLeaseRenewer().closeClient(this);
       // close connections to the namenode
       closeConnectionToNamenode();
     }
@@ -632,7 +665,7 @@ public class DFSClient implements java.io.Closeable {
    * @see ClientProtocol#getServerDefaults()
    */
   public FsServerDefaults getServerDefaults() throws IOException {
-    long now = System.currentTimeMillis();
+    long now = Time.now();
     if (now - serverDefaultsLastUpdate > SERVER_DEFAULTS_VALIDITY_PERIOD) {
       serverDefaults = namenode.getServerDefaults();
       serverDefaultsLastUpdate = now;
@@ -1062,7 +1095,7 @@ public class DFSClient implements java.io.Closeable {
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
         buffersize, dfsClientConf.createChecksum());
-    leaserenewer.put(src, result, this);
+    beginFileLease(src, result);
     return result;
   }
   
@@ -1112,7 +1145,7 @@ public class DFSClient implements java.io.Closeable {
           flag, createParent, replication, blockSize, progress, buffersize,
           checksum);
     }
-    leaserenewer.put(src, result, this);
+    beginFileLease(src, result);
     return result;
   }
   
@@ -1198,7 +1231,7 @@ public class DFSClient implements java.io.Closeable {
           + src + " on client " + clientName);
     }
     final DFSOutputStream result = callAppend(stat, src, buffersize, progress);
-    leaserenewer.put(src, result, this);
+    beginFileLease(src, result);
     return result;
   }
 

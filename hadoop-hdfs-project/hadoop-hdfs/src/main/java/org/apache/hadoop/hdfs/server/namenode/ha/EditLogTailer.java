@@ -43,7 +43,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
 
-import static org.apache.hadoop.hdfs.server.common.Util.now;
+import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -64,8 +65,6 @@ public class EditLogTailer {
   private final Configuration conf;
   private final FSNamesystem namesystem;
   private FSEditLog editLog;
-  
-  private volatile Runtime runtime = Runtime.getRuntime();
 
   private InetSocketAddress activeAddr;
   private NamenodeProtocol cachedActiveProxy = null;
@@ -169,11 +168,6 @@ public class EditLogTailer {
     this.editLog = editLog;
   }
   
-  @VisibleForTesting
-  synchronized void setRuntime(Runtime runtime) {
-    this.runtime = runtime;
-  }
-  
   public void catchupDuringFailover() throws IOException {
     Preconditions.checkState(tailerThread == null ||
         !tailerThread.isAlive(),
@@ -185,7 +179,8 @@ public class EditLogTailer {
     }
   }
   
-  private void doTailEdits() throws IOException, InterruptedException {
+  @VisibleForTesting
+  void doTailEdits() throws IOException, InterruptedException {
     // Write lock needs to be interruptible here because the 
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will
@@ -320,9 +315,9 @@ public class EditLogTailer {
           // interrupter should have already set shouldRun to false
           continue;
         } catch (Throwable t) {
-          LOG.error("Unknown error encountered while tailing edits. " +
+          LOG.fatal("Unknown error encountered while tailing edits. " +
               "Shutting down standby NN.", t);
-          runtime.exit(1);
+          terminate(1, t);
         }
 
         try {

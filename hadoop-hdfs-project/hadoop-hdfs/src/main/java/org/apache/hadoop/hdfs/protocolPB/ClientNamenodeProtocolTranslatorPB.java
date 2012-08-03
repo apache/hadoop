@@ -131,6 +131,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
     rpcProxy = proxy;
   }
   
+  @Override
   public void close() {
     RPC.stopProxy(rpcProxy);
   }

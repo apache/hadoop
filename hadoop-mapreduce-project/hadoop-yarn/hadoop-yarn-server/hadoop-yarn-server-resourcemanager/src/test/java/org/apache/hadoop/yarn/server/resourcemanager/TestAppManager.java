@@ -91,8 +91,11 @@ public class TestAppManager{
         rmDispatcher);
     AMLivelinessMonitor amLivelinessMonitor = new AMLivelinessMonitor(
         rmDispatcher);
+    AMLivelinessMonitor amFinishingMonitor = new AMLivelinessMonitor(
+        rmDispatcher);
     return new RMContextImpl(new MemStore(), rmDispatcher,
-        containerAllocationExpirer, amLivelinessMonitor, null, null) {
+        containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
+        null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;

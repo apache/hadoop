@@ -29,6 +29,7 @@ import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
+import org.apache.hadoop.io.serializer.avro.AvroReflectSerialization;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
 import org.mockito.Mockito;
@@ -555,6 +556,60 @@ public class TestSequenceFile extends TestCase {
         RandomDatum.class, 512, (short) 1, 4096, createParent,
         CompressionType.NONE, null, new Metadata());
     // should succeed, fails if exception thrown
+  }
+
+  public void testSerializationAvailability() throws IOException {
+    Configuration conf = new Configuration();
+    Path path = new Path(System.getProperty("test.build.data", "."),
+        "serializationAvailability");
+    // Check if any serializers aren't found.
+    try {
+      SequenceFile.createWriter(
+          conf,
+          SequenceFile.Writer.file(path),
+          SequenceFile.Writer.keyClass(String.class),
+          SequenceFile.Writer.valueClass(NullWritable.class));
+      // Note: This may also fail someday if JavaSerialization
+      // is activated by default.
+      fail("Must throw IOException for missing serializer for the Key class");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().startsWith(
+        "Could not find a serializer for the Key class: '" +
+            String.class.getName() + "'."));
+    }
+    try {
+      SequenceFile.createWriter(
+          conf,
+          SequenceFile.Writer.file(path),
+          SequenceFile.Writer.keyClass(NullWritable.class),
+          SequenceFile.Writer.valueClass(String.class));
+      // Note: This may also fail someday if JavaSerialization
+      // is activated by default.
+      fail("Must throw IOException for missing serializer for the Value class");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().startsWith(
+        "Could not find a serializer for the Value class: '" +
+            String.class.getName() + "'."));
+    }
+
+    // Write a simple file to test deserialization failures with
+    writeTest(FileSystem.get(conf), 1, 1, path, CompressionType.NONE, null);
+
+    // Remove Writable serializations, to enforce error.
+    conf.setStrings(CommonConfigurationKeys.IO_SERIALIZATIONS_KEY,
+        AvroReflectSerialization.class.getName());
+
+    // Now check if any deserializers aren't found.
+    try {
+      new SequenceFile.Reader(
+          conf,
+          SequenceFile.Reader.file(path));
+      fail("Must throw IOException for missing deserializer for the Key class");
+    } catch (IOException e) {
+      assertTrue(e.getMessage().startsWith(
+        "Could not find a deserializer for the Key class: '" +
+            RandomDatum.class.getName() + "'."));
+    }
   }
 
   /** For debugging and testing. */

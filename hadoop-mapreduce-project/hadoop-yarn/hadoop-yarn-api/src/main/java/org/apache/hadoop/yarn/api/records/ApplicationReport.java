@@ -60,6 +60,19 @@ public interface ApplicationReport {
   @Private
   @Unstable
   void setApplicationId(ApplicationId applicationId);
+  
+  /**
+   * Get the <code>ApplicationAttemptId</code> of the current
+   * attempt of the application
+   * @return <code>ApplicationAttemptId</code> of the attempt
+   */
+  @Private
+  @Unstable
+  ApplicationAttemptId getCurrentApplicationAttemptId();
+  
+  @Private
+  @Unstable
+  void setCurrentApplicationAttemptId(ApplicationAttemptId applicationAttemptId);
 
   /**
    * Get the <em>user</em> who submitted the application.

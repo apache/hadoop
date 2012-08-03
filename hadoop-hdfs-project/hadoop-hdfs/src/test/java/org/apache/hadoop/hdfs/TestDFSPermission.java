@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-
-import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,12 +36,15 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Time;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 /** Unit tests for permission */
-public class TestDFSPermission extends TestCase {
+public class TestDFSPermission {
   public static final Log LOG = LogFactory.getLog(TestDFSPermission.class);
   final private static Configuration conf = new HdfsConfiguration();
   
@@ -77,7 +81,7 @@ public class TestDFSPermission extends TestCase {
   static {
     try {
       // Initiate the random number generator and logging the seed
-      long seed = Util.now();
+      long seed = Time.now();
       r = new Random(seed);
       LOG.info("Random number generator uses seed " + seed);
       LOG.info("NUM_TEST_PERMISSIONS=" + NUM_TEST_PERMISSIONS);
@@ -105,13 +109,13 @@ public class TestDFSPermission extends TestCase {
     }
   }
 
-  @Override
+  @Before
   public void setUp() throws IOException {
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
   }
   
-  @Override
+  @After
   public void tearDown() throws IOException {
     if (cluster != null) {
       cluster.shutdown();
@@ -121,6 +125,7 @@ public class TestDFSPermission extends TestCase {
   /** This tests if permission setting in create, mkdir, and 
    * setPermission works correctly
    */
+  @Test
   public void testPermissionSetting() throws Exception {
     testPermissionSetting(OpType.CREATE); // test file creation
     testPermissionSetting(OpType.MKDIRS); // test directory creation
@@ -256,6 +261,7 @@ public class TestDFSPermission extends TestCase {
    * check that ImmutableFsPermission can be used as the argument
    * to setPermission
    */
+  @Test
   public void testImmutableFsPermission() throws IOException {
     fs = FileSystem.get(conf);
 
@@ -265,6 +271,7 @@ public class TestDFSPermission extends TestCase {
   }
   
   /* check if the ownership of a file/directory is set correctly */
+  @Test
   public void testOwnership() throws Exception {
     testOwnership(OpType.CREATE); // test file creation
     testOwnership(OpType.MKDIRS); // test directory creation
@@ -353,6 +360,7 @@ public class TestDFSPermission extends TestCase {
 
   /* Check if namenode performs permission checking correctly for
    * superuser, file owner, group owner, and other users */
+  @Test
   public void testPermissionChecking() throws Exception {
     try {
       fs = FileSystem.get(conf);
@@ -532,7 +540,7 @@ public class TestDFSPermission extends TestCase {
         } catch(AccessControlException e) {
           assertTrue(expectPermissionDeny());
         }
-      } catch (AssertionFailedError ae) {
+      } catch (AssertionError ae) {
         logPermissions();
         throw ae;
       }
@@ -879,6 +887,7 @@ public class TestDFSPermission extends TestCase {
                 requiredAncestorPermission;
     }
 
+    @Override
     protected void logPermissions() {
       super.logPermissions();
       LOG.info("dst ancestor permission: "

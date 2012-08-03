@@ -380,7 +380,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   
   @Test
   @SuppressWarnings("unchecked")
-  public void testLogAggregationInitFailsWithoutKillingNM() throws Exception {
+  public void testLogAggregationFailsWithoutKillingNM() throws Exception {
     
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
@@ -412,7 +412,16 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         new ApplicationFinishEvent(appId, "Application failed to init aggregation: KABOOM!")
     };
     checkEvents(appEventHandler, expectedEvents, false,
-        "getType", "getApplicationID", "getDiagnostic");    
+        "getType", "getApplicationID", "getDiagnostic");
+
+    // verify trying to collect logs for containers/apps we don't know about
+    // doesn't blow up and tear down the NM
+    logAggregationService.handle(new LogHandlerContainerFinishedEvent(
+        BuilderUtils.newContainerId(4, 1, 1, 1), 0));
+    dispatcher.await();
+    logAggregationService.handle(new LogHandlerAppFinishedEvent(
+        BuilderUtils.newApplicationId(1, 5)));
+    dispatcher.await();
   }
   
   private void writeContainerLogs(File appLogDir, ContainerId containerId)

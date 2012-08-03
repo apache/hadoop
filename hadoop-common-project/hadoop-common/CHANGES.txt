@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HADOOP-8523. test-patch.sh doesn't validate patches before building
     (Jack Dintruff via jeagles)
 
+    HADOOP-8624. ProtobufRpcEngine should log all RPCs if TRACE logging is
+    enabled (todd)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -172,6 +175,18 @@ Trunk (unreleased changes)
 
     HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
 
+    HADOOP-8584. test-patch.sh should not immediately exit when no
+    tests are added or modified. (Colin Patrick McCabe via eli)
+
+    HADOOP-8521. Port StreamInputFormat to new Map Reduce API (madhukara
+    phatak via bobby)
+
+    HADOOP-8593. Add missed @Override annotations in Metric/Metrics2 package.
+    (Brandon Li via suresh)
+
+    HADOOP-8623. hadoop jar command should respect HADOOP_OPTS.
+    (Steven Willis via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -241,6 +256,29 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8533. Remove parallel call ununsed capability in RPC.
     (Brandon Li via suresh)
+
+    HADOOP-8423. MapFile.Reader.get() crashes jvm or throws
+    EOFException on Snappy or LZO block-compressed data
+    (todd via harsh)
+
+    HADOOP-8541. Better high-percentile latency metrics. (Andrew Wang via atm)
+
+    HADOOP-8362. Improve exception message when Configuration.set() is
+    called with a null key or value. (Madhukara Phatak
+    and Suresh Srinivas via harsh)
+
+    HADOOP-7818. DiskChecker#checkDir should fail if the directory is
+    not executable. (Madhukara Phatak via harsh)
+
+    HADOOP-8531. SequenceFile Writer can throw out a better error if a
+    serializer or deserializer isn't available
+    (Madhukara Phatak via harsh)
+
+    HADOOP-8609. IPC server logs a useless message when shutting down socket.
+    (Jon Zuanich via atm)
+
+    HADOOP-8620. Add -Drequire.fuse and -Drequire.snappy. (Colin
+    Patrick McCabe via eli)
 
   BUG FIXES
 
@@ -315,6 +353,29 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8566. AvroReflectSerializer.accept(Class) throws a NPE if the class has no 
     package (primitive types and arrays). (tucu)
+
+    HADOOP-8586. Fixup a bunch of SPNEGO misspellings. (eli)
+
+    HADOOP-3886. Error in javadoc of Reporter, Mapper and Progressable
+    (Jingguo Yao via harsh)
+
+    HADOOP-8587. HarFileSystem access of harMetaCache isn't threadsafe. (eli)
+
+    HADOOP-8585. Fix initialization circularity between UserGroupInformation
+    and HadoopConfiguration. (Colin Patrick McCabe via atm)
+
+    HADOOP-8552. Conflict: Same security.log.file for multiple users. 
+    (kkambatl via tucu)
+
+    HADOOP-8537. Fix TFile tests to pass even when native zlib support is not
+    compiled. (todd)
+
+    HADOOP-8626. Typo in default setting for
+    hadoop.security.group.mapping.ldap.search.filter.user. (Jonathan Natkins
+    via atm)
+
+    HADOOP-8480. The native build should honor -DskipTests.
+    (Colin Patrick McCabe via eli)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
@@ -731,6 +792,8 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8535. Cut hadoop build times in half (Job Eagles via bobby)
 
+    HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -784,6 +847,40 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8129. ViewFileSystemTestSetup setupForViewFileSystem is erring
     (Ahmed Radwan and Ravi Prakash via bobby)
+
+    HADOOP-8573. Configuration tries to read from an inputstream resource 
+    multiple times (Robert Evans via tgraves)
+
+    HADOOP-8599. Non empty response from FileSystem.getFileBlockLocations when
+    asking for data beyond the end of file. (Andrey Klochkov via todd)
+
+    HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp
+    via bobby)
+
+    HADOOP-8551. fs -mkdir creates parent directories without the -p option
+    (John George via bobby)
+
+    HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
+    auth type. (daryn)
+
+    HADOOP-8627. FS deleteOnExit may delete the wrong path (daryn via bobby)
+
+    HADOOP-8634. Ensure FileSystem#close doesn't squawk for deleteOnExit paths 
+    (daryn via bobby)
+
+    HADOOP-8550. hadoop fs -touchz automatically created parent directories
+    (John George via bobby)
+
+    HADOOP-8635. Cannot cancel paths registered deleteOnExit (daryn via bobby)
+
+    HADOOP-8637. FilterFileSystem#setWriteChecksum is broken (daryn via bobby)
+
+    HADOOP-8370. Native build failure: javah: class file for 
+    org.apache.hadoop.classification.InterfaceAudience not found  (Trevor
+    Robinson via tgraves)
+
+    HADOOP-8633. Interrupted FsShell copies may leave tmp files (Daryn Sharp
+    via tgraves)
 
 Release 0.23.2 - UNRELEASED 
 

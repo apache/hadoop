@@ -18,13 +18,15 @@
 
 package org.apache.hadoop.hdfs;
 
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.conf.Configuration;
-import junit.framework.TestCase;
+import static org.junit.Assert.assertTrue;
 
-public class TestDeprecatedKeys extends TestCase {
+import org.apache.hadoop.conf.Configuration;
+import org.junit.Test;
+
+public class TestDeprecatedKeys {
  
   //Tests a deprecated key
+  @Test
   public void testDeprecatedKeys() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.set("topology.script.file.name", "xyz");

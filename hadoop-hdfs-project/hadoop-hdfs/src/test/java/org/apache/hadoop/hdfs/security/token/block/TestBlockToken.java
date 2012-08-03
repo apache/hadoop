@@ -70,6 +70,7 @@ import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -300,8 +301,8 @@ public class TestBlockToken {
 
     int fdsAtStart = countOpenFileDescriptors();
     try {
-      long endTime = System.currentTimeMillis() + 3000;
-      while (System.currentTimeMillis() < endTime) {
+      long endTime = Time.now() + 3000;
+      while (Time.now() < endTime) {
         proxy = DFSUtil.createClientDatanodeProtocolProxy(fakeDnId, conf, 1000,
             fakeBlock);
         assertEquals(block3.getBlockId(), proxy.getReplicaVisibleLength(block3));

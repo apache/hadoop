@@ -513,6 +513,21 @@
 </property>
 
 <property>
+  <name>mapreduce.shuffle.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Whether to use SSL for for the Shuffle HTTP endpoints.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.shuffle.ssl.file.buffer.size</name>
+  <value>65536</value>
+  <description>Buffer size for reading spills from file when using SSL.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.reduce.markreset.buffer.percent</name>
   <value>0.0</value>
   <description>The percentage of memory -relative to the maximum heap size- to
@@ -692,7 +707,7 @@
 </property>
 
 <property>
-  <name>mapreduce.output.fileoutputformat.compression.type</name>
+  <name>mapreduce.output.fileoutputformat.compress.type</name>
   <value>RECORD</value>
   <description>If the job outputs are to compressed as SequenceFiles, how should
                they be compressed? Should be one of NONE, RECORD or BLOCK.
@@ -700,7 +715,7 @@
 </property>
 
 <property>
-  <name>mapreduce.output.fileoutputformat.compression.codec</name>
+  <name>mapreduce.output.fileoutputformat.compress.codec</name>
   <value>org.apache.hadoop.io.compress.DefaultCodec</value>
   <description>If the job outputs are compressed, how should they be compressed?
   </description>
@@ -1285,13 +1300,30 @@
 <property>
   <name>mapreduce.jobhistory.address</name>
   <value>0.0.0.0:10020</value>
-  <description>MapReduce JobHistory Server host:port</description>
+  <description>MapReduce JobHistory Server IPC host:port</description>
 </property>
 
 <property>
   <name>mapreduce.jobhistory.webapp.address</name>
   <value>0.0.0.0:19888</value>
   <description>MapReduce JobHistory Server Web UI host:port</description>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.keytab</name>
+  <description>
+    Location of the kerberos keytab file for the MapReduce
+    JobHistory Server.
+  </description>
+  <value>/etc/security/keytab/jhs.service.keytab</value>
+</property>
+
+<property>
+  <name>mapreduce.jobhistory.principal</name>
+  <description>
+    Kerberos principal name for the MapReduce JobHistory Server.
+  </description>
+  <value>jhs/_HOST@REALM.TLD</value>
 </property>
 
 </configuration>

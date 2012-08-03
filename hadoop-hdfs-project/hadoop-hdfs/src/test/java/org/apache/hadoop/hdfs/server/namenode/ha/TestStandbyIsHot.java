@@ -18,10 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
@@ -79,15 +75,12 @@ public class TestStandbyIsHot {
       .nnTopology(MiniDFSNNTopology.simpleHATopology())
       .numDataNodes(3)
       .build();
-    Runtime mockRuntime = mock(Runtime.class);
     try {
       cluster.waitActive();
       cluster.transitionToActive(0);
       
       NameNode nn1 = cluster.getNameNode(0);
       NameNode nn2 = cluster.getNameNode(1);
-      
-      nn2.getNamesystem().getEditLogTailer().setRuntime(mockRuntime);
       
       FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
       
@@ -130,7 +123,6 @@ public class TestStandbyIsHot {
       waitForBlockLocations(cluster, nn2, TEST_FILE, 3);
       
     } finally {
-      verify(mockRuntime, times(0)).exit(anyInt());
       cluster.shutdown();
     }
   }

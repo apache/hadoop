@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
@@ -41,12 +44,11 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.util.Time;
 import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 /**
  * This class tests if a balancer schedules tasks correctly.
@@ -221,7 +223,7 @@ public class TestBalancer {
   throws IOException, TimeoutException {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
-             : System.currentTimeMillis() + timeout;
+             : Time.now() + timeout;
     
     while (true) {
       long[] status = client.getStats();
@@ -233,7 +235,7 @@ public class TestBalancer {
           && usedSpaceVariance < CAPACITY_ALLOWED_VARIANCE)
         break; //done
 
-      if (System.currentTimeMillis() > failtime) {
+      if (Time.now() > failtime) {
         throw new TimeoutException("Cluster failed to reached expected values of "
             + "totalSpace (current: " + status[0] 
             + ", expected: " + expectedTotalSpace 
@@ -259,7 +261,7 @@ public class TestBalancer {
   throws IOException, TimeoutException {
     long timeout = TIMEOUT;
     long failtime = (timeout <= 0L) ? Long.MAX_VALUE
-        : System.currentTimeMillis() + timeout;
+        : Time.now() + timeout;
     final double avgUtilization = ((double)totalUsedSpace) / totalCapacity;
     boolean balanced;
     do {
@@ -272,7 +274,7 @@ public class TestBalancer {
             / datanode.getCapacity();
         if (Math.abs(avgUtilization - nodeUtilization) > BALANCE_ALLOWED_VARIANCE) {
           balanced = false;
-          if (System.currentTimeMillis() > failtime) {
+          if (Time.now() > failtime) {
             throw new TimeoutException(
                 "Rebalancing expected avg utilization to become "
                 + avgUtilization + ", but on datanode " + datanode
@@ -452,6 +454,39 @@ public class TestBalancer {
       cluster.shutdown();
     }
   }
+
+  /**
+   * Test parse method in Balancer#Cli class with wrong number of params
+   */
+
+  @Test
+  public void testBalancerCliParseWithWrongParams() {
+    String parameters[] = new String[] { "-threshold" };
+    String reason =
+        "IllegalArgumentException is expected when value is not specified";
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+    parameters = new String[] { "-policy" };
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+    parameters = new String[] { "-threshold 1 -policy" };
+    try {
+      Balancer.Cli.parse(parameters);
+      fail(reason);
+    } catch (IllegalArgumentException e) {
+
+    }
+
+  }
+
 
   /**
    * @param args

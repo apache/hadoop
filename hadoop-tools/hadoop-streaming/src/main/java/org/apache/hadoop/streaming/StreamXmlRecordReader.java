@@ -64,7 +64,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
     init();
   }
 
-  public void init() throws IOException {
+  public final void init() throws IOException {
     LOG.info("StreamBaseRecordReader.init: " + " start_=" + start_ + " end_=" + end_ + " length_="
              + length_ + " start_ > in_.getPos() =" + (start_ > in_.getPos()) + " " + start_ + " > "
              + in_.getPos());
@@ -185,14 +185,14 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   }
 
   // states
-  final static int CDATA_IN = 10;
-  final static int CDATA_OUT = 11;
-  final static int CDATA_UNK = 12;
-  final static int RECORD_ACCEPT = 13;
+  private final static int CDATA_IN = 10;
+  private final static int CDATA_OUT = 11;
+  private final static int CDATA_UNK = 12;
+  private final static int RECORD_ACCEPT = 13;
   // inputs
-  final static int CDATA_BEGIN = 20;
-  final static int CDATA_END = 21;
-  final static int RECORD_MAYBE = 22;
+  private final static int CDATA_BEGIN = 20;
+  private final static int CDATA_END = 21;
+  private final static int RECORD_MAYBE = 22;
 
   /* also updates firstMatchStart_;*/
   int nextState(int state, int input, int bufPos) {
@@ -293,7 +293,7 @@ public class StreamXmlRecordReader extends StreamBaseRecordReader {
   BufferedInputStream bin_; // Wrap FSDataInputStream for efficient backward seeks 
   long pos_; // Keep track on position with respect encapsulated FSDataInputStream  
 
-  final static int NA = -1;
+  private final static int NA = -1;
   int firstMatchStart_ = 0; // candidate record boundary. Might just be CDATA.
   int firstMatchEnd_ = 0;
 

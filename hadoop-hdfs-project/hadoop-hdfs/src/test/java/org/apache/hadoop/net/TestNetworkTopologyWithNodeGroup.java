@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.net;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.util.HashMap;
 import java.util.Map;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.junit.Test;
 
-public class TestNetworkTopologyWithNodeGroup extends TestCase {
+public class TestNetworkTopologyWithNodeGroup {
   private final static NetworkTopologyWithNodeGroup cluster = new 
       NetworkTopologyWithNodeGroup();
 
@@ -48,14 +51,17 @@ public class TestNetworkTopologyWithNodeGroup extends TestCase {
     }
   }
 
+  @Test
   public void testNumOfChildren() throws Exception {
     assertEquals(cluster.getNumOfLeaves(), dataNodes.length);
   }
 
+  @Test
   public void testNumOfRacks() throws Exception {
     assertEquals(cluster.getNumOfRacks(), 3);
   }
 
+  @Test
   public void testRacks() throws Exception {
     assertEquals(cluster.getNumOfRacks(), 3);
     assertTrue(cluster.isOnSameRack(dataNodes[0], dataNodes[1]));
@@ -67,6 +73,7 @@ public class TestNetworkTopologyWithNodeGroup extends TestCase {
     assertTrue(cluster.isOnSameRack(dataNodes[6], dataNodes[7]));
   }
 
+  @Test
   public void testNodeGroups() throws Exception {
     assertEquals(cluster.getNumOfRacks(), 3);
     assertTrue(cluster.isOnSameNodeGroup(dataNodes[0], dataNodes[1]));
@@ -78,6 +85,7 @@ public class TestNetworkTopologyWithNodeGroup extends TestCase {
     assertFalse(cluster.isOnSameNodeGroup(dataNodes[6], dataNodes[7]));
   }
 
+  @Test
   public void testGetDistance() throws Exception {
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[0]), 0);
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[1]), 2);
@@ -86,6 +94,7 @@ public class TestNetworkTopologyWithNodeGroup extends TestCase {
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[6]), 8);
   }
 
+  @Test
   public void testPseudoSortByDistance() throws Exception {
     DatanodeDescriptor[] testNodes = new DatanodeDescriptor[4];
 
@@ -152,6 +161,7 @@ public class TestNetworkTopologyWithNodeGroup extends TestCase {
   /**
    * This test checks that chooseRandom works for an excluded node.
    */
+  @Test
   public void testChooseRandomExcludedNode() {
     String scope = "~" + NodeBase.getPath(dataNodes[0]);
     Map<Node, Integer> frequency = pickNodesAtRandom(100, scope);

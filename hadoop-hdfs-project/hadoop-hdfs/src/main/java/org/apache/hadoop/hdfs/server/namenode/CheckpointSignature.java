@@ -72,6 +72,7 @@ public class CheckpointSignature extends StorageInfo
    * Get the cluster id from CheckpointSignature
    * @return the cluster id
    */
+  @Override
   public String getClusterID() {
     return clusterID;
   }
@@ -101,6 +102,7 @@ public class CheckpointSignature extends StorageInfo
     this.blockpoolID = blockpoolID;
   }
   
+  @Override
   public String toString() {
     return String.valueOf(layoutVersion) + FIELD_SEPARATOR
          + String.valueOf(namespaceID) + FIELD_SEPARATOR
@@ -111,12 +113,19 @@ public class CheckpointSignature extends StorageInfo
          + blockpoolID ;
   }
 
+  boolean storageVersionMatches(StorageInfo si) throws IOException {
+    return (layoutVersion == si.layoutVersion) && (cTime == si.cTime);
+  }
+
+  boolean isSameCluster(FSImage si) {
+    return namespaceID == si.getStorage().namespaceID &&
+      clusterID.equals(si.getClusterID()) &&
+      blockpoolID.equals(si.getBlockPoolID());
+  }
+
   void validateStorageInfo(FSImage si) throws IOException {
-    if(layoutVersion != si.getStorage().layoutVersion
-       || namespaceID != si.getStorage().namespaceID 
-       || cTime != si.getStorage().cTime
-       || !clusterID.equals(si.getClusterID())
-       || !blockpoolID.equals(si.getBlockPoolID())) {
+    if (!isSameCluster(si)
+        || !storageVersionMatches(si.getStorage())) {
       throw new IOException("Inconsistent checkpoint fields.\n"
           + "LV = " + layoutVersion + " namespaceID = " + namespaceID
           + " cTime = " + cTime
@@ -133,6 +142,7 @@ public class CheckpointSignature extends StorageInfo
   //
   // Comparable interface
   //
+  @Override
   public int compareTo(CheckpointSignature o) {
     return ComparisonChain.start()
       .compare(layoutVersion, o.layoutVersion)
@@ -145,6 +155,7 @@ public class CheckpointSignature extends StorageInfo
       .result();
   }
 
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof CheckpointSignature)) {
       return false;
@@ -152,6 +163,7 @@ public class CheckpointSignature extends StorageInfo
     return compareTo((CheckpointSignature)o) == 0;
   }
 
+  @Override
   public int hashCode() {
     return layoutVersion ^ namespaceID ^
             (int)(cTime ^ mostRecentCheckpointTxId ^ curSegmentTxId)

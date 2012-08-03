@@ -18,32 +18,35 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.util.Collections;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
-
-import java.util.Collections;
-import java.util.List;
-
-import java.io.File;
+import org.junit.Test;
 
 /**
  * A JUnit test for checking if restarting DFS preserves integrity.
  * Specifically with FSImage being written in parallel
  */
-public class TestParallelImageWrite extends TestCase {
+public class TestParallelImageWrite {
   private static final int NUM_DATANODES = 4;
   /** check if DFS remains in proper condition after a restart */
+  @Test
   public void testRestartDFS() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
@@ -127,7 +130,7 @@ public class TestParallelImageWrite extends TestCase {
    * @param fsn - the FSNamesystem being checked.
    * @param numImageDirs - the configured number of StorageDirectory of type IMAGE. 
    * @return - the md5 hash of the most recent FSImage files, which must all be the same.
-   * @throws AssertionFailedError if image files are empty or different,
+   * @throws AssertionError if image files are empty or different,
    *     if less than two StorageDirectory are provided, or if the
    *     actual number of StorageDirectory is less than configured.
    */

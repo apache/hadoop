@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.test;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Helper to configure FileSystemAccess user/group and proxyuser

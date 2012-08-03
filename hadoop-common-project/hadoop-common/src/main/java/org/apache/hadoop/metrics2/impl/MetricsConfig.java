@@ -114,8 +114,7 @@ class MetricsConfig extends SubsetConfiguration {
         MetricsConfig mc = new MetricsConfig(cf, prefix);
         LOG.debug(mc);
         return mc;
-      }
-      catch (ConfigurationException e) {
+      } catch (ConfigurationException e) {
         if (e.getMessage().startsWith("Cannot locate configuration")) {
           continue;
         }
@@ -198,8 +197,7 @@ class MetricsConfig extends SubsetConfiguration {
       T plugin = (T) cls.newInstance();
       plugin.init(name.isEmpty() ? this : subset(name));
       return plugin;
-    }
-    catch (Exception e) {
+    } catch (Exception e) {
       throw new MetricsConfigException("Error creating plugin: "+ clsName, e);
     }
   }
@@ -229,8 +227,7 @@ class MetricsConfig extends SubsetConfiguration {
           LOG.debug(jar);
           urls[i++] = new URL(jar);
         }
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         throw new MetricsConfigException(e);
       }
       if (LOG.isDebugEnabled()) {
@@ -276,8 +273,9 @@ class MetricsConfig extends SubsetConfiguration {
     PrintStream ps = new PrintStream(buffer);
     PropertiesConfiguration tmp = new PropertiesConfiguration();
     tmp.copy(c);
-    try { tmp.save(ps); }
-    catch (Exception e) {
+    try {
+      tmp.save(ps);
+    } catch (Exception e) {
       throw new MetricsConfigException(e);
     }
     return buffer.toString();

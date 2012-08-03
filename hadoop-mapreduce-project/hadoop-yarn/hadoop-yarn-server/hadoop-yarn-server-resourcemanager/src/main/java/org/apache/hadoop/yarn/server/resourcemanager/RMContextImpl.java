@@ -49,6 +49,7 @@ public class RMContextImpl implements RMContext {
     = new ConcurrentHashMap<String, RMNode>();
 
   private AMLivelinessMonitor amLivelinessMonitor;
+  private AMLivelinessMonitor amFinishingMonitor;
   private ContainerAllocationExpirer containerAllocationExpirer;
   private final DelegationTokenRenewer tokenRenewer;
   private final ApplicationTokenSecretManager appTokenSecretManager;
@@ -56,12 +57,14 @@ public class RMContextImpl implements RMContext {
   public RMContextImpl(Store store, Dispatcher rmDispatcher,
       ContainerAllocationExpirer containerAllocationExpirer,
       AMLivelinessMonitor amLivelinessMonitor,
+      AMLivelinessMonitor amFinishingMonitor,
       DelegationTokenRenewer tokenRenewer,
       ApplicationTokenSecretManager appTokenSecretManager) {
     this.store = store;
     this.rmDispatcher = rmDispatcher;
     this.containerAllocationExpirer = containerAllocationExpirer;
     this.amLivelinessMonitor = amLivelinessMonitor;
+    this.amFinishingMonitor = amFinishingMonitor;
     this.tokenRenewer = tokenRenewer;
     this.appTokenSecretManager = appTokenSecretManager;
   }
@@ -104,6 +107,11 @@ public class RMContextImpl implements RMContext {
   @Override
   public AMLivelinessMonitor getAMLivelinessMonitor() {
     return this.amLivelinessMonitor;
+  }
+
+  @Override
+  public AMLivelinessMonitor getAMFinishingMonitor() {
+    return this.amFinishingMonitor;
   }
 
   @Override

@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -132,10 +133,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       }
     }
 
+    @Override
     synchronized public long getGenerationStamp() {
       return theBlock.getGenerationStamp();
     }
 
+    @Override
     synchronized public long getNumBytes() {
       if (!finalized) {
          return bytesRcvd;
@@ -144,6 +147,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       }
     }
 
+    @Override
     synchronized public void setNumBytes(long length) {
       if (!finalized) {
          bytesRcvd = length;
@@ -686,7 +690,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   public synchronized InputStream getBlockInputStream(ExtendedBlock b,
       long seekOffset) throws IOException {
     InputStream result = getBlockInputStream(b);
-    result.skip(seekOffset);
+    IOUtils.skipFully(result, seekOffset);
     return result;
   }
 
@@ -876,14 +880,17 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     DataNode.LOG.info("Registered FSDatasetState MBean");
   }
 
+  @Override
   public void shutdown() {
     if (mbeanName != null) MBeans.unregister(mbeanName);
   }
 
+  @Override
   public String getStorageInfo() {
     return "Simulated FSDataset-" + storageId;
   }
   
+  @Override
   public boolean hasEnoughResource() {
     return true;
   }

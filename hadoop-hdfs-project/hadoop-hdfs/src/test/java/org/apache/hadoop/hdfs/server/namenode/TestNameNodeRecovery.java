@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.spy;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.HashSet;
 import java.util.Set;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.spy;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,10 +39,8 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
-import org.apache.hadoop.hdfs.server.namenode.FSImage;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.DeleteOp;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.OpInstanceCache;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -124,7 +124,7 @@ public class TestNameNodeRecovery {
           }
         } catch (Throwable e) {
           fail("caught IOException while trying to skip over bad " +
-              "transaction.  message was " + e.getMessage() + 
+              "transaction.   message was " + e.getMessage() + 
               "\nstack trace\n" + StringUtils.stringifyException(e));
         }
       }
@@ -200,15 +200,18 @@ public class TestNameNodeRecovery {
       this.paddingLength = paddingLength;
     }
 
+    @Override
     public void addTransactionsToLog(EditLogOutputStream elos,
         OpInstanceCache cache) throws IOException {
       padEditLog(elos, paddingLength);
     }
 
+    @Override
     public long getLastValidTxId() {
       return -1;
     }
 
+    @Override
     public Set<Long> getValidTxIds() {
       return new HashSet<Long>();
     } 
@@ -248,16 +251,19 @@ public class TestNameNodeRecovery {
       this.paddingLength = paddingLength;
     }
 
+    @Override
     public void addTransactionsToLog(EditLogOutputStream elos,
         OpInstanceCache cache) throws IOException {
       padEditLog(elos, paddingLength);
       addDeleteOpcode(elos, cache);
     }
 
+    @Override
     public long getLastValidTxId() {
       return 0;
     }
 
+    @Override
     public Set<Long> getValidTxIds() {
       return Sets.newHashSet(0L);
     } 
@@ -279,6 +285,7 @@ public class TestNameNodeRecovery {
     final private long BAD_TXID = 4;
     final private long MAX_TXID = 10;
     
+    @Override
     public void addTransactionsToLog(EditLogOutputStream elos,
         OpInstanceCache cache) throws IOException {
       for (long txid = 1; txid <= MAX_TXID; txid++) {
@@ -297,10 +304,12 @@ public class TestNameNodeRecovery {
       }
     }
 
+    @Override
     public long getLastValidTxId() {
       return BAD_TXID - 1;
     }
 
+    @Override
     public Set<Long> getValidTxIds() {
       return Sets.newHashSet(1L , 2L, 3L, 5L, 6L, 7L, 8L, 9L, 10L);
     }

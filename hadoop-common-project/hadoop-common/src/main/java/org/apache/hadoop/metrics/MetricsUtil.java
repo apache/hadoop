@@ -93,8 +93,7 @@ public class MetricsUtil {
     String hostName = null;
     try {
       hostName = InetAddress.getLocalHost().getHostName();
-    } 
-    catch (UnknownHostException ex) {
+    } catch (UnknownHostException ex) {
       LOG.info("Unable to obtain hostName", ex);
       hostName = "unknown";
     }

@@ -126,9 +126,6 @@
   </fileSets>
   <moduleSets>
     <moduleSet>
-      <excludes>
-        <exclude>org.apache.hadoop:hadoop-yarn-server-tests</exclude>
-      </excludes>
       <binaries>
         <outputDirectory>share/hadoop/${hadoop.component}</outputDirectory>
         <includeDependencies>false</includeDependencies>
@@ -138,6 +135,7 @@
     <moduleSet>
       <includes>
         <include>org.apache.hadoop:hadoop-mapreduce-client-jobclient</include>
+        <include>org.apache.hadoop:hadoop-yarn-server-tests</include>
       </includes>
       <binaries>
         <attachmentClassifier>tests</attachmentClassifier>
