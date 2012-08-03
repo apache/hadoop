@@ -671,6 +671,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4504. SortValidator writes to wrong directory (Robert Evans 
     via tgraves)
 
+    MAPREDUCE-4503. Should throw InvalidJobConfException if duplicates found in
+    cacheArchives or cacheFiles (Robert Evans via jeagles)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
