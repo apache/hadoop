@@ -400,6 +400,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3756. DelegationTokenFetcher creates 2 HTTP connections, the second 
     one not properly configured. (tucu)
 
+    HDFS-3719. Re-enable append-related tests in TestFileConcurrentReader.
+    (Andrew Wang via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
