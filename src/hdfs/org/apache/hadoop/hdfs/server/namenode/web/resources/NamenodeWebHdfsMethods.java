@@ -139,7 +139,7 @@ public class NamenodeWebHdfsMethods {
 
     if (op == PutOpParam.Op.CREATE) {
       //choose a datanode near to client
-      final DatanodeInfo dn = ns.chooseDatanode(getRemoteAddress(), blocksize);
+      final DatanodeInfo dn = ns.chooseDatanode(path, getRemoteAddress(), blocksize);
       if (dn != null) {
         return dn;
       }

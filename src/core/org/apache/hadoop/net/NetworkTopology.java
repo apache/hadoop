@@ -569,7 +569,7 @@ public class NetworkTopology {
    * @return number of available nodes
    */
   public int countNumOfAvailableNodes(String scope,
-                                      List<Node> excludedNodes) {
+                                      Collection<Node> excludedNodes) {
     boolean isExcluded=false;
     if (scope.startsWith("~")) {
       isExcluded=true;
