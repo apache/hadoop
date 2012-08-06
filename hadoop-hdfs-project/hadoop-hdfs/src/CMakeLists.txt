@@ -95,6 +95,7 @@ set(_FUSE_DFS_VERSION 0.1.0)
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 add_dual_library(hdfs
+    main/native/libhdfs/exception.c
     main/native/libhdfs/hdfs.c
     main/native/libhdfs/jni_helper.c
 )

@@ -557,6 +557,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3719. Re-enable append-related tests in TestFileConcurrentReader.
     (Andrew Wang via atm)
 
+    HDFS-3579. libhdfs: fix exception handling. (Colin Patrick McCabe via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)

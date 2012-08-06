@@ -17,6 +17,7 @@
  */
 
 #include "config.h"
+#include "exception.h"
 #include "jni_helper.h"
 
 #include <stdio.h> 
@@ -85,16 +86,57 @@ static void hdfsThreadDestructor(void *v)
     free(tls);
 }
 
-
-static int validateMethodType(MethType methType)
+void destroyLocalReference(JNIEnv *env, jobject jObject)
 {
-    if (methType != STATIC && methType != INSTANCE) {
-        fprintf(stderr, "Unimplemented method type\n");
-        return 0;
-    }
-    return 1;
+  if (jObject)
+    (*env)->DeleteLocalRef(env, jObject);
 }
 
+static jthrowable validateMethodType(JNIEnv *env, MethType methType)
+{
+    if (methType != STATIC && methType != INSTANCE) {
+        return newRuntimeError(env, "validateMethodType(methType=%d): "
+            "illegal method type.\n", methType);
+    }
+    return NULL;
+}
+
+jthrowable newJavaStr(JNIEnv *env, const char *str, jstring *out)
+{
+    jstring jstr;
+
+    if (!str) {
+        /* Can't pass NULL to NewStringUTF: the result would be
+         * implementation-defined. */
+        *out = NULL;
+        return NULL;
+    }
+    jstr = (*env)->NewStringUTF(env, str);
+    if (!jstr) {
+        /* If NewStringUTF returns NULL, an exception has been thrown,
+         * which we need to handle.  Probaly an OOM. */
+        return getPendingExceptionAndClear(env);
+    }
+    *out = jstr;
+    return NULL;
+}
+
+jthrowable newCStr(JNIEnv *env, jstring jstr, char **out)
+{
+    const char *tmp;
+
+    if (!jstr) {
+        *out = NULL;
+        return NULL;
+    }
+    tmp = (*env)->GetStringUTFChars(env, jstr, NULL);
+    if (!tmp) {
+        return getPendingExceptionAndClear(env);
+    }
+    *out = strdup(tmp);
+    (*env)->ReleaseStringUTFChars(env, jstr, tmp);
+    return NULL;
+}
 
 static int hashTableInit(void)
 {
@@ -156,7 +198,7 @@ static void* searchEntryFromTable(const char *key)
 
 
 
-int invokeMethod(JNIEnv *env, RetVal *retval, Exc *exc, MethType methType,
+jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
                  jobject instObj, const char *className,
                  const char *methName, const char *methSignature, ...)
 {
@@ -167,21 +209,16 @@ int invokeMethod(JNIEnv *env, RetVal *retval, Exc *exc, MethType methType,
     const char *str; 
     char returnType;
     
-    if (! validateMethodType(methType)) {
-      return -1;
-    }
-    cls = globalClassReference(className, env);
-    if (cls == NULL) {
-      return -2;
-    }
-
-    mid = methodIdFromClass(className, methName, methSignature, 
-                            methType, env);
-    if (mid == NULL) {
-        (*env)->ExceptionDescribe(env);
-        return -3;
-    }
-   
+    jthr = validateMethodType(env, methType);
+    if (jthr)
+        return jthr;
+    jthr = globalClassReference(className, env, &cls);
+    if (jthr)
+        return jthr;
+    jthr = methodIdFromClass(className, methName, methSignature, 
+                            methType, env, &mid);
+    if (jthr)
+        return jthr;
     str = methSignature;
     while (*str != ')') str++;
     str++;
@@ -248,43 +285,14 @@ int invokeMethod(JNIEnv *env, RetVal *retval, Exc *exc, MethType methType,
     va_end(args);
 
     jthr = (*env)->ExceptionOccurred(env);
-    if (jthr != NULL) {
-        if (exc != NULL)
-            *exc = jthr;
-        else
-            (*env)->ExceptionDescribe(env);
-        return -1;
+    if (jthr) {
+        (*env)->ExceptionClear(env);
+        return jthr;
     }
-    return 0;
+    return NULL;
 }
 
-jarray constructNewArrayString(JNIEnv *env, Exc *exc, const char **elements, int size) {
-  const char *className = "java/lang/String";
-  jobjectArray result;
-  int i;
-  jclass arrCls = (*env)->FindClass(env, className);
-  if (arrCls == NULL) {
-    fprintf(stderr, "could not find class %s\n",className);
-    return NULL; /* exception thrown */
-  }
-  result = (*env)->NewObjectArray(env, size, arrCls,
-                                  NULL);
-  if (result == NULL) {
-    fprintf(stderr, "ERROR: could not construct new array\n");
-    return NULL; /* out of memory error thrown */
-  }
-  for (i = 0; i < size; i++) {
-    jstring jelem = (*env)->NewStringUTF(env,elements[i]);
-    if (jelem == NULL) {
-      fprintf(stderr, "ERROR: jelem == NULL\n");
-    }
-    (*env)->SetObjectArrayElement(env, result, i, jelem);
-    (*env)->DeleteLocalRef(env, jelem);
-  }
-  return result;
-}
-
-jobject constructNewObjectOfClass(JNIEnv *env, Exc *exc, const char *className, 
+jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out, const char *className, 
                                   const char *ctorSignature, ...)
 {
     va_list args;
@@ -293,50 +301,37 @@ jobject constructNewObjectOfClass(JNIEnv *env, Exc *exc, const char *className,
     jobject jobj;
     jthrowable jthr;
 
-    cls = globalClassReference(className, env);
-    if (cls == NULL) {
-        (*env)->ExceptionDescribe(env);
-      return NULL;
-    }
-
-    mid = methodIdFromClass(className, "<init>", ctorSignature, 
-                            INSTANCE, env);
-    if (mid == NULL) {
-        (*env)->ExceptionDescribe(env);
-        return NULL;
-    } 
+    jthr = globalClassReference(className, env, &cls);
+    if (jthr)
+        return jthr;
+    jthr = methodIdFromClass(className, "<init>", ctorSignature, 
+                            INSTANCE, env, &mid);
+    if (jthr)
+        return jthr;
     va_start(args, ctorSignature);
     jobj = (*env)->NewObjectV(env, cls, mid, args);
     va_end(args);
-    jthr = (*env)->ExceptionOccurred(env);
-    if (jthr != NULL) {
-        if (exc != NULL)
-            *exc = jthr;
-        else
-            (*env)->ExceptionDescribe(env);
-    }
-    return jobj;
+    if (!jobj)
+        return getPendingExceptionAndClear(env);
+    *out = jobj;
+    return NULL;
 }
 
 
-
-
-jmethodID methodIdFromClass(const char *className, const char *methName, 
+jthrowable methodIdFromClass(const char *className, const char *methName, 
                             const char *methSignature, MethType methType, 
-                            JNIEnv *env)
+                            JNIEnv *env, jmethodID *out)
 {
-    jclass cls = globalClassReference(className, env);
-    if (cls == NULL) {
-      fprintf(stderr, "could not find class %s\n", className);
-      return NULL;
-    }
+    jclass cls;
+    jthrowable jthr;
 
+    jthr = globalClassReference(className, env, &cls);
+    if (jthr)
+        return jthr;
     jmethodID mid = 0;
-    if (!validateMethodType(methType)) {
-      fprintf(stderr, "invalid method type\n");
-      return NULL;
-    }
-
+    jthr = validateMethodType(env, methType);
+    if (jthr)
+        return jthr;
     if (methType == STATIC) {
         mid = (*env)->GetStaticMethodID(env, cls, methName, methSignature);
     }
@@ -344,72 +339,88 @@ jmethodID methodIdFromClass(const char *className, const char *methName,
         mid = (*env)->GetMethodID(env, cls, methName, methSignature);
     }
     if (mid == NULL) {
-      fprintf(stderr, "could not find method %s from class %s with signature %s\n",methName, className, methSignature);
+        fprintf(stderr, "could not find method %s from class %s with "
+            "signature %s\n", methName, className, methSignature);
+        return getPendingExceptionAndClear(env);
     }
-    return mid;
+    *out = mid;
+    return NULL;
 }
 
-
-jclass globalClassReference(const char *className, JNIEnv *env)
+jthrowable globalClassReference(const char *className, JNIEnv *env, jclass *out)
 {
     jclass clsLocalRef;
     jclass cls = searchEntryFromTable(className);
     if (cls) {
-        return cls; 
+        *out = cls;
+        return NULL;
     }
-
     clsLocalRef = (*env)->FindClass(env,className);
     if (clsLocalRef == NULL) {
-        (*env)->ExceptionDescribe(env);
-        return NULL;
+        return getPendingExceptionAndClear(env);
     }
     cls = (*env)->NewGlobalRef(env, clsLocalRef);
     if (cls == NULL) {
-        (*env)->ExceptionDescribe(env);
-        return NULL;
+        (*env)->DeleteLocalRef(env, clsLocalRef);
+        return getPendingExceptionAndClear(env);
     }
     (*env)->DeleteLocalRef(env, clsLocalRef);
     insertEntryIntoTable(className, cls);
-    return cls;
+    *out = cls;
+    return NULL;
 }
 
-
-char *classNameOfObject(jobject jobj, JNIEnv *env) {
-    jclass cls, clsClass;
+jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name)
+{
+    jthrowable jthr;
+    jclass cls, clsClass = NULL;
     jmethodID mid;
-    jstring str;
-    const char *cstr;
+    jstring str = NULL;
+    const char *cstr = NULL;
     char *newstr;
 
     cls = (*env)->GetObjectClass(env, jobj);
     if (cls == NULL) {
-        (*env)->ExceptionDescribe(env);
-        return NULL;
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
     }
     clsClass = (*env)->FindClass(env, "java/lang/Class");
     if (clsClass == NULL) {
-        (*env)->ExceptionDescribe(env);
-        return NULL;
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
     }
     mid = (*env)->GetMethodID(env, clsClass, "getName", "()Ljava/lang/String;");
     if (mid == NULL) {
-        (*env)->ExceptionDescribe(env);
-        return NULL;
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
     }
     str = (*env)->CallObjectMethod(env, cls, mid);
     if (str == NULL) {
-        (*env)->ExceptionDescribe(env);
-        return NULL;
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
     }
-
     cstr = (*env)->GetStringUTFChars(env, str, NULL);
-    newstr = strdup(cstr);
-    (*env)->ReleaseStringUTFChars(env, str, cstr);
-    if (newstr == NULL) {
-        perror("classNameOfObject: strdup");
-        return NULL;
+    if (!cstr) {
+        jthr = getPendingExceptionAndClear(env);
+        goto done;
     }
-    return newstr;
+    newstr = strdup(cstr);
+    if (newstr == NULL) {
+        jthr = newRuntimeError(env, "classNameOfObject: out of memory");
+        goto done;
+    }
+    *name = newstr;
+    jthr = NULL;
+
+done:
+    destroyLocalReference(env, cls);
+    destroyLocalReference(env, clsClass);
+    if (str) {
+        if (cstr)
+            (*env)->ReleaseStringUTFChars(env, str, cstr);
+        (*env)->DeleteLocalRef(env, str);
+    }
+    return jthr;
 }
 
 
@@ -429,6 +440,7 @@ static JNIEnv* getGlobalJNIEnv(void)
     JNIEnv *env;
     jint rv = 0; 
     jint noVMs = 0;
+    jthrowable jthr;
 
     rv = JNI_GetCreatedJavaVMs(&(vmBuf[0]), vmBufLength, &noVMs);
     if (rv != 0) {
@@ -501,10 +513,11 @@ static JNIEnv* getGlobalJNIEnv(void)
                     "with error: %d\n", rv);
             return NULL;
         }
-        if (invokeMethod(env, NULL, NULL, STATIC, NULL,
+        jthr = invokeMethod(env, NULL, STATIC, NULL,
                          "org/apache/hadoop/fs/FileSystem",
-                         "loadFileSystems", "()V") != 0) {
-            (*env)->ExceptionDescribe(env);
+                         "loadFileSystems", "()V");
+        if (jthr) {
+            printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "loadFileSystems");
         }
     }
     else {
