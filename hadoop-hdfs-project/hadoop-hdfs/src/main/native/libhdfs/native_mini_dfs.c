@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+#include "exception.h"
 #include "jni_helper.h"
 #include "native_mini_dfs.h"
 
@@ -41,6 +42,8 @@ struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
     jobject bld = NULL, bld2 = NULL, cobj = NULL;
     jvalue  val;
     JNIEnv *env = getJNIEnv();
+    jthrowable jthr;
+
     if (!env) {
         fprintf(stderr, "nmdCreate: unable to construct JNIEnv.\n");
         goto error;
@@ -50,35 +53,38 @@ struct NativeMiniDfsCluster* nmdCreate(struct NativeMiniDfsConf *conf)
         fprintf(stderr, "nmdCreate: OOM");
         goto error;
     }
-    cobj = constructNewObjectOfClass(env, NULL, HADOOP_CONF, "()V");
-    if (!cobj) {
-        fprintf(stderr, "nmdCreate: unable to construct Configuration\n");
+    jthr = constructNewObjectOfClass(env, &cobj, HADOOP_CONF, "()V");
+    if (jthr) {
+        printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "nmdCreate: new Configuration");
         goto error_free_cl;
     }
-    bld = constructNewObjectOfClass(env, NULL, MINIDFS_CLUSTER_BUILDER,
+    jthr = constructNewObjectOfClass(env, &bld, MINIDFS_CLUSTER_BUILDER,
                     "(L"HADOOP_CONF";)V", cobj);
-    if (!bld) {
-        fprintf(stderr, "nmdCreate: unable to construct "
-                "NativeMiniDfsCluster#Builder\n");
+    if (jthr) {
+        printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "nmdCreate: NativeMiniDfsCluster#Builder#Builder");
         goto error_dlr_cobj;
     }
-    if (invokeMethod(env, &val, NULL, INSTANCE, bld,
-            MINIDFS_CLUSTER_BUILDER, "format",
-            "(Z)L" MINIDFS_CLUSTER_BUILDER ";", conf->doFormat)) {
-        fprintf(stderr, "nmdCreate: failed to call Builder#doFormat\n");
+    jthr = invokeMethod(env, &val, INSTANCE, bld, MINIDFS_CLUSTER_BUILDER,
+            "format", "(Z)L" MINIDFS_CLUSTER_BUILDER ";", conf->doFormat);
+    if (jthr) {
+        printExceptionAndFree(env, jthr, PRINT_EXC_ALL, "nmdCreate: "
+                              "Builder::format");
         goto error_dlr_bld;
     }
     bld2 = val.l;
-    if (invokeMethod(env, &val, NULL, INSTANCE, bld,
-            MINIDFS_CLUSTER_BUILDER, "build",
-            "()L" MINIDFS_CLUSTER ";")) {
-        fprintf(stderr, "nmdCreate: failed to call Builder#build\n");
+    jthr = invokeMethod(env, &val, INSTANCE, bld, MINIDFS_CLUSTER_BUILDER,
+            "build", "()L" MINIDFS_CLUSTER ";");
+    if (jthr) {
+        printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                              "nmdCreate: Builder#build");
         goto error_dlr_bld2;
     }
 	cl->obj = (*env)->NewGlobalRef(env, val.l);
     if (!cl->obj) {
-        fprintf(stderr, "nmdCreate: failed to create global reference to "
-            "MiniDFSCluster\n");
+        printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "nmdCreate: NewGlobalRef");
         goto error_dlr_val;
     }
     (*env)->DeleteLocalRef(env, val.l);
@@ -116,13 +122,17 @@ void nmdFree(struct NativeMiniDfsCluster* cl)
 int nmdShutdown(struct NativeMiniDfsCluster* cl)
 {
     JNIEnv *env = getJNIEnv();
+    jthrowable jthr;
+
     if (!env) {
         fprintf(stderr, "nmdShutdown: getJNIEnv failed\n");
         return -EIO;
     }
-    if (invokeMethod(env, NULL, NULL, INSTANCE, cl->obj,
-            MINIDFS_CLUSTER, "shutdown", "()V")) {
-        fprintf(stderr, "nmdShutdown: MiniDFSCluster#shutdown failure\n");
+    jthr = invokeMethod(env, NULL, INSTANCE, cl->obj,
+            MINIDFS_CLUSTER, "shutdown", "()V");
+    if (jthr) {
+        printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "nmdShutdown: MiniDFSCluster#shutdown");
         return -EIO;
     }
     return 0;
@@ -130,15 +140,17 @@ int nmdShutdown(struct NativeMiniDfsCluster* cl)
 
 int nmdWaitClusterUp(struct NativeMiniDfsCluster *cl)
 {
+    jthrowable jthr;
     JNIEnv *env = getJNIEnv();
     if (!env) {
         fprintf(stderr, "nmdWaitClusterUp: getJNIEnv failed\n");
         return -EIO;
     }
-    if (invokeMethod(env, NULL, NULL, INSTANCE, cl->obj,
-            MINIDFS_CLUSTER, "waitClusterUp", "()V")) {
-        fprintf(stderr, "nmdWaitClusterUp: MiniDFSCluster#waitClusterUp "
-                "failure\n");
+    jthr = invokeMethod(env, NULL, INSTANCE, cl->obj,
+            MINIDFS_CLUSTER, "waitClusterUp", "()V");
+    if (jthr) {
+        printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "nmdWaitClusterUp: MiniDFSCluster#waitClusterUp ");
         return -EIO;
     }
     return 0;
@@ -148,6 +160,7 @@ int nmdGetNameNodePort(struct NativeMiniDfsCluster *cl)
 {
     JNIEnv *env = getJNIEnv();
     jvalue jVal;
+    jthrowable jthr;
 
     if (!env) {
         fprintf(stderr, "nmdHdfsConnect: getJNIEnv failed\n");
@@ -155,10 +168,11 @@ int nmdGetNameNodePort(struct NativeMiniDfsCluster *cl)
     }
     // Note: this will have to be updated when HA nativeMiniDfs clusters are
     // supported
-    if (invokeMethod(env, &jVal, NULL, INSTANCE, cl->obj,
-            MINIDFS_CLUSTER, "getNameNodePort", "()I")) {
-        fprintf(stderr, "nmdHdfsConnect: MiniDFSCluster#getNameNodePort "
-                "failure\n");
+    jthr = invokeMethod(env, &jVal, INSTANCE, cl->obj,
+            MINIDFS_CLUSTER, "getNameNodePort", "()I");
+    if (jthr) {
+        printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "nmdHdfsConnect: MiniDFSCluster#getNameNodePort");
         return -EIO;
     }
     return jVal.i;
