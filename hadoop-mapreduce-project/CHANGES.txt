@@ -33,6 +33,8 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4342. Distributed Cache gives inconsistent result if cache files 
     get deleted from tasktracker. (mayank_bansal via tucu)
 
+    MAPREDUCE-4498. Remove hsqldb jar from Hadoop runtime classpath. (rkanter via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
