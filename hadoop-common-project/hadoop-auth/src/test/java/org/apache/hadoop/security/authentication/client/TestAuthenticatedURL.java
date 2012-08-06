@@ -18,6 +18,7 @@ import junit.framework.TestCase;
 import org.mockito.Mockito;
 
 import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -112,6 +113,23 @@ public class TestAuthenticatedURL extends TestCase {
     } catch (Exception ex) {
       fail();
     }
+  }
+
+  public void testConnectionConfigurator() throws Exception {
+    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
+    Mockito.when(conn.getResponseCode()).
+        thenReturn(HttpURLConnection.HTTP_UNAUTHORIZED);
+
+    ConnectionConfigurator connConf =
+        Mockito.mock(ConnectionConfigurator.class);
+    Mockito.when(connConf.configure(Mockito.<HttpURLConnection>any())).
+        thenReturn(conn);
+
+    Authenticator authenticator = Mockito.mock(Authenticator.class);
+
+    AuthenticatedURL aURL = new AuthenticatedURL(authenticator, connConf);
+    aURL.openConnection(new URL("http://foo"), new AuthenticatedURL.Token());
+    Mockito.verify(connConf).configure(Mockito.<HttpURLConnection>any());
   }
 
 }

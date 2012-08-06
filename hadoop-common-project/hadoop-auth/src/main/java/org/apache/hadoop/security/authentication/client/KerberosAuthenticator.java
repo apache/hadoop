@@ -113,6 +113,18 @@ public class KerberosAuthenticator implements Authenticator {
   private URL url;
   private HttpURLConnection conn;
   private Base64 base64;
+  private ConnectionConfigurator connConfigurator;
+
+  /**
+   * Sets a {@link ConnectionConfigurator} instance to use for
+   * configuring connections.
+   *
+   * @param configurator the {@link ConnectionConfigurator} instance.
+   */
+  @Override
+  public void setConnectionConfigurator(ConnectionConfigurator configurator) {
+    connConfigurator = configurator;
+  }
 
   /**
    * Performs SPNEGO authentication against the specified URL.
@@ -135,6 +147,9 @@ public class KerberosAuthenticator implements Authenticator {
       this.url = url;
       base64 = new Base64(0);
       conn = (HttpURLConnection) url.openConnection();
+      if (connConfigurator != null) {
+        conn = connConfigurator.configure(conn);
+      }
       conn.setRequestMethod(AUTH_HTTP_METHOD);
       conn.connect();
       if (isNegotiate()) {
@@ -244,6 +259,9 @@ public class KerberosAuthenticator implements Authenticator {
   private void sendToken(byte[] outToken) throws IOException, AuthenticationException {
     String token = base64.encodeToString(outToken);
     conn = (HttpURLConnection) url.openConnection();
+    if (connConfigurator != null) {
+      conn = connConfigurator.configure(conn);
+    }
     conn.setRequestMethod(AUTH_HTTP_METHOD);
     conn.setRequestProperty(AUTHORIZATION, NEGOTIATE + " " + token);
     conn.connect();

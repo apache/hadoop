@@ -15,6 +15,7 @@ package org.apache.hadoop.security.authentication.client;
 
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import junit.framework.TestCase;
+import org.mockito.Mockito;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
@@ -120,8 +121,11 @@ public abstract class AuthenticatorTestCase extends TestCase {
     try {
       URL url = new URL(getBaseURL());
       AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-      AuthenticatedURL aUrl = new AuthenticatedURL(authenticator);
+      ConnectionConfigurator connConf =
+          Mockito.mock(ConnectionConfigurator.class);
+      AuthenticatedURL aUrl = new AuthenticatedURL(authenticator, connConf);
       HttpURLConnection conn = aUrl.openConnection(url, token);
+      Mockito.verify(connConf).configure(Mockito.<HttpURLConnection>any());
       String tokenStr = token.toString();
       if (doPost) {
         conn.setRequestMethod("POST");

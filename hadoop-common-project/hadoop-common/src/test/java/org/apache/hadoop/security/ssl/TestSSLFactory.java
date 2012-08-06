@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.File;
 import java.net.URL;
 import java.security.GeneralSecurityException;
@@ -156,6 +157,25 @@ public class TestSSLFactory {
     SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     try {
       sslFactory.init();
+    } finally {
+      sslFactory.destroy();
+    }
+  }
+
+  @Test
+  public void testConnectionConfigurator() throws Exception {
+    Configuration conf = createConfiguration(false);
+    conf.set(SSLFactory.SSL_HOSTNAME_VERIFIER_KEY, "STRICT_IE6");
+    SSLFactory sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    try {
+      sslFactory.init();
+      HttpsURLConnection sslConn =
+          (HttpsURLConnection) new URL("https://foo").openConnection();
+      Assert.assertNotSame("STRICT_IE6",
+                           sslConn.getHostnameVerifier().toString());
+      sslFactory.configure(sslConn);
+      Assert.assertEquals("STRICT_IE6",
+                          sslConn.getHostnameVerifier().toString());
     } finally {
       sslFactory.destroy();
     }

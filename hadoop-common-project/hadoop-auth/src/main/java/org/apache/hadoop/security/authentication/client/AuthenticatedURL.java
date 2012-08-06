@@ -171,6 +171,7 @@ public class AuthenticatedURL {
   }
 
   private Authenticator authenticator;
+  private ConnectionConfigurator connConfigurator;
 
   /**
    * Creates an {@link AuthenticatedURL}.
@@ -186,11 +187,25 @@ public class AuthenticatedURL {
    * KerberosAuthenticator} is used.
    */
   public AuthenticatedURL(Authenticator authenticator) {
+    this(authenticator, null);
+  }
+
+  /**
+   * Creates an <code>AuthenticatedURL</code>.
+   *
+   * @param authenticator the {@link Authenticator} instance to use, if <code>null</code> a {@link
+   * KerberosAuthenticator} is used.
+   * @param connConfigurator a connection configurator.
+   */
+  public AuthenticatedURL(Authenticator authenticator,
+                          ConnectionConfigurator connConfigurator) {
     try {
       this.authenticator = (authenticator != null) ? authenticator : DEFAULT_AUTHENTICATOR.newInstance();
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }
+    this.connConfigurator = connConfigurator;
+    this.authenticator.setConnectionConfigurator(connConfigurator);
   }
 
   /**
@@ -216,6 +231,9 @@ public class AuthenticatedURL {
     }
     authenticator.authenticate(url, token);
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    if (connConfigurator != null) {
+      conn = connConfigurator.configure(conn);
+    }
     injectToken(conn, token);
     return conn;
   }
