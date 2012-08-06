@@ -153,10 +153,18 @@
       <excludes>
         <exclude>org.apache.hadoop:hadoop-common</exclude>
         <exclude>org.apache.hadoop:hadoop-hdfs</exclude>
-	<!-- use slf4j from common to avoid multiple binding warnings -->
-	<exclude>org.slf4j:slf4j-api</exclude>
-	<exclude>org.slf4j:slf4j-log4j12</exclude>
+        <!-- use slf4j from common to avoid multiple binding warnings -->
+        <exclude>org.slf4j:slf4j-api</exclude>
+        <exclude>org.slf4j:slf4j-log4j12</exclude>
+        <exclude>org.hsqldb:hsqldb</exclude>
       </excludes>
+    </dependencySet>
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <outputDirectory>/share/hadoop/${hadoop.component}/lib-examples</outputDirectory>
+      <includes>
+        <include>org.hsqldb:hsqldb</include>
+      </includes>
     </dependencySet>
   </dependencySets>
 </assembly>

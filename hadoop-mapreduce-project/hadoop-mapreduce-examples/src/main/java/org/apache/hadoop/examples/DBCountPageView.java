@@ -65,6 +65,16 @@ import org.hsqldb.server.Server;
  * 
  * When called with no arguments the program starts a local HSQLDB server, and 
  * uses this database for storing/retrieving the data. 
+ * <br>
+ * This program requires some additional configuration relating to HSQLDB.  
+ * The the hsqldb jar should be added to the classpath:
+ * <br>
+ * <code>export HADOOP_CLASSPATH=share/hadoop/mapreduce/lib-examples/hsqldb-2.0.0.jar</code>
+ * <br>
+ * And the hsqldb jar should be included with the <code>-libjars</code> 
+ * argument when executing it with hadoop:
+ * <br>
+ * <code>-libjars share/hadoop/mapreduce/lib-examples/hsqldb-2.0.0.jar</code>
  */
 public class DBCountPageView extends Configured implements Tool {
 
