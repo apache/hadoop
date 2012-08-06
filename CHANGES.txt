@@ -1,5 +1,13 @@
 Hadoop Change Log
 
+Release 1.2.0 - unreleased
+
+  NEW FEATURES
+
+    HDFS-385. Backport: Add support for an experimental API that allows a
+    module external to HDFS to specify how HDFS blocks should be placed.
+    (Sumadhur Reddy Bolli via szetszwo)
+ 
 Release 1.1.0 - unreleased
 
   NEW FEATURES

@@ -682,19 +682,18 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                String clientName,
                                DatanodeInfo[] excludedNodes)
     throws IOException {
-
-    List<Node> excludedNodeList = null;
+    HashMap<Node, Node> excludedNodesSet = null;
     if (excludedNodes != null) {
-      // We must copy here, since this list gets modified later on
-      // in ReplicationTargetChooser
-      excludedNodeList = new ArrayList<Node>(
-        Arrays.<Node>asList(excludedNodes));
+      excludedNodesSet = new HashMap<Node, Node>(excludedNodes.length);
+      for (Node node:excludedNodes) {
+        excludedNodesSet.put(node, node);
+      }
     }
 
     stateChangeLog.debug("*BLOCK* NameNode.addBlock: file "
                          +src+" for "+clientName);
     LocatedBlock locatedBlock = namesystem.getAdditionalBlock(
-      src, clientName, excludedNodeList);
+      src, clientName, excludedNodesSet);
     if (locatedBlock != null)
       myMetrics.incrNumAddBlockOps();
     return locatedBlock;
