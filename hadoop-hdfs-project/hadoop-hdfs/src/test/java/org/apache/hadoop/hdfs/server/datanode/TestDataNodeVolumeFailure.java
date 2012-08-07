@@ -281,7 +281,7 @@ public class TestDataNodeVolumeFailure {
         "test-blockpoolid",
         block.getBlockId());
     BlockReaderFactory.newBlockReader(conf, s, file, block, lblock
-        .getBlockToken(), 0, -1);
+        .getBlockToken(), 0, -1, null);
 
     // nothing - if it fails - it will throw and exception
   }

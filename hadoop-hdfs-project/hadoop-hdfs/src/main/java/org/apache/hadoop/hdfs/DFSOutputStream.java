@@ -24,7 +24,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.BufferOverflowException;
@@ -56,6 +58,9 @@ import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
@@ -867,16 +872,26 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       try {
         sock = createSocketForPipeline(src, 2, dfsClient);
         final long writeTimeout = dfsClient.getDatanodeWriteTimeout(2);
-        out = new DataOutputStream(new BufferedOutputStream(
-            NetUtils.getOutputStream(sock, writeTimeout),
+        
+        OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
+        InputStream unbufIn = NetUtils.getInputStream(sock);
+        if (dfsClient.shouldEncryptData()) {
+          IOStreamPair encryptedStreams =
+              DataTransferEncryptor.getEncryptedStreams(
+                  unbufOut, unbufIn, dfsClient.getDataEncryptionKey());
+          unbufOut = encryptedStreams.out;
+          unbufIn = encryptedStreams.in;
+        }
+        out = new DataOutputStream(new BufferedOutputStream(unbufOut,
             HdfsConstants.SMALL_BUFFER_SIZE));
+        in = new DataInputStream(unbufIn);
 
         //send the TRANSFER_BLOCK request
         new Sender(out).transferBlock(block, blockToken, dfsClient.clientName,
             targets);
+        out.flush();
 
         //ack
-        in = new DataInputStream(NetUtils.getInputStream(sock));
         BlockOpResponseProto response =
           BlockOpResponseProto.parseFrom(HdfsProtoUtil.vintPrefixed(in));
         if (SUCCESS != response.getStatus()) {
@@ -1034,77 +1049,98 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       // persist blocks on namenode on next flush
       persistBlocks.set(true);
 
-      boolean result = false;
-      DataOutputStream out = null;
-      try {
-        assert null == s : "Previous socket unclosed";
-        s = createSocketForPipeline(nodes[0], nodes.length, dfsClient);
-        long writeTimeout = dfsClient.getDatanodeWriteTimeout(nodes.length);
-
-        //
-        // Xmit header info to datanode
-        //
-        out = new DataOutputStream(new BufferedOutputStream(
-            NetUtils.getOutputStream(s, writeTimeout),
-            HdfsConstants.SMALL_BUFFER_SIZE));
-        
-        assert null == blockReplyStream : "Previous blockReplyStream unclosed";
-        blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
-
-        // send the request
-        new Sender(out).writeBlock(block, accessToken, dfsClient.clientName,
-            nodes, null, recoveryFlag? stage.getRecoveryStage() : stage, 
-            nodes.length, block.getNumBytes(), bytesSent, newGS, checksum);
-
-        // receive ack for connect
-        BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
-            HdfsProtoUtil.vintPrefixed(blockReplyStream));
-        pipelineStatus = resp.getStatus();
-        firstBadLink = resp.getFirstBadLink();
-        
-        if (pipelineStatus != SUCCESS) {
-          if (pipelineStatus == Status.ERROR_ACCESS_TOKEN) {
-            throw new InvalidBlockTokenException(
-                "Got access token error for connect ack with firstBadLink as "
-                    + firstBadLink);
-          } else {
-            throw new IOException("Bad connect ack with firstBadLink as "
-                + firstBadLink);
+      int refetchEncryptionKey = 1;
+      while (true) {
+        boolean result = false;
+        DataOutputStream out = null;
+        try {
+          assert null == s : "Previous socket unclosed";
+          assert null == blockReplyStream : "Previous blockReplyStream unclosed";
+          s = createSocketForPipeline(nodes[0], nodes.length, dfsClient);
+          long writeTimeout = dfsClient.getDatanodeWriteTimeout(nodes.length);
+          
+          OutputStream unbufOut = NetUtils.getOutputStream(s, writeTimeout);
+          InputStream unbufIn = NetUtils.getInputStream(s);
+          if (dfsClient.shouldEncryptData()) {
+            IOStreamPair encryptedStreams =
+                DataTransferEncryptor.getEncryptedStreams(unbufOut,
+                    unbufIn, dfsClient.getDataEncryptionKey());
+            unbufOut = encryptedStreams.out;
+            unbufIn = encryptedStreams.in;
           }
-        }
-        assert null == blockStream : "Previous blockStream unclosed";
-        blockStream = out;
-        result =  true; // success
-
-      } catch (IOException ie) {
-
-        DFSClient.LOG.info("Exception in createBlockOutputStream", ie);
-
-        // find the datanode that matches
-        if (firstBadLink.length() != 0) {
-          for (int i = 0; i < nodes.length; i++) {
-            if (nodes[i].getXferAddr().equals(firstBadLink)) {
-              errorIndex = i;
-              break;
+          out = new DataOutputStream(new BufferedOutputStream(unbufOut,
+              HdfsConstants.SMALL_BUFFER_SIZE));
+          blockReplyStream = new DataInputStream(unbufIn);
+  
+          //
+          // Xmit header info to datanode
+          //
+  
+          // send the request
+          new Sender(out).writeBlock(block, accessToken, dfsClient.clientName,
+              nodes, null, recoveryFlag? stage.getRecoveryStage() : stage, 
+              nodes.length, block.getNumBytes(), bytesSent, newGS, checksum);
+  
+          // receive ack for connect
+          BlockOpResponseProto resp = BlockOpResponseProto.parseFrom(
+              HdfsProtoUtil.vintPrefixed(blockReplyStream));
+          pipelineStatus = resp.getStatus();
+          firstBadLink = resp.getFirstBadLink();
+          
+          if (pipelineStatus != SUCCESS) {
+            if (pipelineStatus == Status.ERROR_ACCESS_TOKEN) {
+              throw new InvalidBlockTokenException(
+                  "Got access token error for connect ack with firstBadLink as "
+                      + firstBadLink);
+            } else {
+              throw new IOException("Bad connect ack with firstBadLink as "
+                  + firstBadLink);
             }
           }
-        } else {
-          errorIndex = 0;
+          assert null == blockStream : "Previous blockStream unclosed";
+          blockStream = out;
+          result =  true; // success
+  
+        } catch (IOException ie) {
+          DFSClient.LOG.info("Exception in createBlockOutputStream", ie);
+          if (ie instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
+            DFSClient.LOG.info("Will fetch a new encryption key and retry, " 
+                + "encryption key was invalid when connecting to "
+                + nodes[0].getXferAddr() + " : " + ie);
+            // The encryption key used is invalid.
+            refetchEncryptionKey--;
+            dfsClient.clearDataEncryptionKey();
+            // Don't close the socket/exclude this node just yet. Try again with
+            // a new encryption key.
+            continue;
+          }
+  
+          // find the datanode that matches
+          if (firstBadLink.length() != 0) {
+            for (int i = 0; i < nodes.length; i++) {
+              if (nodes[i].getXferAddr().equals(firstBadLink)) {
+                errorIndex = i;
+                break;
+              }
+            }
+          } else {
+            errorIndex = 0;
+          }
+          hasError = true;
+          setLastException(ie);
+          result =  false;  // error
+        } finally {
+          if (!result) {
+            IOUtils.closeSocket(s);
+            s = null;
+            IOUtils.closeStream(out);
+            out = null;
+            IOUtils.closeStream(blockReplyStream);
+            blockReplyStream = null;
+          }
         }
-        hasError = true;
-        setLastException(ie);
-        result =  false;  // error
-      } finally {
-        if (!result) {
-          IOUtils.closeSocket(s);
-          s = null;
-          IOUtils.closeStream(out);
-          out = null;
-          IOUtils.closeStream(blockReplyStream);
-          blockReplyStream = null;
-        }
+        return result;
       }
-      return result;
     }
 
     private LocatedBlock locateFollowingBlock(long start,

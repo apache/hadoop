@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -206,6 +207,9 @@ public class BlockManager {
 
   /** variable to enable check for enough racks */
   final boolean shouldCheckForEnoughRacks;
+  
+  // whether or not to issue block encryption keys.
+  final boolean encryptDataTransfer;
 
   /**
    * When running inside a Standby node, the node may receive block reports
@@ -286,12 +290,18 @@ public class BlockManager {
     this.replicationRecheckInterval = 
       conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
                   DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_DEFAULT) * 1000L;
+    
+    this.encryptDataTransfer =
+        conf.getBoolean(DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY,
+            DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT);
+    
     LOG.info("defaultReplication         = " + defaultReplication);
     LOG.info("maxReplication             = " + maxReplication);
     LOG.info("minReplication             = " + minReplication);
     LOG.info("maxReplicationStreams      = " + maxReplicationStreams);
     LOG.info("shouldCheckForEnoughRacks  = " + shouldCheckForEnoughRacks);
     LOG.info("replicationRecheckInterval = " + replicationRecheckInterval);
+    LOG.info("encryptDataTransfer        = " + encryptDataTransfer);
   }
 
   private static BlockTokenSecretManager createBlockTokenSecretManager(
@@ -311,10 +321,14 @@ public class BlockManager {
     final long lifetimeMin = conf.getLong(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY, 
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT);
+    final String encryptionAlgorithm = conf.get(
+        DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY);
     LOG.info(DFSConfigKeys.DFS_BLOCK_ACCESS_KEY_UPDATE_INTERVAL_KEY
         + "=" + updateMin + " min(s), "
         + DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_LIFETIME_KEY
-        + "=" + lifetimeMin + " min(s)");
+        + "=" + lifetimeMin + " min(s), "
+        + DFSConfigKeys.DFS_DATA_ENCRYPTION_ALGORITHM_KEY
+        + "=" + encryptionAlgorithm);
     
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     boolean isHaEnabled = HAUtil.isHAEnabled(conf, nsId);
@@ -323,10 +337,17 @@ public class BlockManager {
       String thisNnId = HAUtil.getNameNodeId(conf, nsId);
       String otherNnId = HAUtil.getNameNodeIdOfOtherNode(conf, nsId);
       return new BlockTokenSecretManager(updateMin*60*1000L,
-          lifetimeMin*60*1000L, thisNnId.compareTo(otherNnId) < 0 ? 0 : 1);
+          lifetimeMin*60*1000L, thisNnId.compareTo(otherNnId) < 0 ? 0 : 1, null,
+          encryptionAlgorithm);
     } else {
       return new BlockTokenSecretManager(updateMin*60*1000L,
-          lifetimeMin*60*1000L, 0);
+          lifetimeMin*60*1000L, 0, null, encryptionAlgorithm);
+    }
+  }
+  
+  public void setBlockPoolId(String blockPoolId) {
+    if (isBlockTokenEnabled()) {
+      blockTokenSecretManager.setBlockPoolId(blockPoolId);
     }
   }
 
@@ -791,6 +812,14 @@ public class BlockManager {
     if (isBlockTokenEnabled() && nodeinfo.needKeyUpdate) {
       cmds.add(new KeyUpdateCommand(blockTokenSecretManager.exportKeys()));
       nodeinfo.needKeyUpdate = false;
+    }
+  }
+  
+  public DataEncryptionKey generateDataEncryptionKey() {
+    if (isBlockTokenEnabled() && encryptDataTransfer) {
+      return blockTokenSecretManager.generateDataEncryptionKey();
+    } else {
+      return null;
     }
   }
 

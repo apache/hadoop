@@ -606,7 +606,7 @@ public class DatanodeJspHelper {
     try {
       JspHelper.streamBlockInAscii(new InetSocketAddress(req.getServerName(),
           datanodePort), bpid, blockId, blockToken, genStamp, blockSize,
-          startOffset, chunkSizeToView, out, conf);
+          startOffset, chunkSizeToView, out, conf, dfs.getDataEncryptionKey());
     } catch (Exception e) {
       out.print(e);
     }
@@ -699,7 +699,7 @@ public class DatanodeJspHelper {
 
     out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
     JspHelper.streamBlockInAscii(addr, poolId, blockId, accessToken, genStamp,
-        blockSize, startOffset, chunkSizeToView, out, conf);
+        blockSize, startOffset, chunkSizeToView, out, conf, dfs.getDataEncryptionKey());
     out.print("</textarea>");
     dfs.close();
   }

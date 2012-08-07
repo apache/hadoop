@@ -45,6 +45,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKRE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 
@@ -53,6 +55,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -109,12 +112,15 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Op;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -182,6 +188,7 @@ public class DFSClient implements java.io.Closeable {
   final Conf dfsClientConf;
   private Random r = new Random();
   private SocketAddress[] localInterfaceAddrs;
+  private DataEncryptionKey encryptionKey;
 
   /**
    * DFSClient configuration 
@@ -351,9 +358,6 @@ public class DFSClient implements java.io.Closeable {
     this.clientName = "DFSClient_" + dfsClientConf.taskId + "_" + 
         DFSUtil.getRandom().nextInt()  + "_" + Thread.currentThread().getId();
     
-    this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
-    
-    
     if (rpcNamenode != null) {
       // This case is used for testing.
       Preconditions.checkArgument(nameNodeUri == null);
@@ -383,6 +387,8 @@ public class DFSClient implements java.io.Closeable {
       Joiner.on(',').join(localInterfaces)+ "] with addresses [" +
       Joiner.on(',').join(localInterfaceAddrs) + "]");
     }
+    
+    this.socketCache = new SocketCache(dfsClientConf.socketCacheCapacity);
   }
 
   /**
@@ -1457,7 +1463,44 @@ public class DFSClient implements java.io.Closeable {
    */
   public MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
     checkOpen();
-    return getFileChecksum(src, namenode, socketFactory, dfsClientConf.socketTimeout);    
+    return getFileChecksum(src, namenode, socketFactory,
+        dfsClientConf.socketTimeout, getDataEncryptionKey());
+  }
+  
+  @InterfaceAudience.Private
+  public void clearDataEncryptionKey() {
+    LOG.debug("Clearing encryption key");
+    synchronized (this) {
+      encryptionKey = null;
+    }
+  }
+  
+  /**
+   * @return true if data sent between this client and DNs should be encrypted,
+   *         false otherwise.
+   * @throws IOException in the event of error communicating with the NN
+   */
+  boolean shouldEncryptData() throws IOException {
+    FsServerDefaults d = getServerDefaults();
+    return d == null ? false : d.getEncryptDataTransfer();
+  }
+  
+  @InterfaceAudience.Private
+  public DataEncryptionKey getDataEncryptionKey()
+      throws IOException {
+    if (shouldEncryptData()) {
+      synchronized (this) {
+        if (encryptionKey == null ||
+            (encryptionKey != null &&
+             encryptionKey.expiryDate < Time.now())) {
+          LOG.debug("Getting new encryption token from NN");
+          encryptionKey = namenode.getDataEncryptionKey();
+        }
+        return encryptionKey;
+      }
+    } else {
+      return null;
+    }
   }
 
   /**
@@ -1466,8 +1509,8 @@ public class DFSClient implements java.io.Closeable {
    * @return The checksum 
    */
   public static MD5MD5CRC32FileChecksum getFileChecksum(String src,
-      ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout
-      ) throws IOException {
+      ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout,
+      DataEncryptionKey encryptionKey) throws IOException {
     //get all block locations
     LocatedBlocks blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
     if (null == blockLocations) {
@@ -1510,10 +1553,18 @@ public class DFSClient implements java.io.Closeable {
               timeout);
           sock.setSoTimeout(timeout);
 
-          out = new DataOutputStream(
-              new BufferedOutputStream(NetUtils.getOutputStream(sock), 
-                                       HdfsConstants.SMALL_BUFFER_SIZE));
-          in = new DataInputStream(NetUtils.getInputStream(sock));
+          OutputStream unbufOut = NetUtils.getOutputStream(sock);
+          InputStream unbufIn = NetUtils.getInputStream(sock);
+          if (encryptionKey != null) {
+            IOStreamPair encryptedStreams =
+                DataTransferEncryptor.getEncryptedStreams(
+                    unbufOut, unbufIn, encryptionKey);
+            unbufOut = encryptedStreams.out;
+            unbufIn = encryptedStreams.in;
+          }
+          out = new DataOutputStream(new BufferedOutputStream(unbufOut,
+              HdfsConstants.SMALL_BUFFER_SIZE));
+          in = new DataInputStream(unbufIn);
 
           if (LOG.isDebugEnabled()) {
             LOG.debug("write to " + datanodes[j] + ": "

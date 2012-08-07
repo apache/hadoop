@@ -24,6 +24,8 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URI;
 import java.text.DateFormat;
@@ -57,6 +59,8 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
@@ -311,11 +315,22 @@ public class Balancer {
             NetUtils.createSocketAddr(target.datanode.getXferAddr()),
             HdfsServerConstants.READ_TIMEOUT);
         sock.setKeepAlive(true);
-        out = new DataOutputStream( new BufferedOutputStream(
-            sock.getOutputStream(), HdfsConstants.IO_FILE_BUFFER_SIZE));
+        
+        OutputStream unbufOut = sock.getOutputStream();
+        InputStream unbufIn = sock.getInputStream();
+        if (nnc.getDataEncryptionKey() != null) {
+          IOStreamPair encryptedStreams =
+              DataTransferEncryptor.getEncryptedStreams(
+                  unbufOut, unbufIn, nnc.getDataEncryptionKey());
+          unbufOut = encryptedStreams.out;
+          unbufIn = encryptedStreams.in;
+        }
+        out = new DataOutputStream(new BufferedOutputStream(unbufOut,
+            HdfsConstants.IO_FILE_BUFFER_SIZE));
+        in = new DataInputStream(new BufferedInputStream(unbufIn,
+            HdfsConstants.IO_FILE_BUFFER_SIZE));
+        
         sendRequest(out);
-        in = new DataInputStream( new BufferedInputStream(
-            sock.getInputStream(), HdfsConstants.IO_FILE_BUFFER_SIZE));
         receiveResponse(in);
         bytesMoved.inc(block.getNumBytes());
         LOG.info( "Moving block " + block.getBlock().getBlockId() +

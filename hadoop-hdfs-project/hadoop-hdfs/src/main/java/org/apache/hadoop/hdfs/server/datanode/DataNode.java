@@ -53,6 +53,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -100,6 +101,8 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ClientDatanodeProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DNTransferAckProto;
@@ -737,8 +740,6 @@ public class DataNode extends Configured
             + " tokens, or none may be.");
       }
     }
-    // TODO should we check that all federated nns are either enabled or
-    // disabled?
     if (!isBlockTokenEnabled) return;
     
     if (!blockPoolTokenSecretManager.isBlockPoolRegistered(blockPoolId)) {
@@ -750,7 +751,8 @@ public class DataNode extends Configured
           + " min(s), tokenLifetime=" + blockTokenLifetime / (60 * 1000)
           + " min(s)");
       final BlockTokenSecretManager secretMgr = 
-        new BlockTokenSecretManager(0, blockTokenLifetime);
+          new BlockTokenSecretManager(0, blockTokenLifetime, blockPoolId,
+              dnConf.encryptionAlgorithm);
       blockPoolTokenSecretManager.addBlockPool(blockPoolId, secretMgr);
     }
   }
@@ -1390,9 +1392,21 @@ public class DataNode extends Configured
 
         long writeTimeout = dnConf.socketWriteTimeout + 
                             HdfsServerConstants.WRITE_TIMEOUT_EXTENSION * (targets.length-1);
-        OutputStream baseStream = NetUtils.getOutputStream(sock, writeTimeout);
-        out = new DataOutputStream(new BufferedOutputStream(baseStream,
+        OutputStream unbufOut = NetUtils.getOutputStream(sock, writeTimeout);
+        InputStream unbufIn = NetUtils.getInputStream(sock);
+        if (dnConf.encryptDataTransfer) {
+          IOStreamPair encryptedStreams =
+              DataTransferEncryptor.getEncryptedStreams(
+                  unbufOut, unbufIn,
+                  blockPoolTokenSecretManager.generateDataEncryptionKey(
+                      b.getBlockPoolId()));
+          unbufOut = encryptedStreams.out;
+          unbufIn = encryptedStreams.in;
+        }
+        
+        out = new DataOutputStream(new BufferedOutputStream(unbufOut,
             HdfsConstants.SMALL_BUFFER_SIZE));
+        in = new DataInputStream(unbufIn);
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
             false, false, DataNode.this, null);
         DatanodeInfo srcNode = new DatanodeInfo(bpReg);
@@ -1410,7 +1424,7 @@ public class DataNode extends Configured
             stage, 0, 0, 0, 0, blockSender.getChecksum());
 
         // send data & checksum
-        blockSender.sendBlock(out, baseStream, null);
+        blockSender.sendBlock(out, unbufOut, null);
 
         // no response necessary
         LOG.info(getClass().getSimpleName() + ": Transmitted " + b
@@ -1418,7 +1432,6 @@ public class DataNode extends Configured
 
         // read ack
         if (isClient) {
-          in = new DataInputStream(NetUtils.getInputStream(sock));
           DNTransferAckProto closeAck = DNTransferAckProto.parseFrom(
               HdfsProtoUtil.vintPrefixed(in));
           if (LOG.isDebugEnabled()) {
