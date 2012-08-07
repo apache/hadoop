@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
-import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster.Builder;
 import org.apache.hadoop.hdfs.qjournal.client.AsyncLogger;
 import org.apache.hadoop.hdfs.qjournal.client.AsyncLoggerSet;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
@@ -59,7 +58,8 @@ public class TestEpochsAreUnique {
       // With no failures or contention, epochs should increase one-by-one
       for (int i = 0; i < 5; i++) {
         AsyncLoggerSet als = new AsyncLoggerSet(
-            QuorumJournalManager.createLoggers(conf, uri, FAKE_NSINFO));
+            QuorumJournalManager.createLoggers(conf, uri, FAKE_NSINFO,
+                IPCLoggerChannel.FACTORY));
         als.createNewUniqueEpoch(FAKE_NSINFO);
         assertEquals(i + 1, als.getEpoch());
       }
@@ -69,7 +69,8 @@ public class TestEpochsAreUnique {
       // skipping some
       for (int i = 0; i < 20; i++) {
         AsyncLoggerSet als = new AsyncLoggerSet(
-            makeFaulty(QuorumJournalManager.createLoggers(conf, uri, FAKE_NSINFO)));
+            makeFaulty(QuorumJournalManager.createLoggers(conf, uri, FAKE_NSINFO,
+                IPCLoggerChannel.FACTORY)));
         long newEpoch = -1;
         while (true) {
           try {

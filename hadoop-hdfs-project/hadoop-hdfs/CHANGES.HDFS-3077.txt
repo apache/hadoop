@@ -10,3 +10,5 @@ HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs (todd)
 HDFS-3693. JNStorage should read its storage info even before a writer becomes active (todd)
 
 HDFS-3725. Fix QJM startup when individual JNs have gaps (todd)
+
+HDFS-3741. Exhaustive failure injection test for skipped RPCs (todd)

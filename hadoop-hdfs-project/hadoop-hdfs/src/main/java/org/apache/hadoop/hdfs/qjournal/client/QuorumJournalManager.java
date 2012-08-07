@@ -34,8 +34,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocolPB.PBHelper;
-import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
@@ -78,14 +76,20 @@ public class QuorumJournalManager implements JournalManager {
   
   private final AsyncLoggerSet loggers;
   
-  public QuorumJournalManager(Configuration conf,
+  QuorumJournalManager(Configuration conf,
       URI uri, NamespaceInfo nsInfo) throws IOException {
+    this(conf, uri, nsInfo, IPCLoggerChannel.FACTORY);
+  }
+  
+  QuorumJournalManager(Configuration conf,
+      URI uri, NamespaceInfo nsInfo,
+      AsyncLogger.Factory loggerFactory) throws IOException {
     Preconditions.checkArgument(conf != null, "must be configured");
 
     this.conf = conf;
     this.uri = uri;
     this.nsInfo = nsInfo;
-    this.loggers = new AsyncLoggerSet(createLoggers());
+    this.loggers = new AsyncLoggerSet(createLoggers(loggerFactory));
 
     // Configure timeouts.
     this.startSegmentTimeoutMs = conf.getInt(
@@ -106,6 +110,11 @@ public class QuorumJournalManager implements JournalManager {
         
   }
   
+  protected List<AsyncLogger> createLoggers(
+      AsyncLogger.Factory factory) throws IOException {
+    return createLoggers(conf, uri, nsInfo, factory);
+  }
+
   static String parseJournalId(URI uri) {
     String path = uri.getPath();
     Preconditions.checkArgument(path != null && !path.isEmpty(),
@@ -234,17 +243,14 @@ public class QuorumJournalManager implements JournalManager {
       }
   };
 
-  protected List<AsyncLogger> createLoggers() throws IOException {
-    return createLoggers(conf, uri, nsInfo);
-  }
-  
   static List<AsyncLogger> createLoggers(Configuration conf,
-      URI uri, NamespaceInfo nsInfo) throws IOException {
+      URI uri, NamespaceInfo nsInfo, AsyncLogger.Factory factory)
+          throws IOException {
     List<AsyncLogger> ret = Lists.newArrayList();
     List<InetSocketAddress> addrs = getLoggerAddresses(uri);
     String jid = parseJournalId(uri);
     for (InetSocketAddress addr : addrs) {
-      ret.add(new IPCLoggerChannel(conf, nsInfo, jid, addr));
+      ret.add(factory.createLogger(conf, nsInfo, jid, addr));
     }
     return ret;
   }

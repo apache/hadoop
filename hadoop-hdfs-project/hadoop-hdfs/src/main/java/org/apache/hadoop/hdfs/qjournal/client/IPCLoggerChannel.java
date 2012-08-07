@@ -65,7 +65,7 @@ import com.google.common.util.concurrent.UncaughtExceptionHandlers;
 public class IPCLoggerChannel implements AsyncLogger {
 
   private final Configuration conf;
-  private final InetSocketAddress addr;
+  protected final InetSocketAddress addr;
   private QJournalProtocol proxy;
 
   private final ListeningExecutorService executor;
@@ -87,7 +87,16 @@ public class IPCLoggerChannel implements AsyncLogger {
    * overflows and it starts to treat the logger as having errored.
    */
   private final int queueSizeLimitBytes;
+
   
+  static final Factory FACTORY = new AsyncLogger.Factory() {
+    @Override
+    public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
+        String journalId, InetSocketAddress addr) {
+      return new IPCLoggerChannel(conf, nsInfo, journalId, addr);
+    }
+  };
+
   public IPCLoggerChannel(Configuration conf,
       NamespaceInfo nsInfo,
       String journalId,
@@ -131,15 +140,18 @@ public class IPCLoggerChannel implements AsyncLogger {
   
   protected QJournalProtocol getProxy() throws IOException {
     if (proxy != null) return proxy;
-
+    proxy = createProxy();
+    return proxy;
+  }
+  
+  protected QJournalProtocol createProxy() throws IOException {
     RPC.setProtocolEngine(conf,
         QJournalProtocolPB.class, ProtobufRpcEngine.class);
     QJournalProtocolPB pbproxy = RPC.getProxy(
         QJournalProtocolPB.class,
         RPC.getProtocolVersion(QJournalProtocolPB.class),
         addr, conf);
-    proxy = new QJournalProtocolTranslatorPB(pbproxy);
-    return proxy;
+    return new QJournalProtocolTranslatorPB(pbproxy);
   }
   
   @Override

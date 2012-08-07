@@ -32,8 +32,6 @@ import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -46,6 +44,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+
+import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeOp;
 
 /**
  * True unit tests for QuorumJournalManager
@@ -70,7 +70,7 @@ public class TestQuorumJournalManagerUnit {
 
     qjm = new QuorumJournalManager(conf, new URI("qjournal://host/jid"), FAKE_NSINFO) {
       @Override
-      protected List<AsyncLogger> createLoggers() {
+      protected List<AsyncLogger> createLoggers(AsyncLogger.Factory factory) {
         return spyLoggers;
       }
     };
@@ -191,11 +191,5 @@ public class TestQuorumJournalManagerUnit {
     futureReturns(null).when(spyLoggers.get(2)).startLogSegment(Mockito.anyLong());
     EditLogOutputStream stm = qjm.startLogSegment(1);
     return stm;
-  }
-
-  static void writeOp(EditLogOutputStream stm, long txid) throws IOException {
-    FSEditLogOp op = NameNodeAdapter.createMkdirOp("tx " + txid);
-    op.setTransactionId(txid);
-    stm.write(op);
   }
 }
