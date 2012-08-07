@@ -184,6 +184,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
 
+    HDFS-3291. add test that covers HttpFS working w/ a non-HDFS Hadoop
+    filesystem (tucu)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
