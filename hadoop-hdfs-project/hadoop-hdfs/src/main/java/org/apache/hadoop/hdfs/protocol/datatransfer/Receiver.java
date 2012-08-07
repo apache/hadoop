@@ -38,10 +38,10 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProt
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class Receiver implements DataTransferProtocol {
-  protected final DataInputStream in;
-
-  /** Create a receiver for DataTransferProtocol with a socket. */
-  protected Receiver(final DataInputStream in) {
+  protected DataInputStream in;
+  
+  /** Initialize a receiver for DataTransferProtocol with a socket. */
+  protected void initialize(final DataInputStream in) {
     this.in = in;
   }
 

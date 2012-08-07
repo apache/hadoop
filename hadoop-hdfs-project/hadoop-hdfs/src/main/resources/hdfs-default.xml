@@ -1014,4 +1014,25 @@
   </description>
 </property>
 
+<property>
+  <name>dfs.encrypt.data.transfer</name>
+  <value>false</value>
+  <description>
+    Whether or not actual block data that is read/written from/to HDFS should
+    be encrypted on the wire. This only needs to be set on the NN and DNs,
+    clients will deduce this automatically.
+  </description>
+</property>
+
+<property>
+  <name>dfs.encrypt.data.transfer.algorithm</name>
+  <value></value>
+  <description>
+    This value may be set to either "3des" or "rc4". If nothing is set, then
+    the configured JCE default on the system is used (usually 3DES.) It is
+    widely believed that 3DES is more cryptographically secure, but RC4 is
+    substantially faster.
+  </description>
+</property>
+
 </configuration>

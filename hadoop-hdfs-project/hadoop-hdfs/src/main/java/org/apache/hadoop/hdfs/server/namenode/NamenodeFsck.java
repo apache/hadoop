@@ -560,7 +560,8 @@ public class NamenodeFsck {
             block.getBlockId());
         blockReader = BlockReaderFactory.newBlockReader(
             conf, s, file, block, lblock
-            .getBlockToken(), 0, -1);
+            .getBlockToken(), 0, -1,
+            namenode.getRpcServer().getDataEncryptionKey());
         
       }  catch (IOException ex) {
         // Put chosen node into dead list, continue

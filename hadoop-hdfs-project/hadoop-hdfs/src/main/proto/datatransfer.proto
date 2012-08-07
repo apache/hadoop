@@ -25,6 +25,17 @@ option java_generate_equals_and_hash = true;
 
 import "hdfs.proto";
 
+message DataTransferEncryptorMessageProto {
+  enum DataTransferEncryptorStatus {
+    SUCCESS = 0;
+    ERROR_UNKNOWN_KEY = 1;
+    ERROR = 2;
+  }
+  required DataTransferEncryptorStatus status = 1;
+  optional bytes payload = 2;
+  optional string message = 3;
+}
+
 message BaseHeaderProto {
   required ExtendedBlockProto block = 1;
   optional BlockTokenIdentifierProto token = 2;

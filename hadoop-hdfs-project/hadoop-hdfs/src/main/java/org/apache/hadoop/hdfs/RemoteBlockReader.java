@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtoUtil;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
@@ -458,7 +459,9 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   void sendReadResult(Socket sock, Status statusCode) {
     assert !sentStatusCode : "already sent status code to " + sock;
     try {
-      RemoteBlockReader2.writeReadResult(sock, statusCode);
+      RemoteBlockReader2.writeReadResult(
+          NetUtils.getOutputStream(sock, HdfsServerConstants.WRITE_TIMEOUT),
+          statusCode);
       sentStatusCode = true;
     } catch (IOException e) {
       // It's ok not to be able to send this. But something is probably wrong.
@@ -482,6 +485,13 @@ public class RemoteBlockReader extends FSInputChecker implements BlockReader {
   @Override
   public int read(ByteBuffer buf) throws IOException {
     throw new UnsupportedOperationException("readDirect unsupported in RemoteBlockReader");
+  }
+
+  @Override
+  public IOStreamPair getStreams() {
+    // This class doesn't support encryption, which is the only thing this
+    // method is used for. See HDFS-3637.
+    return null;
   }
 
 }
