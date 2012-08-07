@@ -35,6 +35,9 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4498. Remove hsqldb jar from Hadoop runtime classpath. (rkanter via tucu)
 
+    MAPREDUCE-4494. TestFifoScheduler failing with Metrics source QueueMetrics,q0=default 
+    already exists!. (ahmed.radwan via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES

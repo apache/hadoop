@@ -280,6 +280,7 @@ public class TestFifoScheduler {
     Assert.assertEquals("Allocation headroom", 1 * GB,
         allocation2.getResourceLimit().getMemory());
 
+    rm.stop();
   }
   
 
