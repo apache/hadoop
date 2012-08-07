@@ -18,19 +18,6 @@
 
 package org.apache.hadoop.fs.http.client;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.Writer;
-import java.net.URI;
-import java.net.URL;
-import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
@@ -47,7 +34,6 @@ import org.apache.hadoop.test.HadoopUsersConfTestHelper;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
 import org.apache.hadoop.test.TestHdfs;
-import org.apache.hadoop.test.TestHdfsHelper;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
 import org.junit.Assert;
@@ -57,8 +43,31 @@ import org.junit.runners.Parameterized;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.webapp.WebAppContext;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.URI;
+import java.net.URL;
+import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
+import java.util.Collection;
+
 @RunWith(value = Parameterized.class)
-public class TestHttpFSFileSystem extends HFSTestCase {
+public abstract class BaseTestHttpFSWith extends HFSTestCase {
+
+  protected abstract Path getProxiedFSTestDir();
+
+  protected abstract String getProxiedFSURI();
+
+  protected abstract Configuration getProxiedFSConf();
+
+  protected boolean isLocalFS() {
+    return getProxiedFSURI().startsWith("file://");
+  }
 
   private void createHttpFSServer() throws Exception {
     File homeDir = TestDirHelper.getTestDir();
@@ -72,8 +81,8 @@ public class TestHttpFSFileSystem extends HFSTestCase {
     w.write("secret");
     w.close();
 
-    //HDFS configuration
-    String fsDefaultName = TestHdfsHelper.getHdfsConf().get(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY);
+    //FileSystem being served by HttpFS
+    String fsDefaultName = getProxiedFSURI();
     Configuration conf = new Configuration(false);
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, fsDefaultName);
     File hdfsSite = new File(new File(homeDir, "conf"), "hdfs-site.xml");
@@ -105,7 +114,7 @@ public class TestHttpFSFileSystem extends HFSTestCase {
     return HttpFSFileSystem.class;
   }
 
-  protected FileSystem getHttpFileSystem() throws Exception {
+  protected FileSystem getHttpFSFileSystem() throws Exception {
     Configuration conf = new Configuration();
     conf.set("fs.webhdfs.impl", getFileSystemClass().getName());
     URI uri = new URI("webhdfs://" +
@@ -114,7 +123,7 @@ public class TestHttpFSFileSystem extends HFSTestCase {
   }
 
   protected void testGet() throws Exception {
-    FileSystem fs = getHttpFileSystem();
+    FileSystem fs = getHttpFSFileSystem();
     Assert.assertNotNull(fs);
     URI uri = new URI("webhdfs://" +
                       TestJettyHelper.getJettyURL().toURI().getAuthority());
@@ -123,13 +132,13 @@ public class TestHttpFSFileSystem extends HFSTestCase {
   }
 
   private void testOpen() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    Path path = new Path(getProxiedFSTestDir(), "foo.txt");
     OutputStream os = fs.create(path);
     os.write(1);
     os.close();
     fs.close();
-    fs = getHttpFileSystem();
+    fs = getHttpFSFileSystem();
     InputStream is = fs.open(new Path(path.toUri().getPath()));
     Assert.assertEquals(is.read(), 1);
     is.close();
@@ -137,7 +146,7 @@ public class TestHttpFSFileSystem extends HFSTestCase {
   }
 
   private void testCreate(Path path, boolean override) throws Exception {
-    FileSystem fs = getHttpFileSystem();
+    FileSystem fs = getHttpFSFileSystem();
     FsPermission permission = new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE);
     OutputStream os = fs.create(new Path(path.toUri().getPath()), permission, override, 1024,
                                 (short) 2, 100 * 1024 * 1024, null);
@@ -145,10 +154,12 @@ public class TestHttpFSFileSystem extends HFSTestCase {
     os.close();
     fs.close();
 
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs = FileSystem.get(getProxiedFSConf());
     FileStatus status = fs.getFileStatus(path);
-    Assert.assertEquals(status.getReplication(), 2);
-    Assert.assertEquals(status.getBlockSize(), 100 * 1024 * 1024);
+    if (!isLocalFS()) {
+      Assert.assertEquals(status.getReplication(), 2);
+      Assert.assertEquals(status.getBlockSize(), 100 * 1024 * 1024);
+    }
     Assert.assertEquals(status.getPermission(), permission);
     InputStream is = fs.open(path);
     Assert.assertEquals(is.read(), 1);
@@ -157,66 +168,70 @@ public class TestHttpFSFileSystem extends HFSTestCase {
   }
 
   private void testCreate() throws Exception {
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
+    Path path = new Path(getProxiedFSTestDir(), "foo.txt");
     testCreate(path, false);
     testCreate(path, true);
     try {
       testCreate(path, false);
-      Assert.fail();
+      Assert.fail("the create should have failed because the file exists " +
+                  "and override is FALSE");
     } catch (IOException ex) {
 
     } catch (Exception ex) {
-      Assert.fail();
+      Assert.fail(ex.toString());
     }
   }
 
   private void testAppend() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
-    OutputStream os = fs.create(path);
-    os.write(1);
-    os.close();
-    fs.close();
-    fs = getHttpFileSystem();
-    os = fs.append(new Path(path.toUri().getPath()));
-    os.write(2);
-    os.close();
-    fs.close();
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    InputStream is = fs.open(path);
-    Assert.assertEquals(is.read(), 1);
-    Assert.assertEquals(is.read(), 2);
-    Assert.assertEquals(is.read(), -1);
-    is.close();
-    fs.close();
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+      fs.mkdirs(getProxiedFSTestDir());
+      Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(path);
+      os.write(1);
+      os.close();
+      fs.close();
+      fs = getHttpFSFileSystem();
+      os = fs.append(new Path(path.toUri().getPath()));
+      os.write(2);
+      os.close();
+      fs.close();
+      fs = FileSystem.get(getProxiedFSConf());
+      InputStream is = fs.open(path);
+      Assert.assertEquals(is.read(), 1);
+      Assert.assertEquals(is.read(), 2);
+      Assert.assertEquals(is.read(), -1);
+      is.close();
+      fs.close();
+    }
   }
 
   private void testRename() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo");
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    Path path = new Path(getProxiedFSTestDir(), "foo");
     fs.mkdirs(path);
     fs.close();
-    fs = getHttpFileSystem();
+    fs = getHttpFSFileSystem();
     Path oldPath = new Path(path.toUri().getPath());
     Path newPath = new Path(path.getParent(), "bar");
     fs.rename(oldPath, newPath);
     fs.close();
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs = FileSystem.get(getProxiedFSConf());
     Assert.assertFalse(fs.exists(oldPath));
     Assert.assertTrue(fs.exists(newPath));
     fs.close();
   }
 
   private void testDelete() throws Exception {
-    Path foo = new Path(TestHdfsHelper.getHdfsTestDir(), "foo");
-    Path bar = new Path(TestHdfsHelper.getHdfsTestDir(), "bar");
-    Path foe = new Path(TestHdfsHelper.getHdfsTestDir(), "foe");
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    Path foo = new Path(getProxiedFSTestDir(), "foo");
+    Path bar = new Path(getProxiedFSTestDir(), "bar");
+    Path foe = new Path(getProxiedFSTestDir(), "foe");
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
     fs.mkdirs(foo);
     fs.mkdirs(new Path(bar, "a"));
     fs.mkdirs(foe);
 
-    FileSystem hoopFs = getHttpFileSystem();
+    FileSystem hoopFs = getHttpFSFileSystem();
     Assert.assertTrue(hoopFs.delete(new Path(foo.toUri().getPath()), false));
     Assert.assertFalse(fs.exists(foo));
     try {
@@ -239,15 +254,15 @@ public class TestHttpFSFileSystem extends HFSTestCase {
   }
 
   private void testListStatus() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    Path path = new Path(getProxiedFSTestDir(), "foo.txt");
     OutputStream os = fs.create(path);
     os.write(1);
     os.close();
     FileStatus status1 = fs.getFileStatus(path);
     fs.close();
 
-    fs = getHttpFileSystem();
+    fs = getHttpFSFileSystem();
     FileStatus status2 = fs.getFileStatus(new Path(path.toUri().getPath()));
     fs.close();
 
@@ -267,16 +282,20 @@ public class TestHttpFSFileSystem extends HFSTestCase {
   }
 
   private void testWorkingdirectory() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
     Path workingDir = fs.getWorkingDirectory();
     fs.close();
 
-    fs = getHttpFileSystem();
-    Path hoopWorkingDir = fs.getWorkingDirectory();
+    fs = getHttpFSFileSystem();
+    if (isLocalFS()) {
+      fs.setWorkingDirectory(workingDir);
+    }
+    Path httpFSWorkingDir = fs.getWorkingDirectory();
     fs.close();
-    Assert.assertEquals(hoopWorkingDir.toUri().getPath(), workingDir.toUri().getPath());
+    Assert.assertEquals(httpFSWorkingDir.toUri().getPath(),
+                        workingDir.toUri().getPath());
 
-    fs = getHttpFileSystem();
+    fs = getHttpFSFileSystem();
     fs.setWorkingDirectory(new Path("/tmp"));
     workingDir = fs.getWorkingDirectory();
     fs.close();
@@ -284,62 +303,64 @@ public class TestHttpFSFileSystem extends HFSTestCase {
   }
 
   private void testMkdirs() throws Exception {
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo");
-    FileSystem fs = getHttpFileSystem();
+    Path path = new Path(getProxiedFSTestDir(), "foo");
+    FileSystem fs = getHttpFSFileSystem();
     fs.mkdirs(path);
     fs.close();
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs = FileSystem.get(getProxiedFSConf());
     Assert.assertTrue(fs.exists(path));
     fs.close();
   }
 
   private void testSetTimes() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
-    OutputStream os = fs.create(path);
-    os.write(1);
-    os.close();
-    FileStatus status1 = fs.getFileStatus(path);
-    fs.close();
-    long at = status1.getAccessTime();
-    long mt = status1.getModificationTime();
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+      Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(path);
+      os.write(1);
+      os.close();
+      FileStatus status1 = fs.getFileStatus(path);
+      fs.close();
+      long at = status1.getAccessTime();
+      long mt = status1.getModificationTime();
 
-    fs = getHttpFileSystem();
-    fs.setTimes(path, mt + 10, at + 20);
-    fs.close();
+      fs = getHttpFSFileSystem();
+      fs.setTimes(path, mt - 10, at - 20);
+      fs.close();
 
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    status1 = fs.getFileStatus(path);
-    fs.close();
-    long atNew = status1.getAccessTime();
-    long mtNew = status1.getModificationTime();
-    Assert.assertEquals(mtNew, mt + 10);
-    Assert.assertEquals(atNew, at + 20);
+      fs = FileSystem.get(getProxiedFSConf());
+      status1 = fs.getFileStatus(path);
+      fs.close();
+      long atNew = status1.getAccessTime();
+      long mtNew = status1.getModificationTime();
+      Assert.assertEquals(mtNew, mt - 10);
+      Assert.assertEquals(atNew, at - 20);
+    }
   }
 
   private void testSetPermission() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foodir");
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    Path path = new Path(getProxiedFSTestDir(), "foodir");
     fs.mkdirs(path);
 
-    fs = getHttpFileSystem();
+    fs = getHttpFSFileSystem();
     FsPermission permission1 = new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE);
     fs.setPermission(path, permission1);
     fs.close();
 
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs = FileSystem.get(getProxiedFSConf());
     FileStatus status1 = fs.getFileStatus(path);
     fs.close();
     FsPermission permission2 = status1.getPermission();
     Assert.assertEquals(permission2, permission1);
 
-    //sticky bit 
-    fs = getHttpFileSystem();
+    //sticky bit
+    fs = getHttpFSFileSystem();
     permission1 = new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE, true);
     fs.setPermission(path, permission1);
     fs.close();
 
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs = FileSystem.get(getProxiedFSConf());
     status1 = fs.getFileStatus(path);
     fs.close();
     permission2 = status1.getPermission();
@@ -348,70 +369,76 @@ public class TestHttpFSFileSystem extends HFSTestCase {
   }
 
   private void testSetOwner() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
-    OutputStream os = fs.create(path);
-    os.write(1);
-    os.close();
-    fs.close();
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+      fs.mkdirs(getProxiedFSTestDir());
+      Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(path);
+      os.write(1);
+      os.close();
+      fs.close();
 
-    fs = getHttpFileSystem();
-    String user = HadoopUsersConfTestHelper.getHadoopUsers()[1];
-    String group = HadoopUsersConfTestHelper.getHadoopUserGroups(user)[0];
-    fs.setOwner(path, user, group);
-    fs.close();
+      fs = getHttpFSFileSystem();
+      String user = HadoopUsersConfTestHelper.getHadoopUsers()[1];
+      String group = HadoopUsersConfTestHelper.getHadoopUserGroups(user)[0];
+      fs.setOwner(path, user, group);
+      fs.close();
 
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    FileStatus status1 = fs.getFileStatus(path);
-    fs.close();
-    Assert.assertEquals(status1.getOwner(), user);
-    Assert.assertEquals(status1.getGroup(), group);
+      fs = FileSystem.get(getProxiedFSConf());
+      FileStatus status1 = fs.getFileStatus(path);
+      fs.close();
+      Assert.assertEquals(status1.getOwner(), user);
+      Assert.assertEquals(status1.getGroup(), group);
+    }
   }
 
   private void testSetReplication() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    Path path = new Path(getProxiedFSTestDir(), "foo.txt");
     OutputStream os = fs.create(path);
     os.write(1);
     os.close();
     fs.close();
     fs.setReplication(path, (short) 2);
 
-    fs = getHttpFileSystem();
+    fs = getHttpFSFileSystem();
     fs.setReplication(path, (short) 1);
     fs.close();
 
-    fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
+    fs = FileSystem.get(getProxiedFSConf());
     FileStatus status1 = fs.getFileStatus(path);
     fs.close();
     Assert.assertEquals(status1.getReplication(), (short) 1);
   }
 
   private void testChecksum() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
-    OutputStream os = fs.create(path);
-    os.write(1);
-    os.close();
-    FileChecksum hdfsChecksum = fs.getFileChecksum(path);
-    fs.close();
-    fs = getHttpFileSystem();
-    FileChecksum httpChecksum = fs.getFileChecksum(path);
-    fs.close();
-    Assert.assertEquals(httpChecksum.getAlgorithmName(), hdfsChecksum.getAlgorithmName());
-    Assert.assertEquals(httpChecksum.getLength(), hdfsChecksum.getLength());
-    Assert.assertArrayEquals(httpChecksum.getBytes(), hdfsChecksum.getBytes());
+    if (!isLocalFS()) {
+      FileSystem fs = FileSystem.get(getProxiedFSConf());
+      fs.mkdirs(getProxiedFSTestDir());
+      Path path = new Path(getProxiedFSTestDir(), "foo.txt");
+      OutputStream os = fs.create(path);
+      os.write(1);
+      os.close();
+      FileChecksum hdfsChecksum = fs.getFileChecksum(path);
+      fs.close();
+      fs = getHttpFSFileSystem();
+      FileChecksum httpChecksum = fs.getFileChecksum(path);
+      fs.close();
+      Assert.assertEquals(httpChecksum.getAlgorithmName(), hdfsChecksum.getAlgorithmName());
+      Assert.assertEquals(httpChecksum.getLength(), hdfsChecksum.getLength());
+      Assert.assertArrayEquals(httpChecksum.getBytes(), hdfsChecksum.getBytes());
+    }
   }
 
   private void testContentSummary() throws Exception {
-    FileSystem fs = FileSystem.get(TestHdfsHelper.getHdfsConf());
-    Path path = new Path(TestHdfsHelper.getHdfsTestDir(), "foo.txt");
+    FileSystem fs = FileSystem.get(getProxiedFSConf());
+    Path path = new Path(getProxiedFSTestDir(), "foo.txt");
     OutputStream os = fs.create(path);
     os.write(1);
     os.close();
     ContentSummary hdfsContentSummary = fs.getContentSummary(path);
     fs.close();
-    fs = getHttpFileSystem();
+    fs = getHttpFSFileSystem();
     ContentSummary httpContentSummary = fs.getContentSummary(path);
     fs.close();
     Assert.assertEquals(httpContentSummary.getDirectoryCount(), hdfsContentSummary.getDirectoryCount());
@@ -484,13 +511,13 @@ public class TestHttpFSFileSystem extends HFSTestCase {
       ops[i] = new Object[]{Operation.values()[i]};
     }
     //To test one or a subset of operations do:
-    //return Arrays.asList(new Object[][]{ new Object[]{Operation.OPEN}});
+    //return Arrays.asList(new Object[][]{ new Object[]{Operation.APPEND}});
     return Arrays.asList(ops);
   }
 
   private Operation operation;
 
-  public TestHttpFSFileSystem(Operation operation) {
+  public BaseTestHttpFSWith(Operation operation) {
     this.operation = operation;
   }
 
