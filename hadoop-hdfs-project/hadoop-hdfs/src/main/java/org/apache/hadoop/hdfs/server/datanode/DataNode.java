@@ -146,6 +146,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -278,6 +279,7 @@ public class DataNode extends Configured
   private Configuration conf;
 
   private final String userWithLocalPathAccess;
+  ReadaheadPool readaheadPool;
 
   /**
    * Create the DataNode given a configuration and an array of dataDirs.
@@ -673,6 +675,10 @@ public class DataNode extends Configured
 
     blockPoolManager = new BlockPoolManager(this);
     blockPoolManager.refreshNamenodes(conf);
+
+    // Create the ReadaheadPool from the DataNode context so we can
+    // exit without having to explicitly shutdown its thread pool.
+    readaheadPool = ReadaheadPool.getInstance();
   }
   
   /**
