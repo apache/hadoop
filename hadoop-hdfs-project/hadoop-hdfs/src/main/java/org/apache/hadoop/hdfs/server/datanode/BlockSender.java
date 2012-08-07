@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.EOFException;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -38,7 +37,6 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
@@ -163,8 +161,6 @@ class BlockSender implements java.io.Closeable {
    */
   private static final long LONG_READ_THRESHOLD_BYTES = 256 * 1024;
   
-  private static ReadaheadPool readaheadPool =
-    ReadaheadPool.getInstance();
 
   /**
    * Constructor
@@ -691,8 +687,8 @@ class BlockSender implements java.io.Closeable {
     }
 
     // Perform readahead if necessary
-    if (readaheadLength > 0 && readaheadPool != null) {
-      curReadahead = readaheadPool.readaheadStream(
+    if (readaheadLength > 0 && datanode.readaheadPool != null) {
+      curReadahead = datanode.readaheadPool.readaheadStream(
           clientTraceFmt, blockInFd,
           offset, readaheadLength, Long.MAX_VALUE,
           curReadahead);
