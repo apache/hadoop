@@ -22,11 +22,11 @@
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-mapreduce</artifactId>
+  <artifactId>hadoop-yarn-project</artifactId>
   <version>0.23.3-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>hadoop-mapreduce</name>
-  <url>http://hadoop.apache.org/mapreduce/</url>
+  <name>hadoop-yarn-project</name>
+  <url>http://hadoop.apache.org/yarn/</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -34,13 +34,12 @@
     <test.timeout>600000</test.timeout>
     <fork.mode>once</fork.mode>
     <mr.basedir>${basedir}</mr.basedir>
-    <hadoop.component>mapreduce</hadoop.component>
+    <hadoop.component>yarn</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
 
   <modules>
-    <module>hadoop-mapreduce-client</module>
-    <module>hadoop-mapreduce-examples</module>
+    <module>hadoop-yarn</module>
   </modules>
 
   <dependencies>
@@ -127,8 +126,8 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <!-- needed for security and runtime -->
       <artifactId>hadoop-hdfs</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.inject</groupId>
@@ -158,15 +157,12 @@
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>
     </dependency>
-    <dependency>
-      <groupId>com.cenqua.clover</groupId>
-      <artifactId>clover</artifactId>
-    </dependency>
-    <dependency>
+    <!--<dependency>
       <groupId>org.hsqldb</groupId>
       <artifactId>hsqldb</artifactId>
-      <version>2.0.0</version>
-    </dependency>
+      <scope>compile</scope>
+    </dependency>-->
+
   </dependencies>
 
   <build>
@@ -186,7 +182,7 @@
                 <!-- Using Unix script to preserve symlinks -->
                 <echo file="${project.build.directory}/dist-maketar.sh">
 
-                  which cygpath &gt;> /dev/null
+                  which cygpath 2&gt; /dev/null
                   if [ $? = 1 ]; then
                     BUILD_DIR="${project.build.directory}"
                   else
@@ -200,18 +196,6 @@
                 </exec>
               </target>
             </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>com.atlassian.maven.plugins</groupId>
-        <artifactId>maven-clover2-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>instrument</goal>
-              <goal>aggregate</goal>
-            </goals>
           </execution>
         </executions>
       </plugin>
@@ -273,12 +257,12 @@
               <attach>false</attach>
               <finalName>${project.artifactId}-${project.version}</finalName>
               <descriptorRefs>
-                <descriptorRef>hadoop-mapreduce-dist</descriptorRef>
+                <descriptorRef>hadoop-yarn-dist</descriptorRef>
               </descriptorRefs>
             </configuration>
             <executions>
               <execution>
-                <id>package-mapreduce</id>
+                <id>package-yarn</id>
                 <phase>prepare-package</phase>
                 <goals>
                   <goal>single</goal>
@@ -303,12 +287,6 @@
           <findbugsXmlOutput>true</findbugsXmlOutput>
           <xmlOutput>true</xmlOutput>
         </configuration>
-      </plugin>
-      <plugin>
-        <groupId>com.atlassian.maven.plugins</groupId>
-        <artifactId>maven-clover2-plugin</artifactId>
-        <!-- until we have reporting management cf. MSITE-443 -->
-        <version>3.0.2</version>
       </plugin>
     </plugins>
   </reporting>

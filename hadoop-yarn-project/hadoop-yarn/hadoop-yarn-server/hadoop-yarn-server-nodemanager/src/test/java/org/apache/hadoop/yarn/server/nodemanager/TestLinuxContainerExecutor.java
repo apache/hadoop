@@ -76,7 +76,7 @@ import org.junit.Test;
  * and it needs the setuid bit set. (The build will also overwrite it so you
  * need to move it to a place that you can support it. 
  * <br><pre><code>
- * > cp ./hadoop-mapreduce-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/c/container-executor/container-executor /tmp/
+ * > cp ./hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/c/container-executor/container-executor /tmp/
  * > sudo chown root:mapred /tmp/container-executor
  * > sudo chmod 4550 /tmp/container-executor
  * </code></pre>
