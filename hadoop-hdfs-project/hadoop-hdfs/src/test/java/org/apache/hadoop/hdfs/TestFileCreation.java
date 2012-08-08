@@ -42,8 +42,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.security.PrivilegedExceptionAction;
 import java.util.EnumSet;
 
 import org.apache.commons.logging.LogFactory;
@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
@@ -337,6 +338,60 @@ public class TestFileCreation {
     }
   }
 
+  /**
+   * Test that a file which is open for write is overwritten by another
+   * client. Regression test for HDFS-3755.
+   */
+  @Test
+  public void testOverwriteOpenForWrite() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    SimulatedFSDataset.setFactory(conf);
+    conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, false);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    FileSystem fs = cluster.getFileSystem();
+    
+    UserGroupInformation otherUgi = UserGroupInformation.createUserForTesting(
+        "testuser", new String[]{"testgroup"});
+    FileSystem fs2 = otherUgi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
+      public FileSystem run() throws Exception {
+        return FileSystem.get(cluster.getConfiguration(0));
+      }
+    });
+    
+    try {
+      Path p = new Path("/testfile");
+      FSDataOutputStream stm1 = fs.create(p);
+      stm1.write(1);
+      stm1.hflush();
+
+      // Create file again without overwrite
+      try {
+        fs2.create(p, false);
+        fail("Did not throw!");
+      } catch (IOException abce) {
+        GenericTestUtils.assertExceptionContains("already being created by",
+            abce);
+      }
+      
+      FSDataOutputStream stm2 = fs2.create(p, true);
+      stm2.write(2);
+      stm2.close();
+      
+      try {
+        stm1.close();
+        fail("Should have exception closing stm1 since it was deleted");
+      } catch (IOException ioe) {
+        GenericTestUtils.assertExceptionContains("File is not open for writing", ioe);
+      }
+      
+    } finally {
+      IOUtils.closeStream(fs);
+      IOUtils.closeStream(fs2);
+      cluster.shutdown();
+    }
+  }
+  
   /**
    * Test that file data does not become corrupted even in the face of errors.
    */

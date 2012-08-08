@@ -1755,8 +1755,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     try {
       INodeFile myFile = dir.getFileINode(src);
-      recoverLeaseInternal(myFile, src, holder, clientMachine, false);
-
       try {
         blockManager.verifyReplication(src, replication, clientMachine);
       } catch(IOException e) {
@@ -1772,10 +1770,15 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         // File exists - must be one of append or overwrite
         if (overwrite) {
           delete(src, true);
-        } else if (!append) {
-          throw new FileAlreadyExistsException("failed to create file " + src
-              + " on client " + clientMachine
-              + " because the file exists");
+        } else {
+          // Opening an existing file for write - may need to recover lease.
+          recoverLeaseInternal(myFile, src, holder, clientMachine, false);
+
+          if (!append) {
+            throw new FileAlreadyExistsException("failed to create file " + src
+                + " on client " + clientMachine
+                + " because the file exists");
+          }
         }
       }
 
