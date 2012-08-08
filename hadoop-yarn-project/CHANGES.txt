@@ -1,0 +1,34 @@
+Hadoop MapReduce Change Log
+
+Trunk (unreleased changes)
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+Branch-2 ( Unreleased changes )
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+Release 2.1.0-alpha - Unreleased 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    YARN-1. Promote YARN to be a sub-project of Apache Hadoop. (acmurthy)
+
+  IMPROVEMENTS
+
+  BUG FIXES
+

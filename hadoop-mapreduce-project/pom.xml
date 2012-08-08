@@ -39,9 +39,8 @@
   </properties>
 
   <modules>
-    <module>hadoop-yarn</module>
-      <module>hadoop-mapreduce-client</module>
-      <module>hadoop-mapreduce-examples</module>
+    <module>hadoop-mapreduce-client</module>
+    <module>hadoop-mapreduce-examples</module>
   </modules>
 
   <dependencies>
