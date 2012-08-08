@@ -12,3 +12,5 @@ HDFS-3693. JNStorage should read its storage info even before a writer becomes a
 HDFS-3725. Fix QJM startup when individual JNs have gaps (todd)
 
 HDFS-3741. Exhaustive failure injection test for skipped RPCs (todd)
+
+HDFS-3773. TestNNWithQJM fails after HDFS-3741. (atm)

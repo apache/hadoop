@@ -76,7 +76,7 @@ public class QuorumJournalManager implements JournalManager {
   
   private final AsyncLoggerSet loggers;
   
-  QuorumJournalManager(Configuration conf,
+  public QuorumJournalManager(Configuration conf,
       URI uri, NamespaceInfo nsInfo) throws IOException {
     this(conf, uri, nsInfo, IPCLoggerChannel.FACTORY);
   }
