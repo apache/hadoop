@@ -17,38 +17,46 @@
 <assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
-  <id>hadoop-mapreduce-dist</id>
+  <id>hadoop-yarn-dist</id>
   <formats>
     <format>dir</format>
   </formats>
   <includeBaseDirectory>false</includeBaseDirectory>
   <fileSets>
     <fileSet>
-      <directory>bin</directory>
+      <directory>hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/target/native/target/usr/local/bin</directory>
+      <outputDirectory>bin</outputDirectory>
+      <fileMode>0755</fileMode>
+    </fileSet>
+    <fileSet>
+      <directory>hadoop-yarn/bin</directory>
       <outputDirectory>bin</outputDirectory>
       <includes>
-        <include>mapred</include>
+        <include>yarn</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>bin</directory>
+      <directory>hadoop-yarn/bin</directory>
       <outputDirectory>libexec</outputDirectory>
       <includes>
-        <include>mapred-config.sh</include>
+        <include>yarn-config.sh</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>bin</directory>
+      <directory>hadoop-yarn/bin</directory>
       <outputDirectory>sbin</outputDirectory>
       <includes>
-        <include>mr-jobhistory-daemon.sh</include>
+        <include>yarn-daemon.sh</include>
+        <include>yarn-daemons.sh</include>
+        <include>start-yarn.sh</include>
+        <include>stop-yarn.sh</include>
       </includes>
       <fileMode>0755</fileMode>
     </fileSet>
     <fileSet>
-      <directory>conf</directory>
+      <directory>hadoop-yarn/conf</directory>
       <outputDirectory>etc/hadoop</outputDirectory>
       <includes>
         <include>**/*</include>
@@ -102,7 +110,6 @@
     </moduleSet>
     <moduleSet>
       <includes>
-        <include>org.apache.hadoop:hadoop-mapreduce-client-jobclient</include>
         <include>org.apache.hadoop:hadoop-yarn-server-tests</include>
       </includes>
       <binaries>
