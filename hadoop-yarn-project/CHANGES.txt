@@ -32,3 +32,5 @@ Release 2.1.0-alpha - Unreleased
 
   BUG FIXES
 
+    YARN-12. Fix findbugs warnings in FairScheduler. (Junping Du via acmurthy) 
+

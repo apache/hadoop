@@ -129,15 +129,17 @@ class FairSchedulerEventLog {
   /**
    * Flush and close the log.
    */
-  void shutdown() {
+  synchronized void shutdown() {
     try {
       if (appender != null)
         appender.close();
-    } catch (Exception e) {}
-    logDisabled = true;
+    } catch (Exception e) {
+      LOG.error("Failed to close fair scheduler event log", e);
+      logDisabled = true;
+    }
   }
 
-  boolean isEnabled() {
+  synchronized boolean isEnabled() {
     return !logDisabled;
   }
 }
