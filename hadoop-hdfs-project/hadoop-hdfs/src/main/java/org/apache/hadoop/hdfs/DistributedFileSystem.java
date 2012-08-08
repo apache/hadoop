@@ -247,7 +247,7 @@ public class DistributedFileSystem extends FileSystem {
     FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
     short replication, long blockSize, Progressable progress,
     int bytesPerChecksum) throws IOException {
-    statistics.incrementReadOps(1);
+    statistics.incrementWriteOps(1);
     return new HdfsDataOutputStream(dfs.primitiveCreate(getPathName(f),
         absolutePermission, flag, true, replication, blockSize,
         progress, bufferSize, bytesPerChecksum),statistics);
