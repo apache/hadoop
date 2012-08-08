@@ -414,6 +414,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3760. primitiveCreate is a write, not a read. (Andy Isaacson via atm)
 
+    HDFS-3710. libhdfs misuses O_RDONLY/WRONLY/RDWR. (Andy Isaacson via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
