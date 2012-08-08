@@ -109,6 +109,9 @@ Trunk (unreleased changes)
 
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
+    HDFS-3768. Exception in TestJettyHelper is incorrect. 
+    (Eli Reisman via jghoman)
+
   OPTIMIZATIONS
 
   BUG FIXES
