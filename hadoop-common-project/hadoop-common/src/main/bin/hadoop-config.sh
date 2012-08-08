@@ -42,8 +42,8 @@ HADOOP_COMMON_LIB_JARS_DIR=${HADOOP_COMMON_LIB_JARS_DIR:-"share/hadoop/common/li
 HADOOP_COMMON_LIB_NATIVE_DIR=${HADOOP_COMMON_LIB_NATIVE_DIR:-"lib/native"}
 HDFS_DIR=${HDFS_DIR:-"share/hadoop/hdfs"}
 HDFS_LIB_JARS_DIR=${HDFS_LIB_JARS_DIR:-"share/hadoop/hdfs/lib"}
-YARN_DIR=${YARN_DIR:-"share/hadoop/mapreduce"}
-YARN_LIB_JARS_DIR=${YARN_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
+YARN_DIR=${YARN_DIR:-"share/hadoop/yarn"}
+YARN_LIB_JARS_DIR=${YARN_LIB_JARS_DIR:-"share/hadoop/yarn/lib"}
 MAPRED_DIR=${MAPRED_DIR:-"share/hadoop/mapreduce"}
 MAPRED_LIB_JARS_DIR=${MAPRED_LIB_JARS_DIR:-"share/hadoop/mapreduce/lib"}
 

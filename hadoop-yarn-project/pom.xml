@@ -18,15 +18,15 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-mapreduce</artifactId>
-  <version>2.0.1-SNAPSHOT</version>
+  <artifactId>hadoop-yarn-project</artifactId>
+  <version>3.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>hadoop-mapreduce</name>
-  <url>http://hadoop.apache.org/mapreduce/</url>
+  <name>hadoop-yarn-project</name>
+  <url>http://hadoop.apache.org/yarn/</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -34,13 +34,12 @@
     <test.timeout>600000</test.timeout>
     <fork.mode>once</fork.mode>
     <mr.basedir>${basedir}</mr.basedir>
-    <hadoop.component>mapreduce</hadoop.component>
+    <hadoop.component>yarn</hadoop.component>
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
 
   <modules>
-    <module>hadoop-mapreduce-client</module>
-    <module>hadoop-mapreduce-examples</module>
+    <module>hadoop-yarn</module>
   </modules>
 
   <dependencies>
@@ -258,12 +257,12 @@
               <attach>false</attach>
               <finalName>${project.artifactId}-${project.version}</finalName>
               <descriptorRefs>
-                <descriptorRef>hadoop-mapreduce-dist</descriptorRef>
+                <descriptorRef>hadoop-yarn-dist</descriptorRef>
               </descriptorRefs>
             </configuration>
             <executions>
               <execution>
-                <id>package-mapreduce</id>
+                <id>package-yarn</id>
                 <phase>prepare-package</phase>
                 <goals>
                   <goal>single</goal>

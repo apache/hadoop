@@ -17,35 +17,20 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <artifactId>hadoop-mapreduce-client</artifactId>
+    <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-mapreduce-client-common</artifactId>
-  <version>2.0.1-SNAPSHOT</version>
-  <name>hadoop-mapreduce-client-common</name>
+  <artifactId>hadoop-yarn-api</artifactId>
+  <version>3.0.0-SNAPSHOT</version>
+  <name>hadoop-yarn-api</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
-    <mr.basedir>${project.parent.basedir}/../</mr.basedir>
+    <yarn.basedir>${project.parent.basedir}</yarn.basedir>
   </properties>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-server-common</artifactId>
-    </dependency>
-  </dependencies>
 
   <build>
     <plugins>
@@ -77,12 +62,13 @@
             <configuration>
               <executable>protoc</executable>
               <arguments>
-                <argument>-I../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/proto</argument>
-                <argument>src/main/proto/mr_protos.proto</argument>
-                <argument>src/main/proto/mr_service_protos.proto</argument>
-                <argument>src/main/proto/MRClientProtocol.proto</argument>
+                <argument>src/main/proto/yarn_protos.proto</argument>
+                <argument>src/main/proto/yarn_service_protos.proto</argument>
+                <argument>src/main/proto/AM_RM_protocol.proto</argument>
+                <argument>src/main/proto/client_RM_protocol.proto</argument>
+                <argument>src/main/proto/container_manager.proto</argument>
               </arguments>
             </configuration>
             <goals>
@@ -112,4 +98,5 @@
       </plugin>
     </plugins>
   </build>
+
 </project>

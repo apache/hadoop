@@ -17,38 +17,48 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                       http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
-    <artifactId>hadoop-mapreduce-client</artifactId>
+    <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
-  <artifactId>hadoop-mapreduce-client-common</artifactId>
-  <version>2.0.1-SNAPSHOT</version>
-  <name>hadoop-mapreduce-client-common</name>
+  <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+  <version>3.0.0-SNAPSHOT</version>
+  <name>hadoop-yarn-server-resourcemanager</name>
 
   <properties>
     <!-- Needed for generating FindBugs warnings using parent pom -->
-    <mr.basedir>${project.parent.basedir}/../</mr.basedir>
+    <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-yarn-common</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-yarn-server-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-server-web-proxy</artifactId>
     </dependency>
   </dependencies>
 
   <build>
     <plugins>
+
+      <!-- Publish tests jar -->
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>test-jar</goal>
+            </goals>
+            <phase>test-compile</phase>
+          </execution>
+        </executions>
+      </plugin>
+
       <plugin>
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
@@ -77,12 +87,10 @@
             <configuration>
               <executable>protoc</executable>
               <arguments>
-                <argument>-I../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto/</argument>
                 <argument>-Isrc/main/proto/</argument>
                 <argument>--java_out=target/generated-sources/proto</argument>
-                <argument>src/main/proto/mr_protos.proto</argument>
-                <argument>src/main/proto/mr_service_protos.proto</argument>
-                <argument>src/main/proto/MRClientProtocol.proto</argument>
+                <argument>src/main/proto/yarn_server_resourcemanager_service_protos.proto</argument>
+                <argument>src/main/proto/RMAdminProtocol.proto</argument>
               </arguments>
             </configuration>
             <goals>
@@ -112,4 +120,41 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>visualize</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>compile</phase>
+                <goals>
+                  <goal>java</goal>
+                </goals>
+                <configuration>
+                  <mainClass>org.apache.hadoop.yarn.util.VisualizeStateMachine</mainClass>
+		  <classpathScope>compile</classpathScope>
+                  <arguments>
+                    <argument>ResourceManager</argument>
+                    <argument>org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl,
+                      org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl,
+                      org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl,
+                      org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl</argument>
+                    <argument>ResourceManager.gv</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>
