@@ -657,6 +657,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     */
     /* Get the JNIEnv* corresponding to current thread */
     JNIEnv* env = getJNIEnv();
+    int accmode = flags & O_ACCMODE;
 
     if (env == NULL) {
       errno = EINTERNAL;
@@ -672,9 +673,15 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     hdfsFile file = NULL;
     int ret;
 
-    if (flags & O_RDWR) {
+    if (accmode == O_RDONLY || accmode == O_WRONLY) {
+	/* yay */
+    } else if (accmode == O_RDWR) {
       fprintf(stderr, "ERROR: cannot open an hdfs file in O_RDWR mode\n");
       errno = ENOTSUP;
+      return NULL;
+    } else {
+      fprintf(stderr, "ERROR: cannot open an hdfs file in mode 0x%x\n", accmode);
+      errno = EINVAL;
       return NULL;
     }
 
@@ -683,12 +690,19 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
     }
 
     /* The hadoop java api/signature */
-    const char* method = ((flags & O_WRONLY) == 0) ? "open" : (flags & O_APPEND) ? "append" : "create";
-    const char* signature = ((flags & O_WRONLY) == 0) ?
-        JMETHOD2(JPARAM(HADOOP_PATH), "I", JPARAM(HADOOP_ISTRM)) :
-      (flags & O_APPEND) ?
-      JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_OSTRM)) :
-      JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_OSTRM));
+    const char* method = NULL;
+    const char* signature = NULL;
+
+    if (accmode == O_RDONLY) {
+	method = "open";
+        signature = JMETHOD2(JPARAM(HADOOP_PATH), "I", JPARAM(HADOOP_ISTRM));
+    } else if (flags & O_APPEND) {
+	method = "append";
+	signature = JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_OSTRM));
+    } else {
+	method = "create";
+	signature = JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_OSTRM));
+    }
 
     /* Create an object of org.apache.hadoop.fs.Path */
     jthr = constructNewObjectOfPath(env, path, &jPath);
@@ -741,9 +755,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
         jBufferSize = jVal.i;
     }
 
-    if ((flags & O_WRONLY) && (flags & O_APPEND) == 0) {
-        //replication
-
+    if ((accmode == O_WRONLY) && (flags & O_APPEND) == 0) {
         if (!replication) {
             jthr = invokeMethod(env, &jVal, INSTANCE, jConfiguration, 
                              HADOOP_CONF, "getInt", "(Ljava/lang/String;I)I",
@@ -776,10 +788,10 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
        FSDataOutputStream references jobject jStream */
 
     // READ?
-    if ((flags & O_WRONLY) == 0) {
+    if (accmode == O_RDONLY) {
         jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                        method, signature, jPath, jBufferSize);
-    }  else if ((flags & O_WRONLY) && (flags & O_APPEND)) {
+    }  else if ((accmode == O_WRONLY) && (flags & O_APPEND)) {
         // WRITE/APPEND?
        jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
                        method, signature, jPath);
