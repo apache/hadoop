@@ -13,6 +13,7 @@
  */
 package org.apache.hadoop.security.authentication.client;
 
+import junit.framework.Assert;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import junit.framework.TestCase;
 import org.mockito.Mockito;
@@ -114,6 +115,18 @@ public abstract class AuthenticatorTestCase extends TestCase {
     return "http://" + host + ":" + port + "/foo/bar";
   }
 
+  private static class TestConnectionConfigurator
+      implements ConnectionConfigurator {
+    boolean invoked;
+
+    @Override
+    public HttpURLConnection configure(HttpURLConnection conn)
+        throws IOException {
+      invoked = true;
+      return conn;
+    }
+  }
+
   private String POST = "test";
 
   protected void _testAuthentication(Authenticator authenticator, boolean doPost) throws Exception {
@@ -121,11 +134,10 @@ public abstract class AuthenticatorTestCase extends TestCase {
     try {
       URL url = new URL(getBaseURL());
       AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-      ConnectionConfigurator connConf =
-          Mockito.mock(ConnectionConfigurator.class);
+      TestConnectionConfigurator connConf = new TestConnectionConfigurator();
       AuthenticatedURL aUrl = new AuthenticatedURL(authenticator, connConf);
       HttpURLConnection conn = aUrl.openConnection(url, token);
-      Mockito.verify(connConf).configure(Mockito.<HttpURLConnection>any());
+      Assert.assertTrue(connConf.invoked);
       String tokenStr = token.toString();
       if (doPost) {
         conn.setRequestMethod("POST");

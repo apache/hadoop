@@ -208,6 +208,8 @@ Release 2.0.1-alpha - UNRELEASED
     
     HADOOP-8405. ZKFC tests leak ZK instances. (todd)
 
+    HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
