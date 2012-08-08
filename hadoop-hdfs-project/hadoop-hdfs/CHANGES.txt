@@ -7,6 +7,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3446. HostsFileReader silently ignores bad includes/excludes
     (Matthew Jacobs via todd)
 
+    HDFS-3755. Creating an already-open-for-write file with overwrite=true fails
+    (todd)
+
   NEW FEATURES
 
     HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
