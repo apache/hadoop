@@ -566,6 +566,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. (eli)
 
+    HDFS-3760. primitiveCreate is a write, not a read. (Andy Isaacson via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
