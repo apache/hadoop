@@ -20,6 +20,8 @@ Branch-2 ( Unreleased changes )
 
   BUG FIXES
 
+    YARN-13. Fix pom versions for YARN in branch-2 (todd)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
