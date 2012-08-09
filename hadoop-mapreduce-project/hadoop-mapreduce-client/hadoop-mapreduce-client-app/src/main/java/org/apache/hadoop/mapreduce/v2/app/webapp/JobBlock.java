@@ -20,7 +20,6 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
 import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.util.StringHelper.ujoin;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._EVEN;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._INFO_WRAP;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._ODD;
@@ -31,6 +30,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 import java.util.Date;
 import java.util.List;
 
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
@@ -40,8 +40,6 @@ import org.apache.hadoop.mapreduce.v2.app.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
@@ -106,7 +104,8 @@ public class JobBlock extends HtmlBlock {
       table.tr().
         td(String.valueOf(attempt.getAttemptId())).
         td(new Date(attempt.getStartTime()).toString()).
-        td().a(".nodelink", url("http://", attempt.getNodeHttpAddress()), 
+        td().a(".nodelink", url(HttpConfig.getSchemePrefix(),
+            attempt.getNodeHttpAddress()),
             attempt.getNodeHttpAddress())._().
         td().a(".logslink", url(attempt.getLogsLink()), 
             "logs")._().

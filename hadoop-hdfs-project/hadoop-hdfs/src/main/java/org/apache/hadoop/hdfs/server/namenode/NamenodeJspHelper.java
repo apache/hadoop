@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
@@ -413,7 +414,7 @@ class NamenodeJspHelper {
     }
     String addr = NetUtils.getHostPortString(nn.getNameNodeAddress());
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
-    redirectLocation = "http://" + fqdn + ":" + redirectPort
+    redirectLocation = HttpConfig.getSchemePrefix() + fqdn + ":" + redirectPort
         + "/browseDirectory.jsp?namenodeInfoPort="
         + nn.getHttpAddress().getPort() + "&dir=/"
         + (tokenString == null ? "" :
@@ -462,7 +463,8 @@ class NamenodeJspHelper {
         String suffix, boolean alive, int nnHttpPort, String nnaddr)
         throws IOException {
       // from nn_browsedfscontent.jsp:
-      String url = "http://" + d.getHostName() + ":" + d.getInfoPort()
+      String url = HttpConfig.getSchemePrefix() + d.getHostName() + ":"
+          + d.getInfoPort()
           + "/browseDirectory.jsp?namenodeInfoPort=" + nnHttpPort + "&dir="
           + URLEncoder.encode("/", "UTF-8")
           + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnaddr);

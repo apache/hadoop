@@ -213,6 +213,8 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8644. AuthenticatedURL should be able to use SSLFactory. (tucu)
 
+    HADOOP-8681. add support for HTTPS to the web UIs. (tucu)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual

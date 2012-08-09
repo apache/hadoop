@@ -40,10 +40,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
@@ -65,12 +67,23 @@ public class SecurityUtil {
   static boolean useIpForTokenService;
   @VisibleForTesting
   static HostResolver hostResolver;
-  
+
+  private static SSLFactory sslFactory;
+
   static {
-    boolean useIp = new Configuration().getBoolean(
+    Configuration conf = new Configuration();
+    boolean useIp = conf.getBoolean(
       CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP,
       CommonConfigurationKeys.HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT);
     setTokenServiceUseIp(useIp);
+    if (HttpConfig.isSecure()) {
+      sslFactory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+      try {
+        sslFactory.init();
+      } catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
+    }
   }
   
   /**
@@ -456,7 +469,7 @@ public class SecurityUtil {
 
     AuthenticatedURL.Token token = new AuthenticatedURL.Token();
     try {
-      return new AuthenticatedURL().openConnection(url, token);
+      return new AuthenticatedURL(null, sslFactory).openConnection(url, token);
     } catch (AuthenticationException e) {
       throw new IOException("Exception trying to open authenticated connection to "
               + url, e);
