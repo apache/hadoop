@@ -682,6 +682,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4503. Should throw InvalidJobConfException if duplicates found in
     cacheArchives or cacheFiles (Robert Evans via jeagles)
 
+    MAPREDUCE-3782. teragen terasort jobs fail when using webhdfs:// (Jason
+    Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
