@@ -107,6 +107,10 @@ set(LIBHDFS_VERSION "0.0.0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
+add_library(posix_util
+    main/native/util/posix_util.c
+)
+
 add_executable(test_libhdfs_ops
     main/native/libhdfs/test/test_libhdfs_ops.c
 )

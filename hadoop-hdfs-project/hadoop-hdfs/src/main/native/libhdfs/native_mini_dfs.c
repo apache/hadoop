@@ -156,7 +156,7 @@ int nmdWaitClusterUp(struct NativeMiniDfsCluster *cl)
     return 0;
 }
 
-int nmdGetNameNodePort(struct NativeMiniDfsCluster *cl)
+int nmdGetNameNodePort(const struct NativeMiniDfsCluster *cl)
 {
     JNIEnv *env = getJNIEnv();
     jvalue jVal;

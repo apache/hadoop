@@ -190,6 +190,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3291. add test that covers HttpFS working w/ a non-HDFS Hadoop
     filesystem (tucu)
 
+    HDFS-3634. Add self-contained, mavenized fuse_dfs test. (Colin Patrick
+    McCabe via atm)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
