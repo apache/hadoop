@@ -23,6 +23,8 @@ import java.util.Collection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 
 /**
  * A JournalManager is responsible for managing a single place of storing
@@ -33,7 +35,14 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface JournalManager extends Closeable {
+public interface JournalManager extends Closeable, FormatConfirmable {
+
+  /**
+   * Format the underlying storage, removing any previously
+   * stored data.
+   */
+  void format(NamespaceInfo ns);
+
   /**
    * Begin writing to a new segment of the log stream, which starts at
    * the given transaction ID.
