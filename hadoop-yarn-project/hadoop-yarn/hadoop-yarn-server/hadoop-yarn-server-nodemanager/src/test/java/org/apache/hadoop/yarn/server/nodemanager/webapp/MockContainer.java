@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +44,8 @@ public class MockContainer implements Container {
   private ContainerState state;
   private String user;
   private ContainerLaunchContext launchContext;
-  private final Map<Path, String> resource = new HashMap<Path, String>();
+  private final Map<Path, List<String>> resource =
+      new HashMap<Path, List<String>>();
   private RecordFactory recordFactory;
 
   public MockContainer(ApplicationAttemptId appAttemptId,
@@ -92,7 +94,7 @@ public class MockContainer implements Container {
   }
 
   @Override
-  public Map<Path, String> getLocalizedResources() {
+  public Map<Path, List<String>> getLocalizedResources() {
     return resource;
   }
 
