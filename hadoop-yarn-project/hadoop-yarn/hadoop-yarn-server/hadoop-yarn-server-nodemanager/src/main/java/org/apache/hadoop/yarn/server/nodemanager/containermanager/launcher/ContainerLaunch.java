@@ -111,7 +111,8 @@ public class ContainerLaunch implements Callable<Integer> {
   @SuppressWarnings("unchecked") // dispatcher not typed
   public Integer call() {
     final ContainerLaunchContext launchContext = container.getLaunchContext();
-    final Map<Path,String> localResources = container.getLocalizedResources();
+    final Map<Path,List<String>> localResources =
+        container.getLocalizedResources();
     ContainerId containerID = container.getContainerID();
     String containerIdStr = ConverterUtils.toString(containerID);
     final String user = launchContext.getUser();
@@ -533,7 +534,7 @@ public class ContainerLaunch implements Callable<Integer> {
   }
     
   static void writeLaunchEnv(OutputStream out,
-      Map<String,String> environment, Map<Path,String> resources,
+      Map<String,String> environment, Map<Path,List<String>> resources,
       List<String> command)
       throws IOException {
     ShellScriptBuilder sb = new ShellScriptBuilder();
@@ -543,8 +544,10 @@ public class ContainerLaunch implements Callable<Integer> {
       }
     }
     if (resources != null) {
-      for (Map.Entry<Path,String> link : resources.entrySet()) {
-        sb.symlink(link.getKey(), link.getValue());
+      for (Map.Entry<Path,List<String>> entry : resources.entrySet()) {
+        for (String linkName : entry.getValue()) {
+          sb.symlink(entry.getKey(), linkName);
+        }
       }
     }
 

@@ -36,3 +36,16 @@ Release 2.1.0-alpha - Unreleased
 
     YARN-12. Fix findbugs warnings in FairScheduler. (Junping Du via acmurthy) 
 
+Release 0.23.3 - Unreleased 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+    YARN-14. Symlinks to peer distributed cache files no longer work 
+    (Jason Lowe via bobby) 
+
