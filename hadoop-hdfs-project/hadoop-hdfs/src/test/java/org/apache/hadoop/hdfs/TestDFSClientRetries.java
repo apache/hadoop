@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -256,8 +257,9 @@ public class TestDFSClientRetries {
     long fileSize = 4096;
     Path file = new Path("/testFile");
 
-    // Set short retry timeout so this test runs faster
+    // Set short retry timeouts so this test runs faster
     conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
+    conf.setInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY, 2 * 1000);
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     try {
@@ -980,13 +982,14 @@ public class TestDFSClientRetries {
     }
   }
 
-  public static FileSystem createFsWithDifferentUsername(
+  private static FileSystem createFsWithDifferentUsername(
       final Configuration conf, final boolean isWebHDFS
       ) throws IOException, InterruptedException {
-    String username = UserGroupInformation.getCurrentUser().getShortUserName()+"_XXX";
-    UserGroupInformation ugi = 
-      UserGroupInformation.createUserForTesting(username, new String[]{"supergroup"});
-    
+    final String username = UserGroupInformation.getCurrentUser(
+        ).getShortUserName() + "_XXX";
+    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        username, new String[]{"supergroup"});
+
     return isWebHDFS? WebHdfsTestUtil.getWebHdfsFileSystemAs(ugi, conf)
         : DFSTestUtil.getFileSystemAs(ugi, conf);
   }

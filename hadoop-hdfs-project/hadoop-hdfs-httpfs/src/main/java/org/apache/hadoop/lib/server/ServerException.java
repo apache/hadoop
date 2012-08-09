@@ -18,16 +18,19 @@
 
 package org.apache.hadoop.lib.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.lang.XException;
 
 /**
  * Exception thrown by the {@link Server} class.
  */
+@InterfaceAudience.Private
 public class ServerException extends XException {
 
   /**
    * Error codes use by the {@link Server} class.
    */
+  @InterfaceAudience.Private
   public static enum ERROR implements XException.ERROR {
     S01("Dir [{0}] does not exist"),
     S02("[{0}] is not a directory"),

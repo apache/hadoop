@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.http.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
@@ -68,6 +69,7 @@ import java.util.concurrent.Callable;
  * <p/>
  * This implementation allows a user to access HDFS over HTTP via a HttpFSServer server.
  */
+@InterfaceAudience.Private
 public class HttpFSFileSystem extends FileSystem
   implements DelegationTokenRenewer.Renewable {
 
@@ -160,7 +162,8 @@ public class HttpFSFileSystem extends FileSystem
   private static final String HTTP_POST = "POST";
   private static final String HTTP_DELETE = "DELETE";
 
-  public enum Operation {
+  @InterfaceAudience.Private
+  public static enum Operation {
     OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
     GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),

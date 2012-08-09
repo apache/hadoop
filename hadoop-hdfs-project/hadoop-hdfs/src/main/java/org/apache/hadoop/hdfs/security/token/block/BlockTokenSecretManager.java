@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -74,6 +75,10 @@ public class BlockTokenSecretManager extends
   private BlockKey currentKey;
   private BlockKey nextKey;
   private Map<Integer, BlockKey> allKeys;
+  private String blockPoolId;
+  private String encryptionAlgorithm;
+  
+  private SecureRandom nonceGenerator = new SecureRandom();
 
   public static enum AccessMode {
     READ, WRITE, COPY, REPLACE
@@ -86,8 +91,9 @@ public class BlockTokenSecretManager extends
    * @param tokenLifetime how long an individual token is valid
    */
   public BlockTokenSecretManager(long keyUpdateInterval,
-      long tokenLifetime) {
-    this(false, keyUpdateInterval, tokenLifetime);
+      long tokenLifetime, String blockPoolId, String encryptionAlgorithm) {
+    this(false, keyUpdateInterval, tokenLifetime, blockPoolId,
+        encryptionAlgorithm);
   }
   
   /**
@@ -100,8 +106,10 @@ public class BlockTokenSecretManager extends
    * @param otherNnId the NN ID of the other NN in an HA setup
    */
   public BlockTokenSecretManager(long keyUpdateInterval,
-      long tokenLifetime, int nnIndex) {
-    this(true, keyUpdateInterval, tokenLifetime);
+      long tokenLifetime, int nnIndex, String blockPoolId,
+      String encryptionAlgorithm) {
+    this(true, keyUpdateInterval, tokenLifetime, blockPoolId,
+        encryptionAlgorithm);
     Preconditions.checkArgument(nnIndex == 0 || nnIndex == 1);
     this.nnIndex = nnIndex;
     setSerialNo(new SecureRandom().nextInt());
@@ -109,16 +117,23 @@ public class BlockTokenSecretManager extends
   }
   
   private BlockTokenSecretManager(boolean isMaster, long keyUpdateInterval,
-      long tokenLifetime) {
+      long tokenLifetime, String blockPoolId, String encryptionAlgorithm) {
     this.isMaster = isMaster;
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenLifetime = tokenLifetime;
     this.allKeys = new HashMap<Integer, BlockKey>();
+    this.blockPoolId = blockPoolId;
+    this.encryptionAlgorithm = encryptionAlgorithm;
+    generateKeys();
   }
   
   @VisibleForTesting
   public synchronized void setSerialNo(int serialNo) {
     this.serialNo = (serialNo & LOW_MASK) | (nnIndex << 31);
+  }
+  
+  public void setBlockPoolId(String blockPoolId) {
+    this.blockPoolId = blockPoolId;
   }
 
   /** Initialize block keys */
@@ -369,6 +384,49 @@ public class BlockTokenSecretManager extends
           + identifier.getKeyId() + ") doesn't exist.");
     }
     return createPassword(identifier.getBytes(), key.getKey());
+  }
+  
+  /**
+   * Generate a data encryption key for this block pool, using the current
+   * BlockKey.
+   * 
+   * @return a data encryption key which may be used to encrypt traffic
+   *         over the DataTransferProtocol
+   */
+  public DataEncryptionKey generateDataEncryptionKey() {
+    byte[] nonce = new byte[8];
+    nonceGenerator.nextBytes(nonce);
+    BlockKey key = null;
+    synchronized (this) {
+      key = currentKey;
+    }
+    byte[] encryptionKey = createPassword(nonce, key.getKey());
+    return new DataEncryptionKey(key.getKeyId(), blockPoolId, nonce,
+        encryptionKey, Time.now() + tokenLifetime,
+        encryptionAlgorithm);
+  }
+  
+  /**
+   * Recreate an encryption key based on the given key id and nonce.
+   * 
+   * @param keyId identifier of the secret key used to generate the encryption key.
+   * @param nonce random value used to create the encryption key
+   * @return the encryption key which corresponds to this (keyId, blockPoolId, nonce)
+   * @throws InvalidToken
+   * @throws InvalidEncryptionKeyException 
+   */
+  public byte[] retrieveDataEncryptionKey(int keyId, byte[] nonce)
+      throws InvalidEncryptionKeyException {
+    BlockKey key = null;
+    synchronized (this) {
+      key = allKeys.get(keyId);
+      if (key == null) {
+        throw new InvalidEncryptionKeyException("Can't re-compute encryption key"
+            + " for nonce, since the required block key (keyID=" + keyId
+            + ") doesn't exist. Current key: " + currentKey.getKeyId());
+      }
+    }
+    return createPassword(nonce, key.getKey());
   }
   
   @VisibleForTesting

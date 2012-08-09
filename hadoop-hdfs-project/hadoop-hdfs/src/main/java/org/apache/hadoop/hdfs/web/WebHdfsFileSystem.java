@@ -292,7 +292,11 @@ public class WebHdfsFileSystem extends FileSystem
             + ", message=" + conn.getResponseMessage(), e);
       }
 
-      if (m.get(RemoteException.class.getSimpleName()) == null) {
+      if (m == null) {
+        throw new IOException("Unexpected HTTP response: code=" + code + " != "
+            + op.getExpectedHttpResponseCode() + ", " + op.toQueryString()
+            + ", message=" + conn.getResponseMessage());
+      } else if (m.get(RemoteException.class.getSimpleName()) == null) {
         return m;
       }
 
@@ -529,6 +533,7 @@ public class WebHdfsFileSystem extends FileSystem
       
       //Step 2) Submit another Http request with the URL from the Location header with data.
       conn = (HttpURLConnection)new URL(redirect).openConnection();
+      conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
       conn.setChunkedStreamingMode(32 << 10); //32kB-chunk
       connect();
       return conn;
@@ -541,7 +546,9 @@ public class WebHdfsFileSystem extends FileSystem
     void getResponse(boolean getJsonAndDisconnect) throws IOException {
       try {
         connect();
-        if (!redirected && op.getRedirect()) {
+        final int code = conn.getResponseCode();
+        if (!redirected && op.getRedirect()
+            && code != op.getExpectedHttpResponseCode()) {
           final String redirect = conn.getHeaderField("Location");
           json = validateResponse(HttpOpParam.TemporaryRedirectOp.valueOf(op),
               conn, false);

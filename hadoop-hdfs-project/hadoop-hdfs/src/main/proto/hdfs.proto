@@ -126,7 +126,16 @@ message LocatedBlockProto {
                                         // their locations are not part of this object
 
   required BlockTokenIdentifierProto blockToken = 5;
- }
+}
+
+message DataEncryptionKeyProto {
+  required uint32 keyId = 1;
+  required string blockPoolId = 2;
+  required bytes nonce = 3;
+  required bytes encryptionKey = 4;
+  required uint64 expiryDate = 5;
+  optional string encryptionAlgorithm = 6;
+}
 
 
 /**
@@ -178,6 +187,7 @@ message FsServerDefaultsProto {
   required uint32 writePacketSize = 3;
   required uint32 replication = 4; // Actually a short - only 16 bits used
   required uint32 fileBufferSize = 5;
+  optional bool encryptDataTransfer = 6 [default = false];
 }
 
 

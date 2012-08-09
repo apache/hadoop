@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.Closeable;
 import java.net.Socket;
 import java.net.SocketAddress;
 
@@ -29,6 +30,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.LinkedListMultimap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -37,7 +40,7 @@ import org.apache.hadoop.io.IOUtils;
 class SocketCache {
   static final Log LOG = LogFactory.getLog(SocketCache.class);
 
-  private final LinkedListMultimap<SocketAddress, Socket> multimap;
+  private final LinkedListMultimap<SocketAddress, SocketAndStreams> multimap;
   private final int capacity;
 
   /**
@@ -57,21 +60,21 @@ class SocketCache {
    * @param remote  Remote address the socket is connected to.
    * @return  A socket with unknown state, possibly closed underneath. Or null.
    */
-  public synchronized Socket get(SocketAddress remote) {
+  public synchronized SocketAndStreams get(SocketAddress remote) {
     if (capacity <= 0) { // disabled
       return null;
     }
     
-    List<Socket> socklist = multimap.get(remote);
+    List<SocketAndStreams> socklist = multimap.get(remote);
     if (socklist == null) {
       return null;
     }
 
-    Iterator<Socket> iter = socklist.iterator();
+    Iterator<SocketAndStreams> iter = socklist.iterator();
     while (iter.hasNext()) {
-      Socket candidate = iter.next();
+      SocketAndStreams candidate = iter.next();
       iter.remove();
-      if (!candidate.isClosed()) {
+      if (!candidate.sock.isClosed()) {
         return candidate;
       }
     }
@@ -82,10 +85,11 @@ class SocketCache {
    * Give an unused socket to the cache.
    * @param sock socket not used by anyone.
    */
-  public synchronized void put(Socket sock) {
+  public synchronized void put(Socket sock, IOStreamPair ioStreams) {
+    SocketAndStreams s = new SocketAndStreams(sock, ioStreams);
     if (capacity <= 0) {
       // Cache disabled.
-      IOUtils.closeSocket(sock);
+      s.close();
       return;
     }
     
@@ -102,7 +106,7 @@ class SocketCache {
     if (capacity == multimap.size()) {
       evictOldest();
     }
-    multimap.put(remoteAddr, sock);
+    multimap.put(remoteAddr, new SocketAndStreams(sock, ioStreams));
   }
 
   public synchronized int size() {
@@ -113,23 +117,23 @@ class SocketCache {
    * Evict the oldest entry in the cache.
    */
   private synchronized void evictOldest() {
-    Iterator<Entry<SocketAddress, Socket>> iter =
+    Iterator<Entry<SocketAddress, SocketAndStreams>> iter =
       multimap.entries().iterator();
     if (!iter.hasNext()) {
       throw new IllegalStateException("Cannot evict from empty cache!");
     }
-    Entry<SocketAddress, Socket> entry = iter.next();
+    Entry<SocketAddress, SocketAndStreams> entry = iter.next();
     iter.remove();
-    Socket sock = entry.getValue();
-    IOUtils.closeSocket(sock);
+    SocketAndStreams s = entry.getValue();
+    s.close();
   }
 
   /**
    * Empty the cache, and close all sockets.
    */
   public synchronized void clear() {
-    for (Socket sock : multimap.values()) {
-      IOUtils.closeSocket(sock);
+    for (SocketAndStreams s : multimap.values()) {
+      s.close();
     }
     multimap.clear();
   }
@@ -137,6 +141,26 @@ class SocketCache {
   @Override
   protected void finalize() {
     clear();
+  }
+  
+  @InterfaceAudience.Private
+  static class SocketAndStreams implements Closeable {
+    public final Socket sock;
+    public final IOStreamPair ioStreams;
+    
+    public SocketAndStreams(Socket s, IOStreamPair ioStreams) {
+      this.sock = s;
+      this.ioStreams = ioStreams;
+    }
+    
+    @Override
+    public void close() {
+      if (ioStreams != null) { 
+        IOUtils.closeStream(ioStreams.in);
+        IOUtils.closeStream(ioStreams.out);
+      }
+      IOUtils.closeSocket(sock);
+    }
   }
 
 }

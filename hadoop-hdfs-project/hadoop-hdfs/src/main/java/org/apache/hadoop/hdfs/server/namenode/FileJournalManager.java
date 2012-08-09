@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -80,6 +81,22 @@ public class FileJournalManager implements JournalManager {
   @Override 
   public void close() throws IOException {}
   
+  @Override
+  public void format(NamespaceInfo ns) {
+    // Formatting file journals is done by the StorageDirectory
+    // format code, since they may share their directory with
+    // checkpoints, etc.
+    throw new UnsupportedOperationException();
+  }
+  
+  @Override
+  public boolean hasSomeData() {
+    // Formatting file journals is done by the StorageDirectory
+    // format code, since they may share their directory with
+    // checkpoints, etc.
+    throw new UnsupportedOperationException();
+  }
+
   @Override
   synchronized public EditLogOutputStream startLogSegment(long txid) 
       throws IOException {

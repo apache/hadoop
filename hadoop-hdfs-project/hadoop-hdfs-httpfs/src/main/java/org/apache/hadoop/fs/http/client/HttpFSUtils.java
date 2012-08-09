@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.http.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -35,6 +36,7 @@ import java.util.Map;
 /**
  * Utility methods used by HttpFS classes.
  */
+@InterfaceAudience.Private
 public class HttpFSUtils {
 
   public static final String SERVICE_NAME = "/webhdfs";

@@ -409,9 +409,9 @@ public class TestPBHelper {
   @Test
   public void testConvertLocatedBlock() {
     DatanodeInfo [] dnInfos = {
-        DFSTestUtil.getLocalDatanodeInfo("1.1.1.1", "h1", AdminStates.DECOMMISSION_INPROGRESS),
-        DFSTestUtil.getLocalDatanodeInfo("2.2.2.2", "h2", AdminStates.DECOMMISSIONED),
-        DFSTestUtil.getLocalDatanodeInfo("3.3.3.3", "h3", AdminStates.NORMAL)
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h1", AdminStates.DECOMMISSION_INPROGRESS),
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h2", AdminStates.DECOMMISSIONED),
+        DFSTestUtil.getLocalDatanodeInfo("127.0.0.1", "h3", AdminStates.NORMAL)
     };
     LocatedBlock lb = new LocatedBlock(
         new ExtendedBlock("bp12", 12345, 10, 53), dnInfos, 5, false);

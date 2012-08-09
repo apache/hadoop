@@ -288,10 +288,8 @@ public class TestFileConcurrentReader {
     runTestUnfinishedBlockCRCError(true, SyncType.SYNC, SMALL_WRITE_SIZE);
   }
 
-  // fails due to issue w/append, disable 
-  @Ignore
   @Test
-  public void _testUnfinishedBlockCRCErrorTransferToAppend()
+  public void testUnfinishedBlockCRCErrorTransferToAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(true, SyncType.APPEND, DEFAULT_WRITE_SIZE);
   }
@@ -307,10 +305,8 @@ public class TestFileConcurrentReader {
     runTestUnfinishedBlockCRCError(false, SyncType.SYNC, SMALL_WRITE_SIZE);
   }
 
-  // fails due to issue w/append, disable 
-  @Ignore
   @Test
-  public void _testUnfinishedBlockCRCErrorNormalTransferAppend()
+  public void testUnfinishedBlockCRCErrorNormalTransferAppend()
     throws IOException {
     runTestUnfinishedBlockCRCError(false, SyncType.APPEND, DEFAULT_WRITE_SIZE);
   }

@@ -162,7 +162,7 @@ public class TestBlockToken {
   public void testWritable() throws Exception {
     TestWritable.testWritable(new BlockTokenIdentifier());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     TestWritable.testWritable(generateTokenId(sm, block1,
         EnumSet.allOf(BlockTokenSecretManager.AccessMode.class)));
     TestWritable.testWritable(generateTokenId(sm, block2,
@@ -201,9 +201,9 @@ public class TestBlockToken {
   @Test
   public void testBlockTokenSecretManager() throws Exception {
     BlockTokenSecretManager masterHandler = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     BlockTokenSecretManager slaveHandler = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime);
+        blockKeyUpdateInterval, blockTokenLifetime, "fake-pool", null);
     ExportedBlockKeys keys = masterHandler.exportKeys();
     slaveHandler.addKeys(keys);
     tokenGenerationAndVerification(masterHandler, slaveHandler);
@@ -238,7 +238,7 @@ public class TestBlockToken {
   @Test
   public void testBlockTokenRpc() throws Exception {
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     Token<BlockTokenIdentifier> token = sm.generateToken(block3,
         EnumSet.allOf(BlockTokenSecretManager.AccessMode.class));
 
@@ -273,7 +273,7 @@ public class TestBlockToken {
   public void testBlockTokenRpcLeak() throws Exception {
     Assume.assumeTrue(FD_DIR.exists());
     BlockTokenSecretManager sm = new BlockTokenSecretManager(
-        blockKeyUpdateInterval, blockTokenLifetime, 0);
+        blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
     Token<BlockTokenIdentifier> token = sm.generateToken(block3,
         EnumSet.allOf(BlockTokenSecretManager.AccessMode.class));
 
@@ -342,9 +342,9 @@ public class TestBlockToken {
     for (int i = 0; i < 10; i++) {
       String bpid = Integer.toString(i);
       BlockTokenSecretManager masterHandler = new BlockTokenSecretManager(
-          blockKeyUpdateInterval, blockTokenLifetime, 0);
+          blockKeyUpdateInterval, blockTokenLifetime, 0, "fake-pool", null);
       BlockTokenSecretManager slaveHandler = new BlockTokenSecretManager(
-          blockKeyUpdateInterval, blockTokenLifetime);
+          blockKeyUpdateInterval, blockTokenLifetime, "fake-pool", null);
       bpMgr.addBlockPool(bpid, slaveHandler);
 
       ExportedBlockKeys keys = masterHandler.exportKeys();

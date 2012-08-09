@@ -19,6 +19,8 @@
 package org.apache.hadoop.lib.servlet;
 
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -31,6 +33,7 @@ import java.net.InetAddress;
 /**
  * Filter that resolves the requester hostname.
  */
+@InterfaceAudience.Private
 public class HostnameFilter implements Filter {
   static final ThreadLocal<String> HOSTNAME_TL = new ThreadLocal<String>();
 

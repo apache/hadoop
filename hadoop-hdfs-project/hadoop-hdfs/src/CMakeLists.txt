@@ -21,18 +21,7 @@ cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 # Default to release builds
 set(CMAKE_BUILD_TYPE, Release)
 
-# If JVM_ARCH_DATA_MODEL is 32, compile all binaries as 32-bit.
-# This variable is set by maven.
-if (JVM_ARCH_DATA_MODEL EQUAL 32)
-    # force 32-bit code generation on amd64/x86_64, ppc64, sparc64
-    if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_SYSTEM_PROCESSOR MATCHES ".*64")
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
-        set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -m32")
-    endif ()
-    if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
-        set(CMAKE_SYSTEM_PROCESSOR "i686")
-    endif ()
-endif (JVM_ARCH_DATA_MODEL EQUAL 32)
+include(../../../hadoop-common-project/hadoop-common/src/JNIFlags.cmake NO_POLICY_SCOPE)
 
 # Compile a library with both shared and static variants
 function(add_dual_library LIBNAME)
@@ -95,6 +84,7 @@ set(_FUSE_DFS_VERSION 0.1.0)
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 add_dual_library(hdfs
+    main/native/libhdfs/exception.c
     main/native/libhdfs/hdfs.c
     main/native/libhdfs/jni_helper.c
 )
@@ -105,6 +95,10 @@ dual_output_directory(hdfs target/usr/local/lib)
 set(LIBHDFS_VERSION "0.0.0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
+
+add_library(posix_util
+    main/native/util/posix_util.c
+)
 
 add_executable(test_libhdfs_ops
     main/native/libhdfs/test/test_libhdfs_ops.c

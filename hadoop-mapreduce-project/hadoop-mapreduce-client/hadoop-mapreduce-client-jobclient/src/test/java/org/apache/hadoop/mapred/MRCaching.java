@@ -210,19 +210,10 @@ public class MRCaching {
     fs.copyFromLocalFile(tarPath1, cachePath);
     fs.copyFromLocalFile(tarPath2, cachePath);
   }
- 
-  public static TestResult launchMRCache(String indir,
-                                         String outdir, String cacheDir, 
-                                         JobConf conf, String input) 
-  throws IOException {
-    setupCache(cacheDir, FileSystem.get(conf));
-    return launchMRCache(indir,outdir, cacheDir, conf, input, false); 
-  }
   
   public static TestResult launchMRCache(String indir,
                                          String outdir, String cacheDir, 
-                                         JobConf conf, String input,
-                                         boolean withSymlink)
+                                         JobConf conf, String input)
     throws IOException {
     String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/tmp"))
       .toString().replace(' ', '+');
@@ -256,24 +247,13 @@ public class MRCaching {
     conf.setNumReduceTasks(1);
     conf.setSpeculativeExecution(false);
     URI[] uris = new URI[6];
-    if (!withSymlink) {
-      conf.setMapperClass(MRCaching.MapClass.class);
-      uris[0] = fs.getUri().resolve(cacheDir + "/test.txt");
-      uris[1] = fs.getUri().resolve(cacheDir + "/test.jar");
-      uris[2] = fs.getUri().resolve(cacheDir + "/test.zip");
-      uris[3] = fs.getUri().resolve(cacheDir + "/test.tgz");
-      uris[4] = fs.getUri().resolve(cacheDir + "/test.tar.gz");
-      uris[5] = fs.getUri().resolve(cacheDir + "/test.tar");
-    } else {
-      DistributedCache.createSymlink(conf);
-      conf.setMapperClass(MRCaching.MapClass2.class);
-      uris[0] = fs.getUri().resolve(cacheDir + "/test.txt#" + "test.txt");
-      uris[1] = fs.getUri().resolve(cacheDir + "/test.jar#" + "testjar");
-      uris[2] = fs.getUri().resolve(cacheDir + "/test.zip#" + "testzip");
-      uris[3] = fs.getUri().resolve(cacheDir + "/test.tgz#" + "testtgz");
-      uris[4] = fs.getUri().resolve(cacheDir + "/test.tar.gz#" + "testtargz");
-      uris[5] = fs.getUri().resolve(cacheDir + "/test.tar#" + "testtar");
-    }
+    conf.setMapperClass(MRCaching.MapClass2.class);
+    uris[0] = fs.getUri().resolve(cacheDir + "/test.txt");
+    uris[1] = fs.getUri().resolve(cacheDir + "/test.jar");
+    uris[2] = fs.getUri().resolve(cacheDir + "/test.zip");
+    uris[3] = fs.getUri().resolve(cacheDir + "/test.tgz");
+    uris[4] = fs.getUri().resolve(cacheDir + "/test.tar.gz");
+    uris[5] = fs.getUri().resolve(cacheDir + "/test.tar");
     DistributedCache.addCacheFile(uris[0], conf);
 
     // Save expected file sizes

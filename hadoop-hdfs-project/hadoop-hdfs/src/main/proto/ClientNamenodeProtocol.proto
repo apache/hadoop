@@ -441,6 +441,12 @@ message SetBalancerBandwidthRequestProto {
 message SetBalancerBandwidthResponseProto { // void response
 }
 
+message GetDataEncryptionKeyRequestProto { // no parameters
+}
+
+message GetDataEncryptionKeyResponseProto {
+  required DataEncryptionKeyProto dataEncryptionKey = 1;
+}
 
 service ClientNamenodeProtocol {
   rpc getBlockLocations(GetBlockLocationsRequestProto)
@@ -511,6 +517,8 @@ service ClientNamenodeProtocol {
       returns(RenewDelegationTokenResponseProto);
   rpc cancelDelegationToken(CancelDelegationTokenRequestProto)
       returns(CancelDelegationTokenResponseProto);
-  rpc  setBalancerBandwidth(SetBalancerBandwidthRequestProto)
+  rpc setBalancerBandwidth(SetBalancerBandwidthRequestProto)
       returns(SetBalancerBandwidthResponseProto);
+  rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
+      returns(GetDataEncryptionKeyResponseProto);
 }

@@ -64,7 +64,7 @@ public class AMAttemptInfo {
     if (containerId != null) {
       this.containerId = containerId.toString();
       this.logsLink = join("http://" + nodeHttpAddress,
-          ujoin("node", "containerlogs", this.containerId));
+          ujoin("node", "containerlogs", this.containerId, user));
     }
   }
 

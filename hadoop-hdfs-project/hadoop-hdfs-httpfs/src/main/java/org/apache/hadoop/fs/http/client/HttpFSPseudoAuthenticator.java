@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.http.client;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.PseudoAuthenticator;
 
@@ -27,6 +28,7 @@ import java.io.IOException;
  * A <code>PseudoAuthenticator</code> subclass that uses FileSystemAccess's
  * <code>UserGroupInformation</code> to obtain the client user name (the UGI's login user).
  */
+@InterfaceAudience.Private
 public class HttpFSPseudoAuthenticator extends PseudoAuthenticator {
 
   /**

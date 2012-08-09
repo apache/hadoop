@@ -76,6 +76,5 @@ void nmdFree(struct NativeMiniDfsCluster* cl);
  *
  * @return          the port, or a negative error code
  */
-int nmdGetNameNodePort(struct NativeMiniDfsCluster *cl);
-
+int nmdGetNameNodePort(const struct NativeMiniDfsCluster *cl); 
 #endif

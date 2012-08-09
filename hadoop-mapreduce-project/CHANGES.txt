@@ -159,6 +159,14 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4342. Distributed Cache gives inconsistent result if cache files 
     get deleted from tasktracker. (mayank_bansal via tucu)
 
+    MAPREDUCE-4498. Remove hsqldb jar from Hadoop runtime classpath. (rkanter via tucu)
+
+    MAPREDUCE-4494. TestFifoScheduler failing with Metrics source QueueMetrics,q0=default 
+    already exists!. (ahmed.radwan via tucu)
+
+    MAPREDUCE-4484. Incorrect IS_MINI_YARN_CLUSTER property name in YarnConfiguration. 
+    (ahmed.radwan via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -205,6 +213,9 @@ Release 2.1.0-alpha - Unreleased
     development of new applications. (Bikas Saha via acmurthy) 
 
     MAPREDUCE-4447. Remove aop from cruft from the ant build. (eli)
+
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Siddharth Seth via sseth)
 
   OPTIMIZATIONS
 
@@ -461,6 +472,11 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4231. Update RAID to use the new BlockCollection interface.
     (szetszwo)
 
+    MAPREDUCE-4483. 2.0 build does not work (John George via bobby)
+
+    MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
+    bad (Jason Lowe via bobby)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -504,6 +520,9 @@ Release 0.23.3 - UNRELEASED
     (bobby via tgraves)
 
     MAPREDUCE-4267. mavenize pipes (tgraves via bobby)
+
+    MAPREDUCE-4375. Show Configuration Tracability in MR UI (bobby 
+    via tgraves)
 
   OPTIMIZATIONS
 
@@ -762,6 +781,33 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4423. Potential infinite fetching of map output (Robert Evans
     via tgraves)
+
+    MAPREDUCE-4456. LocalDistributedCacheManager can get an 
+    ArrayIndexOutOfBounds when creating symlinks (Robert Evans via tgraves)
+
+    MAPREDUCE-4496. AM logs link is missing user name (Jason Lowe via bobby)
+
+    MAPREDUCE-4493. Distibuted Cache Compatability Issues (Robert Evans
+    via tgraves)
+
+    MAPREDUCE-4492. Configuring total queue capacity between 100.5 and 99.5 at
+    perticular level is sucessfull (Mayank Bansal via bobby)
+
+    MAPREDUCE-4457. mr job invalid transition TA_TOO_MANY_FETCH_FAILURE at 
+    FAILED  (Robert Evans via tgraves)
+
+    MAPREDUCE-4234. SortValidator.java is incompatible with multi-user or
+    parallel use (due to a /tmp file with static name) (Robert Evans via
+    jeagles)
+
+    MAPREDUCE-4504. SortValidator writes to wrong directory (Robert Evans 
+    via tgraves)
+
+    MAPREDUCE-4503. Should throw InvalidJobConfException if duplicates found in
+    cacheArchives or cacheFiles (Robert Evans via jeagles)
+
+    MAPREDUCE-3782. teragen terasort jobs fail when using webhdfs:// (Jason
+    Lowe via bobby)
 
 Release 0.23.2 - UNRELEASED
 

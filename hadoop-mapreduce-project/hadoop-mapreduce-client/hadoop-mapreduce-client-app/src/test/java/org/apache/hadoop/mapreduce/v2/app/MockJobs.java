@@ -603,7 +603,7 @@ public class MockJobs extends MockApps {
       public Configuration loadConfFile() throws IOException {
         FileContext fc = FileContext.getFileContext(configFile.toUri(), conf);
         Configuration jobConf = new Configuration(false);
-        jobConf.addResource(fc.open(configFile));
+        jobConf.addResource(fc.open(configFile), configFile.toString());
         return jobConf;
       }
     };

@@ -1370,7 +1370,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
           }
         }
         
-        float failureRate = (float) fetchFailures / runningReduceTasks;
+        float failureRate = runningReduceTasks == 0 ? 1.0f : 
+          (float) fetchFailures / runningReduceTasks;
         // declare faulty if fetch-failures >= max-allowed-failures
         boolean isMapFaulty =
             (failureRate >= MAX_ALLOWED_FETCH_FAILURES_FRACTION);
@@ -1561,7 +1562,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     Path confPath = getConfFile();
     FileContext fc = FileContext.getFileContext(confPath.toUri(), conf);
     Configuration jobConf = new Configuration(false);
-    jobConf.addResource(fc.open(confPath));
+    jobConf.addResource(fc.open(confPath), confPath.toString());
     return jobConf;
   }
 }

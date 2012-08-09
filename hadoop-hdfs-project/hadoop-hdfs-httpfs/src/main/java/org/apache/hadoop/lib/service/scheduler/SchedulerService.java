@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.lib.service.scheduler;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.lib.lang.RunnableCallable;
 import org.apache.hadoop.lib.server.BaseService;
 import org.apache.hadoop.lib.server.Server;
@@ -35,6 +36,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+@InterfaceAudience.Private
 public class SchedulerService extends BaseService implements Scheduler {
   private static final Logger LOG = LoggerFactory.getLogger(SchedulerService.class);
 

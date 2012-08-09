@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.http.server;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;
 import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator.DelegationTokenOperation;
@@ -52,6 +53,7 @@ import java.util.Set;
  * If not delegation token is present in the request it delegates to the
  * {@link KerberosAuthenticationHandler}
  */
+@InterfaceAudience.Private
 public class HttpFSKerberosAuthenticationHandler
   extends KerberosAuthenticationHandler {
 

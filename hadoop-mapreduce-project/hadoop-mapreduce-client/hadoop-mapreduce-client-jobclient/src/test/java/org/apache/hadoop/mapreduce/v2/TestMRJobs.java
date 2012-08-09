@@ -211,6 +211,7 @@ public class TestMRJobs {
     Path outputDir =
         new Path(mrCluster.getTestWorkDir().getAbsolutePath(), "random-output");
     FileOutputFormat.setOutputPath(job, outputDir);
+    job.setSpeculativeExecution(false);
     job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
     job.setJarByClass(RandomTextWriterJob.class);
     job.setMaxMapAttempts(1); // speed up failures
@@ -462,7 +463,6 @@ public class TestMRJobs {
     job.addFileToClassPath(APP_JAR); // The AppMaster jar itself.
     job.addArchiveToClassPath(third);
     job.addCacheArchive(fourth.toUri());
-    job.createSymlink();
     job.setMaxMapAttempts(1); // speed up failures
 
     job.submit();

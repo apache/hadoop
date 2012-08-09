@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.lib.service;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 import java.io.IOException;
 import java.security.AccessControlException;
 
+@InterfaceAudience.Private
 public interface ProxyUser {
 
   public void validate(String proxyUser, String proxyHost, String doAsUser) throws IOException, AccessControlException;

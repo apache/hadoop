@@ -48,8 +48,12 @@ import org.apache.hadoop.mapreduce.Job;
  * Archives (zip, tar and tgz/tar.gz files) are un-archived at the slave nodes. 
  * Jars may be optionally added to the classpath of the tasks, a rudimentary 
  * software distribution mechanism.  Files have execution permissions.
- * Optionally users can also direct it to symlink the distributed cache file(s)
- * into the working directory of the task.</p>
+ * In older version of Hadoop Map/Reduce users could optionally ask for symlinks
+ * to be created in the working directory of the child task.  In the current 
+ * version symlinks are always created.  If the URL does not have a fragment 
+ * the name of the file or directory will be used. If multiple files or 
+ * directories map to the same link name, the last one added, will be used.  All
+ * others will not even be downloaded.</p>
  * 
  * <p><code>DistributedCache</code> tracks modification timestamps of the cache 
  * files. Clearly the cache files should not be modified by the application 
@@ -91,8 +95,7 @@ import org.apache.hadoop.mapreduce.Job;
  *       
  *       public void configure(JobConf job) {
  *         // Get the cached archives/files
- *         localArchives = DistributedCache.getLocalCacheArchives(job);
- *         localFiles = DistributedCache.getLocalCacheFiles(job);
+ *         File f = new File("./map.zip/some/file/in/zip.txt");
  *       }
  *       
  *       public void map(K key, V value, 

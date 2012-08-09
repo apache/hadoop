@@ -23,12 +23,16 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.TestDFSClientRetries;
+import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -195,5 +199,13 @@ public class TestWebHDFS {
     }
     in.close();
     t.end(checked);
+  }
+
+  /** Test client retry with namenode restarting. */
+  @Test
+  public void testNamenodeRestart() throws Exception {
+    ((Log4JLogger)NamenodeWebHdfsMethods.LOG).getLogger().setLevel(Level.ALL);
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    TestDFSClientRetries.namenodeRestartTest(conf, true);
   }
 }

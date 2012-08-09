@@ -271,6 +271,23 @@ public class BookKeeperJournalManager implements JournalManager {
     }
   }
 
+  @Override
+  public void format(NamespaceInfo ns) {
+    // Currently, BKJM automatically formats itself when first accessed.
+    // TODO: change over to explicit formatting so that the admin can
+    // clear out the BK storage when reformatting a cluster.
+    LOG.info("Not formatting " + this + " - BKJM does not currently " +
+        "support reformatting. If it has not been used before, it will" +
+        "be formatted automatically upon first use.");
+  }
+  
+  @Override
+  public boolean hasSomeData() throws IOException {
+    // Don't confirm format on BKJM, since format() is currently a
+    // no-op anyway
+    return false;
+  }
+
   /**
    * Start a new log segment in a BookKeeper ledger.
    * First ensure that we have the write lock for this journal.

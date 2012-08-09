@@ -211,6 +211,8 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8465. hadoop-auth should support ephemeral authentication (tucu)
 
+    HADOOP-8644. AuthenticatedURL should be able to use SSLFactory. (tucu)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
@@ -276,6 +278,9 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8609. IPC server logs a useless message when shutting down socket.
     (Jon Zuanich via atm)
+
+    HADOOP-8620. Add -Drequire.fuse and -Drequire.snappy. (Colin
+    Patrick McCabe via eli)
 
   BUG FIXES
 
@@ -371,6 +376,12 @@ Branch-2 ( Unreleased changes )
     hadoop.security.group.mapping.ldap.search.filter.user. (Jonathan Natkins
     via atm)
 
+    HADOOP-8480. The native build should honor -DskipTests.
+    (Colin Patrick McCabe via eli)
+
+    HADOOP-8659. Native libraries must build with soft-float ABI for Oracle JVM
+    on ARM. (Trevor Robinson via todd)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
@@ -402,6 +413,8 @@ Branch-2 ( Unreleased changes )
     (todd via eli)
     
     HADOOP-8405. ZKFC tests leak ZK instances. (todd)
+
+    HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
 
 Release 2.0.0-alpha - 05-23-2012
 
@@ -866,6 +879,15 @@ Release 0.23.3 - UNRELEASED
     (John George via bobby)
 
     HADOOP-8635. Cannot cancel paths registered deleteOnExit (daryn via bobby)
+
+    HADOOP-8637. FilterFileSystem#setWriteChecksum is broken (daryn via bobby)
+
+    HADOOP-8370. Native build failure: javah: class file for 
+    org.apache.hadoop.classification.InterfaceAudience not found  (Trevor
+    Robinson via tgraves)
+
+    HADOOP-8633. Interrupted FsShell copies may leave tmp files (Daryn Sharp
+    via tgraves)
 
 Release 0.23.2 - UNRELEASED 
 
