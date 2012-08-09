@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -95,9 +96,10 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       writer.println(timeoutCommand);
       writer.close();
 
-      Map<Path, String> resources = new HashMap<Path, String>();
+      Map<Path, List<String>> resources =
+          new HashMap<Path, List<String>>();
       Path path = new Path(shellFile.getAbsolutePath());
-      resources.put(path, badSymlink);
+      resources.put(path, Arrays.asList(badSymlink));
 
       FileOutputStream fos = new FileOutputStream(tempFile);
 

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.container;
 
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.fs.Path;
@@ -38,7 +39,7 @@ public interface Container extends EventHandler<ContainerEvent> {
 
   Credentials getCredentials();
 
-  Map<Path,String> getLocalizedResources();
+  Map<Path,List<String>> getLocalizedResources();
 
   ContainerStatus cloneAndGetContainerStatus();
 

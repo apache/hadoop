@@ -29,12 +29,15 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -111,11 +114,12 @@ public class TestContainer {
       wc = new WrappedContainer(8, 314159265358979L, 4344, "yak");
       assertEquals(ContainerState.NEW, wc.c.getContainerState());
       wc.initContainer();
-      Map<Path, String> localPaths = wc.localizeResources();
+      Map<Path, List<String>> localPaths = wc.localizeResources();
 
       // all resources should be localized
       assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
-      for (Entry<Path,String> loc : wc.c.getLocalizedResources().entrySet()) {
+      for (Entry<Path, List<String>> loc : wc.c.getLocalizedResources()
+          .entrySet()) {
         assertEquals(localPaths.remove(loc.getKey()), loc.getValue());
       }
       assertTrue(localPaths.isEmpty());
@@ -578,10 +582,12 @@ public class TestContainer {
 
     // Localize resources 
     // Skip some resources so as to consider them failed
-    public Map<Path, String> doLocalizeResources(boolean checkLocalizingState,
-        int skipRsrcCount) throws URISyntaxException {
+    public Map<Path, List<String>> doLocalizeResources(
+        boolean checkLocalizingState, int skipRsrcCount)
+        throws URISyntaxException {
       Path cache = new Path("file:///cache");
-      Map<Path, String> localPaths = new HashMap<Path, String>();
+      Map<Path, List<String>> localPaths =
+          new HashMap<Path, List<String>>();
       int counter = 0;
       for (Entry<String, LocalResource> rsrc : localResources.entrySet()) {
         if (counter++ < skipRsrcCount) {
@@ -592,7 +598,7 @@ public class TestContainer {
         }
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
         Path p = new Path(cache, rsrc.getKey());
-        localPaths.put(p, rsrc.getKey());
+        localPaths.put(p, Arrays.asList(rsrc.getKey()));
         // rsrc copied to p
         c.handle(new ContainerResourceLocalizedEvent(c.getContainerID(), 
                  req, p));
@@ -602,7 +608,8 @@ public class TestContainer {
     }
     
     
-    public Map<Path, String> localizeResources() throws URISyntaxException {
+    public Map<Path, List<String>> localizeResources()
+        throws URISyntaxException {
       return doLocalizeResources(true, 0);
     }
     
