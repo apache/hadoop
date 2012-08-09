@@ -109,6 +109,9 @@ Trunk (unreleased changes)
 
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
+    HDFS-3768. Exception in TestJettyHelper is incorrect. 
+    (Eli Reisman via jghoman)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -189,6 +192,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3446. HostsFileReader silently ignores bad includes/excludes
     (Matthew Jacobs via todd)
 
+    HDFS-3755. Creating an already-open-for-write file with overwrite=true fails
+    (todd)
+
   NEW FEATURES
 
     HDFS-744. Support hsync in HDFS. (Lars Hofhansl via szetszwo)
@@ -202,6 +208,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3113. httpfs does not support delegation tokens. (tucu)
 
     HDFS-3513. HttpFS should cache filesystems. (tucu)
+
+    HDFS-3637. Add support for encrypting the DataTransferProtocol. (atm)
 
   IMPROVEMENTS
 
@@ -363,6 +371,12 @@ Branch-2 ( Unreleased changes )
     operations. (Andrew Wang via atm)
 
     HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
+
+    HDFS-3291. add test that covers HttpFS working w/ a non-HDFS Hadoop
+    filesystem (tucu)
+
+    HDFS-3634. Add self-contained, mavenized fuse_dfs test. (Colin Patrick
+    McCabe via atm)
 
   OPTIMIZATIONS
 
@@ -553,6 +567,17 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3756. DelegationTokenFetcher creates 2 HTTP connections, the second 
     one not properly configured. (tucu)
+
+    HDFS-3719. Re-enable append-related tests in TestFileConcurrentReader.
+    (Andrew Wang via atm)
+
+    HDFS-3579. libhdfs: fix exception handling. (Colin Patrick McCabe via atm)
+
+    HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. (eli)
+
+    HDFS-3760. primitiveCreate is a write, not a read. (Andy Isaacson via atm)
+
+    HDFS-3710. libhdfs misuses O_RDONLY/WRONLY/RDWR. (Andy Isaacson via atm)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 

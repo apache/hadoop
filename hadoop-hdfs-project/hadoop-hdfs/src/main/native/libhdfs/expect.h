@@ -78,7 +78,7 @@
     do { \
         int __my_ret__ = x; \
         int __my_errno__ = errno; \
-        if (__my_ret__) { \
+        if (!__my_ret__) { \
             fprintf(stderr, "TEST_ERROR: failed on line %d with return " \
 		    "code %d (errno: %d): got zero from %s\n", __LINE__, \
                 __my_ret__, __my_errno__, #x); \
@@ -97,5 +97,24 @@
             return __my_ret__; \
         } \
     } while (0);
+
+#define EXPECT_INT_EQ(x, y) \
+    do { \
+        int __my_ret__ = y; \
+        int __my_errno__ = errno; \
+        if (__my_ret__ != (x)) { \
+            fprintf(stderr, "TEST_ERROR: failed on line %d with return " \
+              "code %d (errno: %d): expected %d\n", \
+               __LINE__, __my_ret__, __my_errno__, (x)); \
+            return -1; \
+        } \
+    } while (0);
+
+#define RETRY_ON_EINTR_GET_ERRNO(ret, expr) do { \
+    ret = expr; \
+    if (!ret) \
+        break; \
+    ret = -errno; \
+    } while (ret == -EINTR);
 
 #endif

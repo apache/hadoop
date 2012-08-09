@@ -20,14 +20,17 @@ package org.apache.hadoop.security.ssl;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.security.GeneralSecurityException;
 
 /**
@@ -42,7 +45,7 @@ import java.security.GeneralSecurityException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class SSLFactory {
+public class SSLFactory implements ConnectionConfigurator {
 
   @InterfaceAudience.Private
   public static enum Mode { CLIENT, SERVER }
@@ -234,4 +237,29 @@ public class SSLFactory {
     return requireClientCert;
   }
 
+  /**
+   * If the given {@link HttpURLConnection} is an {@link HttpsURLConnection}
+   * configures the connection with the {@link SSLSocketFactory} and
+   * {@link HostnameVerifier} of this SSLFactory, otherwise does nothing.
+   *
+   * @param conn the {@link HttpURLConnection} instance to configure.
+   * @return the configured {@link HttpURLConnection} instance.
+   *
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public HttpURLConnection configure(HttpURLConnection conn)
+    throws IOException {
+    if (conn instanceof HttpsURLConnection) {
+      HttpsURLConnection sslConn = (HttpsURLConnection) conn;
+      try {
+        sslConn.setSSLSocketFactory(createSSLSocketFactory());
+      } catch (GeneralSecurityException ex) {
+        throw new IOException(ex);
+      }
+      sslConn.setHostnameVerifier(getHostnameVerifier());
+      conn = sslConn;
+    }
+    return conn;
+  }
 }

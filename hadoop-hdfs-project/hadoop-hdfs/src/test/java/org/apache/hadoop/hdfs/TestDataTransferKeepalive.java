@@ -113,7 +113,7 @@ public class TestDataTransferKeepalive {
     
     // Take it out of the cache - reading should
     // give an EOF.
-    Socket s = dfsClient.socketCache.get(dnAddr);
+    Socket s = dfsClient.socketCache.get(dnAddr).sock;
     assertNotNull(s);
     assertEquals(-1, NetUtils.getInputStream(s).read());
   }

@@ -95,6 +95,7 @@ set(_FUSE_DFS_VERSION 0.1.0)
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/config.h.cmake ${CMAKE_BINARY_DIR}/config.h)
 
 add_dual_library(hdfs
+    main/native/libhdfs/exception.c
     main/native/libhdfs/hdfs.c
     main/native/libhdfs/jni_helper.c
 )
@@ -105,6 +106,10 @@ dual_output_directory(hdfs target/usr/local/lib)
 set(LIBHDFS_VERSION "0.0.0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
+
+add_library(posix_util
+    main/native/util/posix_util.c
+)
 
 add_executable(test_libhdfs_ops
     main/native/libhdfs/test/test_libhdfs_ops.c

@@ -80,6 +80,9 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     /* There should not be any file to open for reading. */
     EXPECT_NULL(hdfsOpenFile(fs, tmp, O_RDONLY, 0, 0, 0));
 
+    /* hdfsOpenFile should not accept mode = 3 */
+    EXPECT_NULL(hdfsOpenFile(fs, tmp, 3, 0, 0, 0));
+
     file = hdfsOpenFile(fs, tmp, O_WRONLY, 0, 0, 0);
     EXPECT_NONNULL(file);
 

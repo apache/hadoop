@@ -77,7 +77,7 @@ public class TestJettyHelper implements MethodRule {
       server.getConnectors()[0].setPort(port);
       return server;
     } catch (Exception ex) {
-      throw new RuntimeException("Could not stop embedded servlet container, " + ex.getMessage(), ex);
+      throw new RuntimeException("Could not start embedded servlet container, " + ex.getMessage(), ex);
     }
   }
 

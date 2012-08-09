@@ -620,7 +620,8 @@ public abstract class FileSystem extends Configured implements Closeable {
         conf.getInt("io.bytes.per.checksum", 512), 
         64 * 1024, 
         getDefaultReplication(),
-        conf.getInt("io.file.buffer.size", 4096));
+        conf.getInt("io.file.buffer.size", 4096),
+        false);
   }
 
   /**

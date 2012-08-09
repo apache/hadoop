@@ -71,6 +71,16 @@ IF(FUSE_FOUND)
         m
         pthread
     )
+    add_executable(test_fuse_dfs
+        test/test_fuse_dfs.c
+        test/fuse_workload.c
+    )
+    target_link_libraries(test_fuse_dfs
+        ${FUSE_LIBRARIES}
+        native_mini_dfs
+        posix_util
+        pthread
+    )
 ELSE(FUSE_FOUND)
     IF(REQUIRE_FUSE)
         MESSAGE(FATAL_ERROR "Required component fuse_dfs could not be built.")

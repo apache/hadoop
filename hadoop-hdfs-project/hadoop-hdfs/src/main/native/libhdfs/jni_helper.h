@@ -37,14 +37,35 @@ typedef enum {
     INSTANCE
 } MethType;
 
-
-/** Used for returning an appropriate return value after invoking
- * a method
+/**
+ * Create a new malloc'ed C string from a Java string.
+ *
+ * @param env       The JNI environment
+ * @param jstr      The Java string
+ * @param out       (out param) the malloc'ed C string
+ *
+ * @return          NULL on success; the exception otherwise
  */
-typedef jvalue RetVal;
+jthrowable newCStr(JNIEnv *env, jstring jstr, char **out);
 
-/** Used for returning the exception after invoking a method */
-typedef jthrowable Exc;
+/**
+ * Create a new Java string from a C string.
+ *
+ * @param env       The JNI environment
+ * @param str       The C string
+ * @param out       (out param) the java string
+ *
+ * @return          NULL on success; the exception otherwise
+ */
+jthrowable newJavaStr(JNIEnv *env, const char *str, jstring *out);
+
+/**
+ * Helper function to destroy a local reference of java.lang.Object
+ * @param env: The JNIEnv pointer. 
+ * @param jFile: The local reference of java.lang.Object object
+ * @return None.
+ */
+void destroyLocalReference(JNIEnv *env, jobject jObject);
 
 /** invokeMethod: Invoke a Static or Instance method.
  * className: Name of the class where the method can be found
@@ -63,33 +84,27 @@ typedef jthrowable Exc;
  * RETURNS: -1 on error and 0 on success. If -1 is returned, exc will have 
    a valid exception reference, and the result stored at retval is undefined.
  */
-int invokeMethod(JNIEnv *env, RetVal *retval, Exc *exc, MethType methType,
+jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
                  jobject instObj, const char *className, const char *methName, 
                  const char *methSignature, ...);
 
-/** constructNewObjectOfClass: Invoke a constructor.
- * className: Name of the class
- * ctorSignature: the signature of the constructor "(arg-types)V"
- * env: The JNIEnv pointer
- * exc: If the ctor throws any exception, this will contain the reference
- * Arguments to the ctor must be passed after ctorSignature 
- */
-jobject constructNewObjectOfClass(JNIEnv *env, Exc *exc, const char *className, 
+jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out, const char *className, 
                                   const char *ctorSignature, ...);
 
-jmethodID methodIdFromClass(const char *className, const char *methName, 
+jthrowable methodIdFromClass(const char *className, const char *methName, 
                             const char *methSignature, MethType methType, 
-                            JNIEnv *env);
+                            JNIEnv *env, jmethodID *out);
 
-jclass globalClassReference(const char *className, JNIEnv *env);
+jthrowable globalClassReference(const char *className, JNIEnv *env, jclass *out);
 
 /** classNameOfObject: Get an object's class name.
  * @param jobj: The object.
  * @param env: The JNIEnv pointer.
- * @return Returns a pointer to a string containing the class name. This string
- * must be freed by the caller.
+ * @param name: (out param) On success, will contain a string containing the
+ * class name. This string must be freed by the caller.
+ * @return NULL on success, or the exception
  */
-char *classNameOfObject(jobject jobj, JNIEnv *env);
+jthrowable classNameOfObject(jobject jobj, JNIEnv *env, char **name);
 
 /** getJNIEnv: A helper function to get the JNIEnv* for the given thread.
  * If no JVM exists, then one will be created. JVM command line arguments
@@ -98,8 +113,6 @@ char *classNameOfObject(jobject jobj, JNIEnv *env);
  * @return The JNIEnv* corresponding to the thread.
  * */
 JNIEnv* getJNIEnv(void);
-
-jarray constructNewArrayString(JNIEnv *env, Exc *exc, const char **elements, int size) ;
 
 #endif /*LIBHDFS_JNI_HELPER_H*/
 

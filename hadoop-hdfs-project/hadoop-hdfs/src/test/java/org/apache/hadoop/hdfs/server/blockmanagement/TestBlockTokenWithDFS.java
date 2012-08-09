@@ -146,7 +146,7 @@ public class TestBlockTokenWithDFS {
           "test-blockpoolid", block.getBlockId());
       blockReader = BlockReaderFactory.newBlockReader(
           conf, s, file, block, 
-          lblock.getBlockToken(), 0, -1);
+          lblock.getBlockToken(), 0, -1, null);
 
     } catch (IOException ex) {
       if (ex instanceof InvalidBlockTokenException) {

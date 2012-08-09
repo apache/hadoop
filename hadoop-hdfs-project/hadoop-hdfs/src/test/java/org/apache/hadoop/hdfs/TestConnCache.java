@@ -168,13 +168,13 @@ public class TestConnCache {
 
     // Insert a socket to the NN
     Socket nnSock = new Socket(nnAddr.getAddress(), nnAddr.getPort());
-    cache.put(nnSock);
-    assertSame("Read the write", nnSock, cache.get(nnAddr));
-    cache.put(nnSock);
+    cache.put(nnSock, null);
+    assertSame("Read the write", nnSock, cache.get(nnAddr).sock);
+    cache.put(nnSock, null);
 
     // Insert DN socks
     for (Socket dnSock : dnSockets) {
-      cache.put(dnSock);
+      cache.put(dnSock, null);
     }
 
     assertEquals("NN socket evicted", null, cache.get(nnAddr));
@@ -182,7 +182,7 @@ public class TestConnCache {
 
     // Lookup the DN socks
     for (Socket dnSock : dnSockets) {
-      assertEquals("Retrieve cached sockets", dnSock, cache.get(dnAddr));
+      assertEquals("Retrieve cached sockets", dnSock, cache.get(dnAddr).sock);
       dnSock.close();
     }
 

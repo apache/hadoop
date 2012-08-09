@@ -25,6 +25,14 @@ import java.net.URL;
 public interface Authenticator {
 
   /**
+   * Sets a {@link ConnectionConfigurator} instance to use for
+   * configuring connections.
+   *
+   * @param configurator the {@link ConnectionConfigurator} instance.
+   */
+  public void setConnectionConfigurator(ConnectionConfigurator configurator);
+
+  /**
    * Authenticates against a URL and returns a {@link AuthenticatedURL.Token} to be
    * used by subsequent requests.
    *

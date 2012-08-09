@@ -252,7 +252,9 @@ extern  "C" {
      * hdfsDisconnect - Disconnect from the hdfs file system.
      * Disconnect from hdfs.
      * @param fs The configured filesystem handle.
-     * @return Returns 0 on success, -1 on error.  
+     * @return Returns 0 on success, -1 on error.
+     *         Even if there is an error, the resources associated with the
+     *         hdfsFS will be freed.
      */
     int hdfsDisconnect(hdfsFS fs);
         
@@ -280,6 +282,10 @@ extern  "C" {
      * @param fs The configured filesystem handle.
      * @param file The file handle.
      * @return Returns 0 on success, -1 on error.  
+     *         On error, errno will be set appropriately.
+     *         If the hdfs file was valid, the memory associated with it will
+     *         be freed at the end of this call, even if there was an I/O
+     *         error.
      */
     int hdfsCloseFile(hdfsFS fs, hdfsFile file);
 
@@ -336,8 +342,7 @@ extern  "C" {
      * @param position Position from which to read
      * @param buffer The buffer to copy read bytes into.
      * @param length The length of the buffer.
-     * @return Returns the number of bytes actually read, possibly less than
-     * than length;-1 on error.
+     * @return      See hdfsRead
      */
     tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position,
                     void* buffer, tSize length);
