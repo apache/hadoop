@@ -422,6 +422,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3710. libhdfs misuses O_RDONLY/WRONLY/RDWR. (Andy Isaacson via atm)
 
+    HDFS-3721. hsync support broke wire compatibility. (todd and atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
