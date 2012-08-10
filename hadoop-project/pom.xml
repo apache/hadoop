@@ -266,7 +266,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>r09</version>
+        <version>11.0.2</version>
       </dependency>
       <dependency>
         <groupId>commons-cli</groupId>

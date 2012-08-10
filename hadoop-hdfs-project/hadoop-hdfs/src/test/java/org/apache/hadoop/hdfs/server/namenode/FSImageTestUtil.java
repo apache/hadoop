@@ -36,6 +36,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -173,7 +174,9 @@ public abstract class FSImageTestUtil {
   public static FSEditLog createStandaloneEditLog(File logDir)
       throws IOException {
     assertTrue(logDir.mkdirs() || logDir.exists());
-    Files.deleteDirectoryContents(logDir);
+    if (!FileUtil.fullyDeleteContents(logDir)) {
+      throw new IOException("Unable to delete contents of " + logDir);
+    }
     NNStorage storage = Mockito.mock(NNStorage.class);
     List<StorageDirectory> sds = Lists.newArrayList(
         FSImageTestUtil.mockStorageDirectory(logDir, NameNodeDirType.EDITS));
