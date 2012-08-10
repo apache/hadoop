@@ -424,6 +424,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3721. hsync support broke wire compatibility. (todd and atm)
 
+    HDFS-3758. TestFuseDFS test failing. (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
