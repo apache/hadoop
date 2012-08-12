@@ -161,6 +161,8 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4036. Streaming TestUlimit fails on CentOS 6. (tucu)
 
+    HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. (eli)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

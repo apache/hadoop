@@ -107,6 +107,7 @@ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.Param;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
@@ -270,6 +271,8 @@ public class DataNode extends Configured
   public Server ipcServer;
 
   private SecureResources secureResources = null;
+
+  ReadaheadPool readaheadPool;
   
   /**
    * Current system time.
@@ -468,6 +471,8 @@ public class DataNode extends Configured
       LOG.info("Periodic Block Verification is disabled because " +
                reason + ".");
     }
+
+    readaheadPool = ReadaheadPool.getInstance();
 
     this.connectToDnViaHostname = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,

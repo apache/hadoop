@@ -86,6 +86,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
   // Cache-management related fields
   private final long readaheadLength;
   private boolean shouldDropCacheBehindRead;
+  private ReadaheadPool readaheadPool;
   private ReadaheadRequest curReadahead;
   private long lastCacheDropOffset;
   private static final long CACHE_DROP_INTERVAL_BYTES = 1024 * 1024; // 1MB
@@ -95,8 +96,6 @@ class BlockSender implements java.io.Closeable, FSConstants {
    */
   private static final long LONG_READ_THRESHOLD_BYTES = 256 * 1024;
 
-  private static ReadaheadPool readaheadPool = ReadaheadPool.getInstance();
-  
   BlockSender(Block block, long startOffset, long length,
               boolean corruptChecksumOk, boolean chunkOffsetOK,
               boolean verifyChecksum, DataNode datanode) throws IOException {
@@ -117,6 +116,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       this.transferToAllowed = datanode.transferToAllowed;
       this.clientTraceFmt = clientTraceFmt;
       this.readaheadLength = datanode.getReadaheadLength();
+      this.readaheadPool = datanode.readaheadPool;
       this.shouldDropCacheBehindRead = datanode.shouldDropCacheBehindReads();
       
       if ( !corruptChecksumOk || datanode.data.metaFileExists(block) ) {

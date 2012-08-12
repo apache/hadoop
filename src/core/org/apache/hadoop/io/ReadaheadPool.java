@@ -60,13 +60,14 @@ public class ReadaheadPool {
   }
 
   private ReadaheadPool() {
+    final ThreadFactory backingFactory = Executors.defaultThreadFactory();
     pool = new ThreadPoolExecutor(POOL_SIZE, MAX_POOL_SIZE, 3L, TimeUnit.SECONDS,
         new ArrayBlockingQueue<Runnable>(CAPACITY));
     pool.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardOldestPolicy());
     pool.setThreadFactory(new ThreadFactory() {
       @Override
       public Thread newThread(Runnable runnable) {
-        Thread thread = Executors.defaultThreadFactory().newThread(runnable);
+        Thread thread = backingFactory.newThread(runnable);
         thread.setName(String.format("Readahead Thread #%d",
             THREAD_COUNTER.getAndIncrement()));
         thread.setDaemon(true);
