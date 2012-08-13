@@ -18,17 +18,18 @@
 
 cmake_minimum_required(VERSION 2.6 FATAL_ERROR)
 
-find_package(JNI REQUIRED)
-
 # If JVM_ARCH_DATA_MODEL is 32, compile all binaries as 32-bit.
 # This variable is set by maven.
 if (JVM_ARCH_DATA_MODEL EQUAL 32)
     # Force 32-bit code generation on amd64/x86_64, ppc64, sparc64
     if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_SYSTEM_PROCESSOR MATCHES ".*64")
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m32")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32")
         set(CMAKE_LD_FLAGS "${CMAKE_LD_FLAGS} -m32")
     endif ()
     if (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
+        # Set CMAKE_SYSTEM_PROCESSOR to ensure that find_package(JNI) will use
+        # the 32-bit version of libjvm.so.
         set(CMAKE_SYSTEM_PROCESSOR "i686")
     endif ()
 endif (JVM_ARCH_DATA_MODEL EQUAL 32)
@@ -63,3 +64,5 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" AND CMAKE_SYSTEM_NAME STREQUAL "Linux"
         endif ()
     endif (READELF MATCHES "NOTFOUND")
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+
+find_package(JNI REQUIRED)

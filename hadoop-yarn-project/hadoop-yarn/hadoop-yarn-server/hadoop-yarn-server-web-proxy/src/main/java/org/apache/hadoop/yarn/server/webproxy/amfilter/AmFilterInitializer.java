@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.http.FilterInitializer;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -37,7 +38,8 @@ public class AmFilterInitializer extends FilterInitializer {
     String proxy = YarnConfiguration.getProxyHostAndPort(conf);
     String[] parts = proxy.split(":");
     params.put(AmIpFilter.PROXY_HOST, parts[0]);
-    params.put(AmIpFilter.PROXY_URI_BASE, "http://"+proxy+
+    params.put(AmIpFilter.PROXY_URI_BASE,
+        HttpConfig.getSchemePrefix() + proxy +
         System.getenv(ApplicationConstants.APPLICATION_WEB_PROXY_BASE_ENV));
     container.addFilter(FILTER_NAME, FILTER_CLASS, params);
   }

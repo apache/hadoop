@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -393,13 +394,13 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       final String trackingUriWithoutScheme) {
     this.readLock.lock();
     try {
-      URI trackingUri = trackingUriWithoutScheme == null ? null : 
+      URI trackingUri = trackingUriWithoutScheme == null ? null :
         ProxyUriUtils.getUriFromAMUrl(trackingUriWithoutScheme);
       URI proxyUri = ProxyUriUtils.getUriFromAMUrl(proxy);
-      URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri, 
+      URI result = ProxyUriUtils.getProxyUri(trackingUri, proxyUri,
           applicationAttemptId.getApplicationId());
       //We need to strip off the scheme to have it match what was there before
-      return result.toASCIIString().substring(7);
+      return result.toASCIIString().substring(HttpConfig.getSchemePrefix().length());
     } catch (URISyntaxException e) {
       LOG.warn("Could not proxify "+trackingUriWithoutScheme,e);
       return trackingUriWithoutScheme;

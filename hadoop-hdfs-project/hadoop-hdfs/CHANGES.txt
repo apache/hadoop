@@ -104,15 +104,15 @@ Trunk (unreleased changes)
 
     HDFS-3573. Supply NamespaceInfo when instantiating JournalManagers (todd)
 
-    HDFS-3190. Simple refactors in existing NN code to assist
-    QuorumJournalManager extension. (todd)
-
     HDFS-3630 Modify TestPersistBlocks to use both flush and hflush  (sanjay)
 
     HDFS-3768. Exception in TestJettyHelper is incorrect. 
     (Eli Reisman via jghoman)
 
     HDFS-3695. Genericize format() to non-file JournalManagers. (todd)
+
+    HDFS-3789. JournalManager#format() should be able to throw IOException
+    (Ivan Kelly via todd)
 
   OPTIMIZATIONS
 
@@ -126,10 +126,6 @@ Trunk (unreleased changes)
     HDFS-2313. Rat excludes has a typo for excluding editsStored files. (atm)
 
     HDFS-2314. MRV1 test compilation broken after HDFS-2197 (todd)
-
-    HDFS-2330. In NNStorage and FSImagePreTransactionalStorageInspector,
-    IOExceptions of stream closures can mask root exceptions. (Uma Maheswara
-    Rao G via szetszwo)
 
     HDFS-46.   Change default namespace quota of root directory from
     Integer.MAX_VALUE to Long.MAX_VALUE. (Uma Maheswara Rao G via szetszwo)
@@ -380,6 +376,11 @@ Branch-2 ( Unreleased changes )
     HDFS-3634. Add self-contained, mavenized fuse_dfs test. (Colin Patrick
     McCabe via atm)
 
+    HDFS-3190. Simple refactors in existing NN code to assist
+    QuorumJournalManager extension. (todd)
+
+    HDFS-3276. initializeSharedEdits should have a -nonInteractive flag (todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
@@ -570,9 +571,6 @@ Branch-2 ( Unreleased changes )
     HDFS-3756. DelegationTokenFetcher creates 2 HTTP connections, the second 
     one not properly configured. (tucu)
 
-    HDFS-3719. Re-enable append-related tests in TestFileConcurrentReader.
-    (Andrew Wang via atm)
-
     HDFS-3579. libhdfs: fix exception handling. (Colin Patrick McCabe via atm)
 
     HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. (eli)
@@ -582,6 +580,12 @@ Branch-2 ( Unreleased changes )
     HDFS-3710. libhdfs misuses O_RDONLY/WRONLY/RDWR. (Andy Isaacson via atm)
 
     HDFS-3721. hsync support broke wire compatibility. (todd and atm)
+
+    HDFS-3758. TestFuseDFS test failing. (Colin Patrick McCabe via eli)
+
+    HDFS-2330. In NNStorage and FSImagePreTransactionalStorageInspector,
+    IOExceptions of stream closures can mask root exceptions. (Uma Maheswara
+    Rao G via szetszwo)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 

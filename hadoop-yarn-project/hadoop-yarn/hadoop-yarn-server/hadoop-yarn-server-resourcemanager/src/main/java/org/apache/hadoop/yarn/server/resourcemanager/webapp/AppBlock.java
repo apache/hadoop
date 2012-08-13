@@ -30,6 +30,7 @@ import java.util.Collection;
 
 import com.google.inject.Inject;
 
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -137,7 +138,8 @@ public class AppBlock extends HtmlBlock {
       table.tr((odd = !odd) ? _ODD : _EVEN).
         td(String.valueOf(attemptInfo.getAttemptId())).
         td(Times.format(attemptInfo.getStartTime())).
-        td().a(".nodelink", url("http://", attemptInfo.getNodeHttpAddress()),
+        td().a(".nodelink", url(HttpConfig.getSchemePrefix(),
+            attemptInfo.getNodeHttpAddress()),
             attemptInfo.getNodeHttpAddress())._().
         td().a(".logslink", url(attemptInfo.getLogsLink()), "logs")._().
       _();

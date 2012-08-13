@@ -32,12 +32,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
@@ -206,7 +206,8 @@ public class TransferFsImage {
       String queryString, List<File> localPaths,
       Storage dstStorage, boolean getChecksum) throws IOException {
 
-    String str = "http://" + nnHostPort + "/getimage?" + queryString;
+    String str = HttpConfig.getSchemePrefix() + nnHostPort + "/getimage?" +
+        queryString;
     LOG.info("Opening connection to " + str);
     //
     // open connection to remote server

@@ -29,6 +29,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 import java.util.Collection;
 
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
@@ -143,7 +144,7 @@ public class HsTaskPage extends HsView {
 
         td.br().$title(String.valueOf(sortId))._(). // sorting
             _(taid)._().td(ta.getState().toString()).td().a(".nodelink",
-                "http://"+ nodeHttpAddr,
+                HttpConfig.getSchemePrefix()+ nodeHttpAddr,
                 nodeRackName + "/" + nodeHttpAddr);
         td._();
         row.td().

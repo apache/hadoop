@@ -41,7 +41,7 @@ public interface JournalManager extends Closeable, FormatConfirmable {
    * Format the underlying storage, removing any previously
    * stored data.
    */
-  void format(NamespaceInfo ns);
+  void format(NamespaceInfo ns) throws IOException;
 
   /**
    * Begin writing to a new segment of the log stream, which starts at
