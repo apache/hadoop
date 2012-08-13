@@ -423,6 +423,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3758. TestFuseDFS test failing. (Colin Patrick McCabe via eli)
 
+    HDFS-2330. In NNStorage.java, IOExceptions of stream closures can mask
+    root exceptions. (umamahesh via todd)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)

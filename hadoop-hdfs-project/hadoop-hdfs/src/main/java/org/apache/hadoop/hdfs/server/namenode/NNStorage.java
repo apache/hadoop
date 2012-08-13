@@ -186,10 +186,12 @@ public class NNStorage extends Storage implements Closeable {
     try {
       oldFile.seek(0);
       int oldVersion = oldFile.readInt();
+      oldFile.close();
+      oldFile = null;
       if (oldVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION)
         return false;
     } finally {
-      oldFile.close();
+      IOUtils.cleanup(LOG, oldFile);
     }
     return true;
   }
@@ -428,6 +430,8 @@ public class NNStorage extends Storage implements Closeable {
       BufferedReader br = new BufferedReader(new FileReader(txidFile));
       try {
         txid = Long.valueOf(br.readLine());
+        br.close();
+        br = null;
       } finally {
         IOUtils.cleanup(LOG, br);
       }
@@ -449,6 +453,8 @@ public class NNStorage extends Storage implements Closeable {
     try {
       fos.write(String.valueOf(txid).getBytes());
       fos.write('\n');
+      fos.close();
+      fos = null;
     } finally {
       IOUtils.cleanup(LOG, fos);
     }
