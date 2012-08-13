@@ -91,4 +91,20 @@ public class AtomicFileOutputStream extends FilterOutputStream {
     }
   }
 
+  /**
+   * Close the atomic file, but do not "commit" the temporary file
+   * on top of the destination. This should be used if there is a failure
+   * in writing.
+   */
+  public void abort() {
+    try {
+      super.close();
+    } catch (IOException ioe) {
+      LOG.warn("Unable to abort file " + tmpFile, ioe);
+    }
+    if (!tmpFile.delete()) {
+      LOG.warn("Unable to delete tmp file during abort " + tmpFile);
+    }
+  }
+
 }

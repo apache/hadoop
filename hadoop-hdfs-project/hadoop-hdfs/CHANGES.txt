@@ -193,6 +193,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3634. Add self-contained, mavenized fuse_dfs test. (Colin Patrick
     McCabe via atm)
 
+    HDFS-3190. Simple refactors in existing NN code to assist
+    QuorumJournalManager extension. (todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
