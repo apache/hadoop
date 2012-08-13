@@ -411,9 +411,6 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3756. DelegationTokenFetcher creates 2 HTTP connections, the second 
     one not properly configured. (tucu)
 
-    HDFS-3719. Re-enable append-related tests in TestFileConcurrentReader.
-    (Andrew Wang via atm)
-
     HDFS-3579. libhdfs: fix exception handling. (Colin Patrick McCabe via atm)
 
     HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. (eli)
