@@ -23,12 +23,14 @@ import java.io.PrintWriter;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URL;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.SSLServerSocketFactory;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -55,6 +57,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.mortbay.io.Buffer;
 import org.mortbay.jetty.Connector;
@@ -104,6 +107,7 @@ public class HttpServer implements FilterContainer {
 
   private AccessControlList adminsAcl;
 
+  private SSLFactory sslFactory;
   protected final Server webServer;
   protected final Connector listener;
   protected final WebAppContext webAppContext;
@@ -207,7 +211,23 @@ public class HttpServer implements FilterContainer {
     
     if(connector == null) {
       listenerStartedExternally = false;
-      listener = createBaseListener(conf);
+      if (HttpConfig.isSecure()) {
+        sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
+        try {
+          sslFactory.init();
+        } catch (GeneralSecurityException ex) {
+          throw new IOException(ex);
+        }
+        SslSocketConnector sslListener = new SslSocketConnector() {
+          @Override
+          protected SSLServerSocketFactory createFactory() throws Exception {
+            return sslFactory.createSSLServerSocketFactory();
+          }
+        };
+        listener = sslListener;
+      } else {
+        listener = createBaseListener(conf);
+      }
       listener.setHost(bindAddress);
       listener.setPort(port);
     } else {
@@ -704,6 +724,16 @@ public class HttpServer implements FilterContainer {
       listener.close();
     } catch (Exception e) {
       LOG.error("Error while stopping listener for webapp"
+          + webAppContext.getDisplayName(), e);
+      exception = addMultiException(exception, e);
+    }
+
+    try {
+      if (sslFactory != null) {
+          sslFactory.destroy();
+      }
+    } catch (Exception e) {
+      LOG.error("Error while destroying the SSLFactory"
           + webAppContext.getDisplayName(), e);
       exception = addMultiException(exception, e);
     }

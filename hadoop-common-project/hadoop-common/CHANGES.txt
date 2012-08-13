@@ -22,6 +22,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8644. AuthenticatedURL should be able to use SSLFactory. (tucu)
 
+    HADOOP-8681. add support for HTTPS to the web UIs. (tucu)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual

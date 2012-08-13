@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -226,7 +227,7 @@ public class DFSck extends Configured implements Tool {
   }
 
   private int doWork(final String[] args) throws IOException {
-    final StringBuilder url = new StringBuilder("http://");
+    final StringBuilder url = new StringBuilder(HttpConfig.getSchemePrefix());
     
     String namenodeAddress = getCurrentNamenodeAddress();
     if (namenodeAddress == null) {

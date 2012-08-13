@@ -21,28 +21,18 @@ package org.apache.hadoop.mapreduce.v2.hs.webapp;
 import com.google.inject.Inject;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
-import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.ConfEntryInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.AMAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.hs.webapp.dao.JobInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.ResponseInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
@@ -142,7 +132,8 @@ public class HsJobBlock extends HtmlBlock {
             table.tr((odd = !odd) ? _ODD : _EVEN).
               td(String.valueOf(attempt.getAttemptId())).
               td(new Date(attempt.getStartTime()).toString()).
-              td().a(".nodelink", url("http://", attempt.getNodeHttpAddress()), 
+              td().a(".nodelink", url(HttpConfig.getSchemePrefix(),
+                  attempt.getNodeHttpAddress()),
                   attempt.getNodeHttpAddress())._().
               td().a(".logslink", url(attempt.getShortLogsLink()), 
                       "logs")._().
