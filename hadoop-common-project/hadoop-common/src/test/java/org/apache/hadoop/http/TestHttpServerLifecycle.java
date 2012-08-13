@@ -56,16 +56,14 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Test public void testStartedServerIsAlive() throws Throwable {
+  @Test
+  public void testStartedServerIsAlive() throws Throwable {
     HttpServer server = null;
-    try {
-      server = createTestServer();
-      assertNotLive(server);
-      server.start();
-      assertAlive(server);
-    } finally {
-      stop(server);
-    }
+    server = createTestServer();
+    assertNotLive(server);
+    server.start();
+    assertAlive(server);
+    stop(server);
   }
 
   /**
@@ -105,4 +103,24 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
     assertNotLive(server);
   }
 
+  /**
+   * Test that the server is alive once started
+   * 
+   * @throws Throwable
+   *           on failure
+   */
+  @Test
+  public void testWepAppContextAfterServerStop() throws Throwable {
+    HttpServer server = null;
+    String key = "test.attribute.key";
+    String value = "test.attribute.value";
+    server = createTestServer();
+    assertNotLive(server);
+    server.start();
+    server.setAttribute(key, value);
+    assertAlive(server);
+    assertEquals(value, server.getAttribute(key));
+    stop(server);
+    assertNull("Server context should have cleared", server.getAttribute(key));
+  }
 }
