@@ -114,6 +114,9 @@ Trunk (unreleased changes)
 
     HDFS-3695. Genericize format() to non-file JournalManagers. (todd)
 
+    HDFS-3789. JournalManager#format() should be able to throw IOException
+    (Ivan Kelly via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
