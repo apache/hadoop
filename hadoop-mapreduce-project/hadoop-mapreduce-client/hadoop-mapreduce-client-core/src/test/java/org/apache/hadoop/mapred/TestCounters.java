@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.text.ParseException;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Random;
 
@@ -222,6 +223,23 @@ public class TestCounters {
     counters.findCounter("fs3", FileSystemCounter.BYTES_READ).increment(1);
     assertTrue(iterator.hasNext());
     iterator.next();
+  }
+  
+  @Test
+  public void testLegacyGetGroupNames() {
+    Counters counters = new Counters();
+    // create 2 filesystem counter groups
+    counters.findCounter("fs1", FileSystemCounter.BYTES_READ).increment(1);
+    counters.findCounter("fs2", FileSystemCounter.BYTES_READ).increment(1);
+    counters.incrCounter("group1", "counter1", 1);
+    
+    HashSet<String> groups = new HashSet<String>(counters.getGroupNames());
+    HashSet<String> expectedGroups = new HashSet<String>();
+    expectedGroups.add("group1");
+    expectedGroups.add("FileSystemCounter"); //Legacy Name
+    expectedGroups.add("org.apache.hadoop.mapreduce.FileSystemCounter");
+
+    assertEquals(expectedGroups, groups);
   }
   
   @Test
