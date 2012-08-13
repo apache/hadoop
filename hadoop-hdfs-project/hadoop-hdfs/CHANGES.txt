@@ -379,6 +379,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3190. Simple refactors in existing NN code to assist
     QuorumJournalManager extension. (todd)
 
+    HDFS-3276. initializeSharedEdits should have a -nonInteractive flag (todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
