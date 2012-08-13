@@ -939,7 +939,10 @@ public class NameNode {
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
       StartupOption.IMPORT.getName() + "] | [" +
-      StartupOption.INITIALIZESHAREDEDITS.getName() + "] | [" +
+      StartupOption.INITIALIZESHAREDEDITS.getName() + 
+        " [" + StartupOption.FORCE.getName() + "] [" +
+             StartupOption.NONINTERACTIVE.getName() + "]" +
+      "] | [" +
       StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" + 
       StartupOption.RECOVER.getName() + " [ " +
         StartupOption.FORCE.getName() + " ] ]");
@@ -1009,6 +1012,16 @@ public class NameNode {
         return startOpt;
       } else if (StartupOption.INITIALIZESHAREDEDITS.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.INITIALIZESHAREDEDITS;
+        for (i = i + 1 ; i < argsLen; i++) {
+          if (StartupOption.NONINTERACTIVE.getName().equals(args[i])) {
+            startOpt.setInteractiveFormat(false);
+          } else if (StartupOption.FORCE.getName().equals(args[i])) {
+            startOpt.setForceFormat(true);
+          } else {
+            LOG.fatal("Invalid argument: " + args[i]);
+            return null;
+          }
+        }
         return startOpt;
       } else if (StartupOption.RECOVER.getName().equalsIgnoreCase(cmd)) {
         if (startOpt != StartupOption.REGULAR) {
@@ -1118,7 +1131,9 @@ public class NameNode {
         return null; // avoid warning
       }
       case INITIALIZESHAREDEDITS: {
-        boolean aborted = initializeSharedEdits(conf, false, true);
+        boolean aborted = initializeSharedEdits(conf,
+            startOpt.getForceFormat(),
+            startOpt.getInteractiveFormat());
         terminate(aborted ? 1 : 0);
         return null; // avoid warning
       }
