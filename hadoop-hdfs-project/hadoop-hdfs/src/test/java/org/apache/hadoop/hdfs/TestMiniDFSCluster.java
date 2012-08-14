@@ -142,7 +142,7 @@ public class TestMiniDFSCluster {
       .checkDataNodeHostConfig(true)
       .build();
     try {
-      Assert.assertEquals("DataNode hostname config not respected", "MYHOST",
+      assertEquals("DataNode hostname config not respected", "MYHOST",
           cluster5.getDataNodes().get(0).getDatanodeId().getHostName());
     } finally {
       MiniDFSCluster.shutdownCluster(cluster5);
