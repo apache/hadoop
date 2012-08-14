@@ -1100,7 +1100,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
           if (ie instanceof InvalidEncryptionKeyException && refetchEncryptionKey > 0) {
             DFSClient.LOG.info("Will fetch a new encryption key and retry, " 
                 + "encryption key was invalid when connecting to "
-                + nodes[0].getXferAddr() + " : " + ie);
+                + nodes[0] + " : " + ie);
             // The encryption key used is invalid.
             refetchEncryptionKey--;
             dfsClient.clearDataEncryptionKey();
@@ -1112,7 +1112,8 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
           // find the datanode that matches
           if (firstBadLink.length() != 0) {
             for (int i = 0; i < nodes.length; i++) {
-              if (nodes[i].getXferAddr().equals(firstBadLink)) {
+              // NB: Unconditionally using the xfer addr w/o hostname
+              if (firstBadLink.equals(nodes[i].getXferAddr())) {
                 errorIndex = i;
                 break;
               }
@@ -1216,11 +1217,11 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
    */
   static Socket createSocketForPipeline(final DatanodeInfo first,
       final int length, final DFSClient client) throws IOException {
-    if(DFSClient.LOG.isDebugEnabled()) {
-      DFSClient.LOG.debug("Connecting to datanode " + first);
+    final String dnAddr = first.getXferAddr(client.connectToDnViaHostname());
+    if (DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug("Connecting to datanode " + dnAddr);
     }
-    final InetSocketAddress isa =
-      NetUtils.createSocketAddr(first.getXferAddr());
+    final InetSocketAddress isa = NetUtils.createSocketAddr(dnAddr);
     final Socket sock = client.socketFactory.createSocket();
     final int timeout = client.getDatanodeReadTimeout(length);
     NetUtils.connect(sock, isa, client.getRandomLocalInterfaceAddr(), timeout);

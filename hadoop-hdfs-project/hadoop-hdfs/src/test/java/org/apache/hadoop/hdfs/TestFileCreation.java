@@ -171,7 +171,14 @@ public class TestFileCreation {
 
   @Test
   public void testFileCreation() throws IOException {
-    checkFileCreation(null);
+    checkFileCreation(null, false);
+  }
+
+  /** Same test but the client should use DN hostnames */
+  @Test
+  public void testFileCreationUsingHostname() throws IOException {
+    assumeTrue(System.getProperty("os.name").startsWith("Linux"));
+    checkFileCreation(null, true);
   }
 
   /** Same test but the client should bind to a local interface */
@@ -180,10 +187,10 @@ public class TestFileCreation {
     assumeTrue(System.getProperty("os.name").startsWith("Linux"));
 
     // The mini cluster listens on the loopback so we can use it here
-    checkFileCreation("lo");
+    checkFileCreation("lo", false);
 
     try {
-      checkFileCreation("bogus-interface");
+      checkFileCreation("bogus-interface", false);
       fail("Able to specify a bogus interface");
     } catch (UnknownHostException e) {
       assertEquals("No such interface bogus-interface", e.getMessage());
@@ -193,16 +200,28 @@ public class TestFileCreation {
   /**
    * Test if file creation and disk space consumption works right
    * @param netIf the local interface, if any, clients should use to access DNs
+   * @param useDnHostname whether the client should contact DNs by hostname
    */
-  public void checkFileCreation(String netIf) throws IOException {
+  public void checkFileCreation(String netIf, boolean useDnHostname)
+      throws IOException {
     Configuration conf = new HdfsConfiguration();
     if (netIf != null) {
       conf.set(DFSConfigKeys.DFS_CLIENT_LOCAL_INTERFACES, netIf);
     }
+    conf.setBoolean(DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME, useDnHostname);
+    if (useDnHostname) {
+      // Since the mini cluster only listens on the loopback we have to
+      // ensure the hostname used to access DNs maps to the loopback. We
+      // do this by telling the DN to advertise localhost as its hostname
+      // instead of the default hostname.
+      conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
+    }
     if (simulatedStorage) {
       SimulatedFSDataset.setFactory(conf);
     }
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .checkDataNodeHostConfig(true)
+      .build();
     FileSystem fs = cluster.getFileSystem();
     try {
 

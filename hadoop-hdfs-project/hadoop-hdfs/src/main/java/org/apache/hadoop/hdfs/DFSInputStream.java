@@ -199,7 +199,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
       
       try {
         cdp = DFSUtil.createClientDatanodeProtocolProxy(
-        datanode, dfsClient.conf, dfsClient.getConf().socketTimeout, locatedblock);
+            datanode, dfsClient.conf, dfsClient.getConf().socketTimeout,
+            dfsClient.getConf().connectToDnViaHostname, locatedblock);
         
         final long n = cdp.getReplicaVisibleLength(locatedblock.getBlock());
         
@@ -716,8 +717,12 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
       DatanodeInfo[] nodes = block.getLocations();
       try {
         DatanodeInfo chosenNode = bestNode(nodes, deadNodes);
-        InetSocketAddress targetAddr = 
-          NetUtils.createSocketAddr(chosenNode.getXferAddr());
+        final String dnAddr =
+            chosenNode.getXferAddr(dfsClient.connectToDnViaHostname());
+        if (DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug("Connecting to datanode " + dnAddr);
+        }
+        InetSocketAddress targetAddr = NetUtils.createSocketAddr(dnAddr);
         return new DNAddrPair(chosenNode, targetAddr);
       } catch (IOException ie) {
         String blockInfo = block.getBlock() + " file=" + src;
@@ -875,7 +880,8 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     
     if (dfsClient.shouldTryShortCircuitRead(dnAddr)) {
       return DFSClient.getLocalBlockReader(dfsClient.conf, src, block,
-          blockToken, chosenNode, dfsClient.hdfsTimeout, startOffset);
+          blockToken, chosenNode, dfsClient.hdfsTimeout, startOffset,
+          dfsClient.connectToDnViaHostname());
     }
     
     IOException err = null;
@@ -1183,7 +1189,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
     throw new IOException("No live nodes contain current block");
   }
 
-  /** Utility class to encapsulate data node info and its ip address. */
+  /** Utility class to encapsulate data node info and its address. */
   static class DNAddrPair {
     DatanodeInfo info;
     InetSocketAddress addr;

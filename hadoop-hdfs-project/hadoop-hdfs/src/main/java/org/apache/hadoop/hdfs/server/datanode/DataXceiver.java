@@ -86,7 +86,7 @@ class DataXceiver extends Receiver implements Runnable {
   private final DataNode datanode;
   private final DNConf dnConf;
   private final DataXceiverServer dataXceiverServer;
-
+  private final boolean connectToDnViaHostname;
   private long opStartTime; //the start time of receiving an Op
   private final SocketInputWrapper socketIn;
   private OutputStream socketOut;
@@ -113,6 +113,7 @@ class DataXceiver extends Receiver implements Runnable {
     this.isLocal = s.getInetAddress().equals(s.getLocalAddress());
     this.datanode = datanode;
     this.dataXceiverServer = dataXceiverServer;
+    this.connectToDnViaHostname = datanode.getDnConf().connectToDnViaHostname;
     remoteAddress = s.getRemoteSocketAddress().toString();
     localAddress = s.getLocalSocketAddress().toString();
 
@@ -404,7 +405,10 @@ class DataXceiver extends Receiver implements Runnable {
       if (targets.length > 0) {
         InetSocketAddress mirrorTarget = null;
         // Connect to backup machine
-        mirrorNode = targets[0].getXferAddr();
+        mirrorNode = targets[0].getXferAddr(connectToDnViaHostname);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Connecting to datanode " + mirrorNode);
+        }
         mirrorTarget = NetUtils.createSocketAddr(mirrorNode);
         mirrorSock = datanode.newSocket();
         try {
@@ -457,7 +461,8 @@ class DataXceiver extends Receiver implements Runnable {
           if (isClient) {
             BlockOpResponseProto.newBuilder()
               .setStatus(ERROR)
-              .setFirstBadLink(mirrorNode)
+               // NB: Unconditionally using the xfer addr w/o hostname
+              .setFirstBadLink(targets[0].getXferAddr())
               .build()
               .writeDelimitedTo(replyOut);
             replyOut.flush();
@@ -729,8 +734,11 @@ class DataXceiver extends Receiver implements Runnable {
     
     try {
       // get the output stream to the proxy
-      InetSocketAddress proxyAddr =
-        NetUtils.createSocketAddr(proxySource.getXferAddr());
+      final String dnAddr = proxySource.getXferAddr(connectToDnViaHostname);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Connecting to datanode " + dnAddr);
+      }
+      InetSocketAddress proxyAddr = NetUtils.createSocketAddr(dnAddr);
       proxySock = datanode.newSocket();
       NetUtils.connect(proxySock, proxyAddr, dnConf.socketTimeout);
       proxySock.setSoTimeout(dnConf.socketTimeout);
@@ -891,6 +899,7 @@ class DataXceiver extends Receiver implements Runnable {
             if (mode == BlockTokenSecretManager.AccessMode.WRITE) {
               DatanodeRegistration dnR = 
                 datanode.getDNRegistrationForBP(blk.getBlockPoolId());
+              // NB: Unconditionally using the xfer addr w/o hostname
               resp.setFirstBadLink(dnR.getXferAddr());
             }
             resp.build().writeDelimitedTo(out);

@@ -127,7 +127,7 @@ public class FileChecksumServlets {
             datanode, conf, getUGI(request, conf));
         final ClientProtocol nnproxy = dfs.getNamenode();
         final MD5MD5CRC32FileChecksum checksum = DFSClient.getFileChecksum(
-            path, nnproxy, socketFactory, socketTimeout, dfs.getDataEncryptionKey());
+            path, nnproxy, socketFactory, socketTimeout, dfs.getDataEncryptionKey(), false);
         MD5MD5CRC32FileChecksum.write(xml, checksum);
       } catch(IOException ioe) {
         writeXml(ioe, path, xml);

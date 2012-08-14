@@ -73,10 +73,10 @@ public class ClientDatanodeProtocolTranslatorPB implements
       RefreshNamenodesRequestProto.newBuilder().build();
 
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
-      Configuration conf, int socketTimeout, LocatedBlock locatedBlock)
-      throws IOException {
+      Configuration conf, int socketTimeout, boolean connectToDnViaHostname,
+      LocatedBlock locatedBlock) throws IOException {
     rpcProxy = createClientDatanodeProtocolProxy( datanodeid, conf, 
-                  socketTimeout, locatedBlock);
+                  socketTimeout, connectToDnViaHostname, locatedBlock);
   }
   
   public ClientDatanodeProtocolTranslatorPB(InetSocketAddress addr,
@@ -90,11 +90,17 @@ public class ClientDatanodeProtocolTranslatorPB implements
    * @param datanodeid Datanode to connect to.
    * @param conf Configuration.
    * @param socketTimeout Socket timeout to use.
+   * @param connectToDnViaHostname connect to the Datanode using its hostname
    * @throws IOException
    */
   public ClientDatanodeProtocolTranslatorPB(DatanodeID datanodeid,
-      Configuration conf, int socketTimeout) throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(datanodeid.getIpcAddr());
+      Configuration conf, int socketTimeout, boolean connectToDnViaHostname)
+      throws IOException {
+    final String dnAddr = datanodeid.getIpcAddr(connectToDnViaHostname);
+    InetSocketAddress addr = NetUtils.createSocketAddr(dnAddr);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to datanode " + dnAddr + " addr=" + addr);
+    }
     rpcProxy = createClientDatanodeProtocolProxy(addr,
         UserGroupInformation.getCurrentUser(), conf,
         NetUtils.getDefaultSocketFactory(conf), socketTimeout);
@@ -102,10 +108,11 @@ public class ClientDatanodeProtocolTranslatorPB implements
 
   static ClientDatanodeProtocolPB createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
-      LocatedBlock locatedBlock) throws IOException {
-    InetSocketAddress addr = NetUtils.createSocketAddr(datanodeid.getIpcAddr());
+      boolean connectToDnViaHostname, LocatedBlock locatedBlock) throws IOException {
+    final String dnAddr = datanodeid.getIpcAddr(connectToDnViaHostname);
+    InetSocketAddress addr = NetUtils.createSocketAddr(dnAddr);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("ClientDatanodeProtocol addr=" + addr);
+      LOG.debug("Connecting to datanode " + dnAddr + " addr=" + addr);
     }
     
     // Since we're creating a new UserGroupInformation here, we know that no

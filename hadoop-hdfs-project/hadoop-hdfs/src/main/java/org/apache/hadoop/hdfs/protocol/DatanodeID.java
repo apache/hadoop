@@ -104,7 +104,7 @@ public class DatanodeID implements Comparable<DatanodeID> {
   /**
    * @return IP:ipcPort string
    */
-  public String getIpcAddr() {
+  private String getIpcAddr() {
     return ipAddr + ":" + ipcPort;
   }
 
@@ -120,6 +120,29 @@ public class DatanodeID implements Comparable<DatanodeID> {
    */
   public String getXferAddrWithHostname() {
     return hostName + ":" + xferPort;
+  }
+
+  /**
+   * @return hostname:ipcPort
+   */
+  private String getIpcAddrWithHostname() {
+    return hostName + ":" + ipcPort;
+  }
+
+  /**
+   * @param useHostname true to use the DN hostname, use the IP otherwise
+   * @return name:xferPort
+   */
+  public String getXferAddr(boolean useHostname) {
+    return useHostname ? getXferAddrWithHostname() : getXferAddr();
+  }
+
+  /**
+   * @param useHostname true to use the DN hostname, use the IP otherwise
+   * @return name:ipcPort
+   */
+  public String getIpcAddr(boolean useHostname) {
+    return useHostname ? getIpcAddrWithHostname() : getIpcAddr();
   }
 
   /**

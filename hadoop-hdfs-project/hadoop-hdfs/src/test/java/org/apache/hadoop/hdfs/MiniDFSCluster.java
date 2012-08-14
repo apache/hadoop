@@ -145,6 +145,7 @@ public class MiniDFSCluster {
     private boolean setupHostsFile = false;
     private MiniDFSNNTopology nnTopology = null;
     private boolean checkExitOnShutdown = true;
+    private boolean checkDataNodeHostConfig = false;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -263,6 +264,14 @@ public class MiniDFSCluster {
     }
 
     /**
+     * Default: false
+     */
+    public Builder checkDataNodeHostConfig(boolean val) {
+      this.checkDataNodeHostConfig = val;
+      return this;
+    }
+    
+    /**
      * Default: null
      */
     public Builder clusterId(String cid) {
@@ -326,7 +335,8 @@ public class MiniDFSCluster {
                        builder.waitSafeMode,
                        builder.setupHostsFile,
                        builder.nnTopology,
-                       builder.checkExitOnShutdown);
+                       builder.checkExitOnShutdown,
+                       builder.checkDataNodeHostConfig);
   }
   
   public class DataNodeProperties {
@@ -563,7 +573,7 @@ public class MiniDFSCluster {
         manageNameDfsDirs, true, manageDataDfsDirs, manageDataDfsDirs,
         operation, racks, hosts,
         simulatedCapacities, null, true, false,
-        MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0), true);
+        MiniDFSNNTopology.simpleSingleNN(nameNodePort, 0), true, false);
   }
 
   private void initMiniDFSCluster(
@@ -573,7 +583,8 @@ public class MiniDFSCluster {
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
       String[] hosts, long[] simulatedCapacities, String clusterId,
       boolean waitSafeMode, boolean setupHostsFile,
-      MiniDFSNNTopology nnTopology, boolean checkExitOnShutdown)
+      MiniDFSNNTopology nnTopology, boolean checkExitOnShutdown,
+      boolean checkDataNodeHostConfig)
   throws IOException {
     ExitUtil.disableSystemExit();
 
@@ -630,7 +641,7 @@ public class MiniDFSCluster {
 
     // Start the DataNodes
     startDataNodes(conf, numDataNodes, manageDataDfsDirs, operation, racks,
-        hosts, simulatedCapacities, setupHostsFile);
+        hosts, simulatedCapacities, setupHostsFile, false, checkDataNodeHostConfig);
     waitClusterUp();
     //make sure ProxyUsers uses the latest conf
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
@@ -982,7 +993,21 @@ public class MiniDFSCluster {
                              long[] simulatedCapacities,
                              boolean setupHostsFile) throws IOException {
     startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, hosts,
-                   simulatedCapacities, setupHostsFile, false);
+        simulatedCapacities, setupHostsFile, false, false);
+  }
+
+  /**
+   * @see MiniDFSCluster#startDataNodes(Configuration, int, boolean, StartupOption,
+   * String[], String[], long[], boolean, boolean, boolean)
+   */
+  public synchronized void startDataNodes(Configuration conf, int numDataNodes,
+      boolean manageDfsDirs, StartupOption operation, 
+      String[] racks, String[] hosts,
+      long[] simulatedCapacities,
+      boolean setupHostsFile,
+      boolean checkDataNodeAddrConfig) throws IOException {
+    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, hosts,
+        simulatedCapacities, setupHostsFile, checkDataNodeAddrConfig, false);
   }
 
   /**
@@ -1008,19 +1033,25 @@ public class MiniDFSCluster {
    * @param simulatedCapacities array of capacities of the simulated data nodes
    * @param setupHostsFile add new nodes to dfs hosts files
    * @param checkDataNodeAddrConfig if true, only set DataNode port addresses if not already set in config
+   * @param checkDataNodeHostConfig if true, only set DataNode hostname key if not already set in config
    *
    * @throws IllegalStateException if NameNode has been shutdown
    */
   public synchronized void startDataNodes(Configuration conf, int numDataNodes,
-                             boolean manageDfsDirs, StartupOption operation, 
-                             String[] racks, String[] hosts,
-                             long[] simulatedCapacities,
-                             boolean setupHostsFile,
-                             boolean checkDataNodeAddrConfig) throws IOException {
+      boolean manageDfsDirs, StartupOption operation, 
+      String[] racks, String[] hosts,
+      long[] simulatedCapacities,
+      boolean setupHostsFile,
+      boolean checkDataNodeAddrConfig,
+      boolean checkDataNodeHostConfig) throws IOException {
     if (operation == StartupOption.RECOVER) {
       return;
     }
-    conf.set(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
+    if (checkDataNodeHostConfig) {
+      conf.setIfUnset(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
+    } else {
+      conf.set(DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1");
+    }
 
     int curDatanodesNum = dataNodes.size();
     // for mincluster's the default initialDelay for BRs is 0
