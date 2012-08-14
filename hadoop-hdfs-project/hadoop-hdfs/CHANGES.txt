@@ -90,6 +90,8 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3187. Upgrade guava to 11.0.2 (todd)
 
+    HDFS-3597. SNN fails to start after DFS upgrade. (Andy Isaacson via todd)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
