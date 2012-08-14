@@ -26,6 +26,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3637. Add support for encrypting the DataTransferProtocol. (atm)
 
+    HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
+
   IMPROVEMENTS
 
     HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG

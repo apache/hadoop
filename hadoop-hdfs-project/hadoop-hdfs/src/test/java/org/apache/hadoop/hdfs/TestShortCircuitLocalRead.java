@@ -246,7 +246,7 @@ public class TestShortCircuitLocalRead {
             @Override
             public ClientDatanodeProtocol run() throws Exception {
               return DFSUtil.createClientDatanodeProtocolProxy(dnInfo, conf,
-                  60000);
+                  60000, false);
             }
           });
       
@@ -264,7 +264,7 @@ public class TestShortCircuitLocalRead {
             @Override
             public ClientDatanodeProtocol run() throws Exception {
               return DFSUtil.createClientDatanodeProtocolProxy(dnInfo, conf,
-                  60000);
+                  60000, false);
             }
           });
       try {

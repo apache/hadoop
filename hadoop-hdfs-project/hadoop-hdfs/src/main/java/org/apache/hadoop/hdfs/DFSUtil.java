@@ -847,17 +847,17 @@ public class DFSUtil {
   /** Create a {@link ClientDatanodeProtocol} proxy */
   public static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
       DatanodeID datanodeid, Configuration conf, int socketTimeout,
-      LocatedBlock locatedBlock) throws IOException {
+      boolean connectToDnViaHostname, LocatedBlock locatedBlock) throws IOException {
     return new ClientDatanodeProtocolTranslatorPB(datanodeid, conf, socketTimeout,
-             locatedBlock);
+        connectToDnViaHostname, locatedBlock);
   }
   
   /** Create {@link ClientDatanodeProtocol} proxy using kerberos ticket */
   static ClientDatanodeProtocol createClientDatanodeProtocolProxy(
-      DatanodeID datanodeid, Configuration conf, int socketTimeout)
-      throws IOException {
+      DatanodeID datanodeid, Configuration conf, int socketTimeout,
+      boolean connectToDnViaHostname) throws IOException {
     return new ClientDatanodeProtocolTranslatorPB(
-        datanodeid, conf, socketTimeout);
+        datanodeid, conf, socketTimeout, connectToDnViaHostname);
   }
   
   /** Create a {@link ClientDatanodeProtocol} proxy */

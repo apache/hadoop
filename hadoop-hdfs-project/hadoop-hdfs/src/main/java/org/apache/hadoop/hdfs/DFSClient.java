@@ -49,6 +49,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEF
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
 
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -216,6 +218,7 @@ public class DFSClient implements java.io.Closeable {
     final String taskId;
     final FsPermission uMask;
     final boolean useLegacyBlockReader;
+    final boolean connectToDnViaHostname;
 
     Conf(Configuration conf) {
       maxFailoverAttempts = conf.getInt(
@@ -266,6 +269,8 @@ public class DFSClient implements java.io.Closeable {
       useLegacyBlockReader = conf.getBoolean(
           DFS_CLIENT_USE_LEGACY_BLOCKREADER,
           DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT);
+      connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
+          DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
     }
 
     private int getChecksumType(Configuration conf) {
@@ -474,6 +479,14 @@ public class DFSClient implements java.io.Closeable {
   
   String getClientName() {
     return clientName;
+  }
+
+  /**
+   * @return whether the client should use hostnames instead of IPs
+   *    when connecting to DataNodes
+   */
+  boolean connectToDnViaHostname() {
+    return dfsClientConf.connectToDnViaHostname;
   }
 
   void checkOpen() throws IOException {
@@ -732,12 +745,12 @@ public class DFSClient implements java.io.Closeable {
    */
   static BlockReader getLocalBlockReader(Configuration conf,
       String src, ExtendedBlock blk, Token<BlockTokenIdentifier> accessToken,
-      DatanodeInfo chosenNode, int socketTimeout, long offsetIntoBlock)
-      throws InvalidToken, IOException {
+      DatanodeInfo chosenNode, int socketTimeout, long offsetIntoBlock,
+      boolean connectToDnViaHostname) throws InvalidToken, IOException {
     try {
       return BlockReaderLocal.newBlockReader(conf, src, blk, accessToken,
           chosenNode, socketTimeout, offsetIntoBlock, blk.getNumBytes()
-              - offsetIntoBlock);
+              - offsetIntoBlock, connectToDnViaHostname);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
           AccessControlException.class);
@@ -1464,7 +1477,8 @@ public class DFSClient implements java.io.Closeable {
   public MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
     checkOpen();
     return getFileChecksum(src, namenode, socketFactory,
-        dfsClientConf.socketTimeout, getDataEncryptionKey());
+        dfsClientConf.socketTimeout, getDataEncryptionKey(),
+        dfsClientConf.connectToDnViaHostname);
   }
   
   @InterfaceAudience.Private
@@ -1510,7 +1524,8 @@ public class DFSClient implements java.io.Closeable {
    */
   public static MD5MD5CRC32FileChecksum getFileChecksum(String src,
       ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout,
-      DataEncryptionKey encryptionKey) throws IOException {
+      DataEncryptionKey encryptionKey, boolean connectToDnViaHostname)
+      throws IOException {
     //get all block locations
     LocatedBlocks blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
     if (null == blockLocations) {
@@ -1548,9 +1563,11 @@ public class DFSClient implements java.io.Closeable {
         try {
           //connect to a datanode
           sock = socketFactory.createSocket();
-          NetUtils.connect(sock,
-              NetUtils.createSocketAddr(datanodes[j].getXferAddr()),
-              timeout);
+          String dnAddr = datanodes[j].getXferAddr(connectToDnViaHostname);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Connecting to datanode " + dnAddr);
+          }
+          NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
           sock.setSoTimeout(timeout);
 
           OutputStream unbufOut = NetUtils.getOutputStream(sock);
