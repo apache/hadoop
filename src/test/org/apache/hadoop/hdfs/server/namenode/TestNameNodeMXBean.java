@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.*;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.Collection;
 import java.util.Map;
@@ -31,9 +32,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileOutputStream;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.mortbay.util.ajax.JSON;
 
 import junit.framework.Assert;
@@ -42,6 +45,26 @@ import junit.framework.Assert;
  * Class for testing {@link NameNodeMXBean} implementation
  */
 public class TestNameNodeMXBean {
+  /**
+   * Create a mocked stream to fail edits log operations
+   */
+  public static EditLogFileOutputStream mockStream(File sdRoot)
+      throws IOException {
+    // Create a mocked EditLogFileOutputStream
+    String edits = sdRoot.getAbsolutePath() + "/current/edits";
+    EditLogFileOutputStream mockStream = Mockito
+        .mock(EditLogFileOutputStream.class);
+    Mockito.when(mockStream.getName()).thenReturn(edits);
+    IOException ioe = new IOException("Mock IOException");
+    Mockito.doThrow(ioe).when(mockStream).write(Mockito.anyInt());
+    Mockito.doThrow(ioe).when(mockStream).flushAndSync();
+    Mockito.doThrow(ioe).when(mockStream).close();
+    Mockito.doThrow(ioe).when(mockStream).setReadyToFlush();
+    Mockito.doThrow(ioe).when(mockStream).flushAndSync();
+    Mockito.when(mockStream.getFile()).thenReturn(new File(edits));
+    return mockStream;
+  }
+  
   @SuppressWarnings({ "unchecked", "deprecation" })
   @Test
   public void testNameNodeMXBeanInfo() throws Exception {
@@ -110,7 +133,13 @@ public class TestNameNodeMXBean {
       
       // This will cause the first dir to fail.
       File failedNameDir = nameDirs.toArray(new File[0])[0];
-      assertEquals(0, FileUtil.chmod(failedNameDir.getAbsolutePath(), "000"));
+      FSImage fsimage = cluster.getNameNode().getFSImage();
+      System.out.println("Use mocked stream to replace the edits in:"
+          + failedNameDir);
+      fsimage.getEditLog().replaceEditsStream(fsimage, failedNameDir,
+          mockStream(failedNameDir));
+    
+      // The above dir will be marked as failed during rollEditLog
       cluster.getNameNode().rollEditLog();
       
       nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,

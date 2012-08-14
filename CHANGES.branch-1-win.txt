@@ -69,3 +69,5 @@ BUG FIXES
 
     HADOOP-8618. Fix build failures due to release 1.0.3 merge.
     (Bikas Saha via suresh)
+
+    HDFS-3763. TestNameNodeMXBean fails on Windows. (Brandon Li via suresh)

@@ -118,7 +118,7 @@ public class FSEditLog {
    * An implementation of the abstract class {@link EditLogOutputStream},
    * which stores edits in a local file.
    */
-  static private class EditLogFileOutputStream extends EditLogOutputStream {
+  static class EditLogFileOutputStream extends EditLogOutputStream {
     private File file;
     private FileOutputStream fp;    // file stream for storing edit logs 
     private FileChannel fc;         // channel of the file stream for sync
@@ -416,6 +416,31 @@ public class FSEditLog {
       ((EditLogFileOutputStream)editStreams.get(idx)).getFile();
     // Namedir is the parent of current which is the parent of edits
     return editsFile.getParentFile().getParentFile();
+  }
+  
+  /**
+   * For error injection tests only. It closes edit stream, unlocks storage
+   * directory, and reopen the original stream with a different
+   * EditLogFileOutputStream which can inject errors.
+   */
+  synchronized void replaceEditsStream(FSImage fsimage, File sdRoot,
+      EditLogFileOutputStream stream) {
+    exitIfStreamsNotSet();
+
+    for (int idx = 0; idx < editStreams.size(); idx++) {
+      File parentDir = getStorageDirForStream(idx);
+      if (parentDir.getAbsolutePath().equals(sdRoot.getAbsolutePath())) {
+        StorageDirectory sd = fsimage.getStorageDir(idx);
+        try {
+          EditLogOutputStream estream = editStreams.get(idx);
+          estream.close();
+          editStreams.set(idx, stream);
+          sd.unlock();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
+      }
+    }
   }
 
   /**
