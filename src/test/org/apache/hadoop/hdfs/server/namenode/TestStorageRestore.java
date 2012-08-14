@@ -63,7 +63,7 @@ public class TestStorageRestore extends TestCase {
   private void writeFile(FileSystem fileSys, Path name, int repl)
       throws IOException {
     FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt("io.file.buffer.size", 4096), (short) repl, (long) blockSize);
+        .getInt("io.file.buffer.size", 4096), (short) repl, blockSize);
     byte[] buffer = new byte[fileSize];
     Random rand = new Random(seed);
     rand.nextBytes(buffer);
@@ -71,7 +71,8 @@ public class TestStorageRestore extends TestCase {
     stm.close();
   }
 
-  protected void setUp() throws Exception {
+  @Override
+  protected void setUp() throws IOException {
     config = new Configuration();
     String baseDir = System.getProperty("test.build.data", "/tmp");
 
@@ -113,6 +114,7 @@ public class TestStorageRestore extends TestCase {
   /**
    * clean up
    */
+  @Override
   public void tearDown() throws Exception {
     restoreAccess();    
     if (hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir)) {
@@ -124,7 +126,7 @@ public class TestStorageRestore extends TestCase {
   /**
    * invalidate storage by removing sub-directory "current" in name2 and name3
    */
-  public void invalidateStorage(FSImage fi) throws IOException {
+  public void invalidateStorage(FSImage fi) {
     for (Iterator<StorageDirectory> it = fi.dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
       
@@ -140,13 +142,6 @@ public class TestStorageRestore extends TestCase {
    * invalidate storage by removing xwr permission from name2 and name3
    */
   public void removeStorageAccess(FSImage fi) throws IOException {
-    path2.setReadable(false);
-    path2.setExecutable(false);
-    path2.setWritable(false);
-    path3.setReadable(false);
-    path3.setExecutable(false);
-    path3.setWritable(false);
-    
     for (Iterator<StorageDirectory> it = fi.dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
       
@@ -156,25 +151,23 @@ public class TestStorageRestore extends TestCase {
         it.remove();
       }
     }
+    FileUtil.chmod(path2.getAbsolutePath(), "-xwr", false);
+    FileUtil.chmod(path3.getAbsolutePath(), "-xwr", false);
   }
   
-  public void restoreAccess() {
+  public void restoreAccess() throws IOException {
     if (path2.exists()) {
-      path2.setReadable(true);
-      path2.setExecutable(true);
-      path2.setWritable(true);
+      FileUtil.chmod(path2.getAbsolutePath(), "+xrw", false);
     }
     if (path3.exists()) {
-      path3.setReadable(true);    
-      path3.setExecutable(true);
-      path3.setWritable(true);
+      FileUtil.chmod(path3.getAbsolutePath(), "+xrw", false);
     }
   }
   
   /**
    * get the total number of healthy storage directories
    */
-  public int numStorageDirs(FSImage fi) throws IOException {
+  public int numStorageDirs(FSImage fi) {
     int sum = 0;
     for (Iterator<StorageDirectory> it = fi.dirIterator(); it.hasNext();) {
       sum++;
@@ -301,7 +294,8 @@ public class TestStorageRestore extends TestCase {
 
     SecondaryNameNode secondary = new SecondaryNameNode(config);
     System.out.println("****testStorageRestore: Cluster and SNN started");
-    printStorages(cluster.getNameNode().getFSImage());
+    FSImage fi = cluster.getNameNode().getFSImage();
+    printStorages(fi);
 
     FileSystem fs = cluster.getFileSystem();
     Path path = new Path("/", "test");
@@ -310,8 +304,8 @@ public class TestStorageRestore extends TestCase {
     System.out
         .println("****testStorageRestore: file test written, invalidating storage...");
 
-    invalidateStorage(cluster.getNameNode().getFSImage());
-    printStorages(cluster.getNameNode().getFSImage());
+    invalidateStorage(fi);
+    printStorages(fi);
     System.out
         .println("****testStorageRestore: storage invalidated + doCheckpoint");
 
@@ -328,13 +322,14 @@ public class TestStorageRestore extends TestCase {
     checkFiles(true);
     
     //use the recovered dir to restart nn
-    if (!FileUtil.fullyDelete(path1)) {
-      throw new Exception("Can't fully delete " + path1);
+    cluster.shutdownNameNode();
+    if (!FileUtil.fullyDelete(new File(path1, Storage.STORAGE_DIR_CURRENT))) {
+      throw new Exception("Can't fully delete current dir under " + path1);
     }
-    if (!FileUtil.fullyDelete(path3)) {
-      throw new Exception("Can't fully delete " + path3);
+    if (!FileUtil.fullyDelete(new File(path3, Storage.STORAGE_DIR_CURRENT))) {
+      throw new Exception("Can't fully delete current dir under " + path3);
     }
-    cluster.restartDataNodes();
+    cluster.restartNameNode();
     cluster.waitActive();
     File tmpfile = new File("/test");
     assert(tmpfile.exists());
@@ -366,37 +361,38 @@ public class TestStorageRestore extends TestCase {
     cluster.waitActive();
 
     SecondaryNameNode secondary = new SecondaryNameNode(config);
-    System.out.println("****testStorageRestore: Cluster and SNN started");
-    printStorages(cluster.getNameNode().getFSImage());
+    System.out.println("****testStorageRestoreFailure: Cluster and SNN started");
+    FSImage fi = cluster.getNameNode().getFSImage();
+    printStorages(fi);
 
     FileSystem fs = cluster.getFileSystem();
     Path path = new Path("/", "test");
     writeFile(fs, path, 2);
 
     System.out
-        .println("****testStorageRestore: file test written, invalidating storage...");
+        .println("****testStorageRestoreFailure: file test written, invalidating storage...");
 
-    removeStorageAccess(cluster.getNameNode().getFSImage());
-    printStorages(cluster.getNameNode().getFSImage());
+    removeStorageAccess(fi);
+    printStorages(fi);
     System.out
-        .println("****testStorageRestore: storage invalidated + doCheckpoint");
+        .println("****testStorageRestoreFailure: storage invalidated + doCheckpoint");
 
     path = new Path("/", "test1");
     writeFile(fs, path, 2);
-    System.out.println("****testStorageRestore: file test1 written");
-    assert(numStorageDirs(cluster.getNameNode().getFSImage()) == 1);
+    System.out.println("****testStorageRestoreFailure: file test1 written");
+    assert(numStorageDirs(fi) == 1);
 
-    System.out.println("****testStorageRestore: checkfiles(false) run");
+    System.out.println("****testStorageRestoreFailure: checkfiles(false) run");
 
     secondary.doCheckpoint(); // still can't recover removed storage dirs
-    assert(numStorageDirs(cluster.getNameNode().getFSImage()) == 1);
+    assert(numStorageDirs(fi) == 1);
 
     restoreAccess();
     secondary.doCheckpoint(); // should restore removed storage dirs
     checkFiles(true);
 
     System.out
-        .println("****testStorageRestore: second Checkpoint done and checkFiles(true) run");
+        .println("****testStorageRestoreFailure: second Checkpoint done and checkFiles(true) run");
     secondary.shutdown();
     cluster.shutdown();
   }
