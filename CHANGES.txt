@@ -76,6 +76,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
     (Todd Lipcon and Brandon Li via sseth)
 
+    HADOOP-8656 Backport forced daemon shutdown of HADOOP-8353 into branch-1
+    (Roman Shaposhnik via stevel)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
