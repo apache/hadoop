@@ -183,6 +183,8 @@ Trunk (unreleased changes)
     HDFS-3625. Fix TestBackupNode by properly initializing edit log during
     startup. (Junping Du via todd)
 
+    HDFS-3792. Fix two findbugs introduced by HDFS-3695 (todd)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES

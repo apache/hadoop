@@ -341,7 +341,7 @@ public class FSEditLog  {
    * File-based journals are skipped, since they are formatted by the
    * Storage format code.
    */
-  void formatNonFileJournals(NamespaceInfo nsInfo) throws IOException {
+  synchronized void formatNonFileJournals(NamespaceInfo nsInfo) throws IOException {
     Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
         "Bad state: %s", state);
     
@@ -352,7 +352,7 @@ public class FSEditLog  {
     }
   }
   
-  List<FormatConfirmable> getFormatConfirmables() {
+  synchronized List<FormatConfirmable> getFormatConfirmables() {
     Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
         "Bad state: %s", state);
 
