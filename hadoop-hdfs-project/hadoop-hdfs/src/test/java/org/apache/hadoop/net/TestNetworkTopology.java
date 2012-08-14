@@ -104,6 +104,17 @@ public class TestNetworkTopology extends TestCase {
     assertTrue(testNodes[0] == dataNodes[1]);
     assertTrue(testNodes[1] == dataNodes[3]);
     assertTrue(testNodes[2] == dataNodes[5]);
+    
+    // array contains local rack node which happens to be in position 0
+    testNodes[0] = dataNodes[1];
+    testNodes[1] = dataNodes[5];
+    testNodes[2] = dataNodes[3];
+    cluster.pseudoSortByDistance(dataNodes[0], testNodes );
+    // peudoSortByDistance does not take the "data center" layer into consideration 
+    // and it doesn't sort by getDistance, so 1, 5, 3 is also valid here
+    assertTrue(testNodes[0] == dataNodes[1]);
+    assertTrue(testNodes[1] == dataNodes[5]);
+    assertTrue(testNodes[2] == dataNodes[3]);
   }
   
   public void testRemove() throws Exception {

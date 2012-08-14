@@ -12,6 +12,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
 
+    HDFS-3258. Test for HADOOP-8144 (pseudoSortByDistance in
+    NetworkTopology for first rack local node). (Junping Du via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
