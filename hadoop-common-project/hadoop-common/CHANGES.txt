@@ -149,6 +149,10 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8633. Interrupted FsShell copies may leave tmp files (Daryn Sharp
     via tgraves)
 
+    HADOOP-8144. pseudoSortByDistance in NetworkTopology doesn't work
+    properly if no local node and first node is local rack node.
+    (Junping Du)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES

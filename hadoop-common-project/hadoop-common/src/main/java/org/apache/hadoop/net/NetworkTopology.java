@@ -639,8 +639,8 @@ public class NetworkTopology {
    */
   public void pseudoSortByDistance( Node reader, Node[] nodes ) {
     int tempIndex = 0;
+    int localRackNode = -1;
     if (reader != null ) {
-      int localRackNode = -1;
       //scan the array to find the local node & local rack node
       for(int i=0; i<nodes.length; i++) {
         if(tempIndex == 0 && reader == nodes[i]) { //local node
@@ -670,7 +670,7 @@ public class NetworkTopology {
     }
     
     // put a random node at position 0 if it is not a local/local-rack node
-    if(tempIndex == 0 && nodes.length != 0) {
+    if(tempIndex == 0 && localRackNode == -1 && nodes.length != 0) {
       swap(nodes, 0, r.nextInt(nodes.length));
     }
   }
