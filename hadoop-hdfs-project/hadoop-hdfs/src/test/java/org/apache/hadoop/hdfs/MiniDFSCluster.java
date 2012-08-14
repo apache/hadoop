@@ -118,6 +118,8 @@ public class MiniDFSCluster {
   public static final String PROP_TEST_BUILD_DATA = "test.build.data";
   /** Configuration option to set the data dir: {@value} */
   public static final String HDFS_MINIDFS_BASEDIR = "hdfs.minidfs.basedir";
+  public static final String  DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY
+      = DFS_NAMENODE_SAFEMODE_EXTENSION_KEY + ".testing";
 
   static { DefaultMetricsSystem.setMiniClusterMode(true); }
 
@@ -574,7 +576,9 @@ public class MiniDFSCluster {
     
     int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
     conf.setInt(DFS_REPLICATION_KEY, Math.min(replication, numDataNodes));
-    conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+    int safemodeExtension = conf.getInt(
+        DFS_NAMENODE_SAFEMODE_EXTENSION_TESTING_KEY, 0);
+    conf.setInt(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, safemodeExtension);
     conf.setInt(DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 3); // 3 second
     conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
                    StaticMapping.class, DNSToSwitchMapping.class);

@@ -434,6 +434,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3790. test_fuse_dfs.c doesn't compile on centos 5. (Colin Patrick
     McCabe via atm)
 
+    HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
