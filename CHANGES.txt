@@ -12,6 +12,9 @@ Release 1.1.1 - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-8656 Backport forced daemon shutdown of HADOOP-8353 into branch-1
+    (Roman Shaposhnik via stevel)
+
   BUG FIXES
 
 Release 1.1.0 - 2012.07.09
