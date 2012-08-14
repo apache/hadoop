@@ -1112,6 +1112,7 @@ public class DataNode extends Configured
       }
     }
     
+    this.shouldRun = false;
     shutdownPeriodicScanners();
     
     if (infoServer != null) {
@@ -1125,7 +1126,6 @@ public class DataNode extends Configured
       ipcServer.stop();
     }
     
-    this.shouldRun = false;
     if (dataXceiverServer != null) {
       ((DataXceiverServer) this.dataXceiverServer.getRunnable()).kill();
       this.dataXceiverServer.interrupt();

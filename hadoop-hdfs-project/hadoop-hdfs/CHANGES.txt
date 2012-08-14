@@ -95,6 +95,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3597. SNN fails to start after DFS upgrade. (Andy Isaacson via todd)
 
+    HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner
+    thread (Kihwal Lee via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
