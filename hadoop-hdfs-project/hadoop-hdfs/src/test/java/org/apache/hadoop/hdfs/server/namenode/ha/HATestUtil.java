@@ -65,7 +65,7 @@ public abstract class HATestUtil {
    * @throws CouldNotCatchUpException if the standby doesn't catch up to the
    *         active in NN_LAG_TIMEOUT milliseconds
    */
-  static void waitForStandbyToCatchUp(NameNode active,
+  public static void waitForStandbyToCatchUp(NameNode active,
       NameNode standby) throws InterruptedException, IOException, CouldNotCatchUpException {
     
     long activeTxId = active.getNamesystem().getFSImage().getEditLog()

@@ -18,11 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -46,6 +42,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -53,9 +50,6 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
-import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -68,8 +62,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -88,6 +80,7 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**********************************************************
@@ -816,9 +809,18 @@ public class NameNode {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
+    
+    if (conf.get(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY) == null) {
+      LOG.fatal("No shared edits directory configured for namespace " +
+          nsId + " namenode " + namenodeId);
+      return false;
+    }
+
     NNStorage existingStorage = null;
     try {
-      FSNamesystem fsns = FSNamesystem.loadFromDisk(conf,
+      Configuration confWithoutShared = new Configuration(conf);
+      confWithoutShared.unset(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+      FSNamesystem fsns = FSNamesystem.loadFromDisk(confWithoutShared,
           FSNamesystem.getNamespaceDirs(conf),
           FSNamesystem.getNamespaceEditsDirs(conf, false));
       
@@ -844,11 +846,9 @@ public class NameNode {
       fsns.getFSImage().getEditLog().close();
       fsns.getFSImage().getEditLog().initJournalsForWrite();
       fsns.getFSImage().getEditLog().recoverUnclosedStreams();
-      
-      if (copyEditLogSegmentsToSharedDir(fsns, sharedEditsDirs,
-          newSharedStorage, conf)) {
-        return true; // aborted
-      }
+
+      copyEditLogSegmentsToSharedDir(fsns, sharedEditsDirs, newSharedStorage,
+          conf);
     } catch (IOException ioe) {
       LOG.error("Could not initialize shared edits dir", ioe);
       return true; // aborted
@@ -866,43 +866,59 @@ public class NameNode {
     }
     return false; // did not abort
   }
-  
-  private static boolean copyEditLogSegmentsToSharedDir(FSNamesystem fsns,
+
+  private static void copyEditLogSegmentsToSharedDir(FSNamesystem fsns,
       Collection<URI> sharedEditsDirs, NNStorage newSharedStorage,
-      Configuration conf) throws FileNotFoundException, IOException {
+      Configuration conf) throws IOException {
+    Preconditions.checkArgument(!sharedEditsDirs.isEmpty(),
+        "No shared edits specified");
     // Copy edit log segments into the new shared edits dir.
-    for (JournalAndStream jas : fsns.getFSImage().getEditLog().getJournals()) {
-      FileJournalManager fjm = null;
-      if (!(jas.getManager() instanceof FileJournalManager)) {
-        LOG.error("Cannot populate shared edits dir from non-file " +
-            "journal manager: " + jas.getManager());
-        return true; // aborted
-      } else {
-        fjm = (FileJournalManager) jas.getManager();
-      }
-      for (EditLogFile elf : fjm.getLogFiles(fsns.getFSImage()
-          .getMostRecentCheckpointTxId())) {
-        File editLogSegment = elf.getFile();
-        for (URI sharedEditsUri : sharedEditsDirs) {
-          StorageDirectory sharedEditsDir = newSharedStorage
-              .getStorageDirectory(sharedEditsUri);
-          File targetFile = new File(sharedEditsDir.getCurrentDir(),
-              editLogSegment.getName());
-          if (!targetFile.exists()) {
-            InputStream in = null;
-            OutputStream out = null;
-            try {
-              in = new FileInputStream(editLogSegment);
-              out = new AtomicFileOutputStream(targetFile);
-              IOUtils.copyBytes(in, out, conf);
-            } finally {
-              IOUtils.cleanup(LOG, in, out);
-            }
-          }
+    List<URI> sharedEditsUris = new ArrayList<URI>(sharedEditsDirs);
+    FSEditLog newSharedEditLog = new FSEditLog(conf, newSharedStorage,
+        sharedEditsUris);
+    newSharedEditLog.initJournalsForWrite();
+    newSharedEditLog.recoverUnclosedStreams();
+    
+    FSEditLog sourceEditLog = fsns.getFSImage().editLog;
+    
+    long fromTxId = fsns.getFSImage().getMostRecentCheckpointTxId();
+    Collection<EditLogInputStream> streams = sourceEditLog.selectInputStreams(
+        fromTxId+1, 0);
+
+    // Set the nextTxid to the CheckpointTxId+1
+    newSharedEditLog.setNextTxId(fromTxId + 1);
+    
+    // Copy all edits after last CheckpointTxId to shared edits dir
+    for (EditLogInputStream stream : streams) {
+      LOG.debug("Beginning to copy stream " + stream + " to shared edits");
+      FSEditLogOp op;
+      boolean segmentOpen = false;
+      while ((op = stream.readOp()) != null) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("copying op: " + op);
+        }
+        if (!segmentOpen) {
+          newSharedEditLog.startLogSegment(op.txid, false);
+          segmentOpen = true;
+        }
+        
+        newSharedEditLog.logEdit(op);
+
+        if (op.opCode == FSEditLogOpCodes.OP_END_LOG_SEGMENT) {
+          newSharedEditLog.logSync();
+          newSharedEditLog.endCurrentLogSegment(false);
+          LOG.debug("ending log segment because of END_LOG_SEGMENT op in " + stream);
+          segmentOpen = false;
         }
       }
+      
+      if (segmentOpen) {
+        LOG.debug("ending log segment because of end of stream in " + stream);
+        newSharedEditLog.logSync();
+        newSharedEditLog.endCurrentLogSegment(false);
+        segmentOpen = false;
+      }
     }
-    return false; // did not abort
   }
 
   private static boolean finalize(Configuration conf,

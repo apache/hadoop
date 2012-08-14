@@ -65,6 +65,15 @@ public final class ExitUtil {
   }
 
   /**
+   * Reset the tracking of process termination. This is for use
+   * in unit tests where one test in the suite expects an exit
+   * but others do not.
+   */
+  public static void resetFirstExitException() {
+    firstExitException = null;
+  }
+
+  /**
    * Terminate the current process. Note that terminate is the *only* method
    * that should be used to terminate the daemon processes.
    * @param status exit code

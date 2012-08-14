@@ -198,6 +198,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3276. initializeSharedEdits should have a -nonInteractive flag (todd)
 
+    HDFS-3765. namenode -initializeSharedEdits should be able to initialize
+    all shared storages. (Vinay and todd via todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
