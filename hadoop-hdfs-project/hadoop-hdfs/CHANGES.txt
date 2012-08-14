@@ -1348,6 +1348,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3553. Hftp proxy tokens are broken (daryn)
 
+    HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner
+    thread (Kihwal Lee via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
