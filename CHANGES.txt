@@ -82,6 +82,8 @@ Release 1.2.0 - unreleased
     HADOOP-8656 Backport forced daemon shutdown of HADOOP-8353 into branch-1
     (Roman Shaposhnik via stevel)
 
+    MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
