@@ -117,6 +117,9 @@ Trunk (unreleased changes)
     HDFS-3723. Add support -h, -help to all the commands. (Jing Zhao via
     suresh)
 
+    HDFS-3803. Change BlockPoolSliceScanner chatty INFO log to DEBUG.
+    (Andrew Purtell via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
