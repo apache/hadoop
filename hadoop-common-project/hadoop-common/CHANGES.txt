@@ -220,6 +220,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-7703. Improved excpetion handling of shutting down web server.
     (Devaraj K via Eric Yang)
 
+    HADOOP-8699. some common testcases create core-site.xml in test-classes 
+    making other testcases to fail. (tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
