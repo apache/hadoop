@@ -162,6 +162,10 @@ public class DFSZKFailoverController extends ZKFailoverController {
 
   public static void main(String args[])
       throws Exception {
+    if (DFSUtil.parseHelpArgument(args, 
+        ZKFailoverController.USAGE, System.out, true)) {
+      System.exit(0);
+    }
     
     GenericOptionsParser parser = new GenericOptionsParser(
         new HdfsConfiguration(), args);
