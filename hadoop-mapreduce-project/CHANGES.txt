@@ -16,6 +16,8 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved
     (Jason Lowe via bobby)
 
+    MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
+
   BUG FIXES
 
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
