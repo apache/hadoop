@@ -40,6 +40,12 @@ public class TestEditLogFileOutputStream {
   final static int MIN_PREALLOCATION_LENGTH =
       EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH;
 
+  static {
+    // No need to fsync for the purposes of tests. This makes
+    // the tests run much faster.
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
+
   @Before
   @After
   public void deleteEditsFile() {

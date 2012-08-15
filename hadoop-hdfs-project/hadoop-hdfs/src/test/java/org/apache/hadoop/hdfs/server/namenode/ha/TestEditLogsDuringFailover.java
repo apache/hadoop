@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -52,6 +53,12 @@ public class TestEditLogsDuringFailover {
   private static final Log LOG =
     LogFactory.getLog(TestEditLogsDuringFailover.class);
   private static final int NUM_DIRS_IN_LOG = 5;
+
+  static {
+    // No need to fsync for the purposes of tests. This makes
+    // the tests run much faster.
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
   
   @Test
   public void testStartup() throws Exception {
