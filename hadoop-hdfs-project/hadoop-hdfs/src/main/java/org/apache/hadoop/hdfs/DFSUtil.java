@@ -18,8 +18,21 @@
 
 package org.apache.hadoop.hdfs;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODE_ID_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICE_ID;
+
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -34,11 +47,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.concurrent.TimeUnit;
 
 import javax.net.SocketFactory;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -63,8 +83,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -430,7 +449,6 @@ public class DFSUtil {
    * 
    * @param conf configuration
    * @return list of InetSocketAddresses
-   * @throws IOException if no addresses are configured
    */
   public static Map<String, Map<String, InetSocketAddress>> getHaNnRpcAddresses(
       Configuration conf) {
@@ -1078,5 +1096,45 @@ public class DFSUtil {
       // No nameservice ID was given and more than one is configured
       return null;
     }
+  }
+  
+  public static Options helpOptions = new Options();
+  public static Option helpOpt = new Option("h", "help", false,
+      "get help information");
+
+  static {
+    helpOptions.addOption(helpOpt);
+  }
+
+  /**
+   * Parse the arguments for commands
+   * 
+   * @param args the argument to be parsed
+   * @param helpDescription help information to be printed out
+   * @param out Printer
+   * @param printGenericCommandUsage whether to print the 
+   *              generic command usage defined in ToolRunner
+   * @return true when the argument matches help option, false if not
+   */
+  public static boolean parseHelpArgument(String[] args,
+      String helpDescription, PrintStream out, boolean printGenericCommandUsage) {
+    if (args.length == 1) {
+      try {
+        CommandLineParser parser = new PosixParser();
+        CommandLine cmdLine = parser.parse(helpOptions, args);
+        if (cmdLine.hasOption(helpOpt.getOpt())
+            || cmdLine.hasOption(helpOpt.getLongOpt())) {
+          // should print out the help information
+          out.println(helpDescription + "\n");
+          if (printGenericCommandUsage) {
+            ToolRunner.printGenericCommandUsage(out);
+          }
+          return true;
+        }
+      } catch (ParseException pe) {
+        return false;
+      }
+    }
+    return false;
   }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.balancer;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.hdfs.protocol.HdfsProtoUtil.vintPrefixed;
 
 import java.io.BufferedInputStream;
@@ -26,6 +27,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.Socket;
 import java.net.URI;
 import java.text.DateFormat;
@@ -68,7 +70,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.io.IOUtils;
@@ -187,6 +188,13 @@ public class Balancer {
    * balancing purpose at a datanode
    */
   public static final int MAX_NUM_CONCURRENT_MOVES = 5;
+  
+  private static final String USAGE = "Usage: java "
+      + Balancer.class.getSimpleName()
+      + "\n\t[-policy <policy>]\tthe balancing policy: "
+      + BalancingPolicy.Node.INSTANCE.getName() + " or "
+      + BalancingPolicy.Pool.INSTANCE.getName()
+      + "\n\t[-threshold <threshold>]\tPercentage of disk capacity";
   
   private final NameNodeConnector nnc;
   private final BalancingPolicy policy;
@@ -1548,7 +1556,7 @@ public class Balancer {
             }
           }
         } catch(RuntimeException e) {
-          printUsage();
+          printUsage(System.err);
           throw e;
         }
       }
@@ -1556,13 +1564,8 @@ public class Balancer {
       return new Parameters(policy, threshold);
     }
 
-    private static void printUsage() {
-      System.out.println("Usage: java " + Balancer.class.getSimpleName());
-      System.out.println("    [-policy <policy>]\tthe balancing policy: "
-          + BalancingPolicy.Node.INSTANCE.getName() + " or " 
-          + BalancingPolicy.Pool.INSTANCE.getName());
-      System.out.println(
-          "    [-threshold <threshold>]\tPercentage of disk capacity");
+    private static void printUsage(PrintStream out) {
+      out.println(USAGE + "\n");
     }
   }
 
@@ -1571,6 +1574,10 @@ public class Balancer {
    * @param args Command line arguments
    */
   public static void main(String[] args) {
+    if (DFSUtil.parseHelpArgument(args, USAGE, System.out, true)) {
+      System.exit(0);
+    }
+
     try {
       System.exit(ToolRunner.run(new HdfsConfiguration(), new Cli(), args));
     } catch (Throwable e) {

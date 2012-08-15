@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
@@ -41,6 +42,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -72,12 +75,9 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.ExitUtil.ExitException;
-
-import static org.apache.hadoop.util.ExitUtil.terminate;
-import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -190,6 +190,22 @@ public class NameNode {
   public static final String[] NAMESERVICE_SPECIFIC_KEYS = {
     DFS_HA_AUTO_FAILOVER_ENABLED_KEY
   };
+  
+  private static final String USAGE = "Usage: java NameNode ["
+      + StartupOption.BACKUP.getName() + "] | ["
+      + StartupOption.CHECKPOINT.getName() + "] | ["
+      + StartupOption.FORMAT.getName() + " ["
+      + StartupOption.CLUSTERID.getName() + " cid ] ["
+      + StartupOption.FORCE.getName() + "] ["
+      + StartupOption.NONINTERACTIVE.getName() + "] ] | ["
+      + StartupOption.UPGRADE.getName() + "] | ["
+      + StartupOption.ROLLBACK.getName() + "] | ["
+      + StartupOption.FINALIZE.getName() + "] | ["
+      + StartupOption.IMPORT.getName() + "] | ["
+      + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | ["
+      + StartupOption.BOOTSTRAPSTANDBY.getName() + "] | ["
+      + StartupOption.RECOVER.getName() + " [ " + StartupOption.FORCE.getName()
+      + " ] ]";
   
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException {
@@ -943,25 +959,8 @@ public class NameNode {
     return false;
   }
 
-  private static void printUsage() {
-    System.err.println(
-      "Usage: java NameNode [" +
-      StartupOption.BACKUP.getName() + "] | [" +
-      StartupOption.CHECKPOINT.getName() + "] | [" +
-      StartupOption.FORMAT.getName() + " [" + StartupOption.CLUSTERID.getName() +  
-      " cid ] [" + StartupOption.FORCE.getName() + "] [" +
-      StartupOption.NONINTERACTIVE.getName() + "] ] | [" +
-      StartupOption.UPGRADE.getName() + "] | [" +
-      StartupOption.ROLLBACK.getName() + "] | [" +
-      StartupOption.FINALIZE.getName() + "] | [" +
-      StartupOption.IMPORT.getName() + "] | [" +
-      StartupOption.INITIALIZESHAREDEDITS.getName() + 
-        " [" + StartupOption.FORCE.getName() + "] [" +
-             StartupOption.NONINTERACTIVE.getName() + "]" +
-      "] | [" +
-      StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" + 
-      StartupOption.RECOVER.getName() + " [ " +
-        StartupOption.FORCE.getName() + " ] ]");
+  private static void printUsage(PrintStream out) {
+    out.println(USAGE + "\n");
   }
 
   private static StartupOption parseArguments(String args[]) {
@@ -1109,7 +1108,7 @@ public class NameNode {
       conf = new HdfsConfiguration();
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
-      printUsage();
+      printUsage(System.err);
       return null;
     }
     setStartupOption(conf, startOpt);
@@ -1223,6 +1222,10 @@ public class NameNode {
   /**
    */
   public static void main(String argv[]) throws Exception {
+    if (DFSUtil.parseHelpArgument(argv, NameNode.USAGE, System.out, true)) {
+      System.exit(0);
+    }
+
     try {
       StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
       NameNode namenode = createNameNode(argv, null);
