@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -111,7 +112,7 @@ public class RawLocalFileSystem extends FileSystem {
   /*******************************************************
    * For open()'s FSInputStream.
    *******************************************************/
-  class LocalFSFileInputStream extends FSInputStream {
+  class LocalFSFileInputStream extends FSInputStream implements HasFileDescriptor {
     private FileInputStream fis;
     private long position;
 
@@ -180,6 +181,11 @@ public class RawLocalFileSystem extends FileSystem {
         this.position += value;
       }
       return value;
+    }
+
+    @Override
+    public FileDescriptor getFileDescriptor() throws IOException {
+      return fis.getFD();
     }
   }
   
