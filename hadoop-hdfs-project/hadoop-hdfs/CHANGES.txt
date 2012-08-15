@@ -15,6 +15,10 @@ Release 0.23.3 - UNRELEASED
     HDFS-3258. Test for HADOOP-8144 (pseudoSortByDistance in
     NetworkTopology for first rack local node). (Junping Du via eli)
 
+    HDFS-3794. WebHDFS OPEN returns the incorrect Content-Length in the HTTP
+    header when offset is specified and length is omitted.
+    (Ravi Prakash via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
