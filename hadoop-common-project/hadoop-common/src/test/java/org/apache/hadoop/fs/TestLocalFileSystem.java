@@ -248,4 +248,14 @@ public class TestLocalFileSystem {
     }
     assertEquals(1, fileSchemeCount);
   }
+
+  public void testHasFileDescriptor() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    Path path = new Path(TEST_ROOT_DIR, "test-file");
+    writeFile(fs, path, 1);
+    BufferedFSInputStream bis = new BufferedFSInputStream(
+        new RawLocalFileSystem().new LocalFSFileInputStream(path), 1024);
+    assertNotNull(bis.getFileDescriptor());
+  }
 }

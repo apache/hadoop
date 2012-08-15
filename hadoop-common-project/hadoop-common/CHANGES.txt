@@ -24,6 +24,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8581. add support for HTTPS to the web UIs. (tucu)
 
+    HADOOP-7754. Expose file descriptors from Hadoop-wrapped local 
+    FileSystems (todd and ahmed via tucu)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
