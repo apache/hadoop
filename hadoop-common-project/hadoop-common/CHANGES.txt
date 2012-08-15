@@ -721,6 +721,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8633. Interrupted FsShell copies may leave tmp files (Daryn Sharp
     via tgraves)
 
+    HADOOP-8703. distcpV2: turn CRC checking off for 0 byte size (Dave
+    Thompson via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
