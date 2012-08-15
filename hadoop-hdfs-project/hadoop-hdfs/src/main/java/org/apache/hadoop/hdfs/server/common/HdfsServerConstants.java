@@ -60,7 +60,7 @@ public final class HdfsServerConstants {
     FORCE("-force"),
     NONINTERACTIVE("-nonInteractive");
     
-    private String name = null;
+    private final String name;
     
     // Used only with format and upgrade options
     private String clusterId = null;

@@ -209,6 +209,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3803. Change BlockPoolSliceScanner chatty INFO log to DEBUG.
     (Andrew Purtell via suresh)
 
+    HDFS-3802. StartupOption.name in HdfsServerConstants should be final.
+    (Jing Zhao via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
