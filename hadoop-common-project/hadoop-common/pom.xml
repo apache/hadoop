@@ -72,13 +72,13 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>commons-net</groupId>
-      <artifactId>commons-net</artifactId>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>commons-io</groupId>
-      <artifactId>commons-io</artifactId>
+      <groupId>commons-net</groupId>
+      <artifactId>commons-net</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -98,16 +98,12 @@
     </dependency>
 
     <dependency>
-      <groupId>asm</groupId>
-      <artifactId>asm</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-core</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
+      <!-- Used, even though 'mvn dependency:analyze' doesn't find it -->
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-json</artifactId>
       <scope>compile</scope>
@@ -121,31 +117,26 @@
     <dependency>
       <groupId>tomcat</groupId>
       <artifactId>jasper-compiler</artifactId>
-      <scope>compile</scope>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>tomcat</groupId>
       <artifactId>jasper-runtime</artifactId>
-      <scope>compile</scope>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>javax.servlet.jsp</groupId>
       <artifactId>jsp-api</artifactId>
-      <scope>compile</scope>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>commons-el</groupId>
       <artifactId>commons-el</artifactId>
-      <scope>compile</scope>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>commons-logging</groupId>
       <artifactId>commons-logging</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging-api</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -159,26 +150,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.mina</groupId>
-      <artifactId>mina-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ftpserver</groupId>
-      <artifactId>ftplet-api</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ftpserver</groupId>
-      <artifactId>ftpserver-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ftpserver</groupId>
-      <artifactId>ftpserver-deprecated</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -186,11 +157,6 @@
     <dependency>
       <groupId>commons-lang</groupId>
       <artifactId>commons-lang</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>commons-collections</groupId>
-      <artifactId>commons-collections</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -206,26 +172,16 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <scope>compile</scope>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jdt</groupId>
-      <artifactId>core</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>oro</groupId>
-      <artifactId>oro</artifactId>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.aspectj</groupId>
-      <artifactId>aspectjrt</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -256,11 +212,6 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-auth</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.googlecode.json-simple</groupId>
-      <artifactId>json-simple</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>

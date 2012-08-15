@@ -258,6 +258,18 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
         </reportSets>
       </plugin>
 
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>2.4</version>
+        <reportSets>
+          <reportSet>
+            <reports>
+              <report>analyze-report</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
     </plugins>
   </reporting>
   

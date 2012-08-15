@@ -60,8 +60,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-annotations</artifactId>
-      <scope>provided</scope>
+      <artifactId>hadoop-auth</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-core</artifactId>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>com.sun.jersey</groupId>
@@ -74,24 +79,19 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>javax.servlet.jsp</groupId>
-      <artifactId>jsp-api</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jdom</groupId>
-      <artifactId>jdom</artifactId>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>com.googlecode.json-simple</groupId>
       <artifactId>json-simple</artifactId>
       <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mortbay.jetty</groupId>
+      <artifactId>jetty</artifactId>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -248,7 +248,7 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <scope>compile</scope>
+      <scope>runtime</scope>
     </dependency>
   </dependencies>
 
