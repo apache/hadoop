@@ -20,3 +20,5 @@ HDFS-3793. Implement genericized format() in QJM (todd)
 HDFS-3795. QJM: validate journal dir at startup (todd)
 
 HDFS-3798. Avoid throwing NPE when finalizeSegment() is called on invalid segment (todd)
+
+HDFS-3799. QJM: handle empty log segments during recovery (todd)

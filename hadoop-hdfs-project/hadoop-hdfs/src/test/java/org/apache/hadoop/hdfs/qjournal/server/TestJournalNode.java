@@ -118,7 +118,9 @@ public class TestJournalNode {
     ch.startLogSegment(3).get();
     response = ch.newEpoch(4).get();
     ch.setEpoch(4);
-    assertEquals(3, response.getLastSegmentTxId());
+    // Because the new segment is empty, it is equivalent to not having
+    // started writing it.
+    assertEquals(0, response.getLastSegmentTxId());
   }
   
   @Test

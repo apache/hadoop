@@ -204,6 +204,89 @@ public class TestJournal {
           "No log file to finalize at transaction ID 1000", ise);
     }
   }
+
+  /**
+   * Assume that a client is writing to a journal, but loses its connection
+   * in the middle of a segment. Thus, any future journal() calls in that
+   * segment may fail, because some txns were missed while the connection was
+   * down.
+   *
+   * Eventually, the connection comes back, and the NN tries to start a new
+   * segment at a higher txid. This should abort the old one and succeed.
+   */
+  @Test
+  public void testAbortOldSegmentIfFinalizeIsMissed() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 1);
+    
+    // Start a segment at txid 1, and write a batch of 3 txns.
+    journal.startLogSegment(makeRI(1), 1);
+    journal.journal(makeRI(2), 1, 3,
+        QJMTestUtil.createTxnData(1, 3));
+
+    GenericTestUtils.assertExists(
+        journal.getStorage().getInProgressEditLog(1));
+    
+    // Try to start new segment at txid 6, this should abort old segment and
+    // then succeed, allowing us to write txid 6-9.
+    journal.startLogSegment(makeRI(3), 6);
+    journal.journal(makeRI(4), 6, 3,
+        QJMTestUtil.createTxnData(6, 3));
+
+    // The old segment should *not* be finalized.
+    GenericTestUtils.assertExists(
+        journal.getStorage().getInProgressEditLog(1));
+    GenericTestUtils.assertExists(
+        journal.getStorage().getInProgressEditLog(6));
+  }
+  
+  /**
+   * Test behavior of startLogSegment() when a segment with the
+   * same transaction ID already exists.
+   */
+  @Test
+  public void testStartLogSegmentWhenAlreadyExists() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 1);
+    
+    // Start a segment at txid 1, and write just 1 transaction. This
+    // would normally be the START_LOG_SEGMENT transaction.
+    journal.startLogSegment(makeRI(1), 1);
+    journal.journal(makeRI(2), 1, 1,
+        QJMTestUtil.createTxnData(1, 1));
+    
+    // Try to start new segment at txid 1, this should succeed, because
+    // we are allowed to re-start a segment if we only ever had the
+    // START_LOG_SEGMENT transaction logged.
+    journal.startLogSegment(makeRI(3), 1);
+    journal.journal(makeRI(4), 1, 1,
+        QJMTestUtil.createTxnData(1, 1));
+
+    // This time through, write more transactions afterwards, simulating
+    // real user transactions.
+    journal.journal(makeRI(5), 2, 3,
+        QJMTestUtil.createTxnData(2, 3));
+
+    try {
+      journal.startLogSegment(makeRI(6), 1);
+      fail("Did not fail to start log segment which would overwrite " +
+          "an existing one");
+    } catch (IllegalStateException ise) {
+      GenericTestUtils.assertExceptionContains(
+          "seems to contain valid transactions", ise);
+    }
+    
+    journal.finalizeLogSegment(makeRI(7), 1, 4);
+    
+    // Ensure that we cannot overwrite a finalized segment
+    try {
+      journal.startLogSegment(makeRI(8), 1);
+      fail("Did not fail to start log segment which would overwrite " +
+          "an existing one");
+    } catch (IllegalStateException ise) {
+      GenericTestUtils.assertExceptionContains(
+          "have a finalized segment", ise);
+    }
+
+  }
   
   private static RequestInfo makeRI(int serial) {
     return new RequestInfo(JID, 1, serial);

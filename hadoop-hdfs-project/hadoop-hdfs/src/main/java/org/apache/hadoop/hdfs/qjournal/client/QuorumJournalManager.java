@@ -235,15 +235,30 @@ public class QuorumJournalManager implements JournalManager {
     } else if (bestResponse.hasSegmentState()) {
       LOG.info("Using longest log: " + bestEntry);
     } else {
-      // TODO: can we get here? what about the following case:
-      // - 3 JNs, JN1, JN2, JN3
-      // - writer starts segment 101 on JN1, then crashes
-      // - during newEpoch(), we saw the segment on JN1 and decide to recover segment 101
-      // - during prepare(), JN1 has actually crashed, and we only talk to JN2 and JN3,
+      // None of the responses to prepareRecovery() had a segment at the given
+      // txid. This can happen for example in the following situation:
+      // - 3 JNs: JN1, JN2, JN3
+      // - writer starts segment 101 on JN1, then crashes before
+      //   writing to JN2 and JN3
+      // - during newEpoch(), we saw the segment on JN1 and decide to
+      //   recover segment 101
+      // - before prepare(), JN1 crashes, and we only talk to JN2 and JN3,
       //   neither of which has any entry for this log.
-      // Write a test case.
-      throw new AssertionError("None of the responses " +
-          "had a log to recover: " + QuorumCall.mapToString(prepareResponses));
+      // In this case, it is allowed to do nothing for recovery, since the
+      // segment wasn't started on a quorum of nodes.
+
+      // Sanity check: we should only get here if none of the responses had
+      // a log. This should be a postcondition of the recovery comparator,
+      // but a bug in the comparator might cause us to get here.
+      for (PrepareRecoveryResponseProto resp : prepareResponses.values()) {
+        assert !resp.hasSegmentState() :
+          "One of the loggers had a response, but no best logger " +
+          "was found.";
+      }
+
+      LOG.info("None of the responders had a log to recover: " +
+          QuorumCall.mapToString(prepareResponses));
+      return;
     }
     
     

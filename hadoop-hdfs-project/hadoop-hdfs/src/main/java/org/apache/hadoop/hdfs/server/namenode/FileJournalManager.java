@@ -460,7 +460,7 @@ public class FileJournalManager implements JournalManager {
       renameSelf(".corrupt");
     }
 
-    void moveAsideEmptyFile() throws IOException {
+    public void moveAsideEmptyFile() throws IOException {
       assert lastTxId == HdfsConstants.INVALID_TXID;
       renameSelf(".empty");
     }

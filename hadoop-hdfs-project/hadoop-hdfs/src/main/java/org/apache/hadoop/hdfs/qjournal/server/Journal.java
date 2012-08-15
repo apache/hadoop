@@ -101,9 +101,21 @@ class Journal implements Closeable {
     }
     LOG.info("Scanning storage " + fjm);
     List<EditLogFile> files = fjm.getLogFiles(0);
-    if (!files.isEmpty()) {
-      EditLogFile latestLog = files.get(files.size() - 1);
-      LOG.info("Latest log is " + latestLog);
+    if (files.isEmpty()) {
+      curSegmentTxId = HdfsConstants.INVALID_TXID;
+      return;
+    }
+    
+    EditLogFile latestLog = files.get(files.size() - 1);
+    latestLog.validateLog();
+    LOG.info("Latest log is " + latestLog);
+    if (latestLog.getLastTxId() == HdfsConstants.INVALID_TXID) {
+      // the log contains no transactions
+      LOG.warn("Latest log " + latestLog + " has no transactions. " +
+          "moving it aside");
+      latestLog.moveAsideEmptyFile();
+      curSegmentTxId = HdfsConstants.INVALID_TXID;
+    } else {
       curSegmentTxId = latestLog.getFirstTxId();
     }
   }
@@ -166,6 +178,7 @@ class Journal implements Closeable {
     if (curSegment != null) {
       curSegment.close();
       curSegment = null;
+      curSegmentTxId = HdfsConstants.INVALID_TXID;
     }
     
     NewEpochResponseProto.Builder builder =
@@ -248,10 +261,37 @@ class Journal implements Closeable {
     checkRequest(reqInfo);
     checkFormatted();
     
-    Preconditions.checkState(curSegment == null,
-        "Can't start a log segment, already writing " + curSegment);
-    Preconditions.checkState(nextTxId == txid || nextTxId == HdfsConstants.INVALID_TXID,
-        "Can't start log segment " + txid + " expecting nextTxId=" + nextTxId);
+    if (curSegment != null) {
+      LOG.warn("Client is requesting a new log segment " + txid + 
+          " though we are already writing " + curSegment + ". " +
+          "Aborting the current segment in order to begin the new one.");
+      // The writer may have lost a connection to us and is now
+      // re-connecting after the connection came back.
+      // We should abort our own old segment.
+      curSegment.abort();
+      curSegment = null;
+    }
+
+    // Paranoid sanity check: we should never overwrite a finalized log file.
+    // Additionally, if it's in-progress, it should have at most 1 transaction.
+    // This can happen if the writer crashes exactly at the start of a segment.
+    EditLogFile existing = fjm.getLogFile(txid);
+    if (existing != null) {
+      if (!existing.isInProgress()) {
+        throw new IllegalStateException("Already have a finalized segment " +
+            existing + " beginning at " + txid);
+      }
+      
+      // If it's in-progress, it should only contain one transaction,
+      // because the "startLogSegment" transaction is written alone at the
+      // start of each segment. 
+      existing.validateLog();
+      if (existing.getLastTxId() != existing.getFirstTxId()) {
+        throw new IllegalStateException("The log file " +
+            existing + " seems to contain valid transactions");
+      }
+    }
+    
     curSegment = fjm.startLogSegment(txid);
     curSegmentTxId = txid;
     nextTxId = txid;
@@ -360,9 +400,10 @@ class Journal implements Closeable {
       elf.validateLog();
     }
     if (elf.getLastTxId() == HdfsConstants.INVALID_TXID) {
-      // no transactions in file
-      throw new AssertionError("TODO: no transactions in file " +
-          elf);
+      LOG.info("Edit log file " + elf + " appears to be empty. " +
+          "Moving it aside...");
+      elf.moveAsideEmptyFile();
+      return null;
     }
     SegmentStateProto ret = SegmentStateProto.newBuilder()
         .setStartTxId(segmentTxId)
@@ -433,13 +474,16 @@ class Journal implements Closeable {
     }
 
     SegmentStateProto currentSegment = getSegmentInfo(segmentTxId);
-    // TODO: this can be null, in the case that one of the loggers started
-    // the next segment, but others did not! add regression test and null
-    // check in next condition below.
-    
-    // TODO: what if they have the same length but one is finalized and the
-    // other isn't! cover that case.
-    if (currentSegment.getEndTxId() != segment.getEndTxId()) {
+    if (currentSegment == null ||
+        currentSegment.getEndTxId() != segment.getEndTxId()) {
+      if (currentSegment == null) {
+        LOG.info("Synchronizing log " + TextFormat.shortDebugString(segment) +
+            ": no current segment in place");
+      } else {
+        LOG.info("Synchronizing log " + TextFormat.shortDebugString(segment) +
+            ": old segment " + TextFormat.shortDebugString(segment) + " is " +
+            "not the right length");
+      }
       syncLog(reqInfo, segment, fromUrl);
     } else {
       LOG.info("Skipping download of log " +
@@ -481,14 +525,6 @@ class Journal implements Closeable {
     try {
       success = tmpFile.renameTo(storage.getInProgressEditLog(
           segment.getStartTxId()));
-      if (success) {
-        // If we're synchronizing the latest segment, update our cached
-        // info.
-        // TODO: can this be done more generally?
-        if (curSegmentTxId == segment.getStartTxId()) {
-          nextTxId = segment.getEndTxId() + 1;
-        }
-      }
     } finally {
       if (!success) {
         if (!tmpFile.delete()) {

@@ -23,7 +23,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -111,15 +113,8 @@ public class IPCLoggerChannel implements AsyncLogger {
         DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_DEFAULT);
     
     executor = MoreExecutors.listeningDecorator(
-        Executors.newSingleThreadExecutor(
-          new ThreadFactoryBuilder()
-            .setDaemon(true)
-            .setNameFormat("Logger channel to " + addr)
-            .setUncaughtExceptionHandler(
-                UncaughtExceptionHandlers.systemExit())
-            .build()));
+        createExecutor());
   }
-  
   @Override
   public synchronized void setEpoch(long epoch) {
     this.epoch = epoch;
@@ -152,6 +147,21 @@ public class IPCLoggerChannel implements AsyncLogger {
         RPC.getProtocolVersion(QJournalProtocolPB.class),
         addr, conf);
     return new QJournalProtocolTranslatorPB(pbproxy);
+  }
+  
+  
+  /**
+   * Separated out for easy overriding in tests.
+   */
+  @VisibleForTesting
+  protected ExecutorService createExecutor() {
+    return Executors.newSingleThreadExecutor(
+        new ThreadFactoryBuilder()
+          .setDaemon(true)
+          .setNameFormat("Logger channel to " + addr)
+          .setUncaughtExceptionHandler(
+              UncaughtExceptionHandlers.systemExit())
+          .build());
   }
   
   @Override
