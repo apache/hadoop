@@ -155,6 +155,60 @@ public class TestJournal {
     journal2.newEpoch(FAKE_NSINFO, 2);
   }
   
+  /**
+   * Test finalizing a segment after some batch of edits were missed.
+   * This should fail, since we validate the log before finalization.
+   */
+  @Test
+  public void testFinalizeWhenEditsAreMissed() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 1);
+    journal.startLogSegment(makeRI(1), 1);
+    journal.journal(makeRI(2), 1, 3,
+        QJMTestUtil.createTxnData(1, 3));
+    
+    // Try to finalize up to txn 6, even though we only wrote up to txn 3.
+    try {
+      journal.finalizeLogSegment(makeRI(3), 1, 6);
+      fail("did not fail to finalize");
+    } catch (IllegalStateException ise) {
+      GenericTestUtils.assertExceptionContains(
+          "but current state of log is", ise);
+    }
+    
+    // Check that, even if we re-construct the journal by scanning the
+    // disk, we don't allow finalizing incorrectly.
+    journal.close();
+    journal = new Journal(TEST_LOG_DIR, mockErrorReporter);
+    
+    try {
+      journal.finalizeLogSegment(makeRI(4), 1, 6);
+      fail("did not fail to finalize");
+    } catch (IllegalStateException ise) {
+      GenericTestUtils.assertExceptionContains(
+          "but current state of log is", ise);
+    }
+  }
+  
+  /**
+   * Ensure that finalizing a segment which doesn't exist throws the
+   * appropriate exception.
+   */
+  @Test
+  public void testFinalizeMissingSegment() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 1);
+    try {
+      journal.finalizeLogSegment(makeRI(1), 1000, 1001);
+      fail("did not fail to finalize");
+    } catch (IllegalStateException ise) {
+      GenericTestUtils.assertExceptionContains(
+          "No log file to finalize at transaction ID 1000", ise);
+    }
+  }
+  
+  private static RequestInfo makeRI(int serial) {
+    return new RequestInfo(JID, 1, serial);
+  }
+  
   @Test
   public void testNamespaceVerification() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 1);

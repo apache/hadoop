@@ -273,6 +273,11 @@ class Journal implements Closeable {
     }
     
     FileJournalManager.EditLogFile elf = fjm.getLogFile(startTxId);
+    if (elf == null) {
+      throw new IllegalStateException("No log file to finalize at " +
+          "transaction ID " + startTxId);
+    }
+
     if (elf.isInProgress()) {
       // TODO: this is slow to validate when in non-recovery cases
       // we already know the length here!
@@ -281,7 +286,7 @@ class Journal implements Closeable {
       elf.validateLog();
       
       Preconditions.checkState(elf.getLastTxId() == endTxId,
-          "Trying to finalize log %s-%s, but current state of log" +
+          "Trying to finalize log %s-%s, but current state of log " +
           "is %s", startTxId, endTxId, elf);
       fjm.finalizeLogSegment(startTxId, endTxId);
     } else {
