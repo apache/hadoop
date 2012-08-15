@@ -75,7 +75,7 @@ static int fuserMount(int *procRet, ...)
 {
   int ret, status;
   size_t i = 0;
-  char *args[64], *c, *env[] = { NULL };
+  char *args[64], *c;
   va_list ap;
   pid_t pid, pret;
 
@@ -99,7 +99,7 @@ static int fuserMount(int *procRet, ...)
             ret, strerror(ret));
     return -ret;
   } else if (pid == 0) {
-    if (execvpe("fusermount", args, env)) {
+    if (execvp("fusermount", args)) {
       ret = errno;
       fprintf(stderr, "FUSE_TEST: failed to execute fusermount: "
               "error %d: %s\n", ret, strerror(ret));

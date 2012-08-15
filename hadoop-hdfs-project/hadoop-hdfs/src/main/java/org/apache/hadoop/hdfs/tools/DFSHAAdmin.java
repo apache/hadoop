@@ -42,6 +42,10 @@ public class DFSHAAdmin extends HAAdmin {
   protected void setErrOut(PrintStream errOut) {
     this.errOut = errOut;
   }
+  
+  protected void setOut(PrintStream out) {
+    this.out = out;
+  }
 
   @Override
   public void setConf(Configuration conf) {

@@ -114,6 +114,12 @@ Trunk (unreleased changes)
     HDFS-3789. JournalManager#format() should be able to throw IOException
     (Ivan Kelly via todd)
 
+    HDFS-3723. Add support -h, -help to all the commands. (Jing Zhao via
+    suresh)
+
+    HDFS-3803. Change BlockPoolSliceScanner chatty INFO log to DEBUG.
+    (Andrew Purtell via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -183,6 +189,8 @@ Trunk (unreleased changes)
     HDFS-3625. Fix TestBackupNode by properly initializing edit log during
     startup. (Junping Du via todd)
 
+    HDFS-3792. Fix two findbugs introduced by HDFS-3695 (todd)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
@@ -208,6 +216,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3513. HttpFS should cache filesystems. (tucu)
 
     HDFS-3637. Add support for encrypting the DataTransferProtocol. (atm)
+
+    HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
 
   IMPROVEMENTS
 
@@ -380,6 +390,14 @@ Branch-2 ( Unreleased changes )
     QuorumJournalManager extension. (todd)
 
     HDFS-3276. initializeSharedEdits should have a -nonInteractive flag (todd)
+
+    HDFS-3765. namenode -initializeSharedEdits should be able to initialize
+    all shared storages. (Vinay and todd via todd)
+
+    HDFS-3802. StartupOption.name in HdfsServerConstants should be final.
+    (Jing Zhao via szetszwo)
+
+    HDFS-3796. Speed up edit log tests by avoiding fsync() (todd)
 
   OPTIMIZATIONS
 
@@ -586,6 +604,15 @@ Branch-2 ( Unreleased changes )
     HDFS-2330. In NNStorage and FSImagePreTransactionalStorageInspector,
     IOExceptions of stream closures can mask root exceptions. (Uma Maheswara
     Rao G via szetszwo)
+
+    HDFS-3790. test_fuse_dfs.c doesn't compile on centos 5. (Colin Patrick
+    McCabe via atm)
+
+    HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
+
+    HDFS-3794. WebHDFS OPEN returns the incorrect Content-Length in the HTTP
+    header when offset is specified and length is omitted.
+    (Ravi Prakash via szetszwo)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
@@ -1461,6 +1488,9 @@ Release 0.23.3 - UNRELEASED
     to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
 
     HDFS-3553. Hftp proxy tokens are broken (daryn)
+
+    HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner
+    thread (Kihwal Lee via daryn)
 
 Release 0.23.2 - UNRELEASED
 

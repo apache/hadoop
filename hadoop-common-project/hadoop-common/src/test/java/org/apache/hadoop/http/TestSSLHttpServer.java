@@ -41,6 +41,8 @@ import java.net.URL;
  * corresponding HTTPS URL.
  */
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
+  private static final String CONFIG_SITE_XML = "sslhttpserver-site.xml";
+
   private static final String BASEDIR =
       System.getProperty("test.build.dir", "target/test-dir") + "/" +
       TestSSLHttpServer.class.getSimpleName();
@@ -49,8 +51,10 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static HttpServer server;
   private static URL baseUrl;
 
+
   @Before
   public void setup() throws Exception {
+    HttpConfig.setSecure(true);
     File base = new File(BASEDIR);
     FileUtil.fullyDelete(base);
     base.mkdirs();
@@ -66,11 +70,12 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     //we do this trick because the MR AppMaster is started in another VM and
     //the HttpServer configuration is not loaded from the job.xml but from the
     //site.xml files in the classpath
-    Writer writer = new FileWriter(classpathDir + "/core-site.xml");
+    Writer writer = new FileWriter(new File(classpathDir, CONFIG_SITE_XML));
     conf.writeXml(writer);
     writer.close();
 
     conf.setInt(HttpServer.HTTP_MAX_THREADS, 10);
+    conf.addResource(CONFIG_SITE_XML);
     server = createServer("test", conf);
     server.addServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     server.start();
@@ -83,7 +88,8 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     server.stop();
     String classpathDir =
         KeyStoreTestUtil.getClasspathDir(TestSSLHttpServer.class);
-    new File(classpathDir + "/core-site.xml").delete();
+    new File(classpathDir, CONFIG_SITE_XML).delete();
+    HttpConfig.setSecure(false);
   }
   
 
@@ -98,7 +104,9 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static String readOut(URL url) throws Exception {
     StringBuilder out = new StringBuilder();
     HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
-    SSLFactory sslf = new SSLFactory(SSLFactory.Mode.CLIENT, new Configuration());
+    Configuration conf = new Configuration();
+    conf.addResource(CONFIG_SITE_XML);
+    SSLFactory sslf = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
     sslf.init();
     conn.setSSLSocketFactory(sslf.createSSLSocketFactory());
     InputStream in = conn.getInputStream();

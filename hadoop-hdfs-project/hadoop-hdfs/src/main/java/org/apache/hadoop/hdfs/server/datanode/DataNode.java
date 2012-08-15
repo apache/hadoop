@@ -46,6 +46,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOUR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTPS_ENABLE_KEY;
+import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -55,6 +56,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -98,8 +100,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.datatransfer.BlockConstructionStage;
-import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferEncryptor;
+import org.apache.hadoop.hdfs.protocol.datatransfer.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.ClientDatanodeProtocolProtos.ClientDatanodeProtocolService;
@@ -124,9 +126,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Util;
-
-import static org.apache.hadoop.util.ExitUtil.terminate;
-
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -171,9 +170,9 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingService;
 
 /**********************************************************
@@ -230,6 +229,8 @@ public class DataNode extends Configured
         
   static final Log ClientTraceLog =
     LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
+  
+  private static final String USAGE = "Usage: java DataNode [-rollback | -regular]";
 
   /**
    * Use {@link NetUtils#createSocketAddr(String)} instead.
@@ -276,6 +277,7 @@ public class DataNode extends Configured
   private Configuration conf;
 
   private final String userWithLocalPathAccess;
+  private boolean connectToDnViaHostname;
   ReadaheadPool readaheadPool;
 
   /**
@@ -296,8 +298,11 @@ public class DataNode extends Configured
            final SecureResources resources) throws IOException {
     super(conf);
 
-    this.userWithLocalPathAccess = conf
-        .get(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
+    this.userWithLocalPathAccess =
+        conf.get(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
+    this.connectToDnViaHostname = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
     try {
       hostName = getHostName(conf);
       LOG.info("Configured hostname is " + hostName);
@@ -878,7 +883,7 @@ public class DataNode extends Configured
   /**
    * NB: The datanode can perform data transfer on the streaming
    * address however clients are given the IPC IP address for data
-   * transfer, and that may be be a different address.
+   * transfer, and that may be a different address.
    * 
    * @return socket address for data transfer
    */
@@ -925,12 +930,12 @@ public class DataNode extends Configured
   }
 
   public static InterDatanodeProtocol createInterDataNodeProtocolProxy(
-      DatanodeID datanodeid, final Configuration conf, final int socketTimeout)
-    throws IOException {
-    final InetSocketAddress addr =
-      NetUtils.createSocketAddr(datanodeid.getIpcAddr());
-    if (InterDatanodeProtocol.LOG.isDebugEnabled()) {
-      InterDatanodeProtocol.LOG.debug("InterDatanodeProtocol addr=" + addr);
+      DatanodeID datanodeid, final Configuration conf, final int socketTimeout,
+      final boolean connectToDnViaHostname) throws IOException {
+    final String dnAddr = datanodeid.getIpcAddr(connectToDnViaHostname);
+    final InetSocketAddress addr = NetUtils.createSocketAddr(dnAddr);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to datanode " + dnAddr + " addr=" + addr);
     }
     final UserGroupInformation loginUgi = UserGroupInformation.getLoginUser();
     try {
@@ -1061,6 +1066,7 @@ public class DataNode extends Configured
       }
     }
     
+    this.shouldRun = false;
     shutdownPeriodicScanners();
     
     if (infoServer != null) {
@@ -1074,7 +1080,6 @@ public class DataNode extends Configured
       ipcServer.stop();
     }
     
-    this.shouldRun = false;
     if (dataXceiverServer != null) {
       ((DataXceiverServer) this.dataXceiverServer.getRunnable()).kill();
       this.dataXceiverServer.interrupt();
@@ -1386,8 +1391,11 @@ public class DataNode extends Configured
       final boolean isClient = clientname.length() > 0;
       
       try {
-        InetSocketAddress curTarget = 
-          NetUtils.createSocketAddr(targets[0].getXferAddr());
+        final String dnAddr = targets[0].getXferAddr(connectToDnViaHostname);
+        InetSocketAddress curTarget = NetUtils.createSocketAddr(dnAddr);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Connecting to datanode " + dnAddr);
+        }
         sock = newSocket();
         NetUtils.connect(sock, curTarget, dnConf.socketTimeout);
         sock.setSoTimeout(targets.length * dnConf.socketTimeout);
@@ -1534,7 +1542,7 @@ public class DataNode extends Configured
     }
     
     if (!parseArguments(args, conf)) {
-      printUsage();
+      printUsage(System.err);
       return null;
     }
     Collection<URI> dataDirs = getStorageDirs(conf);
@@ -1648,9 +1656,8 @@ public class DataNode extends Configured
         + xmitsInProgress.get() + "}";
   }
 
-  private static void printUsage() {
-    System.err.println("Usage: java DataNode");
-    System.err.println("           [-rollback]");
+  private static void printUsage(PrintStream out) {
+    out.println(USAGE + "\n");
   }
 
   /**
@@ -1735,6 +1742,10 @@ public class DataNode extends Configured
   }
   
   public static void main(String args[]) {
+    if (DFSUtil.parseHelpArgument(args, DataNode.USAGE, System.out, true)) {
+      System.exit(0);
+    }
+
     secureMain(args, null);
   }
 
@@ -1843,7 +1854,7 @@ public class DataNode extends Configured
         DatanodeRegistration bpReg = bpos.bpRegistration;
         InterDatanodeProtocol datanode = bpReg.equals(id)?
             this: DataNode.createInterDataNodeProtocolProxy(id, getConf(),
-                dnConf.socketTimeout);
+                dnConf.socketTimeout, dnConf.connectToDnViaHostname);
         ReplicaRecoveryInfo info = callInitReplicaRecovery(datanode, rBlock);
         if (info != null &&
             info.getGenerationStamp() >= block.getGenerationStamp() &&

@@ -49,6 +49,12 @@ public class TestSecurityTokenEditLog {
   static final int NUM_THREADS = 100;
   static final int opsPerTrans = 3;
 
+  static {
+    // No need to fsync for the purposes of tests. This makes
+    // the tests run much faster.
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
+
   //
   // an object that does a bunch of transactions
   //

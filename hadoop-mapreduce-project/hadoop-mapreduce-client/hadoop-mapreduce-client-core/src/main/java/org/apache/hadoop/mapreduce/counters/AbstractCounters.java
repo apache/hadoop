@@ -24,6 +24,7 @@ import static org.apache.hadoop.mapreduce.counters.CounterGroupFactory.isFramewo
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -185,7 +186,15 @@ public abstract class AbstractCounters<C extends Counter,
    * @return Set of counter names.
    */
   public synchronized Iterable<String> getGroupNames() {
-    return Iterables.concat(fgroups.keySet(), groups.keySet());
+    HashSet<String> deprecated = new HashSet<String>();
+    for(Map.Entry<String, String> entry : legacyMap.entrySet()) {
+      String newGroup = entry.getValue();
+      boolean isFGroup = isFrameworkGroup(newGroup);
+      if(isFGroup ? fgroups.containsKey(newGroup) : groups.containsKey(newGroup)) {
+        deprecated.add(entry.getKey());
+      }
+    }
+    return Iterables.concat(fgroups.keySet(), groups.keySet(), deprecated);
   }
 
   @Override

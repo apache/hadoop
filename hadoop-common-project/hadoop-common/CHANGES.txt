@@ -213,7 +213,10 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8644. AuthenticatedURL should be able to use SSLFactory. (tucu)
 
-    HADOOP-8681. add support for HTTPS to the web UIs. (tucu)
+    HADOOP-8581. add support for HTTPS to the web UIs. (tucu)
+
+    HADOOP-7754. Expose file descriptors from Hadoop-wrapped local 
+    FileSystems (todd and ahmed via tucu)
 
   IMPROVEMENTS
 
@@ -283,6 +286,8 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8620. Add -Drequire.fuse and -Drequire.snappy. (Colin
     Patrick McCabe via eli)
+
+    HADOOP-8687. Upgrade log4j to 1.2.17. (eli)
 
   BUG FIXES
 
@@ -417,6 +422,9 @@ Branch-2 ( Unreleased changes )
     HADOOP-8405. ZKFC tests leak ZK instances. (todd)
 
     HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
+
+    HADOOP-8699. some common testcases create core-site.xml in test-classes 
+    making other testcases to fail. (tucu)
 
 Release 2.0.0-alpha - 05-23-2012
 

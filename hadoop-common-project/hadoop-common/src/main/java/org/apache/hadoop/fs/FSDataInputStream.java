@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable, Closeable, ByteBufferReadable {
+    implements Seekable, PositionedReadable, Closeable, ByteBufferReadable, HasFileDescriptor {
 
   public FSDataInputStream(InputStream in)
     throws IOException {
@@ -124,5 +124,16 @@ public class FSDataInputStream extends DataInputStream
     }
 
     throw new UnsupportedOperationException("Byte-buffer read unsupported by input stream");
+  }
+
+  @Override
+  public FileDescriptor getFileDescriptor() throws IOException {
+    if (in instanceof HasFileDescriptor) {
+      return ((HasFileDescriptor) in).getFileDescriptor();
+    } else if (in instanceof FileInputStream) {
+      return ((FileInputStream) in).getFD();
+    } else {
+      return null;
+    }
   }
 }

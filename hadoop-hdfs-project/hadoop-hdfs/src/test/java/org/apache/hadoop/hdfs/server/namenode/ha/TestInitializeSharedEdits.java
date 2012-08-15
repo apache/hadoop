@@ -159,6 +159,13 @@ public class TestInitializeSharedEdits {
   }
   
   @Test
+  public void testFailWhenNoSharedEditsSpecified() throws Exception {
+    Configuration confNoShared = new Configuration(conf);
+    confNoShared.unset(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+    assertFalse(NameNode.initializeSharedEdits(confNoShared, true));
+  }
+  
+  @Test
   public void testDontOverWriteExistingDir() {
     assertFalse(NameNode.initializeSharedEdits(conf, false));
     assertTrue(NameNode.initializeSharedEdits(conf, false));
