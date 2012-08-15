@@ -420,6 +420,9 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
 
+    HADOOP-8699. some common testcases create core-site.xml in test-classes 
+    making other testcases to fail. (tucu)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
