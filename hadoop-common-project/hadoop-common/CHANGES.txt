@@ -153,6 +153,9 @@ Release 0.23.3 - UNRELEASED
     properly if no local node and first node is local rack node.
     (Junping Du)
 
+    HADOOP-8703. distcpV2: turn CRC checking off for 0 byte size (Dave
+    Thompson via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
