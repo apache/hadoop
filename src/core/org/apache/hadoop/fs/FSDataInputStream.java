@@ -22,7 +22,7 @@ import java.io.*;
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable, Closeable {
+    implements Seekable, PositionedReadable, Closeable, HasFileDescriptor {
 
   public FSDataInputStream(InputStream in)
     throws IOException {
@@ -58,5 +58,16 @@ public class FSDataInputStream extends DataInputStream
   
   public boolean seekToNewSource(long targetPos) throws IOException {
     return ((Seekable)in).seekToNewSource(targetPos); 
+  }
+
+  @Override
+  public FileDescriptor getFileDescriptor() throws IOException {
+    if (in instanceof HasFileDescriptor) {
+      return ((HasFileDescriptor) in).getFileDescriptor();
+    } else if (in instanceof FileInputStream) {
+      return ((FileInputStream) in).getFD();
+    } else {
+      return null;
+    }
   }
 }

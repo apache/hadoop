@@ -18,6 +18,8 @@
 package org.apache.hadoop.fs;
 
 import java.io.BufferedInputStream;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.IOException;
 
 
@@ -27,7 +29,7 @@ import java.io.IOException;
 
 
 public class BufferedFSInputStream extends BufferedInputStream
-implements Seekable, PositionedReadable {
+implements Seekable, PositionedReadable, HasFileDescriptor {
   /**
    * Creates a <code>BufferedFSInputStream</code>
    * with the specified buffer size,
@@ -92,5 +94,14 @@ implements Seekable, PositionedReadable {
 
   public void readFully(long position, byte[] buffer) throws IOException {
     ((FSInputStream)in).readFully(position, buffer);
+  }
+
+  @Override
+  public FileDescriptor getFileDescriptor() throws IOException {
+    if (in instanceof HasFileDescriptor) {
+      return ((HasFileDescriptor) in).getFileDescriptor();
+    } else {
+      return null;
+    }
   }
 }

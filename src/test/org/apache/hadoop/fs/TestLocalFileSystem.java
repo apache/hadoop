@@ -160,4 +160,14 @@ public class TestLocalFileSystem extends TestCase {
     FileSystem fs = FileSystem.getLocal(conf);
     assertNull(fs.getCanonicalServiceName());
   }
+
+  public void testHasFileDescriptor() throws IOException {
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    Path path = new Path(TEST_ROOT_DIR, "test-file");
+    writeFile(fs, path);
+    BufferedFSInputStream bis = new BufferedFSInputStream(
+        new RawLocalFileSystem().new LocalFSFileInputStream(path), 1024);
+    assertNotNull(bis.getFileDescriptor());
+  }
 }
