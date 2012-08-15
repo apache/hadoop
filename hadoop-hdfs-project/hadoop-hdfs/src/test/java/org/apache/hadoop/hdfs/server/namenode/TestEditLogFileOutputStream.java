@@ -45,6 +45,12 @@ public class TestEditLogFileOutputStream {
     new File(System.getProperty("test.build.data","/tmp"),
              "editLogStream.dat");
 
+  static {
+    // No need to fsync for the purposes of tests. This makes
+    // the tests run much faster.
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
+
   @Before
   public void deleteEditsFile() {
     TEST_EDITS.delete();

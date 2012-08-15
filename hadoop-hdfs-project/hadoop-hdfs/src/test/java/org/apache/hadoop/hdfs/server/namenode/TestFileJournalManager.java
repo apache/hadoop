@@ -51,6 +51,12 @@ import com.google.common.collect.TreeMultiset;
 public class TestFileJournalManager {
   static final Log LOG = LogFactory.getLog(TestFileJournalManager.class);
 
+  static {
+    // No need to fsync for the purposes of tests. This makes
+    // the tests run much faster.
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
+
   /**
    * Find out how many transactions we can read from a
    * FileJournalManager, starting at a given transaction ID.

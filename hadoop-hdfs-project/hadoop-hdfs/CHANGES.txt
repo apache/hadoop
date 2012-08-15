@@ -212,6 +212,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3802. StartupOption.name in HdfsServerConstants should be final.
     (Jing Zhao via szetszwo)
 
+    HDFS-3796. Speed up edit log tests by avoiding fsync() (todd)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

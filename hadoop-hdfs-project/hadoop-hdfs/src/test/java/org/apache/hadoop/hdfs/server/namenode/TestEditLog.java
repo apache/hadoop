@@ -118,6 +118,11 @@ public class TestEditLog {
         "a4ff 0000 0000 0000 0000 0000 0000 0000"
     ).replace(" ",""));
 
+  static {
+    // No need to fsync for the purposes of tests. This makes
+    // the tests run much faster.
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
+  }
   
   static final byte TRAILER_BYTE = FSEditLogOpCodes.OP_INVALID.getOpCode();
 
