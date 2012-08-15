@@ -263,11 +263,11 @@ class AsyncLoggerSet {
   }
   
   public QuorumCall<AsyncLogger, Void> sendEdits(
-      long firstTxnId, int numTxns, byte[] data) {
+      long segmentTxId, long firstTxnId, int numTxns, byte[] data) {
     Map<AsyncLogger, ListenableFuture<Void>> calls = Maps.newHashMap();
     for (AsyncLogger logger : loggers) {
       ListenableFuture<Void> future = 
-        logger.sendEdits(firstTxnId, numTxns, data);
+        logger.sendEdits(segmentTxId, firstTxnId, numTxns, data);
       calls.put(logger, future);
     }
     return QuorumCall.create(calls);

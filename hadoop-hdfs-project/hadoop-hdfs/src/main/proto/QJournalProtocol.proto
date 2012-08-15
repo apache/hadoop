@@ -58,6 +58,7 @@ message JournalRequestProto {
   required uint64 firstTxnId = 2;
   required uint32 numTxns = 3;
   required bytes records = 4;
+  required uint64 segmentTxnId = 5;
 }
 
 message JournalResponseProto { 

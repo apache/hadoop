@@ -353,7 +353,7 @@ public class QuorumJournalManager implements JournalManager {
         "must recover segments before starting a new one");
     QuorumCall<AsyncLogger,Void> q = loggers.startLogSegment(txId);
     loggers.waitForWriteQuorum(q, startSegmentTimeoutMs);
-    return new QuorumOutputStream(loggers);
+    return new QuorumOutputStream(loggers, txId);
   }
 
   @Override

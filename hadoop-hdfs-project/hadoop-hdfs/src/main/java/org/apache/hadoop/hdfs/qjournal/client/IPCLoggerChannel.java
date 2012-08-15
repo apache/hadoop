@@ -235,7 +235,8 @@ public class IPCLoggerChannel implements AsyncLogger {
   
   @Override
   public ListenableFuture<Void> sendEdits(
-      final long firstTxnId, final int numTxns, final byte[] data) {
+      final long segmentTxId, final long firstTxnId,
+      final int numTxns, final byte[] data) {
     try {
       reserveQueueSpace(data.length);
     } catch (LoggerTooFarBehindException e) {
@@ -246,7 +247,8 @@ public class IPCLoggerChannel implements AsyncLogger {
       ret = executor.submit(new Callable<Void>() {
         @Override
         public Void call() throws IOException {
-          getProxy().journal(createReqInfo(), firstTxnId, numTxns, data);
+          getProxy().journal(createReqInfo(),
+              segmentTxId, firstTxnId, numTxns, data);
           return null;
         }
       });

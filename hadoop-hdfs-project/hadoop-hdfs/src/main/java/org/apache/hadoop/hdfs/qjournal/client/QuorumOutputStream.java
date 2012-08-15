@@ -31,11 +31,14 @@ import org.apache.hadoop.io.DataOutputBuffer;
 class QuorumOutputStream extends EditLogOutputStream {
   private final AsyncLoggerSet loggers;
   private EditsDoubleBuffer buf;
+  private final long segmentTxId;
 
-  public QuorumOutputStream(AsyncLoggerSet loggers) throws IOException {
+  public QuorumOutputStream(AsyncLoggerSet loggers,
+      long txId) throws IOException {
     super();
     this.buf = new EditsDoubleBuffer(256*1024); // TODO: conf
     this.loggers = loggers;
+    this.segmentTxId = txId;
   }
 
   @Override
@@ -96,7 +99,8 @@ class QuorumOutputStream extends EditLogOutputStream {
       assert data.length == bufToSend.getLength();
 
       QuorumCall<AsyncLogger, Void> qcall = loggers.sendEdits(
-          firstTxToFlush, numReadyTxns, data);
+          segmentTxId, firstTxToFlush,
+          numReadyTxns, data);
       loggers.waitForWriteQuorum(qcall, 20000); // TODO: configurable timeout
     }
   }

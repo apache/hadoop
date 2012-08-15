@@ -124,10 +124,12 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
   }
 
   @Override
-  public void journal(RequestInfo reqInfo, long firstTxnId, int numTxns,
+  public void journal(RequestInfo reqInfo,
+      long segmentTxId, long firstTxnId, int numTxns,
       byte[] records) throws IOException {
     JournalRequestProto req = JournalRequestProto.newBuilder()
         .setReqInfo(convert(reqInfo))
+        .setSegmentTxnId(segmentTxId)
         .setFirstTxnId(firstTxnId)
         .setNumTxns(numTxns)
         .setRecords(PBHelper.getByteString(records))

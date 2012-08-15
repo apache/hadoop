@@ -115,10 +115,11 @@ class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
-  public void journal(RequestInfo reqInfo, long firstTxnId,
+  public void journal(RequestInfo reqInfo,
+      long segmentTxId, long firstTxnId,
       int numTxns, byte[] records) throws IOException {
     jn.getOrCreateJournal(reqInfo.getJournalId())
-       .journal(reqInfo, firstTxnId, numTxns, records);
+       .journal(reqInfo, segmentTxId, firstTxnId, numTxns, records);
   }
 
   @Override

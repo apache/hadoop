@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -37,6 +38,9 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.IOUtils;
+
+import com.google.common.collect.Lists;
 
 public abstract class QJMTestUtil {
   public static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
@@ -132,6 +136,23 @@ public abstract class QJMTestUtil {
     assertTrue("File " + fname + " should exist in a quorum of dirs",
         count >= cluster.getQuorumSize());
   }
-  
 
+  public static long recoverAndReturnLastTxn(QuorumJournalManager qjm)
+      throws IOException {
+    qjm.recoverUnfinalizedSegments();
+    long lastRecoveredTxn = 0;
+
+    List<EditLogInputStream> streams = Lists.newArrayList();
+    try {
+      qjm.selectInputStreams(streams, 0, false);
+      
+      for (EditLogInputStream elis : streams) {
+        assertTrue(elis.getFirstTxId() > lastRecoveredTxn);
+        lastRecoveredTxn = elis.getLastTxId();
+      }
+    } finally {
+      IOUtils.cleanup(null, streams.toArray(new Closeable[0]));
+    }
+    return lastRecoveredTxn;
+  }
 }

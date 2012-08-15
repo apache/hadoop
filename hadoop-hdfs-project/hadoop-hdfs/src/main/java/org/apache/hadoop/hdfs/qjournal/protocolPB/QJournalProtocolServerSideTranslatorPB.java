@@ -109,8 +109,8 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       JournalRequestProto req) throws ServiceException {
     try {
       impl.journal(convert(req.getReqInfo()),
-          req.getFirstTxnId(), req.getNumTxns(), req.getRecords()
-              .toByteArray());
+          req.getSegmentTxnId(), req.getFirstTxnId(),
+          req.getNumTxns(), req.getRecords().toByteArray());
     } catch (IOException e) {
       throw new ServiceException(e);
     }

@@ -97,7 +97,7 @@ public class TestJournal {
     }
     try {
       journal.journal(new RequestInfo(JID, 1L, 1L),
-          100L, 0, new byte[0]);
+          12345L, 100L, 0, new byte[0]);
       fail("Should have rejected call from prior epoch");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
@@ -109,7 +109,7 @@ public class TestJournal {
   public void testRestartJournal() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 1);
     journal.startLogSegment(new RequestInfo("j", 1, 1), 1);
-    journal.journal(new RequestInfo("j", 1, 2), 1, 2, 
+    journal.journal(new RequestInfo("j", 1, 2), 1, 1, 2, 
         QJMTestUtil.createTxnData(1, 2));
     // Don't finalize.
     
@@ -163,7 +163,7 @@ public class TestJournal {
   public void testFinalizeWhenEditsAreMissed() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 1);
     journal.startLogSegment(makeRI(1), 1);
-    journal.journal(makeRI(2), 1, 3,
+    journal.journal(makeRI(2), 1, 1, 3,
         QJMTestUtil.createTxnData(1, 3));
     
     // Try to finalize up to txn 6, even though we only wrote up to txn 3.
@@ -220,7 +220,7 @@ public class TestJournal {
     
     // Start a segment at txid 1, and write a batch of 3 txns.
     journal.startLogSegment(makeRI(1), 1);
-    journal.journal(makeRI(2), 1, 3,
+    journal.journal(makeRI(2), 1, 1, 3,
         QJMTestUtil.createTxnData(1, 3));
 
     GenericTestUtils.assertExists(
@@ -229,7 +229,7 @@ public class TestJournal {
     // Try to start new segment at txid 6, this should abort old segment and
     // then succeed, allowing us to write txid 6-9.
     journal.startLogSegment(makeRI(3), 6);
-    journal.journal(makeRI(4), 6, 3,
+    journal.journal(makeRI(4), 6, 6, 3,
         QJMTestUtil.createTxnData(6, 3));
 
     // The old segment should *not* be finalized.
@@ -250,19 +250,19 @@ public class TestJournal {
     // Start a segment at txid 1, and write just 1 transaction. This
     // would normally be the START_LOG_SEGMENT transaction.
     journal.startLogSegment(makeRI(1), 1);
-    journal.journal(makeRI(2), 1, 1,
+    journal.journal(makeRI(2), 1, 1, 1,
         QJMTestUtil.createTxnData(1, 1));
     
     // Try to start new segment at txid 1, this should succeed, because
     // we are allowed to re-start a segment if we only ever had the
     // START_LOG_SEGMENT transaction logged.
     journal.startLogSegment(makeRI(3), 1);
-    journal.journal(makeRI(4), 1, 1,
+    journal.journal(makeRI(4), 1, 1, 1,
         QJMTestUtil.createTxnData(1, 1));
 
     // This time through, write more transactions afterwards, simulating
     // real user transactions.
-    journal.journal(makeRI(5), 2, 3,
+    journal.journal(makeRI(5), 1, 2, 3,
         QJMTestUtil.createTxnData(2, 3));
 
     try {

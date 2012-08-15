@@ -196,9 +196,10 @@ class Journal implements Closeable {
 
   /**
    * Write a batch of edits to the journal.
-   * {@see QJournalProtocol#journal(RequestInfo, long, int, byte[])}
+   * {@see QJournalProtocol#journal(RequestInfo, long, long, int, byte[])}
    */
-  synchronized void journal(RequestInfo reqInfo, long firstTxnId,
+  synchronized void journal(RequestInfo reqInfo,
+      long segmentTxId, long firstTxnId,
       int numTxns, byte[] records) throws IOException {
     checkRequest(reqInfo);
     checkFormatted();
@@ -211,6 +212,21 @@ class Journal implements Closeable {
     // That way the node can catch back up and rejoin
     Preconditions.checkState(curSegment != null,
         "Can't write, no segment open");
+    
+    if (curSegmentTxId != segmentTxId) {
+      // Sanity check: it is possible that the writer will fail IPCs
+      // on both the finalize() and then the start() of the next segment.
+      // This could cause us to continue writing to an old segment
+      // instead of rolling to a new one, which breaks one of the
+      // invariants in the design. If it happens, abort the segment
+      // and throw an exception.
+      curSegment.abort();
+      curSegment = null;
+      throw new IllegalStateException(
+          "Writer out of sync: it thinks it is writing segment " + segmentTxId
+          + " but current segment is " + curSegmentTxId);
+    }
+      
     Preconditions.checkState(nextTxId == firstTxnId,
         "Can't write txid " + firstTxnId + " expecting nextTxId=" + nextTxId);
     

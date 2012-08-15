@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.qjournal.client;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.eq;
 
 import java.io.IOException;
@@ -150,21 +151,21 @@ public class TestQuorumJournalManagerUnit {
     
     // The flush should log txn 1-2
     futureReturns(null).when(spyLoggers.get(0)).sendEdits(
-        eq(1L), eq(2), Mockito.<byte[]>any());
+        anyLong(), eq(1L), eq(2), Mockito.<byte[]>any());
     futureReturns(null).when(spyLoggers.get(1)).sendEdits(
-        eq(1L), eq(2), Mockito.<byte[]>any());
+        anyLong(), eq(1L), eq(2), Mockito.<byte[]>any());
     futureReturns(null).when(spyLoggers.get(2)).sendEdits(
-        eq(1L), eq(2), Mockito.<byte[]>any());
+        anyLong(), eq(1L), eq(2), Mockito.<byte[]>any());
     stm.flush();
 
     // Another flush should now log txn #3
     stm.setReadyToFlush();
     futureReturns(null).when(spyLoggers.get(0)).sendEdits(
-        eq(3L), eq(1), Mockito.<byte[]>any());
+        anyLong(), eq(3L), eq(1), Mockito.<byte[]>any());
     futureReturns(null).when(spyLoggers.get(1)).sendEdits(
-        eq(3L), eq(1), Mockito.<byte[]>any());
+        anyLong(), eq(3L), eq(1), Mockito.<byte[]>any());
     futureReturns(null).when(spyLoggers.get(2)).sendEdits(
-        eq(3L), eq(1), Mockito.<byte[]>any());
+        anyLong(), eq(3L), eq(1), Mockito.<byte[]>any());
     stm.flush();
   }
   
@@ -176,14 +177,14 @@ public class TestQuorumJournalManagerUnit {
     
     // Make the first two logs respond immediately
     futureReturns(null).when(spyLoggers.get(0)).sendEdits(
-        eq(1L), eq(1), Mockito.<byte[]>any());
+        anyLong(), eq(1L), eq(1), Mockito.<byte[]>any());
     futureReturns(null).when(spyLoggers.get(1)).sendEdits(
-        eq(1L), eq(1), Mockito.<byte[]>any());
+        anyLong(), eq(1L), eq(1), Mockito.<byte[]>any());
     
     // And the third log not respond
     SettableFuture<Void> slowLog = SettableFuture.<Void>create();
     Mockito.doReturn(slowLog).when(spyLoggers.get(2)).sendEdits(
-        eq(1L), eq(1), Mockito.<byte[]>any());
+        anyLong(), eq(1L), eq(1), Mockito.<byte[]>any());
     stm.flush();
   }
 

@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.FAKE_NSINFO;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeSegment;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.writeTxns;
 import static org.apache.hadoop.hdfs.qjournal.QJMTestUtil.verifyEdits;
+import static org.apache.hadoop.hdfs.qjournal.client.TestQuorumJournalManagerUnit.futureThrows;
 
 import java.io.Closeable;
 import java.io.File;
@@ -414,8 +415,57 @@ public class TestQuorumJournalManager {
   
   private void failLoggerAtTxn(AsyncLogger spy, long txid) {
     TestQuorumJournalManagerUnit.futureThrows(new IOException("mock failure"))
-      .when(spy).sendEdits(
+      .when(spy).sendEdits(Mockito.anyLong(),
         Mockito.eq(txid), Mockito.eq(1), Mockito.<byte[]>any());
+  }
+  
+  /**
+   * Test the case where one of the loggers misses a finalizeLogSegment()
+   * call, and then misses the next startLogSegment() call before coming
+   * back to life.
+   * 
+   * Previously, this caused it to keep on writing to the old log segment,
+   * such that one logger had eg edits_1-10 while the others had edits_1-5 and
+   * edits_6-10. This caused recovery to fail in certain cases.
+   */
+  @Test
+  public void testMissFinalizeAndNextStart() throws Exception {
+    
+    // Logger 0: miss finalize(1-3) and start(4)
+    futureThrows(new IOException("injected")).when(spies.get(0))
+      .finalizeLogSegment(Mockito.eq(1L), Mockito.eq(3L));
+    futureThrows(new IOException("injected")).when(spies.get(0))
+      .startLogSegment(Mockito.eq(4L));
+    
+    // Logger 1: fail at txn id 4
+    failLoggerAtTxn(spies.get(1), 4L);
+    
+    writeSegment(cluster, qjm, 1, 3, true);
+    EditLogOutputStream stm = qjm.startLogSegment(4);
+    try {
+      writeTxns(stm, 4, 1);
+      fail("Did not fail to write");
+    } catch (QuorumException qe) {
+      // Should fail, because logger 1 had an injected fault and
+      // logger 0 should detect writer out of sync
+      GenericTestUtils.assertExceptionContains("Writer out of sync",
+          qe);
+    } finally {
+      stm.abort();
+      qjm.close();
+    }
+    
+    // State:
+    // Logger 0: 1-3 in-progress (since it missed finalize)
+    // Logger 1: 1-3 finalized
+    // Logger 2: 1-3 finalized, 4 in-progress with one txn
+    
+    // Shut down logger 2 so it doesn't participate in recovery
+    cluster.getJournalNode(2).stopAndJoin(0);
+    
+    qjm = createSpyingQJM();
+    long recovered = QJMTestUtil.recoverAndReturnLastTxn(qjm);
+    assertEquals(3L, recovered);
   }
   
   /**

@@ -72,6 +72,7 @@ public interface QJournalProtocol {
    * to write edits to their local logs.
    */
   public void journal(RequestInfo reqInfo,
+                      long segmentTxId,
                       long firstTxnId,
                       int numTxns,
                       byte[] records) throws IOException;

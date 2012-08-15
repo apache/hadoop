@@ -78,9 +78,10 @@ public class TestIPCLoggerChannel {
   
   @Test
   public void testSimpleCall() throws Exception {
-    ch.sendEdits(1, 3, FAKE_DATA).get();
+    ch.sendEdits(1, 1, 3, FAKE_DATA).get();
     Mockito.verify(mockProxy).journal(Mockito.<RequestInfo>any(),
-        Mockito.eq(1L), Mockito.eq(3), Mockito.same(FAKE_DATA));
+        Mockito.eq(1L), Mockito.eq(1L),
+        Mockito.eq(3), Mockito.same(FAKE_DATA));
   }
 
   
@@ -95,12 +96,13 @@ public class TestIPCLoggerChannel {
     DelayAnswer delayer = new DelayAnswer(LOG);
     Mockito.doAnswer(delayer).when(mockProxy).journal(
         Mockito.<RequestInfo>any(),
-        Mockito.eq(1L), Mockito.eq(1), Mockito.same(FAKE_DATA));
+        Mockito.eq(1L), Mockito.eq(1L),
+        Mockito.eq(1), Mockito.same(FAKE_DATA));
     
     // Queue up the maximum number of calls.
     int numToQueue = LIMIT_QUEUE_SIZE_BYTES / FAKE_DATA.length;
     for (int i = 1; i <= numToQueue; i++) {
-      ch.sendEdits((long)i, 1, FAKE_DATA);
+      ch.sendEdits(1L, (long)i, 1, FAKE_DATA);
     }
     
     // The accounting should show the correct total number queued.
@@ -108,7 +110,7 @@ public class TestIPCLoggerChannel {
     
     // Trying to queue any more should fail.
     try {
-      ch.sendEdits(numToQueue + 1, 1, FAKE_DATA).get(1, TimeUnit.SECONDS);
+      ch.sendEdits(1L, numToQueue + 1, 1, FAKE_DATA).get(1, TimeUnit.SECONDS);
       fail("Did not fail to queue more calls after queue was full");
     } catch (ExecutionException ee) {
       if (!(ee.getCause() instanceof LoggerTooFarBehindException)) {

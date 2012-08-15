@@ -53,12 +53,14 @@ interface AsyncLogger {
 
   /**
    * Send a batch of edits to the logger.
+   * @param segmentTxId the first txid in the current segment
    * @param firstTxnId the first txid of the edits.
    * @param numTxns the number of transactions in the batch
    * @param data the actual data to be sent
    */
   public ListenableFuture<Void> sendEdits(
-      final long firstTxnId, final int numTxns, final byte[] data);
+      final long segmentTxId, final long firstTxnId,
+      final int numTxns, final byte[] data);
 
   /**
    * Begin writing a new log segment.
