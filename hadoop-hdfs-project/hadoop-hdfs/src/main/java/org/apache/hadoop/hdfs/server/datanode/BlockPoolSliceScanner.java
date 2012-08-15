@@ -554,9 +554,11 @@ class BlockPoolSliceScanner {
   }
   
   private synchronized void startNewPeriod() {
-    LOG.info("Starting a new period : work left in prev period : "
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Starting a new period : work left in prev period : "
         + String.format("%.2f%%", totalBytesToScan == 0 ? 0
             : (bytesLeft * 100.0) / totalBytesToScan));
+    }
 
     // reset the byte counts :
     bytesLeft = totalBytesToScan;

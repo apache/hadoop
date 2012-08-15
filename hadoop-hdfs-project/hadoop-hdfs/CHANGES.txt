@@ -203,6 +203,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3765. namenode -initializeSharedEdits should be able to initialize
     all shared storages. (Vinay and todd via todd)
 
+    HDFS-3803. Change BlockPoolSliceScanner chatty INFO log to DEBUG.
+    (Andrew Purtell via suresh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
