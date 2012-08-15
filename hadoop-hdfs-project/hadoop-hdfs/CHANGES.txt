@@ -614,6 +614,8 @@ Branch-2 ( Unreleased changes )
     header when offset is specified and length is omitted.
     (Ravi Prakash via szetszwo)
 
+    HDFS-3048. Small race in BlockManager#close. (Andy Isaacson via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
