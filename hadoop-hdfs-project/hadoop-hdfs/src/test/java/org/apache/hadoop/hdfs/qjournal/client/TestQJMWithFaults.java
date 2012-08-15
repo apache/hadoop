@@ -76,6 +76,7 @@ public class TestQJMWithFaults {
     MiniJournalCluster cluster = new MiniJournalCluster.Builder(conf).build();
     try {
       QuorumJournalManager qjm = createInjectableQJM(cluster);
+      qjm.format(FAKE_NSINFO);
       doWorkload(cluster, qjm);
       
       SortedSet<Integer> ipcCounts = Sets.newTreeSet();
@@ -118,6 +119,7 @@ public class TestQJMWithFaults {
         try {
           QuorumJournalManager qjm;
           qjm = createInjectableQJM(cluster);
+          qjm.format(FAKE_NSINFO);
           List<AsyncLogger> loggers = qjm.getLoggerSetForTests().getLoggersForTests();
           failIpcNumber(loggers.get(0), failA);
           failIpcNumber(loggers.get(1), failB);

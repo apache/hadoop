@@ -85,6 +85,8 @@ public class TestQuorumJournalManagerUnit {
       futureReturns(
           NewEpochResponseProto.newBuilder().build()
           ).when(logger).newEpoch(Mockito.anyLong());
+      
+      futureReturns(null).when(logger).format(Mockito.<NamespaceInfo>any());
     }
     
     qjm.recoverUnfinalizedSegments();

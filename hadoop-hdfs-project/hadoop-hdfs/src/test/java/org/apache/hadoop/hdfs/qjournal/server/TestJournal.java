@@ -61,6 +61,7 @@ public class TestJournal {
   public void setup() throws Exception {
     FileUtil.fullyDelete(TEST_LOG_DIR);
     journal = new Journal(TEST_LOG_DIR, mockErrorReporter);
+    journal.format(FAKE_NSINFO);
   }
   
   @After
@@ -130,18 +131,14 @@ public class TestJournal {
   
   @Test
   public void testJournalLocking() throws Exception {
+    Assume.assumeTrue(journal.getStorage().getStorageDir(0).isLockSupported());
     StorageDirectory sd = journal.getStorage().getStorageDir(0);
     File lockFile = new File(sd.getRoot(), Storage.STORAGE_FILE_LOCK);
-
-    // Journal should not be locked, since we lazily initialize it.
-    assertFalse(lockFile.exists());
+    
+    // Journal should be locked, since the format() call locks it.
+    GenericTestUtils.assertExists(lockFile);
 
     journal.newEpoch(FAKE_NSINFO,  1);
-    Assume.assumeTrue(journal.getStorage().getStorageDir(0).isLockSupported());
-    
-    // Journal should be locked
-    GenericTestUtils.assertExists(lockFile);
-    
     try {
       new Journal(TEST_LOG_DIR, mockErrorReporter);
       fail("Did not fail to create another journal in same dir");
@@ -153,6 +150,7 @@ public class TestJournal {
     journal.close();
     
     // Journal should no longer be locked after the close() call.
+    // Hence, should be able to create a new Journal in the same dir.
     Journal journal2 = new Journal(TEST_LOG_DIR, mockErrorReporter);
     journal2.newEpoch(FAKE_NSINFO, 2);
   }

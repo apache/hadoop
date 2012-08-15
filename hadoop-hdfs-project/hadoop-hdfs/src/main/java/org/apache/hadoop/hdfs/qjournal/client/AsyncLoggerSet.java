@@ -25,18 +25,23 @@ import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hdfs.qjournal.protocol.JournalNotFormattedException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 
 /**
  * Wrapper around a set of Loggers, taking care of fanning out
@@ -197,6 +202,36 @@ class AsyncLoggerSet {
     }
     return QuorumCall.create(calls);    
   }
+  
+  public QuorumCall<AsyncLogger, Boolean> isFormatted() {
+    Map<AsyncLogger, ListenableFuture<Boolean>> calls = Maps.newHashMap();
+    for (AsyncLogger logger : loggers) {
+      final SettableFuture<Boolean> ret = SettableFuture.create();
+      ListenableFuture<GetJournalStateResponseProto> jstate =
+          logger.getJournalState();
+      Futures.addCallback(jstate, new FutureCallback<GetJournalStateResponseProto>() {
+        @Override
+        public void onFailure(Throwable t) {
+          if (t instanceof RemoteException) {
+            t = ((RemoteException)t).unwrapRemoteException();
+          }
+          if (t instanceof JournalNotFormattedException) {
+            ret.set(false);
+          } else {
+            ret.setException(t);
+          }
+        }
+
+        @Override
+        public void onSuccess(GetJournalStateResponseProto jstate) {
+          ret.set(true);
+        }
+      });
+      
+      calls.put(logger, ret);
+    }
+    return QuorumCall.create(calls);
+  }
 
   private QuorumCall<AsyncLogger,NewEpochResponseProto> newEpoch(
       NamespaceInfo nsInfo,
@@ -271,6 +306,17 @@ class AsyncLoggerSet {
     for (AsyncLogger logger : loggers) {
       ListenableFuture<Void> future =
           logger.acceptRecovery(log, fromURL);
+      calls.put(logger, future);
+    }
+    return QuorumCall.create(calls);
+  }
+
+  QuorumCall<AsyncLogger,Void> format(NamespaceInfo nsInfo) {
+    Map<AsyncLogger, ListenableFuture<Void>> calls =
+        Maps.newHashMap();
+    for (AsyncLogger logger : loggers) {
+      ListenableFuture<Void> future =
+          logger.format(nsInfo);
       calls.put(logger, future);
     }
     return QuorumCall.create(calls);

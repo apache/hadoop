@@ -110,6 +110,17 @@ message GetJournalStateResponseProto {
 }
 
 /**
+ * format()
+ */
+message FormatRequestProto {
+  required JournalIdProto jid = 1;
+  required NamespaceInfoProto nsInfo = 2;
+}
+
+message FormatResponseProto {
+}
+
+/**
  * newEpoch()
  */
 message NewEpochRequestProto {
@@ -177,6 +188,8 @@ service QJournalProtocolService {
   rpc getJournalState(GetJournalStateRequestProto) returns (GetJournalStateResponseProto);
 
   rpc newEpoch(NewEpochRequestProto) returns (NewEpochResponseProto);
+
+  rpc format(FormatRequestProto) returns (FormatResponseProto);
 
   rpc journal(JournalRequestProto) returns (JournalResponseProto);
 

@@ -54,6 +54,10 @@ public class TestEpochsAreUnique {
     Configuration conf = new Configuration();
     MiniJournalCluster cluster = new MiniJournalCluster.Builder(conf).build();
     URI uri = cluster.getQuorumJournalURI(JID);
+    QuorumJournalManager qjm = new QuorumJournalManager(
+        conf, uri, FAKE_NSINFO);
+    qjm.format(FAKE_NSINFO);
+    
     try {
       // With no failures or contention, epochs should increase one-by-one
       for (int i = 0; i < 5; i++) {

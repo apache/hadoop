@@ -84,6 +84,7 @@ public class TestQuorumJournalManager {
     qjm = createSpyingQJM();
     spies = qjm.getLoggerSetForTests().getLoggersForTests();
 
+    qjm.format(QJMTestUtil.FAKE_NSINFO);
     qjm.recoverUnfinalizedSegments();
     assertEquals(1, qjm.getLoggerSetForTests().getEpoch());
   }
@@ -107,6 +108,15 @@ public class TestQuorumJournalManager {
 
     // Should be finalized
     checkRecovery(cluster, 4, 4);
+  }
+  
+  @Test
+  public void testFormat() throws Exception {
+    QuorumJournalManager qjm = new QuorumJournalManager(
+        conf, cluster.getQuorumJournalURI("testFormat-jid"), FAKE_NSINFO);
+    assertFalse(qjm.hasSomeData());
+    qjm.format(FAKE_NSINFO);
+    assertTrue(qjm.hasSomeData());
   }
   
   @Test

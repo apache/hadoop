@@ -83,6 +83,12 @@ interface AsyncLogger {
   public ListenableFuture<Void> purgeLogsOlderThan(long minTxIdToKeep);
 
   /**
+   * Format the log directory.
+   * @param nsInfo the namespace info to format with
+   */
+  public ListenableFuture<Void> format(NamespaceInfo nsInfo);
+
+  /**
    * @return the state of the last epoch on the target node.
    */
   public ListenableFuture<GetJournalStateResponseProto> getJournalState();

@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
@@ -157,19 +158,26 @@ public class TestNNWithQJM {
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         mjc.getQuorumJournalURI("myjournal").toString());
     
-    // Start a NN, so the storage is formatted with its namespace info. 
+    // Start a NN, so the storage is formatted -- both on-disk
+    // and QJM.
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(0)
       .manageNameDfsDirs(false)
       .build();
     cluster.shutdown();
     
-    // Create a new (freshly-formatted) NN, which should not be able to
-    // reuse the same journal, since its journal ID would not match.
+    // Reformat just the on-disk portion
+    Configuration onDiskOnly = new Configuration(conf);
+    onDiskOnly.unset(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY);
+    NameNode.format(onDiskOnly);
+
+    // Start the NN - should fail because the JNs are still formatted
+    // with the old namespace ID.
     try {
       cluster = new MiniDFSCluster.Builder(conf)
         .numDataNodes(0)
         .manageNameDfsDirs(false)
+        .format(false)
         .build();
       fail("New NN with different namespace should have been rejected");
     } catch (IOException ioe) {

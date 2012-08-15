@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,6 +69,12 @@ public class QuorumJournalManager implements JournalManager {
   private final int acceptRecoveryTimeoutMs;
   private final int finalizeSegmentTimeoutMs;
   private final int selectInputStreamsTimeoutMs;
+
+  // Since these don't occur during normal operation, we can
+  // use rather lengthy timeouts, and don't need to make them
+  // configurable.
+  private static final int FORMAT_TIMEOUT_MS = 60000;
+  private static final int HASDATA_TIMEOUT_MS = 60000;
   
   private final Configuration conf;
   private final URI uri;
@@ -131,6 +138,52 @@ public class QuorumJournalManager implements JournalManager {
         !jid.contains("/") &&
         !jid.startsWith("."),
         "bad journal id: " + jid);
+  }
+
+  @Override
+  public void format(NamespaceInfo nsInfo) throws IOException {
+    QuorumCall<AsyncLogger,Void> call = loggers.format(nsInfo);
+    try {
+      call.waitFor(loggers.size(), loggers.size(), 0, FORMAT_TIMEOUT_MS);
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted waiting for format() response");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for format() response");
+    }
+    
+    if (call.countExceptions() > 0) {
+      call.rethrowException("Could not format one or more JournalNodes");
+    }
+  }
+
+  @Override
+  public boolean hasSomeData() throws IOException {
+    QuorumCall<AsyncLogger, Boolean> call =
+        loggers.isFormatted();
+
+    try {
+      call.waitFor(loggers.size(), 0, 0, HASDATA_TIMEOUT_MS);
+    } catch (InterruptedException e) {
+      throw new IOException("Interrupted while determining if JNs have data");
+    } catch (TimeoutException e) {
+      throw new IOException("Timed out waiting for response from loggers");
+    }
+    
+    if (call.countExceptions() > 0) {
+      call.rethrowException(
+          "Unable to check if JNs are ready for formatting");
+    }
+    
+    // If any of the loggers returned with a non-empty manifest, then
+    // we should prompt for format.
+    for (Boolean hasData : call.getResults().values()) {
+      if (hasData) {
+        return true;
+      }
+    }
+
+    // Otherwise, none were formatted, we can safely format.
+    return false;
   }
 
   /**
@@ -278,7 +331,7 @@ public class QuorumJournalManager implements JournalManager {
     }
     return addrs;
   }
-
+  
   @Override
   public EditLogOutputStream startLogSegment(long txId) throws IOException {
     Preconditions.checkState(isActiveWriter,

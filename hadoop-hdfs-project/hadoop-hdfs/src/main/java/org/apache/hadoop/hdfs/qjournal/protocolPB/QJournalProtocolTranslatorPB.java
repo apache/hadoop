@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FinalizeLogSegmentRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.FormatRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateRequestProto;
@@ -92,6 +93,19 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
     return JournalIdProto.newBuilder()
         .setIdentifier(jid)
         .build();
+  }
+  
+  @Override
+  public void format(String jid, NamespaceInfo nsInfo) throws IOException {
+    try {
+      FormatRequestProto req = FormatRequestProto.newBuilder()
+          .setJid(convertJournalId(jid))
+          .setNsInfo(PBHelper.convert(nsInfo))
+          .build();
+      rpcProxy.format(NULL_CONTROLLER, req);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
   }
 
   @Override

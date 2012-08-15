@@ -105,37 +105,28 @@ class JNStorage extends Storage {
     setStorageInfo(nsInfo);
     LOG.info("Formatting journal storage directory " + 
         sd + " with nsid: " + getNamespaceID());
+    // Unlock the directory before formatting, because we will
+    // re-analyze it after format(). The analyzeStorage() call
+    // below is reponsible for re-locking it. This is a no-op
+    // if the storage is not currently locked.
+    unlockAll();
     sd.clearDirectory();
     writeProperties(sd);
     if (!getPaxosDir().mkdirs()) {
       throw new IOException("Could not create paxos dir: " + getPaxosDir());
     }
-  }
-  
-  public void formatIfNecessary(NamespaceInfo nsInfo) throws IOException {
-    if (state == StorageState.NOT_FORMATTED ||
-        state == StorageState.NON_EXISTENT) {
-      format(nsInfo);
-      analyzeStorage();
-      assert state == StorageState.NORMAL :
-        "Unexpected state after formatting: " + state;
-    } else {
-      Preconditions.checkState(state == StorageState.NORMAL,
-          "Unhandled storage state in %s: %s", this, state);
-      assert getNamespaceID() != 0;
-      
-      checkConsistentNamespace(nsInfo);
-    }
+    analyzeStorage();
   }
 
-  private void analyzeStorage() throws IOException {
+  
+  void analyzeStorage() throws IOException {
     this.state = sd.analyzeStorage(StartupOption.REGULAR, this);
     if (state == StorageState.NORMAL) {
       readProperties(sd);
     }
   }
 
-  private void checkConsistentNamespace(NamespaceInfo nsInfo)
+  void checkConsistentNamespace(NamespaceInfo nsInfo)
       throws IOException {
     if (nsInfo.getNamespaceID() != getNamespaceID()) {
       throw new IOException("Incompatible namespaceID for journal " +
@@ -154,5 +145,9 @@ class JNStorage extends Storage {
   public void close() throws IOException {
     LOG.info("Closing journal storage for " + sd);
     unlockAll();
+  }
+
+  public boolean isFormatted() {
+    return state == StorageState.NORMAL;
   }
 }

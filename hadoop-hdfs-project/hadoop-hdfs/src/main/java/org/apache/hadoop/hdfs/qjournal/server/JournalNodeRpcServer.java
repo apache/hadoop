@@ -108,6 +108,11 @@ class JournalNodeRpcServer implements QJournalProtocol {
     return jn.getOrCreateJournal(journalId).newEpoch(nsInfo, epoch);
   }
 
+  @Override
+  public void format(String journalId, NamespaceInfo nsInfo)
+      throws IOException {
+    jn.getOrCreateJournal(journalId).format(nsInfo);
+  }
 
   @Override
   public void journal(RequestInfo reqInfo, long firstTxnId,

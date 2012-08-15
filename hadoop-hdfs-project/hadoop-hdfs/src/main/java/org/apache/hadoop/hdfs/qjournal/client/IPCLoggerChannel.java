@@ -281,6 +281,17 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
+  public ListenableFuture<Void> format(final NamespaceInfo nsInfo) {
+    return executor.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        getProxy().format(journalId, nsInfo);
+        return null;
+      }
+    });
+  }
+  
+  @Override
   public ListenableFuture<Void> startLogSegment(final long txid) {
     return executor.submit(new Callable<Void>() {
       @Override
