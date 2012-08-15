@@ -114,9 +114,6 @@ Trunk (unreleased changes)
     HDFS-3789. JournalManager#format() should be able to throw IOException
     (Ivan Kelly via todd)
 
-    HDFS-3723. Add support -h, -help to all the commands. (Jing Zhao via
-    suresh)
-
   OPTIMIZATIONS
 
   BUG FIXES

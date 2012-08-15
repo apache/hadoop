@@ -55,9 +55,7 @@ public class TestDFSHAAdmin {
   
   private DFSHAAdmin tool;
   private ByteArrayOutputStream errOutBytes = new ByteArrayOutputStream();
-  private ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
   private String errOutput;
-  private String output;
   private HAServiceProtocol mockProtocol;
   private ZKFCProtocol mockZkfcProtocol;
   
@@ -113,14 +111,12 @@ public class TestDFSHAAdmin {
     };
     tool.setConf(getHAConf());
     tool.setErrOut(new PrintStream(errOutBytes));
-    tool.setOut(new PrintStream(outBytes));
   }
 
   private void assertOutputContains(String string) {
-    if (!errOutput.contains(string) && !output.contains(string)) {
-      fail("Expected output to contain '" + string + 
-          "' but err_output was:\n" + errOutput + 
-          "\n and output was: \n" + output);
+    if (!errOutput.contains(string)) {
+      fail("Expected output to contain '" + string + "' but was:\n" +
+          errOutput);
     }
   }
   
@@ -147,7 +143,7 @@ public class TestDFSHAAdmin {
 
   @Test
   public void testHelp() throws Exception {
-    assertEquals(0, runTool("-help"));
+    assertEquals(-1, runTool("-help"));
     assertEquals(0, runTool("-help", "transitionToActive"));
     assertOutputContains("Transitions the service into Active");
   }
@@ -382,12 +378,10 @@ public class TestDFSHAAdmin {
   
   private Object runTool(String ... args) throws Exception {
     errOutBytes.reset();
-    outBytes.reset();
     LOG.info("Running: DFSHAAdmin " + Joiner.on(" ").join(args));
     int ret = tool.run(args);
     errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
-    output = new String(outBytes.toByteArray(), Charsets.UTF_8);
-    LOG.info("Err_output:\n" + errOutput + "\nOutput:\n" + output);
+    LOG.info("Output:\n" + errOutput);
     return ret;
   }
   
