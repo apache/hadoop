@@ -447,6 +447,10 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
 
+    HDFS-3794. WebHDFS OPEN returns the incorrect Content-Length in the HTTP
+    header when offset is specified and length is omitted.
+    (Ravi Prakash via szetszwo)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
