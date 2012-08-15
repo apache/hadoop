@@ -24,3 +24,5 @@ HDFS-3798. Avoid throwing NPE when finalizeSegment() is called on invalid segmen
 HDFS-3799. QJM: handle empty log segments during recovery (todd)
 
 HDFS-3797. QJM: add segment txid as a parameter to journal() RPC (todd)
+
+HDFS-3800. improvements to QJM fault testing (todd)

@@ -61,7 +61,7 @@ public abstract class QJMTestUtil {
   }
   
   public static void writeSegment(MiniJournalCluster cluster,
-      QuorumJournalManager qjm, int startTxId, int numTxns,
+      QuorumJournalManager qjm, long startTxId, int numTxns,
       boolean finalize) throws IOException {
     EditLogOutputStream stm = qjm.startLogSegment(startTxId);
     // Should create in-progress
@@ -81,7 +81,7 @@ public abstract class QJMTestUtil {
     stm.write(op);
   }
 
-  public static void writeTxns(EditLogOutputStream stm, int startTxId, int numTxns)
+  public static void writeTxns(EditLogOutputStream stm, long startTxId, int numTxns)
       throws IOException {
     for (long txid = startTxId; txid < startTxId + numTxns; txid++) {
       writeOp(stm, txid);
