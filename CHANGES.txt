@@ -17,6 +17,9 @@ Release 1.1.1 - Unreleased
 
   BUG FIXES
 
+    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
+    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
+
 Release 1.1.0 - 2012.07.09
 
   INCOMPATIBLE CHANGES
