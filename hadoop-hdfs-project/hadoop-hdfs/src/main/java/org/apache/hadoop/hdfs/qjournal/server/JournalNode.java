@@ -55,6 +55,8 @@ public class JournalNode implements Tool, Configurable {
   private JournalNodeHttpServer httpServer;
   private Map<String, Journal> journalsById = Maps.newHashMap();
 
+  private File localDir;
+
   static {
     HdfsConfiguration.init();
   }
@@ -82,7 +84,31 @@ public class JournalNode implements Tool, Configurable {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+    this.localDir = new File(
+        conf.get(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_DEFAULT).trim());
   }
+
+  private static void validateAndCreateJournalDir(File dir) throws IOException {
+    if (!dir.isAbsolute()) {
+      throw new IllegalArgumentException(
+          "Journal dir '" + dir + "' should be an absolute path");
+    }
+
+    if (!dir.exists() && !dir.mkdirs()) {
+      throw new IOException("Could not create journal dir '" +
+          dir + "'");
+    } else if (!dir.isDirectory()) {
+      throw new IOException("Journal directory '" + dir + "' is not " +
+          "a directory");
+    }
+    
+    if (!dir.canWrite()) {
+      throw new IOException("Unable to write to journal dir '" +
+          dir + "'");
+    }
+  }
+
 
   @Override
   public Configuration getConf() {
@@ -100,6 +126,8 @@ public class JournalNode implements Tool, Configurable {
    */
   public void start() throws IOException {
     Preconditions.checkState(!isStarted(), "JN already running");
+    
+    validateAndCreateJournalDir(localDir);
     
     DefaultMetricsSystem.initialize("JournalNode");
     JvmMetrics.create("JournalNode",

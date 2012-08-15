@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
@@ -231,6 +232,33 @@ public class TestJournalNode {
       GenericTestUtils.assertExceptionContains(
           "epoch 1 is less than the last promised epoch 2",
           ioe);
+    }
+  }
+  
+  @Test
+  public void testFailToStartWithBadConfig() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, "non-absolute-path");
+    assertJNFailsToStart(conf, "should be an absolute path");
+    
+    // Existing file which is not a directory 
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, "/dev/null");
+    assertJNFailsToStart(conf, "is not a directory");
+    
+    // Directory which cannot be created
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY, "/proc/does-not-exist");
+    assertJNFailsToStart(conf, "Could not create");
+
+  }
+
+  private static void assertJNFailsToStart(Configuration conf,
+      String errString) {
+    try {
+      JournalNode jn = new JournalNode();
+      jn.setConf(conf);
+      jn.start();
+    } catch (Exception e) {
+      GenericTestUtils.assertExceptionContains(errString, e);
     }
   }
   
