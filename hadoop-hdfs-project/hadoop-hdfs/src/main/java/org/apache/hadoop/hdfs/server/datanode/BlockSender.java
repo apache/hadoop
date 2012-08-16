@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.PacketHeader;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.ReadaheadPool;
 import org.apache.hadoop.io.ReadaheadPool.ReadaheadRequest;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.net.SocketOutputStream;
@@ -236,8 +235,7 @@ class BlockSender implements java.io.Closeable {
       } else {
         LOG.warn("Could not find metadata file for " + block);
         // This only decides the buffer size. Use BUFFER_SIZE?
-        csum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_NULL,
-            16 * 1024);
+        csum = DataChecksum.newDataChecksum(DataChecksum.Type.NULL, 16 * 1024);
       }
 
       /*

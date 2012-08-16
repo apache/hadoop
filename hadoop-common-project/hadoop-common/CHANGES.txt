@@ -89,6 +89,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8278. Make sure components declare correct set of dependencies.
     (tomwhite)
 
+    HADOOP-8700.  Use enum to define the checksum constants in DataChecksum.
+    (szetszwo)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname

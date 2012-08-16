@@ -202,7 +202,7 @@ public class DFSClient implements java.io.Closeable {
     final int maxBlockAcquireFailures;
     final int confTime;
     final int ioBufferSize;
-    final int checksumType;
+    final DataChecksum.Type checksumType;
     final int bytesPerChecksum;
     final int writePacketSize;
     final int socketTimeout;
@@ -273,18 +273,17 @@ public class DFSClient implements java.io.Closeable {
           DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
     }
 
-    private int getChecksumType(Configuration conf) {
-      String checksum = conf.get(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
+    private DataChecksum.Type getChecksumType(Configuration conf) {
+      final String checksum = conf.get(
+          DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
           DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT);
-      if ("CRC32".equals(checksum)) {
-        return DataChecksum.CHECKSUM_CRC32;
-      } else if ("CRC32C".equals(checksum)) {
-        return DataChecksum.CHECKSUM_CRC32C;
-      } else if ("NULL".equals(checksum)) {
-        return DataChecksum.CHECKSUM_NULL;
-      } else {
-        LOG.warn("Bad checksum type: " + checksum + ". Using default.");
-        return DataChecksum.CHECKSUM_CRC32C;
+      try {
+        return DataChecksum.Type.valueOf(checksum);
+      } catch(IllegalArgumentException iae) {
+        LOG.warn("Bad checksum type: " + checksum + ". Using default "
+            + DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT);
+        return DataChecksum.Type.valueOf(
+            DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT); 
       }
     }
 
