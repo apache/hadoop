@@ -26,11 +26,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void print_env_vars(void)
+{
+  const char *cp = getenv("CLASSPATH");
+  const char *ld = getenv("LD_LIBRARY_PATH");
+
+  ERROR("LD_LIBRARY_PATH=%s",ld == NULL ? "NULL" : ld);
+  ERROR("CLASSPATH=%s",cp == NULL ? "NULL" : cp);
+}
+
 // Hacked up function to basically do:
 //  protectedpaths = split(options.protected,':');
 
-void init_protectedpaths(dfs_context *dfs) {
-
+static void init_protectedpaths(dfs_context *dfs)
+{
   char *tmp = options.protected;
 
   // handle degenerate case up front.
@@ -39,7 +48,6 @@ void init_protectedpaths(dfs_context *dfs) {
     dfs->protectedpaths[0] = NULL;
     return;
   }
-  assert(tmp);
 
   if (options.debug) {
     print_options();
@@ -80,10 +88,10 @@ void init_protectedpaths(dfs_context *dfs) {
 
 static void dfsPrintOptions(FILE *fp, const struct options *o)
 {
-  fprintf(fp, "[ protected=%s, nn_uri=%s, nn_port=%d, "
+  INFO("Mounting with options: [ protected=%s, nn_uri=%s, nn_port=%d, "
           "debug=%d, read_only=%d, initchecks=%d, "
           "no_permissions=%d, usetrash=%d, entry_timeout=%d, "
-          "attribute_timeout=%d, rdbuffer_size=%Zd, direct_io=%d ]",
+          "attribute_timeout=%d, rdbuffer_size=%zd, direct_io=%d ]",
           (o->protected ? o->protected : "(NULL)"), o->nn_uri, o->nn_port, 
           o->debug, o->read_only, o->initchecks,
           o->no_permissions, o->usetrash, o->entry_timeout,
@@ -92,12 +100,14 @@ static void dfsPrintOptions(FILE *fp, const struct options *o)
 
 void *dfs_init(void)
 {
+  int ret;
+
   //
   // Create a private struct of data we will pass to fuse here and which
   // will then be accessible on every call.
   //
-  dfs_context *dfs = (dfs_context*)malloc(sizeof(dfs_context));
-  if (NULL == dfs) {
+  dfs_context *dfs = calloc(1, sizeof(*dfs));
+  if (!dfs) {
     ERROR("FATAL: could not malloc dfs_context");
     exit(1);
   }
@@ -110,16 +120,29 @@ void *dfs_init(void)
   dfs->rdbuffer_size         = options.rdbuffer_size;
   dfs->direct_io             = options.direct_io;
 
-  fprintf(stderr, "Mounting with options ");
   dfsPrintOptions(stderr, &options);
-  fprintf(stderr, "\n");
 
   init_protectedpaths(dfs);
   assert(dfs->protectedpaths != NULL);
 
   if (dfs->rdbuffer_size <= 0) {
-    DEBUG("dfs->rdbuffersize <= 0 = %ld", dfs->rdbuffer_size);
+    DEBUG("dfs->rdbuffersize <= 0 = %zd", dfs->rdbuffer_size);
     dfs->rdbuffer_size = 32768;
+  }
+
+  ret = fuseConnectInit(options.nn_uri, options.nn_port);
+  if (ret) {
+    ERROR("FATAL: dfs_init: fuseConnectInit failed with error %d!", ret);
+    print_env_vars();
+    exit(EXIT_FAILURE);
+  }
+  if (options.initchecks == 1) {
+    ret = fuseConnectTest();
+    if (ret) {
+      ERROR("FATAL: dfs_init: fuseConnectTest failed with error %d!", ret);
+      print_env_vars();
+      exit(EXIT_FAILURE);
+    }
   }
   return (void*)dfs;
 }

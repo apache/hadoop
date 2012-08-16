@@ -24,6 +24,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 int is_protected(const char *path) {
 
@@ -65,15 +66,6 @@ static struct fuse_operations dfs_oper = {
   .truncate = dfs_truncate,
 };
 
-static void print_env_vars(void)
-{
-  const char *cp = getenv("CLASSPATH");
-  const char *ld = getenv("LD_LIBRARY_PATH");
-
-  fprintf(stderr, "LD_LIBRARY_PATH=%s",ld == NULL ? "NULL" : ld);
-  fprintf(stderr, "CLASSPATH=%s",cp == NULL ? "NULL" : cp);
-}
-
 int main(int argc, char *argv[])
 {
   int ret;
@@ -103,7 +95,7 @@ int main(int argc, char *argv[])
   }
 
   {
-    char buf[1024];
+    char buf[80];
 
     snprintf(buf, sizeof buf, "-oattr_timeout=%d",options.attribute_timeout);
     fuse_opt_add_arg(&args, buf);
@@ -114,24 +106,18 @@ int main(int argc, char *argv[])
 
   if (options.nn_uri == NULL) {
     print_usage(argv[0]);
-    exit(0);
+    exit(EXIT_SUCCESS);
   }
 
-  ret = fuseConnectInit(options.nn_uri, options.nn_port);
-  if (ret) {
-    ERROR("FATAL: dfs_init: fuseConnInit failed with error %d!", ret);
-    print_env_vars();
-    exit(EXIT_FAILURE);
-  }
-  if (options.initchecks == 1) {
-    ret = fuseConnectTest();
-    if (ret) {
-      ERROR("FATAL: dfs_init: fuseConnTest failed with error %d!", ret);
-      print_env_vars();
-      exit(EXIT_FAILURE);
-    }
-  }
-
+  /* Note: do not call any libhdfs functions until fuse_main has been invoked.
+   *
+   * fuse_main will daemonize this process, by calling fork().  This will cause
+   * any extant threads to be destroyed, which could cause problems if 
+   * libhdfs has started some Java threads.
+   *
+   * Most initialization code should go in dfs_init, which is invoked after the
+   * fork.  See HDFS-3808 for details.
+   */
   ret = fuse_main(args.argc, args.argv, &dfs_oper, NULL);
   fuse_opt_free_args(&args);
   return ret;
