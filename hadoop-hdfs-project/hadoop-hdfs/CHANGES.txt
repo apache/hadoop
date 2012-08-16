@@ -458,6 +458,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3048. Small race in BlockManager#close. (Andy Isaacson via eli)
 
+    HDFS-3194. DataNode block scanner is running too frequently.
+    (Andy Isaacson via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
