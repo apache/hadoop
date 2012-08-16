@@ -15986,7 +15986,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Created file metafile on server hdfs:\/\/[-.a-zA-Z0-9\.:]+</expected-output>
+          <expected-output>Created metasave file metafile in the log directory of namenode hdfs:\/\/[-.a-zA-Z0-9\.:]+</expected-output>
         </comparator>
       </comparators>
     </test>

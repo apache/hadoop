@@ -754,15 +754,15 @@ public class DFSAdmin extends FsShell {
    * Usage: java DFSAdmin -metasave filename
    * @param argv List of of command line parameters.
    * @param idx The index of the command that is being processed.
-   * @exception IOException if an error accoured wile accessing
+   * @exception IOException if an error occurred while accessing
    *            the file or path.
    */
   public int metaSave(String[] argv, int idx) throws IOException {
     String pathname = argv[idx];
     DistributedFileSystem dfs = getDFS();
     dfs.metaSave(pathname);
-    System.out.println("Created file " + pathname + " on server " +
-                       dfs.getUri());
+    System.out.println("Created metasave file " + pathname + " in the log " +
+        "directory of namenode " + dfs.getUri());
     return 0;
   }
 

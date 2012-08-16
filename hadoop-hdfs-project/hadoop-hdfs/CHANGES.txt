@@ -214,6 +214,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3796. Speed up edit log tests by avoiding fsync() (todd)
 
+    HDFS-2963. Console Output is confusing while executing metasave
+    (dfsadmin command). (Andrew Wang via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
