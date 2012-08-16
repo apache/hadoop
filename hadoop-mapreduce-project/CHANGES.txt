@@ -43,6 +43,10 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4484. Incorrect IS_MINI_YARN_CLUSTER property name in YarnConfiguration. 
     (ahmed.radwan via tucu)
 
+    MAPREDUCE-4562. Support for "FileSystemCounter" legacy counter group name
+    for compatibility reasons is creating incorrect counter name.
+    (Jarek Jarcec Cecho via tomwhite)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
