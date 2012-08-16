@@ -388,6 +388,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4053. Counters group names deprecation is wrong, iterating over
     group names deprecated names don't show up  (Robert Evans via tgraves)
 
+    MAPREDUCE-4562. Support for "FileSystemCounter" legacy counter group name
+    for compatibility reasons is creating incorrect counter name.
+    (Jarek Jarcec Cecho via tomwhite)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
