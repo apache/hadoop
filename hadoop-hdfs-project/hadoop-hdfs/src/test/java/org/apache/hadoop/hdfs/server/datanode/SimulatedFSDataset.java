@@ -94,8 +94,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   
   static final byte[] nullCrcFileData;
   static {
-    DataChecksum checksum = DataChecksum.newDataChecksum( DataChecksum.
-                              CHECKSUM_NULL, 16*1024 );
+    DataChecksum checksum = DataChecksum.newDataChecksum(
+        DataChecksum.Type.NULL, 16*1024 );
     byte[] nullCrcHeader = checksum.getHeader();
     nullCrcFileData =  new byte[2 + nullCrcHeader.length];
     nullCrcFileData[0] = (byte) ((BlockMetadataHeader.VERSION >>> 8) & 0xff);

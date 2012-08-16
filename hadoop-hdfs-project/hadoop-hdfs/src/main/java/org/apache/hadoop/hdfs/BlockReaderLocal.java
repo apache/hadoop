@@ -290,7 +290,7 @@ class BlockReaderLocal implements BlockReader {
       long length, BlockLocalPathInfo pathinfo, FileInputStream dataIn)
       throws IOException {
     this(conf, hdfsfile, block, token, startOffset, length, pathinfo,
-        DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_NULL, 4), false,
+        DataChecksum.newDataChecksum(DataChecksum.Type.NULL, 4), false,
         dataIn, startOffset, null);
   }
 

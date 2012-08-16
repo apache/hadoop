@@ -71,7 +71,7 @@ public class IFileInputStream extends InputStream {
   public IFileInputStream(InputStream in, long len, Configuration conf) {
     this.in = in;
     this.inFd = getFileDescriptorIfAvail(in);
-    sum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
+    sum = DataChecksum.newDataChecksum(DataChecksum.Type.CRC32, 
         Integer.MAX_VALUE);
     checksumSize = sum.getChecksumSize();
     length = len;
