@@ -94,9 +94,7 @@ public class TestHDFSCLI extends CLITestHelperDFS {
   protected Result execute(CLICommand cmd) throws Exception {
     return cmd.getExecutor(namenode).executeCommand(cmd.getCmd());
   }
-
-  //TODO: The test is failing due to the change in HADOOP-7360.
-  //      HDFS-2038 is going to fix it.  Disable the test for the moment.
+  
   @Test
   @Override
   public void testAll () {
