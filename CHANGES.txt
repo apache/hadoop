@@ -176,6 +176,8 @@ Release 1.2.0 - unreleased
 
     HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.  (szetszwo)
 
+    MAPREDUCE-4558. Disable TestJobTrackerSafeMode (sseth)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
