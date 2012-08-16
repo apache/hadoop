@@ -733,6 +733,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8703. distcpV2: turn CRC checking off for 0 byte size (Dave
     Thompson via bobby)
 
+    HADOOP-8390. TestFileSystemCanonicalization fails with JDK7  (Trevor
+    Robinson via tgraves)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
