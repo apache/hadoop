@@ -91,9 +91,6 @@ Trunk (unreleased changes)
     HADOOP-8624. ProtobufRpcEngine should log all RPCs if TRACE logging is
     enabled (todd)
 
-    HADOOP-8700.  Use enum to define the checksum constants in DataChecksum.
-    (szetszwo)
-
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
@@ -294,6 +291,9 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8278. Make sure components declare correct set of dependencies.
     (tomwhite)
+
+    HADOOP-8700.  Use enum to define the checksum constants in DataChecksum.
+    (szetszwo)
 
   BUG FIXES
 
