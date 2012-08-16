@@ -266,7 +266,8 @@ public class LineReader {
             bufferPosn++;
             break;
           }
-        } else {
+        } else if (delPosn != 0) {
+          bufferPosn--; // recheck if bufferPosn matches start of delimiter
           delPosn = 0;
         }
       }

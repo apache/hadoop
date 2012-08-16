@@ -192,6 +192,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8659. Native libraries must build with soft-float ABI for Oracle JVM
     on ARM. (Trevor Robinson via todd)
 
+    HADOOP-8654. TextInputFormat delimiter bug (Gelesh and Jason Lowe via
+    bobby)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
