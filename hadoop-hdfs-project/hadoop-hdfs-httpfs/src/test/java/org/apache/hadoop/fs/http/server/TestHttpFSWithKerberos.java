@@ -222,10 +222,11 @@ public class TestHttpFSWithKerberos extends HFSTestCase {
     URI uri = new URI( "webhdfs://" +
                        TestJettyHelper.getJettyURL().toURI().getAuthority());
     FileSystem fs = FileSystem.get(uri, conf);
-    Token<?> token = fs.getDelegationToken("foo");
+    Token<?> tokens[] = fs.addDelegationTokens("foo", null);
     fs.close();
+    Assert.assertEquals(1, tokens.length);
     fs = FileSystem.get(uri, conf);
-    ((DelegationTokenRenewer.Renewable) fs).setDelegationToken(token);
+    ((DelegationTokenRenewer.Renewable) fs).setDelegationToken(tokens[0]);
     fs.listStatus(new Path("/"));
     fs.close();
   }

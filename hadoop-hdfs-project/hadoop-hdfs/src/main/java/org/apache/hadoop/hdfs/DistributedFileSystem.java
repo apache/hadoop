@@ -24,7 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -809,14 +808,6 @@ public class DistributedFileSystem extends FileSystem {
     return getDelegationToken(renewer.toString());
   }
   
-  @Override // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    List<Token<?>> tokenList = new ArrayList<Token<?>>();
-    Token<DelegationTokenIdentifier> token = this.getDelegationToken(renewer);
-    tokenList.add(token);
-    return tokenList;
-  }
-
   /**
    * Renew an existing delegation token.
    * 

@@ -64,8 +64,6 @@ public class HttpFSKerberosAuthenticationHandler
     DELEGATION_TOKEN_OPS.add(
       DelegationTokenOperation.GETDELEGATIONTOKEN.toString());
     DELEGATION_TOKEN_OPS.add(
-      DelegationTokenOperation.GETDELEGATIONTOKENS.toString());
-    DELEGATION_TOKEN_OPS.add(
       DelegationTokenOperation.RENEWDELEGATIONTOKEN.toString());
     DELEGATION_TOKEN_OPS.add(
       DelegationTokenOperation.CANCELDELEGATIONTOKEN.toString());
@@ -111,7 +109,6 @@ public class HttpFSKerberosAuthenticationHandler
             Map map = null;
             switch (dtOp) {
               case GETDELEGATIONTOKEN:
-              case GETDELEGATIONTOKENS:
                 String renewerParam =
                   request.getParameter(HttpFSKerberosAuthenticator.RENEWER_PARAM);
                 if (renewerParam == null) {
@@ -119,11 +116,7 @@ public class HttpFSKerberosAuthenticationHandler
                 }
                 Token<?> dToken = tokenManager.createToken(
                   UserGroupInformation.getCurrentUser(), renewerParam);
-                if (dtOp == DelegationTokenOperation.GETDELEGATIONTOKEN) {
-                  map = delegationTokenToJSON(dToken);
-                } else {
-                  map = delegationTokensToJSON(Arrays.asList((Token)dToken));
-                }
+                map = delegationTokenToJSON(dToken);
                 break;
               case RENEWDELEGATIONTOKEN:
               case CANCELDELEGATIONTOKEN:
@@ -191,23 +184,6 @@ public class HttpFSKerberosAuthenticationHandler
     return response;
   }
   
-  @SuppressWarnings("unchecked")
-  private static Map delegationTokensToJSON(List<Token> tokens)
-    throws IOException {
-    List list = new ArrayList();
-    for (Token token : tokens) {
-      Map map = new HashMap();
-      map.put(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON,
-              token.encodeToUrlString());
-      list.add(map);
-    }
-    Map map = new HashMap();
-    map.put(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_JSON, list);
-    Map response = new LinkedHashMap();
-    response.put(HttpFSKerberosAuthenticator.DELEGATION_TOKENS_JSON, map);
-    return response;
-  }
-
   /**
    * Authenticates a request looking for the <code>delegation</code>
    * query-string parameter and verifying it is a valid token. If there is not

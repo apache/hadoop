@@ -669,17 +669,6 @@ public class NamenodeWebHdfsMethods {
       final String js = JsonUtil.toJsonString(token);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
-    case GETDELEGATIONTOKENS:
-    {
-      if (delegation.getValue() != null) {
-        throw new IllegalArgumentException(delegation.getName()
-            + " parameter is not null.");
-      }
-      final Token<? extends TokenIdentifier>[] tokens = new Token<?>[1];
-      tokens[0] = generateDelegationToken(namenode, ugi, renewer.getValue());
-      final String js = JsonUtil.toJsonString(tokens);
-      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
-    }
     case GETHOMEDIRECTORY:
     {
       final String js = JsonUtil.toJsonString(

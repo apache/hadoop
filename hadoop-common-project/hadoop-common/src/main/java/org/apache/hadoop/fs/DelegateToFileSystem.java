@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -217,6 +218,6 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   
   @Override //AbstractFileSystem
   public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return fsImpl.getDelegationTokens(renewer);
+    return Arrays.asList(fsImpl.addDelegationTokens(renewer, null));
   }
 }
