@@ -739,6 +739,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8692. TestLocalDirAllocator fails intermittently with JDK7 
     (Trevor Robinson via tgraves)
 
+    HADOOP-8693. TestSecurityUtil fails intermittently with JDK7 (Trevor
+    Robinson via tgraves)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
