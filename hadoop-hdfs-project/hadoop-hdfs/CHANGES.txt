@@ -102,6 +102,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner
     thread (Kihwal Lee via daryn)
 
+    HDFS-3788. ByteRangeInputStream should not expect HTTP Content-Length header
+    when chunked transfer-encoding is used.  (szetszwo)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
