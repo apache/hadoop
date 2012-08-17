@@ -230,6 +230,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3697. Enable fadvise readahead by default. (todd)
 
+    HDFS-2421. Improve the concurrency of SerialNumberMap in NameNode.
+    (Jing Zhao and Weiyan Wang via szetszwo)
+
   BUG FIXES
 
     HDFS-3385. The last block of INodeFileUnderConstruction is not
