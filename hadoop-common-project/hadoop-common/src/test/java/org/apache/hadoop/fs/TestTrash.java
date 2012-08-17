@@ -111,10 +111,10 @@ public class TestTrash extends TestCase {
       throws IOException {
     FileSystem fs = FileSystem.get(conf);
 
-    conf.set(FS_TRASH_INTERVAL_KEY, "0"); // disabled
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 0); // disabled
     assertFalse(new Trash(conf).isEnabled());
 
-    conf.set(FS_TRASH_INTERVAL_KEY, "10"); // 10 minute
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); // 10 minute
     assertTrue(new Trash(conf).isEnabled());
 
     FsShell shell = new FsShell();
@@ -435,7 +435,7 @@ public class TestTrash extends TestCase {
   }
 
   public static void trashNonDefaultFS(Configuration conf) throws IOException {
-    conf.set(FS_TRASH_INTERVAL_KEY, "10"); // 10 minute
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); // 10 minute
     // attempt non-default FileSystem trash
     {
       final FileSystem lfs = FileSystem.getLocal(conf);
@@ -580,7 +580,7 @@ public class TestTrash extends TestCase {
     FileSystem fs = FileSystem.getLocal(conf);
     
     conf.set("fs.defaultFS", fs.getUri().toString());
-    conf.set(FS_TRASH_INTERVAL_KEY, "10"); //minutes..
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10); //minutes..
     FsShell shell = new FsShell();
     shell.setConf(conf);
     //Path trashRoot = null;

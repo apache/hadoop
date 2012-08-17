@@ -1002,7 +1002,8 @@ public class PBHelper {
         fs.getBlockSize(), fs.getBytesPerChecksum(), 
         fs.getWritePacketSize(), (short) fs.getReplication(),
         fs.getFileBufferSize(),
-        fs.getEncryptDataTransfer());
+        fs.getEncryptDataTransfer(),
+        fs.getTrashInterval());
   }
   
   public static FsServerDefaultsProto convert(FsServerDefaults fs) {
@@ -1013,7 +1014,8 @@ public class PBHelper {
       setWritePacketSize(fs.getWritePacketSize())
       .setReplication(fs.getReplication())
       .setFileBufferSize(fs.getFileBufferSize())
-      .setEncryptDataTransfer(fs.getEncryptDataTransfer()).build();
+      .setEncryptDataTransfer(fs.getEncryptDataTransfer())
+      .setTrashInterval(fs.getTrashInterval()).build();
   }
   
   public static FsPermissionProto convert(FsPermission p) {
