@@ -467,6 +467,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3808. fuse_dfs: postpone libhdfs intialization until after fork.
     (Colin Patrick McCabe via atm)
 
+    HDFS-3788. ByteRangeInputStream should not expect HTTP Content-Length header
+    when chunked transfer-encoding is used.  (szetszwo)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
