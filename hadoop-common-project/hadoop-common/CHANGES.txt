@@ -9,6 +9,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8689. Make trash a server side configuration option. (eli)
 
+    HADOOP-8710. Remove ability for users to easily run the trash emptier. (eli)
+
   NEW FEATURES
 
     HDFS-3042. Automatic failover support for NameNode HA (todd)
