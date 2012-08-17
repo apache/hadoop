@@ -70,7 +70,7 @@ public class LogAggregationService extends AbstractService implements
 
   /*
    * Expected deployment TLD will be 1777, owner=<NMOwner>, group=<NMGroup -
-   * Group to which NMOwner belongs> App dirs will be created as 750,
+   * Group to which NMOwner belongs> App dirs will be created as 770,
    * owner=<AppOwner>, group=<NMGroup>: so that the owner and <NMOwner> can
    * access / modify the files.
    * <NMGroup> should obviously be a limited access group.
@@ -85,7 +85,7 @@ public class LogAggregationService extends AbstractService implements
    * Permissions for the Application directory.
    */
   private static final FsPermission APP_DIR_PERMISSIONS = FsPermission
-      .createImmutable((short) 0750);
+      .createImmutable((short) 0770);
 
   private final Context context;
   private final DeletionService deletionService;
