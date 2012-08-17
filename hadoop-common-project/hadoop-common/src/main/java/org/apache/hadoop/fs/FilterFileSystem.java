@@ -22,15 +22,11 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
-import java.util.List;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
@@ -428,25 +424,7 @@ public class FilterFileSystem extends FileSystem {
   }
   
   @Override // FileSystem
-  public String getCanonicalServiceName() {
-    return fs.getCanonicalServiceName();
-  }
-  
-  @Override // FileSystem
-  @SuppressWarnings("deprecation")
-  public Token<?> getDelegationToken(String renewer) throws IOException {
-    return fs.getDelegationToken(renewer);
-  }
-  
-  @Override // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return fs.getDelegationTokens(renewer);
-  }
-  
-  @Override
-  // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer,
-      Credentials credentials) throws IOException {
-    return fs.getDelegationTokens(renewer, credentials);
+  public FileSystem[] getChildFileSystems() {
+    return new FileSystem[]{fs};
   }
 }

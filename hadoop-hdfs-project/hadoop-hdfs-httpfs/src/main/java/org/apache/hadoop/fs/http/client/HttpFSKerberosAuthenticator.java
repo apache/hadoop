@@ -66,7 +66,6 @@ public class HttpFSKerberosAuthenticator extends KerberosAuthenticator {
   public static final String RENEWER_PARAM = "renewer";
   public static final String TOKEN_KIND = "HTTPFS_DELEGATION_TOKEN";
   public static final String DELEGATION_TOKEN_JSON = "Token";
-  public static final String DELEGATION_TOKENS_JSON = "Tokens";
   public static final String DELEGATION_TOKEN_URL_STRING_JSON = "urlString";
   public static final String RENEW_DELEGATION_TOKEN_JSON = "long";
 
@@ -76,7 +75,6 @@ public class HttpFSKerberosAuthenticator extends KerberosAuthenticator {
   @InterfaceAudience.Private
   public static enum DelegationTokenOperation {
     GETDELEGATIONTOKEN(HTTP_GET, true),
-    GETDELEGATIONTOKENS(HTTP_GET, true),
     RENEWDELEGATIONTOKEN(HTTP_PUT, true),
     CANCELDELEGATIONTOKEN(HTTP_PUT, false);
 
@@ -121,10 +119,11 @@ public class HttpFSKerberosAuthenticator extends KerberosAuthenticator {
 
   public static final String OP_PARAM = "op";
 
-  private static List<Token<?>> getDelegationTokens(URI fsURI,
-    InetSocketAddress httpFSAddr, DelegationTokenOperation op,
-    AuthenticatedURL.Token token, String renewer)
-    throws IOException {
+  public static Token<?> getDelegationToken(URI fsURI,
+    InetSocketAddress httpFSAddr, AuthenticatedURL.Token token,
+    String renewer) throws IOException {
+    DelegationTokenOperation op = 
+      DelegationTokenOperation.GETDELEGATIONTOKEN;
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, op.toString());
     params.put(RENEWER_PARAM,renewer);
@@ -135,54 +134,18 @@ public class HttpFSKerberosAuthenticator extends KerberosAuthenticator {
       HttpURLConnection conn = aUrl.openConnection(url, token);
       conn.setRequestMethod(op.getHttpMethod());
       HttpFSUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
-      List<String> list = new ArrayList<String>();
-      if (op == DelegationTokenOperation.GETDELEGATIONTOKEN) {
-        JSONObject json = (JSONObject) ((JSONObject)
-          HttpFSUtils.jsonParse(conn)).get(DELEGATION_TOKEN_JSON);
-        String tokenStr = (String)
-          json.get(DELEGATION_TOKEN_URL_STRING_JSON);
-        list.add(tokenStr);
-      }
-      else if (op == DelegationTokenOperation.GETDELEGATIONTOKENS) {
-        JSONObject json = (JSONObject) ((JSONObject)
-          HttpFSUtils.jsonParse(conn)).get(DELEGATION_TOKENS_JSON);
-        JSONArray array = (JSONArray) json.get(DELEGATION_TOKEN_JSON);
-        for (Object element : array) {
-          String tokenStr = (String)
-            ((Map) element).get(DELEGATION_TOKEN_URL_STRING_JSON);
-          list.add(tokenStr);
-        }
-
-      } else {
-        throw new IllegalArgumentException("Invalid operation: " +
-                                           op.toString());
-      }
-      List<Token<?>> dTokens = new ArrayList<Token<?>>();
-      for (String tokenStr : list) {
-        Token<AbstractDelegationTokenIdentifier> dToken =
-          new Token<AbstractDelegationTokenIdentifier>();
-        dToken.decodeFromUrlString(tokenStr);
-        dTokens.add(dToken);
-        SecurityUtil.setTokenService(dToken, httpFSAddr);
-      }
-      return dTokens;
+      JSONObject json = (JSONObject) ((JSONObject)
+        HttpFSUtils.jsonParse(conn)).get(DELEGATION_TOKEN_JSON);
+      String tokenStr = (String)
+        json.get(DELEGATION_TOKEN_URL_STRING_JSON);
+      Token<AbstractDelegationTokenIdentifier> dToken =
+        new Token<AbstractDelegationTokenIdentifier>();
+      dToken.decodeFromUrlString(tokenStr);
+      SecurityUtil.setTokenService(dToken, httpFSAddr);
+      return dToken;
     } catch (AuthenticationException ex) {
       throw new IOException(ex.toString(), ex);
     }
-  }
-
-  public static List<Token<?>> getDelegationTokens(URI fsURI,
-    InetSocketAddress httpFSAddr, AuthenticatedURL.Token token,
-    String renewer) throws IOException {
-    return getDelegationTokens(fsURI, httpFSAddr,
-      DelegationTokenOperation.GETDELEGATIONTOKENS, token, renewer);
-  }
-
-  public static Token<?> getDelegationToken(URI fsURI,
-    InetSocketAddress httpFSAddr, AuthenticatedURL.Token token,
-    String renewer) throws IOException {
-    return getDelegationTokens(fsURI, httpFSAddr,
-      DelegationTokenOperation.GETDELEGATIONTOKENS, token, renewer).get(0);
   }
 
   public static long renewDelegationToken(URI fsURI,

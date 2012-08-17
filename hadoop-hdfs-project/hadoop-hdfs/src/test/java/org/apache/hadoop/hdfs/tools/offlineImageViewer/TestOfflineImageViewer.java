@@ -126,8 +126,8 @@ public class TestOfflineImageViewer {
       }
 
       // Get delegation tokens so we log the delegation token op
-      List<Token<?>> delegationTokens = 
-          hdfs.getDelegationTokens(TEST_RENEWER);
+      Token<?>[] delegationTokens = 
+          hdfs.addDelegationTokens(TEST_RENEWER, null);
       for (Token<?> t : delegationTokens) {
         LOG.debug("got token " + t);
       }
