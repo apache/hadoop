@@ -288,13 +288,25 @@ public class DFSUtil {
     if (blocks == null) {
       return new BlockLocation[0];
     }
-    int nrBlocks = blocks.locatedBlockCount();
+    return locatedBlocks2Locations(blocks.getLocatedBlocks());
+  }
+  
+  /**
+   * Convert a List<LocatedBlock> to BlockLocation[]
+   * @param blocks A List<LocatedBlock> to be converted
+   * @return converted array of BlockLocation
+   */
+  public static BlockLocation[] locatedBlocks2Locations(List<LocatedBlock> blocks) {
+    if (blocks == null) {
+      return new BlockLocation[0];
+    }
+    int nrBlocks = blocks.size();
     BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
     if (nrBlocks == 0) {
       return blkLocations;
     }
     int idx = 0;
-    for (LocatedBlock blk : blocks.getLocatedBlocks()) {
+    for (LocatedBlock blk : blocks) {
       assert idx < nrBlocks : "Incorrect index";
       DatanodeInfo[] locations = blk.getLocations();
       String[] hosts = new String[locations.length];

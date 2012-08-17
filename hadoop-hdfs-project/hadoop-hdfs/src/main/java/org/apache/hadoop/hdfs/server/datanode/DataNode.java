@@ -97,6 +97,7 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -283,6 +284,7 @@ public class DataNode extends Configured
   private final String userWithLocalPathAccess;
   private boolean connectToDnViaHostname;
   ReadaheadPool readaheadPool;
+  private final boolean getHdfsBlockLocationsEnabled;
 
   /**
    * Create the DataNode given a configuration and an array of dataDirs.
@@ -307,6 +309,9 @@ public class DataNode extends Configured
     this.connectToDnViaHostname = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
+    this.getHdfsBlockLocationsEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
+        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
     try {
       hostName = getHostName(conf);
       LOG.info("Configured hostname is " + hostName);
@@ -1037,6 +1042,25 @@ public class DataNode extends Configured
     }
     metrics.incrBlocksGetLocalPathInfo();
     return info;
+  }
+
+  @Override
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks,
+      List<Token<BlockTokenIdentifier>> tokens) throws IOException, 
+      UnsupportedOperationException {
+    if (!getHdfsBlockLocationsEnabled) {
+      throw new UnsupportedOperationException("Datanode#getHdfsBlocksMetadata "
+          + " is not enabled in datanode config");
+    }
+    if (blocks.size() != tokens.size()) {
+      throw new IOException("Differing number of blocks and tokens");
+    }
+    // Check access for each block
+    for (int i = 0; i < blocks.size(); i++) {
+      checkBlockToken(blocks.get(i), tokens.get(i), 
+          BlockTokenSecretManager.AccessMode.READ);
+    }
+    return data.getHdfsBlocksMetadata(blocks);
   }
   
   private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,

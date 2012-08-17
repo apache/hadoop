@@ -45,8 +45,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKRE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
@@ -71,6 +69,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -82,6 +81,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -89,12 +89,14 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.HdfsBlockLocation;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -104,6 +106,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
@@ -219,6 +222,9 @@ public class DFSClient implements java.io.Closeable {
     final FsPermission uMask;
     final boolean useLegacyBlockReader;
     final boolean connectToDnViaHostname;
+    final boolean getHdfsBlocksMetadataEnabled;
+    final int getFileBlockStorageLocationsNumThreads;
+    final int getFileBlockStorageLocationsTimeout;
 
     Conf(Configuration conf) {
       maxFailoverAttempts = conf.getInt(
@@ -271,6 +277,15 @@ public class DFSClient implements java.io.Closeable {
           DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT);
       connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
           DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
+      getHdfsBlocksMetadataEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
+          DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
+      getFileBlockStorageLocationsNumThreads = conf.getInt(
+          DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS,
+          DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT);
+      getFileBlockStorageLocationsTimeout = conf.getInt(
+          DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT,
+          DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_DEFAULT);
     }
 
     private DataChecksum.Type getChecksumType(Configuration conf) {
@@ -981,7 +996,81 @@ public class DFSClient implements java.io.Closeable {
   public BlockLocation[] getBlockLocations(String src, long start, 
     long length) throws IOException, UnresolvedLinkException {
     LocatedBlocks blocks = getLocatedBlocks(src, start, length);
-    return DFSUtil.locatedBlocks2Locations(blocks);
+    BlockLocation[] locations =  DFSUtil.locatedBlocks2Locations(blocks);
+    HdfsBlockLocation[] hdfsLocations = new HdfsBlockLocation[locations.length];
+    for (int i = 0; i < locations.length; i++) {
+      hdfsLocations[i] = new HdfsBlockLocation(locations[i], blocks.get(i));
+    }
+    return hdfsLocations;
+  }
+  
+  /**
+   * Get block location information about a list of {@link HdfsBlockLocation}.
+   * Used by {@link DistributedFileSystem#getFileBlockStorageLocations(List)} to
+   * get {@link BlockStorageLocation}s for blocks returned by
+   * {@link DistributedFileSystem#getFileBlockLocations(org.apache.hadoop.fs.FileStatus, long, long)}
+   * .
+   * 
+   * This is done by making a round of RPCs to the associated datanodes, asking
+   * the volume of each block replica. The returned array of
+   * {@link BlockStorageLocation} expose this information as a
+   * {@link VolumeId}.
+   * 
+   * @param blockLocations
+   *          target blocks on which to query volume location information
+   * @return volumeBlockLocations original block array augmented with additional
+   *         volume location information for each replica.
+   */
+  public BlockStorageLocation[] getBlockStorageLocations(
+      List<BlockLocation> blockLocations) throws IOException,
+      UnsupportedOperationException, InvalidBlockTokenException {
+    if (!getConf().getHdfsBlocksMetadataEnabled) {
+      throw new UnsupportedOperationException("Datanode-side support for " +
+          "getVolumeBlockLocations() must also be enabled in the client " +
+          "configuration.");
+    }
+    // Downcast blockLocations and fetch out required LocatedBlock(s)
+    List<LocatedBlock> blocks = new ArrayList<LocatedBlock>();
+    for (BlockLocation loc : blockLocations) {
+      if (!(loc instanceof HdfsBlockLocation)) {
+        throw new ClassCastException("DFSClient#getVolumeBlockLocations " +
+            "expected to be passed HdfsBlockLocations");
+      }
+      HdfsBlockLocation hdfsLoc = (HdfsBlockLocation) loc;
+      blocks.add(hdfsLoc.getLocatedBlock());
+    }
+    
+    // Re-group the LocatedBlocks to be grouped by datanodes, with the values
+    // a list of the LocatedBlocks on the datanode.
+    Map<DatanodeInfo, List<LocatedBlock>> datanodeBlocks = 
+        new LinkedHashMap<DatanodeInfo, List<LocatedBlock>>();
+    for (LocatedBlock b : blocks) {
+      for (DatanodeInfo info : b.getLocations()) {
+        if (!datanodeBlocks.containsKey(info)) {
+          datanodeBlocks.put(info, new ArrayList<LocatedBlock>());
+        }
+        List<LocatedBlock> l = datanodeBlocks.get(info);
+        l.add(b);
+      }
+    }
+        
+    // Make RPCs to the datanodes to get volume locations for its replicas
+    List<HdfsBlocksMetadata> metadatas = BlockStorageLocationUtil
+        .queryDatanodesForHdfsBlocksMetadata(conf, datanodeBlocks,
+            getConf().getFileBlockStorageLocationsNumThreads,
+            getConf().getFileBlockStorageLocationsTimeout,
+            getConf().connectToDnViaHostname);
+    
+    // Regroup the returned VolumeId metadata to again be grouped by
+    // LocatedBlock rather than by datanode
+    Map<LocatedBlock, List<VolumeId>> blockVolumeIds = BlockStorageLocationUtil
+        .associateVolumeIdsWithBlocks(blocks, datanodeBlocks, metadatas);
+    
+    // Combine original BlockLocations with new VolumeId information
+    BlockStorageLocation[] volumeBlockLocations = BlockStorageLocationUtil
+        .convertToVolumeBlockLocations(blocks, blockVolumeIds);
+
+    return volumeBlockLocations;
   }
   
   public DFSInputStream open(String src) 

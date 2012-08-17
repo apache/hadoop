@@ -217,6 +217,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-2963. Console Output is confusing while executing metasave
     (dfsadmin command). (Andrew Wang via eli)
 
+    HDFS-3672. Expose disk-location information for blocks to enable better
+    scheduling. (Andrew Wang via atm)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

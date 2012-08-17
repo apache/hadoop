@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -108,4 +109,21 @@ public interface ClientDatanodeProtocol {
    */
   BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock block,
       Token<BlockTokenIdentifier> token) throws IOException;
+  
+  /**
+   * Retrieves volume location information about a list of blocks on a datanode.
+   * This is in the form of an opaque {@link VolumeId} for each configured
+   * data directory, which is not guaranteed to be the same across DN restarts.
+   * 
+   * @param blocks
+   *          list of blocks on the local datanode
+   * @param tokens
+   *          block access tokens corresponding to the requested blocks
+   * @return an HdfsBlocksMetadata that associates {@link ExtendedBlock}s with
+   *         data directories
+   * @throws IOException
+   *           if datanode is unreachable, or replica is not found on datanode
+   */
+  HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks,
+      List<Token<BlockTokenIdentifier>> tokens) throws IOException; 
 }

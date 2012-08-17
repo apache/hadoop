@@ -78,7 +78,7 @@
 
 <property>
   <name>dfs.datanode.handler.count</name>
-  <value>3</value>
+  <value>10</value>
   <description>The number of server threads for the datanode.</description>
 </property>
 
@@ -1048,6 +1048,30 @@
     the configured JCE default on the system is used (usually 3DES.) It is
     widely believed that 3DES is more cryptographically secure, but RC4 is
     substantially faster.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.hdfs-blocks-metadata.enabled</name>
+  <value>false</value>
+  <description>
+    Boolean which enables backend datanode-side support for the experimental DistributedFileSystem#getFileVBlockStorageLocations API.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.file-block-storage-locations.num-threads</name>
+  <value>10</value>
+  <description>
+    Number of threads used for making parallel RPCs in DistributedFileSystem#getFileBlockStorageLocations().
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.file-block-storage-locations.timeout</name>
+  <value>60</value>
+  <description>
+    Timeout (in seconds) for the parallel RPCs made in DistributedFileSystem#getFileBlockStorageLocations().
   </description>
 </property>
 
