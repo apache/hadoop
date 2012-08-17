@@ -83,6 +83,7 @@ public class TestWritableName extends TestCase {
     Configuration conf = new Configuration();
     String altName = testName + ".alt";
 
+    WritableName.setName(SimpleWritable.class, testName);
     WritableName.addName(SimpleWritable.class, altName);
 
     Class<?> test = WritableName.getClass(altName, conf);
