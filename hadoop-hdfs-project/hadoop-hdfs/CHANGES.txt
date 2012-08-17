@@ -21,6 +21,9 @@ Release 0.23.3 - UNRELEASED
 
   OPTIMIZATIONS
 
+    HDFS-2421. Improve the concurrency of SerialNumberMap in NameNode.
+    (Jing Zhao and Weiyan Wang via szetszwo)
+
   BUG FIXES
 
     HDFS-3166. Add timeout to Hftp connections.  (Daryn Sharp via szetszwo)
