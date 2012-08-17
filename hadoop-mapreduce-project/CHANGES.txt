@@ -392,6 +392,9 @@ Release 0.23.3 - UNRELEASED
     for compatibility reasons is creating incorrect counter name.
     (Jarek Jarcec Cecho via tomwhite)
 
+    MAPREDUCE-4549. Distributed cache conflicts breaks backwards compatability 
+    (Robert Evans via tgraves)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

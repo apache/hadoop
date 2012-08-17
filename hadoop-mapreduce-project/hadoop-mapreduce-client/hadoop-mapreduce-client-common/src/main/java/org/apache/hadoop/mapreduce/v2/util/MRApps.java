@@ -30,6 +30,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -48,14 +50,15 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.yarn.ContainerLogAppender;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.ConverterUtils;
 
 /**
  * Helper class for MR applications
@@ -63,6 +66,8 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 @Private
 @Unstable
 public class MRApps extends Apps {
+  private static final Log LOG = LogFactory.getLog(MRApps.class);
+  
   public static String toString(JobId jid) {
     return jid.toString();
   }
@@ -263,6 +268,23 @@ public class MRApps extends Apps {
         DistributedCache.getFileClassPaths(conf));
   }
 
+  private static String getResourceDescription(LocalResourceType type) {
+    if(type == LocalResourceType.ARCHIVE) {
+      return "cache archive (" + MRJobConfig.CACHE_ARCHIVES + ") ";
+    }
+    return "cache file (" + MRJobConfig.CACHE_FILES + ") ";
+  }
+  
+  private static String toString(org.apache.hadoop.yarn.api.records.URL url) {
+    StringBuffer b = new StringBuffer();
+    b.append(url.getScheme()).append("://").append(url.getHost());
+    if(url.getPort() >= 0) {
+      b.append(":").append(url.getPort());
+    }
+    b.append(url.getFile());
+    return b.toString();
+  }
+  
   // TODO - Move this to MR!
   // Use TaskDistributedCacheManager.CacheFiles.makeCacheFiles(URI[], 
   // long[], boolean[], Path[], FileType)
@@ -308,6 +330,17 @@ public class MRApps extends Apps {
           throw new IllegalArgumentException("Resource name must be relative");
         }
         String linkName = name.toUri().getPath();
+        LocalResource orig = localResources.get(linkName);
+        org.apache.hadoop.yarn.api.records.URL url = 
+          ConverterUtils.getYarnUrlFromURI(p.toUri());
+        if(orig != null && !orig.getResource().equals(url)) {
+          LOG.warn(
+              getResourceDescription(orig.getType()) + 
+              toString(orig.getResource()) + " conflicts with " + 
+              getResourceDescription(type) + toString(url) + 
+              " This will be an error in Hadoop 2.0");
+          continue;
+        }
         localResources.put(
             linkName,
             BuilderUtils.newLocalResource(
