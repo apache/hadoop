@@ -48,6 +48,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
@@ -56,6 +57,8 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -222,15 +225,25 @@ public abstract class FileSystem extends Configured implements Closeable {
 
   /**
    * Get a canonical service name for this file system.  The token cache is
-   * the only user of this value, and uses it to lookup this filesystem's
-   * service tokens.  The token cache will not attempt to acquire tokens if the
-   * service is null.
+   * the only user of the canonical service name, and uses it to lookup this
+   * filesystem's service tokens.
+   * If file system provides a token of its own then it must have a canonical
+   * name, otherwise canonical name can be null.
+   * 
+   * Default Impl: If the file system has child file systems 
+   * (such as an embedded file system) then it is assumed that the fs has no
+   * tokens of its own and hence returns a null name; otherwise a service
+   * name is built using Uri and port.
+   * 
    * @return a service string that uniquely identifies this file system, null
    *         if the filesystem does not implement tokens
    * @see SecurityUtil#buildDTServiceName(URI, int) 
    */
+  @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
   public String getCanonicalServiceName() {
-    return SecurityUtil.buildDTServiceName(getUri(), getDefaultPort());
+    return (getChildFileSystems() == null)
+      ? SecurityUtil.buildDTServiceName(getUri(), getDefaultPort())
+      : null;
   }
 
   /** @deprecated call #getUri() instead.*/
@@ -396,68 +409,95 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
     
   /**
-   * Deprecated  - use @link {@link #getDelegationTokens(String)}
    * Get a new delegation token for this file system.
+   * This is an internal method that should have been declared protected
+   * but wasn't historically.
+   * Callers should use {@link #addDelegationTokens(String, Credentials)}
+   * 
    * @param renewer the account name that is allowed to renew the token.
    * @return a new delegation token
    * @throws IOException
    */
-  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-  @Deprecated
+  @InterfaceAudience.Private()
   public Token<?> getDelegationToken(String renewer) throws IOException {
     return null;
   }
   
   /**
-   * Get one or more delegation tokens associated with the filesystem. Normally
-   * a file system returns a single delegation token. A file system that manages
-   * multiple file systems underneath, could return set of delegation tokens for
-   * all the file systems it manages.
+   * Obtain all delegation tokens used by this FileSystem that are not
+   * already present in the given Credentials.  Existing tokens will neither
+   * be verified as valid nor having the given renewer.  Missing tokens will
+   * be acquired and added to the given Credentials.
    * 
-   * @param renewer the account name that is allowed to renew the token.
+   * Default Impl: works for simple fs with its own token
+   * and also for an embedded fs whose tokens are those of its
+   * children file system (i.e. the embedded fs has not tokens of its
+   * own).
+   * 
+   * @param renewer the user allowed to renew the delegation tokens
+   * @param credentials cache in which to add new delegation tokens
    * @return list of new delegation tokens
-   *    If delegation tokens not supported then return a list of size zero.
-   * @throws IOException
-   */
-  @InterfaceAudience.LimitedPrivate( { "HDFS", "MapReduce" })
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return new ArrayList<Token<?>>(0);
-  }
-  
-  /**
-   * @see #getDelegationTokens(String)
-   * This is similar to getDelegationTokens, with the added restriction that if
-   * a token is already present in the passed Credentials object - that token
-   * is returned instead of a new delegation token. 
-   * 
-   * If the token is found to be cached in the Credentials object, this API does
-   * not verify the token validity or the passed in renewer. 
-   * 
-   * 
-   * @param renewer the account name that is allowed to renew the token.
-   * @param credentials a Credentials object containing already knowing 
-   *   delegationTokens.
-   * @return a list of delegation tokens.
    * @throws IOException
    */
   @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
-  public List<Token<?>> getDelegationTokens(String renewer,
-      Credentials credentials) throws IOException {
-    List<Token<?>> allTokens = getDelegationTokens(renewer);
-    List<Token<?>> newTokens = new ArrayList<Token<?>>();
-    if (allTokens != null) {
-      for (Token<?> token : allTokens) {
-        Token<?> knownToken = credentials.getToken(token.getService());
-        if (knownToken == null) {
-          newTokens.add(token);
-        } else {
-          newTokens.add(knownToken);
+  public Token<?>[] addDelegationTokens(
+      final String renewer, Credentials credentials) throws IOException {
+    if (credentials == null) {
+      credentials = new Credentials();
+    }
+    final List<Token<?>> tokens = new ArrayList<Token<?>>();
+    collectDelegationTokens(renewer, credentials, tokens);
+    return tokens.toArray(new Token<?>[tokens.size()]);
+  }
+  
+  /**
+   * Recursively obtain the tokens for this FileSystem and all descended
+   * FileSystems as determined by getChildFileSystems().
+   * @param renewer the user allowed to renew the delegation tokens
+   * @param credentials cache in which to add the new delegation tokens
+   * @param tokens list in which to add acquired tokens
+   * @throws IOException
+   */
+  private void collectDelegationTokens(final String renewer,
+                                       final Credentials credentials,
+                                       final List<Token<?>> tokens)
+                                           throws IOException {
+    final String serviceName = getCanonicalServiceName();
+    // Collect token of the this filesystem and then of its embedded children
+    if (serviceName != null) { // fs has token, grab it
+      final Text service = new Text(serviceName);
+      Token<?> token = credentials.getToken(service);
+      if (token == null) {
+        token = getDelegationToken(renewer);
+        if (token != null) {
+          tokens.add(token);
+          credentials.addToken(service, token);
         }
       }
     }
-    return newTokens;
+    // Now collect the tokens from the children
+    final FileSystem[] children = getChildFileSystems();
+    if (children != null) {
+      for (final FileSystem fs : children) {
+        fs.collectDelegationTokens(renewer, credentials, tokens);
+      }
+    }
   }
 
+  /**
+   * Get all the immediate child FileSystems embedded in this FileSystem.
+   * It does not recurse and get grand children.  If a FileSystem
+   * has multiple child FileSystems, then it should return a unique list
+   * of those FileSystems.  Default is to return null to signify no children.
+   * 
+   * @return FileSystems used by this FileSystem
+   */
+  @InterfaceAudience.LimitedPrivate({ "HDFS" })
+  @VisibleForTesting
+  public FileSystem[] getChildFileSystems() {
+    return null;
+  }
+  
   /** create a file with the provided permission
    * The permission of the file is set to be the provided permission as in
    * setPermission, not permission&~umask

@@ -32,7 +32,6 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
 
     GETHOMEDIRECTORY(HttpURLConnection.HTTP_OK),
     GETDELEGATIONTOKEN(HttpURLConnection.HTTP_OK),
-    GETDELEGATIONTOKENS(HttpURLConnection.HTTP_OK),
 
     /** GET_BLOCK_LOCATIONS is a private unstable op. */
     GET_BLOCK_LOCATIONS(HttpURLConnection.HTTP_OK),

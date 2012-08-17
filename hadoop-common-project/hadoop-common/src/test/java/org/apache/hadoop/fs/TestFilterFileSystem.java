@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
 import org.junit.BeforeClass;
@@ -180,6 +181,10 @@ public class TestFilterFileSystem {
       return null;
     }
 
+    public Token<?>[] addDelegationTokens(String renewer, Credentials creds)
+        throws IOException {
+      return null;
+    }
     public String getScheme() {
       return "dontcheck";
     }
