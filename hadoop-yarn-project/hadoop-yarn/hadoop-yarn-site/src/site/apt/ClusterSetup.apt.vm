@@ -314,6 +314,19 @@ Hadoop MapReduce Next Generation - Cluster Setup
 | | | Shuffle service that needs to be set for Map Reduce applications. |
 *-------------------------+-------------------------+------------------------+
 
+        * Configurations for History Server (Needs to be moved elsewhere):
+
+*-------------------------+-------------------------+------------------------+
+|| Parameter              || Value                  || Notes                 |
+*-------------------------+-------------------------+------------------------+
+| <<<yarn.log-aggregation.retain-seconds>>> | | |
+| | <-1> | |
+| | | How long to keep aggregation logs before deleting them. -1 disables. |
+| | | Be careful, set this too small and you will spam the name node. |
+*-------------------------+-------------------------+------------------------+
+
+
+
       * <<<conf/mapred-site.xml>>>
 
         * Configurations for MapReduce Applications:

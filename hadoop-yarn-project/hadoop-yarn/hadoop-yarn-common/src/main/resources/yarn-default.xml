@@ -367,6 +367,13 @@
     <name>yarn.log-aggregation-enable</name>
     <value>false</value>
   </property>
+
+  <property>
+    <description>How long to keep aggregation logs before deleting them.  -1 disables. 
+    Be careful set this too small and you will spam the name node.</description>
+    <name>yarn.log-aggregation.retain-seconds</name>
+    <value>-1</value>
+  </property> 
   
   <property>
     <description>Time in seconds to retain user logs. Only applicable if

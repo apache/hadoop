@@ -353,6 +353,14 @@ public class YarnConfiguration extends Configuration {
       + "log-aggregation-enable";
   public static final boolean DEFAULT_LOG_AGGREGATION_ENABLED = false;
   
+  /** 
+   * How long to wait before deleting aggregated logs, -1 disables.
+   * Be careful set this too small and you will spam the name node.
+   */
+  public static final String LOG_AGGREGATION_RETAIN_SECONDS = YARN_PREFIX
+      + "log-aggregation.retain-seconds";
+  public static final long DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS = -1;
+  
   /**
    * Number of seconds to retain logs on the NodeManager. Only applicable if Log
    * aggregation is disabled

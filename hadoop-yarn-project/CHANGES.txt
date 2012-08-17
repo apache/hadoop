@@ -49,3 +49,5 @@ Release 0.23.3 - Unreleased
     YARN-14. Symlinks to peer distributed cache files no longer work 
     (Jason Lowe via bobby) 
 
+    YARN-25. remove old aggregated logs  (Robert Evans via tgraves)
+
