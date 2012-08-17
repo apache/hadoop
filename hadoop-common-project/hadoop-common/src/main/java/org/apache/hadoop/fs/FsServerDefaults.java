@@ -49,19 +49,21 @@ public class FsServerDefaults implements Writable {
   private short replication;
   private int fileBufferSize;
   private boolean encryptDataTransfer;
+  private long trashInterval;
 
   public FsServerDefaults() {
   }
 
   public FsServerDefaults(long blockSize, int bytesPerChecksum,
       int writePacketSize, short replication, int fileBufferSize,
-      boolean encryptDataTransfer) {
+      boolean encryptDataTransfer, long trashInterval) {
     this.blockSize = blockSize;
     this.bytesPerChecksum = bytesPerChecksum;
     this.writePacketSize = writePacketSize;
     this.replication = replication;
     this.fileBufferSize = fileBufferSize;
     this.encryptDataTransfer = encryptDataTransfer;
+    this.trashInterval = trashInterval;
   }
 
   public long getBlockSize() {
@@ -86,6 +88,10 @@ public class FsServerDefaults implements Writable {
   
   public boolean getEncryptDataTransfer() {
     return encryptDataTransfer;
+  }
+
+  public long getTrashInterval() {
+    return trashInterval;
   }
 
   // /////////////////////////////////////////

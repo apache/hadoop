@@ -351,8 +351,12 @@
   <name>fs.trash.interval</name>
   <value>0</value>
   <description>Number of minutes after which the checkpoint
-  gets deleted.
-  If zero, the trash feature is disabled.
+  gets deleted.  If zero, the trash feature is disabled.
+  This option may be configured both on the server and the
+  client. If trash is disabled server side then the client
+  side configuration is checked. If trash is enabled on the
+  server side then the value configured on the server is
+  used and the client configuration value is ignored.
   </description>
 </property>
 
@@ -360,7 +364,8 @@
   <name>fs.trash.checkpoint.interval</name>
   <value>0</value>
   <description>Number of minutes between trash checkpoints.
-  Should be smaller or equal to fs.trash.interval.
+  Should be smaller or equal to fs.trash.interval. If zero,
+  the value is set to the value of fs.trash.interval.
   Every time the checkpointer runs it creates a new checkpoint 
   out of current and removes checkpoints created more than 
   fs.trash.interval minutes ago.

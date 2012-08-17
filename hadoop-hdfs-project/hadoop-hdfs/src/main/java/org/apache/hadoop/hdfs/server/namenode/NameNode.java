@@ -514,9 +514,7 @@ public class NameNode {
   }
   
   private void startTrashEmptier(Configuration conf) throws IOException {
-    long trashInterval = conf.getLong(
-        CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY,
-        CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
+    long trashInterval = namesystem.getServerDefaults().getTrashInterval();  
     if (trashInterval == 0) {
       return;
     } else if (trashInterval < 0) {

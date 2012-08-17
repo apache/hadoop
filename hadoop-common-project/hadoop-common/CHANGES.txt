@@ -7,6 +7,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8388. Remove unused BlockLocation serialization.
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8689. Make trash a server side configuration option. (eli)
+
   NEW FEATURES
 
     HDFS-3042. Automatic failover support for NameNode HA (todd)

@@ -661,7 +661,9 @@ public abstract class FileSystem extends Configured implements Closeable {
         64 * 1024, 
         getDefaultReplication(),
         conf.getInt("io.file.buffer.size", 4096),
-        false);
+        false,
+        // NB: ignoring the client trash configuration
+        CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT);
   }
 
   /**

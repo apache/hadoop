@@ -45,6 +45,7 @@ public class FtpConfigKeys extends CommonConfigurationKeys {
                                                 "ftp.client-write-packet-size";
   public static final int     CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
   public static final boolean ENCRYPT_DATA_TRANSFER_DEFAULT = false;
+  public static final long    FS_TRASH_INTERVAL_DEFAULT = 0;
   
   protected static FsServerDefaults getServerDefaults() throws IOException {
     return new FsServerDefaults(
@@ -53,7 +54,8 @@ public class FtpConfigKeys extends CommonConfigurationKeys {
         CLIENT_WRITE_PACKET_SIZE_DEFAULT,
         REPLICATION_DEFAULT,
         STREAM_BUFFER_SIZE_DEFAULT,
-        ENCRYPT_DATA_TRANSFER_DEFAULT);
+        ENCRYPT_DATA_TRANSFER_DEFAULT,
+        FS_TRASH_INTERVAL_DEFAULT);
   }
 }
   
