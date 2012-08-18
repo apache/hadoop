@@ -41,7 +41,9 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class TestReplicationPolicy {
   private Random random = DFSUtil.getRandom();
@@ -53,6 +55,9 @@ public class TestReplicationPolicy {
   private static final String filename = "/dummyfile.txt";
   private static DatanodeDescriptor dataNodes[];
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+  
   @BeforeClass
   public static void setupCluster() throws Exception {
     Configuration conf = new HdfsConfiguration();
@@ -587,5 +592,52 @@ public class TestReplicationPolicy {
         "Not returned the expected number of QUEUE_WITH_CORRUPT_BLOCKS blocks",
         fifthPrioritySize, chosenBlocks.get(
             UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS).size());
+  }
+  
+  /**
+   * This testcase tests whether the defaultvalue returned by
+   * DFSUtil.getInvalidateWorkPctPerIteration() is positive, 
+   * and whether an IllegalArgumentException will be thrown 
+   * when a non-positive value is retrieved
+   */
+  @Test
+  public void testGetInvalidateWorkPctPerIteration() {
+    Configuration conf = new Configuration();
+    float blocksInvalidateWorkPct = DFSUtil
+        .getInvalidateWorkPctPerIteration(conf);
+    assertTrue(blocksInvalidateWorkPct > 0);
+
+    conf.set(DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION,
+        "0.5f");
+    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    assertEquals(blocksInvalidateWorkPct, 0.5f, blocksInvalidateWorkPct * 1e-7);
+    
+    conf.set(DFSConfigKeys.
+        DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "0.0");
+    exception.expect(IllegalArgumentException.class);
+    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+  }
+
+  /**
+   * This testcase tests whether the value returned by
+   * DFSUtil.getReplWorkMultiplier() is positive,
+   * and whether an IllegalArgumentException will be thrown 
+   * when a non-positive value is retrieved
+   */
+  @Test
+  public void testGetReplWorkMultiplier() {
+    Configuration conf = new Configuration();
+    int blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
+    assertTrue(blocksReplWorkMultiplier > 0);
+
+    conf.set(DFSConfigKeys.
+        DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,"3");
+    blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
+    assertEquals(blocksReplWorkMultiplier, 3);
+    
+    conf.set(DFSConfigKeys.
+        DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,"-1");
+    exception.expect(IllegalArgumentException.class);
+    blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
   }
 }

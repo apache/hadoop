@@ -86,6 +86,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
@@ -1148,5 +1149,43 @@ public class DFSUtil {
       }
     }
     return false;
+  }
+  
+  /**
+   * Get DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION from configuration.
+   * 
+   * @param conf Configuration
+   * @return Value of DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION
+   */
+  public static float getInvalidateWorkPctPerIteration(Configuration conf) {
+    float blocksInvalidateWorkPct = conf.getFloat(
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION,
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION_DEFAULT);
+    Preconditions.checkArgument(
+        (blocksInvalidateWorkPct > 0),
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION +
+        " = '" + blocksInvalidateWorkPct + "' is invalid. " +
+        "It should be a positive, non-zero float value " +
+        "indicating a percentage.");
+    return blocksInvalidateWorkPct;
+  }
+
+  /**
+   * Get DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION from
+   * configuration.
+   * 
+   * @param conf Configuration
+   * @return Value of DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION
+   */
+  public static int getReplWorkMultiplier(Configuration conf) {
+    int blocksReplWorkMultiplier = conf.getInt(
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT);
+    Preconditions.checkArgument(
+        (blocksReplWorkMultiplier > 0),
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION +
+        " = '" + blocksReplWorkMultiplier + "' is invalid. " +
+        "It should be a positive, non-zero integer value.");
+    return blocksReplWorkMultiplier;
   }
 }

@@ -269,23 +269,8 @@ public class BlockManager {
                                              DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT);
     this.shouldCheckForEnoughRacks = conf.get(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY) != null;
 
-    this.blocksInvalidateWorkPct = conf.getFloat(
-        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION,
-        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION_DEFAULT);
-    Preconditions.checkArgument(
-        (this.blocksInvalidateWorkPct > 0),
-        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION +
-        " = '" + this.blocksInvalidateWorkPct + "' is invalid. " +
-        "It should be a positive, non-zero float value " +
-        "indicating a percentage.");
-    this.blocksReplWorkMultiplier = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT);
-    Preconditions.checkArgument(
-        (this.blocksReplWorkMultiplier > 0),
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION +
-        " = '" + this.blocksReplWorkMultiplier + "' is invalid. " +
-        "It should be a positive, non-zero integer value.");
+    this.blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    this.blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
 
     this.replicationRecheckInterval = 
       conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 

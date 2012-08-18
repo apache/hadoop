@@ -476,6 +476,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3788. ByteRangeInputStream should not expect HTTP Content-Length header
     when chunked transfer-encoding is used.  (szetszwo)
 
+    HDFS-3816. Invalidate work percentage default value should be 0.32f
+    instead of 32. (Jing Zhao via suresh)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
