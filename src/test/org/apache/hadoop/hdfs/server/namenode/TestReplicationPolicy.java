@@ -22,14 +22,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.net.Node;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-
-import junit.framework.TestCase;
+import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.net.Node;
 
 public class TestReplicationPolicy extends TestCase {
   private static final int BLOCK_SIZE = 1024;
@@ -412,6 +414,50 @@ public class TestReplicationPolicy extends TestCase {
                                2, dataNodes[2], chosenNodes, null, BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertTrue(cluster.isOnSameRack(dataNodes[2], targets[0]));
+  }
+  
+  /**
+   * This testcase tests whether the value returned by 
+   * DFSUtil.getInvalidateWorkPctPerIteration() is positive
+   */
+  public void testGetInvalidateWorkPctPerIteration() {
+    Configuration conf = new Configuration();
+    float blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    assertTrue(blocksInvalidateWorkPct > 0);
+    
+    conf.set(DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "0.0");
+    try {
+      blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+      fail("Should throw IllegalArgumentException.");
+    } catch (IllegalArgumentException e) {
+      // expected 
+    }
+    
+    conf.set(DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "0.5f");
+    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    assertEquals(blocksInvalidateWorkPct, 0.5f);
+  }
+  
+  /**
+   * This testcase tests whether the value returned by 
+   * DFSUtil.getReplWorkMultiplier() is positive
+   */
+  public void testGetReplWorkMultiplier() {
+    Configuration conf = new Configuration();
+    int blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
+    assertTrue(blocksReplWorkMultiplier > 0);
+    
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION, "-1");
+    try {
+      blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
+      fail("Should throw IllegalArgumentException.");
+    } catch (IllegalArgumentException e) {
+      // expected
+    }
+    
+    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION, "3");
+    blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
+    assertEquals(blocksReplWorkMultiplier, 3);
   }
   
 }

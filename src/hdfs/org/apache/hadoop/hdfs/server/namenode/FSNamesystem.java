@@ -178,6 +178,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   // Default initial capacity and load factor of map
   public static final int DEFAULT_INITIAL_MAP_CAPACITY = 16;
   public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
+  
+  private float blocksInvalidateWorkPct;
+  private int blocksReplWorkMultiplier;
 
   private boolean isPermissionEnabled;
   private UserGroupInformation fsOwner;
@@ -491,11 +494,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     this.defaultPermission = PermissionStatus.createImmutable(
         fsOwner.getShortUserName(), supergroup, new FsPermission(filePermission));
 
-
     this.replicator = new ReplicationTargetChooser(
                          conf.getBoolean("dfs.replication.considerLoad", true),
                          this,
                          clusterMap);
+    this.blocksInvalidateWorkPct = 
+              DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    this.blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
+
     this.defaultReplication = conf.getInt("dfs.replication", 3);
     this.maxReplication = conf.getInt("dfs.replication.max", 512);
     this.minReplication = conf.getInt("dfs.replication.min", 1);
@@ -2729,8 +2735,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * Periodically calls computeReplicationWork().
    */
   class ReplicationMonitor implements Runnable {
-    static final int INVALIDATE_WORK_PCT_PER_ITERATION = 32;
-    static final float REPLICATION_WORK_MULTIPLIER_PER_ITERATION = 2;
     ReplicateQueueProcessingStats replicateQueueStats = 
         new ReplicateQueueProcessingStats();
     InvalidateQueueProcessingStats invalidateQueueStats = 
@@ -2837,9 +2841,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     synchronized(heartbeats) {
       blocksToProcess = (int)(heartbeats.size() 
-          * ReplicationMonitor.REPLICATION_WORK_MULTIPLIER_PER_ITERATION);
+          * this.blocksReplWorkMultiplier);
       nodesToProcess = (int)Math.ceil((double)heartbeats.size() 
-          * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100);
+          * this.blocksInvalidateWorkPct);
     }
 
     replmon.replicateQueueStats.startCycle(blocksToProcess);

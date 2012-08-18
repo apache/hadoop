@@ -156,6 +156,9 @@ Release 1.1.0 - 2012.07.09
     MAPREDUCE-4400. Avoid task finish sleep to improve small job/workflow
     latency. (llu)
 
+    HDFS-3814. Make the replication monitor multipliers configurable in 1.x.
+    (Jing Zhao via suresh)
+
   BUG FIXES
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
