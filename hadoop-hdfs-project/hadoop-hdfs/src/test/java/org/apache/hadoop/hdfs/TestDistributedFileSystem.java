@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.commons.lang.ArrayUtils;
@@ -36,16 +37,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -662,6 +666,56 @@ public class TestDistributedFileSystem {
           l.getVolumeIds().length);
       assertTrue("Expected one valid and one invalid replica",
           (l.getVolumeIds()[0].isValid()) ^ (l.getVolumeIds()[1].isValid()));
+    }
+  }
+
+  @Test
+  public void testCreateWithCustomChecksum() throws Exception {
+    Configuration conf = getTestConfiguration();
+    final long grace = 1000L;
+    MiniDFSCluster cluster = null;
+    Path testBasePath = new Path("/test/csum");
+    // create args 
+    Path path1 = new Path(testBasePath, "file_wtih_crc1");
+    Path path2 = new Path(testBasePath, "file_with_crc2");
+    ChecksumOpt opt1 = new ChecksumOpt(DataChecksum.Type.CRC32C, 512);
+    ChecksumOpt opt2 = new ChecksumOpt(DataChecksum.Type.CRC32, 512);
+
+    // common args
+    FsPermission perm = FsPermission.getDefault().applyUMask(
+        FsPermission.getUMask(conf));
+    EnumSet<CreateFlag> flags = EnumSet.of(CreateFlag.OVERWRITE,
+        CreateFlag.CREATE);
+    short repl = 1;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      FileSystem dfs = cluster.getFileSystem();
+
+      dfs.mkdirs(testBasePath);
+
+      // create two files with different checksum types
+      FSDataOutputStream out1 = dfs.create(path1, perm, flags, 4096, repl,
+          131072L, null, opt1);
+      FSDataOutputStream out2 = dfs.create(path2, perm, flags, 4096, repl,
+          131072L, null, opt2);
+
+      for (int i = 0; i < 1024; i++) {
+        out1.write(i);
+        out2.write(i);
+      }
+      out1.close();
+      out2.close();
+
+      // the two checksums must be different.
+      FileChecksum sum1 = dfs.getFileChecksum(path1);
+      FileChecksum sum2 = dfs.getFileChecksum(path2);
+      assertFalse(sum1.equals(sum2));
+    } finally {
+      if (cluster != null) {
+        cluster.getFileSystem().delete(testBasePath, true);
+        cluster.shutdown();
+      }
     }
   }
 }

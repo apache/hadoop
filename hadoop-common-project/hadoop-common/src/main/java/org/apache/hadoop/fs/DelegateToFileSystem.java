@@ -28,6 +28,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.token.Token;
@@ -62,7 +63,7 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   public FSDataOutputStream createInternal (Path f,
       EnumSet<CreateFlag> flag, FsPermission absolutePermission, int bufferSize,
       short replication, long blockSize, Progressable progress,
-      int bytesPerChecksum, boolean createParent) throws IOException {
+      ChecksumOpt checksumOpt, boolean createParent) throws IOException {
     checkPath(f);
     
     // Default impl assumes that permissions do not matter
@@ -81,8 +82,8 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
       }
       // parent does exist - go ahead with create of file.
     }
-    return fsImpl.primitiveCreate(f, absolutePermission, flag, 
-        bufferSize, replication, blockSize, progress, bytesPerChecksum);
+    return fsImpl.primitiveCreate(f, absolutePermission, flag,
+        bufferSize, replication, blockSize, progress, checksumOpt);
   }
 
   @Override

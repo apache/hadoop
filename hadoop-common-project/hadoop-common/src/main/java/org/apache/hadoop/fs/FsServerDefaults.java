@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.DataChecksum;
 
 /****************************************************
  * Provides server default configuration values to clients.
@@ -50,13 +52,15 @@ public class FsServerDefaults implements Writable {
   private int fileBufferSize;
   private boolean encryptDataTransfer;
   private long trashInterval;
+  private DataChecksum.Type checksumType;
 
   public FsServerDefaults() {
   }
 
   public FsServerDefaults(long blockSize, int bytesPerChecksum,
       int writePacketSize, short replication, int fileBufferSize,
-      boolean encryptDataTransfer, long trashInterval) {
+      boolean encryptDataTransfer, long trashInterval,
+      DataChecksum.Type checksumType) {
     this.blockSize = blockSize;
     this.bytesPerChecksum = bytesPerChecksum;
     this.writePacketSize = writePacketSize;
@@ -64,6 +68,7 @@ public class FsServerDefaults implements Writable {
     this.fileBufferSize = fileBufferSize;
     this.encryptDataTransfer = encryptDataTransfer;
     this.trashInterval = trashInterval;
+    this.checksumType = checksumType;
   }
 
   public long getBlockSize() {
@@ -94,6 +99,10 @@ public class FsServerDefaults implements Writable {
     return trashInterval;
   }
 
+  public DataChecksum.Type getChecksumType() {
+    return checksumType;
+  }
+
   // /////////////////////////////////////////
   // Writable
   // /////////////////////////////////////////
@@ -104,6 +113,7 @@ public class FsServerDefaults implements Writable {
     out.writeInt(writePacketSize);
     out.writeShort(replication);
     out.writeInt(fileBufferSize);
+    WritableUtils.writeEnum(out, checksumType);
   }
 
   @InterfaceAudience.Private
@@ -113,5 +123,6 @@ public class FsServerDefaults implements Writable {
     writePacketSize = in.readInt();
     replication = in.readShort();
     fileBufferSize = in.readInt();
+    checksumType = WritableUtils.readEnum(in, DataChecksum.Type.class);
   }
 }

@@ -20,7 +20,9 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 
 /**
  * This class contains options related to file system operations.
@@ -45,6 +47,10 @@ public final class Options {
     }
     public static BytesPerChecksum bytesPerChecksum(short crc) {
       return new BytesPerChecksum(crc);
+    }
+    public static ChecksumParam checksumParam(
+        ChecksumOpt csumOpt) {
+      return new ChecksumParam(csumOpt);
     }
     public static Perms perms(FsPermission perm) {
       return new Perms(perm);
@@ -91,7 +97,8 @@ public final class Options {
       }
       public int getValue() { return bufferSize; }
     }
-    
+
+    /** This is not needed if ChecksumParam is specified. **/
     public static class BytesPerChecksum extends CreateOpts {
       private final int bytesPerChecksum;
       protected BytesPerChecksum(short bpc) { 
@@ -102,6 +109,14 @@ public final class Options {
         bytesPerChecksum = bpc; 
       }
       public int getValue() { return bytesPerChecksum; }
+    }
+
+    public static class ChecksumParam extends CreateOpts {
+      private final ChecksumOpt checksumOpt;
+      protected ChecksumParam(ChecksumOpt csumOpt) {
+        checksumOpt = csumOpt;
+      }
+      public ChecksumOpt getValue() { return checksumOpt; }
     }
     
     public static class Perms extends CreateOpts {
@@ -204,6 +219,118 @@ public final class Options {
 
     public byte value() {
       return code;
+    }
+  }
+
+  /**
+   * This is used in FileSystem and FileContext to specify checksum options.
+   */
+  public static class ChecksumOpt {
+    private final int crcBlockSize;
+    private final DataChecksum.Type crcType;
+
+    /**
+     * Create a uninitialized one
+     */
+    public ChecksumOpt() {
+      crcBlockSize = -1;
+      crcType = DataChecksum.Type.DEFAULT;
+    }
+
+    /**
+     * Normal ctor
+     * @param type checksum type
+     * @param size bytes per checksum
+     */
+    public ChecksumOpt(DataChecksum.Type type, int size) {
+      crcBlockSize = size;
+      crcType = type;
+    }
+
+    public int getBytesPerChecksum() {
+      return crcBlockSize;
+    }
+
+    public DataChecksum.Type getChecksumType() {
+      return crcType;
+    }
+
+    /**
+     * Create a ChecksumOpts that disables checksum
+     */
+    public static ChecksumOpt createDisabled() {
+      return new ChecksumOpt(DataChecksum.Type.NULL, -1);
+    }
+
+    /**
+     * A helper method for processing user input and default value to 
+     * create a combined checksum option. This is a bit complicated because
+     * bytesPerChecksum is kept for backward compatibility.
+     *
+     * @param defaultOpt Default checksum option
+     * @param userOpt User-specified checksum option. Ignored if null.
+     * @param userBytesPerChecksum User-specified bytesPerChecksum
+     *                Ignored if < 0.
+     */
+    public static ChecksumOpt processChecksumOpt(ChecksumOpt defaultOpt, 
+        ChecksumOpt userOpt, int userBytesPerChecksum) {
+      // The following is done to avoid unnecessary creation of new objects.
+      // tri-state variable: 0 default, 1 userBytesPerChecksum, 2 userOpt
+      short whichSize;
+      // true default, false userOpt
+      boolean useDefaultType;
+      
+      //  bytesPerChecksum - order of preference
+      //    user specified value in bytesPerChecksum
+      //    user specified value in checksumOpt
+      //    default.
+      if (userBytesPerChecksum > 0) {
+        whichSize = 1; // userBytesPerChecksum
+      } else if (userOpt != null && userOpt.getBytesPerChecksum() > 0) {
+        whichSize = 2; // userOpt
+      } else {
+        whichSize = 0; // default
+      }
+
+      // checksum type - order of preference
+      //   user specified value in checksumOpt
+      //   default.
+      if (userOpt != null &&
+            userOpt.getChecksumType() != DataChecksum.Type.DEFAULT) {
+        useDefaultType = false;
+      } else {
+        useDefaultType = true;
+      }
+
+      // Short out the common and easy cases
+      if (whichSize == 0 && useDefaultType) {
+        return defaultOpt;
+      } else if (whichSize == 2 && !useDefaultType) {
+        return userOpt;
+      }
+
+      // Take care of the rest of combinations
+      DataChecksum.Type type = useDefaultType ? defaultOpt.getChecksumType() :
+          userOpt.getChecksumType();
+      if (whichSize == 0) {
+        return new ChecksumOpt(type, defaultOpt.getBytesPerChecksum());
+      } else if (whichSize == 1) {
+        return new ChecksumOpt(type, userBytesPerChecksum);
+      } else {
+        return new ChecksumOpt(type, userOpt.getBytesPerChecksum());
+      }
+    }
+
+    /**
+     * A helper method for processing user input and default value to 
+     * create a combined checksum option. 
+     *
+     * @param defaultOpt Default checksum option
+     * @param userOpt User-specified checksum option
+     */
+    public static ChecksumOpt processChecksumOpt(ChecksumOpt defaultOpt,
+        ChecksumOpt userOpt) {
+      return processChecksumOpt(defaultOpt, userOpt, -1);
     }
   }
 }

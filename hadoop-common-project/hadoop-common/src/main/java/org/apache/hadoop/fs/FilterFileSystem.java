@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
@@ -410,10 +411,11 @@ public class FilterFileSystem extends FileSystem {
   @Override
   protected FSDataOutputStream primitiveCreate(Path f,
       FsPermission absolutePermission, EnumSet<CreateFlag> flag,
-      int bufferSize, short replication, long blockSize, Progressable progress, int bytesPerChecksum)
+      int bufferSize, short replication, long blockSize,
+      Progressable progress, ChecksumOpt checksumOpt)
       throws IOException {
     return fs.primitiveCreate(f, absolutePermission, flag,
-        bufferSize, replication, blockSize, progress, bytesPerChecksum);
+        bufferSize, replication, blockSize, progress, checksumOpt);
   }
 
   @Override

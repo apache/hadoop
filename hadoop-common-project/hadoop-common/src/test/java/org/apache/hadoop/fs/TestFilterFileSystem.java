@@ -32,6 +32,7 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.security.Credentials;
@@ -78,6 +79,11 @@ public class TestFilterFileSystem {
     public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
             EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
             Progressable progress) throws IOException {
+      return null;
+    }
+    public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+            EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+            Progressable progress, ChecksumOpt checksumOpt) throws IOException {
       return null;
     }
     public boolean mkdirs(Path f) { return false; }
@@ -136,6 +142,16 @@ public class TestFilterFileSystem {
         short replication,
         long blockSize,
         Progressable progress) throws IOException {
+      return null;
+    }
+    public FSDataOutputStream create(Path f,
+        FsPermission permission,
+        EnumSet<CreateFlag> flags,
+        int bufferSize,
+        short replication,
+        long blockSize,
+        Progressable progress,
+        ChecksumOpt checksumOpt) throws IOException {
       return null;
     }
     public String getName() { return null; }
