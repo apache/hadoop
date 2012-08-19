@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -258,19 +259,19 @@ public class DistributedFileSystem extends FileSystem {
   public HdfsDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
-    return create(f, permission,
+    return this.create(f, permission,
         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
             : EnumSet.of(CreateFlag.CREATE), bufferSize, replication,
-        blockSize, progress);
+        blockSize, progress, null);
   }
   
   @Override
   public HdfsDataOutputStream create(Path f, FsPermission permission,
     EnumSet<CreateFlag> cflags, int bufferSize, short replication, long blockSize,
-    Progressable progress) throws IOException {
+    Progressable progress, ChecksumOpt checksumOpt) throws IOException {
     statistics.incrementWriteOps(1);
     final DFSOutputStream out = dfs.create(getPathName(f), permission, cflags,
-        replication, blockSize, progress, bufferSize);
+        replication, blockSize, progress, bufferSize, checksumOpt);
     return new HdfsDataOutputStream(out, statistics);
   }
   
@@ -279,11 +280,11 @@ public class DistributedFileSystem extends FileSystem {
   protected HdfsDataOutputStream primitiveCreate(Path f,
     FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
     short replication, long blockSize, Progressable progress,
-    int bytesPerChecksum) throws IOException {
+    ChecksumOpt checksumOpt) throws IOException {
     statistics.incrementWriteOps(1);
     return new HdfsDataOutputStream(dfs.primitiveCreate(getPathName(f),
         absolutePermission, flag, true, replication, blockSize,
-        progress, bufferSize, bytesPerChecksum),statistics);
+        progress, bufferSize, checksumOpt),statistics);
    } 
 
   /**
@@ -298,7 +299,8 @@ public class DistributedFileSystem extends FileSystem {
       flag.add(CreateFlag.CREATE);
     }
     return new HdfsDataOutputStream(dfs.create(getPathName(f), permission, flag,
-        false, replication, blockSize, progress, bufferSize), statistics);
+        false, replication, blockSize, progress, 
+        bufferSize, null), statistics);
   }
 
   @Override

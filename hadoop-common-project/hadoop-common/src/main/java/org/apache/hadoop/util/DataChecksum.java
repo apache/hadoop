@@ -43,12 +43,14 @@ public class DataChecksum implements Checksum {
   public static final int CHECKSUM_NULL    = 0;
   public static final int CHECKSUM_CRC32   = 1;
   public static final int CHECKSUM_CRC32C  = 2;
+  public static final int CHECKSUM_DEFAULT  = 3; 
  
   /** The checksum types */
   public static enum Type {
     NULL  (CHECKSUM_NULL, 0),
     CRC32 (CHECKSUM_CRC32, 4),
-    CRC32C(CHECKSUM_CRC32C, 4);
+    CRC32C(CHECKSUM_CRC32C, 4),
+    DEFAULT(CHECKSUM_DEFAULT, 0); // This cannot be used to create DataChecksum
 
     public final int id;
     public final int size;

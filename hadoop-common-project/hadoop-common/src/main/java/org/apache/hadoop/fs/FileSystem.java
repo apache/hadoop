@@ -45,6 +45,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.MultipleIOException;
@@ -54,6 +55,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -656,14 +658,17 @@ public abstract class FileSystem extends Configured implements Closeable {
   @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {
     Configuration conf = getConf();
+    // CRC32 is chosen as default as it is available in all 
+    // releases that support checksum.
+    // The client trash configuration is ignored.
     return new FsServerDefaults(getDefaultBlockSize(), 
         conf.getInt("io.bytes.per.checksum", 512), 
         64 * 1024, 
         getDefaultReplication(),
         conf.getInt("io.file.buffer.size", 4096),
         false,
-        // NB: ignoring the client trash configuration
-        CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT);
+        CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT,
+        DataChecksum.Type.CRC32);
   }
 
   /**
@@ -889,11 +894,40 @@ public abstract class FileSystem extends Configured implements Closeable {
       short replication,
       long blockSize,
       Progressable progress) throws IOException {
-    // only DFS support this
-    return create(f, permission, flags.contains(CreateFlag.OVERWRITE), bufferSize, replication, blockSize, progress);
+    return create(f, permission, flags, bufferSize, replication,
+        blockSize, progress, null);
   }
   
-  
+  /**
+   * Create an FSDataOutputStream at the indicated Path with a custom
+   * checksum option
+   * @param f the file name to open
+   * @param permission
+   * @param flags {@link CreateFlag}s to use for this stream.
+   * @param bufferSize the size of the buffer to be used.
+   * @param replication required block replication for the file.
+   * @param blockSize
+   * @param progress
+   * @param checksumOpt checksum parameter. If null, the values
+   *        found in conf will be used.
+   * @throws IOException
+   * @see #setPermission(Path, FsPermission)
+   */
+  public FSDataOutputStream create(Path f,
+      FsPermission permission,
+      EnumSet<CreateFlag> flags,
+      int bufferSize,
+      short replication,
+      long blockSize,
+      Progressable progress,
+      ChecksumOpt checksumOpt) throws IOException {
+    // Checksum options are ignored by default. The file systems that
+    // implement checksum need to override this method. The full
+    // support is currently only available in DFS.
+    return create(f, permission, flags.contains(CreateFlag.OVERWRITE), 
+        bufferSize, replication, blockSize, progress);
+  }
+
   /*.
    * This create has been added to support the FileContext that processes
    * the permission
@@ -905,7 +939,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   protected FSDataOutputStream primitiveCreate(Path f,
      FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
      short replication, long blockSize, Progressable progress,
-     int bytesPerChecksum) throws IOException {
+     ChecksumOpt checksumOpt) throws IOException {
 
     boolean pathExists = exists(f);
     CreateFlag.validate(f, pathExists, flag);

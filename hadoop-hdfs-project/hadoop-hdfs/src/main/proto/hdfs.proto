@@ -179,6 +179,15 @@ message HdfsFileStatusProto {
 } 
 
 /**
+ * Checksum algorithms/types used in HDFS
+ */
+enum ChecksumTypeProto {
+  NULL = 0;
+  CRC32 = 1;
+  CRC32C = 2;
+}
+
+/**
  * HDFS Server Defaults
  */
 message FsServerDefaultsProto {
@@ -189,6 +198,7 @@ message FsServerDefaultsProto {
   required uint32 fileBufferSize = 5;
   optional bool encryptDataTransfer = 6 [default = false];
   optional uint64 trashInterval = 7 [default = 0];
+  optional ChecksumTypeProto checksumType = 8 [default = CRC32];
 }
 
 

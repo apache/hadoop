@@ -31,6 +31,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-7754. Expose file descriptors from Hadoop-wrapped local 
     FileSystems (todd and ahmed via tucu)
 
+    HADOOP-8240. Add a new API to allow users to specify a checksum type
+    on FileSystem.create(..).  (Kihwal Lee via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual
