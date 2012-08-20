@@ -38,14 +38,22 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestQueueMetrics {
   static final int GB = 1024; // MB
   private static final Configuration conf = new Configuration();
 
-  final MetricsSystem ms = new MetricsSystemImpl();
+  private MetricsSystem ms;
 
+  @Before
+  public void setUp() {
+    ms = new MetricsSystemImpl();
+    QueueMetrics.clearQueueMetrics();
+  }
+  
   @Test public void testDefaultSingleQueueMetrics() {
     String queueName = "single";
     String user = "alice";
@@ -226,6 +234,37 @@ public class TestQueueMetrics {
     checkApps(userSource, 1, 0, 0, 1, 0, 0);
     checkApps(parentUserSource, 1, 0, 0, 1, 0, 0);
   }
+  
+  @Test 
+  public void testMetricsCache() {
+    MetricsSystem ms = new MetricsSystemImpl("cache");
+    
+    try {
+      String p1 = "root1";
+      String leafQueueName = "root1.leaf";
+      ms.start();
+
+      QueueMetrics p1Metrics =
+          QueueMetrics.forQueue(ms, p1, null, true, conf);
+      Queue parentQueue1 = make(stub(Queue.class).returning(p1Metrics).
+          from.getMetrics());
+      QueueMetrics metrics =
+          QueueMetrics.forQueue(ms, leafQueueName, parentQueue1, true, conf);
+
+      Assert.assertNotNull("QueueMetrics for A shoudn't be null", metrics);
+
+      // Re-register to check for cache hit, shouldn't blow up metrics-system...
+      // also, verify parent-metrics
+      QueueMetrics alterMetrics =
+          QueueMetrics.forQueue(ms, leafQueueName, parentQueue1, true, conf);
+
+      Assert.assertNotNull("QueueMetrics for alterMetrics shoudn't be null", 
+          alterMetrics);
+    } finally {
+      ms.shutdown();
+    }
+  }
+
 
   public static void checkApps(MetricsSource source, int submitted, int pending,
       int running, int completed, int failed, int killed) {
