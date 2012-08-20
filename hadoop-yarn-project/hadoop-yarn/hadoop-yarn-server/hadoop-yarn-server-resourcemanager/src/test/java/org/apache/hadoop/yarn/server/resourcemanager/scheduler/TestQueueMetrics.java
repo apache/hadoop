@@ -238,11 +238,11 @@ public class TestQueueMetrics {
   @Test 
   public void testMetricsCache() {
     MetricsSystem ms = new MetricsSystemImpl("cache");
+    ms.start();
     
     try {
       String p1 = "root1";
       String leafQueueName = "root1.leaf";
-      ms.start();
 
       QueueMetrics p1Metrics =
           QueueMetrics.forQueue(ms, p1, null, true, conf);
