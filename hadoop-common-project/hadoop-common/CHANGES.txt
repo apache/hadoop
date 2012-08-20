@@ -99,6 +99,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8700.  Use enum to define the checksum constants in DataChecksum.
     (szetszwo)
 
+    HADOOP-8686. Fix warnings in native code. (Colin Patrick McCabe via eli)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname

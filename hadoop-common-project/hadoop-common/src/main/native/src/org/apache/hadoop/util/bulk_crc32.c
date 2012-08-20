@@ -41,7 +41,7 @@ static uint32_t crc32c_sb8(uint32_t crc, const uint8_t *buf, size_t length);
 
 #ifdef USE_PIPELINED
 static void pipelined_crc32c(uint32_t *crc1, uint32_t *crc2, uint32_t *crc3, const uint8_t *p_buf, size_t block_size, int num_blocks);
-#endif USE_PIPELINED
+#endif
 static int cached_cpu_supports_crc32; // initialized by constructor below
 static uint32_t crc32c_hardware(uint32_t crc, const uint8_t* data, size_t length);
 
