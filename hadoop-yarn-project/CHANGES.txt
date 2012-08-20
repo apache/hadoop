@@ -51,3 +51,5 @@ Release 0.23.3 - Unreleased
 
     YARN-25. remove old aggregated logs  (Robert Evans via tgraves)
 
+    YARN-27. Failed refreshQueues due to misconfiguration prevents further 
+    refreshing of queues (Arun Murthy via tgraves)
