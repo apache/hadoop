@@ -71,6 +71,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8362. Improve exception message when Configuration.set() is called with a null key or value. (Madhukara Phatak and Suresh Srinivas via harsh)
 
+    HADOOP-8278. Make sure components declare correct set of dependencies.
+    (tomwhite)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname

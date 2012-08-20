@@ -34,7 +34,7 @@
     <dependency>
       <groupId>jdiff</groupId>
       <artifactId>jdiff</artifactId>
-      <scope>compile</scope>
+      <scope>provided</scope>
     </dependency>
   </dependencies>
 

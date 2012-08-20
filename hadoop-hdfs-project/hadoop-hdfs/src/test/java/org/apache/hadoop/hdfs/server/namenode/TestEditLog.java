@@ -34,12 +34,14 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -59,7 +61,6 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
-import org.aspectj.util.FileUtil;
 
 import org.mockito.Mockito;
 import org.junit.Test;
@@ -589,14 +590,14 @@ public class TestEditLog extends TestCase {
         
         LOG.info("Copying data directory aside to a hot backup");
         File backupDir = new File(dfsDir.getParentFile(), "dfs.backup-while-running");
-        FileUtil.copyDir(dfsDir, backupDir);;
+        FileUtils.copyDirectory(dfsDir, backupDir);
 
         LOG.info("Shutting down cluster #1");
         cluster.shutdown();
         cluster = null;
         
         // Now restore the backup
-        FileUtil.deleteContents(dfsDir);
+        FileUtil.fullyDeleteContents(dfsDir);
         backupDir.renameTo(dfsDir);
         
         // Directory layout looks like:
