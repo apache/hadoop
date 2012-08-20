@@ -59,7 +59,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.eve
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
 import org.apache.hadoop.yarn.service.AbstractService;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 public class LogAggregationService extends AbstractService implements
@@ -203,7 +202,7 @@ public class LogAggregationService extends AbstractService implements
     fs.setPermission(path, new FsPermission(fsPerm));
   }
 
-  private void createAppDir(final String user, final ApplicationId appId,
+  protected void createAppDir(final String user, final ApplicationId appId,
       UserGroupInformation userUgi) {
     try {
       userUgi.doAs(new PrivilegedExceptionAction<Object>() {
@@ -286,13 +285,12 @@ public class LogAggregationService extends AbstractService implements
     this.dispatcher.getEventHandler().handle(eventResponse);
   }
 
-  @VisibleForTesting
-  public void initAppAggregator(final ApplicationId appId, String user,
+  protected void initAppAggregator(final ApplicationId appId, String user,
       Credentials credentials, ContainerLogsRetentionPolicy logRetentionPolicy,
       Map<ApplicationAccessType, String> appAcls) {
 
     // Get user's FileSystem credentials
-    UserGroupInformation userUgi =
+    final UserGroupInformation userUgi =
         UserGroupInformation.createRemoteUser(user);
     if (credentials != null) {
       for (Token<? extends TokenIdentifier> token : credentials
@@ -300,9 +298,6 @@ public class LogAggregationService extends AbstractService implements
         userUgi.addToken(token);
       }
     }
-
-    // Create the app dir
-    createAppDir(user, appId, userUgi);
 
     // New application
     final AppLogAggregator appLogAggregator =
@@ -312,6 +307,14 @@ public class LogAggregationService extends AbstractService implements
             appAcls);
     if (this.appLogAggregators.putIfAbsent(appId, appLogAggregator) != null) {
       throw new YarnException("Duplicate initApp for " + appId);
+    }
+    // wait until check for existing aggregator to create dirs
+    try {
+      // Create the app dir
+      createAppDir(user, appId, userUgi);
+    } catch (YarnException e) {
+      closeFileSystems(userUgi);
+      throw e;
     }
 
 
@@ -325,10 +328,19 @@ public class LogAggregationService extends AbstractService implements
           appLogAggregator.run();
         } finally {
           appLogAggregators.remove(appId);
+          closeFileSystems(userUgi);
         }
       }
     };
     this.threadPool.execute(aggregatorWrapper);
+  }
+
+  protected void closeFileSystems(final UserGroupInformation userUgi) {
+    try {
+      FileSystem.closeAllForUGI(userUgi);
+    } catch (IOException e) {
+      LOG.warn("Failed to close filesystems: ", e);
+    }
   }
 
   // for testing only
