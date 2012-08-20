@@ -42,6 +42,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
@@ -59,6 +60,7 @@ public class TestParentQueue {
   private static final Log LOG = LogFactory.getLog(TestParentQueue.class);
   
   RMContext rmContext;
+  YarnConfiguration conf;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
   
@@ -68,9 +70,11 @@ public class TestParentQueue {
   @Before
   public void setUp() throws Exception {
     rmContext = TestUtils.getMockRMContext();
+    conf = new YarnConfiguration();
     csConf = new CapacitySchedulerConfiguration();
     
     csContext = mock(CapacitySchedulerContext.class);
+    when(csContext.getConf()).thenReturn(conf);
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getMinimumResourceCapability()).thenReturn(
         Resources.createResource(GB));

@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNodes;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
@@ -196,6 +197,7 @@ public class TestRMWebApp {
     setupQueueConfiguration(conf);
 
     CapacityScheduler cs = new CapacityScheduler();
+    cs.setConf(new YarnConfiguration());
     cs.reinitialize(conf, null, null);
     return cs;
   }
@@ -271,6 +273,7 @@ public class TestRMWebApp {
     setupFifoQueueConfiguration(conf);
 
     FifoScheduler fs = new FifoScheduler();
+    fs.setConf(new YarnConfiguration());
     fs.reinitialize(conf, null, null);
     return fs;
   }

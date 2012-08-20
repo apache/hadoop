@@ -108,7 +108,8 @@ public class ParentQueue implements CSQueue {
     // must be called after parent and queueName is set
     this.metrics = old != null ? old.getMetrics() :
         QueueMetrics.forQueue(getQueuePath(), parent,
-        cs.getConfiguration().getEnableUserMetrics());
+			      cs.getConfiguration().getEnableUserMetrics(),
+			      cs.getConf());
 
     float rawCapacity = cs.getConfiguration().getCapacity(getQueuePath());
 

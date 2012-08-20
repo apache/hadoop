@@ -62,6 +62,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4375. Show Configuration Tracability in MR UI (bobby 
     via tgraves)
 
+    MAPREDUCE-3773. Add queue metrics with buckets for job run times. (omalley
+    via acmurthy)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn

@@ -34,6 +34,7 @@ import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
@@ -56,11 +57,13 @@ public class TestApplicationLimits {
   public void setUp() throws IOException {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
+    YarnConfiguration conf = new YarnConfiguration();
     setupQueueConfiguration(csConf);
     
     
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
+    when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability()).thenReturn(Resources.createResource(16*GB));
     when(csContext.getClusterResources()).thenReturn(Resources.createResource(10 * 16 * GB));
@@ -124,10 +127,11 @@ public class TestApplicationLimits {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
     setupQueueConfiguration(csConf);
-    
+    YarnConfiguration conf = new YarnConfiguration();
     
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
+    when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).
         thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability()).
@@ -433,9 +437,11 @@ public class TestApplicationLimits {
         new CapacitySchedulerConfiguration();
     csConf.setUserLimit(CapacitySchedulerConfiguration.ROOT + "." + A, 25);
     setupQueueConfiguration(csConf);
+    YarnConfiguration conf = new YarnConfiguration();
     
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);
+    when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).
         thenReturn(Resources.createResource(GB));
     when(csContext.getMaximumResourceCapability()).
