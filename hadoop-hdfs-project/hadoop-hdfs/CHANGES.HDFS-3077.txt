@@ -26,3 +26,5 @@ HDFS-3799. QJM: handle empty log segments during recovery (todd)
 HDFS-3797. QJM: add segment txid as a parameter to journal() RPC (todd)
 
 HDFS-3800. improvements to QJM fault testing (todd)
+
+HDFS-3823. QJM: TestQJMWithFaults fails occasionally because of missed setting of HTTP port. (todd and atm)

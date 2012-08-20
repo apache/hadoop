@@ -359,6 +359,11 @@ public class IPCLoggerChannel implements AsyncLogger {
     return executor.submit(new Callable<PrepareRecoveryResponseProto>() {
       @Override
       public PrepareRecoveryResponseProto call() throws IOException {
+        if (httpPort < 0) {
+          // If the HTTP port hasn't been set yet, force an RPC call so we know
+          // what the HTTP port should be.
+          httpPort = getProxy().getJournalState(journalId).getHttpPort();
+        }
         return getProxy().prepareRecovery(createReqInfo(), segmentTxId);
       }
     });
