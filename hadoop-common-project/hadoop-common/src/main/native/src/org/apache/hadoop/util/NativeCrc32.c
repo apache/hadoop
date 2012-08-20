@@ -18,6 +18,7 @@
 
 #include <arpa/inet.h>
 #include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -50,7 +51,7 @@ static void throw_checksum_exception(JNIEnv *env,
 
   // Format error message
   snprintf(message, sizeof(message),
-    "Checksum error: %s at %ld exp: %d got: %d",
+    "Checksum error: %s at %"PRId64" exp: %"PRId32" got: %"PRId32,
     filename, pos, expected_crc, got_crc);
   if ((jstr_message = (*env)->NewStringUTF(env, message)) == NULL) {
     goto cleanup;

@@ -24,7 +24,7 @@
 // Simple Functions
 //****************************
 
-extern int LZ4_compress   (char* source, char* dest, int isize);
+extern int LZ4_compress   (const char* source, char* dest, int isize);
 
 /*
 LZ4_compress() :
