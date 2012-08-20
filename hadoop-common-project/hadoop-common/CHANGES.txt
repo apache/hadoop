@@ -202,6 +202,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8654. TextInputFormat delimiter bug (Gelesh and Jason Lowe via
     bobby)
 
+    HADOOP-8614. IOUtils#skipFully hangs forever on EOF. 
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
