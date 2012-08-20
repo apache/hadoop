@@ -98,7 +98,8 @@ public class TestLeafQueue {
     csConf = 
         new CapacitySchedulerConfiguration();
     csConf.setBoolean("yarn.scheduler.capacity.user-metrics.enable", true);
-    setupQueueConfiguration(csConf);
+    final String newRoot = "root" + System.currentTimeMillis();
+    setupQueueConfiguration(csConf, newRoot);
     YarnConfiguration conf = new YarnConfiguration();
     cs.setConf(conf);
     
@@ -112,7 +113,8 @@ public class TestLeafQueue {
     when(csContext.getClusterResources()).
         thenReturn(Resources.createResource(100 * 16 * GB));
     root = 
-        CapacityScheduler.parseQueue(csContext, csConf, null, "root", 
+        CapacityScheduler.parseQueue(csContext, csConf, null, 
+            CapacitySchedulerConfiguration.ROOT, 
             queues, queues, 
             CapacityScheduler.queueComparator, 
             CapacityScheduler.applicationComparator, 
@@ -126,25 +128,33 @@ public class TestLeafQueue {
   private static final String C = "c";
   private static final String C1 = "c1";
   private static final String D = "d";
-  private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
+  private void setupQueueConfiguration(
+      CapacitySchedulerConfiguration conf, 
+      final String newRoot) {
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
+    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {newRoot});
     conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     conf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     conf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
     
-    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
+    final String Q_newRoot = CapacitySchedulerConfiguration.ROOT + "." + newRoot;
+    conf.setQueues(Q_newRoot, new String[] {A, B, C, D});
+    conf.setCapacity(Q_newRoot, 100);
+    conf.setMaximumCapacity(Q_newRoot, 100);
+    conf.setAcl(Q_newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
+
+    final String Q_A = Q_newRoot + "." + A;
     conf.setCapacity(Q_A, 8.5f);
     conf.setMaximumCapacity(Q_A, 20);
     conf.setAcl(Q_A, QueueACL.SUBMIT_APPLICATIONS, "*");
     
-    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
+    final String Q_B = Q_newRoot + "." + B;
     conf.setCapacity(Q_B, 80);
     conf.setMaximumCapacity(Q_B, 99);
     conf.setAcl(Q_B, QueueACL.SUBMIT_APPLICATIONS, "*");
 
-    final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
+    final String Q_C = Q_newRoot + "." + C;
     conf.setCapacity(Q_C, 1.5f);
     conf.setMaximumCapacity(Q_C, 10);
     conf.setAcl(Q_C, QueueACL.SUBMIT_APPLICATIONS, " ");
@@ -154,7 +164,7 @@ public class TestLeafQueue {
     final String Q_C1 = Q_C + "." + C1;
     conf.setCapacity(Q_C1, 100);
 
-    final String Q_D = CapacitySchedulerConfiguration.ROOT + "." + D;
+    final String Q_D = Q_newRoot + "." + D;
     conf.setCapacity(Q_D, 10);
     conf.setMaximumCapacity(Q_D, 11);
     conf.setAcl(Q_D, QueueACL.SUBMIT_APPLICATIONS, "user_d");
