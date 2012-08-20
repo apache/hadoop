@@ -398,6 +398,14 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4549. Distributed cache conflicts breaks backwards compatability 
     (Robert Evans via tgraves)
 
+    MAPREDUCE-4082. hadoop-mapreduce-client-app's mrapp-generated-classpath 
+    file should not be in the module JAR (tucu)
+
+    MAPREDUCE-4091. tools testcases failing because of MAPREDUCE-4082 (tucu)
+
+    MAPREDUCE-4097. tools testcases fail because missing mrapp-generated-classpath 
+    file in classpath (rvs via tucu)
+ 
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
