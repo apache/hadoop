@@ -111,7 +111,7 @@ public class TestViewFileSystemHdfs extends ViewFileSystemBaseTest {
 
   @Override
   int getExpectedDelegationTokenCount() {
-    return 8;
+    return 2; // Mount points to 2 unique hdfs 
   }
 
   @Override

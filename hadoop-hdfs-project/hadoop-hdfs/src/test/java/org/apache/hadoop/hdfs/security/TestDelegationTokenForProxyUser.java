@@ -136,16 +136,14 @@ public class TestDelegationTokenForProxyUser {
     final UserGroupInformation proxyUgi = UserGroupInformation
         .createProxyUserForTesting(PROXY_USER, ugi, GROUP_NAMES);
     try {
-      Token<DelegationTokenIdentifier> token = proxyUgi
-          .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
-            public Token<DelegationTokenIdentifier> run() throws IOException {
-              DistributedFileSystem dfs = (DistributedFileSystem) cluster
-                  .getFileSystem();
-              return dfs.getDelegationToken("RenewerUser");
+      Token<?>[] tokens = proxyUgi
+          .doAs(new PrivilegedExceptionAction<Token<?>[]>() {
+            public Token<?>[] run() throws IOException {
+              return cluster.getFileSystem().addDelegationTokens("RenewerUser", null);
             }
           });
       DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
-      byte[] tokenId = token.getIdentifier();
+      byte[] tokenId = tokens[0].getIdentifier();
       identifier.readFields(new DataInputStream(new ByteArrayInputStream(
           tokenId)));
       Assert.assertEquals(identifier.getUser().getUserName(), PROXY_USER);

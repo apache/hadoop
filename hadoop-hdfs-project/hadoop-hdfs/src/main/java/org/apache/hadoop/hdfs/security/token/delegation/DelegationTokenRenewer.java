@@ -110,7 +110,11 @@ public class DelegationTokenRenewer<T extends FileSystem & DelegationTokenRenewe
             fs.getRenewToken().renew(fs.getConf());
           } catch (IOException ie) {
             try {
-              fs.setDelegationToken(fs.getDelegationTokens(null).get(0));
+              Token<?>[] tokens = fs.addDelegationTokens(null, null);
+              if (tokens.length == 0) {
+                throw new IOException("addDelegationTokens returned no tokens");
+              }
+              fs.setDelegationToken(tokens[0]);
             } catch (IOException ie2) {
               throw new IOException("Can't renew or get new delegation token ", ie);
             }

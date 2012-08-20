@@ -4,6 +4,8 @@ Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
 
+    HADOOP-7967. Need generalized multi-token filesystem support (daryn)
+
   NEW FEATURES
 
   IMPROVEMENTS
