@@ -146,6 +146,20 @@ dfs.datanode.readahead.bytes - set to a non-zero value to trigger readahead for 
       
 </blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3814">HDFS-3814</a>.
+     Major improvement reported by sureshms and fixed by jingzhao (name-node)<br>
+     <b>Make the replication monitor multipliers configurable in 1.x</b><br>
+     <blockquote>                    This change adds two new configuration parameters. <br/>
+
+# {{dfs.namenode.invalidate.work.pct.per.iteration}} for controlling deletion rate of blocks.<br/>
+
+# {{dfs.namenode.replication.work.multiplier.per.iteration}} for controlling replication rate. This in turn allows controlling the time it takes for decommissioning.<br/>
+
+<br/>
+
+Please see hdfs-default.xml for detailed description.
+</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2517">MAPREDUCE-2517</a>.
      Major task reported by vinaythota and fixed by vinaythota (contrib/gridmix)<br>
      <b>Porting Gridmix v3 system tests into trunk branch.</b><br>
@@ -402,6 +416,11 @@ dfs.datanode.readahead.bytes - set to a non-zero value to trigger readahead for 
      <b>Conflict: Same security.log.file for multiple users. </b><br>
      <blockquote>In log4j.properties, hadoop.security.log.file is set to SecurityAuth.audit. In the presence of multiple users, this can lead to a potential conflict.<br><br>Adding username to the log file would avoid this scenario.</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8656">HADOOP-8656</a>.
+     Minor improvement reported by stevel@apache.org and fixed by rvs (bin)<br>
+     <b>backport forced daemon shutdown of HADOOP-8353 into branch-1</b><br>
+     <blockquote>the init.d service shutdown code doesn&apos;t work if the daemon is hung -backporting the portion of HADOOP-8353 that edits bin/hadoop-daemon.sh corrects this</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-1108">HDFS-1108</a>.
      Major sub-task reported by dhruba and fixed by tlipcon (ha, name-node)<br>
      <b>Log newly allocated blocks</b><br>
@@ -636,6 +655,11 @@ dfs.datanode.readahead.bytes - set to a non-zero value to trigger readahead for 
      Blocker bug reported by tlipcon and fixed by tlipcon (name-node)<br>
      <b>1.x: FSEditLog failure removes the wrong edit stream when storage dirs have same name</b><br>
      <blockquote>In {{FSEditLog.removeEditsForStorageDir}}, we iterate over the edits streams trying to find the stream corresponding to a given dir. To check equality, we currently use the following condition:<br>{code}<br>      File parentDir = getStorageDirForStream(idx);<br>      if (parentDir.getName().equals(sd.getRoot().getName())) {<br>{code}<br>... which is horribly incorrect. If two or more storage dirs happen to have the same terminal path component (eg /data/1/nn and /data/2/nn) then it will pick the wrong strea...</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3696">HDFS-3696</a>.
+     Critical bug reported by kihwal and fixed by szetszwo <br>
+     <b>Create files with WebHdfsFileSystem goes OOM when file size is big</b><br>
+     <blockquote>When doing &quot;fs -put&quot; to a WebHdfsFileSystem (webhdfs://), the FsShell goes OOM if the file size is large. When I tested, 20MB files were fine, but 200MB didn&apos;t work.  <br><br>I also tried reading a large file by issuing &quot;-cat&quot; and piping to a slow sink in order to force buffering. The read path didn&apos;t have this problem. The memory consumption stayed the same regardless of progress.<br></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-1740">MAPREDUCE-1740</a>.
      Major bug reported by tlipcon and fixed by ahmed.radwan (jobtracker)<br>

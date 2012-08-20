@@ -4,25 +4,19 @@ Release 1.1.1 - Unreleased
 
   INCOMPATIBLE CHANGES
 
-    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck with
-    SPNEGO-based solution. (Jakob Homan, Owen O'Malley, Alejandro Abdelnur and
-    Aaron T. Myers via atm)
-
   NEW FEATURES
 
   IMPROVEMENTS
 
-    HADOOP-8656 Backport forced daemon shutdown of HADOOP-8353 into branch-1
-    (Roman Shaposhnik via stevel)
-
   BUG FIXES
 
-    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
-    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
-
-Release 1.1.0 - 2012.07.09
+Release 1.1.0 - 2012.08.20
 
   INCOMPATIBLE CHANGES
+
+    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck with
+    SPNEGO-based solution. (Jakob Homan, Owen O'Malley, Alejandro Abdelnur and
+    Aaron T. Myers via atm)
 
     HDFS-3044. fsck move should be non-destructive by default.
     (Colin Patrick McCabe via eli)
@@ -57,6 +51,9 @@ Release 1.1.0 - 2012.07.09
     files. (Andrew Purtell via cdouglas)
 
   IMPROVEMENTS
+
+    HADOOP-8656 Backport forced daemon shutdown of HADOOP-8353 into branch-1
+    (Roman Shaposhnik via stevel)
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
     from Rumen tool. (ravigummadi)
@@ -160,6 +157,9 @@ Release 1.1.0 - 2012.07.09
     (Jing Zhao via suresh)
 
   BUG FIXES
+
+    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
+    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
     become slow in some cases (ravigummadi)
