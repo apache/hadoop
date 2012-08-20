@@ -53,3 +53,5 @@ Release 0.23.3 - Unreleased
 
     YARN-27. Failed refreshQueues due to misconfiguration prevents further 
     refreshing of queues (Arun Murthy via tgraves)
+
+    MAPREDUCE-4323. NM leaks filesystems (Jason Lowe via jeagles)
