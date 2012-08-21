@@ -91,6 +91,10 @@ Trunk (unreleased changes)
     HADOOP-8624. ProtobufRpcEngine should log all RPCs if TRACE logging is
     enabled (todd)
 
+    HADOOP-8711. IPC Server supports adding exceptions for which
+    the message is printed and the stack trace is not printed to avoid chatter.
+    (Brandon Li via Suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
