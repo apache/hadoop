@@ -36,6 +36,9 @@ Release 2.1.0-alpha - Unreleased
 
     YARN-12. Fix findbugs warnings in FairScheduler. (Junping Du via acmurthy) 
 
+    YARN-22. Fix ContainerLogs to work if the log-dir is specified as a URI.
+    (Mayank Bansal via sseth)
+
 Release 0.23.3 - Unreleased 
 
   INCOMPATIBLE CHANGES
