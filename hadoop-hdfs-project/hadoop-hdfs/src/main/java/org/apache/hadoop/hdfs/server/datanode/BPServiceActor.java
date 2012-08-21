@@ -324,7 +324,7 @@ class BPServiceActor implements Runnable {
    * Run an immediate block report on this thread. Used by tests.
    */
   @VisibleForTesting
-  void triggerBlockReportForTests() throws IOException {
+  void triggerBlockReportForTests() {
     synchronized (pendingIncrementalBR) {
       lastBlockReport = 0;
       lastHeartbeat = 0;
@@ -340,7 +340,7 @@ class BPServiceActor implements Runnable {
   }
   
   @VisibleForTesting
-  void triggerHeartbeatForTests() throws IOException {
+  void triggerHeartbeatForTests() {
     synchronized (pendingIncrementalBR) {
       lastHeartbeat = 0;
       pendingIncrementalBR.notifyAll();
@@ -355,7 +355,7 @@ class BPServiceActor implements Runnable {
   }
 
   @VisibleForTesting
-  void triggerDeletionReportForTests() throws IOException {
+  void triggerDeletionReportForTests() {
     synchronized (pendingIncrementalBR) {
       lastDeletedReport = 0;
       pendingIncrementalBR.notifyAll();
@@ -670,7 +670,6 @@ class BPServiceActor implements Runnable {
       
       while (shouldRun()) {
         try {
-          bpos.startDistributedUpgradeIfNeeded();
           offerService();
         } catch (Exception ex) {
           LOG.error("Exception in BPOfferService for " + this, ex);

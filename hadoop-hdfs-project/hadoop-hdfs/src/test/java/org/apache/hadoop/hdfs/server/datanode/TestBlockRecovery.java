@@ -147,7 +147,7 @@ public class TestBlockRecovery {
         Mockito.any(DatanodeRegistration.class));
 
     when(namenode.versionRequest()).thenReturn(new NamespaceInfo
-        (1, CLUSTER_ID, POOL_ID, 1L, 1));
+        (1, CLUSTER_ID, POOL_ID, 1L));
 
     when(namenode.sendHeartbeat(
             Mockito.any(DatanodeRegistration.class),

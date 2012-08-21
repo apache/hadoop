@@ -742,8 +742,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
   @Override // ClientProtocol
   public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action)
       throws IOException {
-    namesystem.checkOperation(OperationCategory.READ);
-    return namesystem.distributedUpgradeProgress(action);
+    throw new UnsupportedActionException(
+        "Deprecated method. No longer supported");
   }
 
   @Override // ClientProtocol
@@ -917,8 +917,10 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
 
   @Override // DatanodeProtocol
-  public UpgradeCommand processUpgradeCommand(UpgradeCommand comm) throws IOException {
-    return namesystem.processDistributedUpgradeCommand(comm);
+  public UpgradeCommand processUpgradeCommand(UpgradeCommand comm)
+      throws IOException {
+    throw new UnsupportedActionException(
+        "Deprecated method, no longer supported");
   }
 
   /** 

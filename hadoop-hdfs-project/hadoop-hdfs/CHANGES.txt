@@ -120,6 +120,8 @@ Trunk (unreleased changes)
     HDFS-3803. Change BlockPoolSliceScanner chatty INFO log to DEBUG.
     (Andrew Purtell via suresh)
 
+    HDFS-2686. Remove DistributedUpgrade related code. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

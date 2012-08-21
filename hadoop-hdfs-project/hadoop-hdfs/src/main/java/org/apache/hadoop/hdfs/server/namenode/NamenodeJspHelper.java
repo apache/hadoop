@@ -120,19 +120,6 @@ class NamenodeJspHelper {
     return str;
   }
 
-  static String getUpgradeStatusText(FSNamesystem fsn) {
-    String statusText = "";
-    try {
-      UpgradeStatusReport status = fsn
-          .distributedUpgradeProgress(UpgradeAction.GET_STATUS);
-      statusText = (status == null ? "There are no upgrades in progress."
-          : status.getStatusText(false));
-    } catch (IOException e) {
-      statusText = "Upgrade status unknown.";
-    }
-    return statusText;
-  }
-
   /** Return a table containing version information. */
   static String getVersionTable(FSNamesystem fsn) {
     return "<div class='dfstable'><table>"
@@ -141,8 +128,6 @@ class NamenodeJspHelper {
         + VersionInfo.getVersion() + ", " + VersionInfo.getRevision()
         + "</td></tr>\n" + "\n  <tr><td class='col1'>Compiled:</td><td>" + VersionInfo.getDate()
         + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
-        + "</td></tr>\n  <tr><td class='col1'>Upgrades:</td><td>"
-        + getUpgradeStatusText(fsn)
         + "</td></tr>\n  <tr><td class='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
         + "</td></tr>\n  <tr><td class='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
         + "</td></tr>\n</table></div>";

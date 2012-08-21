@@ -325,7 +325,7 @@ message RemoteEditLogManifestProto {
  */
 message NamespaceInfoProto {
   required string buildVersion = 1;         // Software revision version (e.g. an svn or git revision)
-  required uint32 distUpgradeVersion = 2;   // Distributed upgrade version
+  required uint32 unused = 2;               // Retained for backward compatibility
   required string blockPoolID = 3;          // block pool used by the namespace
   required StorageInfoProto storageInfo = 4;// Node information
   required string softwareVersion = 5;      // Software version number (e.g. 2.0.0)
