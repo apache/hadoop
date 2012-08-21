@@ -420,8 +420,8 @@ public class TestHASafeMode {
     restartActive();
   }
   
-  private void assertSafeMode(NameNode nn, int safe, int total) {
-    String status = nn1.getNamesystem().getSafemode();
+  private static void assertSafeMode(NameNode nn, int safe, int total) {
+    String status = nn.getNamesystem().getSafemode();
     if (safe == total) {
       assertTrue("Bad safemode status: '" + status + "'",
           status.startsWith(

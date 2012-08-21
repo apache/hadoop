@@ -193,6 +193,9 @@ Trunk (unreleased changes)
 
     HDFS-3792. Fix two findbugs introduced by HDFS-3695 (todd)
 
+    HDFS-3827. TestHASafeMode#assertSafemode method should be made static.
+    (Jing Zhao via suresh)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
