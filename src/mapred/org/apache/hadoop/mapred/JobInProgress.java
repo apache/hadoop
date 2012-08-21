@@ -833,7 +833,7 @@ public class JobInProgress {
       return;
     }
     if (this.status.getRunState() == JobStatus.PREP) {
-      this.status.setRunState(JobStatus.RUNNING);
+      changeStateTo(JobStatus.RUNNING);
       JobHistory.JobInfo.logStarted(profile.getJobID());
     }
   }
