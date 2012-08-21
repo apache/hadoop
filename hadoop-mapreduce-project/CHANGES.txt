@@ -694,6 +694,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4053. Counters group names deprecation is wrong, iterating over
     group names deprecated names don't show up  (Robert Evans via tgraves)
 
+    MAPREDUCE-3506. Calling getPriority on JobInfo after parsing a history log
+    with JobHistoryParser throws a NullPointerException (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
