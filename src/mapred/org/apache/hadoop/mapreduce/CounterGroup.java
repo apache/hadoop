@@ -22,10 +22,12 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.TreeMap;
 
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -45,9 +47,12 @@ public class CounterGroup implements Writable, Iterable<Counter> {
    * Returns the specified resource bundle, or throws an exception.
    * @throws MissingResourceException if the bundle isn't found
    */
-  private static ResourceBundle getResourceBundle(String enumClassName) {
+  @Private
+  public static ResourceBundle getResourceBundle(String enumClassName)
+      throws MissingResourceException {
     String bundleName = enumClassName.replace('$','_');
-    return ResourceBundle.getBundle(bundleName);
+    return ResourceBundle.getBundle(bundleName, Locale.getDefault(), Thread
+        .currentThread().getContextClassLoader());
   }
 
   protected CounterGroup(String name) {

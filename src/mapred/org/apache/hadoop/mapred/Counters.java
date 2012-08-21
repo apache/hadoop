@@ -36,6 +36,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -167,7 +168,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     
     Group(String groupName) {
       try {
-        bundle = getResourceBundle(groupName);
+        bundle = CounterGroup.getResourceBundle(groupName);
       }
       catch (MissingResourceException neverMind) {
       }
@@ -383,15 +384,6 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * typical usage.
    */
   private Map<Enum, Counter> cache = new IdentityHashMap<Enum, Counter>();
-
-  /**
-   * Returns the specified resource bundle, or throws an exception.
-   * @throws MissingResourceException if the bundle isn't found
-   */
-  private static ResourceBundle getResourceBundle(String enumClassName) {
-    String bundleName = enumClassName.replace('$','_');
-    return ResourceBundle.getBundle(bundleName);
-  }
 
   /**
    * Returns the names of all counter classes.

@@ -84,6 +84,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
 
+    MAPREDUCE-4565. Backport MR-2855 to branch-1: ResourceBundle lookup during
+    counter name resolution takes a lot of time. (Karthik Kambatla via sseth)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
