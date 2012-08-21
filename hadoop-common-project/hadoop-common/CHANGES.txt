@@ -36,6 +36,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8240. Add a new API to allow users to specify a checksum type
     on FileSystem.create(..).  (Kihwal Lee via szetszwo)
 
+    HADOOP-8239. Add subclasses of MD5MD5CRC32FileChecksum to support file
+    checksum with CRC32C.  (Kihwal Lee via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
