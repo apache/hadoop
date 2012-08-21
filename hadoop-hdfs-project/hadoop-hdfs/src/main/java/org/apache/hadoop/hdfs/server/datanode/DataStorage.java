@@ -396,10 +396,6 @@ public class DataStorage extends Storage {
     if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION 
         && this.cTime == nsInfo.getCTime())
       return; // regular startup
-    // verify necessity of a distributed upgrade
-    UpgradeManagerDatanode um = 
-      datanode.getUpgradeManagerDatanode(nsInfo.getBlockPoolID());
-    verifyDistributedUpgradeProgress(um, nsInfo);
     
     // do upgrade
     if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION
@@ -708,14 +704,6 @@ public class DataStorage extends Storage {
           new File(to, otherNames[i]), oldLV, hl);
   }
 
-  private void verifyDistributedUpgradeProgress(UpgradeManagerDatanode um,
-                  NamespaceInfo nsInfo
-                ) throws IOException {
-    assert um != null : "DataNode.upgradeManager is null.";
-    um.setUpgradeState(false, getLayoutVersion());
-    um.initializeUpgrade(nsInfo);
-  }
-  
   /**
    * Add bpStorage into bpStorageMap
    */

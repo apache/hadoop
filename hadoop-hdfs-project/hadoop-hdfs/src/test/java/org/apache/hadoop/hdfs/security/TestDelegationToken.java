@@ -155,7 +155,7 @@ public class TestDelegationToken {
   @Test
   public void testAddDelegationTokensDFSApi() throws Exception {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("JobTracker");
-    DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+    DistributedFileSystem dfs = cluster.getFileSystem();
     Credentials creds = new Credentials();
     final Token<?> tokens[] = dfs.addDelegationTokens("JobTracker", creds);
     Assert.assertEquals(1, tokens.length);
@@ -198,7 +198,7 @@ public class TestDelegationToken {
 
   @Test
   public void testDelegationTokenWithDoAs() throws Exception {
-    final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+    final DistributedFileSystem dfs = cluster.getFileSystem();
     final Credentials creds = new Credentials();
     final Token<?> tokens[] = dfs.addDelegationTokens("JobTracker", creds);
     Assert.assertEquals(1, tokens.length);
@@ -212,8 +212,7 @@ public class TestDelegationToken {
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        final DistributedFileSystem dfs = (DistributedFileSystem) cluster
-            .getFileSystem();
+        final DistributedFileSystem dfs = cluster.getFileSystem();
         try {
           //try renew with long name
           dfs.renewDelegationToken(token);
@@ -226,8 +225,7 @@ public class TestDelegationToken {
     shortUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        final DistributedFileSystem dfs = (DistributedFileSystem) cluster
-            .getFileSystem();
+        final DistributedFileSystem dfs = cluster.getFileSystem();
         dfs.renewDelegationToken(token);
         return null;
       }
@@ -235,8 +233,7 @@ public class TestDelegationToken {
     longUgi.doAs(new PrivilegedExceptionAction<Object>() {
       @Override
       public Object run() throws IOException {
-        final DistributedFileSystem dfs = (DistributedFileSystem) cluster
-            .getFileSystem();
+        final DistributedFileSystem dfs = cluster.getFileSystem();
         try {
           //try cancel with long name
           dfs.cancelDelegationToken(token);
@@ -273,7 +270,7 @@ public class TestDelegationToken {
       NameNodeAdapter.getDtSecretManager(nn.getNamesystem());
     assertFalse("Secret manager should not run in safe mode", sm.isRunning());
     
-    NameNodeAdapter.leaveSafeMode(nn, false);
+    NameNodeAdapter.leaveSafeMode(nn);
     assertTrue("Secret manager should start when safe mode is exited",
         sm.isRunning());
     

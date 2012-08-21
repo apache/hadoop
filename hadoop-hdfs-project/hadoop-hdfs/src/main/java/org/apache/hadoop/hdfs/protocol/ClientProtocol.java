@@ -695,8 +695,9 @@ public interface ClientProtocol {
   public void finalizeUpgrade() throws IOException;
 
   /**
-   * Report distributed upgrade progress or force current upgrade to proceed.
+   * <em>Method no longer used - retained only for backward compatibility</em>
    * 
+   * Report distributed upgrade progress or force current upgrade to proceed.
    * @param action {@link HdfsConstants.UpgradeAction} to perform
    * @return upgrade status information or null if no upgrades are in progress
    * @throws IOException

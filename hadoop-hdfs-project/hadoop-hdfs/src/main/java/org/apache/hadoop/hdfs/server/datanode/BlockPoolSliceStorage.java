@@ -138,7 +138,7 @@ public class BlockPoolSliceStorage extends Storage {
     // During startup some of them can upgrade or roll back
     // while others could be up-to-date for the regular startup.
     for (int idx = 0; idx < getNumStorageDirs(); idx++) {
-      doTransition(datanode, getStorageDir(idx), nsInfo, startOpt);
+      doTransition(getStorageDir(idx), nsInfo, startOpt);
       assert getLayoutVersion() == nsInfo.getLayoutVersion() 
           : "Data-node and name-node layout versions must be the same.";
       assert getCTime() == nsInfo.getCTime() 
@@ -232,7 +232,7 @@ public class BlockPoolSliceStorage extends Storage {
    * @param startOpt startup option
    * @throws IOException
    */
-  private void doTransition(DataNode datanode, StorageDirectory sd,
+  private void doTransition(StorageDirectory sd,
       NamespaceInfo nsInfo, StartupOption startOpt) throws IOException {
     if (startOpt == StartupOption.ROLLBACK)
       doRollback(sd, nsInfo); // rollback if applicable
@@ -254,13 +254,9 @@ public class BlockPoolSliceStorage extends Storage {
           + blockpoolID);
     }
     if (this.layoutVersion == HdfsConstants.LAYOUT_VERSION
-        && this.cTime == nsInfo.getCTime())
+        && this.cTime == nsInfo.getCTime()) {
       return; // regular startup
-    
-    // verify necessity of a distributed upgrade
-    UpgradeManagerDatanode um = 
-      datanode.getUpgradeManagerDatanode(nsInfo.getBlockPoolID());
-    verifyDistributedUpgradeProgress(um, nsInfo);
+    }
     if (this.layoutVersion > HdfsConstants.LAYOUT_VERSION
         || this.cTime < nsInfo.getCTime()) {
       doUpgrade(sd, nsInfo); // upgrade
@@ -474,13 +470,6 @@ public class BlockPoolSliceStorage extends Storage {
     DataStorage.linkBlocks(new File(fromDir, DataStorage.STORAGE_DIR_RBW), 
         new File(toDir, DataStorage.STORAGE_DIR_RBW), diskLayoutVersion, hardLink);
     LOG.info( hardLink.linkStats.report() );
-  }
-
-  private void verifyDistributedUpgradeProgress(UpgradeManagerDatanode um,
-      NamespaceInfo nsInfo) throws IOException {
-    assert um != null : "DataNode.upgradeManager is null.";
-    um.setUpgradeState(false, getLayoutVersion());
-    um.initializeUpgrade(nsInfo);
   }
 
   /**

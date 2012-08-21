@@ -75,9 +75,12 @@ public class TestHDFSCLI extends CLITestHelperDFS {
   @After
   @Override
   public void tearDown() throws Exception {
-    if (null != fs)
+    if (fs != null) {
       fs.close();
-    dfsCluster.shutdown();
+    }
+    if (dfsCluster != null) {
+      dfsCluster.shutdown();
+    }
     Thread.sleep(2000);
     super.tearDown();
   }

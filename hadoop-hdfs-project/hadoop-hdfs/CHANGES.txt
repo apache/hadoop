@@ -3,7 +3,6 @@ Hadoop HDFS Change Log
 Release 2.0.1-alpha - UNRELEASED
   
   INCOMPATIBLE CHANGES
-
     HDFS-3446. HostsFileReader silently ignores bad includes/excludes
     (Matthew Jacobs via todd)
 
@@ -500,6 +499,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
+
+    HDFS-2686. Remove DistributedUpgrade related code. (suresh)
 
 Release 2.0.0-alpha - 05-23-2012
 

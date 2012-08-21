@@ -74,7 +74,6 @@ class BPOfferService {
    */
   DatanodeRegistration bpRegistration;
   
-  UpgradeManagerDatanode upgradeManager = null;
   private final DataNode dn;
 
   /**
@@ -260,33 +259,6 @@ class BPOfferService {
     }
   }
 
-  synchronized UpgradeManagerDatanode getUpgradeManager() {
-    if(upgradeManager == null)
-      upgradeManager = 
-        new UpgradeManagerDatanode(dn, getBlockPoolId());
-    
-    return upgradeManager;
-  }
-  
-  void processDistributedUpgradeCommand(UpgradeCommand comm)
-  throws IOException {
-    UpgradeManagerDatanode upgradeManager = getUpgradeManager();
-    upgradeManager.processUpgradeCommand(comm);
-  }
-
-  /**
-   * Start distributed upgrade if it should be initiated by the data-node.
-   */
-  synchronized void startDistributedUpgradeIfNeeded() throws IOException {
-    UpgradeManagerDatanode um = getUpgradeManager();
-    
-    if(!um.getUpgradeState())
-      return;
-    um.setUpgradeState(false, um.getUpgradeVersion());
-    um.startUpgrade();
-    return;
-  }
-  
   DataNode getDataNode() {
     return dn;
   }
@@ -374,9 +346,6 @@ class BPOfferService {
 
     if (bpServices.isEmpty()) {
       dn.shutdownBlockPool(this);
-      
-      if(upgradeManager != null)
-        upgradeManager.shutdownUpgrade();
     }
   }
   
@@ -594,7 +563,7 @@ class BPOfferService {
       break;
     case UpgradeCommand.UC_ACTION_START_UPGRADE:
       // start distributed upgrade here
-      processDistributedUpgradeCommand((UpgradeCommand)cmd);
+      LOG.warn("Distibuted upgrade is no longer supported");
       break;
     case DatanodeProtocol.DNA_RECOVERBLOCK:
       String who = "NameNode at " + actor.getNNSocketAddress();

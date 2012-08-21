@@ -381,14 +381,12 @@ public class TestPBHelper {
   
   @Test
   public void testConvertNamespaceInfo() {
-    NamespaceInfo info = new NamespaceInfo(37, "clusterID", "bpID", 2300, 53);
+    NamespaceInfo info = new NamespaceInfo(37, "clusterID", "bpID", 2300);
     NamespaceInfoProto proto = PBHelper.convert(info);
     NamespaceInfo info2 = PBHelper.convert(proto);
     compare(info, info2); //Compare the StorageInfo
     assertEquals(info.getBlockPoolID(), info2.getBlockPoolID());
     assertEquals(info.getBuildVersion(), info2.getBuildVersion());
-    assertEquals(info.getDistributedUpgradeVersion(),
-        info2.getDistributedUpgradeVersion());
   }
 
   private void compare(StorageInfo expected, StorageInfo actual) {
@@ -440,7 +438,7 @@ public class TestPBHelper {
     DatanodeRegistration reg2 = PBHelper.convert(proto);
     compare(reg.getStorageInfo(), reg2.getStorageInfo());
     compare(reg.getExportedKeys(), reg2.getExportedKeys());
-    compare((DatanodeID)reg, (DatanodeID)reg2);
+    compare(reg, reg2);
     assertEquals(reg.getSoftwareVersion(), reg2.getSoftwareVersion());
   }
   

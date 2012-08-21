@@ -108,7 +108,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -136,7 +135,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -160,7 +158,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirType;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
@@ -179,7 +176,6 @@ import org.apache.hadoop.hdfs.server.protocol.NNHAStatusHeartbeat;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
-import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
@@ -927,8 +923,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   NamespaceInfo unprotectedGetNamespaceInfo() {
     return new NamespaceInfo(dir.fsImage.getStorage().getNamespaceID(),
         getClusterId(), getBlockPoolId(),
-        dir.fsImage.getStorage().getCTime(),
-        upgradeManager.getUpgradeVersion());
+        dir.fsImage.getStorage().getCTime());
   }
 
   /**
@@ -3372,13 +3367,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
           nodeReg, blockPoolId, capacity, dfsUsed, remaining, blockPoolUsed,
           xceiverCount, maxTransfer, failedVolumes);
-      if (cmds == null || cmds.length == 0) {
-        DatanodeCommand cmd = upgradeManager.getBroadcastCommand();
-        if (cmd != null) {
-          cmds = new DatanodeCommand[] {cmd};
-        }
-      }
-      
       return new HeartbeatResponse(cmds, createHaStatusHeartbeat());
     } finally {
       readUnlock();
@@ -3819,24 +3807,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     /**
      * Leave safe mode.
      * <p>
-     * Switch to manual safe mode if distributed upgrade is required.<br>
      * Check for invalid, under- & over-replicated blocks in the end of startup.
      */
-    private synchronized void leave(boolean checkForUpgrades) {
-      if(checkForUpgrades) {
-        // verify whether a distributed upgrade needs to be started
-        boolean needUpgrade = false;
-        try {
-          needUpgrade = upgradeManager.startUpgrade();
-        } catch(IOException e) {
-          FSNamesystem.LOG.error("IOException in startDistributedUpgradeIfNeeded", e);
-        }
-        if(needUpgrade) {
-          // switch to manual safe mode
-          safeMode = new SafeModeInfo(false);
-          return;
-        }
-      }
+    private synchronized void leave() {
       // if not done yet, initialize replication queues.
       // In the standby, do not populate repl queues
       if (!isPopulatingReplQueues() && !isInStandbyState()) {
@@ -3930,7 +3903,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       // the threshold is reached
       if (!isOn() ||                           // safe mode is off
           extension <= 0 || threshold <= 0) {  // don't need to wait
-        this.leave(true); // leave safe mode
+        this.leave(); // leave safe mode
         return;
       }
       if (reached > 0) {  // threshold has already been reached before
@@ -4034,10 +4007,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         leaveMsg = "Safe mode will be turned off automatically";
       }
       if(isManual()) {
-        if(upgradeManager.getUpgradeState())
-          return leaveMsg + " upon completion of " + 
-            "the distributed upgrade: upgrade progress = " + 
-            upgradeManager.getUpgradeStatus() + "%";
         leaveMsg = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off";
       }
 
@@ -4172,13 +4141,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         LOG.info("NameNode is being shutdown, exit SafeModeMonitor thread. ");
       } else {
         // leave safe mode and stop the monitor
-        try {
-          leaveSafeMode(true);
-        } catch(SafeModeException es) { // should never happen
-          String msg = "SafeModeMonitor may not run during distributed upgrade.";
-          assert false : msg;
-          throw new RuntimeException(msg, es);
-        }
+        leaveSafeMode();
       }
       smmthread = null;
     }
@@ -4189,7 +4152,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       checkSuperuserPrivilege();
       switch(action) {
       case SAFEMODE_LEAVE: // leave safe mode
-        leaveSafeMode(false);
+        leaveSafeMode();
         break;
       case SAFEMODE_ENTER: // enter safe mode
         enterSafeMode(false);
@@ -4374,17 +4337,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Leave safe mode.
    * @throws IOException
    */
-  void leaveSafeMode(boolean checkForUpgrades) throws SafeModeException {
+  void leaveSafeMode() {
     writeLock();
     try {
       if (!isInSafeMode()) {
         NameNode.stateChangeLog.info("STATE* Safe mode is already OFF."); 
         return;
       }
-      if(upgradeManager.getUpgradeState())
-        throw new SafeModeException("Distributed upgrade is in progress",
-                                    safeMode);
-      safeMode.leave(checkForUpgrades);
+      safeMode.leave();
     } finally {
       writeUnlock();
     }
@@ -4457,18 +4417,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    */
   private boolean isValidBlock(Block b) {
     return (blockManager.getBlockCollection(b) != null);
-  }
-
-  // Distributed upgrade manager
-  final UpgradeManagerNamenode upgradeManager = new UpgradeManagerNamenode(this);
-
-  UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action 
-                                                 ) throws IOException {
-    return upgradeManager.distributedUpgradeProgress(action);
-  }
-
-  UpgradeCommand processDistributedUpgradeCommand(UpgradeCommand comm) throws IOException {
-    return upgradeManager.processUpgradeCommand(comm);
   }
 
   PermissionStatus createFsOwnerPermissions(FsPermission permission) {

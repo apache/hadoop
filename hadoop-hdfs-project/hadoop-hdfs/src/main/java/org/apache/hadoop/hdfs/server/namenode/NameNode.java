@@ -852,8 +852,7 @@ public class NameNode {
           existingStorage.getNamespaceID(),
           existingStorage.getClusterID(),
           existingStorage.getBlockPoolID(),
-          existingStorage.getCTime(),
-          existingStorage.getDistributedUpgradeVersion()));
+          existingStorage.getCTime()));
       
       // Need to make sure the edit log segments are in good shape to initialize
       // the shared edits dir.
