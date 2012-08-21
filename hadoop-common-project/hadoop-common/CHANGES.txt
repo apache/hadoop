@@ -101,6 +101,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8686. Fix warnings in native code. (Colin Patrick McCabe via eli)
 
+    HADOOP-8239. Add subclasses of MD5MD5CRC32FileChecksum to support file
+    checksum with CRC32C.  (Kihwal Lee via szetszwo)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
