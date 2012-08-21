@@ -182,6 +182,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8611. Allow fall-back to the shell-based implementation when 
     JNI-based users-group mapping fails (Robert Parker via bobby) 
 
+    HADOOP-8614. IOUtils#skipFully hangs forever on EOF. 
+    (Colin Patrick McCabe via eli)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
