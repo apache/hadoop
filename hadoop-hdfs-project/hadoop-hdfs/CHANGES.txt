@@ -220,6 +220,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3672. Expose disk-location information for blocks to enable better
     scheduling. (Andrew Wang via atm)
 
+    HDFS-2727. libhdfs should get the default block size from the server.
+    (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

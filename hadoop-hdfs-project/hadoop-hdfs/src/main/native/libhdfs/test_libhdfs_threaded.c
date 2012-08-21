@@ -21,13 +21,19 @@
 #include "native_mini_dfs.h"
 
 #include <errno.h>
+#include <inttypes.h>
 #include <semaphore.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#define TO_STR_HELPER(X) #X
+#define TO_STR(X) TO_STR_HELPER(X)
+
 #define TLH_MAX_THREADS 100
+
+#define TLH_DEFAULT_BLOCK_SIZE 134217728
 
 static sem_t tlhSem;
 
@@ -46,6 +52,7 @@ static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs
 {
     int ret, port;
     hdfsFS hdfs;
+    struct hdfsBuilder *bld;
     
     port = nmdGetNameNodePort(cl);
     if (port < 0) {
@@ -53,12 +60,52 @@ static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs
                 "returned error %d\n", port);
         return port;
     }
-    hdfs = hdfsConnectNewInstance("localhost", port);
+    bld = hdfsNewBuilder();
+    if (!bld)
+        return -ENOMEM;
+    hdfsBuilderSetNameNode(bld, "localhost");
+    hdfsBuilderSetNameNodePort(bld, port);
+    hdfsBuilderConfSetStr(bld, "dfs.block.size",
+                          TO_STR(TLH_DEFAULT_BLOCK_SIZE));
+    hdfsBuilderConfSetStr(bld, "dfs.blocksize",
+                          TO_STR(TLH_DEFAULT_BLOCK_SIZE));
+    hdfs = hdfsBuilderConnect(bld);
     if (!hdfs) {
         ret = -errno;
         return ret;
     }
     *fs = hdfs;
+    return 0;
+}
+
+static int doTestGetDefaultBlockSize(hdfsFS fs, const char *path)
+{
+    uint64_t blockSize;
+    int ret;
+
+    blockSize = hdfsGetDefaultBlockSize(fs);
+    if (blockSize < 0) {
+        ret = errno;
+        fprintf(stderr, "hdfsGetDefaultBlockSize failed with error %d\n", ret);
+        return ret;
+    } else if (blockSize != TLH_DEFAULT_BLOCK_SIZE) {
+        fprintf(stderr, "hdfsGetDefaultBlockSize got %"PRId64", but we "
+                "expected %d\n", blockSize, TLH_DEFAULT_BLOCK_SIZE);
+        return EIO;
+    }
+
+    blockSize = hdfsGetDefaultBlockSizeAtPath(fs, path);
+    if (blockSize < 0) {
+        ret = errno;
+        fprintf(stderr, "hdfsGetDefaultBlockSizeAtPath(%s) failed with "
+                "error %d\n", path, ret);
+        return ret;
+    } else if (blockSize != TLH_DEFAULT_BLOCK_SIZE) {
+        fprintf(stderr, "hdfsGetDefaultBlockSizeAtPath(%s) got "
+                "%"PRId64", but we expected %d\n", 
+                path, blockSize, TLH_DEFAULT_BLOCK_SIZE);
+        return EIO;
+    }
     return 0;
 }
 
@@ -76,6 +123,8 @@ static int doTestHdfsOperations(struct tlhThreadInfo *ti, hdfsFS fs)
     }
     EXPECT_ZERO(hdfsCreateDirectory(fs, prefix));
     snprintf(tmp, sizeof(tmp), "%s/file", prefix);
+
+    EXPECT_ZERO(doTestGetDefaultBlockSize(fs, prefix));
 
     /* There should not be any file to open for reading. */
     EXPECT_NULL(hdfsOpenFile(fs, tmp, O_RDONLY, 0, 0, 0));
