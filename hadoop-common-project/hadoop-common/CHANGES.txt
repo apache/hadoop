@@ -30,6 +30,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8242. AbstractDelegationTokenIdentifier: add getter methods
     for owner and realuser. (Colin Patrick McCabe via eli)
 
+    HADOOP-8700.  Use enum to define the checksum constants in DataChecksum.
+    (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

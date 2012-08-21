@@ -53,7 +53,7 @@ public class IFileInputStream extends InputStream {
    */
   public IFileInputStream(InputStream in, long len) {
     this.in = in;
-    sum = DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 
+    sum = DataChecksum.newDataChecksum(DataChecksum.Type.CRC32, 
         Integer.MAX_VALUE);
     checksumSize = sum.getChecksumSize();
     length = len;

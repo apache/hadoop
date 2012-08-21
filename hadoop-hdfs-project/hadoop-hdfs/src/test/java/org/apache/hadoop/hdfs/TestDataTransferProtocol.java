@@ -73,7 +73,7 @@ public class TestDataTransferProtocol extends TestCase {
                     "org.apache.hadoop.hdfs.TestDataTransferProtocol");
 
   private static final DataChecksum DEFAULT_CHECKSUM =
-    DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32C, 512);
+    DataChecksum.newDataChecksum(DataChecksum.Type.CRC32C, 512);
   
   DatanodeID datanode;
   InetSocketAddress dnAddr;

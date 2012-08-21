@@ -31,9 +31,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
-
 
 /**
  * Static utilities for dealing with the protocol buffers used by the
@@ -42,19 +39,6 @@ import com.google.common.collect.ImmutableBiMap;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class DataTransferProtoUtil {
-
-  /**
-   * Map between the internal DataChecksum identifiers and the protobuf-
-   * generated identifiers on the wire.
-   */
-  static BiMap<Integer, ChecksumProto.ChecksumType> checksumTypeMap =
-    ImmutableBiMap.<Integer, ChecksumProto.ChecksumType>builder()
-      .put(DataChecksum.CHECKSUM_CRC32, ChecksumProto.ChecksumType.CRC32)
-      .put(DataChecksum.CHECKSUM_CRC32C, ChecksumProto.ChecksumType.CRC32C)
-      .put(DataChecksum.CHECKSUM_NULL, ChecksumProto.ChecksumType.NULL)
-      .build();
-
-  
   static BlockConstructionStage fromProto(
       OpWriteBlockProto.BlockConstructionStage stage) {
     return BlockConstructionStage.valueOf(BlockConstructionStage.class,
@@ -68,7 +52,7 @@ public abstract class DataTransferProtoUtil {
   }
 
   public static ChecksumProto toProto(DataChecksum checksum) {
-    ChecksumType type = checksumTypeMap.get(checksum.getChecksumType());
+    ChecksumType type = ChecksumType.valueOf(checksum.getChecksumType().name());
     if (type == null) {
       throw new IllegalArgumentException(
           "Can't convert checksum to protobuf: " + checksum);
@@ -84,7 +68,7 @@ public abstract class DataTransferProtoUtil {
     if (proto == null) return null;
 
     int bytesPerChecksum = proto.getBytesPerChecksum();
-    int type = checksumTypeMap.inverse().get(proto.getType());
+    DataChecksum.Type type = DataChecksum.Type.valueOf(proto.getType().name());
     
     return DataChecksum.newDataChecksum(type, bytesPerChecksum);
   }

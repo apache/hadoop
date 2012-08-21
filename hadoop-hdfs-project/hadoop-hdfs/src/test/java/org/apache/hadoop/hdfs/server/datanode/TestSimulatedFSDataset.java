@@ -65,7 +65,7 @@ public class TestSimulatedFSDataset extends TestCase {
       // data written
       ReplicaInPipelineInterface bInfo = fsdataset.createRbw(b);
       BlockWriteStreams out = bInfo.createStreams(true,
-          DataChecksum.newDataChecksum(DataChecksum.CHECKSUM_CRC32, 512));
+          DataChecksum.newDataChecksum(DataChecksum.Type.CRC32, 512));
       try {
         OutputStream dataOut  = out.dataOut;
         assertEquals(0, fsdataset.getLength(b));
@@ -115,7 +115,7 @@ public class TestSimulatedFSDataset extends TestCase {
     short version = metaDataInput.readShort();
     assertEquals(BlockMetadataHeader.VERSION, version);
     DataChecksum checksum = DataChecksum.newDataChecksum(metaDataInput);
-    assertEquals(DataChecksum.CHECKSUM_NULL, checksum.getChecksumType());
+    assertEquals(DataChecksum.Type.NULL, checksum.getChecksumType());
     assertEquals(0, checksum.getChecksumSize());  
   }
 
