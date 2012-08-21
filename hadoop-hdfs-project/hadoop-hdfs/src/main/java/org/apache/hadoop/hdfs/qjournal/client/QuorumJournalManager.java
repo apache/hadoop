@@ -209,7 +209,7 @@ public class QuorumJournalManager implements JournalManager {
         loggers.prepareRecovery(segmentTxId);
     Map<AsyncLogger, PrepareRecoveryResponseProto> prepareResponses=
         loggers.waitForWriteQuorum(prepare, prepareRecoveryTimeoutMs);
-    LOG.info("Recovery prepare phase complete. Responses: " +
+    LOG.info("Recovery prepare phase complete. Responses:\n" +
         QuorumCall.mapToString(prepareResponses));
 
     // Determine the logger who either:
@@ -434,7 +434,6 @@ public class QuorumJournalManager implements JournalManager {
       
       for (RemoteEditLog remoteLog : manifest.getLogs()) {
         URL url = logger.buildURLToFetchLogs(remoteLog.getStartTxId());
-        LOG.info("URL: " + url);
 
         EditLogInputStream elis = EditLogFileInputStream.fromUrl(
             url, remoteLog.getStartTxId(), remoteLog.getEndTxId(),

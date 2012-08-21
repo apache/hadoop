@@ -51,12 +51,14 @@ class QuorumException extends IOException {
     msg.append(simpleMsg).append(". ");
     if (!successes.isEmpty()) {
       msg.append(successes.size()).append(" successful responses:\n");
+      
       Joiner.on("\n")
-          .useForNull("null")
+          .useForNull("null [success]")
           .withKeyValueSeparator(": ")
           .appendTo(msg, successes);
       msg.append("\n");
     }
+    
     msg.append(exceptions.size() + " exceptions thrown:\n");
     boolean isFirst = true;
     
@@ -70,8 +72,10 @@ class QuorumException extends IOException {
       
       if (e.getValue() instanceof RuntimeException) {
         msg.append(StringUtils.stringifyException(e.getValue()));
-      } else {
+      } else if (e.getValue().getLocalizedMessage() != null) {
         msg.append(e.getValue().getLocalizedMessage());
+      } else {
+        msg.append(StringUtils.stringifyException(e.getValue()));
       }
     }
     return new QuorumException(msg.toString());
