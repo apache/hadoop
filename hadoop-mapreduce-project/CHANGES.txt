@@ -406,6 +406,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4097. tools testcases fail because missing mrapp-generated-classpath 
     file in classpath (rvs via tucu)
  
+    MAPREDUCE-3506. Calling getPriority on JobInfo after parsing a history log
+    with JobHistoryParser throws a NullPointerException (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
