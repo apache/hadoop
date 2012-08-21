@@ -24,11 +24,18 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.util.DataChecksum;
 
 /** 
  * This class contains constants for configuration keys used
  * in the local file system, raw local fs and checksum fs.
+ *
+ * Note that the settings for unimplemented features are ignored. 
+ * E.g. checksum related settings are just place holders. Even when
+ * wrapped with {@link ChecksumFileSystem}, these settings are not
+ * used.
  */
+
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class LocalConfigKeys extends CommonConfigurationKeys {
@@ -43,6 +50,8 @@ public class LocalConfigKeys extends CommonConfigurationKeys {
   public static final String CLIENT_WRITE_PACKET_SIZE_KEY =
                                                 "file.client-write-packet-size";
   public static final int CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
+  public static final DataChecksum.Type CHECKSUM_TYPE_DEFAULT =
+      DataChecksum.Type.CRC32;
 
   public static FsServerDefaults getServerDefaults() throws IOException {
     return new FsServerDefaults(
@@ -50,7 +59,8 @@ public class LocalConfigKeys extends CommonConfigurationKeys {
         BYTES_PER_CHECKSUM_DEFAULT,
         CLIENT_WRITE_PACKET_SIZE_DEFAULT,
         REPLICATION_DEFAULT,
-        STREAM_BUFFER_SIZE_DEFAULT);
+        STREAM_BUFFER_SIZE_DEFAULT,
+        CHECKSUM_TYPE_DEFAULT);
   }
 }
   

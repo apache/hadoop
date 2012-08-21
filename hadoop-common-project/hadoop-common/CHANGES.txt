@@ -33,6 +33,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8700.  Use enum to define the checksum constants in DataChecksum.
     (szetszwo)
 
+    HADOOP-8240. Add a new API to allow users to specify a checksum type
+    on FileSystem.create(..).  (Kihwal Lee via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
