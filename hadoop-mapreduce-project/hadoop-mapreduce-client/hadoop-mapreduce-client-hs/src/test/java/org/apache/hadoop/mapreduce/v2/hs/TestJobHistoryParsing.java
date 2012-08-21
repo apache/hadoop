@@ -84,6 +84,13 @@ public class TestJobHistoryParsing {
   }
 
   @Test
+  public void testJobInfo() throws Exception {
+    JobInfo info = new JobInfo();
+    Assert.assertEquals("NORMAL", info.getPriority());
+    info.printAll();
+  }
+
+  @Test
   public void testHistoryParsing() throws Exception {
     LOG.info("STARTING testHistoryParsing()");
     try {
