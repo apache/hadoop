@@ -154,6 +154,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "ha.failover-controller.graceful-fence.rpc-timeout.ms";
   public static final int HA_FC_GRACEFUL_FENCE_TIMEOUT_DEFAULT = 5000;
   
+  /* FC connection retries for graceful fencing */
+  public static final String HA_FC_GRACEFUL_FENCE_CONNECTION_RETRIES =
+      "ha.failover-controller.graceful-fence.connection.retries";
+  public static final int HA_FC_GRACEFUL_FENCE_CONNECTION_RETRIES_DEFAULT = 1;
+
   /* Timeout that the CLI (manual) FC waits for monitorHealth, getServiceState */
   public static final String HA_FC_CLI_CHECK_TIMEOUT_KEY =
     "ha.failover-controller.cli-check.rpc-timeout.ms";
