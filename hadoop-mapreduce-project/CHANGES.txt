@@ -50,6 +50,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4068. Jars in lib subdirectory of the submittable JAR are not added to the 
     classpath (rkanter via tucu)
 
+    MAPREDUCE-4577. HDFS-3672 broke
+    TestCombineFileInputFormat.testMissingBlocks() test (atm)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
