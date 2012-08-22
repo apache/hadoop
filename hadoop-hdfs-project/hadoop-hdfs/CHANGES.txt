@@ -487,6 +487,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3830. test_libhdfs_threaded: use forceNewInstance.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3837. Fix DataNode.recoverBlock findbugs warning. (eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
