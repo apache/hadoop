@@ -125,6 +125,8 @@ Trunk (unreleased changes)
     HDFS-3817. Avoid printing SafeModeException stack trace.
     (Brandon Li via suresh)
 
+    HDFS-3832. Remove protocol methods related to DistributedUpgrade. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

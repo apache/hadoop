@@ -33,8 +33,6 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.EnumSetWritable;
@@ -693,17 +691,6 @@ public interface ClientProtocol {
    * @throws IOException
    */
   public void finalizeUpgrade() throws IOException;
-
-  /**
-   * <em>Method no longer used - retained only for backward compatibility</em>
-   * 
-   * Report distributed upgrade progress or force current upgrade to proceed.
-   * @param action {@link HdfsConstants.UpgradeAction} to perform
-   * @return upgrade status information or null if no upgrades are in progress
-   * @throws IOException
-   */
-  public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action) 
-      throws IOException;
 
   /**
    * @return CorruptFileBlocks, containing a list of corrupt files (with

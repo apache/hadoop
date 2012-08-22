@@ -37,7 +37,6 @@ import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -47,7 +46,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Create
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DatanodeReportTypeProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SafeModeActionProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeActionProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BalancerBandwidthCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.BlockRecoveryCommandProto;
@@ -61,7 +59,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHe
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReportProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.UpgradeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.DataEncryptionKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockKeyProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
@@ -96,7 +93,6 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RemoteEditLogProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.NamenodeRegistrationProto.NamenodeRoleProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ReplicaStateProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.StorageInfoProto;
-import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.UpgradeStatusReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.JournalProtocolProtos.JournalInfoProto;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockKey;
@@ -106,7 +102,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
@@ -132,7 +127,6 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStat
 import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
-import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.DataChecksum;
@@ -640,8 +634,6 @@ public class PBHelper {
       return PBHelper.convert(proto.getKeyUpdateCmd());
     case RegisterCommand:
       return REG_CMD;
-    case UpgradeCommand:
-      return PBHelper.convert(proto.getUpgradeCmd());
     }
     return null;
   }
@@ -738,29 +730,11 @@ public class PBHelper {
       builder.setCmdType(DatanodeCommandProto.Type.BlockCommand).setBlkCmd(
           PBHelper.convert((BlockCommand) datanodeCommand));
       break;
-    case DatanodeProtocol.DNA_UC_ACTION_REPORT_STATUS:
-    case DatanodeProtocol.DNA_UC_ACTION_START_UPGRADE:
-      builder.setCmdType(DatanodeCommandProto.Type.UpgradeCommand)
-          .setUpgradeCmd(PBHelper.convert((UpgradeCommand) datanodeCommand));
-      break;
     case DatanodeProtocol.DNA_UNKNOWN: //Not expected
     default:
       builder.setCmdType(DatanodeCommandProto.Type.NullDatanodeCommand);
     }
     return builder.build();
-  }
-
-  public static UpgradeCommand convert(UpgradeCommandProto upgradeCmd) {
-    int action = UpgradeCommand.UC_ACTION_UNKNOWN;
-    switch (upgradeCmd.getAction()) {
-    case REPORT_STATUS:
-      action = UpgradeCommand.UC_ACTION_REPORT_STATUS;
-      break;
-    case START_UPGRADE:
-      action = UpgradeCommand.UC_ACTION_START_UPGRADE;
-    }
-    return new UpgradeCommand(action, upgradeCmd.getVersion(),
-        (short) upgradeCmd.getUpgradeStatus());
   }
 
   public static KeyUpdateCommand convert(KeyUpdateCommandProto keyUpdateCmd) {
@@ -850,28 +824,6 @@ public class PBHelper {
     }
     return builder.setBlock(PBHelper.convert(receivedDeletedBlockInfo.getBlock()))
         .build();
-  }
-
-  public static UpgradeCommandProto convert(UpgradeCommand comm) {
-    UpgradeCommandProto.Builder builder = UpgradeCommandProto.newBuilder();
-    if (comm == null) {
-      return builder.setAction(UpgradeCommandProto.Action.UNKNOWN)
-          .setVersion(0).setUpgradeStatus(0).build();
-    }
-    builder.setVersion(comm.getVersion()).setUpgradeStatus(
-        comm.getCurrentStatus());
-    switch (comm.getAction()) {
-    case UpgradeCommand.UC_ACTION_REPORT_STATUS:
-      builder.setAction(UpgradeCommandProto.Action.REPORT_STATUS);
-      break;
-    case UpgradeCommand.UC_ACTION_START_UPGRADE:
-      builder.setAction(UpgradeCommandProto.Action.START_UPGRADE);
-      break;
-    default:
-      builder.setAction(UpgradeCommandProto.Action.UNKNOWN);
-      break;
-    }
-    return builder.build();
   }
 
   public static ReceivedDeletedBlockInfo convert(
@@ -1236,51 +1188,6 @@ public class PBHelper {
     default:
       throw new IllegalArgumentException("Unexpected SafeModeAction :" + a);
     }
-  }
-  
-  public static UpgradeActionProto convert(
-      UpgradeAction a) {
-    switch (a) {
-    case GET_STATUS:
-      return UpgradeActionProto.GET_STATUS;
-    case DETAILED_STATUS:
-      return UpgradeActionProto.DETAILED_STATUS;
-    case FORCE_PROCEED:
-      return UpgradeActionProto.FORCE_PROCEED;
-    default:
-      throw new IllegalArgumentException("Unexpected UpgradeAction :" + a);
-    }
-  }
-  
-  
-  public static UpgradeAction convert(
-      UpgradeActionProto a) {
-    switch (a) {
-    case GET_STATUS:
-      return UpgradeAction.GET_STATUS;
-    case DETAILED_STATUS:
-      return UpgradeAction.DETAILED_STATUS;
-    case FORCE_PROCEED:
-      return UpgradeAction.FORCE_PROCEED;
-    default:
-      throw new IllegalArgumentException("Unexpected UpgradeAction :" + a);
-    }
-  }
-
-  public static UpgradeStatusReportProto convert(UpgradeStatusReport r) {
-    if (r == null)
-      return null;
-    return UpgradeStatusReportProto.newBuilder()
-        .setVersion(r.getVersion())
-        .setUpgradeStatus(r.getUpgradeStatus())
-        .setFinalized(r.isFinalized())
-        .build();
-  }
-  
-  public static UpgradeStatusReport convert(UpgradeStatusReportProto r) {
-    if (r == null) return null;
-    return new UpgradeStatusReport(r.getVersion(),
-        (short) r.getUpgradeStatus(), r.getFinalized());
   }
   
   public static CorruptFileBlocks convert(CorruptFileBlocksProto c) {

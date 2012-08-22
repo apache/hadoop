@@ -33,8 +33,6 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportR
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ProcessUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReceivedDeletedBlockInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeResponseProto;
@@ -56,7 +54,6 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
 import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -209,25 +206,6 @@ public class DatanodeProtocolServerSideTranslatorPB implements
     }
     return VersionResponseProto.newBuilder()
         .setInfo(PBHelper.convert(info)).build();
-  }
-
-  @Override
-  public ProcessUpgradeResponseProto processUpgrade(RpcController controller,
-      ProcessUpgradeRequestProto request) throws ServiceException {
-    UpgradeCommand ret;
-    try {
-      UpgradeCommand cmd = request.hasCmd() ? PBHelper
-          .convert(request.getCmd()) : null;
-      ret = impl.processUpgradeCommand(cmd);
-    } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-    ProcessUpgradeResponseProto.Builder builder = 
-        ProcessUpgradeResponseProto.newBuilder();
-    if (ret != null) {
-      builder.setCmd(PBHelper.convert(ret));
-    }
-    return builder.build();
   }
 
   @Override

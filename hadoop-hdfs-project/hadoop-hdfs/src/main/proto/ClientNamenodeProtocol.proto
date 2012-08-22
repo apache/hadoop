@@ -296,19 +296,6 @@ message FinalizeUpgradeRequestProto { // no parameters
 message FinalizeUpgradeResponseProto { // void response
 }
 
-enum UpgradeActionProto {
-  GET_STATUS = 1;
-  DETAILED_STATUS = 2;
-  FORCE_PROCEED = 3;
-}
-
-message DistributedUpgradeProgressRequestProto {
-  required UpgradeActionProto action = 1;
-}
-message DistributedUpgradeProgressResponseProto {
-  optional UpgradeStatusReportProto report = 1;
-}
-
 message ListCorruptFileBlocksRequestProto {
   required string path = 1;
   optional string cookie = 2;
@@ -490,8 +477,6 @@ service ClientNamenodeProtocol {
   rpc refreshNodes(RefreshNodesRequestProto) returns(RefreshNodesResponseProto);
   rpc finalizeUpgrade(FinalizeUpgradeRequestProto)
       returns(FinalizeUpgradeResponseProto);
-  rpc distributedUpgradeProgress(DistributedUpgradeProgressRequestProto)
-      returns(DistributedUpgradeProgressResponseProto);
   rpc listCorruptFileBlocks(ListCorruptFileBlocksRequestProto)
       returns(ListCorruptFileBlocksResponseProto);
   rpc metaSave(MetaSaveRequestProto) returns(MetaSaveResponseProto);
