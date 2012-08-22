@@ -210,6 +210,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8614. IOUtils#skipFully hangs forever on EOF. 
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8720. TestLocalFileSystem should use test root subdirectory.
+    (Vlad Rozov via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
