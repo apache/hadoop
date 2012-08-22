@@ -211,15 +211,6 @@ message DirectoryListingProto {
 }
 
 /**
- * Status of current cluster upgrade from one version to another
- */
-message UpgradeStatusReportProto {
-  required uint32 version = 1;;
-  required uint32 upgradeStatus = 2; // % completed in range 0 & 100
-	required bool finalized = 3;
-}
-
-/**
  * Common node information shared by all the nodes in the cluster
  */
 message StorageInfoProto {

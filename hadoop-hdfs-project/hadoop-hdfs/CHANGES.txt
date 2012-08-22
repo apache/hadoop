@@ -222,6 +222,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-2727. libhdfs should get the default block size from the server.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3832. Remove protocol methods related to DistributedUpgrade. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
