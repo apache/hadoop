@@ -33,8 +33,8 @@ import org.junit.Test;
  * This class tests the local file system via the FileSystem abstraction.
  */
 public class TestLocalFileSystem {
-  private static String TEST_ROOT_DIR
-    = System.getProperty("test.build.data","build/test/data/work-dir/localfs");
+  private static final String TEST_ROOT_DIR
+    = System.getProperty("test.build.data","build/test/data") + "/work-dir/localfs";
 
   private Configuration conf;
   private FileSystem fileSys;
