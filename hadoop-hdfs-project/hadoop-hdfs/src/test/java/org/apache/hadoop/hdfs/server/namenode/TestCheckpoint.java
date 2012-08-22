@@ -67,6 +67,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -1825,6 +1826,49 @@ public class TestCheckpoint {
       // old image in memory.
       secondary.doCheckpoint();
       
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
+  /**
+   * Regression test for HDFS-3835 - "Long-lived 2NN cannot perform a
+   * checkpoint if security is enabled and the NN restarts without outstanding
+   * delegation tokens"
+   */
+  @Test
+  public void testSecondaryNameNodeWithDelegationTokens() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .format(true).build();
+      
+      assertNotNull(cluster.getNamesystem().getDelegationToken(new Text("atm")));
+  
+      secondary = startSecondaryNameNode(conf);
+
+      // Checkpoint once, so the 2NN loads the DT into its in-memory sate.
+      secondary.doCheckpoint();
+      
+      // Perform a saveNamespace, so that the NN has a new fsimage, and the 2NN
+      // therefore needs to download a new fsimage the next time it performs a
+      // checkpoint.
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      
+      // Ensure that the 2NN can still perform a checkpoint.
+      secondary.doCheckpoint();
     } finally {
       if (secondary != null) {
         secondary.shutdown();

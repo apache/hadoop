@@ -283,7 +283,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   // Scan interval is not configurable.
   private static final long DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL =
     TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
-  private final DelegationTokenSecretManager dtSecretManager;
+  final DelegationTokenSecretManager dtSecretManager;
   private final boolean alwaysUseDelegationTokensForTests;
   
 

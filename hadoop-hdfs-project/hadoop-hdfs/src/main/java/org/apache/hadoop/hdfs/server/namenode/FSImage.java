@@ -536,6 +536,7 @@ public class FSImage implements Closeable {
    */
   void reloadFromImageFile(File file, FSNamesystem target) throws IOException {
     target.dir.reset();
+    target.dtSecretManager.reset();
 
     LOG.debug("Reloading namespace from " + file);
     loadFSImage(file, target, null);
