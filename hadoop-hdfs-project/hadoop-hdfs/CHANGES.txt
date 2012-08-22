@@ -123,6 +123,9 @@ Trunk (unreleased changes)
     HDFS-3817. Avoid printing SafeModeException stack trace.
     (Brandon Li via suresh)
 
+    HDFS-3819. Should check whether invalidate work percentage default value is 
+    not greater than 1.0f. (Jing Zhao via jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
