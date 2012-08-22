@@ -120,12 +120,8 @@ Trunk (unreleased changes)
     HDFS-3803. Change BlockPoolSliceScanner chatty INFO log to DEBUG.
     (Andrew Purtell via suresh)
 
-    HDFS-2686. Remove DistributedUpgrade related code. (suresh)
-
     HDFS-3817. Avoid printing SafeModeException stack trace.
     (Brandon Li via suresh)
-
-    HDFS-3832. Remove protocol methods related to DistributedUpgrade. (suresh)
 
   OPTIMIZATIONS
 
@@ -417,6 +413,10 @@ Branch-2 ( Unreleased changes )
 
     HDFS-2727. libhdfs should get the default block size from the server.
     (Colin Patrick McCabe via eli)
+
+    HDFS-2686. Remove DistributedUpgrade related code. (suresh)
+
+    HDFS-3832. Remove protocol methods related to DistributedUpgrade. (suresh)
 
   OPTIMIZATIONS
 
