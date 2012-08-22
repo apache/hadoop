@@ -536,8 +536,10 @@ public interface MRJobConfig {
 
   public static final String JOB_SPLIT_METAINFO = "job.splitmetainfo";
 
-  public static final String APPLICATION_MASTER_CLASS =
-      "org.apache.hadoop.mapreduce.v2.app.MRAppMaster";
+  
+  
+  public static final String APPLICATION_MASTER_CLASS = MR_AM_PREFIX + "class";
+  public static final String DEFAULT_APPLICATION_MASTER_CLASS = "org.apache.hadoop.mapreduce.v2.app.MRAppMaster"; 
 
   // The token file for the application. Should contain tokens for access to
   // remote file system and may optionally contain application specific tokens.
