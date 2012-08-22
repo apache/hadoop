@@ -122,6 +122,9 @@ Trunk (unreleased changes)
 
     HDFS-2686. Remove DistributedUpgrade related code. (suresh)
 
+    HDFS-3817. Avoid printing SafeModeException stack trace.
+    (Brandon Li via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
