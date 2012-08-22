@@ -87,6 +87,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4565. Backport MR-2855 to branch-1: ResourceBundle lookup during
     counter name resolution takes a lot of time. (Karthik Kambatla via sseth)
 
+    HDFS-3819. Should check whether invalidate work percentage default value is 
+    not greater than 1.0f. (Jing Zhao via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

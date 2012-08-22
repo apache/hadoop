@@ -136,7 +136,7 @@ public class DFSUtil {
     float blocksInvalidateWorkPct = conf.getFloat(
         DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION,
         DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION_DEFAULT);
-    if (blocksInvalidateWorkPct <= 0) {
+    if (blocksInvalidateWorkPct <= 0.0f || blocksInvalidateWorkPct > 1.0f) {
       throw new IllegalArgumentException(
           DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION + " = '"
               + blocksInvalidateWorkPct + "' is invalid. "

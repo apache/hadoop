@@ -433,7 +433,23 @@ public class TestReplicationPolicy extends TestCase {
     float blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
     assertTrue(blocksInvalidateWorkPct > 0);
     
-    conf.set(DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "0.0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "0.0f");
+    try {
+      blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+      fail("Should throw IllegalArgumentException.");
+    } catch (IllegalArgumentException e) {
+      // expected 
+    }
+    
+    conf.set(DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "1.5f");
+    try {
+      blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+      fail("Should throw IllegalArgumentException.");
+    } catch (IllegalArgumentException e) {
+      // expected 
+    }
+    
+    conf.set(DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "-0.5f");
     try {
       blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
       fail("Should throw IllegalArgumentException.");
