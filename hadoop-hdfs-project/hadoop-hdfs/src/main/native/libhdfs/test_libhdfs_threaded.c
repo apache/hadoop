@@ -63,6 +63,7 @@ static int hdfsSingleNameNodeConnect(struct NativeMiniDfsCluster *cl, hdfsFS *fs
     bld = hdfsNewBuilder();
     if (!bld)
         return -ENOMEM;
+    hdfsBuilderSetForceNewInstance(bld);
     hdfsBuilderSetNameNode(bld, "localhost");
     hdfsBuilderSetNameNodePort(bld, port);
     hdfsBuilderConfSetStr(bld, "dfs.block.size",

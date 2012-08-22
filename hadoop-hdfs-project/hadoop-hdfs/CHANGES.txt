@@ -651,6 +651,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3707. TestFSInputChecker: improper use of skip.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3830. test_libhdfs_threaded: use forceNewInstance.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
