@@ -213,6 +213,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8720. TestLocalFileSystem should use test root subdirectory.
     (Vlad Rozov via eli)
 
+    HADOOP-8721. ZKFC should not retry 45 times when attempting a graceful
+    fence during a failover. (Vinayakumar B via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
