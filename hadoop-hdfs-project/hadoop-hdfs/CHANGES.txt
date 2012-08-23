@@ -492,8 +492,6 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3830. test_libhdfs_threaded: use forceNewInstance.
     (Colin Patrick McCabe via eli)
 
-    HDFS-3837. Fix DataNode.recoverBlock findbugs warning. (eli)
-
     HDFS-3835. Long-lived 2NN cannot perform a checkpoint if security is
     enabled and the NN restarts with outstanding delegation tokens. (atm)
 
