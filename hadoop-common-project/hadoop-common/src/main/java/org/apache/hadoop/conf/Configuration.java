@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.ArrayList;
@@ -219,8 +220,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static final CopyOnWriteArrayList<String> defaultResources =
     new CopyOnWriteArrayList<String>();
 
-  private static final Map<ClassLoader, Map<String, Class<?>>>
-    CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, Class<?>>>();
+  private static final Map<ClassLoader, Map<String, WeakReference<Class<?>>>>
+    CACHE_CLASSES = new WeakHashMap<ClassLoader, Map<String, WeakReference<Class<?>>>>();
 
   /**
    * Sentinel value to store negative cache results in {@link #CACHE_CLASSES}.
@@ -1495,28 +1496,33 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return the class object, or null if it could not be found.
    */
   public Class<?> getClassByNameOrNull(String name) {
-    Map<String, Class<?>> map;
+    Map<String, WeakReference<Class<?>>> map;
     
     synchronized (CACHE_CLASSES) {
       map = CACHE_CLASSES.get(classLoader);
       if (map == null) {
         map = Collections.synchronizedMap(
-          new WeakHashMap<String, Class<?>>());
+          new WeakHashMap<String, WeakReference<Class<?>>>());
         CACHE_CLASSES.put(classLoader, map);
       }
     }
 
-    Class<?> clazz = map.get(name);
+    Class<?> clazz = null;
+    WeakReference<Class<?>> ref = map.get(name); 
+    if (ref != null) {
+       clazz = ref.get();
+    }
+     
     if (clazz == null) {
       try {
         clazz = Class.forName(name, true, classLoader);
       } catch (ClassNotFoundException e) {
         // Leave a marker that the class isn't found
-        map.put(name, NEGATIVE_CACHE_SENTINEL);
+        map.put(name, new WeakReference<Class<?>>(NEGATIVE_CACHE_SENTINEL));
         return null;
       }
       // two putters can race here, but they'll put the same class
-      map.put(name, clazz);
+      map.put(name, new WeakReference<Class<?>>(clazz));
       return clazz;
     } else if (clazz == NEGATIVE_CACHE_SENTINEL) {
       return null; // not found

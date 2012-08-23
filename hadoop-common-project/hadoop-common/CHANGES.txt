@@ -219,6 +219,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8721. ZKFC should not retry 45 times when attempting a graceful
     fence during a failover. (Vinayakumar B via atm)
 
+    HADOOP-8632. Configuration leaking class-loaders (Costin Leau via bobby)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
