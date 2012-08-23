@@ -359,18 +359,20 @@ public class DistCp extends Configured implements Tool {
    * @param argv Command-line arguments sent to DistCp.
    */
   public static void main(String argv[]) {
+    int exitCode;
     try {
       DistCp distCp = new DistCp();
       Cleanup CLEANUP = new Cleanup(distCp);
 
       ShutdownHookManager.get().addShutdownHook(CLEANUP,
         SHUTDOWN_HOOK_PRIORITY);
-      System.exit(ToolRunner.run(getDefaultConf(), distCp, argv));
+      exitCode = ToolRunner.run(getDefaultConf(), distCp, argv);
     }
     catch (Exception e) {
       LOG.error("Couldn't complete DistCp operation: ", e);
-      System.exit(DistCpConstants.UNKNOWN_ERROR);
+      exitCode = DistCpConstants.UNKNOWN_ERROR;
     }
+    System.exit(exitCode);
   }
 
   /**
