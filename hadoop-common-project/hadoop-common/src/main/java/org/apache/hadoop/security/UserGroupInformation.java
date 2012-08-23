@@ -55,6 +55,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -646,9 +647,7 @@ public class UserGroupInformation {
           // user.
           Credentials cred = Credentials.readTokenStorageFile(
               new Path("file:///" + fileLocation), conf);
-          for (Token<?> token: cred.getAllTokens()) {
-            loginUser.addToken(token);
-          }
+          cred.addTokensToUGI(loginUser);
         }
         loginUser.spawnAutoRenewalThreadForUserCreds();
       } catch (LoginException le) {
@@ -1177,6 +1176,41 @@ public class UserGroupInformation {
   public synchronized Set<TokenIdentifier> getTokenIdentifiers() {
     return subject.getPublicCredentials(TokenIdentifier.class);
   }
+
+  // wrapper to retain the creds key for the token
+  private class NamedToken {
+    Text alias;
+    Token<? extends TokenIdentifier> token;
+    NamedToken(Text alias, Token<? extends TokenIdentifier> token) {
+      this.alias = alias;
+      this.token = token;
+    }
+    @Override
+    public boolean equals(Object o) {
+      boolean equals;
+      if (o == this) {
+        equals = true;
+      } else if (!(o instanceof NamedToken)) {
+        equals = false;
+      } else {
+        Text otherAlias = ((NamedToken)o).alias;
+        if (alias == otherAlias) {
+          equals = true;
+        } else {
+          equals = (otherAlias != null && otherAlias.equals(alias));
+        }
+      }
+      return equals;
+    }
+    @Override
+    public int hashCode() {
+      return (alias != null) ? alias.hashCode() : -1; 
+    }
+    @Override
+    public String toString() {
+      return "NamedToken: alias="+alias+" token="+token;
+    }
+  }
   
   /**
    * Add a token to this UGI
@@ -1185,7 +1219,22 @@ public class UserGroupInformation {
    * @return true on successful add of new token
    */
   public synchronized boolean addToken(Token<? extends TokenIdentifier> token) {
-    return subject.getPrivateCredentials().add(token);
+    return addToken(token.getService(), token);
+  }
+
+  /**
+   * Add a named token to this UGI
+   * 
+   * @param alias Name of the token
+   * @param token Token to be added
+   * @return true on successful add of new token
+   */
+  public synchronized boolean addToken(Text alias,
+                                       Token<? extends TokenIdentifier> token) {
+    NamedToken namedToken = new NamedToken(alias, token);
+    Collection<Object> ugiCreds = subject.getPrivateCredentials();
+    ugiCreds.remove(namedToken); // allow token to be replaced
+    return ugiCreds.add(new NamedToken(alias, token));
   }
   
   /**
@@ -1195,14 +1244,23 @@ public class UserGroupInformation {
    */
   public synchronized
   Collection<Token<? extends TokenIdentifier>> getTokens() {
-    Set<Object> creds = subject.getPrivateCredentials();
-    List<Token<?>> result = new ArrayList<Token<?>>(creds.size());
-    for(Object o: creds) {
-      if (o instanceof Token<?>) {
-        result.add((Token<?>) o);
-      }
+    return Collections.unmodifiableList(
+        new ArrayList<Token<?>>(getCredentials().getAllTokens()));
+  }
+
+  /**
+   * Obtain the tokens in credentials form associated with this user.
+   * 
+   * @return Credentials of tokens associated with this user
+   */
+  public synchronized Credentials getCredentials() {
+    final Credentials credentials = new Credentials();
+    final Set<NamedToken> namedTokens =
+        subject.getPrivateCredentials(NamedToken.class);
+    for (final NamedToken namedToken : namedTokens) {
+      credentials.addToken(namedToken.alias, namedToken.token);
     }
-    return Collections.unmodifiableList(result);
+    return credentials;
   }
 
   /**
