@@ -88,4 +88,13 @@ public class DatanodeRegistration extends DatanodeID
       + ", storageInfo=" + storageInfo
       + ")";
   }
+
+  @Override
+  public boolean equals(Object to) {
+    return super.equals(to);
+  }
+  @Override
+  public int hashCode() {
+    return super.hashCode();
+  }
 }
