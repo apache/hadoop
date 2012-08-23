@@ -53,6 +53,8 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4577. HDFS-3672 broke
     TestCombineFileInputFormat.testMissingBlocks() test (atm)
 
+    MAPREDUCE-4470. Fix TestCombineFileInputFormat.testForEmptyFile (ikatsov via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
