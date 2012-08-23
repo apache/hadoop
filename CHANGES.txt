@@ -192,6 +192,8 @@ Release 1.2.0 - unreleased
     MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
     via atm)
 
+    HDFS-3846. Namenode deadlock in branch-1. (Brandon Li via jitendra)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
