@@ -221,6 +221,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HADOOP-8632. Configuration leaking class-loaders (Costin Leau via bobby)
 
+    HADOOP-4572. Can not access user logs - Jetty is not configured by default 
+    to serve aliases/symlinks (ahmed via tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active

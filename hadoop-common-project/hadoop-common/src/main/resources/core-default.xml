@@ -1083,4 +1083,13 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.jetty.logs.serve.aliases</name>
+  <value>true</value>
+  <description>
+    Enable/Disable aliases serving from jetty
+  </description>
+</property>
+
+
 </configuration>

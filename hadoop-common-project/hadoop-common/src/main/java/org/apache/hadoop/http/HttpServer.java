@@ -329,6 +329,12 @@ public class HttpServer implements FilterContainer {
       Context logContext = new Context(parent, "/logs");
       logContext.setResourceBase(logDir);
       logContext.addServlet(AdminAuthorizedServlet.class, "/*");
+      if (conf.getBoolean(
+          CommonConfigurationKeys.HADOOP_JETTY_LOGS_SERVE_ALIASES,
+          CommonConfigurationKeys.DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES)) {
+        logContext.getInitParams().put(
+            "org.mortbay.jetty.servlet.Default.aliases", "true");
+      }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext, conf);
       defaultContexts.put(logContext, true);
