@@ -194,6 +194,9 @@ Release 1.2.0 - unreleased
 
     HDFS-3846. Namenode deadlock in branch-1. (Brandon Li via jitendra)
 
+    HADOOP-4572. Can not access user logs - Jetty is not configured by default 
+    to serve aliases/symlinks (ahmed via tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
