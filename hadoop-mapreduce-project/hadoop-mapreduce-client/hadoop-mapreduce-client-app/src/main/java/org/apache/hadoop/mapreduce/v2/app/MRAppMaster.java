@@ -87,8 +87,6 @@ import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.yarn.Clock;
@@ -489,15 +487,7 @@ public class MRAppMaster extends CompositeService {
         fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
         LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
             + jobTokenFile);
-
-        for (Token<? extends TokenIdentifier> tk : fsTokens.getAllTokens()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Token of kind " + tk.getKind()
-                + "in current ugi in the AppMaster for service "
-                + tk.getService());
-          }
-          currentUser.addToken(tk); // For use by AppMaster itself.
-        }
+        fsTokens.addTokensToUGI(currentUser); // For use by AppMaster itself.
       }
     } catch (IOException e) {
       throw new YarnException(e);

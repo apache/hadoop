@@ -188,6 +188,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8614. IOUtils#skipFully hangs forever on EOF. 
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8225. DistCp fails when invoked by Oozie (daryn via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
