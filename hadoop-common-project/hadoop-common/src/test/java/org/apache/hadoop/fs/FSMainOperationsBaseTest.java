@@ -364,15 +364,17 @@ public abstract class FSMainOperationsBaseTest  {
   }
   
   @Test
-  public void testGlobStatusThrowsExceptionForNonExistentFile() throws Exception {
-    try {
-      // This should throw a FileNotFoundException
-      fSys.globStatus(
-          getTestRootPath(fSys, "test/hadoopfsdf/?"));
-      Assert.fail("Should throw FileNotFoundException");
-    } catch (FileNotFoundException fnfe) {
-      // expected
-    }
+  public void testGlobStatusNonExistentFile() throws Exception {
+    FileStatus[] paths = fSys.globStatus(
+        getTestRootPath(fSys, "test/hadoopfsdf"));
+    Assert.assertNull(paths);
+
+    paths = fSys.globStatus(
+        getTestRootPath(fSys, "test/hadoopfsdf/?"));
+    Assert.assertEquals(0, paths.length);
+    paths = fSys.globStatus(
+        getTestRootPath(fSys, "test/hadoopfsdf/xyz*/?"));
+    Assert.assertEquals(0, paths.length);
   }
   
   @Test
