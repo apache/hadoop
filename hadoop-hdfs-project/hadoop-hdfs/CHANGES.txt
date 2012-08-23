@@ -108,6 +108,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3788. ByteRangeInputStream should not expect HTTP Content-Length header
     when chunked transfer-encoding is used.  (szetszwo)
 
+    HDFS-3841. Port HDFS-3835 to branch-0.23 (bobby via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

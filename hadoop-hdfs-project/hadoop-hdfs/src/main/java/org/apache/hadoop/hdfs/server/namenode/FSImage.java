@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -560,6 +561,10 @@ public class FSImage implements Closeable {
    */
   void reloadFromImageFile(File file) throws IOException {
     namesystem.dir.reset();
+    DelegationTokenSecretManager man = namesystem.getDelegationTokenSecretManager();
+    if (man != null) {
+      man.reset();
+    }
 
     LOG.debug("Reloading namespace from " + file);
     loadFSImage(file);
