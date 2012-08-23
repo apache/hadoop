@@ -595,10 +595,10 @@ public class TestReplicationPolicy {
   }
   
   /**
-   * This testcase tests whether the defaultvalue returned by
+   * This testcase tests whether the default value returned by
    * DFSUtil.getInvalidateWorkPctPerIteration() is positive, 
    * and whether an IllegalArgumentException will be thrown 
-   * when a non-positive value is retrieved
+   * when 0.0f is retrieved
    */
   @Test
   public void testGetInvalidateWorkPctPerIteration() {
@@ -613,7 +613,48 @@ public class TestReplicationPolicy {
     assertEquals(blocksInvalidateWorkPct, 0.5f, blocksInvalidateWorkPct * 1e-7);
     
     conf.set(DFSConfigKeys.
-        DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "0.0");
+        DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "1.0f");
+    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    assertEquals(blocksInvalidateWorkPct, 1.0f, blocksInvalidateWorkPct * 1e-7);
+    
+    conf.set(DFSConfigKeys.
+        DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "0.0f");
+    exception.expect(IllegalArgumentException.class);
+    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+  }
+  
+  /**
+   * This testcase tests whether an IllegalArgumentException 
+   * will be thrown when a negative value is retrieved by 
+   * DFSUtil#getInvalidateWorkPctPerIteration
+   */
+  @Test
+  public void testGetInvalidateWorkPctPerIteration_NegativeValue() {
+    Configuration conf = new Configuration();
+    float blocksInvalidateWorkPct = DFSUtil
+        .getInvalidateWorkPctPerIteration(conf);
+    assertTrue(blocksInvalidateWorkPct > 0);
+    
+    conf.set(DFSConfigKeys.
+        DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "-0.5f");
+    exception.expect(IllegalArgumentException.class);
+    blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+  }
+  
+  /**
+   * This testcase tests whether an IllegalArgumentException 
+   * will be thrown when a value greater than 1 is retrieved by 
+   * DFSUtil#getInvalidateWorkPctPerIteration
+   */
+  @Test
+  public void testGetInvalidateWorkPctPerIteration_GreaterThanOne() {
+    Configuration conf = new Configuration();
+    float blocksInvalidateWorkPct = DFSUtil
+        .getInvalidateWorkPctPerIteration(conf);
+    assertTrue(blocksInvalidateWorkPct > 0);
+    
+    conf.set(DFSConfigKeys.
+        DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION, "1.5f");
     exception.expect(IllegalArgumentException.class);
     blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
   }

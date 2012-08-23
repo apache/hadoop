@@ -1162,11 +1162,11 @@ public class DFSUtil {
         DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION,
         DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION_DEFAULT);
     Preconditions.checkArgument(
-        (blocksInvalidateWorkPct > 0),
+        (blocksInvalidateWorkPct > 0 && blocksInvalidateWorkPct <= 1.0f),
         DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION +
         " = '" + blocksInvalidateWorkPct + "' is invalid. " +
-        "It should be a positive, non-zero float value " +
-        "indicating a percentage.");
+        "It should be a positive, non-zero float value, not greater than 1.0f, " +
+        "to indicate a percentage.");
     return blocksInvalidateWorkPct;
   }
 

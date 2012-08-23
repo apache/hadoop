@@ -224,6 +224,9 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3832. Remove protocol methods related to DistributedUpgrade. (suresh)
 
+    HDFS-3819. Should check whether invalidate work percentage default value is
+    not greater than 1.0f. (Jing Zhao via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
