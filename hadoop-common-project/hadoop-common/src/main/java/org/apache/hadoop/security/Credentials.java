@@ -274,4 +274,10 @@ public class Credentials implements Writable {
       }
     }
   }
+  
+  public void addTokensToUGI(UserGroupInformation ugi) {
+    for (Map.Entry<Text, Token<?>> token: tokenMap.entrySet()) {
+      ugi.addToken(token.getKey(), token.getValue());
+    }
+  }
 }
