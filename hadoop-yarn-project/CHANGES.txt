@@ -51,3 +51,7 @@ Release 0.23.3 - Unreleased
     refreshing of queues (Arun Murthy via tgraves)
 
     MAPREDUCE-4323. NM leaks filesystems (Jason Lowe via jeagles)
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
