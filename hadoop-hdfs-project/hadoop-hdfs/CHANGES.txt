@@ -497,6 +497,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3835. Long-lived 2NN cannot perform a checkpoint if security is
     enabled and the NN restarts with outstanding delegation tokens. (atm)
 
+    HDFS-3715. Fix TestFileCreation#testFileCreationNamenodeRestart.
+    (Andrew Whang via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
