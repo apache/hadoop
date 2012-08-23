@@ -104,6 +104,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8239. Add subclasses of MD5MD5CRC32FileChecksum to support file
     checksum with CRC32C.  (Kihwal Lee via szetszwo)
 
+    HADOOP-8075. Lower native-hadoop library log from info to debug.
+    (Hızır Sefa İrken via eli)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
