@@ -1824,6 +1824,32 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return result.entrySet().iterator();
   }
 
+  private Document parse(DocumentBuilder builder, URL url)
+      throws IOException, SAXException {
+    if (!quietmode) {
+      LOG.info("parsing URL " + url);
+    }
+    if (url == null) {
+      return null;
+    }
+    return parse(builder, url.openStream());
+  }
+
+  private Document parse(DocumentBuilder builder, InputStream is)
+      throws IOException, SAXException {
+    if (!quietmode) {
+      LOG.info("parsing input stream " + is);
+    }
+    if (is == null) {
+      return null;
+    }
+    try {
+      return builder.parse(is);
+    } finally {
+      is.close();
+    }
+  }
+
   private void loadResources(Properties properties,
                              ArrayList<Resource> resources,
                              boolean quiet) {
@@ -1873,21 +1899,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       boolean returnCachedProperties = false;
       
       if (resource instanceof URL) {                  // an URL resource
-        URL url = (URL)resource;
-        if (url != null) {
-          if (!quiet) {
-            LOG.info("parsing " + url);
-          }
-          doc = builder.parse(url.toString());
-        }
+        doc = parse(builder, (URL)resource);
       } else if (resource instanceof String) {        // a CLASSPATH resource
         URL url = getResource((String)resource);
-        if (url != null) {
-          if (!quiet) {
-            LOG.info("parsing " + url);
-          }
-          doc = builder.parse(url.toString());
-        }
+        doc = parse(builder, url);
       } else if (resource instanceof Path) {          // a file resource
         // Can't use FileSystem API or we get an infinite loop
         // since FileSystem uses Configuration API.  Use java.io.File instead.
@@ -1895,22 +1910,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           .getAbsoluteFile();
         if (file.exists()) {
           if (!quiet) {
-            LOG.info("parsing " + file);
+            LOG.info("parsing File " + file);
           }
-          InputStream in = new BufferedInputStream(new FileInputStream(file));
-          try {
-            doc = builder.parse(in);
-          } finally {
-            in.close();
-          }
+          doc = parse(builder, new BufferedInputStream(new FileInputStream(file)));
         }
       } else if (resource instanceof InputStream) {
-        try {
-          doc = builder.parse((InputStream)resource);
-          returnCachedProperties = true;
-        } finally {
-          ((InputStream)resource).close();
-        }
+        doc = parse(builder, (InputStream) resource);
+        returnCachedProperties = true;
       } else if (resource instanceof Properties) {
         overlay(properties, (Properties)resource);
       } else if (resource instanceof Element) {

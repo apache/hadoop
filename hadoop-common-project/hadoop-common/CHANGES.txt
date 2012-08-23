@@ -224,6 +224,22 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-4572. Can not access user logs - Jetty is not configured by default 
     to serve aliases/symlinks (ahmed via tucu)
 
+    HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
+
+    HADOOP-8699. some common testcases create core-site.xml in test-classes
+    making other testcases to fail. (tucu)
+
+    HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
+
+    HADOOP-7703. Improved excpetion handling of shutting down web server.
+    (Devaraj K via Eric Yang)
+
+    HADOOP-8699. some common testcases create core-site.xml in test-classes
+    making other testcases to fail. (tucu)
+
+    HADOOP-8031. Configuration class fails to find embedded .jar resources; 
+    should use URL.openStream() (genman via tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
@@ -255,14 +271,6 @@ Release 2.0.1-alpha - UNRELEASED
     (todd via eli)
     
     HADOOP-8405. ZKFC tests leak ZK instances. (todd)
-
-    HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
-
-    HADOOP-7703. Improved excpetion handling of shutting down web server.
-    (Devaraj K via Eric Yang)
-
-    HADOOP-8699. some common testcases create core-site.xml in test-classes 
-    making other testcases to fail. (tucu)
 
 Release 2.0.0-alpha - 05-23-2012
 
