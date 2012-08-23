@@ -412,6 +412,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4570. ProcfsBasedProcessTree#constructProcessInfo() prints a
     warning if procfsDir/<pid>/stat is not found. (Ahmed Radwan via bobby)
 
+    MAPREDUCE-4068. Jars in lib subdirectory of the submittable JAR are not added to the 
+    classpath (rkanter via tucu)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

@@ -304,7 +304,7 @@ public class YARNRunner implements ClientProtocol {
     return clientCache.getClient(jobId).getJobStatus(jobId);
   }
 
-  private LocalResource createApplicationResource(FileContext fs, Path p)
+  private LocalResource createApplicationResource(FileContext fs, Path p, LocalResourceType type)
       throws IOException {
     LocalResource rsrc = recordFactory.newRecordInstance(LocalResource.class);
     FileStatus rsrcStat = fs.getFileStatus(p);
@@ -312,7 +312,7 @@ public class YARNRunner implements ClientProtocol {
         .getDefaultFileSystem().resolvePath(rsrcStat.getPath())));
     rsrc.setSize(rsrcStat.getLen());
     rsrc.setTimestamp(rsrcStat.getModificationTime());
-    rsrc.setType(LocalResourceType.FILE);
+    rsrc.setType(type);
     rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
     return rsrc;
   }
@@ -343,11 +343,12 @@ public class YARNRunner implements ClientProtocol {
 
     localResources.put(MRJobConfig.JOB_CONF_FILE,
         createApplicationResource(defaultFileContext,
-            jobConfPath));
+            jobConfPath, LocalResourceType.FILE));
     if (jobConf.get(MRJobConfig.JAR) != null) {
       localResources.put(MRJobConfig.JOB_JAR,
           createApplicationResource(defaultFileContext,
-              new Path(jobSubmitDir, MRJobConfig.JOB_JAR)));
+              new Path(jobSubmitDir, MRJobConfig.JOB_JAR), 
+              LocalResourceType.ARCHIVE));
     } else {
       // Job jar may be null. For e.g, for pipes, the job jar is the hadoop
       // mapreduce jar itself which is already on the classpath.
@@ -363,7 +364,7 @@ public class YARNRunner implements ClientProtocol {
       localResources.put(
           MRJobConfig.JOB_SUBMIT_DIR + "/" + s,
           createApplicationResource(defaultFileContext,
-              new Path(jobSubmitDir, s)));
+              new Path(jobSubmitDir, s), LocalResourceType.FILE));
     }
 
     // Setup security tokens
