@@ -648,6 +648,9 @@ Release 2.0.0-alpha - 05-23-2012
     HADOOP-7868. Hadoop native fails to compile when default linker
     option is -Wl,--as-needed. (Trevor Robinson via eli)
 
+    HADOOP-8655. Fix TextInputFormat for large deliminators. (Gelesh via
+    bobby) 
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
