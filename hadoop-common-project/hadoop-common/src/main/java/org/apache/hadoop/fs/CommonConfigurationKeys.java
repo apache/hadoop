@@ -172,6 +172,12 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String DEFAULT_HADOOP_HTTP_STATIC_USER =
     "dr.who";
 
+  /** Enable/Disable aliases serving from jetty */
+  public static final String HADOOP_JETTY_LOGS_SERVE_ALIASES =
+    "hadoop.jetty.logs.serve.aliases";
+  public static final boolean DEFAULT_HADOOP_JETTY_LOGS_SERVE_ALIASES =
+    true;
+
   /* Path to the Kerberos ticket cache.  Setting this will force
    * UserGroupInformation to use only this ticket cache file when creating a
    * FileSystem instance.
