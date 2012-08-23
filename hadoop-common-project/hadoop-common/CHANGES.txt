@@ -784,6 +784,9 @@ Release 0.23.3 - UNRELEASED
 
     HADOOP-8225. DistCp fails when invoked by Oozie (daryn via bobby)
 
+    HADOOP-8709. globStatus changed behavior from 0.20/1.x (Jason Lowe via
+    bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
