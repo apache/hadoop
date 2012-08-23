@@ -189,6 +189,9 @@ Release 1.2.0 - unreleased
 
     MAPREDUCE-4567. Fix failing TestJobKillAndFail in branch-1. (tomwhite)
 
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
