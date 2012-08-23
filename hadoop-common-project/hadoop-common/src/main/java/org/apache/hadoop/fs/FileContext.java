@@ -2012,7 +2012,11 @@ public final class FileContext {
                     new GlobFilter(components[components.length - 1], filter);
         if (fp.hasPattern()) { // last component has a pattern
           // list parent directories and then glob the results
-          results = listStatus(parentPaths, fp);
+          try {
+            results = listStatus(parentPaths, fp);
+          } catch (FileNotFoundException e) {
+            results = null;
+          }
           hasGlob[0] = true;
         } else { // last component does not have a pattern
           // get all the path names
@@ -2063,7 +2067,11 @@ public final class FileContext {
       }
       GlobFilter fp = new GlobFilter(filePattern[level]);
       if (fp.hasPattern()) {
-        parents = FileUtil.stat2Paths(listStatus(parents, fp));
+        try {
+          parents = FileUtil.stat2Paths(listStatus(parents, fp));
+        } catch (FileNotFoundException e) {
+          parents = null;
+        }
         hasGlob[0] = true;
       } else {
         for (int i = 0; i < parents.length; i++) {
