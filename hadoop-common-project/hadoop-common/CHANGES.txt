@@ -798,6 +798,8 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8709. globStatus changed behavior from 0.20/1.x (Jason Lowe via
     bobby)
 
+    HADOOP-8725. MR is broken when security is off (daryn via bobby)
+
 Release 0.23.2 - UNRELEASED 
 
   NEW FEATURES
