@@ -421,6 +421,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3832. Remove protocol methods related to DistributedUpgrade. (suresh)
 
+    HDFS-3177. Update DFSClient and DataXceiver to handle different checkum
+    types in file checksum computation.  (Kihwal Lee via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

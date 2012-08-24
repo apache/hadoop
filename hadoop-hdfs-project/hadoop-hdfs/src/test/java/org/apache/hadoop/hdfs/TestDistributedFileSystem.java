@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.VolumeId;
@@ -708,9 +709,16 @@ public class TestDistributedFileSystem {
       out2.close();
 
       // the two checksums must be different.
-      FileChecksum sum1 = dfs.getFileChecksum(path1);
-      FileChecksum sum2 = dfs.getFileChecksum(path2);
+      MD5MD5CRC32FileChecksum sum1 =
+          (MD5MD5CRC32FileChecksum)dfs.getFileChecksum(path1);
+      MD5MD5CRC32FileChecksum sum2 =
+          (MD5MD5CRC32FileChecksum)dfs.getFileChecksum(path2);
       assertFalse(sum1.equals(sum2));
+
+      // check the individual params
+      assertEquals(DataChecksum.Type.CRC32C, sum1.getCrcType());
+      assertEquals(DataChecksum.Type.CRC32,  sum2.getCrcType());
+
     } finally {
       if (cluster != null) {
         cluster.getFileSystem().delete(testBasePath, true);
