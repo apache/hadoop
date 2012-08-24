@@ -142,6 +142,8 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved
     (Jason Lowe via bobby)
 
+    MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
+
   BUG FIXES
 
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
@@ -166,6 +168,18 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4484. Incorrect IS_MINI_YARN_CLUSTER property name in YarnConfiguration. 
     (ahmed.radwan via tucu)
+
+    MAPREDUCE-4562. Support for "FileSystemCounter" legacy counter group name
+    for compatibility reasons is creating incorrect counter name.
+    (Jarek Jarcec Cecho via tomwhite)
+
+    MAPREDUCE-4068. Jars in lib subdirectory of the submittable JAR are not added to the 
+    classpath (rkanter via tucu)
+
+    MAPREDUCE-4577. HDFS-3672 broke
+    TestCombineFileInputFormat.testMissingBlocks() test. (atm)
+
+    MAPREDUCE-4470. Fix TestCombineFileInputFormat.testForEmptyFile (ikatsov via tucu)
 
 Release 2.1.0-alpha - Unreleased 
 
@@ -811,6 +825,12 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4053. Counters group names deprecation is wrong, iterating over
     group names deprecated names don't show up  (Robert Evans via tgraves)
+
+    MAPREDUCE-3506. Calling getPriority on JobInfo after parsing a history log
+    with JobHistoryParser throws a NullPointerException (Jason Lowe via bobby)
+
+    MAPREDUCE-4570. ProcfsBasedProcessTree#constructProcessInfo() prints a
+    warning if procfsDir/<pid>/stat is not found. (Ahmed Radwan via bobby)
 
 Release 0.23.2 - UNRELEASED
 

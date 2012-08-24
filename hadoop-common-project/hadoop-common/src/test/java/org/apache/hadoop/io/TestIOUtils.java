@@ -21,6 +21,8 @@ package org.apache.hadoop.io;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -173,6 +175,43 @@ public class TestIOUtils {
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
           "Error while reading compressed data", ioe);
+    }
+  }
+  
+  @Test
+  public void testSkipFully() throws IOException {
+    byte inArray[] = new byte[] {0, 1, 2, 3, 4};
+    ByteArrayInputStream in = new ByteArrayInputStream(inArray);
+    try {
+      in.mark(inArray.length);
+      IOUtils.skipFully(in, 2);
+      IOUtils.skipFully(in, 2);
+      try {
+        IOUtils.skipFully(in, 2);
+        fail("expected to get a PrematureEOFException");
+      } catch (EOFException e) {
+        assertEquals(e.getMessage(), "Premature EOF from inputStream " +
+            "after skipping 1 byte(s).");
+      }
+      in.reset();
+      try {
+        IOUtils.skipFully(in, 20);
+        fail("expected to get a PrematureEOFException");
+      } catch (EOFException e) {
+        assertEquals(e.getMessage(), "Premature EOF from inputStream " +
+            "after skipping 5 byte(s).");
+      }
+      in.reset();
+      IOUtils.skipFully(in, 5);
+      try {
+        IOUtils.skipFully(in, 10);
+        fail("expected to get a PrematureEOFException");
+      } catch (EOFException e) {
+        assertEquals(e.getMessage(), "Premature EOF from inputStream " +
+            "after skipping 0 byte(s).");
+      }
+    } finally {
+      in.close();
     }
   }
 }

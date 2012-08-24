@@ -46,7 +46,7 @@ public class TestEpochsAreUnique {
   private static final Log LOG = LogFactory.getLog(TestEpochsAreUnique.class);
   private static final String JID = "testEpochsAreUnique-jid";
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
-      12345, "mycluster", "my-bp", 0L, 0);
+      12345, "mycluster", "my-bp", 0L);
   private Random r = new Random();
   
   @Test

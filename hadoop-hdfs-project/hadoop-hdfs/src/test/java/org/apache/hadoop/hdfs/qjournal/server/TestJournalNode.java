@@ -53,7 +53,7 @@ import com.google.common.primitives.Ints;
 
 public class TestJournalNode {
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
-      12345, "mycluster", "my-bp", 0L, 0);
+      12345, "mycluster", "my-bp", 0L);
   private static final String JID = "test-journalid";
 
   private JournalNode jn;

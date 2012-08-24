@@ -44,7 +44,7 @@ import com.google.common.collect.Lists;
 
 public abstract class QJMTestUtil {
   public static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
-      12345, "mycluster", "my-bp", 0L, 0);
+      12345, "mycluster", "my-bp", 0L);
   public static final String JID = "test-journal";
 
   public static byte[] createTxnData(int startTxn, int numTxns) throws Exception {

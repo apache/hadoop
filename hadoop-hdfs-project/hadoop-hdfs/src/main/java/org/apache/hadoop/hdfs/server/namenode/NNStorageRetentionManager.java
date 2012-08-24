@@ -52,12 +52,12 @@ public class NNStorageRetentionManager {
       NNStorageRetentionManager.class);
   private final NNStorage storage;
   private final StoragePurger purger;
-  private final FSEditLog editLog;
+  private final LogsPurgeable purgeableLogs;
   
   public NNStorageRetentionManager(
       Configuration conf,
       NNStorage storage,
-      FSEditLog editLog,
+      LogsPurgeable purgeableLogs,
       StoragePurger purger) {
     this.numCheckpointsToRetain = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_NUM_CHECKPOINTS_RETAINED_KEY,
@@ -72,13 +72,13 @@ public class NNStorageRetentionManager {
         " must not be negative");
     
     this.storage = storage;
-    this.editLog = editLog;
+    this.purgeableLogs = purgeableLogs;
     this.purger = purger;
   }
   
   public NNStorageRetentionManager(Configuration conf, NNStorage storage,
-      FSEditLog editLog) {
-    this(conf, storage, editLog, new DeletionStoragePurger());
+      LogsPurgeable purgeableLogs) {
+    this(conf, storage, purgeableLogs, new DeletionStoragePurger());
   }
 
   public void purgeOldStorage() throws IOException {
@@ -95,7 +95,7 @@ public class NNStorageRetentionManager {
     // handy for HA, where a remote node may not have as many
     // new images.
     long purgeLogsFrom = Math.max(0, minImageTxId + 1 - numExtraEditsToRetain);
-    editLog.purgeLogsOlderThan(purgeLogsFrom);
+    purgeableLogs.purgeLogsOlderThan(purgeLogsFrom);
   }
   
   private void purgeCheckpointsOlderThan(
@@ -103,7 +103,6 @@ public class NNStorageRetentionManager {
       long minTxId) {
     for (FSImageFile image : inspector.getFoundImages()) {
       if (image.getCheckpointTxId() < minTxId) {
-        LOG.info("Purging old image " + image);
         purger.purgeImage(image);
       }
     }
@@ -146,11 +145,13 @@ public class NNStorageRetentionManager {
   static class DeletionStoragePurger implements StoragePurger {
     @Override
     public void purgeLog(EditLogFile log) {
+      LOG.info("Purging old edit log " + log);
       deleteOrWarn(log.getFile());
     }
 
     @Override
     public void purgeImage(FSImageFile image) {
+      LOG.info("Purging old image " + image);
       deleteOrWarn(image.getFile());
       deleteOrWarn(MD5FileUtils.getDigestFileForFile(image.getFile()));
     }

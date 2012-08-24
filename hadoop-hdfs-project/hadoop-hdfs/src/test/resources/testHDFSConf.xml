@@ -15270,29 +15270,6 @@
     </test>
 
     <test> <!--Tested -->
-      <description>help: help for dfsadmin upgradeProgress</description>
-      <test-commands>
-        <dfs-admin-command>-fs NAMENODE -help upgradeProgress</dfs-admin-command>
-      </test-commands>
-      <cleanup-commands>
-      </cleanup-commands>
-      <comparators>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^-upgradeProgress &lt;status\|details\|force&gt;:( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*request current distributed upgrade status,( )*</expected-output>
-        </comparator>
-        <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^( |\t)*a detailed status or force the upgrade to proceed.( )*</expected-output>
-        </comparator>
-      </comparators>
-    </test>
-
-    <test> <!--Tested -->
       <description>help: help for dfsadmin metasave</description>
       <test-commands>
         <dfs-admin-command>-fs NAMENODE -help metasave</dfs-admin-command>
@@ -15986,7 +15963,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Created file metafile on server hdfs:\/\/[-.a-zA-Z0-9\.:]+</expected-output>
+          <expected-output>Created metasave file metafile in the log directory of namenode hdfs:\/\/[-.a-zA-Z0-9\.:]+</expected-output>
         </comparator>
       </comparators>
     </test>

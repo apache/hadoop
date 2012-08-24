@@ -98,6 +98,8 @@ class Fetcher<K,V> extends Thread {
 
   private volatile boolean stopped = false;
 
+  private JobConf job;
+
   private static boolean sslShuffle;
   private static SSLFactory sslFactory;
 
@@ -105,6 +107,7 @@ class Fetcher<K,V> extends Thread {
                  ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger,
                  Reporter reporter, ShuffleClientMetrics metrics,
                  ExceptionReporter exceptionReporter, SecretKey jobTokenSecret) {
+    this.job = job;
     this.reporter = reporter;
     this.scheduler = scheduler;
     this.merger = merger;
@@ -539,7 +542,7 @@ class Fetcher<K,V> extends Thread {
                                int decompressedLength, 
                                int compressedLength) throws IOException {    
     IFileInputStream checksumIn = 
-      new IFileInputStream(input, compressedLength);
+      new IFileInputStream(input, compressedLength, job);
 
     input = checksumIn;       
   

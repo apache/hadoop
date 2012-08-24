@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -126,9 +127,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
     dispatcher.register(ApplicationEventType.class, appEventHandler);
     
-    LogAggregationService logAggregationService =
+    LogAggregationService logAggregationService = spy(
         new LogAggregationService(dispatcher, this.context, this.delSrvc,
-                                  super.dirsHandler);
+                                  super.dirsHandler));
     logAggregationService.init(this.conf);
     logAggregationService.start();
 
@@ -156,7 +157,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         application1));
 
     logAggregationService.stop();
-
+    // ensure filesystems were closed
+    verify(logAggregationService).closeFileSystems(
+        any(UserGroupInformation.class));
     
     String containerIdStr = ConverterUtils.toString(container11);
     File containerLogDir = new File(app1LogDir, containerIdStr);
@@ -380,7 +383,60 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
   
   @Test
   @SuppressWarnings("unchecked")
-  public void testLogAggregationFailsWithoutKillingNM() throws Exception {
+  public void testLogAggregationInitFailsWithoutKillingNM() throws Exception {
+
+    this.conf.set(YarnConfiguration.NM_LOG_DIRS,
+        localLogDir.getAbsolutePath());
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+        this.remoteRootLogDir.getAbsolutePath());
+
+    DrainDispatcher dispatcher = createDispatcher();
+    EventHandler<ApplicationEvent> appEventHandler = mock(EventHandler.class);
+    dispatcher.register(ApplicationEventType.class, appEventHandler);
+
+    LogAggregationService logAggregationService = spy(
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                                  super.dirsHandler));
+    logAggregationService.init(this.conf);
+    logAggregationService.start();
+
+    ApplicationId appId = BuilderUtils.newApplicationId(
+        System.currentTimeMillis(), (int)Math.random());
+    doThrow(new YarnException("KABOOM!"))
+      .when(logAggregationService).initAppAggregator(
+          eq(appId), eq(user), any(Credentials.class),
+          any(ContainerLogsRetentionPolicy.class), anyMap());
+
+    logAggregationService.handle(new LogHandlerAppStartedEvent(appId,
+        this.user, null,
+        ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY,
+        this.acls));
+
+    dispatcher.await();
+    ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
+        new ApplicationFinishEvent(appId,
+            "Application failed to init aggregation: KABOOM!")
+    };
+    checkEvents(appEventHandler, expectedEvents, false,
+        "getType", "getApplicationID", "getDiagnostic");
+    // no filesystems instantiated yet
+    verify(logAggregationService, never()).closeFileSystems(
+        any(UserGroupInformation.class));
+
+    // verify trying to collect logs for containers/apps we don't know about
+    // doesn't blow up and tear down the NM
+    logAggregationService.handle(new LogHandlerContainerFinishedEvent(
+        BuilderUtils.newContainerId(4, 1, 1, 1), 0));
+    dispatcher.await();
+    logAggregationService.handle(new LogHandlerAppFinishedEvent(
+        BuilderUtils.newApplicationId(1, 5)));
+    dispatcher.await();
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testLogAggregationCreateDirsFailsWithoutKillingNM()
+      throws Exception {
     
     this.conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
@@ -399,10 +455,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     ApplicationId appId = BuilderUtils.newApplicationId(
         System.currentTimeMillis(), (int)Math.random());
     doThrow(new YarnException("KABOOM!"))
-      .when(logAggregationService).initAppAggregator(
-          eq(appId), eq(user), any(Credentials.class),
-          any(ContainerLogsRetentionPolicy.class), anyMap());
-    
+      .when(logAggregationService).createAppDir(any(String.class),
+          any(ApplicationId.class), any(UserGroupInformation.class));
     logAggregationService.handle(new LogHandlerAppStartedEvent(appId,
         this.user, null,
         ContainerLogsRetentionPolicy.AM_AND_FAILED_CONTAINERS_ONLY, this.acls));        
@@ -413,6 +467,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
+    // filesystems may have been instantiated
+    verify(logAggregationService).closeFileSystems(
+        any(UserGroupInformation.class));
 
     // verify trying to collect logs for containers/apps we don't know about
     // doesn't blow up and tear down the NM
@@ -423,7 +480,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         BuilderUtils.newApplicationId(1, 5)));
     dispatcher.await();
   }
-  
+
   private void writeContainerLogs(File appLogDir, ContainerId containerId)
       throws IOException {
     // ContainerLogDir should be created

@@ -959,6 +959,20 @@
     acceptable.
     </description>
   </property>
+
+  <property>
+    <name>mapreduce.ifile.readahead</name>
+    <value>true</value>
+    <description>Configuration key to enable/disable IFile readahead.
+    </description>
+  </property>
+
+  <property>
+    <name>mapreduce.ifile.readahead.bytes</name>
+    <value>4194304</value>
+    <description>Configuration key to set the IFile readahead length in bytes.
+    </description>
+  </property>
   
 <!-- Job Notification Configuration -->
 

@@ -127,7 +127,8 @@ import org.apache.hadoop.util.ShutdownHookManager;
  *  <li> replication factor
  *  <li> block size
  *  <li> buffer size
- *  <li> bytesPerChecksum (if used).
+ *  <li> encryptDataTransfer 
+ *  <li> checksum option. (checksumType and  bytesPerChecksum)
  *  </ul>
  *
  * <p>
@@ -613,7 +614,8 @@ public final class FileContext {
    *          <li>BufferSize - buffersize used in FSDataOutputStream
    *          <li>Blocksize - block size for file blocks
    *          <li>ReplicationFactor - replication for blocks
-   *          <li>BytesPerChecksum - bytes per checksum
+   *          <li>ChecksumParam - Checksum parameters. server default is used
+   *          if not specified.
    *          </ul>
    *          </ul>
    * 
@@ -2012,7 +2014,11 @@ public final class FileContext {
                     new GlobFilter(components[components.length - 1], filter);
         if (fp.hasPattern()) { // last component has a pattern
           // list parent directories and then glob the results
-          results = listStatus(parentPaths, fp);
+          try {
+            results = listStatus(parentPaths, fp);
+          } catch (FileNotFoundException e) {
+            results = null;
+          }
           hasGlob[0] = true;
         } else { // last component does not have a pattern
           // get all the path names
@@ -2063,7 +2069,11 @@ public final class FileContext {
       }
       GlobFilter fp = new GlobFilter(filePattern[level]);
       if (fp.hasPattern()) {
-        parents = FileUtil.stat2Paths(listStatus(parents, fp));
+        try {
+          parents = FileUtil.stat2Paths(listStatus(parents, fp));
+        } catch (FileNotFoundException e) {
+          parents = null;
+        }
         hasGlob[0] = true;
       } else {
         for (int i = 0; i < parents.length; i++) {

@@ -96,6 +96,7 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
@@ -279,6 +280,7 @@ public class DataNode extends Configured
   private final String userWithLocalPathAccess;
   private boolean connectToDnViaHostname;
   ReadaheadPool readaheadPool;
+  private final boolean getHdfsBlockLocationsEnabled;
 
   /**
    * Create the DataNode given a configuration and an array of dataDirs.
@@ -303,6 +305,9 @@ public class DataNode extends Configured
     this.connectToDnViaHostname = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
+    this.getHdfsBlockLocationsEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
+        DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
     try {
       hostName = getHostName(conf);
       LOG.info("Configured hostname is " + hostName);
@@ -497,7 +502,7 @@ public class DataNode extends Configured
       reason = "verifcation is not supported by SimulatedFSDataset";
     } 
     if (reason == null) {
-      directoryScanner = new DirectoryScanner(this, data, conf);
+      directoryScanner = new DirectoryScanner(data, conf);
       directoryScanner.start();
     } else {
       LOG.info("Periodic Directory Tree Verification scan is disabled because " +
@@ -1033,6 +1038,25 @@ public class DataNode extends Configured
     metrics.incrBlocksGetLocalPathInfo();
     return info;
   }
+
+  @Override
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks,
+      List<Token<BlockTokenIdentifier>> tokens) throws IOException, 
+      UnsupportedOperationException {
+    if (!getHdfsBlockLocationsEnabled) {
+      throw new UnsupportedOperationException("Datanode#getHdfsBlocksMetadata "
+          + " is not enabled in datanode config");
+    }
+    if (blocks.size() != tokens.size()) {
+      throw new IOException("Differing number of blocks and tokens");
+    }
+    // Check access for each block
+    for (int i = 0; i < blocks.size(); i++) {
+      checkBlockToken(blocks.get(i), tokens.get(i), 
+          BlockTokenSecretManager.AccessMode.READ);
+    }
+    return data.getHdfsBlocksMetadata(blocks);
+  }
   
   private void checkBlockToken(ExtendedBlock block, Token<BlockTokenIdentifier> token,
       AccessMode accessMode) throws IOException {
@@ -1194,17 +1218,8 @@ public class DataNode extends Configured
     return xmitsInProgress.get();
   }
     
-  UpgradeManagerDatanode getUpgradeManagerDatanode(String bpid) {
-    BPOfferService bpos = blockPoolManager.get(bpid);
-    if(bpos==null) {
-      return null;
-    }
-    return bpos.getUpgradeManager();
-  }
-
-  private void transferBlock( ExtendedBlock block, 
-                              DatanodeInfo xferTargets[] 
-                              ) throws IOException {
+  private void transferBlock(ExtendedBlock block, DatanodeInfo xferTargets[])
+      throws IOException {
     BPOfferService bpos = getBPOSForBlock(block);
     DatanodeRegistration bpReg = getDNRegistrationForBP(block.getBlockPoolId());
     
@@ -1842,8 +1857,7 @@ public class DataNode extends Configured
   private void recoverBlock(RecoveringBlock rBlock) throws IOException {
     ExtendedBlock block = rBlock.getBlock();
     String blookPoolId = block.getBlockPoolId();
-    DatanodeInfo[] targets = rBlock.getLocations();
-    DatanodeID[] datanodeids = (DatanodeID[])targets;
+    DatanodeID[] datanodeids = rBlock.getLocations();
     List<BlockRecord> syncList = new ArrayList<BlockRecord>(datanodeids.length);
     int errorCount = 0;
 

@@ -152,7 +152,7 @@ public class TestCounters {
     Counters counters = new Counters();
     counters.incrCounter(Task.Counter.MAP_INPUT_RECORDS, 1);
     counters.incrCounter(JobInProgress.Counter.DATA_LOCAL_MAPS, 1);
-    counters.findCounter("FileSystemCounter", "FILE_BYTES_READ").increment(1);
+    counters.findCounter("FileSystemCounters", "FILE_BYTES_READ").increment(1);
     
     checkLegacyNames(counters);
   }
@@ -180,7 +180,7 @@ public class TestCounters {
     assertEquals("New name and method", 1, counters.findCounter("file",
         FileSystemCounter.BYTES_READ).getValue());
     assertEquals("Legacy name", 1, counters.findCounter(
-        "FileSystemCounter",
+        "FileSystemCounters",
         "FILE_BYTES_READ").getValue());
   }
   
@@ -236,7 +236,7 @@ public class TestCounters {
     HashSet<String> groups = new HashSet<String>(counters.getGroupNames());
     HashSet<String> expectedGroups = new HashSet<String>();
     expectedGroups.add("group1");
-    expectedGroups.add("FileSystemCounter"); //Legacy Name
+    expectedGroups.add("FileSystemCounters"); //Legacy Name
     expectedGroups.add("org.apache.hadoop.mapreduce.FileSystemCounter");
 
     assertEquals(expectedGroups, groups);

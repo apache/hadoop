@@ -554,11 +554,9 @@ class BlockPoolSliceScanner {
   }
   
   private synchronized void startNewPeriod() {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Starting a new period : work left in prev period : "
+    LOG.info("Starting a new period : work left in prev period : "
         + String.format("%.2f%%", totalBytesToScan == 0 ? 0
             : (bytesLeft * 100.0) / totalBytesToScan));
-    }
 
     // reset the byte counts :
     bytesLeft = totalBytesToScan;
@@ -566,7 +564,6 @@ class BlockPoolSliceScanner {
   }
   
   void scanBlockPoolSlice() {
-    startNewPeriod();
     // Create a new processedBlocks structure
     processedBlocks = new HashMap<Long, Integer>();
     if (!assignInitialVerificationTimes()) {

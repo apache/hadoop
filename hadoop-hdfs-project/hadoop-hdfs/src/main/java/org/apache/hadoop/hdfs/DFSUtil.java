@@ -80,6 +80,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
@@ -282,13 +283,25 @@ public class DFSUtil {
     if (blocks == null) {
       return new BlockLocation[0];
     }
-    int nrBlocks = blocks.locatedBlockCount();
+    return locatedBlocks2Locations(blocks.getLocatedBlocks());
+  }
+  
+  /**
+   * Convert a List<LocatedBlock> to BlockLocation[]
+   * @param blocks A List<LocatedBlock> to be converted
+   * @return converted array of BlockLocation
+   */
+  public static BlockLocation[] locatedBlocks2Locations(List<LocatedBlock> blocks) {
+    if (blocks == null) {
+      return new BlockLocation[0];
+    }
+    int nrBlocks = blocks.size();
     BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
     if (nrBlocks == 0) {
       return blkLocations;
     }
     int idx = 0;
-    for (LocatedBlock blk : blocks.getLocatedBlocks()) {
+    for (LocatedBlock blk : blocks) {
       assert idx < nrBlocks : "Incorrect index";
       DatanodeInfo[] locations = blk.getLocations();
       String[] hosts = new String[locations.length];
@@ -1130,5 +1143,43 @@ public class DFSUtil {
       }
     }
     return false;
+  }
+  
+  /**
+   * Get DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION from configuration.
+   * 
+   * @param conf Configuration
+   * @return Value of DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION
+   */
+  public static float getInvalidateWorkPctPerIteration(Configuration conf) {
+    float blocksInvalidateWorkPct = conf.getFloat(
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION,
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION_DEFAULT);
+    Preconditions.checkArgument(
+        (blocksInvalidateWorkPct > 0 && blocksInvalidateWorkPct <= 1.0f),
+        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION +
+        " = '" + blocksInvalidateWorkPct + "' is invalid. " +
+        "It should be a positive, non-zero float value, not greater than 1.0f, " +
+        "to indicate a percentage.");
+    return blocksInvalidateWorkPct;
+  }
+
+  /**
+   * Get DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION from
+   * configuration.
+   * 
+   * @param conf Configuration
+   * @return Value of DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION
+   */
+  public static int getReplWorkMultiplier(Configuration conf) {
+    int blocksReplWorkMultiplier = conf.getInt(
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
+            DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT);
+    Preconditions.checkArgument(
+        (blocksReplWorkMultiplier > 0),
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION +
+        " = '" + blocksReplWorkMultiplier + "' is invalid. " +
+        "It should be a positive, non-zero integer value.");
+    return blocksReplWorkMultiplier;
   }
 }

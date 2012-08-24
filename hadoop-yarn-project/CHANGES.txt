@@ -20,6 +20,9 @@ Branch-2 ( Unreleased changes )
 
   BUG FIXES
 
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -34,6 +37,9 @@ Release 2.1.0-alpha - Unreleased
 
     YARN-12. Fix findbugs warnings in FairScheduler. (Junping Du via acmurthy) 
 
+    YARN-22. Fix ContainerLogs to work if the log-dir is specified as a URI.
+    (Mayank Bansal via sseth)
+
 Release 0.23.3 - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -47,3 +53,9 @@ Release 0.23.3 - Unreleased
     YARN-14. Symlinks to peer distributed cache files no longer work 
     (Jason Lowe via bobby) 
 
+    YARN-25. remove old aggregated logs  (Robert Evans via tgraves)
+
+    YARN-27. Failed refreshQueues due to misconfiguration prevents further 
+    refreshing of queues (Arun Murthy via tgraves)
+
+    MAPREDUCE-4323. NM leaks filesystems (Jason Lowe via jeagles)

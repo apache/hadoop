@@ -57,6 +57,20 @@ public class Credentials implements Writable {
     new HashMap<Text, Token<? extends TokenIdentifier>>(); 
 
   /**
+   * Create an empty credentials instance
+   */
+  public Credentials() {
+  }
+  
+  /**
+   * Create a copy of the given credentials
+   * @param credentials to copy
+   */
+  public Credentials(Credentials credentials) {
+    this.addAll(credentials);
+  }
+  
+  /**
    * Returns the key bytes for the alias
    * @param alias the alias for the key
    * @return key for this alias
@@ -258,6 +272,12 @@ public class Credentials implements Writable {
       if (!tokenMap.containsKey(key) || overwrite) {
         tokenMap.put(key, token.getValue());
       }
+    }
+  }
+  
+  public void addTokensToUGI(UserGroupInformation ugi) {
+    for (Map.Entry<Text, Token<?>> token: tokenMap.entrySet()) {
+      ugi.addToken(token.getKey(), token.getValue());
     }
   }
 }

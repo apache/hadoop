@@ -113,6 +113,16 @@ extends AbstractDelegationTokenIdentifier>
     }
   }
   
+  /**
+   * Reset all data structures and mutable state.
+   */
+  public synchronized void reset() {
+    currentId = 0;
+    allKeys.clear();
+    delegationTokenSequenceNumber = 0;
+    currentTokens.clear();
+  }
+  
   /** 
    * Add a previously used master key to cache (when NN restarts), 
    * should be called before activate().
@@ -190,7 +200,6 @@ extends AbstractDelegationTokenIdentifier>
   
   @Override
   protected synchronized byte[] createPassword(TokenIdent identifier) {
-    LOG.info("Creating password for identifier: "+identifier);
     int sequenceNum;
     long now = Time.now();
     sequenceNum = ++delegationTokenSequenceNumber;
@@ -198,6 +207,7 @@ extends AbstractDelegationTokenIdentifier>
     identifier.setMaxDate(now + tokenMaxLifetime);
     identifier.setMasterKeyId(currentId);
     identifier.setSequenceNumber(sequenceNum);
+    LOG.info("Creating password for identifier: " + identifier);
     byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
     currentTokens.put(identifier, new DelegationTokenInformation(now
         + tokenRenewInterval, password));

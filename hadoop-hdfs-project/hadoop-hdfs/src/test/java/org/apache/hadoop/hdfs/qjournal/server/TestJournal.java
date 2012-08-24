@@ -42,9 +42,9 @@ import org.mockito.Mockito;
 
 public class TestJournal {
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
-      12345, "mycluster", "my-bp", 0L, 0);
+      12345, "mycluster", "my-bp", 0L);
   private static final NamespaceInfo FAKE_NSINFO_2 = new NamespaceInfo(
-      6789, "mycluster", "my-bp", 0L, 0);
+      6789, "mycluster", "my-bp", 0L);
   
   private static final String JID = "test-journal";
 

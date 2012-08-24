@@ -68,10 +68,8 @@ public class TestHttpFSKerberosAuthenticationHandler extends HFSTestCase {
 
       testNonManagementOperation(handler);
       testManagementOperationErrors(handler);
-      testGetToken(handler, false, null);
-      testGetToken(handler, true, null);
-      testGetToken(handler, false, "foo");
-      testGetToken(handler, true, "foo");
+      testGetToken(handler, null);
+      testGetToken(handler, "foo");
       testCancelToken(handler);
       testRenewToken(handler);
 
@@ -115,12 +113,9 @@ public class TestHttpFSKerberosAuthenticationHandler extends HFSTestCase {
       Mockito.contains("requires SPNEGO"));
   }
 
-  private void testGetToken(AuthenticationHandler handler, boolean tokens,
-                            String renewer)
+  private void testGetToken(AuthenticationHandler handler, String renewer)
     throws Exception {
-    DelegationTokenOperation op =
-      (tokens) ? DelegationTokenOperation.GETDELEGATIONTOKENS
-               : DelegationTokenOperation.GETDELEGATIONTOKEN;
+    DelegationTokenOperation op = DelegationTokenOperation.GETDELEGATIONTOKEN;
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(request.getParameter(HttpFSFileSystem.OP_PARAM)).
@@ -148,23 +143,13 @@ public class TestHttpFSKerberosAuthenticationHandler extends HFSTestCase {
     Mockito.verify(response).setContentType(MediaType.APPLICATION_JSON);
     pwriter.close();
     String responseOutput = writer.toString();
-    String tokenLabel = (tokens)
-                        ? HttpFSKerberosAuthenticator.DELEGATION_TOKENS_JSON
-                        : HttpFSKerberosAuthenticator.DELEGATION_TOKEN_JSON;
-    if (tokens) {
-      Assert.assertTrue(responseOutput.contains(tokenLabel));
-    } else {
-      Assert.assertTrue(responseOutput.contains(tokenLabel));
-    }
+    String tokenLabel = HttpFSKerberosAuthenticator.DELEGATION_TOKEN_JSON;
+    Assert.assertTrue(responseOutput.contains(tokenLabel));
     Assert.assertTrue(responseOutput.contains(
       HttpFSKerberosAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON));
     JSONObject json = (JSONObject) new JSONParser().parse(responseOutput);
     json = (JSONObject) json.get(tokenLabel);
     String tokenStr;
-    if (tokens) {
-      json = (JSONObject) ((JSONArray)
-        json.get(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_JSON)).get(0);
-    }
     tokenStr = (String)
       json.get(HttpFSKerberosAuthenticator.DELEGATION_TOKEN_URL_STRING_JSON);
     Token<DelegationTokenIdentifier> dt = new Token<DelegationTokenIdentifier>();

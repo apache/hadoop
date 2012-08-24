@@ -83,7 +83,7 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class FSEditLog  {
+public class FSEditLog implements LogsPurgeable {
 
   static final Log LOG = LogFactory.getLog(FSEditLog.class);
 
@@ -1032,6 +1032,7 @@ public class FSEditLog  {
   /**
    * Archive any log files that are older than the given txid.
    */
+  @Override
   public synchronized void purgeLogsOlderThan(final long minTxIdToKeep) {
     assert curSegmentTxId == HdfsConstants.INVALID_TXID || // on format this is no-op
       minTxIdToKeep <= curSegmentTxId :

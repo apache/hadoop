@@ -135,15 +135,15 @@ public class TestDelegationTokenForProxyUser {
     final UserGroupInformation proxyUgi = UserGroupInformation
         .createProxyUserForTesting(PROXY_USER, ugi, GROUP_NAMES);
     try {
-      Token<DelegationTokenIdentifier> token = proxyUgi
-          .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
+      Token<?>[] tokens = proxyUgi
+          .doAs(new PrivilegedExceptionAction<Token<?>[]>() {
             @Override
-            public Token<DelegationTokenIdentifier> run() throws IOException {
-              return cluster.getFileSystem().getDelegationToken("RenewerUser");
+            public Token<?>[] run() throws IOException {
+              return cluster.getFileSystem().addDelegationTokens("RenewerUser", null);
             }
           });
       DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
-      byte[] tokenId = token.getIdentifier();
+      byte[] tokenId = tokens[0].getIdentifier();
       identifier.readFields(new DataInputStream(new ByteArrayInputStream(
           tokenId)));
       Assert.assertEquals(identifier.getUser().getUserName(), PROXY_USER);

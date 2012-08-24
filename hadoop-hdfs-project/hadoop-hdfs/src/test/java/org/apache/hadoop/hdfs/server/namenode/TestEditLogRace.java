@@ -184,10 +184,7 @@ public class TestEditLogRace {
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
-
       FSImage fsimage = namesystem.getFSImage();
-      FSEditLog editLog = fsimage.getEditLog();
-
       StorageDirectory sd = fsimage.getStorage().getStorageDir(0);
 
       startTransactionWorkers(namesystem, caughtErr);
@@ -306,7 +303,7 @@ public class TestEditLogRace {
         assertEquals(fsimage.getStorage().getMostRecentCheckpointTxId(),
                      editLog.getLastWrittenTxId() - 1);
 
-        namesystem.leaveSafeMode(false);
+        namesystem.leaveSafeMode();
         LOG.info("Save " + i + ": complete");
       }
     } finally {

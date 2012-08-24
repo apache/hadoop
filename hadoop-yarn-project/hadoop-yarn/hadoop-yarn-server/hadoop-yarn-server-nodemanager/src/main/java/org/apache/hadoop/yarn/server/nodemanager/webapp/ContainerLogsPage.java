@@ -29,6 +29,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -53,6 +55,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 import org.apache.hadoop.yarn.webapp.SubView;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.mortbay.log.Log;
 
 import com.google.inject.Inject;
 
@@ -198,12 +201,14 @@ public class ContainerLogsPage extends NMView {
       if (!$(CONTAINER_LOG_TYPE).isEmpty()) {
         File logFile = null;
         try {
-          logFile =
-              new File(this.dirsHandler.getLogPathToRead(
-                  ContainerLaunch.getRelativeContainerLogDir(
+          URI logPathURI = new URI(this.dirsHandler.getLogPathToRead(
+              ContainerLaunch.getRelativeContainerLogDir(
                   applicationId.toString(), containerId.toString())
-                  + Path.SEPARATOR + $(CONTAINER_LOG_TYPE))
-                  .toUri().getPath());
+                  + Path.SEPARATOR + $(CONTAINER_LOG_TYPE)).toString());
+          logFile = new File(logPathURI.getPath());
+        } catch (URISyntaxException e) {
+          html.h1("Cannot find this log on the local disk.");
+          return;
         } catch (Exception e) {
           html.h1("Cannot find this log on the local disk.");
           return;
@@ -278,14 +283,16 @@ public class ContainerLogsPage extends NMView {
         boolean foundLogFile = false;
         for (File containerLogsDir : containerLogsDirs) {
           File[] logFiles = containerLogsDir.listFiles();
-          Arrays.sort(logFiles);
-          for (File logFile : logFiles) {
-            foundLogFile = true;
-            html.p()
-                .a(url("containerlogs", $(CONTAINER_ID), $(APP_OWNER), 
-                    logFile.getName(), "?start=-4096"),
-                    logFile.getName() + " : Total file length is "
-                        + logFile.length() + " bytes.")._();
+          if (logFiles != null) {
+            Arrays.sort(logFiles);
+            for (File logFile : logFiles) {
+              foundLogFile = true;
+              html.p()
+                  .a(url("containerlogs", $(CONTAINER_ID), $(APP_OWNER),
+                      logFile.getName(), "?start=-4096"),
+                      logFile.getName() + " : Total file length is "
+                          + logFile.length() + " bytes.")._();
+            }
           }
         }
         if (!foundLogFile) {
@@ -297,13 +304,17 @@ public class ContainerLogsPage extends NMView {
     }
 
     static List<File> getContainerLogDirs(ContainerId containerId,
-            LocalDirsHandlerService dirsHandler) {
+        LocalDirsHandlerService dirsHandler) {
       List<String> logDirs = dirsHandler.getLogDirs();
       List<File> containerLogDirs = new ArrayList<File>(logDirs.size());
       for (String logDir : logDirs) {
-        String appIdStr = 
-            ConverterUtils.toString(
-                containerId.getApplicationAttemptId().getApplicationId());
+        try {
+          logDir = new URI(logDir).getPath();
+        } catch (URISyntaxException e) {
+          Log.warn(e.getMessage());
+        }
+        String appIdStr = ConverterUtils.toString(containerId
+            .getApplicationAttemptId().getApplicationId());
         File appLogDir = new File(logDir, appIdStr);
         String containerIdStr = ConverterUtils.toString(containerId);
         containerLogDirs.add(new File(appLogDir, containerIdStr));

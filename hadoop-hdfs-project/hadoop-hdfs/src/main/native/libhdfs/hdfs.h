@@ -217,6 +217,20 @@ extern  "C" {
     void hdfsFreeBuilder(struct hdfsBuilder *bld);
 
     /**
+     * Set a configuration string for an HdfsBuilder.
+     *
+     * @param key      The key to set.
+     * @param val      The value, or NULL to set no value.
+     *                 This will be shallow-copied.  You are responsible for
+     *                 ensuring that it remains valid until the builder is
+     *                 freed.
+     *
+     * @return         0 on success; nonzero error code otherwise.
+     */
+    int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
+                              const char *val);
+
+    /**
      * Get a configuration string.
      *
      * @param key      The key to find
@@ -234,7 +248,7 @@ extern  "C" {
      *
      * @param key      The key to find
      * @param val      (out param) The value.  This will NOT be changed if the
-	 *                 key isn't found.
+     *                 key isn't found.
      *
      * @return         0 on success; nonzero error code otherwise.
      *                 Failure to find the key is not an error.
@@ -550,11 +564,27 @@ extern  "C" {
 
 
     /** 
-     * hdfsGetDefaultBlockSize - Get the optimum blocksize.
-     * @param fs The configured filesystem handle.
-     * @return Returns the blocksize; -1 on error. 
+     * hdfsGetDefaultBlockSize - Get the default blocksize.
+     *
+     * @param fs            The configured filesystem handle.
+     * @deprecated          Use hdfsGetDefaultBlockSizeAtPath instead.
+     *
+     * @return              Returns the default blocksize, or -1 on error.
      */
     tOffset hdfsGetDefaultBlockSize(hdfsFS fs);
+
+
+    /** 
+     * hdfsGetDefaultBlockSizeAtPath - Get the default blocksize at the
+     * filesystem indicated by a given path.
+     *
+     * @param fs            The configured filesystem handle.
+     * @param path          The given path will be used to locate the actual
+     *                      filesystem.  The full path does not have to exist.
+     *
+     * @return              Returns the default blocksize, or -1 on error.
+     */
+    tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path);
 
 
     /** 

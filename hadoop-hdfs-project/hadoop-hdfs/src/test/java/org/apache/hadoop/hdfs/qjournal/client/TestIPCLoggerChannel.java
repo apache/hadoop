@@ -47,7 +47,7 @@ public class TestIPCLoggerChannel {
   
   private Configuration conf = new Configuration();
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
-      12345, "mycluster", "my-bp", 0L, 0);
+      12345, "mycluster", "my-bp", 0L);
   private static final String JID = "test-journalid";
   private static final InetSocketAddress FAKE_ADDR =
       new InetSocketAddress(0);

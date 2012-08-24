@@ -40,8 +40,8 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsMapping_getGroupForUser
 (JNIEnv *env, jobject jobj, jstring juser) {
   extern int getGroupIDList(const char *user, int *ngroups, gid_t **groups);
   extern int getGroupDetails(gid_t group, char **grpBuf);
-
-  jobjectArray jgroups; 
+  const char *cuser = NULL;
+  jobjectArray jgroups = NULL;
   int error = -1;
 
   if (emptyGroups == NULL) {
@@ -56,7 +56,7 @@ Java_org_apache_hadoop_security_JniBasedUnixGroupsMapping_getGroupForUser
     }
   }
   char *grpBuf = NULL;
-  const char *cuser = (*env)->GetStringUTFChars(env, juser, NULL);
+  cuser = (*env)->GetStringUTFChars(env, juser, NULL);
   if (cuser == NULL) {
     goto cleanup;
   }

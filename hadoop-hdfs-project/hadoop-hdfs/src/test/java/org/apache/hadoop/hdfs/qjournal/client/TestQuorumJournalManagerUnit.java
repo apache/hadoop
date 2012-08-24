@@ -56,7 +56,7 @@ public class TestQuorumJournalManagerUnit {
     ((Log4JLogger)QuorumJournalManager.LOG).getLogger().setLevel(Level.ALL);
   }
   private static final NamespaceInfo FAKE_NSINFO = new NamespaceInfo(
-      12345, "mycluster", "my-bp", 0L, 0);
+      12345, "mycluster", "my-bp", 0L);
 
   private Configuration conf = new Configuration();
   private List<AsyncLogger> spyLoggers;

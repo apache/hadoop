@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockLocalPathInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -94,8 +95,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   
   static final byte[] nullCrcFileData;
   static {
-    DataChecksum checksum = DataChecksum.newDataChecksum( DataChecksum.
-                              CHECKSUM_NULL, 16*1024 );
+    DataChecksum checksum = DataChecksum.newDataChecksum(
+        DataChecksum.Type.NULL, 16*1024 );
     byte[] nullCrcHeader = checksum.getHeader();
     nullCrcFileData =  new byte[2 + nullCrcHeader.length];
     nullCrcFileData[0] = (byte) ((BlockMetadataHeader.VERSION >>> 8) & 0xff);
@@ -959,6 +960,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
   @Override
   public BlockLocalPathInfo getBlockLocalPathInfo(ExtendedBlock b) {
+    throw new UnsupportedOperationException();
+  }
+  
+  @Override
+  public HdfsBlocksMetadata getHdfsBlocksMetadata(List<ExtendedBlock> blocks)
+      throws IOException {
     throw new UnsupportedOperationException();
   }
 

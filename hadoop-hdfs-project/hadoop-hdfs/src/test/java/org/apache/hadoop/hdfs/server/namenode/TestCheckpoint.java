@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.InetSocketAddress;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.CheckpointStorage;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -67,6 +69,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
@@ -1835,6 +1838,93 @@ public class TestCheckpoint {
     }
   }
   
+  /**
+   * Regression test for HDFS-3678 "Edit log files are never being purged from 2NN"
+   */
+  @Test
+  public void testSecondaryPurgesEditLogs() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_NUM_EXTRA_EDITS_RETAINED_KEY, 0);
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+          .format(true).build();
+      
+      FileSystem fs = cluster.getFileSystem();
+      fs.mkdirs(new Path("/foo"));
+  
+      secondary = startSecondaryNameNode(conf);
+      
+      // Checkpoint a few times. Doing this will cause a log roll, and thus
+      // several edit log segments on the 2NN.
+      for (int i = 0; i < 5; i++) {
+        secondary.doCheckpoint();
+      }
+      
+      // Make sure there are no more edit log files than there should be.
+      List<File> checkpointDirs = getCheckpointCurrentDirs(secondary);
+      for (File checkpointDir : checkpointDirs) {
+        List<EditLogFile> editsFiles = FileJournalManager.matchEditLogs(
+            checkpointDir);
+        assertEquals("Edit log files were not purged from 2NN", 1,
+            editsFiles.size());
+      }
+      
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
+  /**
+   * Regression test for HDFS-3835 - "Long-lived 2NN cannot perform a
+   * checkpoint if security is enabled and the NN restarts without outstanding
+   * delegation tokens"
+   */
+  @Test
+  public void testSecondaryNameNodeWithDelegationTokens() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .format(true).build();
+      
+      assertNotNull(cluster.getNamesystem().getDelegationToken(new Text("atm")));
+  
+      secondary = startSecondaryNameNode(conf);
+
+      // Checkpoint once, so the 2NN loads the DT into its in-memory sate.
+      secondary.doCheckpoint();
+      
+      // Perform a saveNamespace, so that the NN has a new fsimage, and the 2NN
+      // therefore needs to download a new fsimage the next time it performs a
+      // checkpoint.
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      
+      // Ensure that the 2NN can still perform a checkpoint.
+      secondary.doCheckpoint();
+    } finally {
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
   @Test
   public void testCommandLineParsing() throws ParseException {
     SecondaryNameNode.CommandLineOpts opts =
@@ -1896,7 +1986,7 @@ public class TestCheckpoint {
         ImmutableSet.of("VERSION"));    
   }
   
-  private List<File> getCheckpointCurrentDirs(SecondaryNameNode secondary) {
+  private static List<File> getCheckpointCurrentDirs(SecondaryNameNode secondary) {
     List<File> ret = Lists.newArrayList();
     for (URI u : secondary.getCheckpointDirs()) {
       File checkpointDir = new File(u.getPath());
@@ -1905,7 +1995,7 @@ public class TestCheckpoint {
     return ret;
   }
 
-  private CheckpointStorage spyOnSecondaryImage(SecondaryNameNode secondary1) {
+  private static CheckpointStorage spyOnSecondaryImage(SecondaryNameNode secondary1) {
     CheckpointStorage spy = Mockito.spy((CheckpointStorage)secondary1.getFSImage());;
     secondary1.setFSImage(spy);
     return spy;

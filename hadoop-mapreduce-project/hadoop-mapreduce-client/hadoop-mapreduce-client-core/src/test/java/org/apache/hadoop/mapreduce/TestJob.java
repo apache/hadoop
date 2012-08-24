@@ -18,14 +18,17 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,4 +53,16 @@ public class TestJob {
     Assert.assertNotNull(job.toString());
   }
 
+  @Test
+  public void testUGICredentialsPropogation() throws Exception {
+    Token<?> token = mock(Token.class);
+    Text service = new Text("service");
+    
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    ugi.addToken(service, token);
+    
+    JobConf jobConf = new JobConf();
+    Job job = new Job(jobConf);
+    assertSame(token, job.getCredentials().getToken(service));
+  }
 }

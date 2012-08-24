@@ -91,13 +91,11 @@ public class FSImage implements Closeable {
 
   final private Configuration conf;
 
-  private final NNStorageRetentionManager archivalManager;
+  protected NNStorageRetentionManager archivalManager;
 
   /**
    * Construct an FSImage
    * @param conf Configuration
-   * @see #FSImage(Configuration conf, 
-   *               Collection imageDirs, Collection editsDirs) 
    * @throws IOException if default directories are invalid.
    */
   public FSImage(Configuration conf) throws IOException {
@@ -191,8 +189,6 @@ public class FSImage implements Closeable {
       throw new IOException(
           "All specified directories are not accessible or do not exist.");
     
-    storage.setUpgradeManager(target.upgradeManager);
-    
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
     Map<StorageDirectory, StorageState> dataDirStates = 
@@ -226,9 +222,6 @@ public class FSImage implements Closeable {
     }
     
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-
-    // check whether distributed upgrade is required and/or should be continued
-    storage.verifyDistributedUpgradeProgress(startOpt);
 
     // 2. Format unformatted dirs.
     for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
@@ -320,13 +313,6 @@ public class FSImage implements Closeable {
   }
 
   private void doUpgrade(FSNamesystem target) throws IOException {
-    if(storage.getDistributedUpgradeState()) {
-      // only distributed upgrade need to continue
-      // don't do version upgrade
-      this.loadFSImage(target, null);
-      storage.initializeDistributedUpgrade();
-      return;
-    }
     // Upgrade is allowed only if there are 
     // no previous fs states in any of the directories
     for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
@@ -409,7 +395,6 @@ public class FSImage implements Closeable {
           + storage.getRemovedStorageDirs().size()
           + " storage directory(ies), previously logged.");
     }
-    storage.initializeDistributedUpgrade();
   }
 
   private void doRollback() throws IOException {
@@ -472,8 +457,6 @@ public class FSImage implements Closeable {
       LOG.info("Rollback of " + sd.getRoot()+ " is complete.");
     }
     isUpgradeFinalized = true;
-    // check whether name-node can start in regular mode
-    storage.verifyDistributedUpgradeProgress(StartupOption.REGULAR);
   }
 
   private void doFinalize(StorageDirectory sd) throws IOException {
@@ -573,6 +556,7 @@ public class FSImage implements Closeable {
    */
   void reloadFromImageFile(File file, FSNamesystem target) throws IOException {
     target.dir.reset();
+    target.dtSecretManager.reset();
 
     LOG.debug("Reloading namespace from " + file);
     loadFSImage(file, target, null);

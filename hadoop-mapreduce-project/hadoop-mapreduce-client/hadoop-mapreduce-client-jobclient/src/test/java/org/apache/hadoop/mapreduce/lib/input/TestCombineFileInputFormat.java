@@ -125,9 +125,9 @@ public class TestCombineFileInputFormat extends TestCase {
       BlockLocation[] locs =
         super.getFileBlockLocations(stat, start, len);
       if (name.equals(fileWithMissingBlocks)) {
-        System.out.println("Returing missing blocks for " + fileWithMissingBlocks);
-        locs[0] = new BlockLocation(new String[0], new String[0],
-            locs[0].getOffset(), locs[0].getLength());
+        System.out.println("Returning missing blocks for " + fileWithMissingBlocks);
+        locs[0] = new HdfsBlockLocation(new BlockLocation(new String[0],
+            new String[0], locs[0].getOffset(), locs[0].getLength()), null);
       }
       return locs;
     }

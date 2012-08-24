@@ -60,7 +60,7 @@ message DatanodeCommandProto {
     FinalizeCommand = 3;
     KeyUpdateCommand = 4;
     RegisterCommand = 5;
-    UpgradeCommand = 6;
+    UnusedUpgradeCommand = 6;
     NullDatanodeCommand = 7;
   }
 
@@ -74,7 +74,6 @@ message DatanodeCommandProto {
   optional FinalizeCommandProto finalizeCmd = 5;
   optional KeyUpdateCommandProto keyUpdateCmd = 6;
   optional RegisterCommandProto registerCmd = 7;
-  optional UpgradeCommandProto upgradeCmd = 8;
 }
 
 /**
@@ -129,20 +128,6 @@ message KeyUpdateCommandProto {
  */
 message RegisterCommandProto {
   // void
-}
-
-/**
- * Generic distributed upgrade Command
- */
-message UpgradeCommandProto {
-  enum Action {
-    UNKNOWN = 0;          // Unknown action
-    REPORT_STATUS = 100;  // Report upgrade status
-    START_UPGRADE = 101;  // Start upgrade
-  }
-  required Action action = 1;  // Upgrade action
-  required uint32 version = 2; // Version of the upgrade
-  required uint32 upgradeStatus = 3; // % completed in range 0 & 100
 }
 
 /**
@@ -303,20 +288,6 @@ message ErrorReportResponseProto {
 }
 
 /**
- * cmd - Upgrade command sent from datanode to namenode
- */
-message ProcessUpgradeRequestProto {
-  optional UpgradeCommandProto cmd = 1;
-}
-
-/**
- * cmd - Upgrade command sent from namenode to datanode
- */
-message ProcessUpgradeResponseProto {
-  optional UpgradeCommandProto cmd = 1;
-}
-
-/**
  * blocks - list of blocks that are reported as corrupt
  */
 message ReportBadBlocksRequestProto {
@@ -387,12 +358,6 @@ service DatanodeProtocolService {
    * Request the version
    */
   rpc versionRequest(VersionRequestProto) returns(VersionResponseProto);
-
-  /**
-   * Generic way to send commands from datanode to namenode during
-   * distributed upgrade process.
-   */
-  rpc processUpgrade(ProcessUpgradeRequestProto) returns(ProcessUpgradeResponseProto);
 
   /**
    * Report corrupt blocks at the specified location
