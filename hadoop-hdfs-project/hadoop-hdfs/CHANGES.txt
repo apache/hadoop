@@ -110,6 +110,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3841. Port HDFS-3835 to branch-0.23 (bobby via daryn)
 
+    HDFS-3177. Update DFSClient and DataXceiver to handle different checkum
+    types in file checksum computation.  (Kihwal Lee via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
