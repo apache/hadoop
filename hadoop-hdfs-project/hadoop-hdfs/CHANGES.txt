@@ -227,6 +227,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3819. Should check whether invalidate work percentage default value is
     not greater than 1.0f. (Jing Zhao via jitendra)
 
+    HDFS-3177. Update DFSClient and DataXceiver to handle different checkum
+    types in file checksum computation.  (Kihwal Lee via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
