@@ -203,6 +203,8 @@ Trunk (unreleased changes)
     HDFS-3834. Remove unused static fields NAME, DESCRIPTION and Usage from
     Command. (Jing Zhao via suresh)
 
+    HDFS-3678. Edit log files are never being purged from 2NN. (atm)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES

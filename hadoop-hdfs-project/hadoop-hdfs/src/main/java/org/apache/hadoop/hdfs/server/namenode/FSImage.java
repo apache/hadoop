@@ -91,7 +91,7 @@ public class FSImage implements Closeable {
 
   final private Configuration conf;
 
-  private final NNStorageRetentionManager archivalManager;
+  protected NNStorageRetentionManager archivalManager;
 
   /**
    * Construct an FSImage
