@@ -93,6 +93,9 @@ Release 1.2.0 - unreleased
     HDFS-3838. Fix the typo in FSEditLog.java: isToterationEnabled should be 
     isTolerationEnabled. (Brandon Li via jitendra)
 
+    MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
+    (rkanter via tucu)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

@@ -780,12 +780,20 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       if ("".equals(job.getJobName())){
         job.setJobName(new Path(originalJarPath).getName());
       }
-      Path submitJarFile = JobSubmissionFiles.getJobJar(submitJobDir);
-      job.setJar(submitJarFile.toString());
-      fs.copyFromLocalFile(new Path(originalJarPath), submitJarFile);
-      fs.setReplication(submitJarFile, replication);
-      fs.setPermission(submitJarFile, 
-          new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
+      Path originalJarFile = new Path(originalJarPath);
+      URI jobJarURI = originalJarFile.toUri();
+      // If the job jar is already in fs, we don't need to copy it from local fs
+      if (jobJarURI.getScheme() == null || jobJarURI.getAuthority() == null
+              || !(jobJarURI.getScheme().equals(fs.getUri().getScheme())
+                  && jobJarURI.getAuthority().equals(
+                                            fs.getUri().getAuthority()))) {
+        Path submitJarFile = JobSubmissionFiles.getJobJar(submitJobDir);
+        job.setJar(submitJarFile.toString());
+        fs.copyFromLocalFile(originalJarFile, submitJarFile);
+        fs.setReplication(submitJarFile, replication);
+        fs.setPermission(submitJarFile, 
+            new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
+      }
     } else {
       LOG.warn("No job jar file set.  User classes may not be found. "+
                "See JobConf(Class) or JobConf#setJar(String).");
