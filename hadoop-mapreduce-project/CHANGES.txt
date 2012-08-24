@@ -18,6 +18,9 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
 
+    MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
+    (rkanter via tucu)
+
   BUG FIXES
 
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
