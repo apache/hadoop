@@ -673,6 +673,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3715. Fix TestFileCreation#testFileCreationNamenodeRestart.
     (Andrew Whang via eli)
 
+    HDFS-3731. 2.0 release upgrade must handle blocks being written from 1.0.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
