@@ -1,0 +1,2 @@
+Branch MR-3902
+  MAPREDUCE-4581. TaskHeartbeatHandler should extend HeartbeatHandlerBase (Tsuyoshi OZAWA via sseth)
