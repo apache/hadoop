@@ -642,7 +642,7 @@ public class UserGroupInformation {
                                           AuthenticationMethod.SIMPLE);
         loginUser = new UserGroupInformation(login.getSubject());
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
-        if (fileLocation != null && isSecurityEnabled()) {
+        if (fileLocation != null) {
           // load the token storage file and put all of the tokens into the
           // user.
           Credentials cred = Credentials.readTokenStorageFile(
