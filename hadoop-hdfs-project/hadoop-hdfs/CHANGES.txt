@@ -200,6 +200,9 @@ Trunk (unreleased changes)
     HDFS-3827. TestHASafeMode#assertSafemode method should be made static.
     (Jing Zhao via suresh)
 
+    HDFS-3834. Remove unused static fields NAME, DESCRIPTION and Usage from
+    Command. (Jing Zhao via suresh)
+
 Branch-2 ( Unreleased changes )
 
   INCOMPATIBLE CHANGES
