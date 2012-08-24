@@ -643,7 +643,7 @@ public class FSEditLog {
     long recentOpcodeOffsets[] = new long[4];
     Arrays.fill(recentOpcodeOffsets, -1);
 
-    final boolean isToterationEnabled = tolerationLength >= 0;
+    final boolean isTolerationEnabled = tolerationLength >= 0;
     DataInputStream in = new DataInputStream(tracker);
     Byte opcode = null;
     try {
@@ -670,7 +670,7 @@ public class FSEditLog {
                             "Unsupported version " + logVersion;
 
       while (true) {
-        if (isToterationEnabled) {
+        if (isTolerationEnabled) {
           //mark position could be reset in case of exceptions
           in.mark(TRANSACTION_LENGTH_LIMIT); 
         }
@@ -1007,7 +1007,7 @@ public class FSEditLog {
           + ") at position " + tracker.getPos()
           + ", edit log length is " + edits.length()
           + ", opcode=" + opcode
-          + ", isToterationEnabled=" + isToterationEnabled;
+          + ", isTolerationEnabled=" + isTolerationEnabled;
 
       // Catch Throwable because in the case of a truly corrupt edits log, any
       // sort of error might be thrown (NumberFormat, NullPointer, EOF, etc.)
@@ -1035,7 +1035,7 @@ public class FSEditLog {
       }
 
       LOG.warn(msg, t);
-      if (isToterationEnabled) {
+      if (isTolerationEnabled) {
         in.reset(); //reset to the beginning position of this transaction
       } else {
         //edit log toleration feature is disabled

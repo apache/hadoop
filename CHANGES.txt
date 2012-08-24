@@ -90,6 +90,9 @@ Release 1.2.0 - unreleased
     HDFS-3819. Should check whether invalidate work percentage default value is 
     not greater than 1.0f. (Jing Zhao via jitendra)
 
+    HDFS-3838. Fix the typo in FSEditLog.java: isToterationEnabled should be 
+    isTolerationEnabled. (Brandon Li via jitendra)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
