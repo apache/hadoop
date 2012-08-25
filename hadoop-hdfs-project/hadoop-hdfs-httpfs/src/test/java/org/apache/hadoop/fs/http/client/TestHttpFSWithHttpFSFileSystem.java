@@ -32,19 +32,23 @@ public class TestHttpFSWithHttpFSFileSystem extends BaseTestHttpFSWith {
     super(operation);
   }
 
+  @Override
   protected Class getFileSystemClass() {
     return HttpFSFileSystem.class;
   }
 
+  @Override
   protected Path getProxiedFSTestDir() {
     return TestHdfsHelper.getHdfsTestDir();
   }
 
+  @Override
   protected String getProxiedFSURI() {
     return TestHdfsHelper.getHdfsConf().get(
       CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY);
   }
 
+  @Override
   protected Configuration getProxiedFSConf() {
     return TestHdfsHelper.getHdfsConf();
   }

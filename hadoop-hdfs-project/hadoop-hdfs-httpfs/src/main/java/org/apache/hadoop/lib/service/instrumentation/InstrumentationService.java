@@ -85,16 +85,19 @@ public class InstrumentationService extends BaseService implements Instrumentati
     all.put("samplers", (Map) samplers);
 
     jvmVariables.put("free.memory", new VariableHolder<Long>(new Instrumentation.Variable<Long>() {
+      @Override
       public Long getValue() {
         return Runtime.getRuntime().freeMemory();
       }
     }));
     jvmVariables.put("max.memory", new VariableHolder<Long>(new Instrumentation.Variable<Long>() {
+      @Override
       public Long getValue() {
         return Runtime.getRuntime().maxMemory();
       }
     }));
     jvmVariables.put("total.memory", new VariableHolder<Long>(new Instrumentation.Variable<Long>() {
+      @Override
       public Long getValue() {
         return Runtime.getRuntime().totalMemory();
       }
@@ -162,6 +165,7 @@ public class InstrumentationService extends BaseService implements Instrumentati
     long own;
     long total;
 
+    @Override
     public Cron start() {
       if (total != 0) {
         throw new IllegalStateException("Cron already used");
@@ -175,6 +179,7 @@ public class InstrumentationService extends BaseService implements Instrumentati
       return this;
     }
 
+    @Override
     public Cron stop() {
       if (total != 0) {
         throw new IllegalStateException("Cron already used");

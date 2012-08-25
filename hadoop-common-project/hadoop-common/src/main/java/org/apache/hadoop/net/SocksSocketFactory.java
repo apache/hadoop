@@ -59,14 +59,12 @@ public class SocksSocketFactory extends SocketFactory implements
     this.proxy = proxy;
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket() throws IOException {
 
     return new Socket(proxy);
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket(InetAddress addr, int port) throws IOException {
 
@@ -75,7 +73,6 @@ public class SocksSocketFactory extends SocketFactory implements
     return socket;
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket(InetAddress addr, int port,
       InetAddress localHostAddr, int localPort) throws IOException {
@@ -86,7 +83,6 @@ public class SocksSocketFactory extends SocketFactory implements
     return socket;
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket(String host, int port) throws IOException,
       UnknownHostException {
@@ -96,7 +92,6 @@ public class SocksSocketFactory extends SocketFactory implements
     return socket;
   }
 
-  /* @inheritDoc */
   @Override
   public Socket createSocket(String host, int port,
       InetAddress localHostAddr, int localPort) throws IOException,
@@ -108,13 +103,11 @@ public class SocksSocketFactory extends SocketFactory implements
     return socket;
   }
 
-  /* @inheritDoc */
   @Override
   public int hashCode() {
     return proxy.hashCode();
   }
 
-  /* @inheritDoc */
   @Override
   public boolean equals(Object obj) {
     if (this == obj)
@@ -132,12 +125,12 @@ public class SocksSocketFactory extends SocketFactory implements
     return true;
   }
 
-  /* @inheritDoc */
+  @Override
   public Configuration getConf() {
     return this.conf;
   }
 
-  /* @inheritDoc */
+  @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
     String proxyStr = conf.get("hadoop.socks.server");

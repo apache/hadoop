@@ -45,14 +45,17 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   static public class SimpleFilter implements Filter {
     private FilterConfig filterConfig = null;
 
-    public void init(FilterConfig filterConfig) {
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
       this.filterConfig = filterConfig;
     }
 
+    @Override
     public void destroy() {
       this.filterConfig = null;
     }
 
+    @Override
     public void doFilter(ServletRequest request, ServletResponse response,
         FilterChain chain) throws IOException, ServletException {
       if (filterConfig == null)
@@ -67,6 +70,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     static public class Initializer extends FilterInitializer {
       public Initializer() {}
 
+      @Override
       public void initFilter(FilterContainer container, Configuration conf) {
         container.addFilter("simple", SimpleFilter.class.getName(), null);
       }

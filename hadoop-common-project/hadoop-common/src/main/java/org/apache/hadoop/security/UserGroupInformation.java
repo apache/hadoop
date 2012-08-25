@@ -19,7 +19,6 @@ package org.apache.hadoop.security;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -33,7 +32,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -344,6 +342,7 @@ public class UserGroupInformation {
       this.realUser = realUser;
     }
     
+    @Override
     public String getName() {
       return realUser.getUserName();
     }
@@ -700,6 +699,7 @@ public class UserGroupInformation {
           !isKeytab) {
         Thread t = new Thread(new Runnable() {
           
+          @Override
           public void run() {
             String cmd = conf.get("hadoop.kerberos.kinit.command",
                                   "kinit");

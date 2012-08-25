@@ -59,6 +59,7 @@ public class CompressorStream extends CompressionOutputStream {
     super(out);
   }
 
+  @Override
   public void write(byte[] b, int off, int len) throws IOException {
     // Sanity checks
     if (compressor.finished()) {
@@ -83,6 +84,7 @@ public class CompressorStream extends CompressionOutputStream {
     }
   }
 
+  @Override
   public void finish() throws IOException {
     if (!compressor.finished()) {
       compressor.finish();
@@ -92,10 +94,12 @@ public class CompressorStream extends CompressionOutputStream {
     }
   }
 
+  @Override
   public void resetState() throws IOException {
     compressor.reset();
   }
   
+  @Override
   public void close() throws IOException {
     if (!closed) {
       finish();
@@ -105,6 +109,7 @@ public class CompressorStream extends CompressionOutputStream {
   }
 
   private byte[] oneByte = new byte[1];
+  @Override
   public void write(int b) throws IOException {
     oneByte[0] = (byte)(b & 0xff);
     write(oneByte, 0, oneByte.length);

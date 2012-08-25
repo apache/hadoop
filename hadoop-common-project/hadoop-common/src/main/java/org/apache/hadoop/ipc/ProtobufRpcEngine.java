@@ -240,6 +240,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       return returnMessage;
     }
 
+    @Override
     public void close() throws IOException {
       if (!isClosed) {
         isClosed = true;

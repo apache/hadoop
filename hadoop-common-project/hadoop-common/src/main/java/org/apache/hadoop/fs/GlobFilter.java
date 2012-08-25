@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class GlobFilter implements PathFilter {
   private final static PathFilter DEFAULT_FILTER = new PathFilter() {
+      @Override
       public boolean accept(Path file) {
         return true;
       }
@@ -75,6 +76,7 @@ public class GlobFilter implements PathFilter {
     return pattern.hasWildcard();
   }
 
+  @Override
   public boolean accept(Path path) {
     return pattern.matches(path.getName()) && userFilter.accept(path);
   }

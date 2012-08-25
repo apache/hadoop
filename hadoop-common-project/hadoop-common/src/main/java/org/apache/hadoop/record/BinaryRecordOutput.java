@@ -45,6 +45,7 @@ public class BinaryRecordOutput implements RecordOutput {
   }
     
   private static ThreadLocal bOut = new ThreadLocal() {
+      @Override
       protected synchronized Object initialValue() {
         return new BinaryRecordOutput();
       }
@@ -72,34 +73,42 @@ public class BinaryRecordOutput implements RecordOutput {
   }
     
     
+  @Override
   public void writeByte(byte b, String tag) throws IOException {
     out.writeByte(b);
   }
     
+  @Override
   public void writeBool(boolean b, String tag) throws IOException {
     out.writeBoolean(b);
   }
     
+  @Override
   public void writeInt(int i, String tag) throws IOException {
     Utils.writeVInt(out, i);
   }
     
+  @Override
   public void writeLong(long l, String tag) throws IOException {
     Utils.writeVLong(out, l);
   }
     
+  @Override
   public void writeFloat(float f, String tag) throws IOException {
     out.writeFloat(f);
   }
     
+  @Override
   public void writeDouble(double d, String tag) throws IOException {
     out.writeDouble(d);
   }
     
+  @Override
   public void writeString(String s, String tag) throws IOException {
     Utils.toBinaryString(out, s);
   }
     
+  @Override
   public void writeBuffer(Buffer buf, String tag)
     throws IOException {
     byte[] barr = buf.get();
@@ -108,20 +117,26 @@ public class BinaryRecordOutput implements RecordOutput {
     out.write(barr, 0, len);
   }
     
+  @Override
   public void startRecord(Record r, String tag) throws IOException {}
     
+  @Override
   public void endRecord(Record r, String tag) throws IOException {}
     
+  @Override
   public void startVector(ArrayList v, String tag) throws IOException {
     writeInt(v.size(), tag);
   }
     
+  @Override
   public void endVector(ArrayList v, String tag) throws IOException {}
     
+  @Override
   public void startMap(TreeMap v, String tag) throws IOException {
     writeInt(v.size(), tag);
   }
     
+  @Override
   public void endMap(TreeMap v, String tag) throws IOException {}
     
 }

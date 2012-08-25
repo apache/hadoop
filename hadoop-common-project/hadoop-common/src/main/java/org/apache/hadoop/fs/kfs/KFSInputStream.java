@@ -53,6 +53,7 @@ class KFSInputStream extends FSInputStream {
             this.fsize = 0;
     }
 
+    @Override
     public long getPos() throws IOException {
         if (kfsChannel == null) {
             throw new IOException("File closed");
@@ -60,6 +61,7 @@ class KFSInputStream extends FSInputStream {
         return kfsChannel.tell();
     }
 
+    @Override
     public synchronized int available() throws IOException {
         if (kfsChannel == null) {
             throw new IOException("File closed");
@@ -67,6 +69,7 @@ class KFSInputStream extends FSInputStream {
         return (int) (this.fsize - getPos());
     }
 
+    @Override
     public synchronized void seek(long targetPos) throws IOException {
         if (kfsChannel == null) {
             throw new IOException("File closed");
@@ -74,10 +77,12 @@ class KFSInputStream extends FSInputStream {
         kfsChannel.seek(targetPos);
     }
 
+    @Override
     public synchronized boolean seekToNewSource(long targetPos) throws IOException {
         return false;
     }
 
+    @Override
     public synchronized int read() throws IOException {
         if (kfsChannel == null) {
             throw new IOException("File closed");
@@ -93,6 +98,7 @@ class KFSInputStream extends FSInputStream {
         return -1;
     }
 
+    @Override
     public synchronized int read(byte b[], int off, int len) throws IOException {
         if (kfsChannel == null) {
             throw new IOException("File closed");
@@ -109,6 +115,7 @@ class KFSInputStream extends FSInputStream {
 	return res;
     }
 
+    @Override
     public synchronized void close() throws IOException {
         if (kfsChannel == null) {
             return;
@@ -118,14 +125,17 @@ class KFSInputStream extends FSInputStream {
         kfsChannel = null;
     }
 
+    @Override
     public boolean markSupported() {
         return false;
     }
 
+    @Override
     public void mark(int readLimit) {
         // Do nothing
     }
 
+    @Override
     public void reset() throws IOException {
         throw new IOException("Mark not supported");
     }

@@ -42,7 +42,8 @@ class ViewFsFileStatus extends FileStatus {
      return super.equals(o);
    }
    
-   public int hashCode() {
+   @Override
+  public int hashCode() {
      return super.hashCode();
    }
    

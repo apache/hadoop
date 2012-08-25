@@ -63,6 +63,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   * @throws java.io.IOException
   *             Throws IO exception
   */
+  @Override
   public CompressionOutputStream createOutputStream(OutputStream out)
       throws IOException {
     return new BZip2CompressionOutputStream(out);
@@ -74,6 +75,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   * @return CompressionOutputStream
     @throws java.io.IOException
    */
+  @Override
   public CompressionOutputStream createOutputStream(OutputStream out,
       Compressor compressor) throws IOException {
     return createOutputStream(out);
@@ -84,6 +86,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   *
   * @return BZip2DummyCompressor.class
   */
+  @Override
   public Class<? extends org.apache.hadoop.io.compress.Compressor> getCompressorType() {
     return BZip2DummyCompressor.class;
   }
@@ -93,6 +96,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   *
   * @return Compressor
   */
+  @Override
   public Compressor createCompressor() {
     return new BZip2DummyCompressor();
   }
@@ -106,6 +110,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   * @throws java.io.IOException
   *             Throws IOException
   */
+  @Override
   public CompressionInputStream createInputStream(InputStream in)
       throws IOException {
     return new BZip2CompressionInputStream(in);
@@ -116,6 +121,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   *
   * @return CompressionInputStream
   */
+  @Override
   public CompressionInputStream createInputStream(InputStream in,
       Decompressor decompressor) throws IOException {
     return createInputStream(in);
@@ -133,6 +139,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
    *
    * @return CompressionInputStream for BZip2 aligned at block boundaries
    */
+  @Override
   public SplitCompressionInputStream createInputStream(InputStream seekableIn,
       Decompressor decompressor, long start, long end, READ_MODE readMode)
       throws IOException {
@@ -181,6 +188,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   *
   * @return BZip2DummyDecompressor.class
   */
+  @Override
   public Class<? extends org.apache.hadoop.io.compress.Decompressor> getDecompressorType() {
     return BZip2DummyDecompressor.class;
   }
@@ -190,6 +198,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   *
   * @return Decompressor
   */
+  @Override
   public Decompressor createDecompressor() {
     return new BZip2DummyDecompressor();
   }
@@ -199,6 +208,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
   *
   * @return A String telling the default bzip2 file extension
   */
+  @Override
   public String getDefaultExtension() {
     return ".bz2";
   }
@@ -226,6 +236,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
       }
     }
 
+    @Override
     public void finish() throws IOException {
       if (needsReset) {
         // In the case that nothing is written to this stream, we still need to
@@ -245,12 +256,14 @@ public class BZip2Codec implements SplittableCompressionCodec {
       }
     }    
     
+    @Override
     public void resetState() throws IOException {
       // Cannot write to out at this point because out might not be ready
       // yet, as in SequenceFile.Writer implementation.
       needsReset = true;
     }
 
+    @Override
     public void write(int b) throws IOException {
       if (needsReset) {
         internalReset();
@@ -258,6 +271,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
       this.output.write(b);
     }
 
+    @Override
     public void write(byte[] b, int off, int len) throws IOException {
       if (needsReset) {
         internalReset();
@@ -265,6 +279,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
       this.output.write(b, off, len);
     }
 
+    @Override
     public void close() throws IOException {
       if (needsReset) {
         // In the case that nothing is written to this stream, we still need to
@@ -382,6 +397,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
 
     }// end of method
 
+    @Override
     public void close() throws IOException {
       if (!needsReset) {
         input.close();
@@ -417,6 +433,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
     *
     */
 
+    @Override
     public int read(byte[] b, int off, int len) throws IOException {
       if (needsReset) {
         internalReset();
@@ -440,6 +457,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
 
     }
 
+    @Override
     public int read() throws IOException {
       byte b[] = new byte[1];
       int result = this.read(b, 0, 1);
@@ -454,6 +472,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
       }
     }    
     
+    @Override
     public void resetState() throws IOException {
       // Cannot read from bufferedIn at this point because bufferedIn
       // might not be ready
@@ -461,6 +480,7 @@ public class BZip2Codec implements SplittableCompressionCodec {
       needsReset = true;
     }
 
+    @Override
     public long getPos() {
       return this.compressedStreamPosition;
       }

@@ -312,9 +312,6 @@ public class Hdfs extends AbstractFileSystem {
     return listing.toArray(new FileStatus[listing.size()]);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {

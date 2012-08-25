@@ -99,17 +99,11 @@ public class TestReconfiguration {
       super(conf);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override 
     public Collection<String> getReconfigurableProperties() {
       return Arrays.asList(PROP1, PROP2, PROP4);
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public synchronized void reconfigurePropertyImpl(String property, 
                                                      String newVal) {

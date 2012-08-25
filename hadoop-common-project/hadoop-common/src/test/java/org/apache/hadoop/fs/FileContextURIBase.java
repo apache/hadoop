@@ -20,8 +20,6 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Iterator;
-
 import junit.framework.Assert;
 
 import org.apache.hadoop.fs.permission.FsPermission;

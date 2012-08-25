@@ -136,15 +136,18 @@ public class TestSaslRPC {
   
   public static class TestTokenSecretManager extends
       SecretManager<TestTokenIdentifier> {
+    @Override
     public byte[] createPassword(TestTokenIdentifier id) {
       return id.getBytes();
     }
 
+    @Override
     public byte[] retrievePassword(TestTokenIdentifier id) 
         throws InvalidToken {
       return id.getBytes();
     }
     
+    @Override
     public TestTokenIdentifier createIdentifier() {
       return new TestTokenIdentifier();
     }
@@ -152,6 +155,7 @@ public class TestSaslRPC {
   
   public static class BadTokenSecretManager extends TestTokenSecretManager {
 
+    @Override
     public byte[] retrievePassword(TestTokenIdentifier id) 
         throws InvalidToken {
       throw new InvalidToken(ERROR_MESSAGE);
@@ -186,6 +190,7 @@ public class TestSaslRPC {
   
   public static class TestSaslImpl extends TestRPC.TestImpl implements
       TestSaslProtocol {
+    @Override
     public AuthenticationMethod getAuthMethod() throws IOException {
       return UserGroupInformation.getCurrentUser().getAuthenticationMethod();
     }
@@ -450,6 +455,7 @@ public class TestSaslRPC {
     current.addToken(token);
 
     current.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws IOException {
         TestSaslProtocol proxy = null;
         try {

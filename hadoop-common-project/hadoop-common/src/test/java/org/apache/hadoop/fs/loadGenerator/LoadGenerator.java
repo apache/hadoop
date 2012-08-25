@@ -186,6 +186,7 @@ public class LoadGenerator extends Configured implements Tool {
     /** Main loop
      * Each iteration decides what's the next operation and then pauses.
      */
+    @Override
     public void run() {
       try {
         while (shouldRun) {
@@ -281,6 +282,7 @@ public class LoadGenerator extends Configured implements Tool {
    * Before exiting, it prints the average execution for 
    * each operation and operation throughput.
    */
+  @Override
   public int run(String[] args) throws Exception {
     int exitCode = init(args);
     if (exitCode != 0) {

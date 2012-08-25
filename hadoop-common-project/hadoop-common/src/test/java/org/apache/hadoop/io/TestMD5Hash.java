@@ -91,6 +91,7 @@ public class TestMD5Hash extends TestCase {
                closeHash1.hashCode() != closeHash2.hashCode());
      
     Thread t1 = new Thread() {      
+      @Override
       public void run() {
         for (int i = 0; i < 100; i++) {
           MD5Hash hash = new MD5Hash(DFF);
@@ -100,6 +101,7 @@ public class TestMD5Hash extends TestCase {
     };
     
     Thread t2 = new Thread() {
+      @Override
       public void run() {
         for (int i = 0; i < 100; i++) {
           MD5Hash hash = new MD5Hash(D00);

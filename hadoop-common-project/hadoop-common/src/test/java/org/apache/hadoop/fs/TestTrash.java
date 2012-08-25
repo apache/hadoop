@@ -67,6 +67,7 @@ public class TestTrash extends TestCase {
 
     // filter that matches all the files that start with fileName*
     PathFilter pf = new PathFilter() {
+      @Override
       public boolean accept(Path file) {
         return file.getName().startsWith(prefix);
       }
@@ -563,6 +564,7 @@ public class TestTrash extends TestCase {
       super();
       this.home = home;
     }
+    @Override
     public Path getHomeDirectory() {
       return home;
     }

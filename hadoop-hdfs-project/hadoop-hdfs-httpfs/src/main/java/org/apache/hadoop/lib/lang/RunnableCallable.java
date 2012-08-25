@@ -90,6 +90,7 @@ public class RunnableCallable implements Callable<Void>, Runnable {
    *
    * @return the class name of the wrapper callable/runnable.
    */
+  @Override
   public String toString() {
     return (runnable != null) ? runnable.getClass().getSimpleName() : callable.getClass().getSimpleName();
   }

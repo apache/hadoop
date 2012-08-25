@@ -106,17 +106,21 @@ public class TestRPC {
   public static class TestImpl implements TestProtocol {
     int fastPingCounter = 0;
     
+    @Override
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TestProtocol.versionID;
     }
     
+    @Override
     public ProtocolSignature getProtocolSignature(String protocol, long clientVersion,
         int hashcode) {
       return new ProtocolSignature(TestProtocol.versionID, null);
     }
     
+    @Override
     public void ping() {}
 
+    @Override
     public synchronized void slowPing(boolean shouldSlow) {
       if (shouldSlow) {
         while (fastPingCounter < 2) {
@@ -131,17 +135,22 @@ public class TestRPC {
       }
     }
     
+    @Override
     public String echo(String value) throws IOException { return value; }
 
+    @Override
     public String[] echo(String[] values) throws IOException { return values; }
 
+    @Override
     public Writable echo(Writable writable) {
       return writable;
     }
+    @Override
     public int add(int v1, int v2) {
       return v1 + v2;
     }
 
+    @Override
     public int add(int[] values) {
       int sum = 0;
       for (int i = 0; i < values.length; i++) {
@@ -150,16 +159,19 @@ public class TestRPC {
       return sum;
     }
 
+    @Override
     public int error() throws IOException {
       throw new IOException("bobo");
     }
 
+    @Override
     public void testServerGet() throws IOException {
       if (!(Server.get() instanceof RPC.Server)) {
         throw new IOException("Server.get() failed");
       }
     }
 
+    @Override
     public int[] exchange(int[] values) {
       for (int i = 0; i < values.length; i++) {
         values[i] = i;
@@ -186,6 +198,7 @@ public class TestRPC {
     }
 
     // do two RPC that transfers data.
+    @Override
     public void run() {
       int[] indata = new int[datasize];
       int[] outdata = null;
@@ -220,6 +233,7 @@ public class TestRPC {
       return done;
     }
 
+    @Override
     public void run() {
       try {
         proxy.slowPing(true);   // this would hang until two fast pings happened

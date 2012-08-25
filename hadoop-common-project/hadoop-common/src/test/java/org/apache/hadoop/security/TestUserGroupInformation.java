@@ -92,6 +92,7 @@ public class TestUserGroupInformation {
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
     UserGroupInformation curUGI = 
       userGroupInfo.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
+        @Override
         public UserGroupInformation run() throws IOException {
           return UserGroupInformation.getCurrentUser();
         }});
@@ -316,6 +317,7 @@ public class TestUserGroupInformation {
     // ensure that the tokens are passed through doAs
     Collection<Token<? extends TokenIdentifier>> otherSet = 
       ugi.doAs(new PrivilegedExceptionAction<Collection<Token<?>>>(){
+        @Override
         public Collection<Token<?>> run() throws IOException {
           return UserGroupInformation.getCurrentUser().getTokens();
         }
@@ -342,6 +344,7 @@ public class TestUserGroupInformation {
     // ensure that the token identifiers are passed through doAs
     Collection<TokenIdentifier> otherSet = ugi
         .doAs(new PrivilegedExceptionAction<Collection<TokenIdentifier>>() {
+          @Override
           public Collection<TokenIdentifier> run() throws IOException {
             return UserGroupInformation.getCurrentUser().getTokenIdentifiers();
           }
@@ -358,6 +361,7 @@ public class TestUserGroupInformation {
     ugi.setAuthenticationMethod(am);
     Assert.assertEquals(am, ugi.getAuthenticationMethod());
     ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws IOException {
         Assert.assertEquals(am, UserGroupInformation.getCurrentUser()
             .getAuthenticationMethod());
@@ -379,6 +383,7 @@ public class TestUserGroupInformation {
     Assert.assertEquals(am, UserGroupInformation
         .getRealAuthenticationMethod(proxyUgi));
     proxyUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws IOException {
         Assert.assertEquals(AuthenticationMethod.PROXY, UserGroupInformation
             .getCurrentUser().getAuthenticationMethod());
@@ -451,6 +456,7 @@ public class TestUserGroupInformation {
   public void testUGIUnderNonHadoopContext() throws Exception {
     Subject nonHadoopSubject = new Subject();
     Subject.doAs(nonHadoopSubject, new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws IOException {
           UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
           assertNotNull(ugi);

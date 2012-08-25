@@ -39,6 +39,7 @@ public class FsServerDefaults implements Writable {
 
   static { // register a ctor
     WritableFactories.setFactory(FsServerDefaults.class, new WritableFactory() {
+      @Override
       public Writable newInstance() {
         return new FsServerDefaults();
       }
@@ -106,6 +107,7 @@ public class FsServerDefaults implements Writable {
   // /////////////////////////////////////////
   // Writable
   // /////////////////////////////////////////
+  @Override
   @InterfaceAudience.Private
   public void write(DataOutput out) throws IOException {
     out.writeLong(blockSize);
@@ -116,6 +118,7 @@ public class FsServerDefaults implements Writable {
     WritableUtils.writeEnum(out, checksumType);
   }
 
+  @Override
   @InterfaceAudience.Private
   public void readFields(DataInput in) throws IOException {
     blockSize = in.readLong();

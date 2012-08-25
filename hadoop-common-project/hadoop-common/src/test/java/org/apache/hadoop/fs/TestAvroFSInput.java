@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs;
 
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 
 import org.apache.hadoop.conf.Configuration;

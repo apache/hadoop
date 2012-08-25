@@ -498,6 +498,7 @@ public class SecurityUtil {
    * Uses standard java host resolution
    */
   static class StandardHostResolver implements HostResolver {
+    @Override
     public InetAddress getByName(String host) throws UnknownHostException {
       return InetAddress.getByName(host);
     }
@@ -542,6 +543,7 @@ public class SecurityUtil {
      * @return InetAddress with the fully qualified hostname or ip
      * @throws UnknownHostException if host does not exist
      */
+    @Override
     public InetAddress getByName(String host) throws UnknownHostException {
       InetAddress addr = null;
 

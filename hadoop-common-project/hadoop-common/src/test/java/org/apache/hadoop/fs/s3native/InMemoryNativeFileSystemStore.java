@@ -55,15 +55,18 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
     new TreeMap<String, FileMetadata>();
   private SortedMap<String, byte[]> dataMap = new TreeMap<String, byte[]>();
 
+  @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
     this.conf = conf;
   }
 
+  @Override
   public void storeEmptyFile(String key) throws IOException {
     metadataMap.put(key, new FileMetadata(key, 0, Time.now()));
     dataMap.put(key, new byte[0]);
   }
 
+  @Override
   public void storeFile(String key, File file, byte[] md5Hash)
     throws IOException {
     
@@ -86,10 +89,12 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
     dataMap.put(key, out.toByteArray());
   }
 
+  @Override
   public InputStream retrieve(String key) throws IOException {
     return retrieve(key, 0);
   }
   
+  @Override
   public InputStream retrieve(String key, long byteRangeStart)
     throws IOException {
     
@@ -118,15 +123,18 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
     return result;
   }
 
+  @Override
   public FileMetadata retrieveMetadata(String key) throws IOException {
     return metadataMap.get(key);
   }
 
+  @Override
   public PartialListing list(String prefix, int maxListingLength)
       throws IOException {
     return list(prefix, maxListingLength, null, false);
   }
 
+  @Override
   public PartialListing list(String prefix, int maxListingLength,
       String priorLastKey, boolean recursive) throws IOException {
 
@@ -165,16 +173,19 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
         commonPrefixes.toArray(new String[0]));
   }
 
+  @Override
   public void delete(String key) throws IOException {
     metadataMap.remove(key);
     dataMap.remove(key);
   }
 
+  @Override
   public void copy(String srcKey, String dstKey) throws IOException {
     metadataMap.put(dstKey, metadataMap.get(srcKey));
     dataMap.put(dstKey, dataMap.get(srcKey));
   }
   
+  @Override
   public void purge(String prefix) throws IOException {
     Iterator<Entry<String, FileMetadata>> i =
       metadataMap.entrySet().iterator();
@@ -187,6 +198,7 @@ class InMemoryNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  @Override
   public void dump() throws IOException {
     System.out.println(metadataMap.values());
     System.out.println(dataMap.keySet());

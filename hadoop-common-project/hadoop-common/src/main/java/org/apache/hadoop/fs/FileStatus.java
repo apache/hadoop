@@ -253,6 +253,7 @@ public class FileStatus implements Writable, Comparable {
   //////////////////////////////////////////////////
   // Writable
   //////////////////////////////////////////////////
+  @Override
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, getPath().toString(), Text.DEFAULT_MAX_LEN);
     out.writeLong(getLen());
@@ -270,6 +271,7 @@ public class FileStatus implements Writable, Comparable {
     }
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     String strPath = Text.readString(in, Text.DEFAULT_MAX_LEN);
     this.path = new Path(strPath);
@@ -299,6 +301,7 @@ public class FileStatus implements Writable, Comparable {
    * @throws ClassCastException if the specified object's is not of 
    *         type FileStatus
    */
+  @Override
   public int compareTo(Object o) {
     FileStatus other = (FileStatus)o;
     return this.getPath().compareTo(other.getPath());
@@ -308,6 +311,7 @@ public class FileStatus implements Writable, Comparable {
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.
    */
+  @Override
   public boolean equals(Object o) {
     if (o == null) {
       return false;
@@ -328,6 +332,7 @@ public class FileStatus implements Writable, Comparable {
    *
    * @return  a hash code value for the path name.
    */
+  @Override
   public int hashCode() {
     return getPath().hashCode();
   }

@@ -76,6 +76,7 @@ public class DU extends Shell {
    **/
   class DURefreshThread implements Runnable {
     
+    @Override
     public void run() {
       
       while(shouldRun) {
@@ -169,16 +170,19 @@ public class DU extends Shell {
     }
   }
   
+  @Override
   public String toString() {
     return
       "du -sk " + dirPath +"\n" +
       used + "\t" + dirPath;
   }
 
+  @Override
   protected String[] getExecString() {
     return new String[] {"du", "-sk", dirPath};
   }
   
+  @Override
   protected void parseExecResult(BufferedReader lines) throws IOException {
     String line = lines.readLine();
     if (line == null) {

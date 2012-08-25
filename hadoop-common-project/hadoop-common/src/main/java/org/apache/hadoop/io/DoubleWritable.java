@@ -42,10 +42,12 @@ public class DoubleWritable implements WritableComparable<DoubleWritable> {
     set(value);
   }
   
+  @Override
   public void readFields(DataInput in) throws IOException {
     value = in.readDouble();
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeDouble(value);
   }

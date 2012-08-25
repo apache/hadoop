@@ -257,6 +257,7 @@ public class SnappyDecompressor implements Decompressor {
     return 0;
   }
 
+  @Override
   public synchronized void reset() {
     finished = false;
     compressedDirectBufLen = 0;

@@ -39,22 +39,27 @@ public class JBuffer extends JCompType {
           "org.apache.hadoop.record.Buffer", "TypeID.RIOType.BUFFER");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "org.apache.hadoop.record.meta.TypeID.BufferTypeID";
     }
 
+    @Override
     void genCompareTo(CodeBuffer cb, String fname, String other) {
       cb.append(Consts.RIO_PREFIX + "ret = "+fname+".compareTo("+other+");\n");
     }
     
+    @Override
     void genEquals(CodeBuffer cb, String fname, String peer) {
       cb.append(Consts.RIO_PREFIX + "ret = "+fname+".equals("+peer+");\n");
     }
     
+    @Override
     void genHashCode(CodeBuffer cb, String fname) {
       cb.append(Consts.RIO_PREFIX + "ret = "+fname+".hashCode();\n");
     }
     
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("int i = org.apache.hadoop.record.Utils.readVInt("+
@@ -64,6 +69,7 @@ public class JBuffer extends JCompType {
       cb.append("}\n");
     }
     
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       cb.append("int i1 = org.apache.hadoop.record.Utils.readVInt(b1, s1);\n");
@@ -84,6 +90,7 @@ public class JBuffer extends JCompType {
       super(" ::std::string");
     }
     
+    @Override
     void genGetSet(CodeBuffer cb, String fname) {
       cb.append("virtual const "+getType()+"& get"+toCamelCase(fname)+"() const {\n");
       cb.append("return "+fname+";\n");
@@ -93,6 +100,7 @@ public class JBuffer extends JCompType {
       cb.append("}\n");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::TypeID(::hadoop::RIOTYPE_BUFFER)";
     }
@@ -105,6 +113,7 @@ public class JBuffer extends JCompType {
     setCType(new CCompType());
   }
   
+  @Override
   String getSignature() {
     return "B";
   }

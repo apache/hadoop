@@ -39,10 +39,12 @@ public class FloatWritable implements WritableComparable<FloatWritable> {
   /** Return the value of this FloatWritable. */
   public float get() { return value; }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     value = in.readFloat();
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeFloat(value);
   }

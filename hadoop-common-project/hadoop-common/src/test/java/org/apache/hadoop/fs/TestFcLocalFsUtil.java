@@ -25,6 +25,7 @@ import org.junit.Before;
 public class TestFcLocalFsUtil extends
   FileContextUtilBase {
 
+  @Override
   @Before
   public void setUp() throws Exception {
     fc = FileContext.getLocalFSFileContext();

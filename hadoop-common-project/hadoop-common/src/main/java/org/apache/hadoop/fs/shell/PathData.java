@@ -380,6 +380,7 @@ public class PathData implements Comparable<PathData> {
    * as given on the commandline, or the full path
    * @return String of the path
    */
+  @Override
   public String toString() {
     String scheme = uri.getScheme();
     // No interpretation of symbols. Just decode % escaped chars.

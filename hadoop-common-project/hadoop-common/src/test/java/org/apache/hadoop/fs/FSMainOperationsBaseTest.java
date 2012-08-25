@@ -67,6 +67,7 @@ public abstract class FSMainOperationsBaseTest  {
   protected static FileSystem fSys;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+    @Override
     public boolean accept(final Path file) {
       return true;
     }
@@ -74,6 +75,7 @@ public abstract class FSMainOperationsBaseTest  {
 
   //A test filter with returns any path containing a "b" 
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
+    @Override
     public boolean accept(Path file) {
       if(file.getName().contains("x") || file.getName().contains("X"))
         return true;
