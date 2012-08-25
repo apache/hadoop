@@ -47,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 
 public class TestUtils {
   private static final Log LOG = LogFactory.getLog(TestUtils.class);
@@ -79,9 +80,11 @@ public class TestUtils {
     ContainerAllocationExpirer cae = 
         new ContainerAllocationExpirer(nullDispatcher);
     
+    Configuration conf = new Configuration();
     RMContext rmContext =
         new RMContextImpl(null, nullDispatcher, cae, null, null, null,
-          new ApplicationTokenSecretManager(new Configuration()));
+          new ApplicationTokenSecretManager(conf),
+          new RMContainerTokenSecretManager(conf));
     
     return rmContext;
   }

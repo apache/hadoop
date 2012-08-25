@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 
 public class RMContextImpl implements RMContext {
 
@@ -53,13 +54,15 @@ public class RMContextImpl implements RMContext {
   private ContainerAllocationExpirer containerAllocationExpirer;
   private final DelegationTokenRenewer tokenRenewer;
   private final ApplicationTokenSecretManager appTokenSecretManager;
+  private final RMContainerTokenSecretManager containerTokenSecretManager;
 
   public RMContextImpl(Store store, Dispatcher rmDispatcher,
       ContainerAllocationExpirer containerAllocationExpirer,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
       DelegationTokenRenewer tokenRenewer,
-      ApplicationTokenSecretManager appTokenSecretManager) {
+      ApplicationTokenSecretManager appTokenSecretManager,
+      RMContainerTokenSecretManager containerTokenSecretManager) {
     this.store = store;
     this.rmDispatcher = rmDispatcher;
     this.containerAllocationExpirer = containerAllocationExpirer;
@@ -67,6 +70,7 @@ public class RMContextImpl implements RMContext {
     this.amFinishingMonitor = amFinishingMonitor;
     this.tokenRenewer = tokenRenewer;
     this.appTokenSecretManager = appTokenSecretManager;
+    this.containerTokenSecretManager = containerTokenSecretManager;
   }
   
   @Override
@@ -122,5 +126,10 @@ public class RMContextImpl implements RMContext {
   @Override
   public ApplicationTokenSecretManager getApplicationTokenSecretManager() {
     return this.appTokenSecretManager;
+  }
+
+  @Override
+  public RMContainerTokenSecretManager getContainerTokenSecretManager() {
+    return this.containerTokenSecretManager;
   }
 }

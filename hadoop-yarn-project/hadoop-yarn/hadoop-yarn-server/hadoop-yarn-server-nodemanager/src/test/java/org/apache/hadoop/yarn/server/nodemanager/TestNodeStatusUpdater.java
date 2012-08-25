@@ -65,7 +65,6 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -234,10 +233,8 @@ public class TestNodeStatusUpdater {
     private Context context;
 
     public MyNodeStatusUpdater(Context context, Dispatcher dispatcher,
-        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
-        ContainerTokenSecretManager containerTokenSecretManager) {
-      super(context, dispatcher, healthChecker, metrics,
-          containerTokenSecretManager);
+        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
+      super(context, dispatcher, healthChecker, metrics);
       this.context = context;
     }
 
@@ -252,10 +249,8 @@ public class TestNodeStatusUpdater {
     private Context context;
 
     public MyNodeStatusUpdater3(Context context, Dispatcher dispatcher,
-        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics,
-        ContainerTokenSecretManager containerTokenSecretManager) {
-      super(context, dispatcher, healthChecker, metrics,
-          containerTokenSecretManager);
+        NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
+      super(context, dispatcher, healthChecker, metrics);
       this.context = context;
       this.resourceTracker = new MyResourceTracker3(this.context);
     }
@@ -276,11 +271,9 @@ public class TestNodeStatusUpdater {
     private MyNodeStatusUpdater3 nodeStatusUpdater;
     @Override
     protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-        Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-        ContainerTokenSecretManager containerTokenSecretManager) {
+        Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
       this.nodeStatusUpdater =
-          new MyNodeStatusUpdater3(context, dispatcher, healthChecker, metrics,
-              containerTokenSecretManager);
+          new MyNodeStatusUpdater3(context, dispatcher, healthChecker, metrics);
       return this.nodeStatusUpdater;
     }
 
@@ -398,10 +391,9 @@ public class TestNodeStatusUpdater {
     nm = new NodeManager() {
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-          Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-          ContainerTokenSecretManager containerTokenSecretManager) {
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
         return new MyNodeStatusUpdater(context, dispatcher, healthChecker,
-                                       metrics, containerTokenSecretManager);
+                                       metrics);
       }
     };
 
@@ -528,11 +520,9 @@ public class TestNodeStatusUpdater {
     nm = new NodeManager() {
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-          Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-          ContainerTokenSecretManager containerTokenSecretManager) {
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
         MyNodeStatusUpdater nodeStatusUpdater = new MyNodeStatusUpdater(
-            context, dispatcher, healthChecker, metrics,
-            containerTokenSecretManager);
+            context, dispatcher, healthChecker, metrics);
         MyResourceTracker2 myResourceTracker2 = new MyResourceTracker2();
         myResourceTracker2.registerNodeAction = NodeAction.SHUTDOWN;
         nodeStatusUpdater.resourceTracker = myResourceTracker2;
@@ -556,22 +546,19 @@ public class TestNodeStatusUpdater {
     nm = new NodeManager() {
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-          Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-          ContainerTokenSecretManager containerTokenSecretManager) {
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
         return new MyNodeStatusUpdater(context, dispatcher, healthChecker,
-                                       metrics, containerTokenSecretManager);
+                                       metrics);
       }
 
       @Override
       protected ContainerManagerImpl createContainerManager(Context context,
           ContainerExecutor exec, DeletionService del,
           NodeStatusUpdater nodeStatusUpdater,
-          ContainerTokenSecretManager containerTokenSecretManager,
           ApplicationACLsManager aclsManager,
           LocalDirsHandlerService diskhandler) {
-        return new ContainerManagerImpl(context, exec, del,
-            nodeStatusUpdater, metrics, containerTokenSecretManager,
-            aclsManager, diskhandler) {
+        return new ContainerManagerImpl(context, exec, del, nodeStatusUpdater,
+          metrics, aclsManager, diskhandler) {
           @Override
           public void start() {
             // Simulating failure of starting RPC server
@@ -654,11 +641,9 @@ public class TestNodeStatusUpdater {
     return new NodeManager() {
       @Override
       protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-          Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-          ContainerTokenSecretManager containerTokenSecretManager) {
+          Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
         MyNodeStatusUpdater myNodeStatusUpdater = new MyNodeStatusUpdater(
-            context, dispatcher, healthChecker, metrics,
-            containerTokenSecretManager);
+            context, dispatcher, healthChecker, metrics);
         MyResourceTracker2 myResourceTracker2 = new MyResourceTracker2();
         myResourceTracker2.heartBeatNodeAction = nodeHeartBeatAction;
         myNodeStatusUpdater.resourceTracker = myResourceTracker2;

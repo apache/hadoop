@@ -36,7 +36,10 @@ public interface HeartbeatResponse {
   
   void setResponseId(int responseId);
   void setNodeAction(NodeAction action);
-  
+
+  MasterKey getMasterKey();
+  void setMasterKey(MasterKey secretKey);
+
   void addAllContainersToCleanup(List<ContainerId> containers);
   void addContainerToCleanup(ContainerId container);
   void removeContainerToCleanup(int index);

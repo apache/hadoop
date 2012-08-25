@@ -26,6 +26,7 @@ import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 
 /**
  * Context interface for sharing information across components in the
@@ -43,6 +44,8 @@ public interface Context {
   ConcurrentMap<ApplicationId, Application> getApplications();
 
   ConcurrentMap<ContainerId, Container> getContainers();
+
+  NMContainerTokenSecretManager getContainerTokenSecretManager();
 
   NodeHealthStatus getNodeHealthStatus();
 }
