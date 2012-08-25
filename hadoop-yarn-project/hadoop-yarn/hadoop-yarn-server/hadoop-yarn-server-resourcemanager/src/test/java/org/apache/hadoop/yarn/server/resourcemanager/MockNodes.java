@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
 import com.google.common.collect.Lists;
@@ -185,6 +186,11 @@ public class MockNodes {
 
     @Override
     public HeartbeatResponse getLastHeartBeatResponse() {
+      return null;
+    }
+
+    @Override
+    public MasterKey getCurrentMasterKey() {
       return null;
     }
   };

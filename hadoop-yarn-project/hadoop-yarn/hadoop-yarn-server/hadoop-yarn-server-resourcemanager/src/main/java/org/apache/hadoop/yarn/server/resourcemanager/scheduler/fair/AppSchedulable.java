@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
@@ -51,7 +51,7 @@ public class AppSchedulable extends Schedulable {
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static final Log LOG = LogFactory.getLog(AppSchedulable.class);
   private FSQueue queue;
-  private ContainerTokenSecretManager containerTokenSecretManager;
+  private RMContainerTokenSecretManager containerTokenSecretManager;
 
   public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSQueue queue) {
     this.scheduler = scheduler;

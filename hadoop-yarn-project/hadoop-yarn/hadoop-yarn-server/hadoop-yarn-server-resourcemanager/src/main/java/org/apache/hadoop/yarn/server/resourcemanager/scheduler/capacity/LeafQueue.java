@@ -64,7 +64,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
@@ -104,7 +104,7 @@ public class LeafQueue implements CSQueue {
   private final Resource maximumAllocation;
   private final float minimumAllocationFactor;
 
-  private ContainerTokenSecretManager containerTokenSecretManager;
+  private RMContainerTokenSecretManager containerTokenSecretManager;
 
   private Map<String, User> users = new HashMap<String, User>();
   

@@ -21,11 +21,11 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.ipc.Server;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -171,8 +171,7 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
       throws YarnRemoteException {
     UserGroupInformation user = checkAcls("refreshQueues");
     try {
-      scheduler.reinitialize(conf, null, null); // ContainerTokenSecretManager can't
-                                                // be 'refreshed'
+      scheduler.reinitialize(conf, this.rmContext);
       RMAuditLogger.logSuccess(user.getShortUserName(), "refreshQueues", 
           "AdminService");
       return recordFactory.newRecordInstance(RefreshQueuesResponse.class);

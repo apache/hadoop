@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 
 /**
  * Context of the ResourceManager.
@@ -58,4 +59,6 @@ public interface RMContext {
   DelegationTokenRenewer getDelegationTokenRenewer();
 
   ApplicationTokenSecretManager getApplicationTokenSecretManager();
+
+  RMContainerTokenSecretManager getContainerTokenSecretManager();
 }
