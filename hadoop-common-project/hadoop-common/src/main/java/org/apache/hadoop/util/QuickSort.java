@@ -52,13 +52,12 @@ public final class QuickSort implements IndexedSorter {
    * {@inheritDoc} If the recursion depth falls below {@link #getMaxDepth},
    * then switch to {@link HeapSort}.
    */
+  @Override
   public void sort(IndexedSortable s, int p, int r) {
     sort(s, p, r, null);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  @Override
   public void sort(final IndexedSortable s, int p, int r,
       final Progressable rep) {
     sortInternal(s, p, r, rep, getMaxDepth(r - p));

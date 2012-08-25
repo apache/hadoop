@@ -474,7 +474,7 @@ public class HttpServer implements FilterContainer {
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void addFilter(String name, String classname,
       Map<String, String> parameters) {
 
@@ -494,7 +494,7 @@ public class HttpServer implements FilterContainer {
     filterNames.add(name);
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void addGlobalFilter(String name, String classname,
       Map<String, String> parameters) {
     final String[] ALL_URLS = { "/*" };

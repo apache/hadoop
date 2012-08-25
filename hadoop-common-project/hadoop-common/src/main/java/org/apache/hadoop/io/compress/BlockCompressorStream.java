@@ -78,6 +78,7 @@ public class BlockCompressorStream extends CompressorStream {
    * Each block contains the uncompressed length for the block, followed by
    * one or more length-prefixed blocks of compressed data.
    */
+  @Override
   public void write(byte[] b, int off, int len) throws IOException {
     // Sanity checks
     if (compressor.finished()) {
@@ -132,6 +133,7 @@ public class BlockCompressorStream extends CompressorStream {
     }
   }
 
+  @Override
   public void finish() throws IOException {
     if (!compressor.finished()) {
       rawWriteInt((int)compressor.getBytesRead());
@@ -142,6 +144,7 @@ public class BlockCompressorStream extends CompressorStream {
     }
   }
 
+  @Override
   protected void compress() throws IOException {
     int len = compressor.compress(buffer, 0, buffer.length);
     if (len > 0) {

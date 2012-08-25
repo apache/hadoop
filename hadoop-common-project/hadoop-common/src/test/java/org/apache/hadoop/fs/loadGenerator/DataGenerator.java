@@ -67,6 +67,7 @@ public class DataGenerator extends Configured implements Tool {
    * namespace. Afterwards it reads the file attributes and creates files 
    * in the file. All file content is filled with 'a'.
    */
+  @Override
   public int run(String[] args) throws Exception {
     int exitCode = 0;
     exitCode = init(args);

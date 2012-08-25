@@ -147,6 +147,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     UserGroupInformation ugi =
         UserGroupInformation.getBestUGI(ticketCachePath, user);
     return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws IOException {
         return get(uri, conf);
       }
@@ -332,6 +333,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     UserGroupInformation ugi =
         UserGroupInformation.getBestUGI(ticketCachePath, user);
     return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws IOException {
         return newInstance(uri,conf); 
       }
@@ -1389,6 +1391,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+      @Override
       public boolean accept(Path file) {
         return true;
       }     
@@ -2056,6 +2059,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * No more filesystem operations are needed.  Will
    * release any held locks.
    */
+  @Override
   public void close() throws IOException {
     // delete all files that were marked as delete-on-exit.
     processDeleteOnExit();
@@ -2393,6 +2397,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     private class ClientFinalizer implements Runnable {
+      @Override
       public synchronized void run() {
         try {
           closeAll(true);
@@ -2447,7 +2452,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         this.ugi = UserGroupInformation.getCurrentUser();
       }
 
-      /** {@inheritDoc} */
+      @Override
       public int hashCode() {
         return (scheme + authority).hashCode() + ugi.hashCode() + (int)unique;
       }
@@ -2456,7 +2461,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         return a == b || (a != null && a.equals(b));        
       }
 
-      /** {@inheritDoc} */
+      @Override
       public boolean equals(Object obj) {
         if (obj == this) {
           return true;
@@ -2471,7 +2476,7 @@ public abstract class FileSystem extends Configured implements Closeable {
         return false;        
       }
 
-      /** {@inheritDoc} */
+      @Override
       public String toString() {
         return "("+ugi.toString() + ")@" + scheme + "://" + authority;        
       }
@@ -2584,6 +2589,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       return writeOps.get();
     }
 
+    @Override
     public String toString() {
       return bytesRead + " bytes read, " + bytesWritten + " bytes written, "
           + readOps + " read ops, " + largeReadOps + " large read ops, "

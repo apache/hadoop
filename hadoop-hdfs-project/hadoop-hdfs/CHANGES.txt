@@ -126,6 +126,9 @@ Trunk (unreleased changes)
     HDFS-3819. Should check whether invalidate work percentage default value is 
     not greater than 1.0f. (Jing Zhao via jitendra)
 
+    HDFS-3844. Add @Override and remove {@inheritdoc} and unnecessary
+    imports. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

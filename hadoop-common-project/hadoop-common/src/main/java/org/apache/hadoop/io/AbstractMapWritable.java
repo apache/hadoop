@@ -164,16 +164,18 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
   }
 
   /** @return the conf */
+  @Override
   public Configuration getConf() {
     return conf.get();
   }
 
   /** @param conf the conf to set */
+  @Override
   public void setConf(Configuration conf) {
     this.conf.set(conf);
   }
   
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     
     // First write out the size of the class table and any classes that are
@@ -187,7 +189,7 @@ public abstract class AbstractMapWritable implements Writable, Configurable {
     }
   }
   
-  /** {@inheritDoc} */
+  @Override
   public void readFields(DataInput in) throws IOException {
     
     // Get the number of "unknown" classes

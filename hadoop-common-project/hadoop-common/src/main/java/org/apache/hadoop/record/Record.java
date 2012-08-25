@@ -54,6 +54,7 @@ public abstract class Record implements WritableComparable, Cloneable {
     throws IOException;
   
   // inheric javadoc
+  @Override
   public abstract int compareTo (final Object peer) throws ClassCastException;
   
   /**
@@ -73,18 +74,21 @@ public abstract class Record implements WritableComparable, Cloneable {
   }
   
   // inherit javadoc
+  @Override
   public void write(final DataOutput out) throws java.io.IOException {
     BinaryRecordOutput bout = BinaryRecordOutput.get(out);
     this.serialize(bout);
   }
   
   // inherit javadoc
+  @Override
   public void readFields(final DataInput din) throws java.io.IOException {
     BinaryRecordInput rin = BinaryRecordInput.get(din);
     this.deserialize(rin);
   }
 
   // inherit javadoc
+  @Override
   public String toString() {
     try {
       ByteArrayOutputStream s = new ByteArrayOutputStream();

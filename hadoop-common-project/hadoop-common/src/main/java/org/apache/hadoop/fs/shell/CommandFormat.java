@@ -150,6 +150,7 @@ public class CommandFormat {
       actual = got;
     }
 
+    @Override
     public String getMessage() {
       return "expected " + expected + " but got " + actual;
     }
@@ -165,6 +166,7 @@ public class CommandFormat {
       super(expected, actual);
     }
 
+    @Override
     public String getMessage() {
       return "Too many arguments: " + super.getMessage();
     }
@@ -180,6 +182,7 @@ public class CommandFormat {
       super(expected, actual);
     }
 
+    @Override
     public String getMessage() {
       return "Not enough arguments: " + super.getMessage();
     }

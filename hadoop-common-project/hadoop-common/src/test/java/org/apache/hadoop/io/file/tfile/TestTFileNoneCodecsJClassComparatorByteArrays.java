@@ -19,9 +19,6 @@ package org.apache.hadoop.io.file.tfile;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.io.WritableComparator;
-
 /**
  * 
  * Byte arrays test case class using GZ compression codec, base class of none

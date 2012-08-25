@@ -1847,6 +1847,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * 
    * @return an iterator over the entries.
    */
+  @Override
   public Iterator<Map.Entry<String, String>> iterator() {
     // Get a copy of just the string to string pairs. After the old object
     // methods that allow non-strings to be put into configurations are removed,
@@ -2272,6 +2273,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   //@Override
+  @Override
   public void write(DataOutput out) throws IOException {
     Properties props = getProps();
     WritableUtils.writeVInt(out, props.size());

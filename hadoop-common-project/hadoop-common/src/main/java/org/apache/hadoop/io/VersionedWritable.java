@@ -40,11 +40,13 @@ public abstract class VersionedWritable implements Writable {
   public abstract byte getVersion();
     
   // javadoc from Writable
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeByte(getVersion());                  // store version
   }
 
   // javadoc from Writable
+  @Override
   public void readFields(DataInput in) throws IOException {
     byte version = in.readByte();                 // read version
     if (version != getVersion())

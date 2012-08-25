@@ -164,6 +164,7 @@ public class ViewFileSystem extends FileSystem {
    *          this FileSystem
    * @param conf the configuration
    */
+  @Override
   public void initialize(final URI theUri, final Configuration conf)
       throws IOException {
     super.initialize(theUri, conf);

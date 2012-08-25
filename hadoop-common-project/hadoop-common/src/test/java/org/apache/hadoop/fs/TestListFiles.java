@@ -18,7 +18,6 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;

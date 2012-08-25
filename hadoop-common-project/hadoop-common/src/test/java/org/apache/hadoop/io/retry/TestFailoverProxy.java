@@ -252,6 +252,7 @@ public class TestFailoverProxy {
       this.unreliable = unreliable;
     }
     
+    @Override
     public void run() {
       try {
         result = unreliable.failsIfIdentifierDoesntMatch("impl2");

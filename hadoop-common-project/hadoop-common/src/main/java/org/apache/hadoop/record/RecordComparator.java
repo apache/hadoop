@@ -40,6 +40,7 @@ public abstract class RecordComparator extends WritableComparator {
   }
   
   // inheric JavaDoc
+  @Override
   public abstract int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2);
   
   /**

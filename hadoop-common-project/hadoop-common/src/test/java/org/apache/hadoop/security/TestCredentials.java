@@ -29,12 +29,9 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Collection;
-
-import static org.mockito.Mockito.mock;
 
 import javax.crypto.KeyGenerator;
 

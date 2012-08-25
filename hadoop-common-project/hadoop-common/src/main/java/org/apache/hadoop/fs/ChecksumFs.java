@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.PureJavaCrc32;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * Abstract Checksumed Fs.
@@ -61,6 +60,7 @@ public abstract class ChecksumFs extends FilterFs {
   /**
    * Set whether to verify checksum.
    */
+  @Override
   public void setVerifyChecksum(boolean inVerifyChecksum) {
     this.verifyChecksum = inVerifyChecksum;
   }
@@ -152,14 +152,17 @@ public abstract class ChecksumFs extends FilterFs {
       return HEADER_LENGTH + 4*(dataPos/bytesPerSum);
     }
     
+    @Override
     protected long getChunkPosition(long dataPos) {
       return dataPos/bytesPerSum*bytesPerSum;
     }
     
+    @Override
     public int available() throws IOException {
       return datas.available() + super.available();
     }
     
+    @Override
     public int read(long position, byte[] b, int off, int len)
       throws IOException, UnresolvedLinkException {
       // parameter check
@@ -180,6 +183,7 @@ public abstract class ChecksumFs extends FilterFs {
       return nread;
     }
     
+    @Override
     public void close() throws IOException {
       datas.close();
       if (sums != null) {
@@ -258,6 +262,7 @@ public abstract class ChecksumFs extends FilterFs {
      * @exception  IOException  if an I/O error occurs.
      *             ChecksumException if the chunk to skip to is corrupted
      */
+    @Override
     public synchronized long skip(long n) throws IOException { 
       final long curPos = getPos();
       final long fileLength = getFileLength();
@@ -279,6 +284,7 @@ public abstract class ChecksumFs extends FilterFs {
      *             ChecksumException if the chunk to seek to is corrupted
      */
 
+    @Override
     public synchronized void seek(long pos) throws IOException { 
       if (pos>getFileLength()) {
         throw new IOException("Cannot seek after EOF");
@@ -348,6 +354,7 @@ public abstract class ChecksumFs extends FilterFs {
       sums.writeInt(bytesPerSum);
     }
     
+    @Override
     public void close() throws IOException {
       flushBuffer();
       sums.close();
@@ -447,6 +454,7 @@ public abstract class ChecksumFs extends FilterFs {
    * Implement the delete(Path, boolean) in checksum
    * file system.
    */
+  @Override
   public boolean delete(Path f, boolean recursive) 
     throws IOException, UnresolvedLinkException {
     FileStatus fstatus = null;

@@ -48,6 +48,7 @@ public class BuiltInZlibDeflater extends Deflater implements Compressor {
     super();
   }
 
+  @Override
   public synchronized int compress(byte[] b, int off, int len) 
     throws IOException {
     return super.deflate(b, off, len);

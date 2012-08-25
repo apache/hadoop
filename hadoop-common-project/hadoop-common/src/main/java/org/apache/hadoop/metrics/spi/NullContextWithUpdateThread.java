@@ -21,7 +21,6 @@ package org.apache.hadoop.metrics.spi;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics.ContextFactory;
-import org.apache.hadoop.metrics.MetricsException;
 
 /**
  * A null context which has a thread calling 

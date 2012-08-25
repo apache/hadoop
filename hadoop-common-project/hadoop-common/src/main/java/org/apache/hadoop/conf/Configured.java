@@ -39,11 +39,13 @@ public class Configured implements Configurable {
   }
 
   // inherit javadoc
+  @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
   }
 
   // inherit javadoc
+  @Override
   public Configuration getConf() {
     return conf;
   }

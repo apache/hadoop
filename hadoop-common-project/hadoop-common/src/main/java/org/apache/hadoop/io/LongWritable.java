@@ -42,15 +42,18 @@ public class LongWritable implements WritableComparable<LongWritable> {
   /** Return the value of this LongWritable. */
   public long get() { return value; }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     value = in.readLong();
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeLong(value);
   }
 
   /** Returns true iff <code>o</code> is a LongWritable with the same value. */
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof LongWritable))
       return false;
@@ -58,17 +61,20 @@ public class LongWritable implements WritableComparable<LongWritable> {
     return this.value == other.value;
   }
 
+  @Override
   public int hashCode() {
     return (int)value;
   }
 
   /** Compares two LongWritables. */
+  @Override
   public int compareTo(LongWritable o) {
     long thisValue = this.value;
     long thatValue = o.value;
     return (thisValue<thatValue ? -1 : (thisValue==thatValue ? 0 : 1));
   }
 
+  @Override
   public String toString() {
     return Long.toString(value);
   }
@@ -79,6 +85,7 @@ public class LongWritable implements WritableComparable<LongWritable> {
       super(LongWritable.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       long thisValue = readLong(b1, s1);
@@ -94,6 +101,7 @@ public class LongWritable implements WritableComparable<LongWritable> {
     public int compare(WritableComparable a, WritableComparable b) {
       return -super.compare(a, b);
     }
+    @Override
     public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
       return -super.compare(b1, s1, l1, b2, s2, l2);
     }

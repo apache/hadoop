@@ -240,19 +240,23 @@ public class DataChecksum implements Checksum {
     return 1 + SIZE_OF_INTEGER; // type byte, bytesPerChecksum int
   }
   //Checksum Interface. Just a wrapper around member summer.
+  @Override
   public long getValue() {
     return summer.getValue();
   }
+  @Override
   public void reset() {
     summer.reset();
     inSum = 0;
   }
+  @Override
   public void update( byte[] b, int off, int len ) {
     if ( len > 0 ) {
       summer.update( b, off, len );
       inSum += len;
     }
   }
+  @Override
   public void update( int b ) {
     summer.update( b );
     inSum += 1;
@@ -444,9 +448,13 @@ public class DataChecksum implements Checksum {
     public ChecksumNull() {}
     
     //Dummy interface
+    @Override
     public long getValue() { return 0; }
+    @Override
     public void reset() {}
+    @Override
     public void update(byte[] b, int off, int len) {}
+    @Override
     public void update(int b) {}
   };
 }

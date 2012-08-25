@@ -859,6 +859,7 @@ public abstract class Storage extends StorageInfo {
      * @return a string representation of the formattable item, suitable
      * for display to the user inside a prompt
      */
+    @Override
     public String toString();
   }
   

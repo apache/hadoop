@@ -40,68 +40,81 @@ public class TestCodecFactory extends TestCase {
       return conf;
     }
     
+    @Override
     public CompressionOutputStream createOutputStream(OutputStream out) 
     throws IOException {
       return null;
     }
     
+    @Override
     public Class<? extends Compressor> getCompressorType() {
       return null;
     }
 
+    @Override
     public Compressor createCompressor() {
       return null;
     }
 
+    @Override
     public CompressionInputStream createInputStream(InputStream in, 
                                                     Decompressor decompressor) 
     throws IOException {
       return null;
     }
 
+    @Override
     public CompressionInputStream createInputStream(InputStream in) 
     throws IOException {
       return null;
     }
 
+    @Override
     public CompressionOutputStream createOutputStream(OutputStream out, 
                                                       Compressor compressor) 
     throws IOException {
       return null;
     }
 
+    @Override
     public Class<? extends Decompressor> getDecompressorType() {
       return null;
     }
 
+    @Override
     public Decompressor createDecompressor() {
       return null;
     }
 
+    @Override
     public String getDefaultExtension() {
       return ".base";
     }
   }
   
   private static class BarCodec extends BaseCodec {
+    @Override
     public String getDefaultExtension() {
       return "bar";
     }
   }
   
   private static class FooBarCodec extends BaseCodec {
+    @Override
     public String getDefaultExtension() {
       return ".foo.bar";
     }
   }
   
   private static class FooCodec extends BaseCodec {
+    @Override
     public String getDefaultExtension() {
       return ".foo";
     }
   }
   
   private static class NewGzipCodec extends BaseCodec {
+    @Override
     public String getDefaultExtension() {
       return ".gz";
     }

@@ -53,7 +53,6 @@ class FsUrlConnection extends URLConnection {
     }
   }
 
-  /* @inheritDoc */
   @Override
   public InputStream getInputStream() throws IOException {
     if (is == null) {

@@ -411,6 +411,7 @@ public class TestFsShellReturnCode {
   }
   
   static class MyFsShell extends FsShell {
+    @Override
     protected void registerCommands(CommandFactory factory) {
       factory.addClass(InterruptCommand.class, "-testInterrupt");
     }

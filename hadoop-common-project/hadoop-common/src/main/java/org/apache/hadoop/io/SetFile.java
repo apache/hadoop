@@ -87,6 +87,7 @@ public class SetFile extends MapFile {
     }
 
     // javadoc inherited
+    @Override
     public boolean seek(WritableComparable key)
       throws IOException {
       return super.seek(key);

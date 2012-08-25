@@ -35,6 +35,7 @@ public class TestRunJar extends TestCase {
 
   private static final String TEST_JAR_NAME="test-runjar.jar";
 
+  @Override
   @Before
   protected void setUp()
       throws Exception {
@@ -48,6 +49,7 @@ public class TestRunJar extends TestCase {
     makeTestJar();
   }
 
+  @Override
   @After
   protected void tearDown() {
     FileUtil.fullyDelete(TEST_ROOT_DIR);

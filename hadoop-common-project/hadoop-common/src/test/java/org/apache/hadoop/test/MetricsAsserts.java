@@ -45,7 +45,6 @@ import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 import org.apache.hadoop.metrics2.util.Quantile;
 
 import static org.apache.hadoop.metrics2.lib.Interns.*;
-import static org.apache.hadoop.test.MetricsAsserts.eqName;
 
 /**
  * Helpers for metrics source tests

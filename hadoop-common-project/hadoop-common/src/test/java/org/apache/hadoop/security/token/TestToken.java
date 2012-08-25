@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.security.token;
 
-import static junit.framework.Assert.assertEquals;
-
 import java.io.*;
 import java.util.Arrays;
 

@@ -262,6 +262,7 @@ public class FTPFileSystem extends FileSystem {
   }
 
   /** This optional operation is not yet supported. */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     throw new IOException("Not supported");

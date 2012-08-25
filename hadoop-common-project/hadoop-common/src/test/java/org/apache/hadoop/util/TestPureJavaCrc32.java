@@ -156,7 +156,7 @@ public class TestPureJavaCrc32 {
       return s;
     }
 
-    /** {@inheritDoc} */
+    @Override
     public String toString() {
       final StringBuilder b = new StringBuilder();
       for(String s : toStrings(String.format("T%d_",

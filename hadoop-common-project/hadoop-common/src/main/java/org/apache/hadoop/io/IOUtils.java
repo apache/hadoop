@@ -272,9 +272,11 @@ public class IOUtils {
    * The /dev/null of OutputStreams.
    */
   public static class NullOutputStream extends OutputStream {
+    @Override
     public void write(byte[] b, int off, int len) throws IOException {
     }
 
+    @Override
     public void write(int b) throws IOException {
     }
   }  

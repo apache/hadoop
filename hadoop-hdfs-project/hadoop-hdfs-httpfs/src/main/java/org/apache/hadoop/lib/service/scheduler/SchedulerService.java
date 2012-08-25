@@ -96,6 +96,7 @@ public class SchedulerService extends BaseService implements Scheduler {
       LOG.debug("Scheduling callable [{}], interval [{}] seconds, delay [{}] in [{}]",
                 new Object[]{callable, delay, interval, unit});
       Runnable r = new Runnable() {
+        @Override
         public void run() {
           String instrName = callable.getClass().getSimpleName();
           Instrumentation instr = getServer().get(Instrumentation.class);

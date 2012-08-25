@@ -206,6 +206,7 @@ public class S3FileSystem extends FileSystem {
   }
 
   /** This optional operation is not yet supported. */
+  @Override
   public FSDataOutputStream append(Path f, int bufferSize,
       Progressable progress) throws IOException {
     throw new IOException("Not supported");
@@ -298,6 +299,7 @@ public class S3FileSystem extends FileSystem {
     return true;
   }
 
+  @Override
   public boolean delete(Path path, boolean recursive) throws IOException {
    Path absolutePath = makeAbsolute(path);
    INode inode = store.retrieveINode(absolutePath);

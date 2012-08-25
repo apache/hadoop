@@ -284,6 +284,7 @@ System.out.println("echo int is NOT supported");
       "org.apache.hadoop.ipc.TestRPCCompatibility$TestProtocol1")
   public interface TestProtocol4 extends TestProtocol2 {
     public static final long versionID = 4L;
+    @Override
     int echo(int value)  throws IOException;
   }
   

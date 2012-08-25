@@ -39,7 +39,6 @@ import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.junit.Test;
-import org.apache.hadoop.ipc.TestSaslRPC;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenSecretManager;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenIdentifier;
 import org.apache.hadoop.ipc.TestSaslRPC.TestTokenSelector;
@@ -113,6 +112,7 @@ public class TestDoAsEffectiveUser {
         PROXY_USER_NAME, realUserUgi);
     UserGroupInformation curUGI = proxyUserUgi
         .doAs(new PrivilegedExceptionAction<UserGroupInformation>() {
+          @Override
           public UserGroupInformation run() throws IOException {
             return UserGroupInformation.getCurrentUser();
           }
@@ -131,10 +131,12 @@ public class TestDoAsEffectiveUser {
 
   public class TestImpl implements TestProtocol {
 
+    @Override
     public String aMethod() throws IOException {
       return UserGroupInformation.getCurrentUser().toString();
     }
 
+    @Override
     public long getProtocolVersion(String protocol, long clientVersion)
         throws IOException {
       return TestProtocol.versionID;
@@ -168,6 +170,7 @@ public class TestDoAsEffectiveUser {
           PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
+            @Override
             public String run() throws IOException {
               proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
@@ -210,6 +213,7 @@ public class TestDoAsEffectiveUser {
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
+            @Override
             public String run() throws IOException {
               proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
@@ -257,6 +261,7 @@ public class TestDoAsEffectiveUser {
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
+            @Override
             public String run() throws IOException {
               proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
@@ -296,6 +301,7 @@ public class TestDoAsEffectiveUser {
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
+            @Override
             public String run() throws IOException {
               proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
@@ -334,6 +340,7 @@ public class TestDoAsEffectiveUser {
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
+            @Override
             public String run() throws IOException {
               proxy = (TestProtocol) RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);
@@ -375,6 +382,7 @@ public class TestDoAsEffectiveUser {
           .createProxyUserForTesting(PROXY_USER_NAME, realUserUgi, GROUP_NAMES);
       String retVal = proxyUserUgi
           .doAs(new PrivilegedExceptionAction<String>() {
+            @Override
             public String run() throws IOException {
               proxy = RPC.getProxy(TestProtocol.class,
                   TestProtocol.versionID, addr, conf);

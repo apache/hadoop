@@ -261,6 +261,7 @@ public class Path implements Comparable {
     return new Path(getParent(), getName()+suffix);
   }
 
+  @Override
   public String toString() {
     // we can't use uri.toString(), which escapes everything, because we want
     // illegal characters unescaped in the string, for glob processing, etc.
@@ -289,6 +290,7 @@ public class Path implements Comparable {
     return buffer.toString();
   }
 
+  @Override
   public boolean equals(Object o) {
     if (!(o instanceof Path)) {
       return false;
@@ -297,10 +299,12 @@ public class Path implements Comparable {
     return this.uri.equals(that.uri);
   }
 
+  @Override
   public int hashCode() {
     return uri.hashCode();
   }
 
+  @Override
   public int compareTo(Object o) {
     Path that = (Path)o;
     return this.uri.compareTo(that.uri);

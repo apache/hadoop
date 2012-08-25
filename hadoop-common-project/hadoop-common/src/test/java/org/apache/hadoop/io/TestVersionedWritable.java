@@ -37,16 +37,19 @@ public class TestVersionedWritable extends TestCase {
 
 		
     private static byte VERSION = 1;
+    @Override
     public byte getVersion() { 
       return VERSION; 
     }		
 		
 
+    @Override
     public void write(DataOutput out) throws IOException {
       super.write(out); // version.
       out.writeInt(state);
     }
 		
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in); // version
       this.state = in.readInt();
@@ -61,6 +64,7 @@ public class TestVersionedWritable extends TestCase {
 		
 
     /** Required by test code, below. */
+    @Override
     public boolean equals(Object o) {
       if (!(o instanceof SimpleVersionedWritable))
         return false;
@@ -85,6 +89,7 @@ public class TestVersionedWritable extends TestCase {
     SimpleVersionedWritable containedObject = new SimpleVersionedWritable();
     String[] testStringArray = {"The", "Quick", "Brown", "Fox", "Jumped", "Over", "The", "Lazy", "Dog"};
 
+    @Override
     public void write(DataOutput out) throws IOException {
       super.write(out);
       out.writeUTF(shortTestString); 
@@ -97,6 +102,7 @@ public class TestVersionedWritable extends TestCase {
     }
 		
 		
+    @Override
     public void readFields(DataInput in) throws IOException {
       super.readFields(in);
       shortTestString = in.readUTF();
@@ -108,6 +114,7 @@ public class TestVersionedWritable extends TestCase {
 			
 
 
+    @Override
     public boolean equals(Object o) {
       super.equals(o);
 
@@ -134,6 +141,7 @@ public class TestVersionedWritable extends TestCase {
   /* This one checks that version mismatch is thrown... */
   public static class SimpleVersionedWritableV2 extends SimpleVersionedWritable {
     static byte VERSION = 2;
+    @Override
     public byte getVersion() { 
       return VERSION; 
     }		
