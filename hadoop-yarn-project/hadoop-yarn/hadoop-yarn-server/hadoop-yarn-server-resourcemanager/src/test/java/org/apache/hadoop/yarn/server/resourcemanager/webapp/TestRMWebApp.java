@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.WebApps;
@@ -158,7 +159,7 @@ public class TestRMWebApp {
     for (RMNode node : deactivatedNodes) {
       deactivatedNodesMap.put(node.getHostName(), node);
     }
-   return new RMContextImpl(new MemStore(), null, null, null, null, null) {
+   return new RMContextImpl(new MemStore(), null, null, null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return applicationsMaps;
@@ -198,7 +199,8 @@ public class TestRMWebApp {
 
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
-    cs.reinitialize(conf, null, null);
+    cs.reinitialize(conf, new RMContextImpl(null, null, null, null, null, null,
+      new RMContainerTokenSecretManager(conf)));
     return cs;
   }
 
@@ -274,7 +276,7 @@ public class TestRMWebApp {
 
     FifoScheduler fs = new FifoScheduler();
     fs.setConf(new YarnConfiguration());
-    fs.reinitialize(conf, null, null);
+    fs.reinitialize(conf, null);
     return fs;
   }
 

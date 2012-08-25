@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -220,7 +221,7 @@ public class TestContainerManagerSecurity {
     Resource modifiedResource = BuilderUtils.newResource(2048);
     ContainerTokenIdentifier modifiedIdentifier = new ContainerTokenIdentifier(
         dummyIdentifier.getContainerID(), dummyIdentifier.getNmHostAddress(),
-        modifiedResource, Long.MAX_VALUE);
+        modifiedResource, Long.MAX_VALUE, 0);
     Token<ContainerTokenIdentifier> modifiedToken = new Token<ContainerTokenIdentifier>(
         modifiedIdentifier.getBytes(), containerToken.getPassword().array(),
         new Text(containerToken.getKind()), new Text(containerToken
@@ -250,10 +251,13 @@ public class TestContainerManagerSecurity {
           Assert.assertEquals(
               java.lang.reflect.UndeclaredThrowableException.class
                   .getCanonicalName(), e.getClass().getCanonicalName());
-          Assert.assertEquals(
-              "DIGEST-MD5: digest response format violation. "
-                  + "Mismatched response.", e.getCause().getCause()
-                  .getMessage());
+          Assert.assertTrue(e
+              .getCause()
+              .getCause()
+              .getMessage()
+              .matches(
+                  "Given Container container_\\d*_\\d*_\\d\\d_\\d*"
+                      + " seems to have an illegally generated token."));
         }
         return null;
       }
@@ -329,12 +333,15 @@ public class TestContainerManagerSecurity {
     unauthorizedUser = UserGroupInformation
         .createRemoteUser(containerID.toString());
 
+    RMContainerTokenSecretManager containerTokenSecreteManager = 
+      resourceManager.getRMContainerTokenSecretManager(); 
     final ContainerTokenIdentifier newTokenId =
         new ContainerTokenIdentifier(tokenId.getContainerID(),
           tokenId.getNmHostAddress(), tokenId.getResource(),
-          System.currentTimeMillis() - 1);
+          System.currentTimeMillis() - 1, 
+          containerTokenSecreteManager.getCurrentKey().getKeyId());
     byte[] passowrd =
-        resourceManager.getContainerTokenSecretManager().createPassword(
+        containerTokenSecreteManager.createPassword(
             newTokenId);
     // Create a valid token by using the key from the RM.
     token = new Token<ContainerTokenIdentifier>(

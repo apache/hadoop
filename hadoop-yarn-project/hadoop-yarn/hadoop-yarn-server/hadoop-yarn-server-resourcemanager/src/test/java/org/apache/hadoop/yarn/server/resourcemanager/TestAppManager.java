@@ -92,7 +92,7 @@ public class TestAppManager{
     AMLivelinessMonitor amLivelinessMonitor = new AMLivelinessMonitor(
         rmDispatcher);
     return new RMContextImpl(new MemStore(), rmDispatcher,
-        containerAllocationExpirer, amLivelinessMonitor, null, null) {
+        containerAllocationExpirer, amLivelinessMonitor, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;

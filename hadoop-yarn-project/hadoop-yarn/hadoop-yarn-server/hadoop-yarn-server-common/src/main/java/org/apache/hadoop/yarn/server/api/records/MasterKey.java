@@ -15,15 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.yarn.server.api.records;
 
-public interface RegistrationResponse {
+import java.nio.ByteBuffer;
 
-  MasterKey getMasterKey();
-  
-  void setMasterKey(MasterKey secretKey);
-  
-  NodeAction getNodeAction();
-  
-  void setNodeAction(NodeAction nodeAction);
+public interface MasterKey {
+
+  int getKeyId();
+
+  void setKeyId(int keyId);
+
+  ByteBuffer getBytes();
+
+  void setBytes(ByteBuffer bytes);
+
 }

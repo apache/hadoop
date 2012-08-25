@@ -48,8 +48,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.AMLauncherEventT
 import org.apache.hadoop.yarn.server.resourcemanager.amlauncher.ApplicationMasterLauncher;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
@@ -67,9 +67,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebApp;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.webproxy.AppReportFetcher;
 import org.apache.hadoop.yarn.server.webproxy.ProxyUriUtils;
 import org.apache.hadoop.yarn.server.webproxy.WebAppProxy;
@@ -100,7 +100,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   protected ClientToAMSecretManager clientToAMSecretManager =
       new ClientToAMSecretManager();
   
-  protected ContainerTokenSecretManager containerTokenSecretManager;
+  protected RMContainerTokenSecretManager containerTokenSecretManager;
 
   protected ApplicationTokenSecretManager appTokenSecretManager;
 
@@ -151,18 +151,20 @@ public class ResourceManager extends CompositeService implements Recoverable {
         this.rmDispatcher);
     addService(this.containerAllocationExpirer);
 
-    this.containerTokenSecretManager  = new ContainerTokenSecretManager(conf);
-
     AMLivelinessMonitor amLivelinessMonitor = createAMLivelinessMonitor();
     addService(amLivelinessMonitor);
 
     DelegationTokenRenewer tokenRenewer = createDelegationTokenRenewer();
     addService(tokenRenewer);
     
+
+    this.containerTokenSecretManager = new RMContainerTokenSecretManager(conf);
+
     this.rmContext =
         new RMContextImpl(this.store, this.rmDispatcher,
-          this.containerAllocationExpirer, amLivelinessMonitor, tokenRenewer,
-          this.appTokenSecretManager);
+          this.containerAllocationExpirer, amLivelinessMonitor,
+          tokenRenewer, this.appTokenSecretManager,
+          this.containerTokenSecretManager);
 
     addService(nodesListManager);
 
@@ -192,8 +194,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     addService(resourceTracker);
   
     try {
-      this.scheduler.reinitialize(conf,
-          this.containerTokenSecretManager, this.rmContext);
+      this.scheduler.reinitialize(conf, this.rmContext);
     } catch (IOException ioe) {
       throw new RuntimeException("Failed to initialize scheduler", ioe);
     }
@@ -480,6 +481,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     }
 
     this.appTokenSecretManager.start();
+    this.containerTokenSecretManager.start();
 
     startWepApp();
     DefaultMetricsSystem.initialize("ResourceManager");
@@ -516,6 +518,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
     rmDTSecretManager.stopThreads();
 
     this.appTokenSecretManager.stop();
+    this.containerTokenSecretManager.stop();
 
     /*synchronized(shutdown) {
       shutdown.set(true);
@@ -601,7 +604,7 @@ public class ResourceManager extends CompositeService implements Recoverable {
   }
 
   @Private
-  public ContainerTokenSecretManager getContainerTokenSecretManager() {
+  public RMContainerTokenSecretManager getRMContainerTokenSecretManager() {
     return this.containerTokenSecretManager;
   }
 
