@@ -73,7 +73,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 
 @LimitedPrivate("yarn")
 @Unstable
@@ -82,7 +82,6 @@ public class FairScheduler implements ResourceScheduler {
 
   private boolean initialized;
   private FairSchedulerConfiguration conf;
-  private ContainerTokenSecretManager containerTokenSecretManager;
   private RMContext rmContext;
   private Resource minimumAllocation;
   private Resource maximumAllocation;
@@ -413,8 +412,8 @@ public class FairScheduler implements ResourceScheduler {
     }
   }
 
-  public ContainerTokenSecretManager getContainerTokenSecretManager() {
-    return this.containerTokenSecretManager;
+  public RMContainerTokenSecretManager getContainerTokenSecretManager() {
+    return this.rmContext.getContainerTokenSecretManager();
   }
 
   public double getAppWeight(AppSchedulable app) {
@@ -892,15 +891,11 @@ public class FairScheduler implements ResourceScheduler {
   }
 
   @Override
-  public synchronized void reinitialize(Configuration conf,
-      ContainerTokenSecretManager containerTokenSecretManager,
-      RMContext rmContext)
-  throws IOException
-  {
+  public synchronized void
+      reinitialize(Configuration conf, RMContext rmContext) throws IOException {
     if (!this.initialized) {
       this.conf = new FairSchedulerConfiguration(conf);
       this.rootMetrics = QueueMetrics.forQueue("root", null, true, conf);
-      this.containerTokenSecretManager = containerTokenSecretManager;
       this.rmContext = rmContext;
       this.clock = new SystemClock();
       this.eventLog = new FairSchedulerEventLog();

@@ -93,7 +93,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Test;
@@ -1099,8 +1098,7 @@ public class TestRMContainerAllocator {
       super();
       try {
         Configuration conf = new Configuration();
-        reinitialize(conf, new ContainerTokenSecretManager(conf),
-            rmContext);
+        reinitialize(conf, rmContext);
       } catch (IOException ie) {
         LOG.info("add application failed with ", ie);
         assert (false);

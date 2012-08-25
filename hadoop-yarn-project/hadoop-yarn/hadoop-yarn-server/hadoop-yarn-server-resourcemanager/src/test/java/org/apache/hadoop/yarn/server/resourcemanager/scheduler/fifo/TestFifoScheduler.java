@@ -87,10 +87,10 @@ public class TestFifoScheduler {
   public void testAppAttemptMetrics() throws Exception {
     AsyncDispatcher dispatcher = new InlineDispatcher();
     RMContext rmContext = new RMContextImpl(null, dispatcher, null,
-        null, null, null, null);
+        null, null, null, null, null);
 
     FifoScheduler schedular = new FifoScheduler();
-    schedular.reinitialize(new Configuration(), null, rmContext);
+    schedular.reinitialize(new Configuration(), rmContext);
 
     ApplicationId appId = BuilderUtils.newApplicationId(200, 1);
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(

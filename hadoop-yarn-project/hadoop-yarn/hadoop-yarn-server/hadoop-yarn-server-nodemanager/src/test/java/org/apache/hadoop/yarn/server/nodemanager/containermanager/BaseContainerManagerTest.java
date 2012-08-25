@@ -54,8 +54,8 @@ import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdaterImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.Service.STATE;
 import org.junit.After;
 import org.junit.Before;
@@ -70,8 +70,6 @@ public abstract class BaseContainerManagerTest {
   protected static File localLogDir;
   protected static File remoteLogDir;
   protected static File tmpDir;
-  protected ContainerTokenSecretManager containerTokenSecretManager =
-      new ContainerTokenSecretManager(new Configuration());
 
   protected final NodeManagerMetrics metrics = NodeManagerMetrics.create();
 
@@ -93,7 +91,8 @@ public abstract class BaseContainerManagerTest {
       .getLog(BaseContainerManagerTest.class);
 
   protected Configuration conf = new YarnConfiguration();
-  protected Context context = new NMContext();
+  protected Context context = new NMContext(new NMContainerTokenSecretManager(
+    conf));
   protected ContainerExecutor exec;
   protected DeletionService delSrvc;
   protected String user = "nobody";
@@ -101,7 +100,7 @@ public abstract class BaseContainerManagerTest {
   protected LocalDirsHandlerService dirsHandler;
 
   protected NodeStatusUpdater nodeStatusUpdater = new NodeStatusUpdaterImpl(
-      context, new AsyncDispatcher(), null, metrics, this.containerTokenSecretManager) {
+      context, new AsyncDispatcher(), null, metrics) {
     @Override
     protected ResourceTracker getRMClient() {
       return new LocalRMInterface();
@@ -155,9 +154,9 @@ public abstract class BaseContainerManagerTest {
     nodeHealthChecker = new NodeHealthCheckerService();
     nodeHealthChecker.init(conf);
     dirsHandler = nodeHealthChecker.getDiskHandler();
-    containerManager = new ContainerManagerImpl(context, exec, delSrvc,
-        nodeStatusUpdater, metrics, this.containerTokenSecretManager,
-        new ApplicationACLsManager(conf), dirsHandler);
+    containerManager =
+        new ContainerManagerImpl(context, exec, delSrvc, nodeStatusUpdater,
+          metrics, new ApplicationACLsManager(conf), dirsHandler);
     containerManager.init(conf);
   }
 

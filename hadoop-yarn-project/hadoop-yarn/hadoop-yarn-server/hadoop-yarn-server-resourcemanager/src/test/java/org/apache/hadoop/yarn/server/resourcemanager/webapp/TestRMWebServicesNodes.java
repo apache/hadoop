@@ -145,7 +145,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     nodeHealth.setHealthReport("test health report");
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeHealth,
-        new ArrayList<ContainerStatus>(), null, null));
+        new ArrayList<ContainerStatus>(), null, null, null));
     rm.NMwaitForState(nm3.getNodeId(), NodeState.UNHEALTHY);
 
     ClientResponse response =
@@ -360,7 +360,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     nodeHealth.setHealthReport("test health report");
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeHealth,
-        new ArrayList<ContainerStatus>(), null, null));
+        new ArrayList<ContainerStatus>(), null, null, null));
     rm.NMwaitForState(nm1.getNodeId(), NodeState.UNHEALTHY);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")

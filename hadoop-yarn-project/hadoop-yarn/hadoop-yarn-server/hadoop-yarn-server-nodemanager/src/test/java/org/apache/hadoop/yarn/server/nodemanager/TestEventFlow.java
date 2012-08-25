@@ -36,12 +36,12 @@ import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager.NMContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.Test;
 
 public class TestEventFlow {
@@ -69,9 +69,9 @@ public class TestEventFlow {
     localLogDir.mkdir();
     remoteLogDir.mkdir();
 
-    Context context = new NMContext();
-
     YarnConfiguration conf = new YarnConfiguration();
+    Context context = new NMContext(new NMContainerTokenSecretManager(conf));
+
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, localDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, localLogDir.getAbsolutePath());
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, 
@@ -86,10 +86,8 @@ public class TestEventFlow {
     healthChecker.init(conf);
     LocalDirsHandlerService dirsHandler = healthChecker.getDiskHandler();
     NodeManagerMetrics metrics = NodeManagerMetrics.create();
-    ContainerTokenSecretManager containerTokenSecretManager =
-        new ContainerTokenSecretManager(conf);
     NodeStatusUpdater nodeStatusUpdater =
-        new NodeStatusUpdaterImpl(context, dispatcher, healthChecker, metrics, containerTokenSecretManager) {
+        new NodeStatusUpdaterImpl(context, dispatcher, healthChecker, metrics) {
       @Override
       protected ResourceTracker getRMClient() {
         return new LocalRMInterface();
@@ -101,10 +99,9 @@ public class TestEventFlow {
       }
     };
 
-    DummyContainerManager containerManager = new DummyContainerManager(
-        context, exec, del, nodeStatusUpdater, metrics,
-        containerTokenSecretManager, new ApplicationACLsManager(conf),
-        dirsHandler);
+    DummyContainerManager containerManager =
+        new DummyContainerManager(context, exec, del, nodeStatusUpdater,
+          metrics, new ApplicationACLsManager(conf), dirsHandler);
     containerManager.init(conf);
     containerManager.start();
 

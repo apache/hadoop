@@ -120,7 +120,7 @@ public class TestLeafQueue {
             CapacityScheduler.applicationComparator, 
             TestUtils.spyHook);
 
-    cs.reinitialize(csConf, null, rmContext);
+    cs.reinitialize(csConf, rmContext);
   }
   
   private static final String A = "a";

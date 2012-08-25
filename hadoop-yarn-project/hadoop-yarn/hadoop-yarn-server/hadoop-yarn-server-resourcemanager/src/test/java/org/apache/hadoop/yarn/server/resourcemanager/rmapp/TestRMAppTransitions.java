@@ -49,6 +49,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -119,9 +120,11 @@ public class TestRMAppTransitions {
         mock(ContainerAllocationExpirer.class);
     AMLivelinessMonitor amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
-    this.rmContext = new RMContextImpl(new MemStore(), rmDispatcher,
-        containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-        null, new ApplicationTokenSecretManager(conf));
+    this.rmContext =
+        new RMContextImpl(new MemStore(), rmDispatcher,
+          containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
+          null, new ApplicationTokenSecretManager(conf),
+          new RMContainerTokenSecretManager(conf));
 
     rmDispatcher.register(RMAppAttemptEventType.class,
         new TestApplicationAttemptEventDispatcher(this.rmContext));
