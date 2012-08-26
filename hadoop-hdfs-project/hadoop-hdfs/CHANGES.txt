@@ -129,6 +129,8 @@ Trunk (unreleased changes)
     HDFS-3844. Add @Override and remove {@inheritdoc} and unnecessary
     imports. (Jing Zhao via suresh)
 
+    HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
