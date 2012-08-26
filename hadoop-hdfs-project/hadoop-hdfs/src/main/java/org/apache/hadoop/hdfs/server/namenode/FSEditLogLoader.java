@@ -193,8 +193,9 @@ public class FSEditLogLoader {
           if (op.hasTransactionId()) {
             long now = now();
             if (now - lastLogTime > REPLAY_TRANSACTION_LOG_INTERVAL) {
-              int percent = Math.round((float)lastAppliedTxId / numTxns * 100);
-              LOG.info("replaying edit log: " + lastAppliedTxId + "/" + numTxns
+              long deltaTxId = lastAppliedTxId - expectedStartingTxId + 1;
+              int percent = Math.round((float) deltaTxId / numTxns * 100);
+              LOG.info("replaying edit log: " + deltaTxId + "/" + numTxns
                   + " transactions completed. (" + percent + "%)");
               lastLogTime = now;
             }

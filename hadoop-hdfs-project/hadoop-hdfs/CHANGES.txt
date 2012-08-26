@@ -504,6 +504,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3715. Fix TestFileCreation#testFileCreationNamenodeRestart.
     (Andrew Whang via eli)
 
+    HDFS-3683. Edit log replay progress indicator shows >100% complete. (Plamen
+    Jeliazkov via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
