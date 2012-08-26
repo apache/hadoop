@@ -679,6 +679,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3731. 2.0 release upgrade must handle blocks being written from 1.0.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3683. Edit log replay progress indicator shows >100% complete. (Plamen
+    Jeliazkov via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
