@@ -35,6 +35,8 @@ Release 2.1.0-alpha - Unreleased
 
   IMPROVEMENTS
 
+    YARN-29. Add a yarn-client module. (Vinod Kumar Vavilapalli via sseth)
+
   BUG FIXES
 
     YARN-12. Fix findbugs warnings in FairScheduler. (Junping Du via acmurthy) 
