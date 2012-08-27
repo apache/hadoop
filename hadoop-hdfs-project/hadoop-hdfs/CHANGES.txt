@@ -510,6 +510,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3683. Edit log replay progress indicator shows >100% complete. (Plamen
     Jeliazkov via atm)
 
+    HDFS-3731. Release upgrade must handle blocks being written from 1.0.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
