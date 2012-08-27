@@ -101,6 +101,25 @@ public class TestLostTracker extends TestCase {
       testTaskStatuses(mtip.getTaskStatuses());
     }
     
+    // Before validating job history, wait for the history file to be available
+    JobInProgress jip = mr.getJobTrackerRunner().getJobTracker().getJob(id);
+    long beginWaiting = System.currentTimeMillis();
+    final long MAX_WAIT_TIME = 5 * 60 * 1000;
+    while (System.currentTimeMillis() - beginWaiting < MAX_WAIT_TIME) {
+      if (!jip.getHistoryFile().equals("")) {
+        break;
+      } else {
+        try {
+          Thread.sleep(50);
+        } catch (InterruptedException ie) {
+          // do nothing
+        }
+      }
+    }
+
+    assertFalse("Job history file needs to be set for further validation", jip
+        .getHistoryFile().equals(""));
+
     // validate the history file
     TestJobHistory.validateJobHistoryFileFormat(id, job, "SUCCESS", true);
     TestJobHistory.validateJobHistoryFileContent(mr, rJob, job);

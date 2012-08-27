@@ -210,6 +210,9 @@ Release 1.2.0 - unreleased
     HADOOP-4572. Can not access user logs - Jetty is not configured by default 
     to serve aliases/symlinks (ahmed via tucu)
 
+    MAPREDUCE-4595. TestLostTracker failing - possibly due to a race in 
+    JobHistory.JobHistoryFilesManager#run() (kkambatl via tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
