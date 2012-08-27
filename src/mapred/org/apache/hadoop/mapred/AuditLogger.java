@@ -34,6 +34,9 @@ class AuditLogger {
     static final String REFRESH_QUEUE = "REFRESH_QUEUE";
     static final String REFRESH_NODES = "REFRESH_NODES";
     
+    static final String GET_SAFEMODE = "GET_SAFEMODE";
+    static final String SET_SAFEMODE = "SET_SAFEMODE";
+    
     // Some commonly used descriptions
     static final String UNAUTHORIZED_USER = "Unauthorized user";
   }

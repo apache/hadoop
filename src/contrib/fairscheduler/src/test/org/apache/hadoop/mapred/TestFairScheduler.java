@@ -509,6 +509,12 @@ public class TestFairScheduler extends TestCase {
       trackerForTip.get(attemptIdStr).getTaskReports().remove(status);
       return true;
     }
+
+    @Override
+    public boolean isInSafeMode() {
+      // TODO Auto-generated method stub
+      return false;
+    }
   }
   
   protected JobConf conf;

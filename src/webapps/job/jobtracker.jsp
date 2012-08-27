@@ -107,7 +107,7 @@
 <b>Compiled:</b> <%= VersionInfo.getDate()%> by 
                  <%= VersionInfo.getUser()%><br>
 <b>Identifier:</b> <%= tracker.getTrackerIdentifier()%><br>                 
-                   
+<b>SafeMode:</b> <%= tracker.getSafeModeText()%><br>                    
 <hr>
 <h2>Cluster Summary (Heap Size is <%= StringUtils.byteDesc(Runtime.getRuntime().totalMemory()) %>/<%= StringUtils.byteDesc(Runtime.getRuntime().maxMemory()) %>)</h2>
 <% 

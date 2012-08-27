@@ -412,7 +412,13 @@ public class FairScheduler extends TaskScheduler {
 
     // Update time waited for local maps for jobs skipped on last heartbeat
     updateLocalityWaitTimes(currentTime);
-    
+
+    // Check for JT safe-mode
+    if (taskTrackerManager.isInSafeMode()) {
+      LOG.info("JobTracker is in safe-mode, not scheduling any tasks.");
+      return null;
+    } 
+
     TaskTrackerStatus tts = tracker.getStatus();
 
     int mapsAssigned = 0; // loop counter for map in the below while loop

@@ -33,6 +33,13 @@ Release 1.2.0 - unreleased
     HADOOP-7754. Expose file descriptors from Hadoop-wrapped local 
     FileSystems (todd and ahmed via tucu)
 
+    MAPREDUCE-4328. Add a JobTracker safemode to allow it to be resilient to
+    NameNode failures. The safemode can be entered either automatically via
+    the configurable background thread to monitor the NameNode or by the
+    admin. In the safemode the JobTracker doesn't schedule new tasks, marks
+    all failed tasks as KILLED for future retries and doesn't accept new job
+    submissions. (acmurthy)
+
   IMPROVEMENTS
 
     HDFS-3515. Port HDFS-1457 to branch-1. (eli)

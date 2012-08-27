@@ -112,4 +112,10 @@ interface TaskTrackerManager {
    * @param job JobInProgress object
    */
   public void failJob(JobInProgress job);
+  
+  /**
+   * Get safe mode.
+   * @return
+   */
+  public boolean isInSafeMode();
 }
