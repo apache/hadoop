@@ -32,3 +32,5 @@ HDFS-3823. QJM: TestQJMWithFaults fails occasionally because of missed setting o
 HDFS-3826. QJM: Some trivial logging / exception text improvements. (todd and atm)
 
 HDFS-3839. QJM: hadoop-daemon.sh should be updated to accept "journalnode" (eli)
+
+HDFS-3845. Fixes for edge cases in QJM recovery protocol (todd)

@@ -30,9 +30,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
@@ -531,6 +532,212 @@ public class TestQuorumJournalManager {
     spies = qjm.getLoggerSetForTests().getLoggersForTests();
     qjm.recoverUnfinalizedSegments();
     checkRecovery(cluster, 1, 4);
+  }
+  
+  /**
+   * Set up the following tricky edge case state which is used by
+   * multiple tests:
+   * 
+   * Initial writer:
+   * - Writing to 3 JNs: JN0, JN1, JN2:
+   * - A log segment with txnid 1 through 100 succeeds.
+   * - The first transaction in the next segment only goes to JN0
+   *   before the writer crashes (eg it is partitioned)
+   *   
+   * Recovery by another writer:
+   * - The new NN starts recovery and talks to all three. Thus, it sees
+   *   that the newest log segment which needs recovery is 101.
+   * - It sends the prepareRecovery(101) call, and decides that the
+   *   recovery length for 101 is only the 1 transaction.
+   * - It sends acceptRecovery(101-101) to only JN0, before crashing
+   * 
+   * This yields the following state:
+   * - JN0: 1-100 finalized, 101_inprogress, accepted recovery: 101-101
+   * - JN1: 1-100 finalized, 101_inprogress.empty
+   * - JN2: 1-100 finalized, 101_inprogress.empty
+   *  (the .empty files got moved aside during recovery)
+   * @throws Exception 
+   */
+  private void setupEdgeCaseOneJnHasSegmentWithAcceptedRecovery() throws Exception {
+    // Log segment with txns 1-100 succeeds 
+    writeSegment(cluster, qjm, 1, 100, true);
+
+    // startLogSegment only makes it to one of the three nodes
+    failLoggerAtTxn(spies.get(1), 101);
+    failLoggerAtTxn(spies.get(2), 101);
+    
+    try {
+      writeSegment(cluster, qjm, 101, 1, true);
+      fail("Should have failed");
+    } catch (QuorumException qe) {
+      GenericTestUtils.assertExceptionContains("mock failure", qe);
+    } finally {
+      qjm.close();
+    }
+    
+    // Recovery 1:
+    // make acceptRecovery() only make it to the node which has txid 101
+    // this should fail because only 1/3 accepted the recovery
+    qjm = createSpyingQJM();
+    spies = qjm.getLoggerSetForTests().getLoggersForTests();
+    futureThrows(new IOException("mock failure")).when(spies.get(1))
+      .acceptRecovery(Mockito.<SegmentStateProto>any(), Mockito.<URL>any());
+    futureThrows(new IOException("mock failure")).when(spies.get(2))
+      .acceptRecovery(Mockito.<SegmentStateProto>any(), Mockito.<URL>any());
+    
+    try {
+      qjm.recoverUnfinalizedSegments();
+      fail("Should have failed to recover");
+    } catch (QuorumException qe) {
+      GenericTestUtils.assertExceptionContains("mock failure", qe);
+    } finally {
+      qjm.close();
+    }
+    
+    // Check that we have entered the expected state as described in the
+    // method javadoc.
+    GenericTestUtils.assertGlobEquals(cluster.getCurrentDir(0, JID),
+        "edits_.*",
+        NNStorage.getFinalizedEditsFileName(1, 100),
+        NNStorage.getInProgressEditsFileName(101));
+    GenericTestUtils.assertGlobEquals(cluster.getCurrentDir(1, JID),
+        "edits_.*",
+        NNStorage.getFinalizedEditsFileName(1, 100),
+        NNStorage.getInProgressEditsFileName(101) + ".empty");
+    GenericTestUtils.assertGlobEquals(cluster.getCurrentDir(2, JID),
+        "edits_.*",
+        NNStorage.getFinalizedEditsFileName(1, 100),
+        NNStorage.getInProgressEditsFileName(101) + ".empty");
+
+    File paxos0 = new File(cluster.getCurrentDir(0, JID), "paxos");
+    File paxos1 = new File(cluster.getCurrentDir(1, JID), "paxos");
+    File paxos2 = new File(cluster.getCurrentDir(2, JID), "paxos");
+    
+    GenericTestUtils.assertGlobEquals(paxos0, ".*", "101");
+    GenericTestUtils.assertGlobEquals(paxos1, ".*");
+    GenericTestUtils.assertGlobEquals(paxos2, ".*");
+  }
+  
+  /**
+   * Test an edge case discovered by randomized testing.
+   * 
+   * Starts with the edge case state set up by
+   * {@link #setupEdgeCaseOneJnHasSegmentWithAcceptedRecovery()}
+   * 
+   * Recovery 2:
+   * - New NN starts recovery and only talks to JN1 and JN2. JN0 has
+   *   crashed. Since they have no logs open, they say they don't need
+   *   recovery.
+   * - Starts writing segment 101, and writes 50 transactions before crashing.
+   *
+   * Recovery 3:
+   * - JN0 has come back to life.
+   * - New NN starts recovery and talks to all three. All three have
+   *   segments open from txid 101, so it calls prepareRecovery(101)
+   * - JN0 has an already-accepted value for segment 101, so it replies
+   *   "you should recover 101-101"
+   * - Former incorrect behavior: NN truncates logs to txid 101 even though
+   *   it should have recovered through 150.
+   *   
+   * In this case, even though there is an accepted recovery decision,
+   * the newer log segments should take precedence, since they were written
+   * in a newer epoch than the recorded decision.
+   */
+  @Test
+  public void testNewerVersionOfSegmentWins() throws Exception {
+    setupEdgeCaseOneJnHasSegmentWithAcceptedRecovery();
+    
+    // Now start writing again without JN0 present:
+    cluster.getJournalNode(0).stopAndJoin(0);
+    
+    qjm = createSpyingQJM();
+    try {
+      assertEquals(100, QJMTestUtil.recoverAndReturnLastTxn(qjm));
+      
+      // Write segment but do not finalize
+      writeSegment(cluster, qjm, 101, 50, false);
+    } finally {
+      qjm.close();
+    }
+    
+    // Now try to recover a new writer, with JN0 present,
+    // and ensure that all of the above-written transactions are recovered.
+    cluster.restartJournalNode(0);
+    qjm = createSpyingQJM();
+    try {
+      assertEquals(150, QJMTestUtil.recoverAndReturnLastTxn(qjm));
+    } finally {
+      qjm.close();
+    }
+  }
+  
+  /**
+   * Test another edge case discovered by randomized testing.
+   * 
+   * Starts with the edge case state set up by
+   * {@link #setupEdgeCaseOneJnHasSegmentWithAcceptedRecovery()}
+   * 
+   * Recovery 2:
+   * - New NN starts recovery and only talks to JN1 and JN2. JN0 has
+   *   crashed. Since they have no logs open, they say they don't need
+   *   recovery.
+   * - Before writing any transactions, JN0 comes back to life and
+   *   JN1 crashes.
+   * - Starts writing segment 101, and writes 50 transactions before crashing.
+   *
+   * Recovery 3:
+   * - JN1 has come back to life. JN2 crashes.
+   * - New NN starts recovery and talks to all three. All three have
+   *   segments open from txid 101, so it calls prepareRecovery(101)
+   * - JN0 has an already-accepted value for segment 101, so it replies
+   *   "you should recover 101-101"
+   * - Former incorrect behavior: NN truncates logs to txid 101 even though
+   *   it should have recovered through 150.
+   *   
+   * In this case, even though there is an accepted recovery decision,
+   * the newer log segments should take precedence, since they were written
+   * in a newer epoch than the recorded decision.
+   */
+  @Test
+  public void testNewerVersionOfSegmentWins2() throws Exception {
+    setupEdgeCaseOneJnHasSegmentWithAcceptedRecovery();
+
+    // Recover without JN0 present.
+    cluster.getJournalNode(0).stopAndJoin(0);
+    
+    qjm = createSpyingQJM();
+    try {
+      assertEquals(100, QJMTestUtil.recoverAndReturnLastTxn(qjm));
+
+      // After recovery, JN0 comes back to life and JN1 crashes.
+      cluster.restartJournalNode(0);
+      cluster.getJournalNode(1).stopAndJoin(0);
+      
+      // Write segment but do not finalize
+      writeSegment(cluster, qjm, 101, 50, false);
+    } finally {
+      qjm.close();
+    }
+    
+    // State:
+    // JN0: 1-100 finalized, 101_inprogress (txns up to 150)
+    // Previously, JN0 had an accepted recovery 101-101 from an earlier recovery
+    // attempt.
+    // JN1: 1-100 finalized
+    // JN2: 1-100 finalized, 101_inprogress (txns up to 150)
+    
+    // We need to test that the accepted recovery 101-101 on JN0 doesn't
+    // end up truncating the log back to 101.
+
+    cluster.restartJournalNode(1);
+    cluster.getJournalNode(2).stopAndJoin(0);
+
+    qjm = createSpyingQJM();
+    try {
+      assertEquals(150, QJMTestUtil.recoverAndReturnLastTxn(qjm));
+    } finally {
+      qjm.close();
+    }
   }
   
   @Test

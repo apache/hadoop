@@ -23,7 +23,6 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -52,7 +51,6 @@ import org.apache.hadoop.util.StringUtils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Lists;
 
 /**
@@ -223,7 +221,7 @@ public class QuorumJournalManager implements JournalManager {
     // TODO: we should collect any "ties" and pass the URL for all of them
     // when syncing, so we can tolerate failure during recovery better.
     Entry<AsyncLogger, PrepareRecoveryResponseProto> bestEntry = Collections.max(
-        prepareResponses.entrySet(), RECOVERY_COMPARATOR); 
+        prepareResponses.entrySet(), SegmentRecoveryComparator.INSTANCE); 
     AsyncLogger bestLogger = bestEntry.getKey();
     PrepareRecoveryResponseProto bestResponse = bestEntry.getValue();
     
@@ -282,35 +280,6 @@ public class QuorumJournalManager implements JournalManager {
     loggers.waitForWriteQuorum(finalize, finalizeSegmentTimeoutMs);
   }
   
-  private static final Comparator<Entry<AsyncLogger, PrepareRecoveryResponseProto>> RECOVERY_COMPARATOR =
-  new Comparator<Entry<AsyncLogger, PrepareRecoveryResponseProto>>() {
-      @Override
-      public int compare(
-          Entry<AsyncLogger, PrepareRecoveryResponseProto> a,
-          Entry<AsyncLogger, PrepareRecoveryResponseProto> b) {
-        
-        PrepareRecoveryResponseProto r1 = a.getValue();
-        PrepareRecoveryResponseProto r2 = b.getValue();
-        
-        if (r1.hasSegmentState() && r2.hasSegmentState()) {
-          assert r1.getSegmentState().getStartTxId() ==
-              r2.getSegmentState().getStartTxId() : "bad args: " + r1 + ", " + r2;
-        }
-        
-        return ComparisonChain.start()
-            // If one of them has accepted something and the other hasn't,
-            // use the one with an accepted recovery
-            .compare(r1.hasAcceptedInEpoch(), r2.hasAcceptedInEpoch())
-            // If they both accepted, use the one that's more recent
-            .compare(r1.getAcceptedInEpoch(),
-                     r2.getAcceptedInEpoch())
-            // Otherwise, choose based on which log is longer
-            .compare(r1.hasSegmentState(), r2.hasSegmentState())
-            .compare(r1.getSegmentState().getEndTxId(), r2.getSegmentState().getEndTxId())
-            .result();
-      }
-  };
-
   static List<AsyncLogger> createLoggers(Configuration conf,
       URI uri, NamespaceInfo nsInfo, AsyncLogger.Factory factory)
           throws IOException {

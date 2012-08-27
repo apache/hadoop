@@ -76,7 +76,17 @@ class Journal implements Closeable {
    * number of that writer is stored persistently on disk.
    */
   private PersistentLongFile lastPromisedEpoch;
+  
+  /**
+   * The epoch number of the last writer to actually write a transaction.
+   * This is used to differentiate log segments after a crash at the very
+   * beginning of a segment. See the the 'testNewerVersionOfSegmentWins'
+   * test case.
+   */
+  private PersistentLongFile lastWriterEpoch;
+  
   private static final String LAST_PROMISED_FILENAME = "last-promised-epoch";
+  private static final String LAST_WRITER_EPOCH = "last-writer-epoch";
 
   private final FileJournalManager fjm;
 
@@ -86,6 +96,8 @@ class Journal implements Closeable {
     File currentDir = storage.getSingularStorageDir().getCurrentDir();
     this.lastPromisedEpoch = new PersistentLongFile(
         new File(currentDir, LAST_PROMISED_FILENAME), 0);
+    this.lastWriterEpoch = new PersistentLongFile(
+        new File(currentDir, LAST_WRITER_EPOCH), 0);
 
     this.fjm = storage.getJournalManager();
   }
@@ -201,7 +213,7 @@ class Journal implements Closeable {
   synchronized void journal(RequestInfo reqInfo,
       long segmentTxId, long firstTxnId,
       int numTxns, byte[] records) throws IOException {
-    checkRequest(reqInfo);
+    checkWriteRequest(reqInfo);
     checkFormatted();
     
     // TODO: if a JN goes down and comes back up, then it will throw
@@ -260,6 +272,16 @@ class Journal implements Closeable {
     // client
   }
   
+  private synchronized void checkWriteRequest(RequestInfo reqInfo) throws IOException {
+    checkRequest(reqInfo);
+    
+    if (reqInfo.getEpoch() != lastWriterEpoch.get()) {
+      throw new IOException("IPC's epoch " + reqInfo.getEpoch() +
+          " is not the current writer epoch  " +
+          lastWriterEpoch.get());
+    }
+  }
+  
   private void checkFormatted() throws JournalNotFormattedException {
     if (!storage.isFormatted()) {
       throw new JournalNotFormattedException("Journal " + storage +
@@ -308,6 +330,18 @@ class Journal implements Closeable {
       }
     }
     
+    long curLastWriterEpoch = lastWriterEpoch.get();
+    if (curLastWriterEpoch != reqInfo.getEpoch()) {
+      LOG.info("Recording lastWriterEpoch = " + reqInfo.getEpoch());
+      lastWriterEpoch.set(reqInfo.getEpoch());
+    }
+
+    // The fact that we are starting a segment at this txid indicates
+    // that any previous recovery for this same segment was aborted.
+    // Otherwise, no writer would have started writing. So, we can
+    // remove the record of the older segment here.
+    purgePaxosDecision(txid);
+    
     curSegment = fjm.startLogSegment(txid);
     curSegmentTxId = txid;
     nextTxId = txid;
@@ -350,6 +384,12 @@ class Journal implements Closeable {
           "Trying to re-finalize already finalized log " +
               elf + " with different endTxId " + endTxId);
     }
+
+    // Once logs are finalized, a different length will never be decided.
+    // During recovery, we treat a finalized segment the same as an accepted
+    // recovery. Thus, we no longer need to keep track of the previously-
+    // accepted decision. The existence of the finalized log segment is enough.
+    purgePaxosDecision(elf.getFirstTxId());
   }
   
   /**
@@ -364,6 +404,21 @@ class Journal implements Closeable {
     purgePaxosDecisionsOlderThan(minTxIdToKeep);
   }
   
+  /**
+   * Remove the previously-recorded 'accepted recovery' information
+   * for a given log segment, once it is no longer necessary. 
+   * @param segmentTxId the transaction ID to purge
+   * @throws IOException if the file could not be deleted
+   */
+  private void purgePaxosDecision(long segmentTxId) throws IOException {
+    File paxosFile = storage.getPaxosFile(segmentTxId);
+    if (paxosFile.exists()) {
+      if (!paxosFile.delete()) {
+        throw new IOException("Unable to delete paxos file " + paxosFile);
+      }
+    }
+  }
+
   private void purgePaxosDecisionsOlderThan(long minTxIdToKeep)
       throws IOException {
     File dir = storage.getPaxosDir();
@@ -442,17 +497,28 @@ class Journal implements Closeable {
     
     PrepareRecoveryResponseProto.Builder builder =
         PrepareRecoveryResponseProto.newBuilder();
+
+    SegmentStateProto segInfo = getSegmentInfo(segmentTxId);
+    boolean hasFinalizedSegment = segInfo != null && !segInfo.getIsInProgress();
     
     PersistedRecoveryPaxosData previouslyAccepted = getPersistedPaxosData(segmentTxId);
-    if (previouslyAccepted != null) {
+
+    if (previouslyAccepted != null && !hasFinalizedSegment) {
+      SegmentStateProto acceptedState = previouslyAccepted.getSegmentState();
+      assert acceptedState.getEndTxId() == segInfo.getEndTxId() &&
+             acceptedState.getMd5Sum().equals(segInfo.getMd5Sum()) :
+            "prev accepted: " + TextFormat.shortDebugString(previouslyAccepted)+ "\n" +
+            "on disk:       " + TextFormat.shortDebugString(segInfo);
+            
       builder.setAcceptedInEpoch(previouslyAccepted.getAcceptedInEpoch())
         .setSegmentState(previouslyAccepted.getSegmentState());
     } else {
-      SegmentStateProto segInfo = getSegmentInfo(segmentTxId);
       if (segInfo != null) {
         builder.setSegmentState(segInfo);
       }
     }
+    
+    builder.setLastWriterEpoch(lastWriterEpoch.get());
     
     PrepareRecoveryResponseProto resp = builder.build();
     LOG.info("Prepared recovery for segment " + segmentTxId + ": " +
