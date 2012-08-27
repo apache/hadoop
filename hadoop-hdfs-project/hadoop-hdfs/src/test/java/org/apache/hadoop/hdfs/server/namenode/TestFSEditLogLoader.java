@@ -70,7 +70,7 @@ public class TestFSEditLogLoader {
     MiniDFSCluster cluster = null;
     FileSystem fileSys = null;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)
-        .build();
+        .enableManagedDfsDirsRedundancy(false).build();
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
     final FSNamesystem namesystem = cluster.getNamesystem();
@@ -100,7 +100,7 @@ public class TestFSEditLogLoader {
     bld.append("Recent opcode offsets: (\\d+\\s*){4}$");
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)
-          .format(false).build();
+          .enableManagedDfsDirsRedundancy(false).format(false).build();
       fail("should not be able to start");
     } catch (IOException e) {
       assertTrue("error message contains opcodes message",

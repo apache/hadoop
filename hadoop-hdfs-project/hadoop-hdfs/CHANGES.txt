@@ -233,6 +233,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3844. Add @Override and remove {@inheritdoc} and unnecessary
     imports. (Jing Zhao via suresh)
 
+    HDFS-3853. Port MiniDFSCluster enableManagedDfsDirsRedundancy
+    option to branch-2. (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
