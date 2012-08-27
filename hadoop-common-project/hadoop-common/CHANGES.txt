@@ -95,6 +95,9 @@ Trunk (unreleased changes)
     the message is printed and the stack trace is not printed to avoid chatter.
     (Brandon Li via Suresh)
 
+    HADOOP-8719. Workaround for kerberos-related log errors upon running any
+    hadoop command on OSX. (Jianbin Wei via harsh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.

@@ -61,6 +61,15 @@ fi
 # restore ordinary behaviour
 unset IFS
 
+MAC_OSX=false
+case "`uname`" in
+Darwin*) MAC_OSX=true;;
+esac
+
+if $MAC_OSX; then
+  YARN_OPTS="$YARN_OPTS -Djava.security.krb5.realm= -Djava.security.krb5.kdc="
+fi
+
 
 YARN_OPTS="$YARN_OPTS -Dhadoop.log.dir=$YARN_LOG_DIR"
 YARN_OPTS="$YARN_OPTS -Dyarn.log.dir=$YARN_LOG_DIR"
