@@ -177,8 +177,13 @@ public class TestYARNRunner extends TestCase {
   @Test
   public void testResourceMgrDelegate() throws Exception {
     /* we not want a mock of resourcemgr deleagte */
-    ClientRMProtocol clientRMProtocol = mock(ClientRMProtocol.class);
-    ResourceMgrDelegate delegate = new ResourceMgrDelegate(conf, clientRMProtocol);
+    final ClientRMProtocol clientRMProtocol = mock(ClientRMProtocol.class);
+    ResourceMgrDelegate delegate = new ResourceMgrDelegate(conf) {
+      @Override
+      public synchronized void start() {
+        this.rmClient = clientRMProtocol;
+      }
+    };
     /* make sure kill calls finish application master */
     when(clientRMProtocol.forceKillApplication(any(KillApplicationRequest.class)))
     .thenReturn(null);
