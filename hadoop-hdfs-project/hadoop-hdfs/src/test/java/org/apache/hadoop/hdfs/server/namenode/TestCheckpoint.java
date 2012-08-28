@@ -1878,6 +1878,59 @@ public class TestCheckpoint {
       }
     }
   }
+
+  /**
+   * Regression test for HDFS-3849.  This makes sure that when we re-load the
+   * FSImage in the 2NN, we clear the existing leases.
+   */
+  @Test
+  public void testSecondaryNameNodeWithSavedLeases() throws IOException {
+    MiniDFSCluster cluster = null;
+    SecondaryNameNode secondary = null;
+    FSDataOutputStream fos = null;
+    Configuration conf = new HdfsConfiguration();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+          .format(true).build();
+      FileSystem fs = cluster.getFileSystem();
+      fos = fs.create(new Path("tmpfile"));
+      fos.write(new byte[] { 0, 1, 2, 3 });
+      fos.hflush();
+      assertEquals(1, cluster.getNamesystem().getLeaseManager().countLease());
+
+      secondary = startSecondaryNameNode(conf);
+      assertEquals(0, secondary.getFSNamesystem().getLeaseManager().countLease());
+
+      // Checkpoint once, so the 2NN loads the lease into its in-memory sate.
+      secondary.doCheckpoint();
+      assertEquals(1, secondary.getFSNamesystem().getLeaseManager().countLease());
+      fos.close();
+      fos = null;
+
+      // Perform a saveNamespace, so that the NN has a new fsimage, and the 2NN
+      // therefore needs to download a new fsimage the next time it performs a
+      // checkpoint.
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+      cluster.getNameNodeRpc().saveNamespace();
+      cluster.getNameNodeRpc().setSafeMode(SafeModeAction.SAFEMODE_LEAVE);
+      
+      // Ensure that the 2NN can still perform a checkpoint.
+      secondary.doCheckpoint();
+      
+      // And the leases have been cleared...
+      assertEquals(0, secondary.getFSNamesystem().getLeaseManager().countLease());
+    } finally {
+      if (fos != null) {
+        fos.close();
+      }
+      if (secondary != null) {
+        secondary.shutdown();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
   
   @Test
   public void testCommandLineParsing() throws ParseException {

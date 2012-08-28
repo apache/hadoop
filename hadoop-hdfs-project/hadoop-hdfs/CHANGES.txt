@@ -519,6 +519,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3860. HeartbeatManager#Monitor may wrongly hold the writelock of
     namesystem. (Jing Zhao via atm)
 
+    HDFS-3849. When re-loading the FSImage, we should clear the existing
+    genStamp and leases. (Colin Patrick McCabe via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)

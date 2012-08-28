@@ -351,6 +351,23 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private final boolean haEnabled;
     
   /**
+   * Clear all loaded data
+   */
+  void clear() {
+    dir.reset();
+    dtSecretManager.reset();
+    generationStamp.setStamp(GenerationStamp.FIRST_VALID_STAMP);
+    leaseManager.removeAllLeases();
+  }
+
+  @VisibleForTesting
+  LeaseManager getLeaseManager() {
+    return leaseManager;
+  }
+  
+  /**
+
+  /**
    * Instantiates an FSNamesystem loaded from the image and edits
    * directories specified in the passed Configuration.
    * 
