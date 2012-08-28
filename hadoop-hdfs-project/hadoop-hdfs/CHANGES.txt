@@ -684,6 +684,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3683. Edit log replay progress indicator shows >100% complete. (Plamen
     Jeliazkov via atm)
 
+    HDFS-3856. TestHDFSServerPorts failure is causing surefire fork failure.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
