@@ -3,7 +3,6 @@ Hadoop Change Log
 Release 2.0.1-alpha - UNRELEASED
 
   INCOMPATIBLE CHANGES
-
     HADOOP-8388. Remove unused BlockLocation serialization.
     (Colin Patrick McCabe via eli)
 
@@ -683,6 +682,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
 
     HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
+
+    HADOOP-8619. WritableComparator must implement no-arg constructor.
+    (Chris Douglas via Suresh)
 
   OPTIMIZATIONS
 
