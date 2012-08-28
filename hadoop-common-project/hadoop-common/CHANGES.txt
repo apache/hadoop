@@ -239,6 +239,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8031. Configuration class fails to find embedded .jar resources; 
     should use URL.openStream() (genman via tucu)
 
+    HADOOP-8738. junit JAR is showing up in the distro (tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
