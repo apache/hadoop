@@ -96,6 +96,9 @@ Release 2.1.0-alpha - Unreleased
     MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
     (Todd Lipcon and Siddharth Seth via sseth)
 
+    MAPREDUCE-4580. Change MapReduce to use the yarn-client module.
+    (Vinod Kumar Vavilapalli via sseth)
+
   OPTIMIZATIONS
 
   BUG FIXES
