@@ -98,6 +98,9 @@ Trunk (unreleased changes)
     HADOOP-8719. Workaround for kerberos-related log errors upon running any
     hadoop command on OSX. (Jianbin Wei via harsh)
 
+    HADOOP-8619. WritableComparator must implement no-arg constructor.
+    (Chris Douglas via Suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
