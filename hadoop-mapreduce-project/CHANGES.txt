@@ -415,6 +415,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4068. Jars in lib subdirectory of the submittable JAR are not added to the 
     classpath (rkanter via tucu)
 
+    MAPREDUCE-4600. TestTokenCache.java from MRV1 no longer compiles  (daryn 
+    via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
