@@ -69,3 +69,6 @@ Release 0.23.3 - Unreleased
     
     YARN-39. RM-NM secret-keys should be randomly generated and rolled every
     so often. (vinodkv and sseth via sseth)
+
+    YARN-31. Fix TestDelegationTokenRenewer to not depend on test order so as to
+    pass tests on jdk7. (Thomas Graves via vinodkv)
