@@ -58,6 +58,10 @@ class BlocksMap {
     INodeFile getINode() {
       return inode;
     }
+    
+    void setINode(INodeFile inode) {
+      this.inode = inode;
+    }
 
     DatanodeDescriptor getDatanode(int index) {
       assert this.triplets != null : "BlockInfo is not initialized";
