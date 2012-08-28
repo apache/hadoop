@@ -159,6 +159,12 @@ public class LeaseManager {
     }
   }
 
+  synchronized void removeAllLeases() {
+    sortedLeases.clear();
+    sortedLeasesByPath.clear();
+    leases.clear();
+  }
+
   /**
    * Reassign lease for file src to the new holder.
    */
