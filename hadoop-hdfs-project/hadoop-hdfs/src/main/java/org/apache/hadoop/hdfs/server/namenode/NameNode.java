@@ -514,13 +514,13 @@ public class NameNode {
   }
   
   private void startTrashEmptier(Configuration conf) throws IOException {
-    long trashInterval = namesystem.getServerDefaults().getTrashInterval();  
+    long trashInterval =
+        conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT);
     if (trashInterval == 0) {
       return;
     } else if (trashInterval < 0) {
       throw new IOException("Cannot start tresh emptier with negative interval."
-          + " Set " + CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY + " to a"
-          + " positive value.");
+          + " Set " + FS_TRASH_INTERVAL_KEY + " to a positive value.");
     }
     this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);

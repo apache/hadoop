@@ -513,6 +513,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3731. Release upgrade must handle blocks being written from 1.0.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3856. TestHDFSServerPorts failure is causing surefire fork failure.
+    (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
