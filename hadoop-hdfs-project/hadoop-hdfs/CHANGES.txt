@@ -514,7 +514,7 @@ Release 2.0.1-alpha - UNRELEASED
     (Colin Patrick McCabe via eli)
 
     HDFS-3856. TestHDFSServerPorts failure is causing surefire fork failure.
-    (Colin Patrick McCabe via eli)
+    (eli)
 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
