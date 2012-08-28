@@ -516,6 +516,9 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3856. TestHDFSServerPorts failure is causing surefire fork failure.
     (eli)
 
+    HDFS-3860. HeartbeatManager#Monitor may wrongly hold the writelock of
+    namesystem. (Jing Zhao via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
