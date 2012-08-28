@@ -39,6 +39,9 @@ Release 0.23.3 - UNRELEASED
     HADOOP-8239. Add subclasses of MD5MD5CRC32FileChecksum to support file
     checksum with CRC32C.  (Kihwal Lee via szetszwo)
 
+    HADOOP-8619. WritableComparator must implement no-arg constructor.
+    (Chris Douglas via Suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

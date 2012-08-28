@@ -87,6 +87,10 @@ public class WritableComparator implements RawComparator {
   private final WritableComparable key2;
   private final DataInputBuffer buffer;
 
+  protected WritableComparator() {
+    this(null);
+  }
+
   /** Construct for a {@link WritableComparable} implementation. */
   protected WritableComparator(Class<? extends WritableComparable> keyClass) {
     this(keyClass, false);
