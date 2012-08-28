@@ -213,6 +213,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4595. TestLostTracker failing - possibly due to a race in 
     JobHistory.JobHistoryFilesManager#run() (kkambatl via tucu)
 
+    MAPREDUCE-1684. ClusterStatus can be cached in 
+    CapacityTaskScheduler.assignTasks() (Koji Noguchi via tgraves)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
