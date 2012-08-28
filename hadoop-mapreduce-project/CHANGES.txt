@@ -717,6 +717,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4570. ProcfsBasedProcessTree#constructProcessInfo() prints a
     warning if procfsDir/<pid>/stat is not found. (Ahmed Radwan via bobby)
 
+    MAPREDUCE-4600. TestTokenCache.java from MRV1 no longer compiles  (daryn 
+    via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
