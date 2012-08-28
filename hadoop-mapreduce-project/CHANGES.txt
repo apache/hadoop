@@ -99,6 +99,9 @@ Release 2.1.0-alpha - Unreleased
     MAPREDUCE-4580. Change MapReduce to use the yarn-client module.
     (Vinod Kumar Vavilapalli via sseth)
 
+    MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
+    jdk7. (Thomas Graves via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
