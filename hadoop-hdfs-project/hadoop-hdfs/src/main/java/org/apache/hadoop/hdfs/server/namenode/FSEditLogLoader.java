@@ -304,7 +304,9 @@ public class FSEditLogLoader {
             addCloseOp.path);
       }
       
-      // Update in-memory data structures
+      // Update the salient file attributes.
+      oldFile.setAccessTime(addCloseOp.atime);
+      oldFile.setModificationTimeForce(addCloseOp.mtime);
       updateBlocks(fsDir, addCloseOp, oldFile);
 
       // Now close the file
