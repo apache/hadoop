@@ -25,13 +25,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.classification.InterfaceAudience.Public;
-import org.apache.hadoop.classification.InterfaceStability.Stable;
-import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -43,6 +41,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.ContainerToken;
+import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -52,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
-import org.apache.hadoop.yarn.api.records.DelegationToken;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.URL;
@@ -398,5 +396,26 @@ public class BuilderUtils {
     allocateRequest.addAllAsks(resourceAsk);
     allocateRequest.addAllReleases(containersToBeReleased);
     return allocateRequest;
+  }
+  
+  public static AllocateResponse newAllocateResponse(AMResponse amResponse,
+      int numNodes) {
+    AllocateResponse response = Records.newRecord(AllocateResponse.class);
+    response.setAMResponse(amResponse);
+    response.setNumClusterNodes(numNodes);
+    return response;
+  }
+  
+  public static AMResponse newAMResponse(List<Container> allocated,
+      Resource available, List<ContainerStatus> completed, boolean reboot,
+      int responseId, List<NodeReport> nodeUpdates) {
+    AMResponse amResponse = Records.newRecord(AMResponse.class);
+    amResponse.setAllocatedContainers(allocated);
+    amResponse.setAvailableResources(available);
+    amResponse.setCompletedContainersStatuses(completed);
+    amResponse.setReboot(reboot);
+    amResponse.setResponseId(responseId);
+    amResponse.setUpdatedNodes(nodeUpdates);
+    return amResponse;
   }
 }
