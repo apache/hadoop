@@ -219,6 +219,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-1684. ClusterStatus can be cached in 
     CapacityTaskScheduler.assignTasks() (Koji Noguchi via tgraves)
 
+    HDFS-2815. Namenode is not coming out of safemode when we perform ( NN crash + restart ). 
+    Also FSCK report shows blocks missed. (umamahesh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
