@@ -103,6 +103,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
     (rkanter via tucu)
 
+    MAPREDUCE-4499. Looking for speculative tasks is very expensive in 1.x
+    (Koji Noguchi via tgraves)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet

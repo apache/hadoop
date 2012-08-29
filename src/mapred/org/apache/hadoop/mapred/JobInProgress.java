@@ -2246,21 +2246,19 @@ public class JobInProgress {
         continue;
       }
 
-      if (!tip.hasRunOnMachine(ttStatus.getHost(), 
-                               ttStatus.getTrackerName())) {
-        if (tip.hasSpeculativeTask(currentTime, avgProgress)) {
-          // In case of shared list we don't remove it. Since the TIP failed 
-          // on this tracker can be scheduled on some other tracker.
-          if (shouldRemove) {
-            iter.remove(); //this tracker is never going to run it again
-          }
-          return tip;
-        } 
-      } else {
+      if (tip.hasSpeculativeTask(currentTime, avgProgress)) {
         // Check if this tip can be removed from the list.
         // If the list is shared then we should not remove.
-        if (shouldRemove) {
-          // This tracker will never speculate this tip
+        if(shouldRemove){
+          iter.remove();
+        }
+        if (!tip.hasRunOnMachine(ttStatus.getHost(),
+                               ttStatus.getTrackerName())) {
+          return tip;
+        }
+      } else {
+        if (shouldRemove && tip.hasRunOnMachine(ttStatus.getHost(),
+                                         ttStatus.getTrackerName())) {
           iter.remove();
         }
       }
