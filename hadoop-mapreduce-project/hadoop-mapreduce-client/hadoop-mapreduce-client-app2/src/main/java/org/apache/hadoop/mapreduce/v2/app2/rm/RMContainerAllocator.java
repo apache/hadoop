@@ -866,10 +866,10 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
           // Blakclisted nodes should likely be removed immediately.
           
           // TODO Differentiation between blacklisted versus unusable nodes ?
-          //blackListed = appContext.getAllNodes().isHostBlackListed(allocatedHost);
+          boolean blackListed = appContext.getAllNodes().isHostBlackListed(allocatedHost);
           nodeUsable = appContext.getNode(allocated.getNodeId()).isUsable();
           
-          if (!nodeUsable) {
+          if (!nodeUsable || blackListed) {
             // we need to request for a new container 
             // and release the current one
             LOG.info("Got allocated container on an unusable "

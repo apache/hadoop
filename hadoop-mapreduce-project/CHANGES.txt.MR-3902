@@ -2,3 +2,5 @@ Branch MR-3902
   MAPREDUCE-4581. TaskHeartbeatHandler should extend HeartbeatHandlerBase (Tsuyoshi OZAWA via sseth)
 
   MAPREDUCE-4602. Re-create ask list correctly in case of a temporary error in the AM-RM allocate call (sseth)
+
+  MAPREDUCE-4599. Prevent contianer launches on blacklisted hosts. (Tsuyoshi OZAWA via sseth)

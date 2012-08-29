@@ -237,6 +237,8 @@ public class AMNodeImpl implements AMNode {
         node.numFailedTAs++;
         boolean shouldBlacklist = node.shouldBlacklistNode();
         if (shouldBlacklist) {
+          node.sendEvent(new AMNodeEvent(node.getNodeId(),
+              AMNodeEventType.N_NODE_WAS_BLACKLISTED));
           return AMNodeState.BLACKLISTED;
           // TODO XXX: An event likely needs to go out to the scheduler.
         }
@@ -291,6 +293,8 @@ public class AMNodeImpl implements AMNode {
     public AMNodeState transition(AMNodeImpl node, AMNodeEvent nEvent) {
       boolean shouldBlacklist = node.shouldBlacklistNode();
       if (shouldBlacklist) {
+        node.sendEvent(new AMNodeEvent(node.getNodeId(),
+            AMNodeEventType.N_NODE_WAS_BLACKLISTED));
         return AMNodeState.BLACKLISTED;
         // TODO XXX: An event likely needs to go out to the scheduler.
       }
@@ -375,7 +379,6 @@ public class AMNodeImpl implements AMNode {
 
   @Override
   public boolean isUsable() {
-    // TODO Auto-generated method stub
     this.readLock.lock();
     try {
       return (EnumSet.of(AMNodeState.ACTIVE, AMNodeState.FORCED_ACTIVE)
