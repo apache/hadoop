@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.util.Random;
 
@@ -32,12 +33,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.util.ThreadUtil;
 import org.junit.Test;
 
 /**
  * This class tests the decommissioning of nodes.
  */
 public class TestModTime {
+  
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int fileSize = 16384;
@@ -184,6 +187,46 @@ public class TestModTime {
     } finally {
       fileSys.close();
       cluster.shutdown();
+    }
+  }
+  
+  /**
+   * Regression test for HDFS-3864 - NN does not update internal file mtime for
+   * OP_CLOSE when reading from the edit log.
+   */
+  @Test
+  public void testModTimePersistsAfterRestart() throws IOException {
+    final long sleepTime = 10; // 10 milliseconds
+    MiniDFSCluster cluster = null;
+    FileSystem fs = null;
+    Configuration conf = new HdfsConfiguration();
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      fs = cluster.getFileSystem();
+      Path testPath = new Path("/test");
+      
+      // Open a file, and get its initial modification time.
+      OutputStream out = fs.create(testPath);
+      long initialModTime = fs.getFileStatus(testPath).getModificationTime();
+      assertTrue(initialModTime > 0);
+      
+      // Wait and then close the file. Ensure that the mod time goes up.
+      ThreadUtil.sleepAtLeastIgnoreInterrupts(sleepTime);
+      out.close();
+      long modTimeAfterClose = fs.getFileStatus(testPath).getModificationTime();
+      assertTrue(modTimeAfterClose >= initialModTime + sleepTime);
+      
+      // Restart the NN, and make sure that the later mod time is still used.
+      cluster.restartNameNode();
+      long modTimeAfterRestart = fs.getFileStatus(testPath).getModificationTime();
+      assertEquals(modTimeAfterClose, modTimeAfterRestart);
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
