@@ -94,6 +94,7 @@ public class LocatedFileStatus extends FileStatus {
    * @throws ClassCastException if the specified object's is not of 
    *         type FileStatus
    */
+  @Override
   public int compareTo(Object o) {
     return super.compareTo(o);
   }
@@ -102,6 +103,7 @@ public class LocatedFileStatus extends FileStatus {
    * @param   o the object to be compared.
    * @return  true if two file status has the same path name; false if not.
    */
+  @Override
   public boolean equals(Object o) {
     return super.equals(o);
   }
@@ -112,6 +114,7 @@ public class LocatedFileStatus extends FileStatus {
    *
    * @return  a hash code value for the path name.
    */
+  @Override
   public int hashCode() {
     return super.hashCode();
   }

@@ -58,6 +58,8 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
+import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
+import org.apache.hadoop.hdfs.server.namenode.NNStorageRetentionManager.StoragePurger;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
@@ -137,6 +139,11 @@ public class SecondaryNameNode implements Runnable {
   @VisibleForTesting
   FSImage getFSImage() {
     return checkpointImage;
+  }
+
+  @VisibleForTesting
+  FSNamesystem getFSNamesystem() {
+    return namesystem;
   }
   
   @VisibleForTesting
@@ -376,6 +383,7 @@ public class SecondaryNameNode implements Runnable {
               downloadImage = false;
               LOG.info("Image has not changed. Will not download image.");
             } else {
+              LOG.info("Image has changed. Downloading updated image from NN.");
               MD5Hash downloadedHash = TransferFsImage.downloadImageToStorage(
                   nnHostPort, sig.mostRecentCheckpointTxId, dstImage.getStorage(), true);
               dstImage.saveDigestAndRenameCheckpointImage(
@@ -472,10 +480,6 @@ public class SecondaryNameNode implements Runnable {
     LOG.warn("Checkpoint done. New Image Size: " 
              + dstStorage.getFsImageName(txid).length());
     
-    // Since we've successfully checkpointed, we can remove some old
-    // image files
-    checkpointImage.purgeOldStorage();
-    
     return loadImage;
   }
   
@@ -562,6 +566,9 @@ public class SecondaryNameNode implements Runnable {
     if (opts == null) {
       LOG.fatal("Failed to parse options");
       terminate(1);
+    } else if (opts.shouldPrintHelp()) {
+      opts.usage();
+      System.exit(0);
     }
     
     StringUtils.startupShutdownMessage(SecondaryNameNode.class, argv, LOG);
@@ -595,6 +602,7 @@ public class SecondaryNameNode implements Runnable {
     private final Option geteditsizeOpt;
     private final Option checkpointOpt;
     private final Option formatOpt;
+    private final Option helpOpt;
 
 
     Command cmd;
@@ -605,6 +613,7 @@ public class SecondaryNameNode implements Runnable {
     
     private boolean shouldForce;
     private boolean shouldFormat;
+    private boolean shouldPrintHelp;
 
     CommandLineOpts() {
       geteditsizeOpt = new Option("geteditsize",
@@ -612,19 +621,31 @@ public class SecondaryNameNode implements Runnable {
       checkpointOpt = OptionBuilder.withArgName("force")
         .hasOptionalArg().withDescription("checkpoint on startup").create("checkpoint");;
       formatOpt = new Option("format", "format the local storage during startup");
+      helpOpt = new Option("h", "help", false, "get help information");
       
       options.addOption(geteditsizeOpt);
       options.addOption(checkpointOpt);
       options.addOption(formatOpt);
+      options.addOption(helpOpt);
     }
     
     public boolean shouldFormat() {
       return shouldFormat;
     }
 
+    public boolean shouldPrintHelp() {
+      return shouldPrintHelp;
+    }
+    
     public void parse(String ... argv) throws ParseException {
       CommandLineParser parser = new PosixParser();
       CommandLine cmdLine = parser.parse(options, argv);
+      
+      if (cmdLine.hasOption(helpOpt.getOpt())
+          || cmdLine.hasOption(helpOpt.getLongOpt())) {
+        shouldPrintHelp = true;
+        return;
+      }
       
       boolean hasGetEdit = cmdLine.hasOption(geteditsizeOpt.getOpt());
       boolean hasCheckpoint = cmdLine.hasOption(checkpointOpt.getOpt()); 
@@ -662,8 +683,13 @@ public class SecondaryNameNode implements Runnable {
     }
     
     void usage() {
+      String header = "The Secondary NameNode is a helper "
+          + "to the primary NameNode. The Secondary is responsible "
+          + "for supporting periodic checkpoints of the HDFS metadata. "
+          + "The current design allows only one Secondary NameNode "
+          + "per HDFS cluster.";
       HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("secondarynamenode", options);
+      formatter.printHelp("secondarynamenode", header, options, "", false);
     }
   }
 
@@ -680,6 +706,34 @@ public class SecondaryNameNode implements Runnable {
   }
   
   static class CheckpointStorage extends FSImage {
+    
+    private static class CheckpointLogPurger implements LogsPurgeable {
+      
+      private NNStorage storage;
+      private StoragePurger purger
+          = new NNStorageRetentionManager.DeletionStoragePurger();
+      
+      public CheckpointLogPurger(NNStorage storage) {
+        this.storage = storage;
+      }
+
+      @Override
+      public void purgeLogsOlderThan(long minTxIdToKeep) throws IOException {
+        Iterator<StorageDirectory> iter = storage.dirIterator();
+        while (iter.hasNext()) {
+          StorageDirectory dir = iter.next();
+          List<EditLogFile> editFiles = FileJournalManager.matchEditLogs(
+              dir.getCurrentDir());
+          for (EditLogFile f : editFiles) {
+            if (f.getLastTxId() < minTxIdToKeep) {
+              purger.purgeLog(f);
+            }
+          }
+        }
+      }
+      
+    }
+    
     /**
      * Construct a checkpoint image.
      * @param conf Node configuration.
@@ -696,6 +750,11 @@ public class SecondaryNameNode implements Runnable {
       // we shouldn't have any editLog instance. Setting to null
       // makes sure we don't accidentally depend on it.
       editLog = null;
+      
+      // Replace the archival manager with one that can actually work on the
+      // 2NN's edits storage.
+      this.archivalManager = new NNStorageRetentionManager(conf, storage,
+          new CheckpointLogPurger(storage));
     }
 
     /**
@@ -792,6 +851,7 @@ public class SecondaryNameNode implements Runnable {
     }
     
     Checkpointer.rollForwardByApplyingLogs(manifest, dstImage, dstNamesystem);
+    // The following has the side effect of purging old fsimages/edit logs.
     dstImage.saveFSImageInAllDirs(dstNamesystem, dstImage.getLastAppliedTxId());
     dstStorage.writeAll();
   }

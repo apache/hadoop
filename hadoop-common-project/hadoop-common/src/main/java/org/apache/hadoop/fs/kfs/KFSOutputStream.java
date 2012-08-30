@@ -20,15 +20,10 @@
 package org.apache.hadoop.fs.kfs;
 
 import java.io.*;
-import java.net.*;
-import java.util.*;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.util.Progressable;
 
 import org.kosmix.kosmosfs.access.KfsAccess;
@@ -60,6 +55,7 @@ class KFSOutputStream extends OutputStream {
         return kfsChannel.tell();
     }
 
+    @Override
     public void write(int v) throws IOException {
         if (kfsChannel == null) {
             throw new IOException("File closed");
@@ -70,6 +66,7 @@ class KFSOutputStream extends OutputStream {
         write(b, 0, 1);
     }
 
+    @Override
     public void write(byte b[], int off, int len) throws IOException {
         if (kfsChannel == null) {
             throw new IOException("File closed");
@@ -80,6 +77,7 @@ class KFSOutputStream extends OutputStream {
         kfsChannel.write(ByteBuffer.wrap(b, off, len));
     }
 
+    @Override
     public void flush() throws IOException {
         if (kfsChannel == null) {
             throw new IOException("File closed");
@@ -89,6 +87,7 @@ class KFSOutputStream extends OutputStream {
         kfsChannel.sync();
     }
 
+    @Override
     public synchronized void close() throws IOException {
         if (kfsChannel == null) {
             return;

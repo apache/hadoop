@@ -564,7 +564,6 @@ class BlockPoolSliceScanner {
   }
   
   void scanBlockPoolSlice() {
-    startNewPeriod();
     // Create a new processedBlocks structure
     processedBlocks = new HashMap<Long, Integer>();
     if (!assignInitialVerificationTimes()) {

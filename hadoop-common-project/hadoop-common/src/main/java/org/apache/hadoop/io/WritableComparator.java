@@ -87,6 +87,10 @@ public class WritableComparator implements RawComparator {
   private final WritableComparable key2;
   private final DataInputBuffer buffer;
 
+  protected WritableComparator() {
+    this(null);
+  }
+
   /** Construct for a {@link WritableComparable} implementation. */
   protected WritableComparator(Class<? extends WritableComparable> keyClass) {
     this(keyClass, false);
@@ -120,6 +124,7 @@ public class WritableComparator implements RawComparator {
    * Writable#readFields(DataInput)}, then calls {@link
    * #compare(WritableComparable,WritableComparable)}.
    */
+  @Override
   public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
     try {
       buffer.reset(b1, s1, l1);                   // parse key1
@@ -144,6 +149,7 @@ public class WritableComparator implements RawComparator {
     return a.compareTo(b);
   }
 
+  @Override
   public int compare(Object a, Object b) {
     return compare((WritableComparable)a, (WritableComparable)b);
   }

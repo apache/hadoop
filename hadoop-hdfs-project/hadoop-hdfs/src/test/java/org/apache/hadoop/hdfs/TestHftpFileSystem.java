@@ -92,7 +92,6 @@ public class TestHftpFileSystem {
     RAN.setSeed(seed);
 
     config = new Configuration();
-    config.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     hdfs = cluster.getFileSystem();
     blockPoolId = cluster.getNamesystem().getBlockPoolId();

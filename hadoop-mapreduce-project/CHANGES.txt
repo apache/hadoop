@@ -142,6 +142,11 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved
     (Jason Lowe via bobby)
 
+    MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
+
+    MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
+    (rkanter via tucu)
+
   BUG FIXES
 
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
@@ -166,6 +171,24 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4484. Incorrect IS_MINI_YARN_CLUSTER property name in YarnConfiguration. 
     (ahmed.radwan via tucu)
+
+    MAPREDUCE-4562. Support for "FileSystemCounter" legacy counter group name
+    for compatibility reasons is creating incorrect counter name.
+    (Jarek Jarcec Cecho via tomwhite)
+
+    MAPREDUCE-4068. Jars in lib subdirectory of the submittable JAR are not added to the 
+    classpath (rkanter via tucu)
+
+    MAPREDUCE-4577. HDFS-3672 broke
+    TestCombineFileInputFormat.testMissingBlocks() test. (atm)
+
+    MAPREDUCE-4470. Fix TestCombineFileInputFormat.testForEmptyFile (ikatsov via tucu)
+
+    MAPREDUCE-4608. hadoop-mapreduce-client is missing some dependencies.
+    (tucu via tomwhite)
+
+    MAPREDUCE-4610. Support deprecated mapreduce.job.counters.limit property in
+    MR2. (tomwhite)
 
 Release 2.1.0-alpha - Unreleased 
 
@@ -216,6 +239,12 @@ Release 2.1.0-alpha - Unreleased
 
     MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
     (Todd Lipcon and Siddharth Seth via sseth)
+
+    MAPREDUCE-4580. Change MapReduce to use the yarn-client module.
+    (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
+    jdk7. (Thomas Graves via vinodkv)
 
   OPTIMIZATIONS
 
@@ -524,6 +553,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4375. Show Configuration Tracability in MR UI (bobby 
     via tgraves)
 
+    MAPREDUCE-4569. Fixed TestHsWebServicesJobsQuery to pass on JDK7 by not
+    depending on test order. (Thomas Graves via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
@@ -808,6 +840,18 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-3782. teragen terasort jobs fail when using webhdfs:// (Jason
     Lowe via bobby)
+
+    MAPREDUCE-4053. Counters group names deprecation is wrong, iterating over
+    group names deprecated names don't show up  (Robert Evans via tgraves)
+
+    MAPREDUCE-3506. Calling getPriority on JobInfo after parsing a history log
+    with JobHistoryParser throws a NullPointerException (Jason Lowe via bobby)
+
+    MAPREDUCE-4570. ProcfsBasedProcessTree#constructProcessInfo() prints a
+    warning if procfsDir/<pid>/stat is not found. (Ahmed Radwan via bobby)
+
+    MAPREDUCE-4600. TestTokenCache.java from MRV1 no longer compiles  (daryn 
+    via bobby)
 
 Release 0.23.2 - UNRELEASED
 

@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.AddOp;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.CancelDelegationTokenOp;
@@ -82,7 +83,7 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class FSEditLog  {
+public class FSEditLog implements LogsPurgeable {
 
   static final Log LOG = LogFactory.getLog(FSEditLog.class);
 
@@ -331,6 +332,39 @@ public class FSEditLog  {
     }
 
     state = State.CLOSED;
+  }
+
+
+  /**
+   * Format all configured journals which are not file-based.
+   * 
+   * File-based journals are skipped, since they are formatted by the
+   * Storage format code.
+   */
+  synchronized void formatNonFileJournals(NamespaceInfo nsInfo) throws IOException {
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
+        "Bad state: %s", state);
+    
+    for (JournalManager jm : journalSet.getJournalManagers()) {
+      if (!(jm instanceof FileJournalManager)) {
+        jm.format(nsInfo);
+      }
+    }
+  }
+  
+  synchronized List<FormatConfirmable> getFormatConfirmables() {
+    Preconditions.checkState(state == State.BETWEEN_LOG_SEGMENTS,
+        "Bad state: %s", state);
+
+    List<FormatConfirmable> ret = Lists.newArrayList();
+    for (final JournalManager jm : journalSet.getJournalManagers()) {
+      // The FJMs are confirmed separately since they are also
+      // StorageDirectories
+      if (!(jm instanceof FileJournalManager)) {
+        ret.add(jm);
+      }
+    }
+    return ret;
   }
 
   /**
@@ -998,6 +1032,7 @@ public class FSEditLog  {
   /**
    * Archive any log files that are older than the given txid.
    */
+  @Override
   public synchronized void purgeLogsOlderThan(final long minTxIdToKeep) {
     assert curSegmentTxId == HdfsConstants.INVALID_TXID || // on format this is no-op
       minTxIdToKeep <= curSegmentTxId :

@@ -48,13 +48,12 @@ public final class HeapSort implements IndexedSorter {
    * Sort the given range of items using heap sort.
    * {@inheritDoc}
    */
+  @Override
   public void sort(IndexedSortable s, int p, int r) {
     sort(s, p, r, null);
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  @Override
   public void sort(final IndexedSortable s, final int p, final int r,
       final Progressable rep) {
     final int N = r - p;

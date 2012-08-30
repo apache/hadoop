@@ -49,6 +49,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
   private S3Service s3Service;
   private S3Bucket bucket;
   
+  @Override
   public void initialize(URI uri, Configuration conf) throws IOException {
     S3Credentials s3Credentials = new S3Credentials();
     s3Credentials.initialize(uri, conf);
@@ -63,6 +64,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     bucket = new S3Bucket(uri.getHost());
   }
   
+  @Override
   public void storeFile(String key, File file, byte[] md5Hash)
     throws IOException {
     
@@ -90,6 +92,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  @Override
   public void storeEmptyFile(String key) throws IOException {
     try {
       S3Object object = new S3Object(key);
@@ -102,6 +105,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
   
+  @Override
   public FileMetadata retrieveMetadata(String key) throws IOException {
     try {
       S3Object object = s3Service.getObjectDetails(bucket, key);
@@ -117,6 +121,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
   
+  @Override
   public InputStream retrieve(String key) throws IOException {
     try {
       S3Object object = s3Service.getObject(bucket, key);
@@ -127,6 +132,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
   
+  @Override
   public InputStream retrieve(String key, long byteRangeStart)
     throws IOException {
     try {
@@ -139,11 +145,13 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  @Override
   public PartialListing list(String prefix, int maxListingLength)
     throws IOException {
     return list(prefix, maxListingLength, null, false);
   }
   
+  @Override
   public PartialListing list(String prefix, int maxListingLength, String priorLastKey,
       boolean recurse) throws IOException {
 
@@ -175,6 +183,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  @Override
   public void delete(String key) throws IOException {
     try {
       s3Service.deleteObject(bucket, key);
@@ -183,6 +192,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
   
+  @Override
   public void copy(String srcKey, String dstKey) throws IOException {
     try {
       s3Service.copyObject(bucket.getName(), srcKey, bucket.getName(),
@@ -192,6 +202,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  @Override
   public void purge(String prefix) throws IOException {
     try {
       S3Object[] objects = s3Service.listObjects(bucket, prefix, null);
@@ -203,6 +214,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
     }
   }
 
+  @Override
   public void dump() throws IOException {
     StringBuilder sb = new StringBuilder("S3 Native Filesystem, ");
     sb.append(bucket.getName()).append("\n");

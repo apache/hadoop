@@ -37,6 +37,7 @@ public class MurmurHash extends Hash {
     return _instance;
   }
   
+  @Override
   public int hash(byte[] data, int length, int seed) {
     int m = 0x5bd1e995;
     int r = 24;

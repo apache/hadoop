@@ -37,6 +37,7 @@ public abstract class FileChecksum implements Writable {
   public abstract byte[] getBytes();
 
   /** Return true if both the algorithms and the values are the same. */
+  @Override
   public boolean equals(Object other) {
     if (other == this) {
       return true;
@@ -50,7 +51,7 @@ public abstract class FileChecksum implements Writable {
       && Arrays.equals(this.getBytes(), that.getBytes());
   }
   
-  /** {@inheritDoc} */
+  @Override
   public int hashCode() {
     return getAlgorithmName().hashCode() ^ Arrays.hashCode(getBytes());
   }

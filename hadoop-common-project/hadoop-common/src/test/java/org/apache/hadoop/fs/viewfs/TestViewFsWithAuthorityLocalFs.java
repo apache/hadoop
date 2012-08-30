@@ -41,6 +41,7 @@ import org.junit.Test;
 public class TestViewFsWithAuthorityLocalFs extends ViewFsBaseTest {
   URI schemeWithAuthority;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     // create the test root on local_fs
@@ -54,11 +55,13 @@ public class TestViewFsWithAuthorityLocalFs extends ViewFsBaseTest {
     fcView = FileContext.getFileContext(schemeWithAuthority, conf);  
   }
 
+  @Override
   @After
   public void tearDown() throws Exception {
     super.tearDown();
   }
   
+  @Override
   @Test
   public void testBasicPaths() {
       Assert.assertEquals(schemeWithAuthority,

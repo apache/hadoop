@@ -56,7 +56,6 @@ import org.apache.hadoop.util.Time;
 public class DirectoryScanner implements Runnable {
   private static final Log LOG = LogFactory.getLog(DirectoryScanner.class);
 
-  private final DataNode datanode;
   private final FsDatasetSpi<?> dataset;
   private final ExecutorService reportCompileThreadPool;
   private final ScheduledExecutorService masterThread;
@@ -222,8 +221,7 @@ public class DirectoryScanner implements Runnable {
     }
   }
 
-  DirectoryScanner(DataNode dn, FsDatasetSpi<?> dataset, Configuration conf) {
-    this.datanode = dn;
+  DirectoryScanner(FsDatasetSpi<?> dataset, Configuration conf) {
     this.dataset = dataset;
     int interval = conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY,
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT);
@@ -271,17 +269,6 @@ public class DirectoryScanner implements Runnable {
         return;
       }
 
-      String[] bpids = dataset.getBlockPoolList();
-      for(String bpid : bpids) {
-        UpgradeManagerDatanode um = 
-          datanode.getUpgradeManagerDatanode(bpid);
-        if (um != null && !um.isUpgradeCompleted()) {
-          //If distributed upgrades underway, exit and wait for next cycle.
-          LOG.warn("this cycle terminating immediately because Distributed Upgrade is in process");
-          return; 
-        }
-      }
-      
       //We're are okay to run - do it
       reconcile();      
       

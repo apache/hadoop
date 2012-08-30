@@ -40,11 +40,13 @@ public class RandomDatum implements WritableComparable<RandomDatum> {
     return length;
   }
   
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(length);
     out.write(data);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     length = in.readInt();
     if (data == null || length > data.length)
@@ -102,6 +104,7 @@ public class RandomDatum implements WritableComparable<RandomDatum> {
       super(RandomDatum.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       int n1 = readInt(b1, s1);

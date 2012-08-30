@@ -106,6 +106,7 @@ public class HarFileSystem extends FilterFileSystem {
    * har:///archivepath. This assumes the underlying filesystem
    * to be used in case not specified.
    */
+  @Override
   public void initialize(URI name, Configuration conf) throws IOException {
     // decode the name
     URI underLyingURI = decodeHarURI(name, conf);
@@ -247,6 +248,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * return the top level archive.
    */
+  @Override
   public Path getWorkingDirectory() {
     return new Path(uri.toString());
   }
@@ -636,6 +638,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * @return null since no checksum algorithm is implemented.
    */
+  @Override
   public FileChecksum getFileChecksum(Path f) {
     return null;
   }
@@ -668,6 +671,7 @@ public class HarFileSystem extends FilterFileSystem {
     throw new IOException("Har: Create not allowed");
   }
   
+  @Override
   public FSDataOutputStream create(Path f,
       FsPermission permission,
       boolean overwrite,
@@ -735,10 +739,12 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * return the top level archive path.
    */
+  @Override
   public Path getHomeDirectory() {
     return new Path(uri.toString());
   }
   
+  @Override
   public void setWorkingDirectory(Path newDir) {
     //does nothing.
   }
@@ -746,6 +752,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * not implemented.
    */
+  @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     throw new IOException("Har: mkdirs not allowed");
   }
@@ -753,6 +760,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * not implemented.
    */
+  @Override
   public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws 
         IOException {
     throw new IOException("Har: copyfromlocalfile not allowed");
@@ -761,6 +769,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * copies the file in the har filesystem to a local file.
    */
+  @Override
   public void copyToLocalFile(boolean delSrc, Path src, Path dst) 
     throws IOException {
     FileUtil.copy(this, src, getLocal(getConf()), dst, false, getConf());
@@ -769,6 +778,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * not implemented.
    */
+  @Override
   public Path startLocalOutput(Path fsOutputFile, Path tmpLocalFile) 
     throws IOException {
     throw new IOException("Har: startLocalOutput not allowed");
@@ -777,6 +787,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * not implemented.
    */
+  @Override
   public void completeLocalOutput(Path fsOutputFile, Path tmpLocalFile) 
     throws IOException {
     throw new IOException("Har: completeLocalOutput not allowed");
@@ -785,6 +796,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * not implemented.
    */
+  @Override
   public void setOwner(Path p, String username, String groupname)
     throws IOException {
     throw new IOException("Har: setowner not allowed");
@@ -793,6 +805,7 @@ public class HarFileSystem extends FilterFileSystem {
   /**
    * Not implemented.
    */
+  @Override
   public void setPermission(Path p, FsPermission permisssion) 
     throws IOException {
     throw new IOException("Har: setPermission not allowed");
@@ -825,6 +838,7 @@ public class HarFileSystem extends FilterFileSystem {
         this.end = start + length;
       }
       
+      @Override
       public synchronized int available() throws IOException {
         long remaining = end - underLyingStream.getPos();
         if (remaining > (long)Integer.MAX_VALUE) {
@@ -833,6 +847,7 @@ public class HarFileSystem extends FilterFileSystem {
         return (int) remaining;
       }
       
+      @Override
       public synchronized  void close() throws IOException {
         underLyingStream.close();
         super.close();
@@ -847,15 +862,18 @@ public class HarFileSystem extends FilterFileSystem {
       /**
        * reset is not implemented
        */
+      @Override
       public void reset() throws IOException {
         throw new IOException("reset not implemented.");
       }
       
+      @Override
       public synchronized int read() throws IOException {
         int ret = read(oneBytebuff, 0, 1);
         return (ret <= 0) ? -1: (oneBytebuff[0] & 0xff);
       }
       
+      @Override
       public synchronized int read(byte[] b) throws IOException {
         int ret = read(b, 0, b.length);
         if (ret != -1) {
@@ -867,6 +885,7 @@ public class HarFileSystem extends FilterFileSystem {
       /**
        * 
        */
+      @Override
       public synchronized int read(byte[] b, int offset, int len) 
         throws IOException {
         int newlen = len;
@@ -882,6 +901,7 @@ public class HarFileSystem extends FilterFileSystem {
         return ret;
       }
       
+      @Override
       public synchronized long skip(long n) throws IOException {
         long tmpN = n;
         if (tmpN > 0) {
@@ -895,10 +915,12 @@ public class HarFileSystem extends FilterFileSystem {
         return (tmpN < 0)? -1 : 0;
       }
       
+      @Override
       public synchronized long getPos() throws IOException {
         return (position - start);
       }
       
+      @Override
       public synchronized void seek(long pos) throws IOException {
         if (pos < 0 || (start + pos > end)) {
           throw new IOException("Failed to seek: EOF");
@@ -907,6 +929,7 @@ public class HarFileSystem extends FilterFileSystem {
         underLyingStream.seek(position);
       }
 
+      @Override
       public boolean seekToNewSource(long targetPos) throws IOException {
         //do not need to implement this
         // hdfs in itself does seektonewsource 
@@ -917,6 +940,7 @@ public class HarFileSystem extends FilterFileSystem {
       /**
        * implementing position readable. 
        */
+      @Override
       public int read(long pos, byte[] b, int offset, int length) 
       throws IOException {
         int nlength = length;
@@ -929,6 +953,7 @@ public class HarFileSystem extends FilterFileSystem {
       /**
        * position readable again.
        */
+      @Override
       public void readFully(long pos, byte[] b, int offset, int length) 
       throws IOException {
         if (start + length + pos > end) {
@@ -937,6 +962,7 @@ public class HarFileSystem extends FilterFileSystem {
         underLyingStream.readFully(pos + start, b, offset, length);
       }
       
+      @Override
       public void readFully(long pos, byte[] b) throws IOException {
           readFully(pos, b, 0, b.length);
       }

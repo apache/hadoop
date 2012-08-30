@@ -124,6 +124,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
    * @throws GeneralSecurityException thrown if the keystores could not be
    * initialized due to a security error.
    */
+  @Override
   public void init(SSLFactory.Mode mode)
     throws IOException, GeneralSecurityException {
 

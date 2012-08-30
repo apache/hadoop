@@ -98,6 +98,7 @@ public class CodeBuffer {
     sb.append(ch);
   }
   
+  @Override
   public String toString() {
     return sb.toString();
   }

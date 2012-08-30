@@ -35,18 +35,22 @@ import org.junit.Before;
  */
 public class TestLocalFSFileContextSymlink extends FileContextSymlinkBaseTest {
   
+  @Override
   protected String getScheme() {
     return "file";
   }
 
+  @Override
   protected String testBaseDir1() throws IOException {
     return getAbsoluteTestRootDir(fc)+"/test1";
   }
   
+  @Override
   protected String testBaseDir2() throws IOException {
     return getAbsoluteTestRootDir(fc)+"/test2";
   }
 
+  @Override
   protected URI testURI() {
     try {
       return new URI("file:///");
@@ -55,6 +59,7 @@ public class TestLocalFSFileContextSymlink extends FileContextSymlinkBaseTest {
     }
   }
   
+  @Override
   @Before
   public void setUp() throws Exception {
     fc = FileContext.getLocalFSFileContext();

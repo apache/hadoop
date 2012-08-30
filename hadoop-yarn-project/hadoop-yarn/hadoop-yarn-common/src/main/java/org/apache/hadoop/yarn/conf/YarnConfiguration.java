@@ -18,15 +18,15 @@
 
 package org.apache.hadoop.yarn.conf;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.Iterator;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 
 public class YarnConfiguration extends Configuration {
   private static final Splitter ADDR_SPLITTER = Splitter.on(':').trimResults();
@@ -262,6 +262,12 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_RM_APP_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
       24 * 60 * 60;
 
+  public static final String RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
+      RM_PREFIX + "container-tokens.master-key-rolling-interval-secs";
+
+  public static final long DEFAULT_RM_CONTAINER_TOKEN_MASTER_KEY_ROLLING_INTERVAL_SECS =
+      24 * 60 * 60;
+
   ////////////////////////////////
   // Node Manager Configs
   ////////////////////////////////
@@ -352,6 +358,14 @@ public class YarnConfiguration extends Configuration {
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";
   public static final boolean DEFAULT_LOG_AGGREGATION_ENABLED = false;
+  
+  /** 
+   * How long to wait before deleting aggregated logs, -1 disables.
+   * Be careful set this too small and you will spam the name node.
+   */
+  public static final String LOG_AGGREGATION_RETAIN_SECONDS = YARN_PREFIX
+      + "log-aggregation.retain-seconds";
+  public static final long DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS = -1;
   
   /**
    * Number of seconds to retain logs on the NodeManager. Only applicable if Log

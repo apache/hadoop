@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.mapreduce;
 
+import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -104,14 +105,20 @@ public class TestYarnClientProtocolProvider extends TestCase {
       rmDTToken.setPassword(ByteBuffer.wrap("testcluster".getBytes()));
       rmDTToken.setService("0.0.0.0:8032");
       getDTResponse.setRMDelegationToken(rmDTToken);
-      ClientRMProtocol cRMProtocol = mock(ClientRMProtocol.class);
+      final ClientRMProtocol cRMProtocol = mock(ClientRMProtocol.class);
       when(cRMProtocol.getDelegationToken(any(
           GetDelegationTokenRequest.class))).thenReturn(getDTResponse);
       ResourceMgrDelegate rmgrDelegate = new ResourceMgrDelegate(
-          new YarnConfiguration(conf), cRMProtocol);
+          new YarnConfiguration(conf)) {
+        @Override
+        public synchronized void start() {
+          this.rmClient = cRMProtocol;
+        }
+      };
       yrunner.setResourceMgrDelegate(rmgrDelegate);
       Token t = cluster.getDelegationToken(new Text(" "));
-      assertTrue("Testclusterkind".equals(t.getKind().toString()));
+      assertTrue("Token kind is instead " + t.getKind().toString(),
+        "Testclusterkind".equals(t.getKind().toString()));
     } finally {
       if (cluster != null) {
         cluster.close();

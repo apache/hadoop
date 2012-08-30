@@ -59,7 +59,6 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSClusterStats;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
@@ -268,23 +267,8 @@ public class BlockManager {
                                              DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT);
     this.shouldCheckForEnoughRacks = conf.get(DFSConfigKeys.NET_TOPOLOGY_SCRIPT_FILE_NAME_KEY) != null;
 
-    this.blocksInvalidateWorkPct = conf.getFloat(
-        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION,
-        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION_DEFAULT);
-    Preconditions.checkArgument(
-        (this.blocksInvalidateWorkPct > 0),
-        DFSConfigKeys.DFS_NAMENODE_INVALIDATE_WORK_PCT_PER_ITERATION +
-        " = '" + this.blocksInvalidateWorkPct + "' is invalid. " +
-        "It should be a positive, non-zero float value " +
-        "indicating a percentage.");
-    this.blocksReplWorkMultiplier = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION,
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION_DEFAULT);
-    Preconditions.checkArgument(
-        (this.blocksReplWorkMultiplier > 0),
-        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION +
-        " = '" + this.blocksReplWorkMultiplier + "' is invalid. " +
-        "It should be a positive, non-zero integer value.");
+    this.blocksInvalidateWorkPct = DFSUtil.getInvalidateWorkPctPerIteration(conf);
+    this.blocksReplWorkMultiplier = DFSUtil.getReplWorkMultiplier(conf);
 
     this.replicationRecheckInterval = 
       conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 
@@ -373,10 +357,17 @@ public class BlockManager {
   }
 
   public void close() {
-    if (pendingReplications != null) pendingReplications.stop();
-    blocksMap.close();
-    datanodeManager.close();
-    if (replicationThread != null) replicationThread.interrupt();
+    try {
+      if (replicationThread != null) {
+        replicationThread.interrupt();
+        replicationThread.join(3000);
+      }
+    } catch (InterruptedException ie) {
+    } finally {
+      if (pendingReplications != null) pendingReplications.stop();
+      blocksMap.close();
+      datanodeManager.close();
+    }
   }
 
   /** @return the datanodeManager */

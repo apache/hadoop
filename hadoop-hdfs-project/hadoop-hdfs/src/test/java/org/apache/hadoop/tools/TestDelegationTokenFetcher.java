@@ -41,6 +41,9 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenRenewer;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import static org.mockito.Matchers.*;
 
 public class TestDelegationTokenFetcher {
   private DistributedFileSystem dfs;
@@ -105,9 +108,17 @@ public class TestDelegationTokenFetcher {
 
     // Create a token for the fetcher to fetch, wire NN to return it when asked
     // for this particular user.
-    Token<DelegationTokenIdentifier> t = 
+    final Token<DelegationTokenIdentifier> t = 
       new Token<DelegationTokenIdentifier>(ident, pw, KIND, service);
-    when(dfs.getDelegationToken(eq((String) null))).thenReturn(t);
+    when(dfs.addDelegationTokens(eq((String) null), any(Credentials.class))).thenAnswer(
+        new Answer<Token<?>[]>() {
+          @Override
+          public Token<?>[] answer(InvocationOnMock invocation) {
+            Credentials creds = (Credentials)invocation.getArguments()[1];
+            creds.addToken(service, t);
+            return new Token<?>[]{t};
+          }
+        });
     when(dfs.renewDelegationToken(eq(t))).thenReturn(1000L);
     when(dfs.getUri()).thenReturn(uri);
     FakeRenewer.reset();

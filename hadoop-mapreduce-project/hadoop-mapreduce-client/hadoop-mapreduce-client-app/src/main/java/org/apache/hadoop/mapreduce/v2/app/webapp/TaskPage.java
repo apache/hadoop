@@ -27,6 +27,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI.tableInit;
 
 import java.util.Collection;
 
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.util.StringUtils;
@@ -93,13 +94,15 @@ public class TaskPage extends AppView {
           nodeTd._("N/A");
         } else {
           nodeTd.
-            a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
+            a(".nodelink", url(HttpConfig.getSchemePrefix(),
+                               nodeHttpAddr), nodeHttpAddr);
         }
         nodeTd._();
         if (containerId != null) {
           String containerIdStr = ta.getAssignedContainerIdStr();
           row.td().
-            a(".logslink", url("http://", nodeHttpAddr, "node", "containerlogs",
+              a(".logslink", url(HttpConfig.getSchemePrefix(),
+              nodeHttpAddr, "node", "containerlogs",
               containerIdStr, app.getJob().getUserName()), "logs")._();
         } else {
           row.td()._("N/A")._();

@@ -42,6 +42,7 @@ import org.junit.Test;
 public class TestViewFileSystemWithAuthorityLocalFileSystem extends ViewFileSystemBaseTest {
   URI schemeWithAuthority;
 
+  @Override
   @Before
   public void setUp() throws Exception {
     // create the test root on local_fs
@@ -55,12 +56,14 @@ public class TestViewFileSystemWithAuthorityLocalFileSystem extends ViewFileSyst
     fsView = FileSystem.get(schemeWithAuthority, conf);
   }
 
+  @Override
   @After
   public void tearDown() throws Exception {
     fsTarget.delete(FileSystemTestHelper.getTestRootPath(fsTarget), true);
     super.tearDown();
   }
  
+  @Override
   @Test
   public void testBasicPaths() {
     Assert.assertEquals(schemeWithAuthority,

@@ -27,6 +27,7 @@ public abstract class ByteParam extends Param<Byte> {
     super(name, defaultValue);
   }
 
+  @Override
   protected Byte parse(String str) throws Exception {
     return Byte.parseByte(str);
   }

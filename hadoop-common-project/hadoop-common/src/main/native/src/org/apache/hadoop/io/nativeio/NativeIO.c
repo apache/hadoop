@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+#define _GNU_SOURCE
+
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -366,23 +368,15 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_chmod(
  */
 static void throw_ioe(JNIEnv* env, int errnum)
 {
-  const char* message;
-  char buffer[80];
+  char message[80];
   jstring jstr_message;
 
-  buffer[0] = 0;
-#ifdef STRERROR_R_CHAR_P
-  // GNU strerror_r
-  message = strerror_r(errnum, buffer, sizeof(buffer));
-  assert (message != NULL);
-#else
-  int ret = strerror_r(errnum, buffer, sizeof(buffer));
-  if (ret == 0) {
-    message = buffer;
+  if ((errnum >= 0) && (errnum < sys_nerr)) {
+    snprintf(message, sizeof(message), "%s", sys_errlist[errnum]);
   } else {
-    message = "Unknown error";
+    snprintf(message, sizeof(message), "Unknown error %d", errnum);
   }
-#endif
+
   jobject errno_obj = errno_to_enum(env, errnum);
 
   if ((jstr_message = (*env)->NewStringUTF(env, message)) == NULL)

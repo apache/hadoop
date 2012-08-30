@@ -84,10 +84,10 @@ public class ContainerImpl implements Container {
 
   private static final Log LOG = LogFactory.getLog(Container.class);
   private final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-  private final Map<LocalResourceRequest,String> pendingResources =
-    new HashMap<LocalResourceRequest,String>();
-  private final Map<Path,String> localizedResources =
-    new HashMap<Path,String>();
+  private final Map<LocalResourceRequest,List<String>> pendingResources =
+    new HashMap<LocalResourceRequest,List<String>>();
+  private final Map<Path,List<String>> localizedResources =
+    new HashMap<Path,List<String>>();
   private final List<LocalResourceRequest> publicRsrcs =
     new ArrayList<LocalResourceRequest>();
   private final List<LocalResourceRequest> privateRsrcs =
@@ -327,7 +327,7 @@ public class ContainerImpl implements Container {
   }
 
   @Override
-  public Map<Path,String> getLocalizedResources() {
+  public Map<Path,List<String>> getLocalizedResources() {
     this.readLock.lock();
     try {
     assert ContainerState.LOCALIZED == getContainerState(); // TODO: FIXME!!
@@ -496,20 +496,25 @@ public class ContainerImpl implements Container {
         try {
           for (Map.Entry<String,LocalResource> rsrc : cntrRsrc.entrySet()) {
             try {
-            LocalResourceRequest req =
-              new LocalResourceRequest(rsrc.getValue());
-            container.pendingResources.put(req, rsrc.getKey());
-            switch (rsrc.getValue().getVisibility()) {
-            case PUBLIC:
-              container.publicRsrcs.add(req);
-              break;
-            case PRIVATE:
-              container.privateRsrcs.add(req);
-              break;
-            case APPLICATION:
-              container.appRsrcs.add(req);
-              break;
-            }
+              LocalResourceRequest req =
+                  new LocalResourceRequest(rsrc.getValue());
+              List<String> links = container.pendingResources.get(req);
+              if (links == null) {
+                links = new ArrayList<String>();
+                container.pendingResources.put(req, links);
+              }
+              links.add(rsrc.getKey());
+              switch (rsrc.getValue().getVisibility()) {
+              case PUBLIC:
+                container.publicRsrcs.add(req);
+                break;
+              case PRIVATE:
+                container.privateRsrcs.add(req);
+                break;
+              case APPLICATION:
+                container.appRsrcs.add(req);
+                break;
+              }
             } catch (URISyntaxException e) {
               LOG.info("Got exception parsing " + rsrc.getKey()
                   + " and value " + rsrc.getValue());
@@ -560,15 +565,16 @@ public class ContainerImpl implements Container {
     public ContainerState transition(ContainerImpl container,
         ContainerEvent event) {
       ContainerResourceLocalizedEvent rsrcEvent = (ContainerResourceLocalizedEvent) event;
-      String sym = container.pendingResources.remove(rsrcEvent.getResource());
-      if (null == sym) {
+      List<String> syms =
+          container.pendingResources.remove(rsrcEvent.getResource());
+      if (null == syms) {
         LOG.warn("Localized unknown resource " + rsrcEvent.getResource() +
                  " for container " + container.getContainerID());
         assert false;
         // fail container?
         return ContainerState.LOCALIZING;
       }
-      container.localizedResources.put(rsrcEvent.getLocation(), sym);
+      container.localizedResources.put(rsrcEvent.getLocation(), syms);
       if (!container.pendingResources.isEmpty()) {
         return ContainerState.LOCALIZING;
       }
@@ -728,15 +734,16 @@ public class ContainerImpl implements Container {
     @Override
     public void transition(ContainerImpl container, ContainerEvent event) {
       ContainerResourceLocalizedEvent rsrcEvent = (ContainerResourceLocalizedEvent) event;
-      String sym = container.pendingResources.remove(rsrcEvent.getResource());
-      if (null == sym) {
+      List<String> syms =
+          container.pendingResources.remove(rsrcEvent.getResource());
+      if (null == syms) {
         LOG.warn("Localized unknown resource " + rsrcEvent.getResource() +
                  " for container " + container.getContainerID());
         assert false;
         // fail container?
         return;
       }
-      container.localizedResources.put(rsrcEvent.getLocation(), sym);
+      container.localizedResources.put(rsrcEvent.getLocation(), syms);
     }
   }
 

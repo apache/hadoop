@@ -147,6 +147,7 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
    *
    * @param event servelt context event.
    */
+  @Override
   public void contextInitialized(ServletContextEvent event) {
     try {
       init();
@@ -194,6 +195,7 @@ public abstract class ServerWebApp extends Server implements ServletContextListe
    *
    * @param event servelt context event.
    */
+  @Override
   public void contextDestroyed(ServletContextEvent event) {
     destroy();
   }

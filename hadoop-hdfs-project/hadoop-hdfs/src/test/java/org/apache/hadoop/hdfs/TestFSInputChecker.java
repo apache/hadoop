@@ -20,7 +20,9 @@ package org.apache.hadoop.hdfs;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -159,8 +161,8 @@ public class TestFSInputChecker {
   private void testSkip1(int skippedBytes) 
   throws Exception {
     long oldPos = stm.getPos();
-    long nSkipped = stm.skip(skippedBytes);
-    long newPos = oldPos+nSkipped;
+    IOUtils.skipFully(stm, skippedBytes);
+    long newPos = oldPos + skippedBytes;
     assertEquals(stm.getPos(), newPos);
     stm.readFully(actual);
     checkAndEraseData(actual, (int)newPos, expected, "Read Sanity Test");
@@ -193,13 +195,31 @@ public class TestFSInputChecker {
     testSkip1(FILE_SIZE-1);
     
     stm.seek(0);
-    assertEquals(stm.skip(FILE_SIZE), FILE_SIZE);
-    assertEquals(stm.skip(10), 0);
+    IOUtils.skipFully(stm, FILE_SIZE);
+    try {
+      IOUtils.skipFully(stm, 10);
+      fail("expected to get a PrematureEOFException");
+    } catch (EOFException e) {
+      assertEquals(e.getMessage(), "Premature EOF from inputStream " +
+          "after skipping 0 byte(s).");
+    }
     
     stm.seek(0);
-    assertEquals(stm.skip(FILE_SIZE+10), FILE_SIZE);
+    try {
+      IOUtils.skipFully(stm, FILE_SIZE + 10);
+      fail("expected to get a PrematureEOFException");
+    } catch (EOFException e) {
+      assertEquals(e.getMessage(), "Premature EOF from inputStream " +
+          "after skipping " + FILE_SIZE + " byte(s).");
+    }
     stm.seek(10);
-    assertEquals(stm.skip(FILE_SIZE), FILE_SIZE-10);
+    try {
+      IOUtils.skipFully(stm, FILE_SIZE);
+      fail("expected to get a PrematureEOFException");
+    } catch (EOFException e) {
+      assertEquals(e.getMessage(), "Premature EOF from inputStream " +
+          "after skipping " + (FILE_SIZE - 10) + " byte(s).");
+    }
   }
 
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {

@@ -24,8 +24,10 @@ import java.util.Random;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Helper class for unit tests.
@@ -217,5 +219,40 @@ public final class FileSystemTestHelper {
       Assert.assertTrue(s.isSymlink());
     }
     Assert.assertEquals(aFs.makeQualified(new Path(path)), s.getPath());
+  }
+  
+  /**
+   * Class to enable easier mocking of a FileSystem
+   * Use getRawFileSystem to retrieve the mock
+   */
+  public static class MockFileSystem extends FilterFileSystem {
+    public MockFileSystem() {
+      // it's a bit ackward to mock ourselves, but it allows the visibility
+      // of methods to be increased
+      super(mock(MockFileSystem.class));
+    }
+    @Override
+    public MockFileSystem getRawFileSystem() {
+      return (MockFileSystem) super.getRawFileSystem();
+      
+    }
+    // these basic methods need to directly propagate to the mock to be
+    // more transparent
+    @Override
+    public void initialize(URI uri, Configuration conf) throws IOException {
+      fs.initialize(uri, conf);
+    }
+    @Override
+    public String getCanonicalServiceName() {
+      return fs.getCanonicalServiceName();
+    }
+    @Override
+    public FileSystem[] getChildFileSystems() {
+      return fs.getChildFileSystems();
+    }
+    @Override // publicly expose for mocking
+    public Token<?> getDelegationToken(String renewer) throws IOException {
+      return fs.getDelegationToken(renewer);
+    }    
   }
 }

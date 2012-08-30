@@ -608,7 +608,7 @@ public abstract class TaskAttemptImpl implements
         localResources.put(
             MRJobConfig.JOB_JAR,
             createLocalResource(remoteFS, remoteJobJar,
-                LocalResourceType.FILE, LocalResourceVisibility.APPLICATION));
+                LocalResourceType.ARCHIVE, LocalResourceVisibility.APPLICATION));
         LOG.info("The job-jar file on the remote FS is "
             + remoteJobJar.toUri().toASCIIString());
       } else {

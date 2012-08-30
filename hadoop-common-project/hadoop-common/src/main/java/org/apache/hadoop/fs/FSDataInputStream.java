@@ -28,7 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable, Closeable, ByteBufferReadable {
+    implements Seekable, PositionedReadable, Closeable, ByteBufferReadable, HasFileDescriptor {
 
   public FSDataInputStream(InputStream in)
     throws IOException {
@@ -44,6 +44,7 @@ public class FSDataInputStream extends DataInputStream
    *
    * @param desired offset to seek to
    */
+  @Override
   public synchronized void seek(long desired) throws IOException {
     ((Seekable)in).seek(desired);
   }
@@ -53,6 +54,7 @@ public class FSDataInputStream extends DataInputStream
    *
    * @return current position in the input stream
    */
+  @Override
   public long getPos() throws IOException {
     return ((Seekable)in).getPos();
   }
@@ -68,6 +70,7 @@ public class FSDataInputStream extends DataInputStream
    *         if there is no more data because the end of the stream has been
    *         reached
    */
+  @Override
   public int read(long position, byte[] buffer, int offset, int length)
     throws IOException {
     return ((PositionedReadable)in).read(position, buffer, offset, length);
@@ -85,6 +88,7 @@ public class FSDataInputStream extends DataInputStream
    *                      If an exception is thrown an undetermined number
    *                      of bytes in the buffer may have been written. 
    */
+  @Override
   public void readFully(long position, byte[] buffer, int offset, int length)
     throws IOException {
     ((PositionedReadable)in).readFully(position, buffer, offset, length);
@@ -93,6 +97,7 @@ public class FSDataInputStream extends DataInputStream
   /**
    * See {@link #readFully(long, byte[], int, int)}.
    */
+  @Override
   public void readFully(long position, byte[] buffer)
     throws IOException {
     ((PositionedReadable)in).readFully(position, buffer, 0, buffer.length);
@@ -104,6 +109,7 @@ public class FSDataInputStream extends DataInputStream
    * @param  targetPos  position to seek to
    * @return true if a new source is found, false otherwise
    */
+  @Override
   public boolean seekToNewSource(long targetPos) throws IOException {
     return ((Seekable)in).seekToNewSource(targetPos); 
   }
@@ -118,11 +124,23 @@ public class FSDataInputStream extends DataInputStream
     return in;
   }
 
+  @Override
   public int read(ByteBuffer buf) throws IOException {
     if (in instanceof ByteBufferReadable) {
       return ((ByteBufferReadable)in).read(buf);
     }
 
     throw new UnsupportedOperationException("Byte-buffer read unsupported by input stream");
+  }
+
+  @Override
+  public FileDescriptor getFileDescriptor() throws IOException {
+    if (in instanceof HasFileDescriptor) {
+      return ((HasFileDescriptor) in).getFileDescriptor();
+    } else if (in instanceof FileInputStream) {
+      return ((FileInputStream) in).getFD();
+    } else {
+      return null;
+    }
   }
 }

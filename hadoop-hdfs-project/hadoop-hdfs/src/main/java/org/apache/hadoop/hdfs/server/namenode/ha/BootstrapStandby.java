@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -55,7 +56,6 @@ import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 
 /**
  * Tool which allows the standby node's storage directories to be bootstrapped
@@ -171,19 +171,18 @@ public class BootstrapStandby implements Tool, Configurable {
         "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
         "=====================================================");
 
+    long imageTxId = proxy.getMostRecentCheckpointTxId();
+    long curTxId = proxy.getTransactionID();
+    
+    NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
+    
     // Check with the user before blowing away data.
-    if (!NameNode.confirmFormat(
-            Sets.union(Sets.newHashSet(dirsToFormat),
-                Sets.newHashSet(editUrisToFormat)),
+    if (!Storage.confirmFormat(storage.dirIterable(null),
             force, interactive)) {
       return ERR_CODE_ALREADY_FORMATTED;
     }
     
-    long imageTxId = proxy.getMostRecentCheckpointTxId();
-    long curTxId = proxy.getTransactionID();
-    
     // Format the storage (writes VERSION file)
-    NNStorage storage = new NNStorage(conf, dirsToFormat, editUrisToFormat);
     storage.format(nsInfo);
 
     // Load the newly formatted image, using all of the directories (including shared

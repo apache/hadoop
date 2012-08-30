@@ -57,6 +57,7 @@ public class TestNameNodeRecovery {
 
   static {
     recoverStartOpt.setForce(MetaRecoveryContext.FORCE_ALL);
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
   }
 
   static void runEditLogTest(EditLogTestSetup elts) throws IOException {

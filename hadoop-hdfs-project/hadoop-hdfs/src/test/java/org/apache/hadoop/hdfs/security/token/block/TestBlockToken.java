@@ -304,7 +304,7 @@ public class TestBlockToken {
       long endTime = Time.now() + 3000;
       while (Time.now() < endTime) {
         proxy = DFSUtil.createClientDatanodeProtocolProxy(fakeDnId, conf, 1000,
-            fakeBlock);
+            false, fakeBlock);
         assertEquals(block3.getBlockId(), proxy.getReplicaVisibleLength(block3));
         if (proxy != null) {
           RPC.stopProxy(proxy);

@@ -24,6 +24,7 @@ import org.junit.Before;
 
 public class TestLocal_S3FileContextURI extends FileContextURIBase {
 
+  @Override
   @Before
   public void setUp() throws Exception {
     Configuration S3Conf = new Configuration();

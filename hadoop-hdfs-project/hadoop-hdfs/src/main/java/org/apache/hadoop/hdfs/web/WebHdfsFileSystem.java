@@ -30,7 +30,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
 
@@ -376,8 +375,7 @@ public class WebHdfsFileSystem extends FileSystem
         + Param.toSortedString("&", parameters);
     final URL url;
     if (op == PutOpParam.Op.RENEWDELEGATIONTOKEN
-        || op == GetOpParam.Op.GETDELEGATIONTOKEN
-        || op == GetOpParam.Op.GETDELEGATIONTOKENS) {
+        || op == GetOpParam.Op.GETDELEGATIONTOKEN) {
       // Skip adding delegation token for getting or renewing delegation token,
       // because these operations require kerberos authentication.
       url = getNamenodeURL(path, query);
@@ -840,27 +838,14 @@ public class WebHdfsFileSystem extends FileSystem
     return statuses;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
-  public Token<DelegationTokenIdentifier> getDelegationToken(final String renewer
-      ) throws IOException {
+  public Token<DelegationTokenIdentifier> getDelegationToken(
+      final String renewer) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
     final Map<?, ?> m = run(op, null, new RenewerParam(renewer));
     final Token<DelegationTokenIdentifier> token = JsonUtil.toDelegationToken(m); 
     SecurityUtil.setTokenService(token, nnAddr);
     return token;
-  }
-
-  @Override
-  public List<Token<?>> getDelegationTokens(final String renewer
-      ) throws IOException {
-    final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKENS;
-    final Map<?, ?> m = run(op, null, new RenewerParam(renewer));
-    final List<Token<?>> tokens = JsonUtil.toTokenList(m);
-    for(Token<?> t : tokens) {
-      SecurityUtil.setTokenService(t, nnAddr);
-    }
-    return tokens;
   }
 
   @Override

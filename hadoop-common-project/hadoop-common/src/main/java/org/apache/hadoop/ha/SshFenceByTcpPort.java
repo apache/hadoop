@@ -274,6 +274,7 @@ public class SshFenceByTcpPort extends Configured
     static final Log LOG = LogFactory.getLog(
         SshFenceByTcpPort.class.getName() + ".jsch");
 
+    @Override
     public boolean isEnabled(int level) {
       switch (level) {
       case com.jcraft.jsch.Logger.DEBUG:
@@ -291,6 +292,7 @@ public class SshFenceByTcpPort extends Configured
       }
     }
       
+    @Override
     public void log(int level, String message) {
       switch (level) {
       case com.jcraft.jsch.Logger.DEBUG:

@@ -39,6 +39,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -467,6 +468,7 @@ public abstract class AbstractFileSystem {
     short replication = -1;
     long blockSize = -1;
     int bytesPerChecksum = -1;
+    ChecksumOpt checksumOpt = null;
     FsPermission permission = null;
     Progressable progress = null;
     Boolean createParent = null;
@@ -496,6 +498,12 @@ public abstract class AbstractFileSystem {
               "BytesPerChecksum option is set multiple times");
         }
         bytesPerChecksum = ((CreateOpts.BytesPerChecksum) iOpt).getValue();
+      } else if (CreateOpts.ChecksumParam.class.isInstance(iOpt)) {
+        if (checksumOpt != null) {
+          throw new  HadoopIllegalArgumentException(
+              "CreateChecksumType option is set multiple times");
+        }
+        checksumOpt = ((CreateOpts.ChecksumParam) iOpt).getValue();
       } else if (CreateOpts.Perms.class.isInstance(iOpt)) {
         if (permission != null) {
           throw new HadoopIllegalArgumentException(
@@ -533,9 +541,16 @@ public abstract class AbstractFileSystem {
     if (blockSize == -1) {
       blockSize = ssDef.getBlockSize();
     }
-    if (bytesPerChecksum == -1) {
-      bytesPerChecksum = ssDef.getBytesPerChecksum();
-    }
+
+    // Create a checksum option honoring user input as much as possible.
+    // If bytesPerChecksum is specified, it will override the one set in
+    // checksumOpt. Any missing value will be filled in using the default.
+    ChecksumOpt defaultOpt = new ChecksumOpt(
+        ssDef.getChecksumType(),
+        ssDef.getBytesPerChecksum());
+    checksumOpt = ChecksumOpt.processChecksumOpt(defaultOpt,
+        checksumOpt, bytesPerChecksum);
+
     if (bufferSize == -1) {
       bufferSize = ssDef.getFileBufferSize();
     }
@@ -552,7 +567,7 @@ public abstract class AbstractFileSystem {
     }
 
     return this.createInternal(f, createFlag, permission, bufferSize,
-      replication, blockSize, progress, bytesPerChecksum, createParent);
+      replication, blockSize, progress, checksumOpt, createParent);
   }
 
   /**
@@ -563,7 +578,7 @@ public abstract class AbstractFileSystem {
   public abstract FSDataOutputStream createInternal(Path f,
       EnumSet<CreateFlag> flag, FsPermission absolutePermission,
       int bufferSize, short replication, long blockSize, Progressable progress,
-      int bytesPerChecksum, boolean createParent)
+      ChecksumOpt checksumOpt, boolean createParent)
       throws AccessControlException, FileAlreadyExistsException,
       FileNotFoundException, ParentNotDirectoryException,
       UnsupportedFileSystemException, UnresolvedLinkException, IOException;

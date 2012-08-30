@@ -27,14 +27,31 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PacketHeaderProto;
 import org.apache.hadoop.hdfs.util.ByteBufferOutputStream;
 
+import com.google.common.base.Preconditions;
+import com.google.common.primitives.Shorts;
+import com.google.common.primitives.Ints;
+import com.google.protobuf.InvalidProtocolBufferException;
+
 /**
  * Header data for each packet that goes through the read/write pipelines.
+ * Includes all of the information about the packet, excluding checksums and
+ * actual data.
+ * 
+ * This data includes:
+ *  - the offset in bytes into the HDFS block of the data in this packet
+ *  - the sequence number of this packet in the pipeline
+ *  - whether or not this is the last packet in the pipeline
+ *  - the length of the data in this packet
+ *  - whether or not this packet should be synced by the DNs.
+ *  
+ * When serialized, this header is written out as a protocol buffer, preceded
+ * by a 4-byte integer representing the full packet length, and a 2-byte short
+ * representing the header length.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class PacketHeader {
-  /** Header size for a packet */
-  private static final int PROTO_SIZE = 
+  private static final int MAX_PROTO_SIZE = 
     PacketHeaderProto.newBuilder()
       .setOffsetInBlock(0)
       .setSeqno(0)
@@ -42,8 +59,10 @@ public class PacketHeader {
       .setDataLen(0)
       .setSyncBlock(false)
       .build().getSerializedSize();
-  public static final int PKT_HEADER_LEN =
-    6 + PROTO_SIZE;
+  public static final int PKT_LENGTHS_LEN =
+      Ints.BYTES + Shorts.BYTES;
+  public static final int PKT_MAX_HEADER_LEN =
+      PKT_LENGTHS_LEN + MAX_PROTO_SIZE;
 
   private int packetLen;
   private PacketHeaderProto proto;
@@ -54,13 +73,25 @@ public class PacketHeader {
   public PacketHeader(int packetLen, long offsetInBlock, long seqno,
                       boolean lastPacketInBlock, int dataLen, boolean syncBlock) {
     this.packetLen = packetLen;
-    proto = PacketHeaderProto.newBuilder()
+    Preconditions.checkArgument(packetLen >= Ints.BYTES,
+        "packet len %s should always be at least 4 bytes",
+        packetLen);
+    
+    PacketHeaderProto.Builder builder = PacketHeaderProto.newBuilder()
       .setOffsetInBlock(offsetInBlock)
       .setSeqno(seqno)
       .setLastPacketInBlock(lastPacketInBlock)
-      .setDataLen(dataLen)
-      .setSyncBlock(syncBlock)
-      .build();
+      .setDataLen(dataLen);
+      
+    if (syncBlock) {
+      // Only set syncBlock if it is specified.
+      // This is wire-incompatible with Hadoop 2.0.0-alpha due to HDFS-3721
+      // because it changes the length of the packet header, and BlockReceiver
+      // in that version did not support variable-length headers.
+      builder.setSyncBlock(syncBlock);
+    }
+      
+    proto = builder.build();
   }
 
   public int getDataLen() {
@@ -90,8 +121,14 @@ public class PacketHeader {
   @Override
   public String toString() {
     return "PacketHeader with packetLen=" + packetLen +
-      "Header data: " + 
+      " header data: " + 
       proto.toString();
+  }
+  
+  public void setFieldsFromData(
+      int packetLen, byte[] headerData) throws InvalidProtocolBufferException {
+    this.packetLen = packetLen;
+    proto = PacketHeaderProto.parseFrom(headerData);
   }
   
   public void readFields(ByteBuffer buf) throws IOException {
@@ -110,14 +147,21 @@ public class PacketHeader {
     proto = PacketHeaderProto.parseFrom(data);
   }
 
+  /**
+   * @return the number of bytes necessary to write out this header,
+   * including the length-prefixing of the payload and header
+   */
+  public int getSerializedSize() {
+    return PKT_LENGTHS_LEN + proto.getSerializedSize();
+  }
 
   /**
    * Write the header into the buffer.
    * This requires that PKT_HEADER_LEN bytes are available.
    */
   public void putInBuffer(final ByteBuffer buf) {
-    assert proto.getSerializedSize() == PROTO_SIZE
-      : "Expected " + (PROTO_SIZE) + " got: " + proto.getSerializedSize();
+    assert proto.getSerializedSize() <= MAX_PROTO_SIZE
+      : "Expected " + (MAX_PROTO_SIZE) + " got: " + proto.getSerializedSize();
     try {
       buf.putInt(packetLen);
       buf.putShort((short) proto.getSerializedSize());
@@ -128,11 +172,17 @@ public class PacketHeader {
   }
   
   public void write(DataOutputStream out) throws IOException {
-    assert proto.getSerializedSize() == PROTO_SIZE
-    : "Expected " + (PROTO_SIZE) + " got: " + proto.getSerializedSize();
+    assert proto.getSerializedSize() <= MAX_PROTO_SIZE
+    : "Expected " + (MAX_PROTO_SIZE) + " got: " + proto.getSerializedSize();
     out.writeInt(packetLen);
     out.writeShort(proto.getSerializedSize());
     proto.writeTo(out);
+  }
+  
+  public byte[] getBytes() {
+    ByteBuffer buf = ByteBuffer.allocate(getSerializedSize());
+    putInBuffer(buf);
+    return buf.array();
   }
 
   /**

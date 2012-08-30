@@ -29,12 +29,9 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Collection;
-
-import static org.mockito.Mockito.mock;
 
 import javax.crypto.KeyGenerator;
 
@@ -213,5 +210,22 @@ public class TestCredentials {
     // new token & secret should be added
     assertEquals(token[2], creds.getToken(service[2]));
     assertEquals(secret[2], new Text(creds.getSecretKey(secret[2])));
- }
+  }
+  
+  @Test
+  public void testAddTokensToUGI() {
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("someone");
+    Credentials creds = new Credentials();
+    
+    for (int i=0; i < service.length; i++) {
+      creds.addToken(service[i], token[i]);
+    }
+    ugi.addCredentials(creds);
+
+    creds = ugi.getCredentials();
+    for (int i=0; i < service.length; i++) {
+      assertSame(token[i], creds.getToken(service[i]));
+    }
+    assertEquals(service.length, creds.numberOfTokens());
+  }
 }

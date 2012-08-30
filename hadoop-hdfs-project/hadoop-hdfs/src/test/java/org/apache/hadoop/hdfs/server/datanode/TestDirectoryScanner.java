@@ -239,8 +239,7 @@ public class TestDirectoryScanner {
       fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                   parallelism);
-      DataNode dn = cluster.getDataNodes().get(0);
-      scanner = new DirectoryScanner(dn, fds, CONF);
+      scanner = new DirectoryScanner(fds, CONF);
       scanner.setRetainDiffs(true);
 
       // Add files with 100 blocks

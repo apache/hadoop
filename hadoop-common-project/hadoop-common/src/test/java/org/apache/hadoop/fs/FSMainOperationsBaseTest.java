@@ -67,6 +67,7 @@ public abstract class FSMainOperationsBaseTest  {
   protected static FileSystem fSys;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+    @Override
     public boolean accept(final Path file) {
       return true;
     }
@@ -74,6 +75,7 @@ public abstract class FSMainOperationsBaseTest  {
 
   //A test filter with returns any path containing a "b" 
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
+    @Override
     public boolean accept(Path file) {
       if(file.getName().contains("x") || file.getName().contains("X"))
         return true;
@@ -364,15 +366,17 @@ public abstract class FSMainOperationsBaseTest  {
   }
   
   @Test
-  public void testGlobStatusThrowsExceptionForNonExistentFile() throws Exception {
-    try {
-      // This should throw a FileNotFoundException
-      fSys.globStatus(
-          getTestRootPath(fSys, "test/hadoopfsdf/?"));
-      Assert.fail("Should throw FileNotFoundException");
-    } catch (FileNotFoundException fnfe) {
-      // expected
-    }
+  public void testGlobStatusNonExistentFile() throws Exception {
+    FileStatus[] paths = fSys.globStatus(
+        getTestRootPath(fSys, "test/hadoopfsdf"));
+    Assert.assertNull(paths);
+
+    paths = fSys.globStatus(
+        getTestRootPath(fSys, "test/hadoopfsdf/?"));
+    Assert.assertEquals(0, paths.length);
+    paths = fSys.globStatus(
+        getTestRootPath(fSys, "test/hadoopfsdf/xyz*/?"));
+    Assert.assertEquals(0, paths.length);
   }
   
   @Test

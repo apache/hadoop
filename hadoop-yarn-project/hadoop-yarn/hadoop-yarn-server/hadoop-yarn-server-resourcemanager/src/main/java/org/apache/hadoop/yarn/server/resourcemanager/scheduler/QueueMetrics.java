@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -120,14 +121,41 @@ public class QueueMetrics implements MetricsSource {
                     enableUserMetrics, conf);
   }
 
-  public static QueueMetrics forQueue(MetricsSystem ms, String queueName,
+  /**
+   * Helper method to clear cache - used only for unit tests.
+   */
+  @Private
+  public synchronized static void clearQueueMetrics() {
+    queueMetrics.clear();
+  }
+  
+  /**
+   * Simple metrics cache to help prevent re-registrations.
+   */
+  private static Map<String, QueueMetrics> queueMetrics =
+      new HashMap<String, QueueMetrics>();
+  
+  public synchronized 
+  static QueueMetrics forQueue(MetricsSystem ms, String queueName,
                                       Queue parent, boolean enableUserMetrics,
 				      Configuration conf) {
-    QueueMetrics metrics = 
-      new QueueMetrics(ms, queueName, parent, enableUserMetrics, conf
-		       ).tag(QUEUE_INFO, queueName);
-    return ms == null ? metrics : ms.register(sourceName(queueName).toString(),
-        "Metrics for queue: " + queueName, metrics);
+    QueueMetrics metrics = queueMetrics.get(queueName);
+    if (metrics == null) {
+      metrics =
+          new QueueMetrics(ms, queueName, parent, enableUserMetrics, conf).
+          tag(QUEUE_INFO, queueName);
+      
+      // Register with the MetricsSystems
+      if (ms != null) {
+        metrics = 
+            ms.register(
+                sourceName(queueName).toString(), 
+                "Metrics for queue: " + queueName, metrics);
+      }
+      queueMetrics.put(queueName, metrics);
+    }
+
+    return metrics;
   }
 
   public synchronized QueueMetrics getUserMetrics(String userName) {

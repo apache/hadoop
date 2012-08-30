@@ -24,6 +24,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
@@ -87,10 +88,10 @@ public class AppInfo {
       this.trackingUI = this.trackingUrlIsNotReady ? "UNASSIGNED" : (app
           .getFinishTime() == 0 ? "ApplicationMaster" : "History");
       if (!trackingUrlIsNotReady) {
-        this.trackingUrl = join("http://", trackingUrl);
+        this.trackingUrl = join(HttpConfig.getSchemePrefix(), trackingUrl);
       }
       this.trackingUrlPretty = trackingUrlIsNotReady ? "UNASSIGNED" : join(
-          "http://", trackingUrl);
+          HttpConfig.getSchemePrefix(), trackingUrl);
       this.applicationId = app.getApplicationId();
       this.appIdNum = String.valueOf(app.getApplicationId().getId());
       this.id = app.getApplicationId().toString();
@@ -104,7 +105,6 @@ public class AppInfo {
       }
       this.finalStatus = app.getFinalApplicationStatus();
       this.clusterId = ResourceManager.clusterTimeStamp;
-
       if (hasAccess) {
         this.startedTime = app.getStartTime();
         this.finishedTime = app.getFinishTime();
@@ -116,7 +116,8 @@ public class AppInfo {
           Container masterContainer = attempt.getMasterContainer();
           if (masterContainer != null) {
             this.amContainerLogsExist = true;
-            String url = join("http://", masterContainer.getNodeHttpAddress(),
+            String url = join(HttpConfig.getSchemePrefix(),
+                masterContainer.getNodeHttpAddress(),
                 "/node", "/containerlogs/",
                 ConverterUtils.toString(masterContainer.getId()),
                 "/", app.getUser());

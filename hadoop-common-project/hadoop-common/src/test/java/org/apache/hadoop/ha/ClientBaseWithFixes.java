@@ -25,7 +25,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -82,6 +81,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
      *
      */
     protected class NullWatcher implements Watcher {
+        @Override
         public void process(WatchedEvent event) { /* nada */ }
     }
 
@@ -97,6 +97,7 @@ public abstract class ClientBaseWithFixes extends ZKTestCase {
             clientConnected = new CountDownLatch(1);
             connected = false;
         }
+        @Override
         synchronized public void process(WatchedEvent event) {
             if (event.getState() == KeeperState.SyncConnected ||
                 event.getState() == KeeperState.ConnectedReadOnly) {

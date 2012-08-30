@@ -364,6 +364,7 @@ public class Client {
        * until a byte is read.
        * @throws IOException for any IO problem other than socket timeout
        */
+      @Override
       public int read() throws IOException {
         do {
           try {
@@ -380,6 +381,7 @@ public class Client {
        * 
        * @return the total number of bytes read; -1 if the connection is closed.
        */
+      @Override
       public int read(byte[] buf, int off, int len) throws IOException {
         do {
           try {
@@ -510,6 +512,7 @@ public class Client {
         final Random rand, final UserGroupInformation ugi) throws IOException,
         InterruptedException {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
         public Object run() throws IOException, InterruptedException {
           final short MAX_BACKOFF = 5000;
           closeConnection();
@@ -803,6 +806,7 @@ public class Client {
       }
     }
 
+    @Override
     public void run() {
       if (LOG.isDebugEnabled())
         LOG.debug(getName() + ": starting, having connections " 

@@ -38,12 +38,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.Storage.FormatConfirmable;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageState;
 import org.apache.hadoop.hdfs.server.common.Util;
 import static org.apache.hadoop.util.Time.now;
+
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 
@@ -89,13 +92,11 @@ public class FSImage implements Closeable {
 
   final private Configuration conf;
 
-  private final NNStorageRetentionManager archivalManager;
+  protected NNStorageRetentionManager archivalManager;
 
   /**
    * Construct an FSImage
    * @param conf Configuration
-   * @see #FSImage(Configuration conf, 
-   *               Collection imageDirs, Collection editsDirs) 
    * @throws IOException if default directories are invalid.
    */
   public FSImage(Configuration conf) throws IOException {
@@ -139,8 +140,31 @@ public class FSImage implements Closeable {
         fileCount + " files");
     NamespaceInfo ns = NNStorage.newNamespaceInfo();
     ns.clusterID = clusterId;
+    
     storage.format(ns);
+    editLog.formatNonFileJournals(ns);
     saveFSImageInAllDirs(fsn, 0);
+  }
+  
+  /**
+   * Check whether the storage directories and non-file journals exist.
+   * If running in interactive mode, will prompt the user for each
+   * directory to allow them to format anyway. Otherwise, returns
+   * false, unless 'force' is specified.
+   * 
+   * @param force format regardless of whether dirs exist
+   * @param interactive prompt the user when a dir exists
+   * @return true if formatting should proceed
+   * @throws IOException if some storage cannot be accessed
+   */
+  boolean confirmFormat(boolean force, boolean interactive) throws IOException {
+    List<FormatConfirmable> confirms = Lists.newArrayList();
+    for (StorageDirectory sd : storage.dirIterable(null)) {
+      confirms.add(sd);
+    }
+    
+    confirms.addAll(editLog.getFormatConfirmables());
+    return Storage.confirmFormat(confirms, force, interactive);
   }
   
   /**
@@ -165,8 +189,6 @@ public class FSImage implements Closeable {
                              && startOpt != StartupOption.IMPORT)  
       throw new IOException(
           "All specified directories are not accessible or do not exist.");
-    
-    storage.setUpgradeManager(target.upgradeManager);
     
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
@@ -201,9 +223,6 @@ public class FSImage implements Closeable {
     }
     
     storage.processStartupOptionsForUpgrade(startOpt, layoutVersion);
-
-    // check whether distributed upgrade is required and/or should be continued
-    storage.verifyDistributedUpgradeProgress(startOpt);
 
     // 2. Format unformatted dirs.
     for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
@@ -295,13 +314,6 @@ public class FSImage implements Closeable {
   }
 
   private void doUpgrade(FSNamesystem target) throws IOException {
-    if(storage.getDistributedUpgradeState()) {
-      // only distributed upgrade need to continue
-      // don't do version upgrade
-      this.loadFSImage(target, null);
-      storage.initializeDistributedUpgrade();
-      return;
-    }
     // Upgrade is allowed only if there are 
     // no previous fs states in any of the directories
     for (Iterator<StorageDirectory> it = storage.dirIterator(); it.hasNext();) {
@@ -384,7 +396,6 @@ public class FSImage implements Closeable {
           + storage.getRemovedStorageDirs().size()
           + " storage directory(ies), previously logged.");
     }
-    storage.initializeDistributedUpgrade();
   }
 
   private void doRollback() throws IOException {
@@ -447,8 +458,6 @@ public class FSImage implements Closeable {
       LOG.info("Rollback of " + sd.getRoot()+ " is complete.");
     }
     isUpgradeFinalized = true;
-    // check whether name-node can start in regular mode
-    storage.verifyDistributedUpgradeProgress(StartupOption.REGULAR);
   }
 
   private void doFinalize(StorageDirectory sd) throws IOException {
@@ -547,8 +556,7 @@ public class FSImage implements Closeable {
    * file.
    */
   void reloadFromImageFile(File file, FSNamesystem target) throws IOException {
-    target.dir.reset();
-
+    target.clear();
     LOG.debug("Reloading namespace from " + file);
     loadFSImage(file, target, null);
   }

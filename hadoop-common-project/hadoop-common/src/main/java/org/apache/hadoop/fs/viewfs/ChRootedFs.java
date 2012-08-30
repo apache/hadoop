@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -159,11 +160,11 @@ class ChRootedFs extends AbstractFileSystem {
   public FSDataOutputStream createInternal(final Path f,
       final EnumSet<CreateFlag> flag, final FsPermission absolutePermission,
       final int bufferSize, final short replication, final long blockSize,
-      final Progressable progress, final int bytesPerChecksum,
+      final Progressable progress, final ChecksumOpt checksumOpt,
       final boolean createParent) throws IOException, UnresolvedLinkException {
     return myFs.createInternal(fullPath(f), flag,
         absolutePermission, bufferSize,
-        replication, blockSize, progress, bytesPerChecksum, createParent);
+        replication, blockSize, progress, checksumOpt, createParent);
   }
 
   @Override

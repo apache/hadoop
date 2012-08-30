@@ -273,4 +273,10 @@
        <Method name="quit" />
        <Bug pattern="DM_EXIT" />
      </Match>
+     <!-- Don't complain about recoverBlock equality check -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.server.datanode.DataNode" />
+       <Method name="recoverBlock" />
+       <Bug pattern="EC_UNRELATED_TYPES" />
+     </Match>
  </FindBugsFilter>

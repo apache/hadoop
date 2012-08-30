@@ -324,6 +324,10 @@ public class GetConf extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
+    if (DFSUtil.parseHelpArgument(args, USAGE, System.out, true)) {
+      System.exit(0);
+    }
+    
     int res = ToolRunner.run(new GetConf(new HdfsConfiguration()), args);
     System.exit(res);
   }

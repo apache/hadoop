@@ -20,7 +20,7 @@
 #include "org_apache_hadoop.h"
 #include "org_apache_hadoop_io_compress_lz4_Lz4Decompressor.h"
 
-int LZ4_uncompress_unknownOutputSize (char* source, char* dest, int isize, int maxOutputSize);
+int LZ4_uncompress_unknownOutputSize(const char* source, char* dest, int isize, int maxOutputSize);
 
 /*
 LZ4_uncompress_unknownOutputSize() :

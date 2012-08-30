@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 
 /**
  * Node managers information on available resources 
@@ -106,4 +107,6 @@ public interface RMNode {
   public List<ApplicationId> getAppsToCleanup();
 
   public HeartbeatResponse getLastHeartBeatResponse();
+  
+  public MasterKey getCurrentMasterKey();
 }

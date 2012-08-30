@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.viewfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -137,9 +138,9 @@ public class ViewFileSystemBaseTest {
    */
   @Test
   public void testGetDelegationTokens() throws IOException {
-    List<Token<?>> delTokens = 
-        fsView.getDelegationTokens("sanjay");
-    Assert.assertEquals(getExpectedDelegationTokenCount(), delTokens.size()); 
+    Token<?>[] delTokens = 
+        fsView.addDelegationTokens("sanjay", new Credentials());
+    Assert.assertEquals(getExpectedDelegationTokenCount(), delTokens.length); 
   }
   
   int getExpectedDelegationTokenCount() {
@@ -150,29 +151,20 @@ public class ViewFileSystemBaseTest {
   public void testGetDelegationTokensWithCredentials() throws IOException {
     Credentials credentials = new Credentials();
     List<Token<?>> delTokens =
-        fsView.getDelegationTokens("sanjay", credentials);
+        Arrays.asList(fsView.addDelegationTokens("sanjay", credentials));
 
     int expectedTokenCount = getExpectedDelegationTokenCountWithCredentials();
 
     Assert.assertEquals(expectedTokenCount, delTokens.size());
+    Credentials newCredentials = new Credentials();
     for (int i = 0; i < expectedTokenCount / 2; i++) {
       Token<?> token = delTokens.get(i);
-      credentials.addToken(token.getService(), token);
+      newCredentials.addToken(token.getService(), token);
     }
 
     List<Token<?>> delTokens2 =
-        fsView.getDelegationTokens("sanjay", credentials);
-    Assert.assertEquals(expectedTokenCount, delTokens2.size());
-
-    for (int i = 0; i < delTokens2.size(); i++) {
-      for (int j = 0; j < delTokens.size(); j++) {
-        if (delTokens.get(j) == delTokens2.get(i)) {
-          delTokens.remove(j);
-          break;
-        }
-      }
-    }
-    Assert.assertEquals((expectedTokenCount + 1) / 2, delTokens.size());
+        Arrays.asList(fsView.addDelegationTokens("sanjay", newCredentials));
+    Assert.assertEquals((expectedTokenCount + 1) / 2, delTokens2.size());
   }
 
   int getExpectedDelegationTokenCountWithCredentials() {

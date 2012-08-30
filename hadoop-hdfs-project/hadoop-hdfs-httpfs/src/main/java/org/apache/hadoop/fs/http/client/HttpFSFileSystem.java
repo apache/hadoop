@@ -60,7 +60,6 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -863,7 +862,6 @@ public class HttpFSFileSystem extends FileSystem
 
 
   @Override
-  @SuppressWarnings("deprecation")
   public Token<?> getDelegationToken(final String renewer)
     throws IOException {
     return doAsRealUserIfNecessary(new Callable<Token<?>>() {
@@ -871,19 +869,6 @@ public class HttpFSFileSystem extends FileSystem
       public Token<?> call() throws Exception {
         return HttpFSKerberosAuthenticator.
           getDelegationToken(uri, httpFSAddr, authToken, renewer);
-      }
-    });
-  }
-
-
-  @Override
-  public List<Token<?>> getDelegationTokens(final String renewer)
-    throws IOException {
-    return doAsRealUserIfNecessary(new Callable<List<Token<?>>>() {
-      @Override
-      public List<Token<?>> call() throws Exception {
-        return HttpFSKerberosAuthenticator.
-          getDelegationTokens(uri, httpFSAddr, authToken, renewer);
       }
     });
   }

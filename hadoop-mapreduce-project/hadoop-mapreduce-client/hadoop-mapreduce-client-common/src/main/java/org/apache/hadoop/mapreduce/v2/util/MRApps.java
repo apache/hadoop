@@ -204,7 +204,15 @@ public class MRApps extends Apps {
     Apps.addToEnvironment(
         environment,
         Environment.CLASSPATH.name(),
-        MRJobConfig.JOB_JAR);
+        MRJobConfig.JOB_JAR + Path.SEPARATOR);
+    Apps.addToEnvironment(
+        environment,
+        Environment.CLASSPATH.name(),
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + "classes" + Path.SEPARATOR);
+    Apps.addToEnvironment(
+        environment,
+        Environment.CLASSPATH.name(),
+        MRJobConfig.JOB_JAR + Path.SEPARATOR + "lib" + Path.SEPARATOR + "*");
     Apps.addToEnvironment(
         environment,
         Environment.CLASSPATH.name(),

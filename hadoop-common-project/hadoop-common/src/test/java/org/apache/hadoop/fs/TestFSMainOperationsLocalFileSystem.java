@@ -28,6 +28,7 @@ import org.junit.Test;
 
 public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTest {
 
+  @Override
   @Before
   public void setUp() throws Exception {
     fSys = FileSystem.getLocal(new Configuration());
@@ -35,12 +36,14 @@ public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTes
   }
   
   static Path wd = null;
+  @Override
   protected Path getDefaultWorkingDirectory() throws IOException {
     if (wd == null)
       wd = FileSystem.getLocal(new Configuration()).getWorkingDirectory();
     return wd;
   }
   
+  @Override
   @After
   public void tearDown() throws Exception {
     super.tearDown();

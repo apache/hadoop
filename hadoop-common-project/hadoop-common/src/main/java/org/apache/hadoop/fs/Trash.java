@@ -117,9 +117,4 @@ public class Trash extends Configured {
   public Runnable getEmptier() throws IOException {
     return trashPolicy.getEmptier();
   }
-
-  /** Run an emptier.*/
-  public static void main(String[] args) throws Exception {
-    new Trash(new Configuration()).getEmptier().run();
-  }
 }

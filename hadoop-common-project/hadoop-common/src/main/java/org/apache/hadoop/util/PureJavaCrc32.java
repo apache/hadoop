@@ -46,17 +46,17 @@ public class PureJavaCrc32 implements Checksum {
     reset();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public long getValue() {
     return (~crc) & 0xffffffffL;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void reset() {
     crc = 0xffffffff;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void update(byte[] b, int off, int len) {
     int localCrc = crc;
     while(len > 7) {
@@ -81,7 +81,7 @@ public class PureJavaCrc32 implements Checksum {
     crc = localCrc;
   }
 
-  /** {@inheritDoc} */
+  @Override
   final public void update(int b) {
     crc = (crc >>> 8) ^ T8_0[(crc ^ b) & 0xff];
   }

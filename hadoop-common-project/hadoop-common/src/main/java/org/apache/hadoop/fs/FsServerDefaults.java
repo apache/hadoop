@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.DataChecksum;
 
 /****************************************************
  * Provides server default configuration values to clients.
@@ -37,6 +39,7 @@ public class FsServerDefaults implements Writable {
 
   static { // register a ctor
     WritableFactories.setFactory(FsServerDefaults.class, new WritableFactory() {
+      @Override
       public Writable newInstance() {
         return new FsServerDefaults();
       }
@@ -49,19 +52,24 @@ public class FsServerDefaults implements Writable {
   private short replication;
   private int fileBufferSize;
   private boolean encryptDataTransfer;
+  private long trashInterval;
+  private DataChecksum.Type checksumType;
 
   public FsServerDefaults() {
   }
 
   public FsServerDefaults(long blockSize, int bytesPerChecksum,
       int writePacketSize, short replication, int fileBufferSize,
-      boolean encryptDataTransfer) {
+      boolean encryptDataTransfer, long trashInterval,
+      DataChecksum.Type checksumType) {
     this.blockSize = blockSize;
     this.bytesPerChecksum = bytesPerChecksum;
     this.writePacketSize = writePacketSize;
     this.replication = replication;
     this.fileBufferSize = fileBufferSize;
     this.encryptDataTransfer = encryptDataTransfer;
+    this.trashInterval = trashInterval;
+    this.checksumType = checksumType;
   }
 
   public long getBlockSize() {
@@ -88,9 +96,18 @@ public class FsServerDefaults implements Writable {
     return encryptDataTransfer;
   }
 
+  public long getTrashInterval() {
+    return trashInterval;
+  }
+
+  public DataChecksum.Type getChecksumType() {
+    return checksumType;
+  }
+
   // /////////////////////////////////////////
   // Writable
   // /////////////////////////////////////////
+  @Override
   @InterfaceAudience.Private
   public void write(DataOutput out) throws IOException {
     out.writeLong(blockSize);
@@ -98,8 +115,10 @@ public class FsServerDefaults implements Writable {
     out.writeInt(writePacketSize);
     out.writeShort(replication);
     out.writeInt(fileBufferSize);
+    WritableUtils.writeEnum(out, checksumType);
   }
 
+  @Override
   @InterfaceAudience.Private
   public void readFields(DataInput in) throws IOException {
     blockSize = in.readLong();
@@ -107,5 +126,6 @@ public class FsServerDefaults implements Writable {
     writePacketSize = in.readInt();
     replication = in.readShort();
     fileBufferSize = in.readInt();
+    checksumType = WritableUtils.readEnum(in, DataChecksum.Type.class);
   }
 }

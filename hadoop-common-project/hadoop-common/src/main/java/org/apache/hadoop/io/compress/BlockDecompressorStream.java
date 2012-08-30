@@ -65,6 +65,7 @@ public class BlockDecompressorStream extends DecompressorStream {
     super(in);
   }
 
+  @Override
   protected int decompress(byte[] b, int off, int len) throws IOException {
     // Check if we are the beginning of a block
     if (noUncompressedBytes == originalBlockSize) {
@@ -104,6 +105,7 @@ public class BlockDecompressorStream extends DecompressorStream {
     return n;
   }
 
+  @Override
   protected int getCompressedData() throws IOException {
     checkStream();
 
@@ -126,6 +128,7 @@ public class BlockDecompressorStream extends DecompressorStream {
     return len;
   }
 
+  @Override
   public void resetState() throws IOException {
     originalBlockSize = 0;
     noUncompressedBytes = 0;

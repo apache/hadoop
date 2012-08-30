@@ -169,7 +169,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
           ContainerExecutor.TASK_LAUNCH_SCRIPT_PERMISSION);
 
       // Setup command to run
-      String[] command = {"bash", "-c",
+      String[] command = {"bash",
           wrapperScriptDst.toUri().getPath().toString()};
       LOG.info("launchContainer: " + Arrays.toString(command));
       shExec = new ShellCommandExecutor(
@@ -211,7 +211,6 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     sb.append("/bin/mv -f " + pidFilePath + ".tmp " + pidFilePath + "\n");
     sb.append(ContainerExecutor.isSetsidAvailable? "exec setsid" : "exec");
     sb.append(" /bin/bash ");
-    sb.append("-c ");
     sb.append("\"");
     sb.append(launchScriptDst);
     sb.append("\"\n");

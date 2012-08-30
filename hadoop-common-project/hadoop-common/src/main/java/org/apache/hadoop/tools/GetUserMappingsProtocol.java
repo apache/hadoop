@@ -21,7 +21,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
  * Protocol implemented by the Name Node and Job Tracker which maps users to

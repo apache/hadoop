@@ -27,6 +27,7 @@ import java.net.URLEncoder;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 public class ProxyUriUtils {
@@ -138,8 +139,8 @@ public class ProxyUriUtils {
    * @return a URI with an http scheme
    * @throws URISyntaxException if the url is not formatted correctly.
    */
-  public static URI getUriFromAMUrl(String noSchemeUrl) 
+  public static URI getUriFromAMUrl(String noSchemeUrl)
     throws URISyntaxException {
-    return new URI("http://"+noSchemeUrl);
+      return new URI(HttpConfig.getSchemePrefix() + noSchemeUrl);
   }
 }

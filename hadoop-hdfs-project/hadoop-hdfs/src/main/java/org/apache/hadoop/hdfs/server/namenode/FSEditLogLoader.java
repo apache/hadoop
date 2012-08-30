@@ -29,12 +29,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
-import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -193,8 +191,9 @@ public class FSEditLogLoader {
           if (op.hasTransactionId()) {
             long now = now();
             if (now - lastLogTime > REPLAY_TRANSACTION_LOG_INTERVAL) {
-              int percent = Math.round((float)lastAppliedTxId / numTxns * 100);
-              LOG.info("replaying edit log: " + lastAppliedTxId + "/" + numTxns
+              long deltaTxId = lastAppliedTxId - expectedStartingTxId + 1;
+              int percent = Math.round((float) deltaTxId / numTxns * 100);
+              LOG.info("replaying edit log: " + deltaTxId + "/" + numTxns
                   + " transactions completed. (" + percent + "%)");
               lastLogTime = now;
             }
@@ -303,7 +302,9 @@ public class FSEditLogLoader {
             addCloseOp.path);
       }
       
-      // Update in-memory data structures
+      // Update the salient file attributes.
+      oldFile.setAccessTime(addCloseOp.atime);
+      oldFile.setModificationTimeForce(addCloseOp.mtime);
       updateBlocks(fsDir, addCloseOp, oldFile);
 
       // Now close the file

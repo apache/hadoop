@@ -24,5 +24,6 @@ public interface CLICommand {
   public CommandExecutor getExecutor(String tag) throws IllegalArgumentException;
   public CLICommandTypes getType();
   public String getCmd();
+  @Override
   public String toString();
 }

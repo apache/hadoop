@@ -32,7 +32,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.ftpserver.command.impl.STAT;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.shell.CommandFactory;
 import org.apache.hadoop.fs.shell.FsCommand;
@@ -412,6 +411,7 @@ public class TestFsShellReturnCode {
   }
   
   static class MyFsShell extends FsShell {
+    @Override
     protected void registerCommands(CommandFactory factory) {
       factory.addClass(InterruptCommand.class, "-testInterrupt");
     }

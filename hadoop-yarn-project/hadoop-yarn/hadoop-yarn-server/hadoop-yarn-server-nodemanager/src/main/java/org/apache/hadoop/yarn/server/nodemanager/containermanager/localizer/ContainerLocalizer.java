@@ -43,6 +43,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -176,10 +177,14 @@ public class ContainerLocalizer {
       e.printStackTrace(System.out);
       return -1;
     } finally {
-      if (exec != null) {
-        exec.shutdownNow();
+      try {
+        if (exec != null) {
+          exec.shutdownNow();
+        }
+        LocalDirAllocator.removeContext(appCacheDirContextName);
+      } finally {
+        closeFileSystems(ugi);
       }
-      LocalDirAllocator.removeContext(appCacheDirContextName);
     }
   }
 
@@ -215,7 +220,15 @@ public class ContainerLocalizer {
     TimeUnit.SECONDS.sleep(duration);
   }
 
-  private void localizeFiles(LocalizationProtocol nodemanager,
+  protected void closeFileSystems(UserGroupInformation ugi) {
+    try {
+      FileSystem.closeAllForUGI(ugi);
+    } catch (IOException e) {
+      LOG.warn("Failed to close filesystems: ", e);
+    }
+  }
+
+  protected void localizeFiles(LocalizationProtocol nodemanager,
       CompletionService<Path> cs, UserGroupInformation ugi)
       throws IOException {
     while (true) {

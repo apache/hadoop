@@ -17,18 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,10 +37,12 @@ import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
+import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -53,9 +50,6 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
-import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.hdfs.server.namenode.ha.ActiveState;
 import org.apache.hadoop.hdfs.server.namenode.ha.BootstrapStandby;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
@@ -67,8 +61,7 @@ import org.apache.hadoop.hdfs.server.protocol.JournalProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
-import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -79,14 +72,12 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.ExitUtil.ExitException;
-
-import static org.apache.hadoop.util.ExitUtil.terminate;
-import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
 /**********************************************************
@@ -196,6 +187,22 @@ public class NameNode {
   public static final String[] NAMESERVICE_SPECIFIC_KEYS = {
     DFS_HA_AUTO_FAILOVER_ENABLED_KEY
   };
+  
+  private static final String USAGE = "Usage: java NameNode ["
+      + StartupOption.BACKUP.getName() + "] | ["
+      + StartupOption.CHECKPOINT.getName() + "] | ["
+      + StartupOption.FORMAT.getName() + " ["
+      + StartupOption.CLUSTERID.getName() + " cid ] ["
+      + StartupOption.FORCE.getName() + "] ["
+      + StartupOption.NONINTERACTIVE.getName() + "] ] | ["
+      + StartupOption.UPGRADE.getName() + "] | ["
+      + StartupOption.ROLLBACK.getName() + "] | ["
+      + StartupOption.FINALIZE.getName() + "] | ["
+      + StartupOption.IMPORT.getName() + "] | ["
+      + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | ["
+      + StartupOption.BOOTSTRAPSTANDBY.getName() + "] | ["
+      + StartupOption.RECOVER.getName() + " [ " + StartupOption.FORCE.getName()
+      + " ] ]";
   
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException {
@@ -504,15 +511,13 @@ public class NameNode {
   }
   
   private void startTrashEmptier(Configuration conf) throws IOException {
-    long trashInterval = conf.getLong(
-        CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY,
-        CommonConfigurationKeys.FS_TRASH_INTERVAL_DEFAULT);
+    long trashInterval =
+        conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT);
     if (trashInterval == 0) {
       return;
     } else if (trashInterval < 0) {
       throw new IOException("Cannot start tresh emptier with negative interval."
-          + " Set " + CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY + " to a"
-          + " positive value.");
+          + " Set " + FS_TRASH_INTERVAL_KEY + " to a positive value.");
     }
     this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);
@@ -709,9 +714,6 @@ public class NameNode {
     dirsToPrompt.addAll(sharedDirs);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
-    if (!confirmFormat(dirsToPrompt, force, isInteractive)) {
-      return true; // aborted
-    }
 
     // if clusterID is not provided - see if you can find the current one
     String clusterId = StartupOption.FORMAT.getClusterId();
@@ -723,60 +725,14 @@ public class NameNode {
     
     FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+    fsImage.getEditLog().initJournalsForWrite();
+    
+    if (!fsImage.confirmFormat(force, isInteractive)) {
+      return true; // aborted
+    }
+    
     fsImage.format(fsn, clusterId);
     return false;
-  }
-
-  /**
-   * Check whether the given storage directories already exist.
-   * If running in interactive mode, will prompt the user for each
-   * directory to allow them to format anyway. Otherwise, returns
-   * false, unless 'force' is specified.
-   * 
-   * @param dirsToFormat the dirs to check
-   * @param force format regardless of whether dirs exist
-   * @param interactive prompt the user when a dir exists
-   * @return true if formatting should proceed
-   * @throws IOException
-   */
-  public static boolean confirmFormat(Collection<URI> dirsToFormat,
-      boolean force, boolean interactive)
-      throws IOException {
-    for(Iterator<URI> it = dirsToFormat.iterator(); it.hasNext();) {
-      URI dirUri = it.next();
-      if (!dirUri.getScheme().equals(NNStorage.LOCAL_URI_SCHEME)) {
-        System.err.println("Skipping format for directory \"" + dirUri
-            + "\". Can only format local directories with scheme \""
-            + NNStorage.LOCAL_URI_SCHEME + "\".");
-        continue;
-      }
-      // To validate only file based schemes are formatted
-      assert dirUri.getScheme().equals(NNStorage.LOCAL_URI_SCHEME) :
-        "formatting is not supported for " + dirUri;
-
-      File curDir = new File(dirUri.getPath());
-      // Its alright for a dir not to exist, or to exist (properly accessible)
-      // and be completely empty.
-      if (!curDir.exists() ||
-          (curDir.isDirectory() && FileUtil.listFiles(curDir).length == 0))
-        continue;
-      if (force) { // Don't confirm, always format.
-        System.err.println(
-            "Storage directory exists in " + curDir + ". Formatting anyway.");
-        continue;
-      }
-      if (!interactive) { // Don't ask - always don't format
-        System.err.println(
-            "Running in non-interactive mode, and image appears to exist in " +
-            curDir + ". Not formatting.");
-        return false;
-      }
-      if (!confirmPrompt("Re-format filesystem in " + curDir + " ?")) {
-        System.err.println("Format aborted in " + curDir);
-        return false;
-      }
-    }
-    return true;
   }
 
   public static void checkAllowFormat(Configuration conf) throws IOException {
@@ -815,34 +771,50 @@ public class NameNode {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
+    
+    if (conf.get(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY) == null) {
+      LOG.fatal("No shared edits directory configured for namespace " +
+          nsId + " namenode " + namenodeId);
+      return false;
+    }
+
     NNStorage existingStorage = null;
     try {
-      FSNamesystem fsns = FSNamesystem.loadFromDisk(conf,
+      Configuration confWithoutShared = new Configuration(conf);
+      confWithoutShared.unset(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+      FSNamesystem fsns = FSNamesystem.loadFromDisk(confWithoutShared,
           FSNamesystem.getNamespaceDirs(conf),
           FSNamesystem.getNamespaceEditsDirs(conf, false));
       
       existingStorage = fsns.getFSImage().getStorage();
+      NamespaceInfo nsInfo = existingStorage.getNamespaceInfo();
       
-      Collection<URI> sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
-      if (!confirmFormat(sharedEditsDirs, force, interactive)) {
-        return true; // aborted
-      }
-      NNStorage newSharedStorage = new NNStorage(conf,
+      List<URI> sharedEditsDirs = FSNamesystem.getSharedEditsDirs(conf);
+      
+      FSImage sharedEditsImage = new FSImage(conf,
           Lists.<URI>newArrayList(),
           sharedEditsDirs);
+      sharedEditsImage.getEditLog().initJournalsForWrite();
       
-      newSharedStorage.format(existingStorage.getNamespaceInfo());
+      if (!sharedEditsImage.confirmFormat(force, interactive)) {
+        return true; // abort
+      }
       
+      NNStorage newSharedStorage = sharedEditsImage.getStorage();
+      // Call Storage.format instead of FSImage.format here, since we don't
+      // actually want to save a checkpoint - just prime the dirs with
+      // the existing namespace info
+      newSharedStorage.format(nsInfo);
+      sharedEditsImage.getEditLog().formatNonFileJournals(nsInfo);
+
       // Need to make sure the edit log segments are in good shape to initialize
       // the shared edits dir.
       fsns.getFSImage().getEditLog().close();
       fsns.getFSImage().getEditLog().initJournalsForWrite();
       fsns.getFSImage().getEditLog().recoverUnclosedStreams();
-      
-      if (copyEditLogSegmentsToSharedDir(fsns, sharedEditsDirs,
-          newSharedStorage, conf)) {
-        return true; // aborted
-      }
+
+      copyEditLogSegmentsToSharedDir(fsns, sharedEditsDirs, newSharedStorage,
+          conf);
     } catch (IOException ioe) {
       LOG.error("Could not initialize shared edits dir", ioe);
       return true; // aborted
@@ -860,43 +832,59 @@ public class NameNode {
     }
     return false; // did not abort
   }
-  
-  private static boolean copyEditLogSegmentsToSharedDir(FSNamesystem fsns,
+
+  private static void copyEditLogSegmentsToSharedDir(FSNamesystem fsns,
       Collection<URI> sharedEditsDirs, NNStorage newSharedStorage,
-      Configuration conf) throws FileNotFoundException, IOException {
+      Configuration conf) throws IOException {
+    Preconditions.checkArgument(!sharedEditsDirs.isEmpty(),
+        "No shared edits specified");
     // Copy edit log segments into the new shared edits dir.
-    for (JournalAndStream jas : fsns.getFSImage().getEditLog().getJournals()) {
-      FileJournalManager fjm = null;
-      if (!(jas.getManager() instanceof FileJournalManager)) {
-        LOG.error("Cannot populate shared edits dir from non-file " +
-            "journal manager: " + jas.getManager());
-        return true; // aborted
-      } else {
-        fjm = (FileJournalManager) jas.getManager();
-      }
-      for (EditLogFile elf : fjm.getLogFiles(fsns.getFSImage()
-          .getMostRecentCheckpointTxId())) {
-        File editLogSegment = elf.getFile();
-        for (URI sharedEditsUri : sharedEditsDirs) {
-          StorageDirectory sharedEditsDir = newSharedStorage
-              .getStorageDirectory(sharedEditsUri);
-          File targetFile = new File(sharedEditsDir.getCurrentDir(),
-              editLogSegment.getName());
-          if (!targetFile.exists()) {
-            InputStream in = null;
-            OutputStream out = null;
-            try {
-              in = new FileInputStream(editLogSegment);
-              out = new AtomicFileOutputStream(targetFile);
-              IOUtils.copyBytes(in, out, conf);
-            } finally {
-              IOUtils.cleanup(LOG, in, out);
-            }
-          }
+    List<URI> sharedEditsUris = new ArrayList<URI>(sharedEditsDirs);
+    FSEditLog newSharedEditLog = new FSEditLog(conf, newSharedStorage,
+        sharedEditsUris);
+    newSharedEditLog.initJournalsForWrite();
+    newSharedEditLog.recoverUnclosedStreams();
+    
+    FSEditLog sourceEditLog = fsns.getFSImage().editLog;
+    
+    long fromTxId = fsns.getFSImage().getMostRecentCheckpointTxId();
+    Collection<EditLogInputStream> streams = sourceEditLog.selectInputStreams(
+        fromTxId+1, 0);
+
+    // Set the nextTxid to the CheckpointTxId+1
+    newSharedEditLog.setNextTxId(fromTxId + 1);
+    
+    // Copy all edits after last CheckpointTxId to shared edits dir
+    for (EditLogInputStream stream : streams) {
+      LOG.debug("Beginning to copy stream " + stream + " to shared edits");
+      FSEditLogOp op;
+      boolean segmentOpen = false;
+      while ((op = stream.readOp()) != null) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("copying op: " + op);
+        }
+        if (!segmentOpen) {
+          newSharedEditLog.startLogSegment(op.txid, false);
+          segmentOpen = true;
+        }
+        
+        newSharedEditLog.logEdit(op);
+
+        if (op.opCode == FSEditLogOpCodes.OP_END_LOG_SEGMENT) {
+          newSharedEditLog.logSync();
+          newSharedEditLog.endCurrentLogSegment(false);
+          LOG.debug("ending log segment because of END_LOG_SEGMENT op in " + stream);
+          segmentOpen = false;
         }
       }
+      
+      if (segmentOpen) {
+        LOG.debug("ending log segment because of end of stream in " + stream);
+        newSharedEditLog.logSync();
+        newSharedEditLog.endCurrentLogSegment(false);
+        segmentOpen = false;
+      }
     }
-    return false; // did not abort
   }
 
   private static boolean finalize(Configuration conf,
@@ -921,22 +909,8 @@ public class NameNode {
     return false;
   }
 
-  private static void printUsage() {
-    System.err.println(
-      "Usage: java NameNode [" +
-      StartupOption.BACKUP.getName() + "] | [" +
-      StartupOption.CHECKPOINT.getName() + "] | [" +
-      StartupOption.FORMAT.getName() + " [" + StartupOption.CLUSTERID.getName() +  
-      " cid ] [" + StartupOption.FORCE.getName() + "] [" +
-      StartupOption.NONINTERACTIVE.getName() + "] ] | [" +
-      StartupOption.UPGRADE.getName() + "] | [" +
-      StartupOption.ROLLBACK.getName() + "] | [" +
-      StartupOption.FINALIZE.getName() + "] | [" +
-      StartupOption.IMPORT.getName() + "] | [" +
-      StartupOption.INITIALIZESHAREDEDITS.getName() + "] | [" +
-      StartupOption.BOOTSTRAPSTANDBY.getName() + "] | [" + 
-      StartupOption.RECOVER.getName() + " [ " +
-        StartupOption.FORCE.getName() + " ] ]");
+  private static void printUsage(PrintStream out) {
+    out.println(USAGE + "\n");
   }
 
   private static StartupOption parseArguments(String args[]) {
@@ -1003,6 +977,16 @@ public class NameNode {
         return startOpt;
       } else if (StartupOption.INITIALIZESHAREDEDITS.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.INITIALIZESHAREDEDITS;
+        for (i = i + 1 ; i < argsLen; i++) {
+          if (StartupOption.NONINTERACTIVE.getName().equals(args[i])) {
+            startOpt.setInteractiveFormat(false);
+          } else if (StartupOption.FORCE.getName().equals(args[i])) {
+            startOpt.setForceFormat(true);
+          } else {
+            LOG.fatal("Invalid argument: " + args[i]);
+            return null;
+          }
+        }
         return startOpt;
       } else if (StartupOption.RECOVER.getName().equalsIgnoreCase(cmd)) {
         if (startOpt != StartupOption.REGULAR) {
@@ -1074,7 +1058,7 @@ public class NameNode {
       conf = new HdfsConfiguration();
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
-      printUsage();
+      printUsage(System.err);
       return null;
     }
     setStartupOption(conf, startOpt);
@@ -1112,7 +1096,9 @@ public class NameNode {
         return null; // avoid warning
       }
       case INITIALIZESHAREDEDITS: {
-        boolean aborted = initializeSharedEdits(conf, false, true);
+        boolean aborted = initializeSharedEdits(conf,
+            startOpt.getForceFormat(),
+            startOpt.getInteractiveFormat());
         terminate(aborted ? 1 : 0);
         return null; // avoid warning
       }
@@ -1186,6 +1172,10 @@ public class NameNode {
   /**
    */
   public static void main(String argv[]) throws Exception {
+    if (DFSUtil.parseHelpArgument(argv, NameNode.USAGE, System.out, true)) {
+      System.exit(0);
+    }
+
     try {
       StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
       NameNode namenode = createNameNode(argv, null);

@@ -45,10 +45,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_LEGACY_BLOCKRE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_REPLICATION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT;
 
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -67,6 +67,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -78,6 +79,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
@@ -85,12 +87,17 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
+import org.apache.hadoop.fs.HdfsBlockLocation;
 import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
@@ -100,10 +107,10 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsBlocksMetadata;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -118,11 +125,11 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.Sender;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BlockOpResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
-import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
-import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -197,8 +204,7 @@ public class DFSClient implements java.io.Closeable {
     final int maxBlockAcquireFailures;
     final int confTime;
     final int ioBufferSize;
-    final int checksumType;
-    final int bytesPerChecksum;
+    final ChecksumOpt defaultChecksumOpt;
     final int writePacketSize;
     final int socketTimeout;
     final int socketCacheCapacity;
@@ -213,6 +219,10 @@ public class DFSClient implements java.io.Closeable {
     final String taskId;
     final FsPermission uMask;
     final boolean useLegacyBlockReader;
+    final boolean connectToDnViaHostname;
+    final boolean getHdfsBlocksMetadataEnabled;
+    final int getFileBlockStorageLocationsNumThreads;
+    final int getFileBlockStorageLocationsTimeout;
 
     Conf(Configuration conf) {
       maxFailoverAttempts = conf.getInt(
@@ -233,9 +243,7 @@ public class DFSClient implements java.io.Closeable {
       ioBufferSize = conf.getInt(
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY,
           CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT);
-      checksumType = getChecksumType(conf);
-      bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
-          DFS_BYTES_PER_CHECKSUM_DEFAULT);
+      defaultChecksumOpt = getChecksumOptFromConf(conf);
       socketTimeout = conf.getInt(DFS_CLIENT_SOCKET_TIMEOUT_KEY,
           HdfsServerConstants.READ_TIMEOUT);
       /** dfs.write.packet.size is an internal config variable */
@@ -263,26 +271,59 @@ public class DFSClient implements java.io.Closeable {
       useLegacyBlockReader = conf.getBoolean(
           DFS_CLIENT_USE_LEGACY_BLOCKREADER,
           DFS_CLIENT_USE_LEGACY_BLOCKREADER_DEFAULT);
+      connectToDnViaHostname = conf.getBoolean(DFS_CLIENT_USE_DN_HOSTNAME,
+          DFS_CLIENT_USE_DN_HOSTNAME_DEFAULT);
+      getHdfsBlocksMetadataEnabled = conf.getBoolean(
+          DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED, 
+          DFSConfigKeys.DFS_HDFS_BLOCKS_METADATA_ENABLED_DEFAULT);
+      getFileBlockStorageLocationsNumThreads = conf.getInt(
+          DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS,
+          DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_NUM_THREADS_DEFAULT);
+      getFileBlockStorageLocationsTimeout = conf.getInt(
+          DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT,
+          DFSConfigKeys.DFS_CLIENT_FILE_BLOCK_STORAGE_LOCATIONS_TIMEOUT_DEFAULT);
     }
 
-    private int getChecksumType(Configuration conf) {
-      String checksum = conf.get(DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
+    private DataChecksum.Type getChecksumType(Configuration conf) {
+      final String checksum = conf.get(
+          DFSConfigKeys.DFS_CHECKSUM_TYPE_KEY,
           DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT);
-      if ("CRC32".equals(checksum)) {
-        return DataChecksum.CHECKSUM_CRC32;
-      } else if ("CRC32C".equals(checksum)) {
-        return DataChecksum.CHECKSUM_CRC32C;
-      } else if ("NULL".equals(checksum)) {
-        return DataChecksum.CHECKSUM_NULL;
-      } else {
-        LOG.warn("Bad checksum type: " + checksum + ". Using default.");
-        return DataChecksum.CHECKSUM_CRC32C;
+      try {
+        return DataChecksum.Type.valueOf(checksum);
+      } catch(IllegalArgumentException iae) {
+        LOG.warn("Bad checksum type: " + checksum + ". Using default "
+            + DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT);
+        return DataChecksum.Type.valueOf(
+            DFSConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT); 
       }
     }
 
-    private DataChecksum createChecksum() {
-      return DataChecksum.newDataChecksum(
-          checksumType, bytesPerChecksum);
+    // Construct a checksum option from conf
+    private ChecksumOpt getChecksumOptFromConf(Configuration conf) {
+      DataChecksum.Type type = getChecksumType(conf);
+      int bytesPerChecksum = conf.getInt(DFS_BYTES_PER_CHECKSUM_KEY,
+          DFS_BYTES_PER_CHECKSUM_DEFAULT);
+      return new ChecksumOpt(type, bytesPerChecksum);
+    }
+
+    // create a DataChecksum with the default option.
+    private DataChecksum createChecksum() throws IOException {
+      return createChecksum(null);
+    }
+
+    private DataChecksum createChecksum(ChecksumOpt userOpt) 
+        throws IOException {
+      // Fill in any missing field with the default.
+      ChecksumOpt myOpt = ChecksumOpt.processChecksumOpt(
+          defaultChecksumOpt, userOpt);
+      DataChecksum dataChecksum = DataChecksum.newDataChecksum(
+          myOpt.getChecksumType(),
+          myOpt.getBytesPerChecksum());
+      if (dataChecksum == null) {
+        throw new IOException("Invalid checksum type specified: "
+            + myOpt.getChecksumType().name());
+      }
+      return dataChecksum;
     }
   }
  
@@ -473,6 +514,14 @@ public class DFSClient implements java.io.Closeable {
     return clientName;
   }
 
+  /**
+   * @return whether the client should use hostnames instead of IPs
+   *    when connecting to DataNodes
+   */
+  boolean connectToDnViaHostname() {
+    return dfsClientConf.connectToDnViaHostname;
+  }
+
   void checkOpen() throws IOException {
     if (!clientRunning) {
       IOException result = new IOException("Filesystem closed");
@@ -484,7 +533,7 @@ public class DFSClient implements java.io.Closeable {
    *  until the first output stream is created. The same instance will
    *  be returned until all output streams are closed.
    */
-  public synchronized LeaseRenewer getLeaseRenewer() throws IOException {
+  public LeaseRenewer getLeaseRenewer() throws IOException {
       return LeaseRenewer.getInstance(authority, ugi, this);
   }
 
@@ -729,12 +778,12 @@ public class DFSClient implements java.io.Closeable {
    */
   static BlockReader getLocalBlockReader(Configuration conf,
       String src, ExtendedBlock blk, Token<BlockTokenIdentifier> accessToken,
-      DatanodeInfo chosenNode, int socketTimeout, long offsetIntoBlock)
-      throws InvalidToken, IOException {
+      DatanodeInfo chosenNode, int socketTimeout, long offsetIntoBlock,
+      boolean connectToDnViaHostname) throws InvalidToken, IOException {
     try {
       return BlockReaderLocal.newBlockReader(conf, src, blk, accessToken,
           chosenNode, socketTimeout, offsetIntoBlock, blk.getNumBytes()
-              - offsetIntoBlock);
+              - offsetIntoBlock, connectToDnViaHostname);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
           AccessControlException.class);
@@ -930,7 +979,81 @@ public class DFSClient implements java.io.Closeable {
   public BlockLocation[] getBlockLocations(String src, long start, 
     long length) throws IOException, UnresolvedLinkException {
     LocatedBlocks blocks = getLocatedBlocks(src, start, length);
-    return DFSUtil.locatedBlocks2Locations(blocks);
+    BlockLocation[] locations =  DFSUtil.locatedBlocks2Locations(blocks);
+    HdfsBlockLocation[] hdfsLocations = new HdfsBlockLocation[locations.length];
+    for (int i = 0; i < locations.length; i++) {
+      hdfsLocations[i] = new HdfsBlockLocation(locations[i], blocks.get(i));
+    }
+    return hdfsLocations;
+  }
+  
+  /**
+   * Get block location information about a list of {@link HdfsBlockLocation}.
+   * Used by {@link DistributedFileSystem#getFileBlockStorageLocations(List)} to
+   * get {@link BlockStorageLocation}s for blocks returned by
+   * {@link DistributedFileSystem#getFileBlockLocations(org.apache.hadoop.fs.FileStatus, long, long)}
+   * .
+   * 
+   * This is done by making a round of RPCs to the associated datanodes, asking
+   * the volume of each block replica. The returned array of
+   * {@link BlockStorageLocation} expose this information as a
+   * {@link VolumeId}.
+   * 
+   * @param blockLocations
+   *          target blocks on which to query volume location information
+   * @return volumeBlockLocations original block array augmented with additional
+   *         volume location information for each replica.
+   */
+  public BlockStorageLocation[] getBlockStorageLocations(
+      List<BlockLocation> blockLocations) throws IOException,
+      UnsupportedOperationException, InvalidBlockTokenException {
+    if (!getConf().getHdfsBlocksMetadataEnabled) {
+      throw new UnsupportedOperationException("Datanode-side support for " +
+          "getVolumeBlockLocations() must also be enabled in the client " +
+          "configuration.");
+    }
+    // Downcast blockLocations and fetch out required LocatedBlock(s)
+    List<LocatedBlock> blocks = new ArrayList<LocatedBlock>();
+    for (BlockLocation loc : blockLocations) {
+      if (!(loc instanceof HdfsBlockLocation)) {
+        throw new ClassCastException("DFSClient#getVolumeBlockLocations " +
+            "expected to be passed HdfsBlockLocations");
+      }
+      HdfsBlockLocation hdfsLoc = (HdfsBlockLocation) loc;
+      blocks.add(hdfsLoc.getLocatedBlock());
+    }
+    
+    // Re-group the LocatedBlocks to be grouped by datanodes, with the values
+    // a list of the LocatedBlocks on the datanode.
+    Map<DatanodeInfo, List<LocatedBlock>> datanodeBlocks = 
+        new LinkedHashMap<DatanodeInfo, List<LocatedBlock>>();
+    for (LocatedBlock b : blocks) {
+      for (DatanodeInfo info : b.getLocations()) {
+        if (!datanodeBlocks.containsKey(info)) {
+          datanodeBlocks.put(info, new ArrayList<LocatedBlock>());
+        }
+        List<LocatedBlock> l = datanodeBlocks.get(info);
+        l.add(b);
+      }
+    }
+        
+    // Make RPCs to the datanodes to get volume locations for its replicas
+    List<HdfsBlocksMetadata> metadatas = BlockStorageLocationUtil
+        .queryDatanodesForHdfsBlocksMetadata(conf, datanodeBlocks,
+            getConf().getFileBlockStorageLocationsNumThreads,
+            getConf().getFileBlockStorageLocationsTimeout,
+            getConf().connectToDnViaHostname);
+    
+    // Regroup the returned VolumeId metadata to again be grouped by
+    // LocatedBlock rather than by datanode
+    Map<LocatedBlock, List<VolumeId>> blockVolumeIds = BlockStorageLocationUtil
+        .associateVolumeIdsWithBlocks(blocks, datanodeBlocks, metadatas);
+    
+    // Combine original BlockLocations with new VolumeId information
+    BlockStorageLocation[] volumeBlockLocations = BlockStorageLocationUtil
+        .convertToVolumeBlockLocations(blocks, blockVolumeIds);
+
+    return volumeBlockLocations;
   }
   
   public DFSInputStream open(String src) 
@@ -1041,12 +1164,13 @@ public class DFSClient implements java.io.Closeable {
     return create(src, FsPermission.getDefault(),
         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
             : EnumSet.of(CreateFlag.CREATE), replication, blockSize, progress,
-        buffersize);
+        buffersize, null);
   }
 
   /**
    * Call {@link #create(String, FsPermission, EnumSet, boolean, short, 
-   * long, Progressable, int)} with <code>createParent</code> set to true.
+   * long, Progressable, int, ChecksumOpt)} with <code>createParent</code>
+   *  set to true.
    */
   public DFSOutputStream create(String src, 
                              FsPermission permission,
@@ -1054,10 +1178,11 @@ public class DFSClient implements java.io.Closeable {
                              short replication,
                              long blockSize,
                              Progressable progress,
-                             int buffersize)
+                             int buffersize,
+                             ChecksumOpt checksumOpt)
       throws IOException {
     return create(src, permission, flag, true,
-        replication, blockSize, progress, buffersize);
+        replication, blockSize, progress, buffersize, checksumOpt);
   }
 
   /**
@@ -1075,6 +1200,7 @@ public class DFSClient implements java.io.Closeable {
    * @param blockSize maximum block size
    * @param progress interface for reporting client progress
    * @param buffersize underlying buffer size 
+   * @param checksumOpt checksum options
    * 
    * @return output stream
    * 
@@ -1088,8 +1214,8 @@ public class DFSClient implements java.io.Closeable {
                              short replication,
                              long blockSize,
                              Progressable progress,
-                             int buffersize)
-    throws IOException {
+                             int buffersize,
+                             ChecksumOpt checksumOpt) throws IOException {
     checkOpen();
     if (permission == null) {
       permission = FsPermission.getDefault();
@@ -1100,7 +1226,7 @@ public class DFSClient implements java.io.Closeable {
     }
     final DFSOutputStream result = DFSOutputStream.newStreamForCreate(this,
         src, masked, flag, createParent, replication, blockSize, progress,
-        buffersize, dfsClientConf.createChecksum());
+        buffersize, dfsClientConf.createChecksum(checksumOpt));
     beginFileLease(src, result);
     return result;
   }
@@ -1138,15 +1264,13 @@ public class DFSClient implements java.io.Closeable {
                              long blockSize,
                              Progressable progress,
                              int buffersize,
-                             int bytesPerChecksum)
+                             ChecksumOpt checksumOpt)
       throws IOException, UnresolvedLinkException {
     checkOpen();
     CreateFlag.validate(flag);
     DFSOutputStream result = primitiveAppend(src, flag, buffersize, progress);
     if (result == null) {
-      DataChecksum checksum = DataChecksum.newDataChecksum(
-          dfsClientConf.checksumType,
-          bytesPerChecksum);
+      DataChecksum checksum = dfsClientConf.createChecksum(checksumOpt);
       result = DFSOutputStream.newStreamForCreate(this, src, absPermission,
           flag, createParent, replication, blockSize, progress, buffersize,
           checksum);
@@ -1425,7 +1549,8 @@ public class DFSClient implements java.io.Closeable {
   public MD5MD5CRC32FileChecksum getFileChecksum(String src) throws IOException {
     checkOpen();
     return getFileChecksum(src, namenode, socketFactory,
-        dfsClientConf.socketTimeout, getDataEncryptionKey());
+        dfsClientConf.socketTimeout, getDataEncryptionKey(),
+        dfsClientConf.connectToDnViaHostname);
   }
   
   @InterfaceAudience.Private
@@ -1471,7 +1596,8 @@ public class DFSClient implements java.io.Closeable {
    */
   public static MD5MD5CRC32FileChecksum getFileChecksum(String src,
       ClientProtocol namenode, SocketFactory socketFactory, int socketTimeout,
-      DataEncryptionKey encryptionKey) throws IOException {
+      DataEncryptionKey encryptionKey, boolean connectToDnViaHostname)
+      throws IOException {
     //get all block locations
     LocatedBlocks blockLocations = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE);
     if (null == blockLocations) {
@@ -1479,7 +1605,8 @@ public class DFSClient implements java.io.Closeable {
     }
     List<LocatedBlock> locatedblocks = blockLocations.getLocatedBlocks();
     final DataOutputBuffer md5out = new DataOutputBuffer();
-    int bytesPerCRC = 0;
+    int bytesPerCRC = -1;
+    DataChecksum.Type crcType = DataChecksum.Type.DEFAULT;
     long crcPerBlock = 0;
     boolean refetchBlocks = false;
     int lastRetriedIndex = -1;
@@ -1509,9 +1636,11 @@ public class DFSClient implements java.io.Closeable {
         try {
           //connect to a datanode
           sock = socketFactory.createSocket();
-          NetUtils.connect(sock,
-              NetUtils.createSocketAddr(datanodes[j].getXferAddr()),
-              timeout);
+          String dnAddr = datanodes[j].getXferAddr(connectToDnViaHostname);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Connecting to datanode " + dnAddr);
+          }
+          NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
           sock.setSoTimeout(timeout);
 
           OutputStream unbufOut = NetUtils.getOutputStream(sock);
@@ -1581,6 +1710,17 @@ public class DFSClient implements java.io.Closeable {
               checksumData.getMd5().toByteArray());
           md5.write(md5out);
           
+          // read crc-type
+          final DataChecksum.Type ct = HdfsProtoUtil.
+              fromProto(checksumData.getCrcType());
+          if (i == 0) { // first block
+            crcType = ct;
+          } else if (crcType != DataChecksum.Type.MIXED
+              && crcType != ct) {
+            // if crc types are mixed in a file
+            crcType = DataChecksum.Type.MIXED;
+          }
+
           done = true;
 
           if (LOG.isDebugEnabled()) {
@@ -1606,7 +1746,18 @@ public class DFSClient implements java.io.Closeable {
 
     //compute file MD5
     final MD5Hash fileMD5 = MD5Hash.digest(md5out.getData()); 
-    return new MD5MD5CRC32FileChecksum(bytesPerCRC, crcPerBlock, fileMD5);
+    switch (crcType) {
+      case CRC32:
+        return new MD5MD5CRC32GzipFileChecksum(bytesPerCRC,
+            crcPerBlock, fileMD5);
+      case CRC32C:
+        return new MD5MD5CRC32CastagnoliFileChecksum(bytesPerCRC,
+            crcPerBlock, fileMD5);
+      default:
+        // we should never get here since the validity was checked
+        // when getCrcType() was called above.
+        return null;
+    }
   }
 
   /**
@@ -1767,14 +1918,6 @@ public class DFSClient implements java.io.Closeable {
    */
   public void finalizeUpgrade() throws IOException {
     namenode.finalizeUpgrade();
-  }
-
-  /**
-   * @see ClientProtocol#distributedUpgradeProgress(HdfsConstants.UpgradeAction)
-   */
-  public UpgradeStatusReport distributedUpgradeProgress(UpgradeAction action)
-      throws IOException {
-    return namenode.distributedUpgradeProgress(action);
   }
 
   /**

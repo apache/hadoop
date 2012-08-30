@@ -67,6 +67,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   protected static FileContext fc;
   
   final private static PathFilter DEFAULT_FILTER = new PathFilter() {
+    @Override
     public boolean accept(final Path file) {
       return true;
     }
@@ -74,6 +75,7 @@ public abstract class FileContextMainOperationsBaseTest  {
 
   //A test filter with returns any path containing a "b" 
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
+    @Override
     public boolean accept(Path file) {
       if(file.getName().contains("x") || file.getName().contains("X"))
         return true;
@@ -360,15 +362,17 @@ public abstract class FileContextMainOperationsBaseTest  {
   }
   
   @Test
-  public void testGlobStatusThrowsExceptionForNonExistentFile() throws Exception {
-    try {
-      // This should throw a FileNotFoundException
-      fc.util().globStatus(
-          getTestRootPath(fc, "test/hadoopfsdf/?"));
-      Assert.fail("Should throw FileNotFoundException");
-    } catch (FileNotFoundException fnfe) {
-      // expected
-    }
+  public void testGlobStatusNonExistentFile() throws Exception {
+    FileStatus[] paths = fc.util().globStatus(
+          getTestRootPath(fc, "test/hadoopfsdf"));
+    Assert.assertNull(paths);
+
+    paths = fc.util().globStatus(
+        getTestRootPath(fc, "test/hadoopfsdf/?"));
+    Assert.assertEquals(0, paths.length);
+    paths = fc.util().globStatus(
+        getTestRootPath(fc, "test/hadoopfsdf/xyz*/?"));
+    Assert.assertEquals(0, paths.length);
   }
   
   @Test

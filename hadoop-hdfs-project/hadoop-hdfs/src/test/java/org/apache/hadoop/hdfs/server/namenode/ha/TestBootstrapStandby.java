@@ -75,7 +75,7 @@ public class TestBootstrapStandby {
   }
   
   @After
-  public void shutdownCluster() throws IOException {
+  public void shutdownCluster() {
     if (cluster != null) {
       cluster.shutdown();
     }
@@ -125,7 +125,7 @@ public class TestBootstrapStandby {
     // Make checkpoint
     NameNodeAdapter.enterSafeMode(nn0, false);
     NameNodeAdapter.saveNamespace(nn0);
-    NameNodeAdapter.leaveSafeMode(nn0, false);
+    NameNodeAdapter.leaveSafeMode(nn0);
     long expectedCheckpointTxId = NameNodeAdapter.getNamesystem(nn0)
       .getFSImage().getMostRecentCheckpointTxId();
     assertEquals(6, expectedCheckpointTxId);

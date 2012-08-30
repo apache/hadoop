@@ -37,10 +37,12 @@ public class JByte extends JType {
       super("byte", "Byte", "Byte", "TypeID.RIOType.BYTE");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "org.apache.hadoop.record.meta.TypeID.ByteTypeID";
     }
 
+    @Override
     void genSlurpBytes(CodeBuffer cb, String b, String s, String l) {
       cb.append("{\n");
       cb.append("if ("+l+"<1) {\n");
@@ -51,6 +53,7 @@ public class JByte extends JType {
       cb.append("}\n");
     }
     
+    @Override
     void genCompareBytes(CodeBuffer cb) {
       cb.append("{\n");
       cb.append("if (l1<1 || l2<1) {\n");
@@ -71,6 +74,7 @@ public class JByte extends JType {
       super("int8_t");
     }
     
+    @Override
     String getTypeIDObjectString() {
       return "new ::hadoop::TypeID(::hadoop::RIOTYPE_BYTE)";
     }
@@ -82,6 +86,7 @@ public class JByte extends JType {
     setCType(new CType());
   }
   
+  @Override
   String getSignature() {
     return "b";
   }

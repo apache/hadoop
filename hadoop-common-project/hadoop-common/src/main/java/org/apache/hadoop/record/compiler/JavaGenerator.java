@@ -39,6 +39,7 @@ class JavaGenerator extends CodeGenerator {
    * @param rlist List of records defined within this file
    * @param destDir output directory
    */
+  @Override
   void genCode(String name, ArrayList<JFile> ilist,
                ArrayList<JRecord> rlist, String destDir, ArrayList<String> options)
     throws IOException {

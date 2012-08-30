@@ -343,14 +343,18 @@ public class TestLocalDirAllocator {
   @Test
   public void testRemoveContext() throws IOException {
     String dir = buildBufferDir(ROOT, 0);
-    String contextCfgItemName = "application_1340842292563_0004.app.cache.dirs";
-    conf.set(contextCfgItemName, dir);
-    LocalDirAllocator localDirAllocator = new LocalDirAllocator(
-        contextCfgItemName);
-    localDirAllocator.getLocalPathForWrite("p1/x", SMALL_FILE_SIZE, conf);
-    assertTrue(LocalDirAllocator.isContextValid(contextCfgItemName));
-    LocalDirAllocator.removeContext(contextCfgItemName);
-    assertFalse(LocalDirAllocator.isContextValid(contextCfgItemName));
+    try {
+      String contextCfgItemName = "application_1340842292563_0004.app.cache.dirs";
+      conf.set(contextCfgItemName, dir);
+      LocalDirAllocator localDirAllocator = new LocalDirAllocator(
+          contextCfgItemName);
+      localDirAllocator.getLocalPathForWrite("p1/x", SMALL_FILE_SIZE, conf);
+      assertTrue(LocalDirAllocator.isContextValid(contextCfgItemName));
+      LocalDirAllocator.removeContext(contextCfgItemName);
+      assertFalse(LocalDirAllocator.isContextValid(contextCfgItemName));
+    } finally {
+      rmBufferDirs();
+    }
   }
 
 }

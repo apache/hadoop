@@ -78,7 +78,7 @@ public class TestRMNodeTransitions {
     
     rmContext =
         new RMContextImpl(new MemStore(), rmDispatcher, null, null, null,
-            mock(DelegationTokenRenewer.class), null);
+            mock(DelegationTokenRenewer.class), null, null);
     scheduler = mock(YarnScheduler.class);
     doAnswer(
         new Answer<Void>() {
@@ -102,7 +102,7 @@ public class TestRMNodeTransitions {
         new TestSchedulerEventDispatcher());
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
-    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null);
+    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
 
   }
   

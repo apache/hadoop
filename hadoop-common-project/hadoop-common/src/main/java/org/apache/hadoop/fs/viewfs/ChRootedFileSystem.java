@@ -102,6 +102,7 @@ class ChRootedFileSystem extends FilterFileSystem {
    *   for this FileSystem
    * @param conf the configuration
    */
+  @Override
   public void initialize(final URI name, final Configuration conf)
       throws IOException {
     super.initialize(name, conf);

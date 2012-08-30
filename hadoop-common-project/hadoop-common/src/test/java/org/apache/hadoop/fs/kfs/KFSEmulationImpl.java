@@ -39,16 +39,20 @@ public class KFSEmulationImpl implements IFSImpl {
         localFS = FileSystem.getLocal(conf);
     }
 
+    @Override
     public boolean exists(String path) throws IOException {
         return localFS.exists(new Path(path));
     }
+    @Override
     public boolean isDirectory(String path) throws IOException {
         return localFS.isDirectory(new Path(path));
     }
+    @Override
     public boolean isFile(String path) throws IOException {
         return localFS.isFile(new Path(path));
     }
 
+    @Override
     public String[] readdir(String path) throws IOException {
         FileStatus[] p = localFS.listStatus(new Path(path));
         try {
@@ -64,10 +68,12 @@ public class KFSEmulationImpl implements IFSImpl {
         return entries;
     }
 
+    @Override
     public FileStatus[] readdirplus(Path path) throws IOException {
         return localFS.listStatus(path);
     }
 
+    @Override
     public int mkdirs(String path) throws IOException {
         if (localFS.mkdirs(new Path(path)))
             return 0;
@@ -75,12 +81,14 @@ public class KFSEmulationImpl implements IFSImpl {
         return -1;
     }
 
+    @Override
     public int rename(String source, String dest) throws IOException {
         if (localFS.rename(new Path(source), new Path(dest)))
             return 0;
         return -1;
     }
 
+    @Override
     public int rmdir(String path) throws IOException {
         if (isDirectory(path)) {
             // the directory better be empty
@@ -91,21 +99,26 @@ public class KFSEmulationImpl implements IFSImpl {
         return -1;
     }
 
+    @Override
     public int remove(String path) throws IOException {
         if (isFile(path) && (localFS.delete(new Path(path), true)))
             return 0;
         return -1;
     }
 
+    @Override
     public long filesize(String path) throws IOException {
         return localFS.getFileStatus(new Path(path)).getLen();
     }
+    @Override
     public short getReplication(String path) throws IOException {
         return 1;
     }
+    @Override
     public short setReplication(String path, short replication) throws IOException {
         return 1;
     }
+    @Override
     public String[][] getDataLocation(String path, long start, long len) throws IOException {
         BlockLocation[] blkLocations = 
           localFS.getFileBlockLocations(localFS.getFileStatus(new Path(path)),
@@ -123,6 +136,7 @@ public class KFSEmulationImpl implements IFSImpl {
           return hints;
     }
 
+    @Override
     public long getModificationTime(String path) throws IOException {
         FileStatus s = localFS.getFileStatus(new Path(path));
         if (s == null)
@@ -131,18 +145,21 @@ public class KFSEmulationImpl implements IFSImpl {
         return s.getModificationTime();
     }
 
+    @Override
     public FSDataOutputStream append(String path, int bufferSize, Progressable progress) throws IOException {
         // besides path/overwrite, the other args don't matter for
         // testing purposes.
         return localFS.append(new Path(path));
     }
 
+    @Override
     public FSDataOutputStream create(String path, short replication, int bufferSize, Progressable progress) throws IOException {
         // besides path/overwrite, the other args don't matter for
         // testing purposes.
         return localFS.create(new Path(path));
     }
 
+    @Override
     public FSDataInputStream open(String path, int bufferSize) throws IOException {
         return localFS.open(new Path(path));
     }
