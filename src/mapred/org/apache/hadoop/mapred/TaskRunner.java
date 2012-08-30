@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Vector;
 import java.util.Map.Entry;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -71,7 +73,8 @@ abstract class TaskRunner extends Thread {
   static final String MAPRED_ADMIN_USER_HOME_DIR =
     "mapreduce.admin.user.home.dir";
 
-  static final String DEFAULT_HOME_DIR= "/homes/";
+  static final String DEFAULT_HOME_DIR =
+      System.getenv(Shell.WINDOWS ? "USERPROFILE" : "HOME");
   
   static final String HADOOP_WORK_DIR = "HADOOP_WORK_DIR";
   
@@ -507,13 +510,10 @@ abstract class TaskRunner extends Thread {
 
     // if temp directory path is not absolute, prepend it with workDir.
     if (!tmpDir.isAbsolute()) {
-      if (Shell.WINDOWS) {
-        //review minwei:
-        String acmeDir = workDir.toString();
-        if (acmeDir.charAt(0) == '"') 
-          acmeDir = acmeDir.substring(1,acmeDir.length()-1);
-        tmpDir = new Path(acmeDir+ "/tmp");
-      } else
+      if (Shell.WINDOWS)
+        // trim leading and trailing quotes on Windows
+        tmpDir = new Path(workDir.toString().replaceAll("^\"|\"$", ""), tmp);
+      else
         tmpDir = new Path(workDir.toString(), tmp);
       if (createDir) {
         FileSystem localFs = FileSystem.getLocal(conf);
@@ -522,6 +522,13 @@ abstract class TaskRunner extends Thread {
           throw new IOException("Mkdirs failed to create " +
               tmpDir.toString());
         }
+      }
+    } else if (createDir) {
+      FileSystem localFs = FileSystem.getLocal(conf);
+      if (!localFs.exists(tmpDir) && !localFs.mkdirs(tmpDir) && 
+          !localFs.getFileStatus(tmpDir).isDir()) {
+            throw new IOException("Mkdirs failed to create " +
+                tmpDir.toString());
       }
     }
     return tmpDir;
@@ -627,34 +634,24 @@ abstract class TaskRunner extends Thread {
       for (String cEnv : childEnvs) {
         try {
           String[] parts = cEnv.split("="); // split on '='
-          String value = env.get(parts[0]);
-          
-          if (value != null) {
+          Pattern p = Pattern.compile(Shell.getEnvironmentVariableRegex());
+          Matcher m = p.matcher(parts[1]);
+          StringBuffer sb = new StringBuffer();
+          while (m.find()) {
+            String var = m.group(1);
             // replace $env with the child's env constructed by tt's
-            // example LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp
-            value = parts[1].replace("$" + parts[0], value);
-          } else {
-            // this key is not configured by the tt for the child .. get it
+            String replace = env.get(var);
+            // if this key is not configured by the tt for the child .. get it
             // from the tt's env
-            // example PATH=$PATH:/tmp
-            value = System.getenv(parts[0]);
-            if (value != null) {
-              // the env key is present in the tt's env
-              value = parts[1].replace("$" + parts[0], value);
-            } else {
-              // check for simple variable substitution
-              // for e.g. ROOT=$HOME
-              String envValue = System.getenv(parts[1].substring(1)); 
-              if (envValue != null) {
-                value = envValue;
-              } else {
-                // the env key is note present anywhere .. simply set it
-                // example X=$X:/tmp or X=/tmp
-                value = parts[1].replace("$" + parts[0], "");
-              }
-            }
+            if (replace == null)
+              replace = System.getenv(var);
+            // the env key is note present anywhere .. simply set it
+            if (replace == null)
+              replace = "";
+            m.appendReplacement(sb, Matcher.quoteReplacement(replace));
           }
-          env.put(parts[0], value);
+          m.appendTail(sb);
+          env.put(parts[0], sb.toString());
         } catch (Throwable t) {
           // set the error msg
           errorInfo = "Invalid User environment settings : " + mapredChildEnv
@@ -798,13 +795,11 @@ abstract class TaskRunner extends Thread {
   private static void symlink(File workDir, String target, String link)
       throws IOException {
     if (link != null) {
-      if (Shell.WINDOWS){
-        String path = workDir.toString();
-        path = path.substring(1,path.length()-1); //strip leading and trailing quotes
-        link = path + "\\" + link;
-      }
+      if (Shell.WINDOWS)
+        // trim leading and trailing quotes on Windows
+        link = workDir.toString().replaceAll("^\"|\"$", "") + File.separator + link;
       else
-        link = workDir.toString() + Path.SEPARATOR + link;
+        link = workDir.toString() + File.separator + link;
       File flink = new File(link);
       if (!flink.exists()) {
         LOG.info(String.format("Creating symlink: %s <- %s", target, link));

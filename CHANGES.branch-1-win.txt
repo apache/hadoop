@@ -71,6 +71,9 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8453. Added unit tests for winutils. (Chuan Liu via acmurthy)
 
+    MAPREDUCE-4374. Completed support for configurable environment for child
+    map/reduce tasks. (Chuan Liu via acmurthy)
+
 BUG FIXES
 
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
@@ -91,3 +94,4 @@ BUG FIXES
 
     HADOOP-8732. Fix intermittent failures in tests by serializing process
     creation to get around a bug in MS Windows. (Ivan Mitic via acmurthy)
+

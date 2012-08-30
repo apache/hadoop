@@ -17,35 +17,21 @@
  */
 package org.apache.hadoop.mapred;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.Vector;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
-import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.mapred.JvmManager.JvmManagerForType;
-import org.apache.hadoop.mapred.JvmManager.JvmManagerForType.JvmRunner;
-import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.mapred.TaskTracker.RunningJob;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
-import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
+import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
 public class TestTaskEnvironment {
-  private static File TEST_DIR = new File(System.getProperty("test.build.data",
-      "/tmp"), TestJvmManager.class.getSimpleName());
   private static int MAP_SLOTS = 1;
   private static int REDUCE_SLOTS = 1;
   private TaskTracker tt;
@@ -54,12 +40,10 @@ public class TestTaskEnvironment {
 
   @Before
   public void setUp() {
-    TEST_DIR.mkdirs();
   }
 
   @After
   public void tearDown() throws IOException {
-    FileUtil.fullyDelete(TEST_DIR);
   }
 
   public TestTaskEnvironment() throws Exception {
@@ -75,26 +59,12 @@ public class TestTaskEnvironment {
     tt.setUserLogManager(new UserLogManager(ttConf));
   }
 
-  // write a shell script to execute the command.
-  private File writeScript(String fileName, String cmd, File pidFile) throws IOException {
-    File script = new File(TEST_DIR, fileName);
-    FileOutputStream out = new FileOutputStream(script);
-    // write pid into a file
-    out.write(("echo $$ >" + pidFile.toString() + ";").getBytes());
-    // ignore SIGTERM
-    out.write(("trap '' 15\n").getBytes());
-    // write the actual command it self.
-    out.write(cmd.getBytes());
-    out.close();
-    script.setExecutable(true);
-    return script;
-  }
-
   @Test
   public void testTaskEnv() throws Throwable {
     ttConf.set("mapreduce.admin.user.shell", "/bin/testshell");
     ttConf.set("mapreduce.admin.user.env", "key1=value1,key2=value2");
-    ttConf.set("mapred.child.env", "ROOT=$HOME");
+    ttConf.set("mapred.child.env", (Shell.WINDOWS ? "ROOT=%USERPROFILE%"
+        : "ROOT=$HOME"));
     final Map<String, String> env = new HashMap<String, String>();
     String user = "test";
     JobConf taskConf = new JobConf(ttConf);
@@ -115,13 +85,6 @@ public class TestTaskEnvironment {
     taskRunner.updateUserLoginEnv(errorInfo, user, taskConf, env);
     taskRunner.setEnvFromInputString(errorInfo, env, mapredChildEnv);
 
-    final Vector<String> vargs = new Vector<String>(1);
-    File pidFile = new File(TEST_DIR, "pid");
-    vargs.add(writeScript("ENV", "/bin/env ", pidFile).getAbsolutePath());
-    final File workDir = new File(TEST_DIR, "work");
-    workDir.mkdir();
-    final File stdout = new File(TEST_DIR, "stdout");
-    final File stderr = new File(TEST_DIR, "stderr");
     Map<String, String> jvmenvmap = env;
     String javaOpts = taskRunner.getChildJavaOpts(ttConf, 
       JobConf.MAPRED_MAP_TASK_JAVA_OPTS);
@@ -134,6 +97,7 @@ public class TestTaskEnvironment {
     assertTrue(javaOpts, javaOpts.contains("IPv4"));
     
     String root = jvmenvmap.get("ROOT");
-    assertTrue(root, root.contentEquals(System.getenv("HOME")));
+    assertTrue(root, root.contentEquals(System
+        .getenv((Shell.WINDOWS ? "USERPROFILE" : "HOME"))));
   }
 }

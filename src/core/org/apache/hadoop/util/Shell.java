@@ -85,6 +85,12 @@ abstract public class Shell {
     return (WINDOWS) ? new String[] { WINUTILS, "chmod", perm }
                      : new String[] { "chmod", perm };
   }
+  
+  /** Return a regular expression string that match environment variables */
+  public static String getEnvironmentVariableRegex() {
+    return (WINDOWS) ? "%([A-Za-z_][A-Za-z0-9_]*?)%" :
+      "\\$([A-Za-z_][A-Za-z0-9_]*)";
+  }
 
   /** Return a command to set owner */
   public static String[] getSetOwnerCommand(String owner) {

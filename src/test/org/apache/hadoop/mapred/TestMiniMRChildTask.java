@@ -32,6 +32,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
@@ -48,6 +49,8 @@ public class TestMiniMRChildTask extends TestCase {
   private final static String TASK_OPTS_VAL = "-Xmx200m";
   private final static String MAP_OPTS_VAL = "-Xmx200m";
   private final static String REDUCE_OPTS_VAL = "-Xmx300m";
+  
+  private final static String TMP_PATH = Shell.WINDOWS ? "C:\\tmp" : "/tmp";
 
   private MiniMRCluster mr;
   private MiniDFSCluster dfs;
@@ -158,11 +161,14 @@ public class TestMiniMRChildTask extends TestCase {
 
   private static void checkEnv(String envName, String expValue, String mode) {
     String envValue = System.getenv(envName).trim();
+    // trim leading and trailing quotes on Windows 
+    if (Shell.WINDOWS)
+      envValue = envValue.replaceAll("^\"|\"$", "");
     if ("append".equals(mode)) {
-      if (envValue == null || !envValue.contains(":")) {
+      if (envValue == null || !envValue.contains(File.pathSeparator)) {
         throw new RuntimeException("Missing env variable");
       } else {
-        String parts[] = envValue.split(":");
+        String parts[] = envValue.split(File.pathSeparator);
         // check if the value is appended
         if (!parts[parts.length - 1].equals(expValue)) {
           throw new RuntimeException("Wrong env variable in append mode");
@@ -173,6 +179,30 @@ public class TestMiniMRChildTask extends TestCase {
         throw new RuntimeException("Wrong env variable in noappend mode");
       }
     }
+  }
+  
+  private static void checkEnvs(JobConf job) {
+    String path = job.get("path");
+    
+    // check if the pwd is there in LD_LIBRARY_PATH on Linux
+    if (!Shell.WINDOWS) {        
+      String pwd = System.getenv("PWD");
+      assertTrue("LD_LIBRARY_PATH doesnt contain pwd", System.getenv("LD_LIBRARY_PATH")
+          .contains(pwd));
+    }
+    
+    // check if X=$X:/abc or X=%X%;C:\abc works for LD_LIBRARY_PATH
+    checkEnv("LD_LIBRARY_PATH", TMP_PATH, "append");
+    // check if X=/tmp works for an already existing parameter
+    checkEnv("HOME", TMP_PATH, "noappend");
+    // check if X=/tmp for a new env variable
+    checkEnv("MY_PATH", TMP_PATH, "noappend");
+    // check if X=$X:/tmp or X=%X%;C:\tmp works for a new env var and results
+    // into :/tmp or ;C:\tmp on Linux or Windows respectively
+    checkEnv("NEW_PATH", File.pathSeparator + TMP_PATH, "noappend");
+    // check if X=$(tt's X var):/tmp or X=%(tt's X var)%:C:\tmp for an old env
+    // variable inherited from the tt
+    checkEnv("PATH", path + File.pathSeparator + TMP_PATH, "noappend");
   }
 
   // Mappers that simply checks if the desired user env are present or not
@@ -196,26 +226,7 @@ public class TestMiniMRChildTask extends TestCase {
                      mapJavaOpts, 
                      mapJavaOpts, MAP_OPTS_VAL);
       }
-
-      String path = job.get("path");
-      
-      // check if the pwd is there in LD_LIBRARY_PATH
-      String pwd = System.getenv("PWD");
-      
-      assertTrue("LD doesnt contain pwd", 
-                 System.getenv("LD_LIBRARY_PATH").contains(pwd));
-      
-      // check if X=$X:/abc works for LD_LIBRARY_PATH
-      checkEnv("LD_LIBRARY_PATH", "/tmp", "append");
-      // check if X=/tmp works for an already existing parameter
-      checkEnv("HOME", "/tmp", "noappend");
-      // check if X=/tmp for a new env variable
-      checkEnv("MY_PATH", "/tmp", "noappend");
-      // check if X=$X:/tmp works for a new env var and results into :/tmp
-      checkEnv("NEW_PATH", ":/tmp", "noappend");
-      // check if X=$(tt's X var):/tmp for an old env variable inherited from 
-      // the tt
-      checkEnv("PATH",  path + ":/tmp", "noappend");
+      checkEnvs(job);
     }
 
     public void map(WritableComparable key, Writable value,
@@ -246,27 +257,7 @@ public class TestMiniMRChildTask extends TestCase {
                      reduceJavaOpts, 
                      reduceJavaOpts, REDUCE_OPTS_VAL);
       }
-
-      String path = job.get("path");
-      
-      // check if the pwd is there in LD_LIBRARY_PATH
-      String pwd = System.getenv("PWD");
-      
-      assertTrue("LD doesnt contain pwd", 
-                 System.getenv("LD_LIBRARY_PATH").contains(pwd));
-      
-      // check if X=$X:/abc works for LD_LIBRARY_PATH
-      checkEnv("LD_LIBRARY_PATH", "/tmp", "append");
-      // check if X=/tmp works for an already existing parameter
-      checkEnv("HOME", "/tmp", "noappend");
-      // check if X=/tmp for a new env variable
-      checkEnv("MY_PATH", "/tmp", "noappend");
-      // check if X=$X:/tmp works for a new env var and results into :/tmp
-      checkEnv("NEW_PATH", ":/tmp", "noappend");
-      // check if X=$(tt's X var):/tmp for an old env variable inherited from 
-      // the tt
-      checkEnv("PATH",  path + ":/tmp", "noappend");
-
+      checkEnvs(job);
     }
 
     @Override
@@ -403,12 +394,15 @@ public class TestMiniMRChildTask extends TestCase {
       mapTaskJavaOptsKey = reduceTaskJavaOptsKey = JobConf.MAPRED_TASK_JAVA_OPTS;
       mapTaskJavaOpts = reduceTaskJavaOpts = TASK_OPTS_VAL;
     }
-    conf.set(mapTaskEnvKey,
-             "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp," +
-             "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
-    conf.set(reduceTaskEnvKey,
-             "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp," +
-             "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
+
+    String envKey = String.format(Shell.WINDOWS ? "MY_PATH=%1$s,HOME=%1$s,"
+        + "LD_LIBRARY_PATH=%%LD_LIBRARY_PATH%%;%1$s,"
+        + "PATH=%%PATH%%;%1$s,NEW_PATH=%%NEW_PATH%%;%1$s"
+        : "MY_PATH=%1$s,HOME=%1$s,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:%1$s,"
+            + "PATH=$PATH:%1$s,NEW_PATH=$NEW_PATH:%1$s", TMP_PATH);
+
+    conf.set(mapTaskEnvKey, envKey);
+    conf.set(reduceTaskEnvKey, envKey);
 
     conf.set("path", System.getenv("PATH"));
 
