@@ -27,7 +27,6 @@ import java.security.Principal;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -646,7 +645,7 @@ public class UserGroupInformation {
           // user.
           Credentials cred = Credentials.readTokenStorageFile(
               new Path("file:///" + fileLocation), conf);
-          cred.addTokensToUGI(loginUser);
+          loginUser.addCredentials(cred);
         }
         loginUser.spawnAutoRenewalThreadForUserCreds();
       } catch (LoginException le) {
@@ -1176,41 +1175,6 @@ public class UserGroupInformation {
   public synchronized Set<TokenIdentifier> getTokenIdentifiers() {
     return subject.getPublicCredentials(TokenIdentifier.class);
   }
-
-  // wrapper to retain the creds key for the token
-  private class NamedToken {
-    Text alias;
-    Token<? extends TokenIdentifier> token;
-    NamedToken(Text alias, Token<? extends TokenIdentifier> token) {
-      this.alias = alias;
-      this.token = token;
-    }
-    @Override
-    public boolean equals(Object o) {
-      boolean equals;
-      if (o == this) {
-        equals = true;
-      } else if (!(o instanceof NamedToken)) {
-        equals = false;
-      } else {
-        Text otherAlias = ((NamedToken)o).alias;
-        if (alias == otherAlias) {
-          equals = true;
-        } else {
-          equals = (otherAlias != null && otherAlias.equals(alias));
-        }
-      }
-      return equals;
-    }
-    @Override
-    public int hashCode() {
-      return (alias != null) ? alias.hashCode() : -1; 
-    }
-    @Override
-    public String toString() {
-      return "NamedToken: alias="+alias+" token="+token;
-    }
-  }
   
   /**
    * Add a token to this UGI
@@ -1219,7 +1183,7 @@ public class UserGroupInformation {
    * @return true on successful add of new token
    */
   public synchronized boolean addToken(Token<? extends TokenIdentifier> token) {
-    return addToken(token.getService(), token);
+    return (token != null) ? addToken(token.getService(), token) : false;
   }
 
   /**
@@ -1231,10 +1195,8 @@ public class UserGroupInformation {
    */
   public synchronized boolean addToken(Text alias,
                                        Token<? extends TokenIdentifier> token) {
-    NamedToken namedToken = new NamedToken(alias, token);
-    Collection<Object> ugiCreds = subject.getPrivateCredentials();
-    ugiCreds.remove(namedToken); // allow token to be replaced
-    return ugiCreds.add(new NamedToken(alias, token));
+    getCredentialsInternal().addToken(alias, token);
+    return true;
   }
   
   /**
@@ -1244,8 +1206,8 @@ public class UserGroupInformation {
    */
   public synchronized
   Collection<Token<? extends TokenIdentifier>> getTokens() {
-    return Collections.unmodifiableList(
-        new ArrayList<Token<?>>(getCredentials().getAllTokens()));
+    return Collections.unmodifiableCollection(
+        getCredentialsInternal().getAllTokens());
   }
 
   /**
@@ -1254,11 +1216,26 @@ public class UserGroupInformation {
    * @return Credentials of tokens associated with this user
    */
   public synchronized Credentials getCredentials() {
-    final Credentials credentials = new Credentials();
-    final Set<NamedToken> namedTokens =
-        subject.getPrivateCredentials(NamedToken.class);
-    for (final NamedToken namedToken : namedTokens) {
-      credentials.addToken(namedToken.alias, namedToken.token);
+    return new Credentials(getCredentialsInternal());
+  }
+  
+  /**
+   * Add the given Credentials to this user.
+   * @param credentials of tokens and secrets
+   */
+  public synchronized void addCredentials(Credentials credentials) {
+    getCredentialsInternal().addAll(credentials);
+  }
+
+  private synchronized Credentials getCredentialsInternal() {
+    final Credentials credentials;
+    final Set<Credentials> credentialsSet =
+      subject.getPrivateCredentials(Credentials.class);
+    if (!credentialsSet.isEmpty()){
+      credentials = credentialsSet.iterator().next();
+    } else {
+      credentials = new Credentials();
+      subject.getPrivateCredentials().add(credentials);
     }
     return credentials;
   }

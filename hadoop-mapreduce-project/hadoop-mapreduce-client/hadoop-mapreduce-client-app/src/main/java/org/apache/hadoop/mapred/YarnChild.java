@@ -141,7 +141,7 @@ class YarnChild {
       childUGI = UserGroupInformation.createRemoteUser(System
           .getenv(ApplicationConstants.Environment.USER.toString()));
       // Add tokens to new user so that it may execute its task correctly.
-      job.getCredentials().addTokensToUGI(childUGI);
+      childUGI.addCredentials(credentials);
 
       // Create a final reference to the task for the doAs block
       final Task taskFinal = task;
