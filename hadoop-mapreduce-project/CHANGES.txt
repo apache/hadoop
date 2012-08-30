@@ -58,6 +58,9 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4470. Fix TestCombineFileInputFormat.testForEmptyFile (ikatsov via tucu)
 
+    MAPREDUCE-4608. hadoop-mapreduce-client is missing some dependencies.
+    (tucu via tomwhite)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
