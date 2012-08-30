@@ -48,6 +48,9 @@ abstract public class Shell {
   /** a Unix command to get the current user's name */
   public final static String USER_NAME_COMMAND = "whoami";
 
+  /** Windows CreateProcess synchronization object */
+  public static final Object WindowsProcessLaunchLock = new Object();
+
   /** a Unix command to set the change user's groups list */
   public static final String SET_GROUP_COMMAND = "chgrp";
 
@@ -253,7 +256,19 @@ abstract public class Shell {
       builder.directory(this.dir);
     }
     
-    process = builder.start();
+    if (Shell.WINDOWS) {
+      synchronized (WindowsProcessLaunchLock) {
+        // To workaround the race condition issue with child processes
+        // inheriting unintended handles during process launch that can
+        // lead to hangs on reading output and error streams, we
+        // serialize process creation. More info available at:
+        // http://support.microsoft.com/kb/315939
+        process = builder.start();
+      }
+    } else {
+      process = builder.start();
+    }
+
     if (timeOutInterval > 0) {
       timeOutTimer = new Timer();
       timeoutTimerTask = new ShellTimeoutTimerTask(

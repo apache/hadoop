@@ -87,3 +87,5 @@ BUG FIXES
     MAPREDUCE-4597. Fix intermittent failures in TestKillSubProcesses. (Bikas
     Saha via acmurthy)
 
+    HADOOP-8732. Fix intermittent failures in tests by serializing process
+    creation to get around a bug in MS Windows. (Ivan Mitic via acmurthy)
