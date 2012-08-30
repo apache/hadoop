@@ -223,7 +223,7 @@ public class TestCredentials {
     for (int i=0; i < service.length; i++) {
       creds.addToken(service[i], token[i]);
     }
-    creds.addTokensToUGI(ugi);
+    ugi.addCredentials(creds);
 
     creds = ugi.getCredentials();
     for (int i=0; i < service.length; i++) {
