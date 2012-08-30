@@ -136,6 +136,8 @@
 
   <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
+ 
+  <property name="test.winutils.dir" value="${test.build.dir}/winutils/"/>
 
   <property name="librecordio.test.dir" value="${test.build.dir}/librecordio"/>
   <property name="web.src.dir" value="${basedir}/src/web"/>
@@ -621,6 +623,16 @@
 
     <exec dir="${build.winutils}" executable="${msbuild.cmd}" failonerror="true">
       <arg line="${winutils.src.dir}/winutils.vcxproj /p:Configuration=Release;OutDir=${build.winutils}/"/>
+    </exec>
+
+    <copy file="${build.winutils}/winutils.exe" todir="${basedir}/bin"/>
+  </target>
+
+  <target name="compile-ms-winutils-debug" if="windows">
+    <mkdir dir="${build.winutils}"/>
+
+    <exec dir="${build.winutils}" executable="${msbuild.cmd}" failonerror="true">
+      <arg line="${winutils.src.dir}/winutils.vcxproj /p:Configuration=Debug;OutDir=${build.winutils}/"/>
     </exec>
 
     <copy file="${build.winutils}/winutils.exe" todir="${basedir}/bin"/>
@@ -2172,6 +2184,20 @@
         <env key="LIBHDFS_INSTALL_DIR" value="${install.c++}/lib"/>  
         <env key="LIB_DIR" value="${common.ivy.lib.dir}"/>
 		<arg value="test"/>
+    </exec>
+  </target>
+
+  <target name="test-ms-winutils" depends="compile-ms-winutils-debug" if="windows">
+    <delete dir="${test.winutils.dir}"/>
+    <mkdir dir="${test.winutils.dir}"/>
+    <copy todir="${test.winutils.dir}">
+      <fileset dir="${winutils.src.dir}\tests" includes="*.bat"/>
+    </copy>
+
+    <exec dir="${test.winutils.dir}"
+      executable="${test.winutils.dir}\test-all.bat"
+      failonerror="true">
+      <env key="HADOOP_HOME" value="${basedir}"/>
     </exec>
   </target>
 

@@ -69,6 +69,8 @@ branch-hadoop-1-win - unreleased
     MAPREDUCE-4510. Fix needless check/logging of getconf in Windows. (Bikas
     Saha via acmurthy)
 
+    HADOOP-8453. Added unit tests for winutils. (Chuan Liu via acmurthy)
+
 BUG FIXES
 
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes
