@@ -65,6 +65,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-3773. Add queue metrics with buckets for job run times. (omalley
     via acmurthy)
 
+    MAPREDUCE-4569. Fixed TestHsWebServicesJobsQuery to pass on JDK7 by not
+    depending on test order. (Thomas Graves via vinodkv)
+
   OPTIMIZATIONS
 
     MAPREDUCE-3850. Avoid redundant calls for tokens in TokenCache (Daryn
