@@ -487,7 +487,7 @@ public class MRAppMaster extends CompositeService {
         fsTokens.addAll(Credentials.readTokenStorageFile(jobTokenFile, conf));
         LOG.info("jobSubmitDir=" + jobSubmitDir + " jobTokenFile="
             + jobTokenFile);
-        fsTokens.addTokensToUGI(currentUser); // For use by AppMaster itself.
+        currentUser.addCredentials(fsTokens); // For use by AppMaster itself.
       }
     } catch (IOException e) {
       throw new YarnException(e);
