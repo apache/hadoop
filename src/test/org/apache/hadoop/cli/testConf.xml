@@ -506,7 +506,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -527,7 +527,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -551,19 +551,19 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data60bytes</expected-output>
+          <expected-output>DATAFILE60_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data120bytes</expected-output>
+          <expected-output>DATAFILE120_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -585,7 +585,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/dir0/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/dir0/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -607,7 +607,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -632,19 +632,19 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/dir0/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/dir0/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/dir0/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*NAMENODE/dir0/data60bytes</expected-output>
+          <expected-output>DATAFILE60_SIZE( |\t)*NAMENODE/dir0/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*NAMENODE/dir0/data120bytes</expected-output>
+          <expected-output>DATAFILE120_SIZE( |\t)*NAMENODE/dir0/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -677,7 +677,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^NAMENODE/dir0( |\t)*450</expected-output>
+          <expected-output>^NAMENODE/dir0( |\t)*DATAFILE_TOTAL_2xSIZE</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -709,7 +709,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^NAMENODE/user/[a-zA-Z0-9]*/dir0( |\t)*450</expected-output>
+          <expected-output>^NAMENODE/user/[a-zA-Z0-9]*/dir0( |\t)*DATAFILE_TOTAL_2xSIZE</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -747,7 +747,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^NAMENODE/dir0( |\t)*450</expected-output>
+          <expected-output>^NAMENODE/dir0( |\t)*DATAFILE_TOTAL_2xSIZE</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1638,7 +1638,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1659,7 +1659,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1676,19 +1676,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/dir0/dir1/data/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/dir0/dir1/data/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/dir0/dir1/data/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*NAMENODE/dir0/dir1/data/data60bytes</expected-output>
+          <expected-output>DATAFILE60_SIZE( |\t)*NAMENODE/dir0/dir1/data/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*NAMENODE/dir0/dir1/data/data120bytes</expected-output>
+          <expected-output>DATAFILE120_SIZE( |\t)*NAMENODE/dir0/dir1/data/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1705,19 +1705,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data60bytes</expected-output>
+          <expected-output>DATAFILE60_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data120bytes</expected-output>
+          <expected-output>DATAFILE120_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1739,11 +1739,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/dir0/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/dir0/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1765,11 +1765,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1894,7 +1894,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1915,7 +1915,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/data15bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1932,19 +1932,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/dir0/dir1/data/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/dir0/dir1/data/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/dir0/dir1/data/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*NAMENODE/dir0/dir1/data/data60bytes</expected-output>
+          <expected-output>DATAFILE60_SIZE( |\t)*NAMENODE/dir0/dir1/data/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*NAMENODE/dir0/dir1/data/data120bytes</expected-output>
+          <expected-output>DATAFILE120_SIZE( |\t)*NAMENODE/dir0/dir1/data/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1961,19 +1961,19 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data30bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^60( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data60bytes</expected-output>
+          <expected-output>DATAFILE60_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data60bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^120( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data120bytes</expected-output>
+          <expected-output>DATAFILE120_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/dir1/data/data120bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -1995,11 +1995,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/dir0/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/dir0/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2021,11 +2021,11 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^15( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data15bytes</expected-output>
+          <expected-output>^DATAFILE15_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data15bytes</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^30( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data30bytes</expected-output>
+          <expected-output>DATAFILE30_SIZE( |\t)*NAMENODE/user/[a-zA-Z0-9]*/dir0/data30bytes</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2795,7 +2795,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>data60bytes-60</expected-output>
+          <expected-output>data60bytes-DATAFILE60_SIZE</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2812,7 +2812,7 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>data60bytes-60</expected-output>
+          <expected-output>data60bytes-DATAFILE60_SIZE</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2868,19 +2868,19 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data15bytes-15"</expected-output>
+          <expected-output>"data15bytes-DATAFILE15_SIZE"</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data30bytes-30"</expected-output>
+          <expected-output>"data30bytes-DATAFILE30_SIZE"</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data60bytes-60"</expected-output>
+          <expected-output>"data60bytes-DATAFILE60_SIZE"</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data120bytes-120"</expected-output>
+          <expected-output>"data120bytes-DATAFILE120_SIZE"</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
@@ -2905,19 +2905,19 @@
       <comparators>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data15bytes-15"</expected-output>
+          <expected-output>"data15bytes-DATAFILE15_SIZE"</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data30bytes-30"</expected-output>
+          <expected-output>"data30bytes-DATAFILE30_SIZE"</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data60bytes-60"</expected-output>
+          <expected-output>"data60bytes-DATAFILE60_SIZE"</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
-          <expected-output>"data120bytes-120"</expected-output>
+          <expected-output>"data120bytes-DATAFILE120_SIZE"</expected-output>
         </comparator>
         <comparator>
           <type>TokenComparator</type>
