@@ -116,6 +116,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3177. Update DFSClient and DataXceiver to handle different checkum
     types in file checksum computation.  (Kihwal Lee via daryn)
 
+    HDFS-3861. Deadlock in DFSClient (Kihwal Lee via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
