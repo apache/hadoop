@@ -39,10 +39,13 @@ public class TestWindowsBasedProcessTree extends TestCase {
   }
   
   public void testTree() {
-    if(!WindowsBasedProcessTree.isAvailable()) {
-      LOG.info("WindowsBasedProcessTree not available on this platform. Not testing");
-      return;
+    if( !Shell.WINDOWS) {
+      LOG.info("Platform not Windows. Not testing");
+      return;      
     }
+    assertTrue("WindowsBasedProcessTree should be available on Windows", 
+               WindowsBasedProcessTree.isAvailable());
+    
     
     WindowsBasedProcessTreeTester pTree = new WindowsBasedProcessTreeTester("-1");
     pTree.infoStr = "3524,1024,1024,500\r\n2844,1024,1024,500\r\n";

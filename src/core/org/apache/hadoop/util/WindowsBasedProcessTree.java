@@ -45,9 +45,24 @@ public class WindowsBasedProcessTree extends ResourceCalculatorProcessTree {
   private long cpuTimeMs = 0;
   private Map<String, ProcessInfo> processTree = 
       new HashMap<String, ProcessInfo>();
-  
+    
   public static boolean isAvailable() {
-    return Shell.WINDOWS;
+    if (Shell.WINDOWS) {
+      ShellCommandExecutor shellExecutor = new ShellCommandExecutor(
+          new String[] { Shell.WINUTILS, "help" });
+      try {
+        shellExecutor.execute();
+      } catch (IOException e) {
+        LOG.error(StringUtils.stringifyException(e));
+      } finally {
+        String output = shellExecutor.getOutput();
+        if (output != null &&
+            output.contains("Prints to stdout a list of processes in the task")) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   public WindowsBasedProcessTree(String pid) {

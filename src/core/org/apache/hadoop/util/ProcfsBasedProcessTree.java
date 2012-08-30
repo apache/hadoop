@@ -53,32 +53,30 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
   static final String PROCFS_STAT_FILE = "stat";
   static final String PROCFS_CMDLINE_FILE = "cmdline";
   public static final long PAGE_SIZE;
+  public static final long JIFFY_LENGTH_IN_MILLIS; // in millisecond
+  
   static {
-    ShellCommandExecutor shellExecutor =
-            new ShellCommandExecutor(new String[]{"getconf",  "PAGESIZE"});
+    long jiffiesPerSecond = -1;
     long pageSize = -1;
     try {
-      shellExecutor.execute();
-      pageSize = Long.parseLong(shellExecutor.getOutput().replace("\n", ""));
-    } catch (IOException e) {
-      LOG.error(StringUtils.stringifyException(e));
-    } finally {
-      PAGE_SIZE = pageSize;
-    }
-  }
-  public static final long JIFFY_LENGTH_IN_MILLIS; // in millisecond
-  static {
-    ShellCommandExecutor shellExecutor =
-            new ShellCommandExecutor(new String[]{"getconf",  "CLK_TCK"});
-    long jiffiesPerSecond = -1;
-    try {
-      shellExecutor.execute();
-      jiffiesPerSecond = Long.parseLong(shellExecutor.getOutput().replace("\n", ""));
+      if(Shell.LINUX) {
+        ShellCommandExecutor shellExecutorClk = new ShellCommandExecutor(
+            new String[] { "getconf", "CLK_TCK" });
+        shellExecutorClk.execute();
+        jiffiesPerSecond = Long.parseLong(shellExecutorClk.getOutput().replace("\n", ""));
+
+        ShellCommandExecutor shellExecutorPage = new ShellCommandExecutor(
+            new String[] { "getconf", "PAGESIZE" });
+        shellExecutorPage.execute();
+        pageSize = Long.parseLong(shellExecutorPage.getOutput().replace("\n", ""));
+
+      }
     } catch (IOException e) {
       LOG.error(StringUtils.stringifyException(e));
     } finally {
       JIFFY_LENGTH_IN_MILLIS = jiffiesPerSecond != -1 ?
                      Math.round(1000D / jiffiesPerSecond) : -1;
+                     PAGE_SIZE = pageSize;
     }
   }
 
@@ -110,9 +108,8 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
    */
   public static boolean isAvailable() {
     try {
-      String osName = System.getProperty("os.name");
-      if (!osName.startsWith("Linux")) {
-        LOG.info("ProcfsBasedProcessTree currently is supported only on "
+      if (!Shell.LINUX) {
+        LOG.debug("ProcfsBasedProcessTree currently is supported only on "
             + "Linux.");
         return false;
       }

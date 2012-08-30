@@ -56,10 +56,11 @@ public class ProcessTree {
     if (Shell.WINDOWS) {
       ShellCommandExecutor shexec = null;
       try {
-        String args[] = {Shell.WINUTILS};
+        String args[] = {Shell.WINUTILS, "help"};
         shexec = new ShellCommandExecutor(args);
         shexec.execute();
       } catch (IOException e) {
+        LOG.error(StringUtils.stringifyException(e));
       } finally {
         String result = shexec.getOutput();
         if (result == null

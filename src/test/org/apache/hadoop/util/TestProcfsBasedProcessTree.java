@@ -96,14 +96,17 @@ public class TestProcfsBasedProcessTree extends TestCase {
 
   public void testProcessTree() {
 
+    if (!Shell.LINUX) {
+      System.out
+          .println("ProcfsBasedProcessTree is not available on this system. Not testing");
+      return;
+
+    }
     try {
-      if (!ProcfsBasedProcessTree.isAvailable()) {
-        System.out
-            .println("ProcfsBasedProcessTree is not available on this system. Not testing");
-        return;
-      }
+      assertTrue(ProcfsBasedProcessTree.isAvailable());
     } catch (Exception e) {
       LOG.info(StringUtils.stringifyException(e));
+      assertTrue("ProcfsBaseProcessTree should be available on Linux", false);
       return;
     }
     // create shell script

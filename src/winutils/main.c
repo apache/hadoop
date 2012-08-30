@@ -59,6 +59,11 @@ int wmain(int argc, wchar_t* argv[])
   {
     return SystemInfo();
   }
+  else if (wcscmp(L"help", cmd) == 0)
+  {
+    Usage(argv[0]);
+    return EXIT_SUCCESS;
+  }
   else
   {
     Usage(argv[0]);
