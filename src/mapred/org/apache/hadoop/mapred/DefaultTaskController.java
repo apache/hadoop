@@ -126,18 +126,7 @@ public class DefaultTaskController extends TaskController {
 
       String commandFile = writeCommand(cmdLine, rawFs, p).getAbsolutePath();
       rawFs.setPermission(p, TaskController.TASK_LAUNCH_SCRIPT_PERMISSION);
-      String[] commandArray = null;
-      if(Shell.WINDOWS) {
-        if(ProcessTree.isSetsidAvailable) {
-          commandArray = new String[] { Shell.WINUTILS, "task", "create",
-              attemptId, "cmd /c " + commandFile };
-        }
-        else {
-          commandArray = new String[]{ "cmd", "/c", commandFile};
-        }
-      } else {
-        commandArray = new String[] { "bash", "-c", commandFile };
-      }
+      String[] commandArray = Shell.getRunCommand(commandFile, attemptId);
       shExec = new ShellCommandExecutor(commandArray, currentWorkDirectory);
       shExec.execute();
     } catch (Exception e) {

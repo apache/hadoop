@@ -28,7 +28,13 @@ import java.util.TimerTask;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -106,13 +112,15 @@ class NodeHealthCheckerService {
     String exceptionStackTrace = "";
 
     public NodeHealthMonitorExecutor(String[] args) {
-      ArrayList<String> execScript = new ArrayList<String>();
-      execScript.add(nodeHealthScript);
+      final String windowsGroupId = 
+          "_HadoopWindowsNodeHealthCheckerService_" + 
+          Long.toString(System.currentTimeMillis()); // avoid name collisions
+      String scriptCommand = nodeHealthScript;
       if (args != null) {
-        execScript.addAll(Arrays.asList(args));
+        scriptCommand = nodeHealthScript + " " + StringUtils.join(" ", args);
       }
-      shexec = new ShellCommandExecutor((String[]) execScript
-          .toArray(new String[execScript.size()]), null, null, scriptTimeout);
+      String[] command = Shell.getRunCommand(scriptCommand, windowsGroupId);
+      shexec = new ShellCommandExecutor(command, null, null, scriptTimeout);
     }
 
     @Override
@@ -125,13 +133,15 @@ class NodeHealthCheckerService {
         status = HealthCheckerExitStatus.FAILED_WITH_EXIT_CODE;
       } catch (Exception e) {
         LOG.warn("Caught exception : " + e.getMessage());
-        if (!shexec.isTimedOut()) {
-          status = HealthCheckerExitStatus.FAILED_WITH_EXCEPTION;
-        } else {
-          status = HealthCheckerExitStatus.TIMED_OUT;
-        }
+        status = HealthCheckerExitStatus.FAILED_WITH_EXCEPTION;
         exceptionStackTrace = StringUtils.stringifyException(e);
       } finally {
+        // Check for timeout in the finally block as the exception is not
+        // always thrown when the script is killed
+        if (shexec.isTimedOut()) {
+          status = HealthCheckerExitStatus.TIMED_OUT;
+        }
+
         if (status == HealthCheckerExitStatus.SUCCESS) {
           if (hasErrors(shexec.getOutput())) {
             status = HealthCheckerExitStatus.FAILED;
@@ -327,8 +337,22 @@ class NodeHealthCheckerService {
     if (nodeHealthScript == null || nodeHealthScript.trim().isEmpty()) {
       return false;
     }
-    File f = new File(nodeHealthScript);
-    return f.exists() && f.canExecute();
+
+    Path path = new Path(nodeHealthScript);
+    try {
+      // Use LocalFileSystem to check if the script exists and if it
+      // is executable as Java's API does not work well cross-platform
+      FileSystem localFS = FileSystem.getLocal(conf);
+      FileStatus fs = localFS.getFileStatus(path);
+      FsPermission fsPerm = fs.getPermission();
+      return (localFS.exists(path)
+              && fsPerm.getUserAction().implies(FsAction.EXECUTE));
+    } catch (IOException ex) {
+      LOG.warn("Failed to extract file status " + path
+               + ". Node health script will not be allowed to run");
+    }
+    
+    return false;
   }
 
   private synchronized void setHealthStatus(boolean isHealthy, String output) {

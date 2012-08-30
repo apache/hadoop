@@ -63,6 +63,9 @@ branch-hadoop-1-win - unreleased
 
     HADOOP-8544 Move an assertion location in 'winutils chmod' (Chuan Liu via sanjay)
 
+    MAPREDUCE-4598. Add support for NodeHealthCheck script for Windows. (Bikas
+    Saha via acmurthy)
+
 BUG FIXES
 
     HDFS-6527. Backport HADOOP-7389: Use of TestingGroups by tests causes

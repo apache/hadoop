@@ -27,7 +27,9 @@ import java.util.TimerTask;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
+import org.apache.hadoop.util.Shell;
 
 import junit.framework.TestCase;
 
@@ -45,7 +47,8 @@ public class TestNodeHealthService extends TestCase {
   private String testRootDir = new File(System.getProperty("test.build.data",
       "/tmp")).getAbsolutePath();
 
-  private File nodeHealthscriptFile = new File(testRootDir, "failingscript.sh");
+  private File nodeHealthscriptFile = new File(testRootDir,
+      Shell.WINDOWS ? "failingscript.cmd" : "failingscript.sh");
 
   @Override
   protected void tearDown() throws Exception {
@@ -69,15 +72,17 @@ public class TestNodeHealthService extends TestCase {
   }
 
   private void writeNodeHealthScriptFile(String scriptStr, boolean setExecutable)
-      throws IOException {
+      throws IOException, InterruptedException {
     PrintWriter pw = new PrintWriter(new FileOutputStream(nodeHealthscriptFile));
     pw.println(scriptStr);
     pw.flush();
     pw.close();
-    nodeHealthscriptFile.setExecutable(setExecutable);
+    FileUtil.chmod(nodeHealthscriptFile.getAbsolutePath(),
+                  (setExecutable ? "+x" : "-x"));
   }
 
-  public void testNodeHealthScriptShouldRun() throws IOException {
+  public void testNodeHealthScriptShouldRun()
+      throws IOException, InterruptedException {
     // Node health script should not start if there is no property called
     // node health script path.
     assertFalse("Health checker should not have started",
@@ -103,7 +108,7 @@ public class TestNodeHealthService extends TestCase {
     TaskTrackerHealthStatus healthStatus = new TaskTrackerHealthStatus();
     String errorScript = "echo ERROR\n echo \"Tracker not healthy\"";
     String normalScript = "echo \"I am all fine\"";
-    String timeOutScript = "sleep 4\n echo\"I am fine\"";
+    String timeOutScript = "sleep 4\n echo \"I am fine\"";
     Configuration conf = getConfForNodeHealthScript();
     conf.writeXml(new FileOutputStream(nodeHealthConfigFile));
 

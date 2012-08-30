@@ -169,12 +169,8 @@ public class ProcessTree {
       return;
     }
 
-    String[] args = null;
-    if(Shell.WINDOWS){
-      args = new String[] {Shell.WINUTILS, "task", "kill", pgrpId};
-    } else {
-      args = new String[] { "kill", "-" + signal.getValue() , "-"+pgrpId };
-    }
+    String[] args =
+      Shell.getSignalKillProcessGroupCommand(signal.getValue(), pgrpId);
     ShellCommandExecutor shexec = new ShellCommandExecutor(args);
     try {
       shexec.execute();
