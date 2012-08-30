@@ -320,6 +320,9 @@ Branch-2 ( Unreleased changes )
     HADOOP-8075. Lower native-hadoop library log from info to debug.
     (Hızır Sefa İrken via eli)
 
+    HADOOP-8748. Refactor DFSClient retry utility methods to a new class
+    in org.apache.hadoop.io.retry.  (Arun C Murthy via szetszwo)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
