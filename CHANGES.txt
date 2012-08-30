@@ -106,6 +106,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4499. Looking for speculative tasks is very expensive in 1.x
     (Koji Noguchi via tgraves)
 
+    HADOOP-8748. Refactor DFSClient retry utility methods to a new class in
+    org.apache.hadoop.io.retry.  Contributed by Arun C Murthy.
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
