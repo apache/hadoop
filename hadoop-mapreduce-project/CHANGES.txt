@@ -61,6 +61,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4608. hadoop-mapreduce-client is missing some dependencies.
     (tucu via tomwhite)
 
+    MAPREDUCE-4610. Support deprecated mapreduce.job.counters.limit property in
+    MR2. (tomwhite)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
