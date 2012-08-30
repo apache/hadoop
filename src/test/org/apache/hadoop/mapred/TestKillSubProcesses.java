@@ -203,15 +203,23 @@ public class TestKillSubProcesses extends TestCase {
     if(ProcessTree.isSetsidAvailable) {
       if(Shell.WINDOWS) {
         try {
-          Thread.sleep(1000);
-          String result = Shell.execCommand("cmd", "/c", Shell.WINUTILS
-              + " task isAlive " + pid);
-          assertTrue("Map process tree not alive", result.contains("IsAlive"));
-          String[] parts = result.split("[,\r\n]");
-          assertTrue(parts.length >= 2);
-          // > numLevelsOfSubProcesses because of winutils etc are also part of 
-          // the task job object along with the spawned scripts
-          assertTrue(Integer.parseInt(parts[1]) > numLevelsOfSubProcesses);
+          int sleepCount = 5;
+          int numChildren = 0;
+          while(sleepCount-- > 0) {
+            Thread.sleep(1000);
+            String result = Shell.execCommand("cmd", "/c", Shell.WINUTILS
+                + " task isAlive " + pid);
+            assertTrue("Map process tree not alive", result.contains("IsAlive"));
+            String[] parts = result.split("[,\r\n]");
+            assertTrue(parts.length >= 2);
+            // > numLevelsOfSubProcesses because of winutils etc are also part of 
+            // the task job object along with the spawned scripts
+            numChildren = Integer.parseInt(parts[1]);
+            if(numChildren > numLevelsOfSubProcesses){
+              break;
+            }
+          }
+          assertTrue(numChildren > numLevelsOfSubProcesses);
         } catch (InterruptedException ie) {
           // ignore
         }

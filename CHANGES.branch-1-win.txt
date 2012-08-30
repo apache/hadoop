@@ -81,3 +81,6 @@ BUG FIXES
     HADOOP-8657. Fix TestCLI to not hardcode file length since it's
     encoding/platform dependent. (Bikas Saha via acmurthy) 
 
+    MAPREDUCE-4597. Fix intermittent failures in TestKillSubProcesses. (Bikas
+    Saha via acmurthy)
+
