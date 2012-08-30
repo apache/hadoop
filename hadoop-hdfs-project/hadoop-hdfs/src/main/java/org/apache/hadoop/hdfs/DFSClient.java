@@ -535,7 +535,7 @@ public class DFSClient implements java.io.Closeable {
    *  until the first output stream is created. The same instance will
    *  be returned until all output streams are closed.
    */
-  public synchronized LeaseRenewer getLeaseRenewer() throws IOException {
+  public LeaseRenewer getLeaseRenewer() throws IOException {
       return LeaseRenewer.getInstance(authority, ugi, this);
   }
 

@@ -1439,6 +1439,8 @@ Release 0.23.3 - UNRELEASED
     HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner
     thread (Kihwal Lee via daryn)
 
+    HDFS-3861. Deadlock in DFSClient (Kihwal Lee via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
