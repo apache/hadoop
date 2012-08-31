@@ -95,3 +95,5 @@ BUG FIXES
     HADOOP-8732. Fix intermittent failures in tests by serializing process
     creation to get around a bug in MS Windows. (Ivan Mitic via acmurthy)
 
+    HDFS-3833. TestDFSShell fails on windows due to concurrent file 
+    read/write. (Brandon Li via suresh)

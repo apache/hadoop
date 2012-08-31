@@ -1194,6 +1194,11 @@ public class TestDFSShell extends TestCase {
   public void testGet() throws IOException {
     DFSTestUtil.setLogLevel2All(FSInputChecker.LOG);
     final Configuration conf = new Configuration();
+    // Race can happen here: block scanner is reading the file when test tries
+    // to corrupt the test file, which will fail the test on Windows platform.
+    // Disable block scanner to avoid this race.
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1);
+  
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
 
