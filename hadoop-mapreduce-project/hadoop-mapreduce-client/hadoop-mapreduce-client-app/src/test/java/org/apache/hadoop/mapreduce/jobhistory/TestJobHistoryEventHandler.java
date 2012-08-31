@@ -330,7 +330,7 @@ public class TestJobHistoryEventHandler {
     Mockito.when(jobId.getAppId()).thenReturn(mockAppId);
 
     jheh.addToFileMap(jobId);
-    jheh.setSignalled(true);
+    jheh.setForcejobCompletion(true);
     for(int i=0; i < numEvents; ++i) {
       events[i] = getEventToEnqueue(jobId);
       jheh.handle(events[i]);
