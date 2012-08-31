@@ -301,9 +301,19 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
     }
   }
 
+  private String getStat() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("ContainersAllocated: ").append(numContainersAllocated)
+        .append(", ContainersFinished: ").append(numFinishedContainers)
+        .append(", NumContainerReleaseRequests: ")
+        .append(numContainerReleaseRequests);
+    return sb.toString();
+  }
+  
   @SuppressWarnings("unchecked")
   @Override
   protected void heartbeat() throws Exception {
+    LOG.info("BeforeHeartbeat: " + getStat());
     int headRoom = getAvailableResources() != null ? getAvailableResources()
         .getMemory() : 0;// first time it would be null
     AMResponse response = errorCheckedMakeRemoteRequest();
@@ -322,6 +332,8 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
     List<NodeReport> updatedNodeReports = response.getUpdatedNodes();
     logUpdatedNodes(updatedNodeReports);
  
+    LOG.info("AfterHeartbeat: " + getStat());
+    
     // Inform the Containers about completion..
     for (ContainerStatus c : finishedContainers) {
       eventHandler.handle(new AMContainerEventReleased(c));
@@ -420,6 +432,7 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
       RMCommunicatorContainerDeAllocateRequestEvent event = (RMCommunicatorContainerDeAllocateRequestEvent) rawEvent;
       releaseLock.lock();
       try {
+        // TODO XXX: Currently the RM does not handle release requests for RUNNING containers.
         numContainerReleaseRequests++;
         release.add(event.getContainerId());
       } finally {
@@ -506,7 +519,7 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
   
   private void logFinishedContainers(List<ContainerStatus> finishedContainers) {
     if (finishedContainers.size() > 0) {
-      LOG.info(finishedContainers.size() + " finished");
+      LOG.info(finishedContainers.size() + " containers finished");
       for (ContainerStatus cs : finishedContainers) {
         LOG.info("FinihsedContainer: " + cs);
       }

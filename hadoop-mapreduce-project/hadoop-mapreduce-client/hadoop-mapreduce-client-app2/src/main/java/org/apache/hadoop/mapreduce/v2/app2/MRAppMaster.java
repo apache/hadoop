@@ -444,6 +444,7 @@ public class MRAppMaster extends CompositeService {
     // second timeout before the exit.
     // TODO XXX: Modify TaskAttemptCleaner to empty it's queue while stopping.
     public void handle(JobFinishEvent event) {
+      LOG.info("Handling JobFinished Event");
       AMShutdownRunnable r = new AMShutdownRunnable();
       Thread t = new Thread(r, "AMShutdownThread");
       t.start();
@@ -506,6 +507,8 @@ public class MRAppMaster extends CompositeService {
       @Override
       public void run() {
         maybeSendJobEndNotification();
+        // TODO XXX Add a timeout.
+        LOG.info("Waiting for all containers and TaskAttempts to complete");
         while (!allContainersComplete() || !allTaskAttemptsComplete()) {
           try {
             synchronized(this) {
@@ -516,6 +519,7 @@ public class MRAppMaster extends CompositeService {
             break;
           }
         }
+        LOG.info("All Containers and TaskAttempts Complete. Stopping services");
         stopAM();
         LOG.info("AM Shutdown Thread Completing");
       }

@@ -25,8 +25,7 @@ public enum TaskAttemptEventType {
 
   //Producer:Task, Speculator
   TA_SCHEDULE,
-  TA_RESCHEDULE,
-  
+
   //Producer: TaskAttemptListener
   TA_STARTED_REMOTELY,
   TA_STATUS_UPDATE,

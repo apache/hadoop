@@ -591,7 +591,8 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
 
     ++numberUncompletedAttempts;
     //schedule the nextAttemptNumber
-    eventHandler.handle(new TaskAttemptScheduleEvent(attempt.getID(), TaskAttemptEventType.TA_SCHEDULE, failedAttempts > 0));
+    eventHandler.handle(new TaskAttemptScheduleEvent(attempt.getID(),
+        TaskAttemptEventType.TA_SCHEDULE, failedAttempts > 0));
     
   }
 

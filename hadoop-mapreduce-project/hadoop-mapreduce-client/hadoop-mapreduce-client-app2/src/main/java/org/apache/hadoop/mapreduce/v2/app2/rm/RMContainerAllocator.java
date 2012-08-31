@@ -56,6 +56,7 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventKillRequest;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMContainerRequestor.ContainerRequest;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainer;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerAssignTAEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventType;
@@ -158,6 +159,8 @@ public class RMContainerAllocator extends AbstractService
       attemptToLaunchRequestMap = new HashMap<TaskAttemptId, AMSchedulerTALaunchRequestEvent>();
   
   private int containersAllocated = 0;
+  private int newContainerAllocations = 0;
+  private int existingContainerAllocations = 0;
   private int containersReleased = 0;
   private int hostLocalAssigned = 0;
   private int rackLocalAssigned = 0;
@@ -177,7 +180,6 @@ public class RMContainerAllocator extends AbstractService
   BlockingQueue<AMSchedulerEvent> eventQueue
     = new LinkedBlockingQueue<AMSchedulerEvent>();
 
-  @SuppressWarnings("rawtypes")
   public RMContainerAllocator(RMContainerRequestor requestor,
       AppContext appContext) {
     super("RMContainerAllocator");
@@ -211,7 +213,10 @@ public class RMContainerAllocator extends AbstractService
         MRJobConfig.MR_AM_SCHEDULER_INTERVAL,
         MRJobConfig.DEFAULT_MR_AM_SCHEDULER_INTERVAL);
     shouldReUse = conf.getBoolean("am.scheduler.shouldReuse", false);
-    LOG.info("XXX: ShouldReUse: " + shouldReUse);
+    LOG.info("AMSchedulerConfiguration: " + "ReUseEnabled: " + shouldReUse
+        + ", reduceSlowStart: " + reduceSlowStart + ", maxReduceRampupLimit: "
+        + maxReduceRampupLimit + ", maxReducePreemptionLimit: "
+        + maxReducePreemptionLimit);
     RackResolver.init(conf);
   }
 
@@ -249,7 +254,8 @@ public class RMContainerAllocator extends AbstractService
     
     scheduleTimer = new Timer("AMSchedulerTimer", true);
     scheduleTimerTask = new ScheduleTimerTask();
-    scheduleTimer.scheduleAtFixedRate(scheduleTimerTask, scheduleInterval, scheduleInterval);
+    scheduleTimer.scheduleAtFixedRate(scheduleTimerTask, scheduleInterval,
+        scheduleInterval);
     this.job = appContext.getJob(jobId);
     
     super.start();
@@ -260,10 +266,10 @@ public class RMContainerAllocator extends AbstractService
     this.stopEventHandling = true;
     if (eventHandlingThread != null)
       eventHandlingThread.interrupt();
-    super.stop();
     if (scheduleTimerTask != null) {
       scheduleTimerTask.stop();
     }
+    super.stop();
     LOG.info("Final Scheduler Stats: " + getStat());
   }
   
@@ -322,11 +328,10 @@ public class RMContainerAllocator extends AbstractService
       throw new YarnException(e);
     }
   }
-  
-  // TODO XXX: Before and after makeRemoteRequest statistics.
 
-protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
-    
+  protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
+
+    LOG.info("XXX: Processing the event " + sEvent.toString());
     switch(sEvent.getType()) {
     // TODO XXX: recalculateReduceSchedule may need to bet set on other events - not just containerAllocated.
     case S_TA_LAUNCH_REQUEST:
@@ -345,21 +350,22 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
     case S_CONTAINERS_ALLOCATED:
       handleContainersAllocated((AMSchedulerEventContainersAllocated) sEvent);
       break;
-    // No HEALTH_CHANGE events. Not modifying the table based on these.
-    case S_CONTAINER_COMPLETED: // Maybe use this to reschedule reduces ?
+    case S_CONTAINER_COMPLETED: //Nothing specific to be done in this scheduler.
       break;
-    // Node State Change Event. May want to withdraw requests related to the node, and put
-    // in fresh requests.
-      
-    // Similarly for the case where a  node gets blacklisted.
-    default:
+    case S_NODE_BLACKLISTED:
+      // TODO XXX Withdraw requests related to this node and place new ones.
+      break;
+    case S_NODE_UNHEALTHY:
+      // Ignore. RM will not allocated containers on this node.
+      break;
+    case S_NODE_HEALTHY:
+      // Ignore. RM will start allocating containers if there's pending requests.
       break;
     }
   }
 
   private void handleTaLaunchRequest(AMSchedulerTALaunchRequestEvent event) {
     // Add to queue of pending tasks.
-    LOG.info("Processing the event " + event.toString());
     attemptToLaunchRequestMap.put(event.getAttemptID(), event);
     if (event.getAttemptID().getTaskId().getTaskType() == TaskType.MAP) {
       mapResourceReqt = maybeComputeNormalizedRequestForType(event,
@@ -381,10 +387,8 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
   }
 
   private void handleTaStopRequest(AMSchedulerTAStopRequestEvent event) {
-    LOG.info("Processing the event " + event.toString());
     TaskAttemptId aId = event.getAttemptID();
     attemptToLaunchRequestMap.remove(aId);
-    // XXX Not very efficient. List / check type.
     boolean removed = pendingReduces.remove(aId);
     if (!removed) {
       removed = scheduledRequests.remove(aId);
@@ -393,11 +397,16 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
         ContainerId containerId = assignedRequests.getContainerId(aId);
         if (containerId != null) {
           // Ask the container to stop.
-          sendEvent(new AMContainerEvent(containerId, AMContainerEventType.C_STOP_REQUEST));
-          // Inform the Node - the task has asked to be STOPPED / has already stopped.
-          sendEvent(new AMNodeEventTaskAttemptEnded(containerMap.get(containerId).getContainer().getNodeId(), containerId, event.getAttemptID(), event.failed()));
+          sendEvent(new AMContainerEvent(containerId,
+              AMContainerEventType.C_STOP_REQUEST));
+          // Inform the Node - the task has asked to be STOPPED / has already
+          // stopped.
+          sendEvent(new AMNodeEventTaskAttemptEnded(containerMap
+              .get(containerId).getContainer().getNodeId(), containerId,
+              event.getAttemptID(), event.failed()));
         } else {
-          LOG.warn("Received a STOP request for absent taskAttempt: " + event.getAttemptID());
+          LOG.warn("Received a STOP request for absent taskAttempt: "
+              + event.getAttemptID());
         }
       }
     }
@@ -409,33 +418,28 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
     // XXX: Maybe send the request to the task before sending it to the scheduler - the scheduler can then
     //  query the task to figure out whether the taskAttempt is the successfulAttempt - and whether to count it towards the reduce ramp up.
     //  Otherwise -> Job.getCompletedMaps() - will give an out of date picture, since the scheduler event will always be generated before the TaskCompleted event to the job.
-    
-    LOG.info("Processing the event " + event.toString());
     attemptToLaunchRequestMap.remove(event.getAttemptID());
     ContainerId containerId = assignedRequests.remove(event.getAttemptID());
     if (containerId != null) { // TODO Should not be null. Confirm.
-      sendEvent(new AMContainerTASucceededEvent(containerId, event.getAttemptID()));
-      sendEvent(new AMNodeEventTaskAttemptSucceeded(containerMap.get(containerId).getContainer().getNodeId(), containerId, event.getAttemptID()));
+      sendEvent(new AMContainerTASucceededEvent(containerId,
+          event.getAttemptID()));
+      sendEvent(new AMNodeEventTaskAttemptSucceeded(containerMap
+          .get(containerId).getContainer().getNodeId(), containerId,
+          event.getAttemptID()));
       containerAvailable(containerId);
     } else {
       LOG.warn("Received TaskAttemptSucceededEvent for unmapped TaskAttempt: "
           + event.getAttemptID() + ". Full event: " + event);
     }
   }
-  
+
   // TODO XXX: Deal with node blacklisting.
   
   private void handleContainersAllocated(AMSchedulerEventContainersAllocated event) {
-    // TODO XXX: Maybe have an event from the Requestor -> saying AllocationChanged -> listOfNewContainers, listOfFinishedContainers (finished containers goes to Containers directly, but should always come in from the RM)
-    // TODO XXX
-    /*
-     * Start allocating containers. Match requests to capabilities. 
-     * Send out Container_START / Container_TA_ASSIGNED events.
-     */
-    // TODO XXX: Logging of the assigned containerIds.
 
-    LOG.info("Processing the event " + event.toString());
     availableContainerIds.addAll(event.getContainerIds());
+  
+
     if (event.didHeadroomChange() || event.getContainerIds().size() > 0) {
       // TODO XXX -> recaulculateReduceSchedule in case of released containers
       // .... would imply CONTAINER_COMPLETED messages are required by the Scheduler.
@@ -445,6 +449,7 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
     schedule();
   }
 
+  // TODO XXX: Deal with node blacklisting.
   
   
   // TODO Override for re-use.
@@ -480,6 +485,7 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
   private synchronized void schedule() {
     assignContainers();
     requestContainers();
+    lastScheduleTime = clock.getTime();
   }
 
   protected void containerAvailable(ContainerId containerId) {
@@ -492,17 +498,6 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
           AMContainerEventType.C_STOP_REQUEST));
     }
   }
-
-  // TODO Override for container re-use.
-//  protected void containerAvailable(ContainerId containerId) {
-//    // For now releasing the container.
-//    // allocatedContainerIds.add(containerId);
-//    sendEvent(new AMContainerEvent(containerId,
-//        AMContainerEventType.C_STOP_REQUEST));
-//    // XXX A release should not be required. Only required when a container
-//    // cannot be assigned, or if there's an explicit request to stop the container,
-//    // in which case the release request will go out from the container itself.
-//  }
 
   @SuppressWarnings("unchecked")
   private int maybeComputeNormalizedRequestForType(
@@ -704,11 +699,14 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
         " AssignedReduces:" + assignedRequests.reduces.size() +
         " completedMaps:" + getJob().getCompletedMaps() + 
         " completedReduces:" + getJob().getCompletedReduces() +
-        " containersAllocated:" + containersAllocated +
+        " containersAllocated:" + containersAllocated + //Not super useful.
+        " newContainersAllocated: " + newContainerAllocations +
+        " existingContainersAllocated: " + existingContainerAllocations +
         " containersReleased:" + containersReleased +
         " hostLocalAssigned:" + hostLocalAssigned + 
         " rackLocalAssigned:" + rackLocalAssigned +
         " availableResources(headroom):" + requestor.getAvailableResources();
+    // TODO (Post 3902): Can hostLocal/rackLocal be handled elsewhere.
   }
 
 
@@ -719,11 +717,17 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
 
   @Private
   public int getMemLimit() {
-    int headRoom = requestor.getAvailableResources() != null ? requestor.getAvailableResources().getMemory() : 0;
-    return headRoom + assignedRequests.maps.size() * mapResourceReqt + 
-       assignedRequests.reduces.size() * reduceResourceReqt;
+    int headRoom = requestor.getAvailableResources() != null ? requestor
+        .getAvailableResources().getMemory() : 0;
+    return headRoom + assignedRequests.maps.size() * mapResourceReqt
+        + assignedRequests.reduces.size() * reduceResourceReqt;
   }
   
+  
+  /**
+   * Tracks attempts for which a Container ask has been sent to the
+   * RMCommunicator.
+   */
   private class ScheduledRequests {
     
     private final LinkedList<TaskAttemptId> earlierFailedMaps = 
@@ -820,7 +824,13 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
       containersAllocated += allocatedContainerIds.size();
       while (it.hasNext()) {
         ContainerId containerId = it.next();
-        Container allocated = containerMap.get(containerId).getContainer();
+        AMContainer amContainer = containerMap.get(containerId);
+        Container allocated = amContainer.getContainer();
+        if (amContainer.getState() == AMContainerState.ALLOCATED) {
+          newContainerAllocations++;
+        } else {
+          existingContainerAllocations++;
+        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("Assigning container " + allocated.getId()
               + " with priority " + allocated.getPriority() + " to NM "
@@ -1108,6 +1118,9 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
     }
   }
 
+  /**
+   * Tracks TaskAttempts which have been assigned a Container.
+   */
   private class AssignedRequests {
     private final LinkedHashMap<TaskAttemptId, Container> maps = 
       new LinkedHashMap<TaskAttemptId, Container>();
@@ -1159,6 +1172,7 @@ protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
     }
     
     // TODO XXX Check where all this is being used.
+    // XXX: Likely needed in case of TA failed / killed / terminated as well.
     // Old code was removing when CONTAINER_COMPLETED was received fromthe RM.
     ContainerId remove(TaskAttemptId tId) {
       ContainerId containerId = null;

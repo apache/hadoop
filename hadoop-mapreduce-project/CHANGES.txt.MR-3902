@@ -6,3 +6,5 @@ Branch MR-3902
   MAPREDUCE-4599. Prevent contianer launches on blacklisted hosts. (Tsuyoshi OZAWA via sseth)
 
   MAPREDUCE-4609. RMContainerAllocator scheduler interval should be configurable. (Tsuyoshi OZAWA via sseth)
+
+  MAPREDUCE-4625. Statistics logging in the AM scheduler. (sseth)

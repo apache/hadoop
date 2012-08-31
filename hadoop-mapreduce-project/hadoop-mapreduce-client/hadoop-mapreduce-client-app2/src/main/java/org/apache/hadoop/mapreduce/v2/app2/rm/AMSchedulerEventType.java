@@ -6,21 +6,17 @@ public enum AMSchedulerEventType {
   S_TA_STOP_REQUEST, // Maybe renamed to S_TA_END / S_TA_ABNORMAL_END
   S_TA_SUCCEEDED,
   S_TA_ENDED,
-  
+
   //Producer: RMCommunicator
   S_CONTAINERS_ALLOCATED,
-  
+
   //Producer: Container. (Maybe RMCommunicator)
   S_CONTAINER_COMPLETED,
-  
-  // Add events for nodes being blacklisted.
-  
-  // TODO XXX
-  //Producer: RMCommunicator. May not be needed.
-//  S_CONTAINER_COMPLETED,
-  
-  //Producer: RMComm
-//  S_NODE_UNHEALTHY,
-//  S_NODE_HEALTHY,
-  
+
+  //Producer: Node
+  S_NODE_BLACKLISTED,
+  S_NODE_UNHEALTHY,
+  S_NODE_HEALTHY
+  // The scheduler should have a way of knowing about unusable nodes. Acting on
+  // this information to change requests etc is scheduler specific.
 }
