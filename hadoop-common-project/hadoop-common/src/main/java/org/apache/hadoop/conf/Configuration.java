@@ -2286,6 +2286,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
                new String[]{CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY});
     Configuration.addDeprecation("fs.default.name", 
                new String[]{CommonConfigurationKeys.FS_DEFAULT_NAME_KEY});
+    Configuration.addDeprecation("dfs.umaskmode",
+        new String[]{CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY});
   }
   
   /**
