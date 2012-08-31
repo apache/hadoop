@@ -141,8 +141,21 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      .addTransition(RMNodeState.UNHEALTHY, 
          EnumSet.of(RMNodeState.UNHEALTHY, RMNodeState.RUNNING),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenUnHealthyTransition())
+     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.DECOMMISSIONED,
+         RMNodeEventType.DECOMMISSION,
+         new DeactivateNodeTransition(RMNodeState.DECOMMISSIONED))
+     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.LOST,
+         RMNodeEventType.EXPIRE,
+         new DeactivateNodeTransition(RMNodeState.LOST))
+     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.REBOOTED,
+         RMNodeEventType.REBOOTING,
+         new DeactivateNodeTransition(RMNodeState.REBOOTED))
      .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
+     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
+         RMNodeEventType.CLEANUP_APP, new CleanUpAppTransition())
+     .addTransition(RMNodeState.UNHEALTHY, RMNodeState.UNHEALTHY,
+         RMNodeEventType.CLEANUP_CONTAINER, new CleanUpContainerTransition())
          
      // create the topology tables
      .installTopology(); 
