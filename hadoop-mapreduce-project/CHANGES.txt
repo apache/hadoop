@@ -599,6 +599,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4600. TestTokenCache.java from MRV1 no longer compiles  (daryn 
     via bobby)
 
+    MAPREDUCE-4604. In mapred-default, mapreduce.map.maxattempts &
+    mapreduce.reduce.maxattempts defaults are set to 4 as well as
+    mapreduce.job.maxtaskfailures.per.tracker. (Ravi Prakash via jeagles)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
