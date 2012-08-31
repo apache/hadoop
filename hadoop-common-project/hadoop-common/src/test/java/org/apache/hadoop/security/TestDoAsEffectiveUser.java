@@ -155,8 +155,9 @@ public class TestDoAsEffectiveUser {
     conf.setStrings(ProxyUsers
         .getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME), "group1");
     configureSuperUserIPAddresses(conf, REAL_USER_SHORT_NAME);
-    Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
-        0, 5, true, conf, null);
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(5).setVerbose(true).build();
 
     refreshConf(conf);
     try {
@@ -197,8 +198,9 @@ public class TestDoAsEffectiveUser {
     configureSuperUserIPAddresses(conf, REAL_USER_SHORT_NAME);
     conf.setStrings(ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME),
         "group1");
-    Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
-        0, 2, false, conf, null);
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
 
     refreshConf(conf);
     try {
@@ -244,8 +246,9 @@ public class TestDoAsEffectiveUser {
         "20.20.20.20"); //Authorized IP address
     conf.setStrings(ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME),
         "group1");
-    Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
-        0, 2, false, conf, null);
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
 
     refreshConf(conf);
     
@@ -286,8 +289,9 @@ public class TestDoAsEffectiveUser {
     final Configuration conf = new Configuration();
     conf.setStrings(ProxyUsers
         .getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME), "group1");
-    Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
-        0, 2, false, conf, null);
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
 
     try {
       server.start();
@@ -325,8 +329,9 @@ public class TestDoAsEffectiveUser {
   public void testRealUserGroupNotSpecified() throws IOException {
     final Configuration conf = new Configuration();
     configureSuperUserIPAddresses(conf, REAL_USER_SHORT_NAME);
-    Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
-        0, 2, false, conf, null);
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
 
     try {
       server.start();
@@ -366,9 +371,9 @@ public class TestDoAsEffectiveUser {
     configureSuperUserIPAddresses(conf, REAL_USER_SHORT_NAME);
     conf.setStrings(ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME),
         "group3");
-    Server server = RPC.getServer(TestProtocol.class, new TestImpl(), ADDRESS,
-        0, 2, false, conf, null);
-
+    Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
     
     try {
       server.start();
@@ -414,8 +419,9 @@ public class TestDoAsEffectiveUser {
     conf
         .set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
-    final Server server = RPC.getServer(TestProtocol.class, new TestImpl(),
-        ADDRESS, 0, 5, true, conf, sm);
+    final Server server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+        .setInstance(new TestImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(5).setVerbose(true).setSecretManager(sm).build();
 
     server.start();
 
@@ -468,8 +474,10 @@ public class TestDoAsEffectiveUser {
     newConf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION,
         "kerberos");
     UserGroupInformation.setConfiguration(newConf);
-    final Server server = RPC.getServer(TestProtocol.class, new TestImpl(),
-        ADDRESS, 0, 5, true, newConf, sm);
+    final Server server = new RPC.Builder(newConf)
+        .setProtocol(TestProtocol.class).setInstance(new TestImpl())
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .setSecretManager(sm).build();
 
     server.start();
 
