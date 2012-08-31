@@ -1449,6 +1449,8 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3861. Deadlock in DFSClient (Kihwal Lee via daryn)
 
+    HDFS-3873. Hftp assumes security is disabled if token fetch fails (daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
