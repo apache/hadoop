@@ -185,9 +185,6 @@ Release 2.1.0-alpha - Unreleased
     MAPREDUCE-4380. Empty Userlogs directory is getting created under logs
     directory (Devaraj K via bobby)
 
-    MAPREDUCE-4612. job summary file permissions not set when its created
-    (tgraves via bobby)
-
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
@@ -731,6 +728,11 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4600. TestTokenCache.java from MRV1 no longer compiles  (daryn 
     via bobby)
+
+    MAPREDUCE-4612. job summary file permissions not set when its created
+    (tgraves via bobby)
+
+    MAPREDUCE-4614. Simplify debugging a job's tokens (daryn via bobby)
 
 Release 0.23.2 - UNRELEASED
 
