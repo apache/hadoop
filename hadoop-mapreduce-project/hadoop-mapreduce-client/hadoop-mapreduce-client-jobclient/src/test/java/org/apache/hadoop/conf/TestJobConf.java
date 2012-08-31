@@ -21,6 +21,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 
 public class TestJobConf {
@@ -184,5 +185,20 @@ public class TestJobConf {
     Assert.assertEquals(configuration.getMemoryForReduceTask(), 2);
     
     
+  }
+
+  /**
+   * Ensure that by default JobContext.MAX_TASK_FAILURES_PER_TRACKER is less
+   * JobContext.MAP_MAX_ATTEMPTS and JobContext.REDUCE_MAX_ATTEMPTS so that
+   * failed tasks will be retried on other nodes
+   */
+  @Test
+  public void testMaxTaskFailuresPerTracker() {
+    JobConf jobConf = new JobConf(true);
+    Assert.assertTrue("By default JobContext.MAX_TASK_FAILURES_PER_TRACKER was "
+      + "not less than JobContext.MAP_MAX_ATTEMPTS and REDUCE_MAX_ATTEMPTS"
+      ,jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxMapAttempts() &&
+      jobConf.getMaxTaskFailuresPerTracker() < jobConf.getMaxReduceAttempts()
+      );
   }
 }

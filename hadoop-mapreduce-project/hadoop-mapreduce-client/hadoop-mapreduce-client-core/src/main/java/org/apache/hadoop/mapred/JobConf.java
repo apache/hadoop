@@ -1357,7 +1357,7 @@ public class JobConf extends Configuration {
    * @return the maximum no. of failures of a given job per tasktracker.
    */
   public int getMaxTaskFailuresPerTracker() {
-    return getInt(JobContext.MAX_TASK_FAILURES_PER_TRACKER, 4); 
+    return getInt(JobContext.MAX_TASK_FAILURES_PER_TRACKER, 3);
   }
 
   /**
