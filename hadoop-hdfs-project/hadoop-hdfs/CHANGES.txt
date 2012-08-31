@@ -527,14 +527,17 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3837. Fix DataNode.recoverBlock findbugs warning. (eli)
 
-    HDFS-3733. Audit logs should include WebHDFS access. (Andy Isaacson via eli)
+    HDFS-3733. Audit logs should include WebHDFS access. (Andy Isaacson via 
+    eli)
 
     HDFS-2686. Remove DistributedUpgrade related code. (suresh)
 
     HDFS-3833. TestDFSShell fails on windows due to concurrent file 
     read/write. (Brandon Li via suresh)
 
-
+    HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
+    (omalley)
+    
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
@@ -835,7 +838,7 @@ Release 2.0.0-alpha - 05-23-2012
     (Brandon Li via szetszwo)
 
     HDFS-2617. Replaced Kerberized SSL for image transfer and fsck
-    with SPNEGO-based solution. (jghoman, tucu, and atm via eli)
+    with SPNEGO-based solution. (jghoman, omalley, tucu, and atm via eli)
 
     HDFS-3365. Enable users to disable socket caching in DFS client
     configuration (todd)
