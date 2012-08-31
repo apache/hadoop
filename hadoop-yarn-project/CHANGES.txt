@@ -63,3 +63,5 @@ Release 0.23.3 - Unreleased
 
     YARN-63. RMNodeImpl is missing valid transitions from the UNHEALTHY state
     (Jason Lowe via bobby)
+
+    YARN-66. aggregated logs permissions not set properly (tgraves via bobby)
