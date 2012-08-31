@@ -144,6 +144,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      .addTransition(NodeState.UNHEALTHY, 
          EnumSet.of(NodeState.UNHEALTHY, NodeState.RUNNING),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenUnHealthyTransition())
+     .addTransition(NodeState.UNHEALTHY, NodeState.DECOMMISSIONED,
+         RMNodeEventType.DECOMMISSION,
+         new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
+     .addTransition(NodeState.UNHEALTHY, NodeState.LOST,
+         RMNodeEventType.EXPIRE,
+         new DeactivateNodeTransition(NodeState.LOST))
+     .addTransition(NodeState.UNHEALTHY, NodeState.REBOOTED,
+         RMNodeEventType.REBOOTING,
+         new DeactivateNodeTransition(NodeState.REBOOTED))
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
