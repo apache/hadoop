@@ -207,6 +207,9 @@ public class RMContainerAllocator extends AbstractService
     maxReducePreemptionLimit = conf.getFloat(
         MRJobConfig.MR_AM_JOB_REDUCE_PREEMPTION_LIMIT,
         MRJobConfig.DEFAULT_MR_AM_JOB_REDUCE_PREEMPTION_LIMIT);
+    scheduleInterval = conf.getLong(
+        MRJobConfig.MR_AM_SCHEDULER_INTERVAL,
+        MRJobConfig.DEFAULT_MR_AM_SCHEDULER_INTERVAL);
     shouldReUse = conf.getBoolean("am.scheduler.shouldReuse", false);
     LOG.info("XXX: ShouldReUse: " + shouldReUse);
     RackResolver.init(conf);
