@@ -18,24 +18,25 @@
 
 package org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb;
 
-
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.MasterKeyProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonProtos.NodeStatusProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerCommonServiceProtos.NodeHeartbeatRequestProtoOrBuilder;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.NodeStatusPBImpl;
 
-
-    
-public class NodeHeartbeatRequestPBImpl extends ProtoBase<NodeHeartbeatRequestProto> implements NodeHeartbeatRequest {
+public class NodeHeartbeatRequestPBImpl extends
+    ProtoBase<NodeHeartbeatRequestProto> implements NodeHeartbeatRequest {
   NodeHeartbeatRequestProto proto = NodeHeartbeatRequestProto.getDefaultInstance();
   NodeHeartbeatRequestProto.Builder builder = null;
   boolean viaProto = false;
   
   private NodeStatus nodeStatus = null;
-  
+  private MasterKey lastKnownMasterKey = null;
   
   public NodeHeartbeatRequestPBImpl() {
     builder = NodeHeartbeatRequestProto.newBuilder();
@@ -56,6 +57,10 @@ public class NodeHeartbeatRequestPBImpl extends ProtoBase<NodeHeartbeatRequestPr
   private void mergeLocalToBuilder() {
     if (this.nodeStatus != null) {
       builder.setNodeStatus(convertToProtoFormat(this.nodeStatus));
+    }
+    if (this.lastKnownMasterKey != null) {
+      builder
+        .setLastKnownMasterKey(convertToProtoFormat(this.lastKnownMasterKey));
     }
   }
 
@@ -96,6 +101,27 @@ public class NodeHeartbeatRequestPBImpl extends ProtoBase<NodeHeartbeatRequestPr
     this.nodeStatus = nodeStatus;
   }
 
+  @Override
+  public MasterKey getLastKnownMasterKey() {
+    NodeHeartbeatRequestProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.lastKnownMasterKey != null) {
+      return this.lastKnownMasterKey;
+    }
+    if (!p.hasLastKnownMasterKey()) {
+      return null;
+    }
+    this.lastKnownMasterKey = convertFromProtoFormat(p.getLastKnownMasterKey());
+    return this.lastKnownMasterKey;
+  }
+
+  @Override
+  public void setLastKnownMasterKey(MasterKey masterKey) {
+    maybeInitBuilder();
+    if (masterKey == null) 
+      builder.clearLastKnownMasterKey();
+    this.lastKnownMasterKey = masterKey;
+  }
+
   private NodeStatusPBImpl convertFromProtoFormat(NodeStatusProto p) {
     return new NodeStatusPBImpl(p);
   }
@@ -104,6 +130,11 @@ public class NodeHeartbeatRequestPBImpl extends ProtoBase<NodeHeartbeatRequestPr
     return ((NodeStatusPBImpl)t).getProto();
   }
 
+  private MasterKeyPBImpl convertFromProtoFormat(MasterKeyProto p) {
+    return new MasterKeyPBImpl(p);
+  }
 
-
+  private MasterKeyProto convertToProtoFormat(MasterKey t) {
+    return ((MasterKeyPBImpl)t).getProto();
+  }
 }  

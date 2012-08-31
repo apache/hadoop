@@ -54,6 +54,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceServletContextListener;
@@ -145,7 +146,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     nodeHealth.setHealthReport("test health report");
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm3.getNodeId(), nodeHealth,
-        new ArrayList<ContainerStatus>(), null, null, null));
+        new ArrayList<ContainerStatus>(), null, null));
     rm.NMwaitForState(nm3.getNodeId(), NodeState.UNHEALTHY);
 
     ClientResponse response =
@@ -360,7 +361,7 @@ public class TestRMWebServicesNodes extends JerseyTest {
     nodeHealth.setHealthReport("test health report");
     nodeHealth.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(nm1.getNodeId(), nodeHealth,
-        new ArrayList<ContainerStatus>(), null, null, null));
+        new ArrayList<ContainerStatus>(), null, null));
     rm.NMwaitForState(nm1.getNodeId(), NodeState.UNHEALTHY);
 
     ClientResponse response = r.path("ws").path("v1").path("cluster")

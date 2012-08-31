@@ -261,7 +261,7 @@ public class TestNodeStatusUpdater {
     }
     
     @Override
-    protected boolean isSecurityEnabled() {
+    protected boolean isTokenKeepAliveEnabled(Configuration conf) {
       return true;
     }
   }
