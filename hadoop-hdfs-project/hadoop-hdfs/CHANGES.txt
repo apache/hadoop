@@ -1451,6 +1451,8 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3873. Hftp assumes security is disabled if token fetch fails (daryn)
 
+    HDFS-3852. TestHftpDelegationToken is broken after HADOOP-8225 (daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
