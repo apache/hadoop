@@ -23,6 +23,8 @@ import static
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import org.junit.Test;
@@ -133,6 +135,53 @@ public class TestHftpDelegationToken {
     checkTokenSelection(fs, httpsPort+1, conf);
     
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 5);
+  }
+  
+
+  @Test
+  public void testInsecureRemoteCluster()  throws Exception {
+    final ServerSocket socket = new ServerSocket(0); // just reserve a port
+    socket.close();
+    Configuration conf = new Configuration();
+    URI fsUri = URI.create("hsftp://localhost:"+socket.getLocalPort());
+    assertNull(FileSystem.newInstance(fsUri, conf).getDelegationToken(null));
+  }
+
+  @Test
+  public void testSecureClusterError()  throws Exception {
+    final ServerSocket socket = new ServerSocket(0);
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        while (true) { // fetching does a few retries
+          try {
+            Socket s = socket.accept();
+            s.getOutputStream().write(1234);
+            s.shutdownOutput();
+          } catch (Exception e) {
+            break;
+          }
+        }
+      }
+    };
+    t.start();
+
+    try {
+      Configuration conf = new Configuration();
+      URI fsUri = URI.create("hsftp://localhost:"+socket.getLocalPort());
+      Exception ex = null;
+      try {
+        FileSystem.newInstance(fsUri, conf).getDelegationToken(null);
+      } catch (Exception e) {
+        ex = e;
+      }
+      assertNotNull(ex);
+      assertNotNull(ex.getCause());
+      assertEquals("Can't get service ticket for: host/localhost",
+                   ex.getCause().getMessage());
+    } finally {
+      t.interrupt();
+    }
   }
   
   private void checkTokenSelection(HftpFileSystem fs,
