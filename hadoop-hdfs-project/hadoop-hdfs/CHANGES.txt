@@ -529,6 +529,12 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3733. Audit logs should include WebHDFS access. (Andy Isaacson via eli)
 
+    HDFS-2686. Remove DistributedUpgrade related code. (suresh)
+
+    HDFS-3833. TestDFSShell fails on windows due to concurrent file 
+    read/write. (Brandon Li via suresh)
+
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
@@ -544,8 +550,6 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
-
-    HDFS-2686. Remove DistributedUpgrade related code. (suresh)
 
 Release 2.0.0-alpha - 05-23-2012
 
