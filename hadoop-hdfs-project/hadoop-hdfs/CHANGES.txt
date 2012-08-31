@@ -716,6 +716,9 @@ Branch-2 ( Unreleased changes )
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
 
+    HDFS-3833. TestDFSShell fails on windows due to concurrent file 
+    read/write. (Brandon Li via suresh)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
