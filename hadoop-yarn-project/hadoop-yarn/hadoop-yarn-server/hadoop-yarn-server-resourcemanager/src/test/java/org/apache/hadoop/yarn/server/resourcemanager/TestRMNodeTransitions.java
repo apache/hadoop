@@ -104,7 +104,7 @@ public class TestRMNodeTransitions {
         new TestSchedulerEventDispatcher());
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
-    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
+    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null);
 
   }
   
@@ -199,7 +199,7 @@ public class TestRMNodeTransitions {
   private RMNodeImpl getRunningNode() {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
-        null, null, null);
+        null, null);
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.STARTED));
     Assert.assertEquals(RMNodeState.RUNNING, node.getState());
     return node;
@@ -211,7 +211,7 @@ public class TestRMNodeTransitions {
     status.setHealthReport("sick");
     status.setIsNodeHealthy(false);
     node.handle(new RMNodeStatusEvent(node.getNodeID(), status,
-        new ArrayList<ContainerStatus>(), null, null, null));
+        new ArrayList<ContainerStatus>(), null, null));
     Assert.assertEquals(RMNodeState.UNHEALTHY, node.getState());
     return node;
   }

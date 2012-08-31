@@ -156,10 +156,9 @@ public class ResourceManager extends CompositeService implements Recoverable {
 
     DelegationTokenRenewer tokenRenewer = createDelegationTokenRenewer();
     addService(tokenRenewer);
+
+    this.containerTokenSecretManager = createContainerTokenSecretManager(conf);
     
-
-    this.containerTokenSecretManager = new RMContainerTokenSecretManager(conf);
-
     this.rmContext =
         new RMContextImpl(this.store, this.rmDispatcher,
           this.containerAllocationExpirer, amLivelinessMonitor,
@@ -224,6 +223,11 @@ public class ResourceManager extends CompositeService implements Recoverable {
     new RMNMInfo(this.rmContext, this.scheduler);
 
     super.init(conf);
+  }
+
+  protected RMContainerTokenSecretManager createContainerTokenSecretManager(
+      Configuration conf) {
+    return new RMContainerTokenSecretManager(conf);
   }
 
   protected EventHandler<SchedulerEvent> createSchedulerEventDispatcher() {

@@ -169,14 +169,14 @@ public class ResourceTrackerService extends AbstractService implements
       return response;
     }
 
-    MasterKey nextMasterKeyForNode = null;
     if (isSecurityEnabled()) {
-      nextMasterKeyForNode = this.containerTokenSecretManager.getCurrentKey();
+      MasterKey nextMasterKeyForNode =
+          this.containerTokenSecretManager.getCurrentKey();
       regResponse.setMasterKey(nextMasterKeyForNode);
     }
 
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
-        resolve(host), capability, nextMasterKeyForNode);
+        resolve(host), capability);
 
     RMNode oldNode = this.rmContext.getRMNodes().putIfAbsent(nodeId, rmNode);
     if (oldNode == null) {
@@ -266,17 +266,18 @@ public class ResourceTrackerService extends AbstractService implements
     latestResponse.addAllApplicationsToCleanup(rmNode.getAppsToCleanup());
     latestResponse.setNodeAction(NodeAction.NORMAL);
 
-    MasterKey nextMasterKeyForNode = null;
-
     // Check if node's masterKey needs to be updated and if the currentKey has
     // roller over, send it across
     if (isSecurityEnabled()) {
+
       boolean shouldSendMasterKey = false;
-      MasterKey nodeKnownMasterKey = rmNode.getCurrentMasterKey();
-      nextMasterKeyForNode = this.containerTokenSecretManager.getNextKey();
+
+      MasterKey nextMasterKeyForNode =
+          this.containerTokenSecretManager.getNextKey();
       if (nextMasterKeyForNode != null) {
         // nextMasterKeyForNode can be null if there is no outstanding key that
         // is in the activation period.
+        MasterKey nodeKnownMasterKey = request.getLastKnownMasterKey();
         if (nodeKnownMasterKey.getKeyId() != nextMasterKeyForNode.getKeyId()) {
           shouldSendMasterKey = true;
         }
@@ -290,8 +291,7 @@ public class ResourceTrackerService extends AbstractService implements
     this.rmContext.getDispatcher().getEventHandler().handle(
         new RMNodeStatusEvent(nodeId, remoteNodeStatus.getNodeHealthStatus(),
             remoteNodeStatus.getContainersStatuses(), 
-            remoteNodeStatus.getKeepAliveApplications(), latestResponse,
-            nextMasterKeyForNode));
+            remoteNodeStatus.getKeepAliveApplications(), latestResponse));
 
     nodeHeartBeatResponse.setHeartbeatResponse(latestResponse);
     return nodeHeartBeatResponse;

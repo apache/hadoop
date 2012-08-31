@@ -221,7 +221,7 @@ public class TestContainerManagerSecurity {
     Resource modifiedResource = BuilderUtils.newResource(2048);
     ContainerTokenIdentifier modifiedIdentifier = new ContainerTokenIdentifier(
         dummyIdentifier.getContainerID(), dummyIdentifier.getNmHostAddress(),
-        modifiedResource, Long.MAX_VALUE, 0);
+        modifiedResource, Long.MAX_VALUE, dummyIdentifier.getMasterKeyId());
     Token<ContainerTokenIdentifier> modifiedToken = new Token<ContainerTokenIdentifier>(
         modifiedIdentifier.getBytes(), containerToken.getPassword().array(),
         new Text(containerToken.getKind()), new Text(containerToken
@@ -249,15 +249,14 @@ public class TestContainerManagerSecurity {
               + "it will indicate RPC success");
         } catch (Exception e) {
           Assert.assertEquals(
-              java.lang.reflect.UndeclaredThrowableException.class
-                  .getCanonicalName(), e.getClass().getCanonicalName());
+            java.lang.reflect.UndeclaredThrowableException.class
+              .getCanonicalName(), e.getClass().getCanonicalName());
           Assert.assertTrue(e
-              .getCause()
-              .getCause()
-              .getMessage()
-              .matches(
-                  "Given Container container_\\d*_\\d*_\\d\\d_\\d*"
-                      + " seems to have an illegally generated token."));
+            .getCause()
+            .getMessage()
+            .contains(
+              "DIGEST-MD5: digest response format violation. "
+                  + "Mismatched response."));
         }
         return null;
       }

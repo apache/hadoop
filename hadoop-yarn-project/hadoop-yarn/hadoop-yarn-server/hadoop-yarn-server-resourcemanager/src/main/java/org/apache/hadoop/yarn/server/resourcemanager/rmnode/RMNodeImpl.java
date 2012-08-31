@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
-import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.resourcemanager.ClusterMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
@@ -102,8 +101,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private HeartbeatResponse latestHeartBeatResponse = recordFactory
       .newRecordInstance(HeartbeatResponse.class);
   
-  private MasterKey currentMasterKey;
-
   private static final StateMachineFactory<RMNodeImpl,
                                            RMNodeState,
                                            RMNodeEventType,
@@ -164,8 +161,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
                              RMNodeEvent> stateMachine;
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
-      int cmPort, int httpPort, Node node, Resource capability,
-      MasterKey masterKey) {
+      int cmPort, int httpPort, Node node, Resource capability) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
@@ -175,7 +171,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.nodeAddress = hostName + ":" + cmPort;
     this.httpAddress = hostName + ":" + httpPort;
     this.node = node;
-    this.currentMasterKey = masterKey;
     this.nodeHealthStatus.setIsNodeHealthy(true);
     this.nodeHealthStatus.setHealthReport("Healthy");
     this.nodeHealthStatus.setLastHealthReportTime(System.currentTimeMillis());
@@ -309,17 +304,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       this.readLock.unlock();
     }
   }
-  
-  @Override
-  public MasterKey getCurrentMasterKey() {
-    this.readLock.lock();
-    try {
-      return this.currentMasterKey;
-    } finally {
-      this.readLock.unlock();
-    }
-  }
-  
 
   public void handle(RMNodeEvent event) {
     LOG.debug("Processing " + event.getNodeId() + " of type " + event.getType());
@@ -494,7 +478,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       // Switch the last heartbeatresponse.
       rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
-      rmNode.currentMasterKey = statusEvent.getCurrentMasterKey();
 
       NodeHealthStatus remoteNodeHealthStatus = 
           statusEvent.getNodeHealthStatus();
@@ -573,7 +556,6 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       // Switch the last heartbeatresponse.
       rmNode.latestHeartBeatResponse = statusEvent.getLatestResponse();
-      rmNode.currentMasterKey = statusEvent.getCurrentMasterKey();
       NodeHealthStatus remoteNodeHealthStatus = statusEvent.getNodeHealthStatus();
       rmNode.setNodeHealthStatus(remoteNodeHealthStatus);
       if (remoteNodeHealthStatus.getIsNodeHealthy()) {

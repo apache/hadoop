@@ -31,6 +31,7 @@ import java.util.Random;
 import org.apache.avro.AvroRuntimeException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
@@ -111,10 +112,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.totalResource = recordFactory.newRecordInstance(Resource.class);
     this.totalResource.setMemory(memoryMb);
     metrics.addResource(totalResource);
-    this.tokenKeepAliveEnabled =
-        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
-            YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)
-            && isSecurityEnabled();
+    this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
     this.tokenRemovalDelayMs =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
@@ -163,8 +161,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return this.hasToRebootNode;
   }
 
-  protected boolean isSecurityEnabled() {
+  private boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
+  }
+
+  @Private
+  protected boolean isTokenKeepAliveEnabled(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+        YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)
+        && isSecurityEnabled();
   }
 
   protected ResourceTracker getRMClient() {
@@ -321,7 +326,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             
             NodeHeartbeatRequest request = recordFactory
                 .newRecordInstance(NodeHeartbeatRequest.class);
-            request.setNodeStatus(nodeStatus);            
+            request.setNodeStatus(nodeStatus);
+            if (isSecurityEnabled()) {
+              request.setLastKnownMasterKey(NodeStatusUpdaterImpl.this.context
+                .getContainerTokenSecretManager().getCurrentKey());
+            }
             HeartbeatResponse response =
               resourceTracker.nodeHeartbeat(request).getHeartbeatResponse();
 
