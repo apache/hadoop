@@ -797,9 +797,12 @@
 
 <property>
   <name>mapreduce.job.maxtaskfailures.per.tracker</name>
-  <value>4</value>
+  <value>3</value>
   <description>The number of task-failures on a tasktracker of a given job 
-               after which new tasks of that job aren't assigned to it.
+               after which new tasks of that job aren't assigned to it. It
+               MUST be less than mapreduce.map.maxattempts and
+               mapreduce.reduce.maxattempts otherwise the failed task will
+               never be tried on a different node.
   </description>
 </property>
 

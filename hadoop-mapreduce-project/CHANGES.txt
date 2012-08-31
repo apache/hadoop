@@ -737,6 +737,10 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4611. MR AM dies badly when Node is decommissioned (Robert
     Evans via tgraves)
 
+    MAPREDUCE-4604. In mapred-default, mapreduce.map.maxattempts &
+    mapreduce.reduce.maxattempts defaults are set to 4 as well as
+    mapreduce.job.maxtaskfailures.per.tracker. (Ravi Prakash via jeagles)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
