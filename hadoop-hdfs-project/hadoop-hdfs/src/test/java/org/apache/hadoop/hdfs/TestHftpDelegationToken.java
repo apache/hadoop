@@ -55,7 +55,7 @@ public class TestHftpDelegationToken {
        new Text("127.0.0.1:8020"));
     user.addToken(token);
     Token<?> token2 = new Token<TokenIdentifier>
-      (null, null, new Text("other token"), new Text("127.0.0.1:8020"));
+      (null, null, new Text("other token"), new Text("127.0.0.1:8021"));
     user.addToken(token2);
     assertEquals("wrong tokens in user", 2, user.getTokens().size());
     FileSystem fs = 
