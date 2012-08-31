@@ -372,7 +372,12 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                       SecurityUtil.getServerPrincipal(principalInConf,
                           serverAddress.getHostName()));
                 }
-                String httpKeytab = conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
+                String httpKeytab = conf.get(
+                  DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
+                if (httpKeytab == null) {
+                  httpKeytab = 
+                    conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY);
+                }
                 if (httpKeytab != null && !httpKeytab.isEmpty()) {
                   params.put("kerberos.keytab", httpKeytab);
                 }

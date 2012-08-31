@@ -331,6 +331,9 @@ Release 1.1.0 - 2012.08.20
     mapreduce.job.committer.setup.cleanup.needed=false and
     mapreduce.map/reduce.failures.maxpercent>0 (Subroto Sanyal via tgraves)
 
+    HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
+    (omalley)
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
