@@ -92,7 +92,6 @@ public class NMContainerTokenSecretManager extends
         containerId.getApplicationAttemptId().getApplicationId();
 
     MasterKeyData masterKeyToUse = null;
-
     if (this.previousMasterKey != null
         && keyId == this.previousMasterKey.getMasterKey().getKeyId()) {
       // A container-launch has come in with a token generated off the last
