@@ -537,6 +537,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
     (omalley)
+
+    HDFS-3879. Fix findbugs warning in TransferFsImage on branch-2. (eli)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 

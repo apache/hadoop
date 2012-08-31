@@ -205,7 +205,6 @@ public class TransferFsImage {
   static MD5Hash getFileClient(String nnHostPort,
       String queryString, List<File> localPaths,
       Storage dstStorage, boolean getChecksum) throws IOException {
-    byte[] buf = new byte[HdfsConstants.IO_FILE_BUFFER_SIZE];
 
     String str = HttpConfig.getSchemePrefix() + nnHostPort + "/getimage?" +
         queryString;
