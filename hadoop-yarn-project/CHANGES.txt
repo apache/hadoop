@@ -42,6 +42,8 @@ Release 2.1.0-alpha - Unreleased
     YARN-37. Change TestRMAppTransitions to use the DrainDispatcher.
     (Mayank Bansal via sseth)
 
+    YARN-36. branch-2.1.0-alpha doesn't build. (Radim Kolar via eli)
+
 Release 0.23.3 - Unreleased 
 
   INCOMPATIBLE CHANGES
