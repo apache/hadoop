@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
@@ -92,6 +93,7 @@ import org.apache.hadoop.hdfs.web.resources.ReplicationParam;
 import org.apache.hadoop.hdfs.web.resources.TokenArgumentParam;
 import org.apache.hadoop.hdfs.web.resources.UriFsPathParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
@@ -116,9 +118,20 @@ public class NamenodeWebHdfsMethods {
     return REMOTE_ADDRESS.get();
   }
 
-  /** Set the remote client address. */
-  static void setRemoteAddress(String remoteAddress) {
-    REMOTE_ADDRESS.set(remoteAddress);
+  public static InetAddress getRemoteIp() {
+    try {
+      return InetAddress.getByName(getRemoteAddress());
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  /**
+   * Returns true if a WebHdfs request is in progress.  Akin to
+   * {@link Server#isRpcInvocation()}.
+   */
+  public static boolean isWebHdfsInvocation() {
+    return getRemoteAddress() != null;
   }
 
   private @Context ServletContext context;

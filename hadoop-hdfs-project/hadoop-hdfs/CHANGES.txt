@@ -698,6 +698,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3837. Fix DataNode.recoverBlock findbugs warning. (eli)
 
+    HDFS-3733. Audit logs should include WebHDFS access. (Andy Isaacson via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
