@@ -102,7 +102,7 @@ public class TestRMNodeTransitions {
         new TestSchedulerEventDispatcher());
     
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
-    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
+    node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null);
 
   }
   
