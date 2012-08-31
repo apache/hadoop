@@ -78,3 +78,5 @@ Release 0.23.3 - Unreleased
 
     YARN-60. Fixed a bug in ResourceManager which causes all NMs to get NPEs and
     thus causes all containers to be rejected. (vinodkv)
+
+    YARN-66. aggregated logs permissions not set properly (tgraves via bobby)
