@@ -23,6 +23,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -32,10 +33,12 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.InlineDispatcher;
+import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
@@ -148,4 +151,69 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(0, completedContainers.size());
   }
 
+  @Test
+  public void testRunningExpire() {
+    RMNodeImpl node = getRunningNode();
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.EXPIRE));
+    Assert.assertEquals(NodeState.LOST, node.getState());
+  }
+
+  @Test
+  public void testUnhealthyExpire() {
+    RMNodeImpl node = getUnhealthyNode();
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.EXPIRE));
+    Assert.assertEquals(NodeState.LOST, node.getState());
+  }
+
+  @Test
+  public void testRunningDecommission() {
+    RMNodeImpl node = getRunningNode();
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.DECOMMISSION));
+    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
+  }
+
+  @Test
+  public void testUnhealthyDecommission() {
+    RMNodeImpl node = getUnhealthyNode();
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.DECOMMISSION));
+    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
+  }
+
+  @Test
+  public void testRunningRebooting() {
+    RMNodeImpl node = getRunningNode();
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.REBOOTING));
+    Assert.assertEquals(NodeState.REBOOTED, node.getState());
+  }
+
+  @Test
+  public void testUnhealthyRebooting() {
+    RMNodeImpl node = getUnhealthyNode();
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.REBOOTING));
+    Assert.assertEquals(NodeState.REBOOTED, node.getState());
+  }
+
+  private RMNodeImpl getRunningNode() {
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
+    RMNodeImpl node = new RMNodeImpl(nodeId, rmContext,null, 0, 0,
+        null, null, null);
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.STARTED));
+    Assert.assertEquals(NodeState.RUNNING, node.getState());
+    return node;
+  }
+
+  private RMNodeImpl getUnhealthyNode() {
+    RMNodeImpl node = getRunningNode();
+    NodeHealthStatus status = node.getNodeHealthStatus();
+    status.setHealthReport("sick");
+    status.setIsNodeHealthy(false);
+    node.handle(new RMNodeStatusEvent(node.getNodeID(), status,
+        new ArrayList<ContainerStatus>(), null, null, null));
+    Assert.assertEquals(NodeState.UNHEALTHY, node.getState());
+    return node;
+  }
 }

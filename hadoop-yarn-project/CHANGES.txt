@@ -72,3 +72,7 @@ Release 0.23.3 - Unreleased
 
     YARN-31. Fix TestDelegationTokenRenewer to not depend on test order so as to
     pass tests on jdk7. (Thomas Graves via vinodkv)
+
+    YARN-63. RMNodeImpl is missing valid transitions from the UNHEALTHY state
+    (Jason Lowe via bobby)
+
