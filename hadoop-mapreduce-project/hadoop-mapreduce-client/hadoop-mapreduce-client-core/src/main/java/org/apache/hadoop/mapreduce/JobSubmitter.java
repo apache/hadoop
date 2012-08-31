@@ -428,12 +428,9 @@ class JobSubmitter {
   private void printTokens(JobID jobId,
       Credentials credentials) throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Printing tokens for job: " + jobId);
-      for(Token<?> token: credentials.getAllTokens()) {
-        if (token.getKind().toString().equals("HDFS_DELEGATION_TOKEN")) {
-          LOG.debug("Submitting with " +
-              org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.stringifyToken(token));
-        }
+      LOG.info("Submitting tokens for job: " + jobId);
+      for (Token<?> token: credentials.getAllTokens()) {
+        LOG.info(token);
       }
     }
   }
