@@ -34,3 +34,5 @@ HDFS-3826. QJM: Some trivial logging / exception text improvements. (todd and at
 HDFS-3839. QJM: hadoop-daemon.sh should be updated to accept "journalnode" (eli)
 
 HDFS-3845. Fixes for edge cases in QJM recovery protocol (todd)
+
+HDFS-3877. QJM: Provide defaults for dfs.journalnode.*address (eli)
