@@ -131,6 +131,8 @@ Trunk (unreleased changes)
 
     HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
 
+    HDFS-2580. NameNode#main(...) can make use of GenericOptionsParser. (harsh)
+
   OPTIMIZATIONS
 
   BUG FIXES
