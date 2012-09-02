@@ -711,6 +711,9 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
     (omalley)
+
+    HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
+    (Vinay via umamahesh)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
