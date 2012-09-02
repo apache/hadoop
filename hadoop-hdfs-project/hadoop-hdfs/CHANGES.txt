@@ -542,6 +542,9 @@ Release 2.0.1-alpha - UNRELEASED
     (omalley)
 
     HDFS-3879. Fix findbugs warning in TransferFsImage on branch-2. (eli)
+
+    HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
+    (Vinay via umamahesh)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
