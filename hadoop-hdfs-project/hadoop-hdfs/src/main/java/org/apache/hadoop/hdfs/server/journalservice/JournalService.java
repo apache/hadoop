@@ -283,8 +283,9 @@ public class JournalService implements JournalProtocol {
         new JournalProtocolServerSideTranslatorPB(impl);
     BlockingService service = 
         JournalProtocolService.newReflectiveBlockingService(xlator);
-    return RPC.getServer(JournalProtocolPB.class, service,
-        address.getHostName(), address.getPort(), 1, false, conf, null);
+    return new RPC.Builder(conf).setProtocol(JournalProtocolPB.class)
+        .setInstance(service).setBindAddress(address.getHostName())
+        .setPort(address.getPort()).setNumHandlers(1).setVerbose(false).build();
   }
   
   private void verifyEpoch(long e) throws FencedException {

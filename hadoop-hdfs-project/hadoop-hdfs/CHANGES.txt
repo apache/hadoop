@@ -133,6 +133,9 @@ Trunk (unreleased changes)
 
     HDFS-2580. NameNode#main(...) can make use of GenericOptionsParser. (harsh)
 
+    HDFS-3880. Use Builder to build RPC server in HDFS.
+    (Brandon Li vias suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
