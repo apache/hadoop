@@ -21,6 +21,9 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
     (rkanter via tucu)
 
+    MAPREDUCE-2786. Add compression option for TestDFSIO.
+    (Plamen Jeliazkov via shv)
+
   BUG FIXES
 
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
