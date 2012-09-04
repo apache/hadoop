@@ -1,5 +1,6 @@
 package org.apache.hadoop.mapreduce.v2.app2.rm.container;
 
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.mapreduce.jobhistory.ContainerHeartbeatHandler;
@@ -8,11 +9,9 @@ import org.apache.hadoop.mapreduce.v2.app2.TaskAttemptListener;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.service.AbstractService;
 
-// TODO Extending concurrentHashMap seems weird. May be simpler to just have some 
-// simple methods. The iterator is kindof useful though.
-@SuppressWarnings("serial")
-public class AMContainerMap extends ConcurrentHashMap<ContainerId, AMContainer>
+public class AMContainerMap extends AbstractService
     implements EventHandler<AMContainerEvent> {
 
   private final ContainerHeartbeatHandler chh;
@@ -20,25 +19,36 @@ public class AMContainerMap extends ConcurrentHashMap<ContainerId, AMContainer>
   @SuppressWarnings("rawtypes")
   private final EventHandler eventHandler;
   private final AppContext context;
+  private final ConcurrentHashMap<ContainerId, AMContainer>containerMap;
 
   @SuppressWarnings("rawtypes")
   public AMContainerMap(ContainerHeartbeatHandler chh, TaskAttemptListener tal,
       EventHandler eventHandler, AppContext context) {
+    super("AMContainerMaps");
     this.chh = chh;
     this.tal = tal;
     this.eventHandler = eventHandler;
     this.context = context;
+    this.containerMap = new ConcurrentHashMap<ContainerId, AMContainer>();
   }
 
   @Override
   public void handle(AMContainerEvent event) {
     ContainerId containerId = event.getContainerId();
-    get(containerId).handle(event);
+    containerMap.get(containerId).handle(event);
   }
 
   public void addNewContainer(Container container) {
     AMContainer amc = new AMContainerImpl(container, chh, tal, eventHandler,
         context);
-    put(container.getId(), amc);
+    containerMap.put(container.getId(), amc);
+  }
+  
+  public AMContainer get(ContainerId containerId) {
+    return containerMap.get(containerId);
+  }
+  
+  public Collection<AMContainer>values() {
+    return containerMap.values();
   }
 }

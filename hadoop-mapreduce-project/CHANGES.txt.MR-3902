@@ -10,3 +10,5 @@ Branch MR-3902
   MAPREDUCE-4625. Statistics logging in the AM scheduler. (sseth)
 
   MAPREDUCE-4624. Reduce scheduling fixes, factor in MR-4437. (sseth)
+
+  MAPREDUCE-4619. Change AMContainerMap to extend AbstractService (Tsuyoshi OZAWA via sseth)
