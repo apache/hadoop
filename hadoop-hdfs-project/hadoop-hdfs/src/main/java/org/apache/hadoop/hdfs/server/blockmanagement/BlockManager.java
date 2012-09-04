@@ -1316,8 +1316,9 @@ public class BlockManager {
       final HashMap<Node, Node> excludedNodes,
       final long blocksize) throws IOException {
     // choose targets for the new block to be allocated.
-    final DatanodeDescriptor targets[] = blockplacement.chooseTarget(
-        src, numOfReplicas, client, excludedNodes, blocksize);
+    final DatanodeDescriptor targets[] = blockplacement.chooseTarget(src,
+        numOfReplicas, client, new ArrayList<DatanodeDescriptor>(), false,
+        excludedNodes, blocksize);
     if (targets.length < minReplication) {
       throw new IOException("File " + src + " could only be replicated to "
           + targets.length + " nodes instead of minReplication (="
