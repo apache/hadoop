@@ -255,6 +255,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-2421. Improve the concurrency of SerialNumberMap in NameNode.
     (Jing Zhao and Weiyan Wang via szetszwo)
 
+    HDFS-3866. HttpFS POM should have property where to download tomcat from (zero45 via tucu)
+
   BUG FIXES
 
     HDFS-3385. The last block of INodeFileUnderConstruction is not

@@ -45,6 +45,7 @@
     </httpfs.tomcat.dist.dir>
     <kerberos.realm>LOCALHOST</kerberos.realm>
     <test.exclude.kerberos.test>**/TestHttpFSWithKerberos.java</test.exclude.kerberos.test>
+    <tomcat.download.url>http://archive.apache.org/dist/tomcat/tomcat-6/v${tomcat.version}/bin/apache-tomcat-${tomcat.version}.tar.gz</tomcat.download.url>
   </properties>
 
   <dependencies>
@@ -527,7 +528,7 @@
                   <target>
                     <mkdir dir="downloads"/>
                     <get
-                        src="http://archive.apache.org/dist/tomcat/tomcat-6/v${tomcat.version}/bin/apache-tomcat-${tomcat.version}.tar.gz"
+                        src="${tomcat.download.url}"
                         dest="downloads/tomcat.tar.gz" verbose="true" skipexisting="true"/>
                     <delete dir="${project.build.directory}/tomcat.exp"/>
                     <mkdir dir="${project.build.directory}/tomcat.exp"/>
