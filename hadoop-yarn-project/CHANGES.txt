@@ -8,6 +8,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
+
   OPTIMAZATIONS
 
   BUG FIXES
