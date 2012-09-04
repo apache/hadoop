@@ -8,6 +8,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+  OPTIMAZATIONS
+
   BUG FIXES
 
 Branch-2 ( Unreleased changes )
@@ -17,6 +19,8 @@ Branch-2 ( Unreleased changes )
   NEW FEATURES
 
   IMPROVEMENTS
+
+  OPTIMAZATIONS
 
   BUG FIXES
 
@@ -37,6 +41,11 @@ Release 2.1.0-alpha - Unreleased
 
     YARN-29. Add a yarn-client module. (Vinod Kumar Vavilapalli via sseth)
 
+    YARN-10. Fix DistributedShell module to not have a dependency on 
+    hadoop-mapreduce-client-core. (Hitesh Shah via vinodkv)
+
+  OPTIMAZATIONS
+
   BUG FIXES
 
     YARN-12. Fix findbugs warnings in FairScheduler. (Junping Du via acmurthy) 
@@ -54,6 +63,8 @@ Release 0.23.3 - Unreleased
   NEW FEATURES
 
   IMPROVEMENTS
+
+  OPTIMAZATIONS
 
   BUG FIXES
 
