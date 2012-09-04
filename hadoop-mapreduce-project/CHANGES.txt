@@ -1,7 +1,16 @@
 Hadoop MapReduce Change Log
 
-    MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
-    bad (Jason Lowe via bobby)
+Release 0.23.4 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
 
 Release 0.23.3 - UNRELEASED
 
@@ -16,6 +25,9 @@ Release 0.23.3 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
+    bad (Jason Lowe via bobby)
 
     MAPREDUCE-4059. The history server should have a separate pluggable 
     storage/query interface. (Robert Evans via tgraves)
