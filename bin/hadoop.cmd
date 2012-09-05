@@ -110,7 +110,7 @@ call :updatepath %HADOOP_BIN_PATH%
     set CLASS=%hadoop-command%
   )
   
-  set path=%HADOOP_BIN_PATH%;%windir%\system32;%windir%
+  set path=%PATH%;%HADOOP_BIN_PATH%
   call %JAVA% %JAVA_HEAP_MAX% %HADOOP_OPTS% -classpath %CLASSPATH% %CLASS% %hadoop-command-arguments%
 
   goto :eof

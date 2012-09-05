@@ -97,3 +97,6 @@ BUG FIXES
 
     HDFS-3833. TestDFSShell fails on windows due to concurrent file 
     read/write. (Brandon Li via suresh)
+
+    HADOOP-8664. hadoop streaming job need the full path to commands even 
+    when they are in the path. (Bikas Saha via suresh)

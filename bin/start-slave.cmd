@@ -1,6 +1,7 @@
 @echo off
 setlocal
-set path=%HADOOP_BIN_PATH%;%windir%\system32;%windir%
+
+set path=%PATH%;%HADOOP_BIN_PATH%
 
 :StartHadoop
 start "Apache Hadoop Distribution" hadoop datanode
