@@ -723,6 +723,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
     (Vinay via umamahesh)
+
+    HDFS-1490. TransferFSImage should timeout (Dmytro Molkov and Vinay via todd)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
