@@ -99,6 +99,18 @@ class AsyncLoggerSet {
     }
   }
 
+
+  /**
+   * Set the highest successfully committed txid seen by the writer.
+   * This should be called after a successful write to a quorum, and is used
+   * for extra sanity checks against the protocol. See HDFS-3863.
+   */
+  public void setCommittedTxId(long txid) {
+    for (AsyncLogger logger : loggers) {
+      logger.setCommittedTxId(txid);
+    }
+  }
+
   /**
    * @return the epoch number for this writer. This may only be called after
    * a successful call to {@link #createNewUniqueEpoch(NamespaceInfo)}.

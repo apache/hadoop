@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.qjournal.protocolPB;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos;
@@ -199,6 +200,8 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
     return new RequestInfo(
         reqInfo.getJournalId().getIdentifier(),
         reqInfo.getEpoch(),
-        reqInfo.getIpcSerialNumber());
+        reqInfo.getIpcSerialNumber(),
+        reqInfo.hasCommittedTxId() ?
+          reqInfo.getCommittedTxId() : HdfsConstants.INVALID_TXID);
   }
 }

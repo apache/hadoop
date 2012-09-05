@@ -265,6 +265,21 @@ public class QuorumJournalManager implements JournalManager {
     SegmentStateProto logToSync = bestResponse.getSegmentState();
     assert segmentTxId == logToSync.getStartTxId();
     
+    // Sanity check: none of the loggers should be aware of a higher
+    // txid than the txid we intend to truncate to
+    for (Map.Entry<AsyncLogger, PrepareRecoveryResponseProto> e :
+         prepareResponses.entrySet()) {
+      AsyncLogger logger = e.getKey();
+      PrepareRecoveryResponseProto resp = e.getValue();
+
+      if (resp.hasLastCommittedTxId() &&
+          resp.getLastCommittedTxId() > logToSync.getEndTxId()) {
+        throw new AssertionError("Decided to synchronize log to " + logToSync +
+            " but logger " + logger + " had seen txid " +
+            resp.getLastCommittedTxId() + " committed");
+      }
+    }
+    
     URL syncFromUrl = bestLogger.buildURLToFetchLogs(segmentTxId);
     
     QuorumCall<AsyncLogger,Void> accept = loggers.acceptRecovery(logToSync, syncFromUrl);

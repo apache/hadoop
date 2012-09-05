@@ -31,6 +31,13 @@ message RequestInfoProto {
   required JournalIdProto journalId = 1;
   required uint64 epoch = 2;
   required uint64 ipcSerialNumber = 3;
+
+  // Whenever a writer makes a request, it informs
+  // the node of the latest committed txid. This may
+  // be higher than the transaction data included in the
+  // request itself, eg in the case that the node has
+  // fallen behind.
+  optional uint64 committedTxId = 4;
 }
 
 message SegmentStateProto {
@@ -163,6 +170,11 @@ message PrepareRecoveryResponseProto {
   optional SegmentStateProto segmentState = 1;
   optional uint64 acceptedInEpoch = 2;
   required uint64 lastWriterEpoch = 3;
+
+  // The highest committed txid that this logger has ever seen.
+  // This may be higher than the data it actually has, in the case
+  // that it was lagging before the old writer crashed.
+  optional uint64 lastCommittedTxId = 4;
 }
 
 /**

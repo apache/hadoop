@@ -30,6 +30,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
@@ -73,6 +74,8 @@ public class IPCLoggerChannel implements AsyncLogger {
   private final ListeningExecutorService executor;
   private long ipcSerial = 0;
   private long epoch = -1;
+  private long committedTxId = HdfsConstants.INVALID_TXID;
+  
   private final String journalId;
   private final NamespaceInfo nsInfo;
   private int httpPort = -1;
@@ -115,9 +118,18 @@ public class IPCLoggerChannel implements AsyncLogger {
     executor = MoreExecutors.listeningDecorator(
         createExecutor());
   }
+  
   @Override
   public synchronized void setEpoch(long epoch) {
     this.epoch = epoch;
+  }
+  
+  @Override
+  public synchronized void setCommittedTxId(long txid) {
+    Preconditions.checkArgument(txid >= committedTxId,
+        "Trying to move committed txid backwards in client " +
+         "old: %s new: %s", committedTxId, txid);
+    this.committedTxId = txid;
   }
   
   @Override
@@ -183,7 +195,8 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   private synchronized RequestInfo createReqInfo() {
     Preconditions.checkState(epoch > 0, "bad epoch: " + epoch);
-    return new RequestInfo(journalId, epoch, ipcSerial++);
+    return new RequestInfo(journalId, epoch, ipcSerial++,
+        committedTxId);
   }
 
   @VisibleForTesting

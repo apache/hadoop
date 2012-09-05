@@ -102,6 +102,11 @@ class QuorumOutputStream extends EditLogOutputStream {
           segmentTxId, firstTxToFlush,
           numReadyTxns, data);
       loggers.waitForWriteQuorum(qcall, 20000); // TODO: configurable timeout
+      
+      // Since we successfully wrote this batch, let the loggers know. Any future
+      // RPCs will thus let the loggers know of the most recent transaction, even
+      // if a logger has fallen behind.
+      loggers.setCommittedTxId(firstTxToFlush + numReadyTxns - 1);
     }
   }
 }

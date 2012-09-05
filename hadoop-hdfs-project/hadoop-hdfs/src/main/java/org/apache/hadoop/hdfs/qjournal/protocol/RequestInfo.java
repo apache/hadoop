@@ -18,17 +18,21 @@
 package org.apache.hadoop.hdfs.qjournal.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 @InterfaceAudience.Private
 public class RequestInfo {
   private String jid;
   private long epoch;
   private long ipcSerialNumber;
+  private long committedTxId;
   
-  public RequestInfo(String jid, long epoch, long ipcSerialNumber) {
+  public RequestInfo(String jid, long epoch, long ipcSerialNumber,
+      long committedTxId) {
     this.jid = jid;
     this.epoch = epoch;
     this.ipcSerialNumber = ipcSerialNumber;
+    this.committedTxId = committedTxId;
   }
 
   public long getEpoch() {
@@ -51,4 +55,11 @@ public class RequestInfo {
     this.ipcSerialNumber = ipcSerialNumber;
   }
 
+  public long getCommittedTxId() {
+    return committedTxId;
+  }
+
+  public boolean hasCommittedTxId() {
+    return (committedTxId != HdfsConstants.INVALID_TXID);
+  }
 }

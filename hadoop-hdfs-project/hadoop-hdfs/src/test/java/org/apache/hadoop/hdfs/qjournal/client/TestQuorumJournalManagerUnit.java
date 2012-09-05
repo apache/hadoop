@@ -186,6 +186,8 @@ public class TestQuorumJournalManagerUnit {
     Mockito.doReturn(slowLog).when(spyLoggers.get(2)).sendEdits(
         anyLong(), eq(1L), eq(1), Mockito.<byte[]>any());
     stm.flush();
+    
+    Mockito.verify(spyLoggers.get(0)).setCommittedTxId(1L);
   }
 
   private EditLogOutputStream createLogSegment() throws IOException {

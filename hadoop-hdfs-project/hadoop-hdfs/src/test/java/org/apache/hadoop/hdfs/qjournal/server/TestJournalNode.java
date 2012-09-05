@@ -119,8 +119,8 @@ public class TestJournalNode {
     response = ch.newEpoch(4).get();
     ch.setEpoch(4);
     // Because the new segment is empty, it is equivalent to not having
-    // started writing it.
-    assertEquals(0, response.getLastSegmentTxId());
+    // started writing it. Hence, we should return the prior segment txid.
+    assertEquals(1, response.getLastSegmentTxId());
   }
   
   @Test

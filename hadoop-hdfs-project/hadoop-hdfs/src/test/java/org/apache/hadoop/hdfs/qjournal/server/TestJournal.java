@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assume;
@@ -70,6 +71,11 @@ public class TestJournal {
       .reportErrorOnFile(Mockito.<File>any());
   }
   
+  @After
+  public void cleanup() {
+    IOUtils.closeStream(journal);
+  }
+  
   @Test
   public void testEpochHandling() throws Exception {
     assertEquals(0, journal.getLastPromisedEpoch());
@@ -88,28 +94,41 @@ public class TestJournal {
           "Proposed epoch 3 <= last promise 3", ioe);
     }
     try {
-      journal.startLogSegment(new RequestInfo(JID, 1L, 1L),
-          12345L);
+      journal.startLogSegment(makeRI(1), 12345L);
       fail("Should have rejected call from prior epoch");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
           "epoch 1 is less than the last promised epoch 3", ioe);
     }
     try {
-      journal.journal(new RequestInfo(JID, 1L, 1L),
-          12345L, 100L, 0, new byte[0]);
+      journal.journal(makeRI(1), 12345L, 100L, 0, new byte[0]);
       fail("Should have rejected call from prior epoch");
     } catch (IOException ioe) {
       GenericTestUtils.assertExceptionContains(
           "epoch 1 is less than the last promised epoch 3", ioe);
     }
   }
-
+  
+  @Test
+  public void testMaintainCommittedTxId() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 1);
+    journal.startLogSegment(makeRI(1), 1);
+    // Send txids 1-3, with a request indicating only 0 committed
+    journal.journal(new RequestInfo(JID, 1, 2, 0), 1, 1, 3,
+        QJMTestUtil.createTxnData(1, 3));
+    assertEquals(0, journal.getCommittedTxnIdForTests());
+    
+    // Send 4-6, with request indicating that through 3 is committed.
+    journal.journal(new RequestInfo(JID, 1, 3, 3), 1, 4, 3,
+        QJMTestUtil.createTxnData(4, 6));
+    assertEquals(3, journal.getCommittedTxnIdForTests());    
+  }
+  
   @Test
   public void testRestartJournal() throws Exception {
     journal.newEpoch(FAKE_NSINFO, 1);
-    journal.startLogSegment(new RequestInfo("j", 1, 1), 1);
-    journal.journal(new RequestInfo("j", 1, 2), 1, 1, 2, 
+    journal.startLogSegment(makeRI(1), 1);
+    journal.journal(makeRI(2), 1, 1, 2, 
         QJMTestUtil.createTxnData(1, 2));
     // Don't finalize.
     
@@ -127,6 +146,23 @@ public class TestJournal {
     assertEquals(1, journal.getLastPromisedEpoch());
     NewEpochResponseProtoOrBuilder newEpoch = journal.newEpoch(FAKE_NSINFO, 2);
     assertEquals(1, newEpoch.getLastSegmentTxId());
+  }
+  
+  /**
+   * Test that, if the writer crashes at the very beginning of a segment,
+   * before any transactions are written, that the next newEpoch() call
+   * returns the prior segment txid as its most recent segment.
+   */
+  @Test
+  public void testNewEpochAtBeginningOfSegment() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 1);
+    journal.startLogSegment(makeRI(1), 1);
+    journal.journal(makeRI(2), 1, 1, 2, 
+        QJMTestUtil.createTxnData(1, 2));
+    journal.finalizeLogSegment(makeRI(3), 1, 2);
+    journal.startLogSegment(makeRI(3), 3);
+    NewEpochResponseProto resp = journal.newEpoch(FAKE_NSINFO, 2);
+    assertEquals(1, resp.getLastSegmentTxId());
   }
   
   @Test
@@ -289,7 +325,7 @@ public class TestJournal {
   }
   
   private static RequestInfo makeRI(int serial) {
-    return new RequestInfo(JID, 1, serial);
+    return new RequestInfo(JID, 1, serial, 0);
   }
   
   @Test

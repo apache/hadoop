@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.AcceptRec
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PurgeLogsRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.RequestInfoProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.StartLogSegmentRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
@@ -143,11 +144,14 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
 
   private QJournalProtocolProtos.RequestInfoProto convert(
       RequestInfo reqInfo) {
-    return QJournalProtocolProtos.RequestInfoProto.newBuilder()
-      .setJournalId(convertJournalId(reqInfo.getJournalId()))
-      .setEpoch(reqInfo.getEpoch())
-      .setIpcSerialNumber(reqInfo.getIpcSerialNumber())
-      .build();
+    RequestInfoProto.Builder builder = RequestInfoProto.newBuilder()
+        .setJournalId(convertJournalId(reqInfo.getJournalId()))
+        .setEpoch(reqInfo.getEpoch())
+        .setIpcSerialNumber(reqInfo.getIpcSerialNumber());
+    if (reqInfo.hasCommittedTxId()) {
+      builder.setCommittedTxId(reqInfo.getCommittedTxId());
+    }
+    return builder.build();
   }
 
   @Override

@@ -124,6 +124,13 @@ interface AsyncLogger {
   public void setEpoch(long e);
 
   /**
+   * Let the logger know the highest committed txid across all loggers in the
+   * set. This txid may be higher than the last committed txid for <em>this</em>
+   * logger. See HDFS-3863 for details.
+   */
+  public void setCommittedTxId(long txid);
+
+  /**
    * Build an HTTP URL to fetch the log segment with the given startTxId.
    */
   public URL buildURLToFetchLogs(long segmentTxId);
