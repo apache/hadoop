@@ -56,6 +56,9 @@ Release 2.1.0-alpha - Unreleased
     YARN-37. Change TestRMAppTransitions to use the DrainDispatcher.
     (Mayank Bansal via sseth)
 
+    YARN-79. Implement close on all clients to YARN so that RPC clients don't
+    throw exceptions on shut-down. (Vinod Kumar Vavilapalli)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
