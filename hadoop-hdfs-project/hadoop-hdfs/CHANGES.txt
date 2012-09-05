@@ -242,6 +242,8 @@ Release 2.0.1-alpha - UNRELEASED
     HDFS-3887. Remove redundant chooseTarget methods in BlockPlacementPolicy.
     (Jing Zhao via szetszwo)
 
+    HDFS-3888. Clean up BlockPlacementPolicyDefault.  (Jing Zhao via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

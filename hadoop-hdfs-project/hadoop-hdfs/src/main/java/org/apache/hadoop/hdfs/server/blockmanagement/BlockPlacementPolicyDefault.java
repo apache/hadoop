@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -54,9 +52,6 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
-
-  private static final Log LOG =
-    LogFactory.getLog(BlockPlacementPolicyDefault.class.getName());
 
   private static final String enableDebugLogging =
     "For more information, please enable DEBUG log level on "
@@ -124,7 +119,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         excludedNodes, blocksize);
   }
 
-
   /** This is the implementation. */
   DatanodeDescriptor[] chooseTarget(int numOfReplicas,
                                     DatanodeDescriptor writer,
@@ -161,7 +155,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
       
     DatanodeDescriptor localNode = chooseTarget(numOfReplicas, writer, 
-                                                excludedNodes, blocksize, maxNodesPerRack, results);
+                                                excludedNodes, blocksize, 
+                                                maxNodesPerRack, results);
     if (!returnChosenNodes) {  
       results.removeAll(chosenNodes);
     }
@@ -438,14 +433,29 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * does not have too much load, and the rack does not have too many nodes
    */
   private boolean isGoodTarget(DatanodeDescriptor node,
-                               long blockSize, int maxTargetPerLoc,
+                               long blockSize, int maxTargetPerRack,
                                List<DatanodeDescriptor> results) {
-    return isGoodTarget(node, blockSize, maxTargetPerLoc,
+    return isGoodTarget(node, blockSize, maxTargetPerRack,
                         this.considerLoad, results);
   }
-    
+  
+  /**
+   * Determine if a node is a good target. 
+   * 
+   * @param node The target node
+   * @param blockSize Size of block
+   * @param maxTargetPerRack Maximum number of targets per rack. The value of 
+   *                       this parameter depends on the number of racks in 
+   *                       the cluster and total number of replicas for a block
+   * @param considerLoad whether or not to consider load of the target node
+   * @param results A list containing currently chosen nodes. Used to check if 
+   *                too many nodes has been chosen in the target rack. 
+   * @return Return true if <i>node</i> has enough space, 
+   *         does not have too much load, 
+   *         and the rack does not have too many nodes.
+   */
   private boolean isGoodTarget(DatanodeDescriptor node,
-                               long blockSize, int maxTargetPerLoc,
+                               long blockSize, int maxTargetPerRack,
                                boolean considerLoad,
                                List<DatanodeDescriptor> results) {
     // check if the node is (being) decommissed
@@ -497,7 +507,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         counter++;
       }
     }
-    if (counter>maxTargetPerLoc) {
+    if (counter>maxTargetPerRack) {
       if(LOG.isDebugEnabled()) {
         threadLocalBuilder.get().append(node.toString()).append(": ")
           .append("Node ").append(NodeBase.getPath(node))
