@@ -157,14 +157,18 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         application1));
 
     logAggregationService.stop();
+    assertEquals(0, logAggregationService.getNumAggregators());
     // ensure filesystems were closed
     verify(logAggregationService).closeFileSystems(
         any(UserGroupInformation.class));
     
+    delSrvc.stop();
+    
     String containerIdStr = ConverterUtils.toString(container11);
     File containerLogDir = new File(app1LogDir, containerIdStr);
     for (String fileType : new String[] { "stdout", "stderr", "syslog" }) {
-      Assert.assertFalse(new File(containerLogDir, fileType).exists());
+      File f = new File(containerLogDir, fileType);
+      Assert.assertFalse("check "+f, f.exists());
     }
 
     Assert.assertFalse(app1LogDir.exists());
@@ -222,6 +226,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         application1));
 
     logAggregationService.stop();
+    assertEquals(0, logAggregationService.getNumAggregators());
 
     Assert.assertFalse(new File(logAggregationService
         .getRemoteNodeLogFileForApp(application1, this.user).toUri().getPath())
@@ -356,6 +361,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         application1));
 
     logAggregationService.stop();
+    assertEquals(0, logAggregationService.getNumAggregators());
 
     verifyContainerLogs(logAggregationService, application1,
         new ContainerId[] { container11, container12 });
@@ -454,7 +460,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     
     ApplicationId appId = BuilderUtils.newApplicationId(
         System.currentTimeMillis(), (int)Math.random());
-    doThrow(new YarnException("KABOOM!"))
+    Exception e = new RuntimeException("KABOOM!");
+    doThrow(e)
       .when(logAggregationService).createAppDir(any(String.class),
           any(ApplicationId.class), any(UserGroupInformation.class));
     logAggregationService.handle(new LogHandlerAppStartedEvent(appId,
@@ -463,7 +470,8 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     
     dispatcher.await();
     ApplicationEvent expectedEvents[] = new ApplicationEvent[]{
-        new ApplicationFinishEvent(appId, "Application failed to init aggregation: KABOOM!")
+        new ApplicationFinishEvent(appId,
+            "Application failed to init aggregation: "+e)
     };
     checkEvents(appEventHandler, expectedEvents, false,
         "getType", "getApplicationID", "getDiagnostic");
@@ -479,6 +487,9 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     logAggregationService.handle(new LogHandlerAppFinishedEvent(
         BuilderUtils.newApplicationId(1, 5)));
     dispatcher.await();
+
+    logAggregationService.stop();
+    assertEquals(0, logAggregationService.getNumAggregators());
   }
 
   private void writeContainerLogs(File appLogDir, ContainerId containerId)
@@ -690,6 +701,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
             ContainerLogsRetentionPolicy.ALL_CONTAINERS, this.acls));
 
     logAggregationService.stop();
+    assertEquals(0, logAggregationService.getNumAggregators());
   }
 
   @Test
