@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.EnumSet;
@@ -61,8 +62,15 @@ public abstract class FileContextMainOperationsBaseTest  {
   private static String TEST_DIR_AXX = "test/hadoop/axx";
   private static int numBlocks = 2;
   
-  static  final String LOCAL_FS_ROOT_URI = "file:///tmp/test";
-  
+  public static final Path LOCAL_FS_ROOT_PATH;
+      
+  static {
+    File testBuildData = new File(System.getProperty("test.build.data",
+                                    "build/test/data"));
+    Path localFsRootPath = new Path(testBuildData.getAbsolutePath(), 
+                                    "root-uri");
+    LOCAL_FS_ROOT_PATH = localFsRootPath.makeQualified(LocalFileSystem.NAME, null);
+  }
   
   protected static FileContext fc;
   
@@ -95,7 +103,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   @After
   public void tearDown() throws Exception {
     fc.delete(new Path(getAbsoluteTestRootPath(fc), new Path("test")), true);
-    fc.delete(new Path(LOCAL_FS_ROOT_URI), true);
+    fc.delete(LOCAL_FS_ROOT_PATH, true);
   }
   
   
@@ -176,7 +184,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     // Try a URI
 
-    absoluteDir = new Path(LOCAL_FS_ROOT_URI + "/existingDir");
+    absoluteDir = new Path(LOCAL_FS_ROOT_PATH, "existingDir");
     fc.mkdir(absoluteDir, FileContext.DEFAULT_PERM, true);
     fc.setWorkingDirectory(absoluteDir);
     Assert.assertEquals(absoluteDir, fc.getWorkingDirectory());
