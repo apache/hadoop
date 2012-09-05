@@ -160,6 +160,7 @@ public class TestViewFileSystemDelegationTokenSupport {
   static class FakeFileSystem extends RawLocalFileSystem {
     URI uri;
 
+    @Override
     public void initialize(URI name, Configuration conf) throws IOException {
       this.uri = name;
     }
@@ -169,6 +170,7 @@ public class TestViewFileSystemDelegationTokenSupport {
       return new Path("/"); // ctor calls getUri before the uri is inited...
     }
     
+    @Override
     public URI getUri() {
       return uri;
     }

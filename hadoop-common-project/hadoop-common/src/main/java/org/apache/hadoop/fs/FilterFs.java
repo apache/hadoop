@@ -174,9 +174,6 @@ public abstract class FilterFs extends AbstractFileSystem {
     return myFs.listStatus(f);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {

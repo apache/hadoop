@@ -33,6 +33,7 @@ import org.junit.Test;
 
 public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTest {
    static FileSystem fcTarget;
+  @Override
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
@@ -42,6 +43,7 @@ public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTes
     super.setUp();
   }
   
+  @Override
   @After
   public void tearDown() throws Exception {
     super.tearDown();

@@ -21,11 +21,7 @@
 package org.apache.hadoop.metrics.spi;
 
 import java.util.Collections;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.Map.Entry;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.metrics.spi.AbstractMetricsContext.MetricMap;

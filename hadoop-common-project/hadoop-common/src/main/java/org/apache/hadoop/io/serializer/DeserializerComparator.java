@@ -56,6 +56,7 @@ public abstract class DeserializerComparator<T> implements RawComparator<T> {
     this.deserializer.open(buffer);
   }
 
+  @Override
   public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
     try {
       

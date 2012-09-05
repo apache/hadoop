@@ -27,6 +27,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobStatus.State;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
@@ -55,14 +56,20 @@ public class TestJob {
 
   @Test
   public void testUGICredentialsPropogation() throws Exception {
+    Credentials creds = new Credentials();
     Token<?> token = mock(Token.class);
-    Text service = new Text("service");
-    
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    ugi.addToken(service, token);
+    Text tokenService = new Text("service");
+    Text secretName = new Text("secret");
+    byte secret[] = new byte[]{};
+        
+    creds.addToken(tokenService,  token);
+    creds.addSecretKey(secretName, secret);
+    UserGroupInformation.getLoginUser().addCredentials(creds);
     
     JobConf jobConf = new JobConf();
     Job job = new Job(jobConf);
-    assertSame(token, job.getCredentials().getToken(service));
+
+    assertSame(token, job.getCredentials().getToken(tokenService));
+    assertSame(secret, job.getCredentials().getSecretKey(secretName));
   }
 }

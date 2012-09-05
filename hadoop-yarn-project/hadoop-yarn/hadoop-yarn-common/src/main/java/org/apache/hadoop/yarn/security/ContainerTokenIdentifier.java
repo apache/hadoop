@@ -50,13 +50,15 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   private String nmHostAddr;
   private Resource resource;
   private long expiryTimeStamp;
+  private int masterKeyId;
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
-      Resource r, long expiryTimeStamp) {
+      Resource r, long expiryTimeStamp, int masterKeyId) {
     this.containerId = containerID;
     this.nmHostAddr = hostName;
     this.resource = r;
     this.expiryTimeStamp = expiryTimeStamp;
+    this.masterKeyId = masterKeyId;
   }
 
   /**
@@ -81,6 +83,10 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     return this.expiryTimeStamp;
   }
 
+  public int getMasterKeyId() {
+    return this.masterKeyId;
+  }
+
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing ContainerTokenIdentifier to RPC layer: " + this);
@@ -94,6 +100,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     out.writeUTF(this.nmHostAddr);
     out.writeInt(this.resource.getMemory());
     out.writeLong(this.expiryTimeStamp);
+    out.writeInt(this.masterKeyId);
   }
 
   @Override
@@ -107,6 +114,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     this.nmHostAddr = in.readUTF();
     this.resource = BuilderUtils.newResource(in.readInt());
     this.expiryTimeStamp = in.readLong();
+    this.masterKeyId = in.readInt();
   }
 
   @Override

@@ -214,6 +214,7 @@ public class Progress {
     this.status = status;
   }
 
+  @Override
   public String toString() {
     StringBuilder result = new StringBuilder();
     toString(result);

@@ -91,6 +91,7 @@ public class DelegationKey implements Writable {
 
   /**
    */
+  @Override
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, keyId);
     WritableUtils.writeVLong(out, expiryDate);
@@ -104,6 +105,7 @@ public class DelegationKey implements Writable {
 
   /**
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
     keyId = WritableUtils.readVInt(in);
     expiryDate = WritableUtils.readVLong(in);

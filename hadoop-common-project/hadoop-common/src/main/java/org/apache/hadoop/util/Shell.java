@@ -30,7 +30,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 
 /** 
  * A base class for running a Unix command.
@@ -323,10 +322,12 @@ abstract public class Shell {
       this.run();    
     }
 
+    @Override
     public String[] getExecString() {
       return command;
     }
 
+    @Override
     protected void parseExecResult(BufferedReader lines) throws IOException {
       output = new StringBuffer();
       char[] buf = new char[512];
@@ -348,6 +349,7 @@ abstract public class Shell {
      *
      * @return a string representation of the object.
      */
+    @Override
     public String toString() {
       StringBuilder builder = new StringBuilder();
       String[] args = getExecString();

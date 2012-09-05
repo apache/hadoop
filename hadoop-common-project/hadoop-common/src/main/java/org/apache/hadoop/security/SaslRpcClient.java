@@ -239,6 +239,7 @@ public class SaslRpcClient {
       this.userPassword = SaslRpcServer.encodePassword(token.getPassword());
     }
 
+    @Override
     public void handle(Callback[] callbacks)
         throws UnsupportedCallbackException {
       NameCallback nc = null;

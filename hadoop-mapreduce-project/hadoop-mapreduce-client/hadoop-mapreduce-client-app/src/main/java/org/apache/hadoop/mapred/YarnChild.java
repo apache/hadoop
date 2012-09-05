@@ -93,7 +93,11 @@ class YarnChild {
     // Security framework already loaded the tokens into current ugi
     Credentials credentials =
         UserGroupInformation.getCurrentUser().getCredentials();
-    
+    LOG.info("Executing with tokens:");
+    for (Token<?> token: credentials.getAllTokens()) {
+      LOG.info(token);
+    }
+
     // Create TaskUmbilicalProtocol as actual task owner.
     UserGroupInformation taskOwner =
       UserGroupInformation.createRemoteUser(firstTaskid.getJobID().toString());
@@ -141,7 +145,7 @@ class YarnChild {
       childUGI = UserGroupInformation.createRemoteUser(System
           .getenv(ApplicationConstants.Environment.USER.toString()));
       // Add tokens to new user so that it may execute its task correctly.
-      job.getCredentials().addTokensToUGI(childUGI);
+      childUGI.addCredentials(credentials);
 
       // Create a final reference to the task for the doAs block
       final Task taskFinal = task;

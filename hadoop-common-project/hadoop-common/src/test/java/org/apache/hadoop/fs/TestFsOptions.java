@@ -19,8 +19,6 @@ package org.apache.hadoop.fs;
 
 import static org.junit.Assert.*;
 
-import java.io.IOException;
-
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.util.DataChecksum;
 

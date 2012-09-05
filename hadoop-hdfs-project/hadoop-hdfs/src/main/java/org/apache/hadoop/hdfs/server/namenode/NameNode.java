@@ -73,6 +73,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ExitUtil.ExitException;
+import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 
@@ -511,13 +512,13 @@ public class NameNode {
   }
   
   private void startTrashEmptier(Configuration conf) throws IOException {
-    long trashInterval = namesystem.getServerDefaults().getTrashInterval();  
+    long trashInterval =
+        conf.getLong(FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT);
     if (trashInterval == 0) {
       return;
     } else if (trashInterval < 0) {
       throw new IOException("Cannot start tresh emptier with negative interval."
-          + " Set " + CommonConfigurationKeys.FS_TRASH_INTERVAL_KEY + " to a"
-          + " positive value.");
+          + " Set " + FS_TRASH_INTERVAL_KEY + " to a positive value.");
     }
     this.emptier = new Thread(new Trash(conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);
@@ -1056,6 +1057,10 @@ public class NameNode {
       throws IOException {
     if (conf == null)
       conf = new HdfsConfiguration();
+    // Parse out some generic args into Configuration.
+    GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+    argv = hParser.getRemainingArgs();
+    // Parse the rest, NN specific args.
     StartupOption startOpt = parseArguments(argv);
     if (startOpt == null) {
       printUsage(System.err);

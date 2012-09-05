@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
@@ -51,7 +50,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 
@@ -290,10 +288,9 @@ public class MiniYARNCluster extends CompositeService {
 
     @Override
     protected NodeStatusUpdater createNodeStatusUpdater(Context context,
-        Dispatcher dispatcher, NodeHealthCheckerService healthChecker,
-        ContainerTokenSecretManager containerTokenSecretManager) {
+        Dispatcher dispatcher, NodeHealthCheckerService healthChecker) {
       return new NodeStatusUpdaterImpl(context, dispatcher,
-          healthChecker, metrics, containerTokenSecretManager) {
+          healthChecker, metrics) {
         @Override
         protected ResourceTracker getRMClient() {
           final ResourceTrackerService rt = resourceManager

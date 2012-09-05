@@ -75,7 +75,7 @@ public class ContentSummary implements Writable{
   /** Returns (disk) space quota */
   public long getSpaceQuota() {return spaceQuota;}
   
-  /** {@inheritDoc} */
+  @Override
   @InterfaceAudience.Private
   public void write(DataOutput out) throws IOException {
     out.writeLong(length);
@@ -86,7 +86,7 @@ public class ContentSummary implements Writable{
     out.writeLong(spaceQuota);
   }
 
-  /** {@inheritDoc} */
+  @Override
   @InterfaceAudience.Private
   public void readFields(DataInput in) throws IOException {
     this.length = in.readLong();
@@ -131,7 +131,7 @@ public class ContentSummary implements Writable{
     return qOption ? QUOTA_HEADER : HEADER;
   }
   
-  /** {@inheritDoc} */
+  @Override
   public String toString() {
     return toString(true);
   }

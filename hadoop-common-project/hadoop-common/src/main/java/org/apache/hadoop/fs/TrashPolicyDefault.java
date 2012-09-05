@@ -263,6 +263,7 @@ public class TrashPolicyDefault extends TrashPolicy {
       }
     }
 
+    @Override
     public void run() {
       if (emptierInterval == 0)
         return;                                   // trash disabled

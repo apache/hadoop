@@ -176,6 +176,7 @@ public abstract class FileContextPermissionBase {
         .createRemoteUser("otherUser");
     FileContext newFc = otherUser.doAs(new PrivilegedExceptionAction<FileContext>() {
 
+      @Override
       public FileContext run() throws Exception {
         FileContext newFc = FileContext.getFileContext();
         return newFc;

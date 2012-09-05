@@ -50,22 +50,27 @@ class KFSImpl implements IFSImpl {
         statistics = stats;
     }
 
+    @Override
     public boolean exists(String path) throws IOException {
         return kfsAccess.kfs_exists(path);
     }
 
+    @Override
     public boolean isDirectory(String path) throws IOException {
         return kfsAccess.kfs_isDirectory(path);
     }
 
+    @Override
     public boolean isFile(String path) throws IOException {
         return kfsAccess.kfs_isFile(path);
     }
 
+    @Override
     public String[] readdir(String path) throws IOException {
         return kfsAccess.kfs_readdir(path);
     }
 
+    @Override
     public FileStatus[] readdirplus(Path path) throws IOException {
         String srep = path.toUri().getPath();
         KfsFileAttr[] fattr = kfsAccess.kfs_readdirplus(srep);
@@ -100,52 +105,64 @@ class KFSImpl implements IFSImpl {
     }
 
 
+    @Override
     public int mkdirs(String path) throws IOException {
         return kfsAccess.kfs_mkdirs(path);
     }
 
+    @Override
     public int rename(String source, String dest) throws IOException {
         return kfsAccess.kfs_rename(source, dest);
     }
 
+    @Override
     public int rmdir(String path) throws IOException {
         return kfsAccess.kfs_rmdir(path);
     }
 
+    @Override
     public int remove(String path) throws IOException {
         return kfsAccess.kfs_remove(path);
     }
 
+    @Override
     public long filesize(String path) throws IOException {
         return kfsAccess.kfs_filesize(path);
     }
 
+    @Override
     public short getReplication(String path) throws IOException {
         return kfsAccess.kfs_getReplication(path);
     }
 
+    @Override
     public short setReplication(String path, short replication) throws IOException {
         return kfsAccess.kfs_setReplication(path, replication);
     }
 
+    @Override
     public String[][] getDataLocation(String path, long start, long len) throws IOException {
         return kfsAccess.kfs_getDataLocation(path, start, len);
     }
 
+    @Override
     public long getModificationTime(String path) throws IOException {
         return kfsAccess.kfs_getModificationTime(path);
     }
 
+    @Override
     public FSDataInputStream open(String path, int bufferSize) throws IOException {
         return new FSDataInputStream(new KFSInputStream(kfsAccess, path, 
                                                         statistics));
     }
 
+    @Override
     public FSDataOutputStream create(String path, short replication, int bufferSize, Progressable progress) throws IOException {
         return new FSDataOutputStream(new KFSOutputStream(kfsAccess, path, replication, false, progress), 
                                       statistics);
     }
 
+    @Override
     public FSDataOutputStream append(String path, int bufferSize, Progressable progress) throws IOException {
         // when opening for append, # of replicas is ignored
         return new FSDataOutputStream(new KFSOutputStream(kfsAccess, path, (short) 1, true, progress), 

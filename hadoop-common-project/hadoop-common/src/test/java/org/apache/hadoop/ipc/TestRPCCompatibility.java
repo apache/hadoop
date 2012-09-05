@@ -131,8 +131,9 @@ public class TestRPCCompatibility {
   public void testVersion0ClientVersion1Server() throws Exception {
     // create a server with two handlers
     TestImpl1 impl = new TestImpl1();
-    server = RPC.getServer(TestProtocol1.class,
-                            impl, ADDRESS, 0, 2, false, conf, null);
+    server = new RPC.Builder(conf).setProtocol(TestProtocol1.class)
+        .setInstance(impl).setBindAddress(ADDRESS).setPort(0).setNumHandlers(2)
+        .setVerbose(false).build();
     server.addProtocol(RPC.RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
@@ -147,8 +148,9 @@ public class TestRPCCompatibility {
   @Test  // old client vs new server
   public void testVersion1ClientVersion0Server() throws Exception {
     // create a server with two handlers
-    server = RPC.getServer(TestProtocol0.class,
-                              new TestImpl0(), ADDRESS, 0, 2, false, conf, null);
+    server = new RPC.Builder(conf).setProtocol(TestProtocol0.class)
+        .setInstance(new TestImpl0()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -198,8 +200,9 @@ System.out.println("echo int is NOT supported");
   public void testVersion2ClientVersion1Server() throws Exception {
     // create a server with two handlers
     TestImpl1 impl = new TestImpl1();
-    server = RPC.getServer(TestProtocol1.class,
-                              impl, ADDRESS, 0, 2, false, conf, null);
+    server = new RPC.Builder(conf).setProtocol(TestProtocol1.class)
+        .setInstance(impl).setBindAddress(ADDRESS).setPort(0).setNumHandlers(2)
+        .setVerbose(false).build();
     server.addProtocol(RPC.RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
@@ -219,8 +222,9 @@ System.out.println("echo int is NOT supported");
     ProtocolSignature.resetCache();
     // create a server with two handlers
     TestImpl2 impl = new TestImpl2();
-    server = RPC.getServer(TestProtocol2.class,
-                             impl, ADDRESS, 0, 2, false, conf, null);
+    server = new RPC.Builder(conf).setProtocol(TestProtocol2.class)
+        .setInstance(impl).setBindAddress(ADDRESS).setPort(0).setNumHandlers(2)
+        .setVerbose(false).build();
     server.addProtocol(RPC.RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
     addr = NetUtils.getConnectAddress(server);
@@ -284,13 +288,15 @@ System.out.println("echo int is NOT supported");
       "org.apache.hadoop.ipc.TestRPCCompatibility$TestProtocol1")
   public interface TestProtocol4 extends TestProtocol2 {
     public static final long versionID = 4L;
+    @Override
     int echo(int value)  throws IOException;
   }
   
   @Test
   public void testVersionMismatch() throws IOException {
-    server = RPC.getServer(TestProtocol2.class, new TestImpl2(), ADDRESS, 0, 2,
-        false, conf, null);
+    server = new RPC.Builder(conf).setProtocol(TestProtocol2.class)
+        .setInstance(new TestImpl2()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -307,8 +313,9 @@ System.out.println("echo int is NOT supported");
   
   @Test
   public void testIsMethodSupported() throws IOException {
-    server = RPC.getServer(TestProtocol2.class, new TestImpl2(), ADDRESS, 0, 2,
-        false, conf, null);
+    server = new RPC.Builder(conf).setProtocol(TestProtocol2.class)
+        .setInstance(new TestImpl2()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(2).setVerbose(false).build();
     server.start();
     addr = NetUtils.getConnectAddress(server);
 
@@ -331,8 +338,9 @@ System.out.println("echo int is NOT supported");
   @Test
   public void testProtocolMetaInfoSSTranslatorPB() throws Exception {
     TestImpl1 impl = new TestImpl1();
-    server = RPC.getServer(TestProtocol1.class, impl, ADDRESS, 0, 2, false,
-        conf, null);
+    server = new RPC.Builder(conf).setProtocol(TestProtocol1.class)
+        .setInstance(impl).setBindAddress(ADDRESS).setPort(0).setNumHandlers(2)
+        .setVerbose(false).build();
     server.addProtocol(RPC.RpcKind.RPC_WRITABLE, TestProtocol0.class, impl);
     server.start();
 

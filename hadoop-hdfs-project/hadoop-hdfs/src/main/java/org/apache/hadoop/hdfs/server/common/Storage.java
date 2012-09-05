@@ -88,6 +88,12 @@ public abstract class Storage extends StorageInfo {
   public    static final String STORAGE_TMP_LAST_CKPT = "lastcheckpoint.tmp";
   public    static final String STORAGE_PREVIOUS_CKPT = "previous.checkpoint";
   
+  /**
+   * The blocksBeingWritten directory which was used in some 1.x and earlier
+   * releases.
+   */
+  public static final String STORAGE_1_BBW = "blocksBeingWritten";
+  
   public enum StorageState {
     NON_EXISTENT,
     NOT_FORMATTED,
@@ -864,6 +870,7 @@ public abstract class Storage extends StorageInfo {
      * @return a string representation of the formattable item, suitable
      * for display to the user inside a prompt
      */
+    @Override
     public String toString();
   }
   

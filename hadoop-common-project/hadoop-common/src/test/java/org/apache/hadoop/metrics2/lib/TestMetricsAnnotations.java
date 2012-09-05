@@ -21,8 +21,6 @@ package org.apache.hadoop.metrics2.lib;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
-import static org.apache.hadoop.test.MockitoMaker.*;
-
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -145,6 +143,7 @@ public class TestMetricsAnnotations {
 
     @Metric int getG0() { return 0; }
 
+    @Override
     public void getMetrics(MetricsCollector collector, boolean all) {
       collector.addRecord("foo")
                   .setContext("foocontext")
@@ -183,6 +182,7 @@ public class TestMetricsAnnotations {
 
     @Metric MutableCounterInt c1;
 
+    @Override
     public void getMetrics(MetricsCollector collector, boolean all) {
       collector.addRecord("foo");
     }

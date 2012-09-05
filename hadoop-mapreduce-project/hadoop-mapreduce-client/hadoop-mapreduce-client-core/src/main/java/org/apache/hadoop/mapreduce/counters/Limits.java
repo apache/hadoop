@@ -20,12 +20,14 @@ package org.apache.hadoop.mapreduce.counters;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
+
 import static org.apache.hadoop.mapreduce.MRJobConfig.*;
 
 @InterfaceAudience.Private
 public class Limits {
 
-  static final Configuration conf = new Configuration();
+  static final Configuration conf = new JobConf();
   public static final int GROUP_NAME_MAX =
       conf.getInt(COUNTER_GROUP_NAME_MAX_KEY, COUNTER_GROUP_NAME_MAX_DEFAULT);
   public static final int COUNTER_NAME_MAX =

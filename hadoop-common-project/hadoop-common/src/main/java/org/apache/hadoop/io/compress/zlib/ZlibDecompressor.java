@@ -118,6 +118,7 @@ public class ZlibDecompressor implements Decompressor {
     this(CompressionHeader.DEFAULT_HEADER, DEFAULT_DIRECT_BUFFER_SIZE);
   }
 
+  @Override
   public synchronized void setInput(byte[] b, int off, int len) {
     if (b == null) {
       throw new NullPointerException();
@@ -154,6 +155,7 @@ public class ZlibDecompressor implements Decompressor {
     userBufLen -= compressedDirectBufLen;
   }
 
+  @Override
   public synchronized void setDictionary(byte[] b, int off, int len) {
     if (stream == 0 || b == null) {
       throw new NullPointerException();
@@ -165,6 +167,7 @@ public class ZlibDecompressor implements Decompressor {
     needDict = false;
   }
 
+  @Override
   public synchronized boolean needsInput() {
     // Consume remaining compressed data?
     if (uncompressedDirectBuf.remaining() > 0) {
@@ -184,16 +187,19 @@ public class ZlibDecompressor implements Decompressor {
     return false;
   }
 
+  @Override
   public synchronized boolean needsDictionary() {
     return needDict;
   }
 
+  @Override
   public synchronized boolean finished() {
     // Check if 'zlib' says it's 'finished' and
     // all compressed data has been consumed
     return (finished && uncompressedDirectBuf.remaining() == 0);
   }
 
+  @Override
   public synchronized int decompress(byte[] b, int off, int len) 
     throws IOException {
     if (b == null) {
@@ -255,6 +261,7 @@ public class ZlibDecompressor implements Decompressor {
    *
    * @return the total (non-negative) number of unprocessed bytes in input
    */
+  @Override
   public synchronized int getRemaining() {
     checkStream();
     return userBufLen + getRemaining(stream);  // userBuf + compressedDirectBuf
@@ -263,6 +270,7 @@ public class ZlibDecompressor implements Decompressor {
   /**
    * Resets everything including the input buffers (user and direct).</p>
    */
+  @Override
   public synchronized void reset() {
     checkStream();
     reset(stream);
@@ -274,6 +282,7 @@ public class ZlibDecompressor implements Decompressor {
     userBufOff = userBufLen = 0;
   }
 
+  @Override
   public synchronized void end() {
     if (stream != 0) {
       end(stream);
@@ -281,6 +290,7 @@ public class ZlibDecompressor implements Decompressor {
     }
   }
 
+  @Override
   protected void finalize() {
     end();
   }

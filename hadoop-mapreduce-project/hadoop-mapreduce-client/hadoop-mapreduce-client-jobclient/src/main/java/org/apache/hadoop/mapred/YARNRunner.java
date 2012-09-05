@@ -89,7 +89,7 @@ import org.apache.hadoop.yarn.util.ProtoUtils;
 /**
  * This class enables the current JobClient (0.22 hadoop) to run on YARN.
  */
-@SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class YARNRunner implements ClientProtocol {
 
   private static final Log LOG = LogFactory.getLog(YARNRunner.class);
@@ -345,10 +345,10 @@ public class YARNRunner implements ClientProtocol {
         createApplicationResource(defaultFileContext,
             jobConfPath, LocalResourceType.FILE));
     if (jobConf.get(MRJobConfig.JAR) != null) {
+      Path jobJarPath = new Path(jobConf.get(MRJobConfig.JAR));
       localResources.put(MRJobConfig.JOB_JAR,
           createApplicationResource(defaultFileContext,
-              new Path(jobSubmitDir, MRJobConfig.JOB_JAR), 
-              LocalResourceType.ARCHIVE));
+              jobJarPath, LocalResourceType.ARCHIVE));
     } else {
       // Job jar may be null. For e.g, for pipes, the job jar is the hadoop
       // mapreduce jar itself which is already on the classpath.

@@ -65,4 +65,53 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" AND CMAKE_SYSTEM_NAME STREQUAL "Linux"
     endif (READELF MATCHES "NOTFOUND")
 endif (CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
 
-find_package(JNI REQUIRED)
+IF("${CMAKE_SYSTEM}" MATCHES "Linux")
+    #
+    # Locate JNI_INCLUDE_DIRS and JNI_LIBRARIES.
+    # Since we were invoked from Maven, we know that the JAVA_HOME environment
+    # variable is valid.  So we ignore system paths here and just use JAVA_HOME.
+    #
+    FILE(TO_CMAKE_PATH "$ENV{JAVA_HOME}" _JAVA_HOME)
+    IF(CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$")
+        SET(_java_libarch "i386")
+    ELSEIF (CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64")
+        SET(_java_libarch "amd64")
+    ELSEIF (CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
+        SET(_java_libarch "arm")
+    ELSE()
+        SET(_java_libarch ${CMAKE_SYSTEM_PROCESSOR})
+    ENDIF()
+    SET(_JDK_DIRS "${_JAVA_HOME}/jre/lib/${_java_libarch}/*"
+                  "${_JAVA_HOME}/jre/lib/${_java_libarch}"
+                  "${_JAVA_HOME}/jre/lib/*"
+                  "${_JAVA_HOME}/jre/lib"
+                  "${_JAVA_HOME}/lib/*"
+                  "${_JAVA_HOME}/lib"
+                  "${_JAVA_HOME}/include/*"
+                  "${_JAVA_HOME}/include"
+                  "${_JAVA_HOME}"
+    )
+    FIND_PATH(JAVA_INCLUDE_PATH
+        NAMES jni.h 
+        PATHS ${_JDK_DIRS}
+        NO_DEFAULT_PATH)
+    FIND_PATH(JAVA_INCLUDE_PATH2 
+        NAMES jni_md.h
+        PATHS ${_JDK_DIRS}
+        NO_DEFAULT_PATH)
+    SET(JNI_INCLUDE_DIRS ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
+    FIND_LIBRARY(JAVA_JVM_LIBRARY
+        NAMES jvm JavaVM
+        PATHS ${_JDK_DIRS}
+        NO_DEFAULT_PATH)
+    SET(JNI_LIBRARIES ${JAVA_JVM_LIBRARY})
+    MESSAGE("JAVA_HOME=${JAVA_HOME}, JAVA_JVM_LIBRARY=${JAVA_JVM_LIBRARY}")
+    MESSAGE("JAVA_INCLUDE_PATH=${JAVA_INCLUDE_PATH}, JAVA_INCLUDE_PATH2=${JAVA_INCLUDE_PATH2}")
+    IF(JAVA_JVM_LIBRARY AND JAVA_INCLUDE_PATH AND JAVA_INCLUDE_PATH2)
+        MESSAGE("Located all JNI components successfully.")
+    ELSE()
+        MESSAGE(FATAL_ERROR "Failed to find a viable JVM installation under JAVA_HOME.")
+    ENDIF()
+ELSE()
+    find_package(JNI REQUIRED)
+ENDIF()

@@ -66,11 +66,13 @@ public class DecompressorStream extends CompressionInputStream {
   }
   
   private byte[] oneByte = new byte[1];
+  @Override
   public int read() throws IOException {
     checkStream();
     return (read(oneByte, 0, oneByte.length) == -1) ? -1 : (oneByte[0] & 0xff);
   }
 
+  @Override
   public int read(byte[] b, int off, int len) throws IOException {
     checkStream();
     
@@ -163,11 +165,13 @@ public class DecompressorStream extends CompressionInputStream {
     }
   }
   
+  @Override
   public void resetState() throws IOException {
     decompressor.reset();
   }
 
   private byte[] skipBytes = new byte[512];
+  @Override
   public long skip(long n) throws IOException {
     // Sanity checks
     if (n < 0) {
@@ -189,11 +193,13 @@ public class DecompressorStream extends CompressionInputStream {
     return skipped;
   }
 
+  @Override
   public int available() throws IOException {
     checkStream();
     return (eof) ? 0 : 1;
   }
 
+  @Override
   public void close() throws IOException {
     if (!closed) {
       in.close();
@@ -201,13 +207,16 @@ public class DecompressorStream extends CompressionInputStream {
     }
   }
 
+  @Override
   public boolean markSupported() {
     return false;
   }
 
+  @Override
   public synchronized void mark(int readlimit) {
   }
 
+  @Override
   public synchronized void reset() throws IOException {
     throw new IOException("mark/reset not supported");
   }

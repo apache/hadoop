@@ -72,8 +72,10 @@ public class MiniMRYarnCluster extends MiniYARNCluster {
   @Override
   public void init(Configuration conf) {
     conf.set(MRConfig.FRAMEWORK_NAME, MRConfig.YARN_FRAMEWORK_NAME);
-    conf.set(MRJobConfig.MR_AM_STAGING_DIR, new File(getTestWorkDir(),
-        "apps_staging_dir/").getAbsolutePath());
+    if (conf.get(MRJobConfig.MR_AM_STAGING_DIR) == null) {
+      conf.set(MRJobConfig.MR_AM_STAGING_DIR, new File(getTestWorkDir(),
+          "apps_staging_dir/").getAbsolutePath());
+    }
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY,  "000");
 
     try {

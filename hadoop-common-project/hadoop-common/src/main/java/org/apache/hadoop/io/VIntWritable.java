@@ -43,10 +43,12 @@ public class VIntWritable implements WritableComparable<VIntWritable> {
   /** Return the value of this VIntWritable. */
   public int get() { return value; }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     value = WritableUtils.readVInt(in);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, value);
   }

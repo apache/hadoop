@@ -103,7 +103,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   private HeartbeatResponse latestHeartBeatResponse = recordFactory
       .newRecordInstance(HeartbeatResponse.class);
-
+  
   private static final StateMachineFactory<RMNodeImpl,
                                            NodeState,
                                            RMNodeEventType,
@@ -141,6 +141,15 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
      .addTransition(NodeState.UNHEALTHY, 
          EnumSet.of(NodeState.UNHEALTHY, NodeState.RUNNING),
          RMNodeEventType.STATUS_UPDATE, new StatusUpdateWhenUnHealthyTransition())
+     .addTransition(NodeState.UNHEALTHY, NodeState.DECOMMISSIONED,
+         RMNodeEventType.DECOMMISSION,
+         new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
+     .addTransition(NodeState.UNHEALTHY, NodeState.LOST,
+         RMNodeEventType.EXPIRE,
+         new DeactivateNodeTransition(NodeState.LOST))
+     .addTransition(NodeState.UNHEALTHY, NodeState.REBOOTED,
+         RMNodeEventType.REBOOTING,
+         new DeactivateNodeTransition(NodeState.REBOOTED))
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
          RMNodeEventType.RECONNECTED, new ReconnectNodeTransition())
      .addTransition(NodeState.UNHEALTHY, NodeState.UNHEALTHY,
@@ -539,6 +548,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
       // HeartBeat processing from our end is done, as node pulls the following
       // lists before sending status-updates. Clear data-structures
+      // TODO: These lists could go to the NM multiple times, or never.
       rmNode.containersToClean.clear();
       rmNode.finishedApplications.clear();
 

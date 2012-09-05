@@ -144,6 +144,12 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
 
+    MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
+    (rkanter via tucu)
+
+    MAPREDUCE-2786. Add compression option for TestDFSIO.
+    (Plamen Jeliazkov via shv)
+
   BUG FIXES
 
     MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in 
@@ -180,6 +186,12 @@ Branch-2 ( Unreleased changes )
     TestCombineFileInputFormat.testMissingBlocks() test. (atm)
 
     MAPREDUCE-4470. Fix TestCombineFileInputFormat.testForEmptyFile (ikatsov via tucu)
+
+    MAPREDUCE-4608. hadoop-mapreduce-client is missing some dependencies.
+    (tucu via tomwhite)
+
+    MAPREDUCE-4610. Support deprecated mapreduce.job.counters.limit property in
+    MR2. (tomwhite)
 
 Release 2.1.0-alpha - Unreleased 
 
@@ -230,6 +242,12 @@ Release 2.1.0-alpha - Unreleased
 
     MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
     (Todd Lipcon and Siddharth Seth via sseth)
+
+    MAPREDUCE-4580. Change MapReduce to use the yarn-client module.
+    (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
+    jdk7. (Thomas Graves via vinodkv)
 
   OPTIMIZATIONS
 
@@ -491,6 +509,18 @@ Release 2.0.0-alpha - 05-23-2012
     MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is
     bad (Jason Lowe via bobby)
 
+Release 0.23.4 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -537,6 +567,9 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4375. Show Configuration Tracability in MR UI (bobby 
     via tgraves)
+
+    MAPREDUCE-4569. Fixed TestHsWebServicesJobsQuery to pass on JDK7 by not
+    depending on test order. (Thomas Graves via vinodkv)
 
   OPTIMIZATIONS
 
@@ -831,6 +864,21 @@ Release 0.23.3 - UNRELEASED
 
     MAPREDUCE-4570. ProcfsBasedProcessTree#constructProcessInfo() prints a
     warning if procfsDir/<pid>/stat is not found. (Ahmed Radwan via bobby)
+
+    MAPREDUCE-4600. TestTokenCache.java from MRV1 no longer compiles  (daryn 
+    via bobby)
+
+    MAPREDUCE-4612. job summary file permissions not set when its created
+    (tgraves via bobby)
+
+    MAPREDUCE-4614. Simplify debugging a job's tokens (daryn via bobby)
+
+    MAPREDUCE-4611. MR AM dies badly when Node is decommissioned (Robert
+    Evans via tgraves)
+
+    MAPREDUCE-4604. In mapred-default, mapreduce.map.maxattempts &
+    mapreduce.reduce.maxattempts defaults are set to 4 as well as
+    mapreduce.job.maxtaskfailures.per.tracker. (Ravi Prakash via jeagles)
 
 Release 0.23.2 - UNRELEASED
 

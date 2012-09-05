@@ -110,6 +110,7 @@ public class UTF8 implements WritableComparable<UTF8> {
     System.arraycopy(other.bytes, 0, bytes, 0, length);
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     length = in.readUnsignedShort();
     if (bytes == null || bytes.length < length)
@@ -123,6 +124,7 @@ public class UTF8 implements WritableComparable<UTF8> {
     WritableUtils.skipFully(in, length);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeShort(length);
     out.write(bytes, 0, length);

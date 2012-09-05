@@ -347,6 +347,7 @@ public class TestChRootedFileSystem {
     MockFileSystem() {
       super(mock(FileSystem.class));
     }
+    @Override
     public void initialize(URI name, Configuration conf) throws IOException {}
   }
 }

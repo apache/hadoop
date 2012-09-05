@@ -126,6 +126,16 @@ Trunk (unreleased changes)
     HDFS-3819. Should check whether invalidate work percentage default value is 
     not greater than 1.0f. (Jing Zhao via jitendra)
 
+    HDFS-3844. Add @Override and remove {@inheritdoc} and unnecessary
+    imports. (Jing Zhao via suresh)
+
+    HDFS-3851. DFSOutputStream class code cleanup. (Jing Zhao via suresh)
+
+    HDFS-2580. NameNode#main(...) can make use of GenericOptionsParser. (harsh)
+
+    HDFS-3880. Use Builder to build RPC server in HDFS.
+    (Brandon Li vias suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -232,6 +242,8 @@ Branch-2 ( Unreleased changes )
     HDFS-3637. Add support for encrypting the DataTransferProtocol. (atm)
 
     HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
+
+    HDFS-2793. Add an admin command to trigger an edit log roll. (todd)
 
   IMPROVEMENTS
 
@@ -429,6 +441,14 @@ Branch-2 ( Unreleased changes )
     HDFS-3177. Update DFSClient and DataXceiver to handle different checkum
     types in file checksum computation.  (Kihwal Lee via szetszwo)
 
+    HDFS-3871. Change NameNodeProxies to use RetryUtils.  (Arun C Murthy
+    via szetszwo)
+
+    HDFS-3887. Remove redundant chooseTarget methods in BlockPlacementPolicy.
+    (Jing Zhao via szetszwo)
+
+    HDFS-3888. Clean up BlockPlacementPolicyDefault.  (Jing Zhao via szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
@@ -444,6 +464,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-2421. Improve the concurrency of SerialNumberMap in NameNode.
     (Jing Zhao and Weiyan Wang via szetszwo)
+
+    HDFS-3866. HttpFS POM should have property where to download tomcat from (zero45 via tucu)
 
   BUG FIXES
 
@@ -673,6 +695,35 @@ Branch-2 ( Unreleased changes )
     HDFS-3715. Fix TestFileCreation#testFileCreationNamenodeRestart.
     (Andrew Whang via eli)
 
+    HDFS-3731. 2.0 release upgrade must handle blocks being written from 1.0.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3683. Edit log replay progress indicator shows >100% complete. (Plamen
+    Jeliazkov via atm)
+
+    HDFS-3856. TestHDFSServerPorts failure is causing surefire fork failure.
+    (eli)
+
+    HDFS-3860. HeartbeatManager#Monitor may wrongly hold the writelock of
+    namesystem. (Jing Zhao via atm)
+
+    HDFS-3849. When re-loading the FSImage, we should clear the existing
+    genStamp and leases. (Colin Patrick McCabe via atm)
+
+    HDFS-3864. NN does not update internal file mtime for OP_CLOSE when reading
+    from the edit log. (atm)
+
+    HDFS-3837. Fix DataNode.recoverBlock findbugs warning. (eli)
+
+    HDFS-3733. Audit logs should include WebHDFS access. (Andy Isaacson via 
+    eli)
+
+    HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
+    (omalley)
+
+    HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
+    (Vinay via umamahesh)
+    
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
@@ -688,6 +739,9 @@ Branch-2 ( Unreleased changes )
     HDFS-3412. Fix findbugs warnings in auto-HA branch (todd)
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
+
+    HDFS-3833. TestDFSShell fails on windows due to concurrent file 
+    read/write. (Brandon Li via suresh)
 
 Release 2.0.0-alpha - 05-23-2012
 
@@ -967,7 +1021,7 @@ Release 2.0.0-alpha - 05-23-2012
     (Brandon Li via szetszwo)
 
     HDFS-2617. Replaced Kerberized SSL for image transfer and fsck
-    with SPNEGO-based solution. (jghoman, tucu, and atm via eli)
+    with SPNEGO-based solution. (jghoman, omalley, tucu, and atm via eli)
 
     HDFS-3365. Enable users to disable socket caching in DFS client
     configuration (todd)
@@ -1499,6 +1553,18 @@ Release 2.0.0-alpha - 05-23-2012
     
     HDFS-3039. Address findbugs and javadoc warnings on branch. (todd via atm)
 
+Release 0.23.4 - UNRELEASED
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -1550,6 +1616,12 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner
     thread (Kihwal Lee via daryn)
+
+    HDFS-3861. Deadlock in DFSClient (Kihwal Lee via daryn)
+
+    HDFS-3873. Hftp assumes security is disabled if token fetch fails (daryn)
+
+    HDFS-3852. TestHftpDelegationToken is broken after HADOOP-8225 (daryn)
 
 Release 0.23.2 - UNRELEASED
 

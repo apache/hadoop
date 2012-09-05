@@ -171,6 +171,7 @@ public abstract class GenericTestUtils {
       waitLatch.countDown();
     }
   
+    @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
       LOG.info("DelayAnswer firing fireLatch");
       fireLatch.countDown();

@@ -41,9 +41,11 @@ public class BinaryRecordInput implements RecordInput {
     private BinaryIndex(int nelems) {
       this.nelems = nelems;
     }
+    @Override
     public boolean done() {
       return (nelems <= 0);
     }
+    @Override
     public void incr() {
       nelems--;
     }
@@ -56,6 +58,7 @@ public class BinaryRecordInput implements RecordInput {
   }
     
   private static ThreadLocal bIn = new ThreadLocal() {
+      @Override
       protected synchronized Object initialValue() {
         return new BinaryRecordInput();
       }
@@ -82,34 +85,42 @@ public class BinaryRecordInput implements RecordInput {
     this.in = din;
   }
     
+  @Override
   public byte readByte(final String tag) throws IOException {
     return in.readByte();
   }
     
+  @Override
   public boolean readBool(final String tag) throws IOException {
     return in.readBoolean();
   }
     
+  @Override
   public int readInt(final String tag) throws IOException {
     return Utils.readVInt(in);
   }
     
+  @Override
   public long readLong(final String tag) throws IOException {
     return Utils.readVLong(in);
   }
     
+  @Override
   public float readFloat(final String tag) throws IOException {
     return in.readFloat();
   }
     
+  @Override
   public double readDouble(final String tag) throws IOException {
     return in.readDouble();
   }
     
+  @Override
   public String readString(final String tag) throws IOException {
     return Utils.fromBinaryString(in);
   }
     
+  @Override
   public Buffer readBuffer(final String tag) throws IOException {
     final int len = Utils.readVInt(in);
     final byte[] barr = new byte[len];
@@ -117,26 +128,32 @@ public class BinaryRecordInput implements RecordInput {
     return new Buffer(barr);
   }
     
+  @Override
   public void startRecord(final String tag) throws IOException {
     // no-op
   }
     
+  @Override
   public void endRecord(final String tag) throws IOException {
     // no-op
   }
     
+  @Override
   public Index startVector(final String tag) throws IOException {
     return new BinaryIndex(readInt(tag));
   }
     
+  @Override
   public void endVector(final String tag) throws IOException {
     // no-op
   }
     
+  @Override
   public Index startMap(final String tag) throws IOException {
     return new BinaryIndex(readInt(tag));
   }
     
+  @Override
   public void endMap(final String tag) throws IOException {
     // no-op
   }

@@ -47,14 +47,17 @@ public class TestHttpFSFileSystemLocalFileSystem extends BaseTestHttpFSWith {
     super(operation);
   }
 
+  @Override
   protected Path getProxiedFSTestDir() {
     return addPrefix(new Path(TestDirHelper.getTestDir().getAbsolutePath()));
   }
 
+  @Override
   protected String getProxiedFSURI() {
     return "file:///";
   }
 
+  @Override
   protected Configuration getProxiedFSConf() {
     Configuration conf = new Configuration(false);
     conf.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, getProxiedFSURI());

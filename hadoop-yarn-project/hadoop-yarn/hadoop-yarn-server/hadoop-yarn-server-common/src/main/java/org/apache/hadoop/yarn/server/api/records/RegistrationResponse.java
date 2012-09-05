@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.yarn.server.api.records;
 
-import java.nio.ByteBuffer;
-
 public interface RegistrationResponse {
-  public abstract ByteBuffer getSecretKey();
+
+  MasterKey getMasterKey();
   
-  public abstract void setSecretKey(ByteBuffer secretKey);
+  void setMasterKey(MasterKey secretKey);
   
-  public abstract NodeAction getNodeAction();
+  NodeAction getNodeAction();
   
-  public abstract void setNodeAction(NodeAction nodeAction);
+  void setNodeAction(NodeAction nodeAction);
 }

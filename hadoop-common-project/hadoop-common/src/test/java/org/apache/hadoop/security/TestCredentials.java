@@ -29,12 +29,9 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Collection;
-
-import static org.mockito.Mockito.mock;
 
 import javax.crypto.KeyGenerator;
 
@@ -223,7 +220,7 @@ public class TestCredentials {
     for (int i=0; i < service.length; i++) {
       creds.addToken(service[i], token[i]);
     }
-    creds.addTokensToUGI(ugi);
+    ugi.addCredentials(creds);
 
     creds = ugi.getCredentials();
     for (int i=0; i < service.length; i++) {

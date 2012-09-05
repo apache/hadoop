@@ -58,6 +58,7 @@ public class SocketOutputStream extends OutputStream
       this.channel = channel;
     }
     
+    @Override
     int performIO(ByteBuffer buf) throws IOException {
       return channel.write(buf);
     }
@@ -98,6 +99,7 @@ public class SocketOutputStream extends OutputStream
     this(socket.getChannel(), timeout);
   }
   
+  @Override
   public void write(int b) throws IOException {
     /* If we need to, we can optimize this allocation.
      * probably no need to optimize or encourage single byte writes.
@@ -107,6 +109,7 @@ public class SocketOutputStream extends OutputStream
     write(buf, 0, 1);
   }
   
+  @Override
   public void write(byte[] b, int off, int len) throws IOException {
     ByteBuffer buf = ByteBuffer.wrap(b, off, len);
     while (buf.hasRemaining()) {
@@ -126,6 +129,7 @@ public class SocketOutputStream extends OutputStream
     }
   }
 
+  @Override
   public synchronized void close() throws IOException {
     /* close the channel since Socket.getOuputStream().close() 
      * closes the socket.
@@ -145,10 +149,12 @@ public class SocketOutputStream extends OutputStream
 
   //WritableByteChannle interface 
   
+  @Override
   public boolean isOpen() {
     return writer.isOpen();
   }
 
+  @Override
   public int write(ByteBuffer src) throws IOException {
     return writer.doIO(src, SelectionKey.OP_WRITE);
   }

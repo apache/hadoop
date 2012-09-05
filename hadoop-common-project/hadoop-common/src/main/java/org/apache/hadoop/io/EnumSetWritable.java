@@ -23,7 +23,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.Collection;
 import java.util.AbstractCollection;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,8 +45,11 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
   EnumSetWritable() {
   }
 
+  @Override
   public Iterator<E> iterator() { return value.iterator(); }
+  @Override
   public int size() { return value.size(); }
+  @Override
   public boolean add(E e) {
     if (value == null) {
       value = EnumSet.of(e);
@@ -109,7 +111,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
     return value;
   }
 
-  /** {@inheritDoc} */
+  @Override
   @SuppressWarnings("unchecked")
   public void readFields(DataInput in) throws IOException {
     int length = in.readInt();
@@ -127,7 +129,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
     }
   }
 
-  /** {@inheritDoc} */
+  @Override
   public void write(DataOutput out) throws IOException {
     if (this.value == null) {
       out.writeInt(-1);
@@ -152,6 +154,7 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
    * Returns true if <code>o</code> is an EnumSetWritable with the same value,
    * or both are null.
    */
+  @Override
   public boolean equals(Object o) {
     if (o == null) {
       throw new IllegalArgumentException("null argument passed in equal().");
@@ -180,27 +183,25 @@ public class EnumSetWritable<E extends Enum<E>> extends AbstractCollection<E>
     return elementType;
   }
 
-  /** {@inheritDoc} */
+  @Override
   public int hashCode() {
     if (value == null)
       return 0;
     return (int) value.hashCode();
   }
 
-  /** {@inheritDoc} */
+  @Override
   public String toString() {
     if (value == null)
       return "(null)";
     return value.toString();
   }
 
-  /** {@inheritDoc} */
   @Override
   public Configuration getConf() {
     return this.conf;
   }
 
-  /** {@inheritDoc} */
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;

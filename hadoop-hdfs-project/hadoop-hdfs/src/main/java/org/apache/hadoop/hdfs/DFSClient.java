@@ -533,7 +533,7 @@ public class DFSClient implements java.io.Closeable {
    *  until the first output stream is created. The same instance will
    *  be returned until all output streams are closed.
    */
-  public synchronized LeaseRenewer getLeaseRenewer() throws IOException {
+  public LeaseRenewer getLeaseRenewer() throws IOException {
       return LeaseRenewer.getInstance(authority, ugi, this);
   }
 
@@ -1866,6 +1866,20 @@ public class DFSClient implements java.io.Closeable {
   void saveNamespace() throws AccessControlException, IOException {
     try {
       namenode.saveNamespace();
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
+  }
+
+  /**
+   * Rolls the edit log on the active NameNode.
+   * @return the txid of the new log segment 
+   *
+   * @see ClientProtocol#rollEdits()
+   */
+  long rollEdits() throws AccessControlException, IOException {
+    try {
+      return namenode.rollEdits();
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class);
     }

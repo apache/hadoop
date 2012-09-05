@@ -38,10 +38,12 @@ public class TestWritable extends TestCase {
 
     int state = RANDOM.nextInt();
 
+    @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(state);
     }
 
+    @Override
     public void readFields(DataInput in) throws IOException {
       this.state = in.readInt();
     }
@@ -53,6 +55,7 @@ public class TestWritable extends TestCase {
     }
 
     /** Required by test code, below. */
+    @Override
     public boolean equals(Object o) {
       if (!(o instanceof SimpleWritable))
         return false;

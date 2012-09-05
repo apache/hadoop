@@ -19,9 +19,7 @@
 package org.apache.hadoop.security;
 
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -122,6 +120,7 @@ public class SaslOutputStream extends OutputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public void write(int b) throws IOException {
     if (!useWrap) {
       outStream.write(b);
@@ -146,6 +145,7 @@ public class SaslOutputStream extends OutputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public void write(byte[] b) throws IOException {
     write(b, 0, b.length);
   }
@@ -163,6 +163,7 @@ public class SaslOutputStream extends OutputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public void write(byte[] inBuf, int off, int len) throws IOException {
     if (!useWrap) {
       outStream.write(inBuf, off, len);
@@ -197,6 +198,7 @@ public class SaslOutputStream extends OutputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public void flush() throws IOException {
     outStream.flush();
   }
@@ -208,6 +210,7 @@ public class SaslOutputStream extends OutputStream {
    * @exception IOException
    *              if an I/O error occurs.
    */
+  @Override
   public void close() throws IOException {
     disposeSasl();
     outStream.close();

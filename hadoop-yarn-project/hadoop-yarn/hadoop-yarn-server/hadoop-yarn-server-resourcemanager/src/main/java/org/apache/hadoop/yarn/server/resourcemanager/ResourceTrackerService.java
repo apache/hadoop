@@ -18,9 +18,6 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-
-import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -28,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -42,6 +40,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerResponse;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
@@ -52,8 +51,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeReconnectEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeStatusEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.util.RackResolver;
 
@@ -68,7 +67,7 @@ public class ResourceTrackerService extends AbstractService implements
   private final RMContext rmContext;
   private final NodesListManager nodesListManager;
   private final NMLivelinessMonitor nmLivelinessMonitor;
-  private final ContainerTokenSecretManager containerTokenSecretManager;
+  private final RMContainerTokenSecretManager containerTokenSecretManager;
 
   private Server server;
   private InetSocketAddress resourceTrackerAddress;
@@ -93,7 +92,7 @@ public class ResourceTrackerService extends AbstractService implements
   public ResourceTrackerService(RMContext rmContext,
       NodesListManager nodesListManager,
       NMLivelinessMonitor nmLivelinessMonitor,
-      ContainerTokenSecretManager containerTokenSecretManager) {
+      RMContainerTokenSecretManager containerTokenSecretManager) {
     super(ResourceTrackerService.class.getName());
     this.rmContext = rmContext;
     this.nodesListManager = nodesListManager;
@@ -160,9 +159,6 @@ public class ResourceTrackerService extends AbstractService implements
         .newRecordInstance(RegisterNodeManagerResponse.class);
     RegistrationResponse regResponse = recordFactory
         .newRecordInstance(RegistrationResponse.class);
-    SecretKey secretKey = this.containerTokenSecretManager
-        .createAndGetSecretKey(nodeId.toString());
-    regResponse.setSecretKey(ByteBuffer.wrap(secretKey.getEncoded()));
 
     // Check if this node is a 'valid' node
     if (!this.nodesListManager.isValidNode(host)) {
@@ -171,6 +167,12 @@ public class ResourceTrackerService extends AbstractService implements
       regResponse.setNodeAction(NodeAction.SHUTDOWN);
       response.setRegistrationResponse(regResponse);
       return response;
+    }
+
+    if (isSecurityEnabled()) {
+      MasterKey nextMasterKeyForNode =
+          this.containerTokenSecretManager.getCurrentKey();
+      regResponse.setMasterKey(nextMasterKeyForNode);
     }
 
     RMNode rmNode = new RMNodeImpl(nodeId, rmContext, host, cmPort, httpPort,
@@ -236,7 +238,7 @@ public class ResourceTrackerService extends AbstractService implements
 
     NodeHeartbeatResponse nodeHeartBeatResponse = recordFactory
         .newRecordInstance(NodeHeartbeatResponse.class);
-
+    
     // 3. Check if it's a 'fresh' heartbeat i.e. not duplicate heartbeat
     HeartbeatResponse lastHeartbeatResponse = rmNode.getLastHeartBeatResponse();
     if (remoteNodeStatus.getResponseId() + 1 == lastHeartbeatResponse
@@ -263,6 +265,27 @@ public class ResourceTrackerService extends AbstractService implements
     latestResponse.addAllContainersToCleanup(rmNode.getContainersToCleanUp());
     latestResponse.addAllApplicationsToCleanup(rmNode.getAppsToCleanup());
     latestResponse.setNodeAction(NodeAction.NORMAL);
+
+    // Check if node's masterKey needs to be updated and if the currentKey has
+    // roller over, send it across
+    if (isSecurityEnabled()) {
+
+      boolean shouldSendMasterKey = false;
+
+      MasterKey nextMasterKeyForNode =
+          this.containerTokenSecretManager.getNextKey();
+      if (nextMasterKeyForNode != null) {
+        // nextMasterKeyForNode can be null if there is no outstanding key that
+        // is in the activation period.
+        MasterKey nodeKnownMasterKey = request.getLastKnownMasterKey();
+        if (nodeKnownMasterKey.getKeyId() != nextMasterKeyForNode.getKeyId()) {
+          shouldSendMasterKey = true;
+        }
+      }
+      if (shouldSendMasterKey) {
+        latestResponse.setMasterKey(nextMasterKeyForNode);
+      }
+    }
 
     // 4. Send status to RMNode, saving the latest response.
     this.rmContext.getDispatcher().getEventHandler().handle(
@@ -309,5 +332,8 @@ public class ResourceTrackerService extends AbstractService implements
       PolicyProvider policyProvider) {
     this.server.refreshServiceAcl(configuration, policyProvider);
   }
-  
+
+  protected boolean isSecurityEnabled() {
+    return UserGroupInformation.isSecurityEnabled();
+  }
 }

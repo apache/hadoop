@@ -23,6 +23,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -295,6 +296,8 @@ public class TestDFSIO extends TestCase implements Tool {
       // create file
       OutputStream out;
       out = fs.create(new Path(getDataDir(getConf()), name), true, bufferSize);
+    
+      if(compressionCodec != null) out = compressionCodec.createOutputStream(out);
       
       try {
         // write to the file
@@ -358,6 +361,8 @@ public class TestDFSIO extends TestCase implements Tool {
       OutputStream out;
       out = fs.append(new Path(getDataDir(getConf()), name), bufferSize);
       
+      if(compressionCodec != null) out = compressionCodec.createOutputStream(out);
+      
       try {
         // write to the file
         long nrRemaining;
@@ -394,7 +399,10 @@ public class TestDFSIO extends TestCase implements Tool {
                        long totalSize // in bytes
                      ) throws IOException {
       // open file
-      DataInputStream in = fs.open(new Path(getDataDir(getConf()), name));
+      InputStream in = fs.open(new Path(getDataDir(getConf()), name));
+      
+      if(compressionCodec != null) in = compressionCodec.createInputStream(in);
+      
       long actualSize = 0;
       try {
         while (actualSize < totalSize) {
@@ -459,6 +467,7 @@ public class TestDFSIO extends TestCase implements Tool {
     long fileSize = 1*MEGA;
     int nrFiles = 1;
     String resFileName = DEFAULT_RES_FILE_NAME;
+    String compressionClass = null;
     boolean isSequential = false;
     String version = TestDFSIO.class.getSimpleName() + ".0.0.6";
 
@@ -479,6 +488,8 @@ public class TestDFSIO extends TestCase implements Tool {
         testType = TEST_TYPE_CLEANUP;
       } else if (args[i].startsWith("-seq")) {
         isSequential = true;
+      } else if (args[i].startsWith("-compression")) {
+        compressionClass = args[++i];
       } else if (args[i].equals("-nrFiles")) {
         nrFiles = Integer.parseInt(args[++i]);
       } else if (args[i].equals("-fileSize")) {
@@ -497,6 +508,11 @@ public class TestDFSIO extends TestCase implements Tool {
     LOG.info("fileSize (MB) = " + toMB(fileSize));
     LOG.info("bufferSize = " + bufferSize);
     LOG.info("baseDir = " + getBaseDir(config));
+    
+    if(compressionClass != null) {
+      config.set("test.io.compression.class", compressionClass);
+      LOG.info("compressionClass = " + compressionClass);
+    }
 
     config.setInt("test.io.file.buffer.size", bufferSize);
     config.setBoolean(DFSConfigKeys.DFS_SUPPORT_APPEND_KEY, true);

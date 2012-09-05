@@ -81,6 +81,7 @@ public class BytesWritable extends BinaryComparable
    * if you need the returned array to be precisely the length of the data.
    * @return The data is only valid between 0 and getLength() - 1.
    */
+  @Override
   public byte[] getBytes() {
     return bytes;
   }
@@ -97,6 +98,7 @@ public class BytesWritable extends BinaryComparable
   /**
    * Get the current size of the buffer.
    */
+  @Override
   public int getLength() {
     return size;
   }
@@ -171,6 +173,7 @@ public class BytesWritable extends BinaryComparable
   }
 
   // inherit javadoc
+  @Override
   public void readFields(DataInput in) throws IOException {
     setSize(0); // clear the old data
     setSize(in.readInt());
@@ -178,6 +181,7 @@ public class BytesWritable extends BinaryComparable
   }
   
   // inherit javadoc
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(size);
     out.write(bytes, 0, size);

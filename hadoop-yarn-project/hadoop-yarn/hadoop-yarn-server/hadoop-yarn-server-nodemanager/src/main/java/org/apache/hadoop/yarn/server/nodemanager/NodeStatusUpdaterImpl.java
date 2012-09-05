@@ -25,12 +25,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Map.Entry;
+import java.util.Random;
 
 import org.apache.avro.AvroRuntimeException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
@@ -51,14 +52,13 @@ import org.apache.hadoop.yarn.server.api.ResourceTracker;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NodeHeartbeatRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterNodeManagerRequest;
 import org.apache.hadoop.yarn.server.api.records.HeartbeatResponse;
+import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.NodeAction;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.api.records.RegistrationResponse;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
 import org.apache.hadoop.yarn.service.AbstractService;
-
 
 public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatusUpdater {
@@ -71,13 +71,11 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final Dispatcher dispatcher;
 
   private NodeId nodeId;
-  private ContainerTokenSecretManager containerTokenSecretManager;
   private long heartBeatInterval;
   private ResourceTracker resourceTracker;
   private InetSocketAddress rmAddress;
   private Resource totalResource;
   private int httpPort;
-  private byte[] secretKeyBytes = new byte[0];
   private boolean isStopped;
   private RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private boolean tokenKeepAliveEnabled;
@@ -93,14 +91,12 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private boolean hasToRebootNode;
   
   public NodeStatusUpdaterImpl(Context context, Dispatcher dispatcher,
-      NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics, 
-      ContainerTokenSecretManager containerTokenSecretManager) {
+      NodeHealthCheckerService healthChecker, NodeManagerMetrics metrics) {
     super(NodeStatusUpdaterImpl.class.getName());
     this.healthChecker = healthChecker;
     this.context = context;
     this.dispatcher = dispatcher;
     this.metrics = metrics;
-    this.containerTokenSecretManager = containerTokenSecretManager;
   }
 
   @Override
@@ -116,10 +112,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     this.totalResource = recordFactory.newRecordInstance(Resource.class);
     this.totalResource.setMemory(memoryMb);
     metrics.addResource(totalResource);
-    this.tokenKeepAliveEnabled =
-        conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
-            YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)
-            && isSecurityEnabled();
+    this.tokenKeepAliveEnabled = isTokenKeepAliveEnabled(conf);
     this.tokenRemovalDelayMs =
         conf.getInt(YarnConfiguration.RM_NM_EXPIRY_INTERVAL_MS,
             YarnConfiguration.DEFAULT_RM_NM_EXPIRY_INTERVAL_MS);
@@ -168,8 +161,15 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     return this.hasToRebootNode;
   }
 
-  protected boolean isSecurityEnabled() {
+  private boolean isSecurityEnabled() {
     return UserGroupInformation.isSecurityEnabled();
+  }
+
+  @Private
+  protected boolean isTokenKeepAliveEnabled(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.LOG_AGGREGATION_ENABLED,
+        YarnConfiguration.DEFAULT_LOG_AGGREGATION_ENABLED)
+        && isSecurityEnabled();
   }
 
   protected ResourceTracker getRMClient() {
@@ -194,28 +194,22 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
       throw new YarnException(
           "Recieved SHUTDOWN signal from Resourcemanager ,Registration of NodeManager failed");
     }
-    
-    if (UserGroupInformation.isSecurityEnabled()) {
-      this.secretKeyBytes = regResponse.getSecretKey().array();
-    }
 
-    // do this now so that its set before we start heartbeating to RM
     if (UserGroupInformation.isSecurityEnabled()) {
+      MasterKey masterKey = regResponse.getMasterKey();
+      // do this now so that its set before we start heartbeating to RM
       LOG.info("Security enabled - updating secret keys now");
       // It is expected that status updater is started by this point and
-      // RM gives the shared secret in registration during StatusUpdater#start().
-      this.containerTokenSecretManager.setSecretKey(
-          this.nodeId.toString(),
-          this.getRMNMSharedSecret());
+      // RM gives the shared secret in registration during
+      // StatusUpdater#start().
+      if (masterKey != null) {
+        this.context.getContainerTokenSecretManager().setMasterKey(masterKey);
+      }
     }
+
     LOG.info("Registered with ResourceManager as " + this.nodeId
         + " with total resource of " + this.totalResource);
 
-  }
-
-  @Override
-  public byte[] getRMNMSharedSecret() {
-    return this.secretKeyBytes.clone();
   }
 
   private List<ApplicationId> createKeepAliveApplicationList() {
@@ -332,9 +326,24 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             
             NodeHeartbeatRequest request = recordFactory
                 .newRecordInstance(NodeHeartbeatRequest.class);
-            request.setNodeStatus(nodeStatus);            
+            request.setNodeStatus(nodeStatus);
+            if (isSecurityEnabled()) {
+              request.setLastKnownMasterKey(NodeStatusUpdaterImpl.this.context
+                .getContainerTokenSecretManager().getCurrentKey());
+            }
             HeartbeatResponse response =
               resourceTracker.nodeHeartbeat(request).getHeartbeatResponse();
+
+            // See if the master-key has rolled over
+            if (isSecurityEnabled()) {
+              MasterKey updatedMasterKey = response.getMasterKey();
+              if (updatedMasterKey != null) {
+                // Will be non-null only on roll-over on RM side
+                context.getContainerTokenSecretManager().setMasterKey(
+                  updatedMasterKey);
+              }
+            }
+
             if (response.getNodeAction() == NodeAction.SHUTDOWN) {
               LOG
                   .info("Recieved SHUTDOWN signal from Resourcemanager as part of heartbeat," +

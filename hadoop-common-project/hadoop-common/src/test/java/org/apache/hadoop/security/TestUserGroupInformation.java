@@ -92,6 +92,7 @@ public class TestUserGroupInformation {
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
     UserGroupInformation curUGI = 
       userGroupInfo.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
+        @Override
         public UserGroupInformation run() throws IOException {
           return UserGroupInformation.getCurrentUser();
         }});
@@ -249,6 +250,70 @@ public class TestUserGroupInformation {
     ugi.addToken(t1);
     checkTokens(ugi, t1, t2, t3);    
   }
+
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test
+  public <T extends TokenIdentifier> void testGetCreds() throws Exception {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createRemoteUser("someone"); 
+    
+    Text service = new Text("service");
+    Token<T> t1 = mock(Token.class);
+    when(t1.getService()).thenReturn(service);
+    Token<T> t2 = mock(Token.class);
+    when(t2.getService()).thenReturn(new Text("service2"));
+    Token<T> t3 = mock(Token.class);
+    when(t3.getService()).thenReturn(service);
+    
+    // add token to ugi
+    ugi.addToken(t1);
+    ugi.addToken(t2);
+    checkTokens(ugi, t1, t2);
+
+    Credentials creds = ugi.getCredentials();
+    creds.addToken(t3.getService(), t3);
+    assertSame(t3, creds.getToken(service));
+    // check that ugi wasn't modified
+    checkTokens(ugi, t1, t2);
+  }
+
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test
+  public <T extends TokenIdentifier> void testAddCreds() throws Exception {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createRemoteUser("someone"); 
+    
+    Text service = new Text("service");
+    Token<T> t1 = mock(Token.class);
+    when(t1.getService()).thenReturn(service);
+    Token<T> t2 = mock(Token.class);
+    when(t2.getService()).thenReturn(new Text("service2"));
+    byte[] secret = new byte[]{};
+    Text secretKey = new Text("sshhh");
+
+    // fill credentials
+    Credentials creds = new Credentials();
+    creds.addToken(t1.getService(), t1);
+    creds.addToken(t2.getService(), t2);
+    creds.addSecretKey(secretKey, secret);
+    
+    // add creds to ugi, and check ugi
+    ugi.addCredentials(creds);
+    checkTokens(ugi, t1, t2);
+    assertSame(secret, ugi.getCredentials().getSecretKey(secretKey));
+  }
+
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test
+  public <T extends TokenIdentifier> void testGetCredsNotSame()
+      throws Exception {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createRemoteUser("someone"); 
+    Credentials creds = ugi.getCredentials();
+    // should always get a new copy
+    assertNotSame(creds, ugi.getCredentials());
+  }
+
   
   private void checkTokens(UserGroupInformation ugi, Token<?> ... tokens) {
     // check the ugi's token collection
@@ -298,13 +363,22 @@ public class TestUserGroupInformation {
     Token<T> t2 = mock(Token.class);
     when(t2.getService()).thenReturn(new Text("t2"));
     
+    Credentials creds = new Credentials();
+    byte[] secretKey = new byte[]{};
+    Text secretName = new Text("shhh");
+    creds.addSecretKey(secretName, secretKey);
+    
     ugi.addToken(t1);
     ugi.addToken(t2);
+    ugi.addCredentials(creds);
     
     Collection<Token<? extends TokenIdentifier>> z = ugi.getTokens();
     assertTrue(z.contains(t1));
     assertTrue(z.contains(t2));
     assertEquals(2, z.size());
+    Credentials ugiCreds = ugi.getCredentials();
+    assertSame(secretKey, ugiCreds.getSecretKey(secretName));
+    assertEquals(1, ugiCreds.numberOfSecretKeys());
     
     try {
       z.remove(t1);
@@ -316,6 +390,7 @@ public class TestUserGroupInformation {
     // ensure that the tokens are passed through doAs
     Collection<Token<? extends TokenIdentifier>> otherSet = 
       ugi.doAs(new PrivilegedExceptionAction<Collection<Token<?>>>(){
+        @Override
         public Collection<Token<?>> run() throws IOException {
           return UserGroupInformation.getCurrentUser().getTokens();
         }
@@ -342,6 +417,7 @@ public class TestUserGroupInformation {
     // ensure that the token identifiers are passed through doAs
     Collection<TokenIdentifier> otherSet = ugi
         .doAs(new PrivilegedExceptionAction<Collection<TokenIdentifier>>() {
+          @Override
           public Collection<TokenIdentifier> run() throws IOException {
             return UserGroupInformation.getCurrentUser().getTokenIdentifiers();
           }
@@ -358,6 +434,7 @@ public class TestUserGroupInformation {
     ugi.setAuthenticationMethod(am);
     Assert.assertEquals(am, ugi.getAuthenticationMethod());
     ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws IOException {
         Assert.assertEquals(am, UserGroupInformation.getCurrentUser()
             .getAuthenticationMethod());
@@ -379,6 +456,7 @@ public class TestUserGroupInformation {
     Assert.assertEquals(am, UserGroupInformation
         .getRealAuthenticationMethod(proxyUgi));
     proxyUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
       public Object run() throws IOException {
         Assert.assertEquals(AuthenticationMethod.PROXY, UserGroupInformation
             .getCurrentUser().getAuthenticationMethod());
@@ -451,6 +529,7 @@ public class TestUserGroupInformation {
   public void testUGIUnderNonHadoopContext() throws Exception {
     Subject nonHadoopSubject = new Subject();
     Subject.doAs(nonHadoopSubject, new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws IOException {
           UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
           assertNotNull(ugi);

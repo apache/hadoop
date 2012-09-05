@@ -88,6 +88,7 @@ public class TestNativeIO {
     List<Thread> statters = new ArrayList<Thread>();
     for (int i = 0; i < 10; i++) {
       Thread statter = new Thread() {
+        @Override
         public void run() {
           long et = Time.now() + 5000;
           while (Time.now() < et) {

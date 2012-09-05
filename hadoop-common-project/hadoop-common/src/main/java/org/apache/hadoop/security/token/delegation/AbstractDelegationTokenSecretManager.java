@@ -404,6 +404,7 @@ extends AbstractDelegationTokenIdentifier>
     private long lastMasterKeyUpdate;
     private long lastTokenCacheCleanup;
 
+    @Override
     public void run() {
       LOG.info("Starting expired delegation token remover thread, "
           + "tokenRemoverScanInterval=" + tokenRemoverScanInterval

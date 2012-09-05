@@ -18,20 +18,16 @@
 
 package org.apache.hadoop.fs.kfs;
 
-import java.io.*;
-import java.net.*;
+import java.io.IOException;
+import java.net.URI;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-
-import org.apache.hadoop.fs.kfs.KosmosFileSystem;
 
 public class TestKosmosFileSystem extends TestCase {
 

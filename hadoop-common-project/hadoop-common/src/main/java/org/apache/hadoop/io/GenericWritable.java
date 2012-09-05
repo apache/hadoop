@@ -114,11 +114,13 @@ public abstract class GenericWritable implements Writable, Configurable {
     return instance;
   }
   
+  @Override
   public String toString() {
     return "GW[" + (instance != null ? ("class=" + instance.getClass().getName() +
         ",value=" + instance.toString()) : "(null)") + "]";
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     type = in.readByte();
     Class<? extends Writable> clazz = getTypes()[type & 0xff];
@@ -131,6 +133,7 @@ public abstract class GenericWritable implements Writable, Configurable {
     instance.readFields(in);
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     if (type == NOT_SET || instance == null)
       throw new IOException("The GenericWritable has NOT been set correctly. type="
@@ -145,10 +148,12 @@ public abstract class GenericWritable implements Writable, Configurable {
    */
   abstract protected Class<? extends Writable>[] getTypes();
 
+  @Override
   public Configuration getConf() {
     return conf;
   }
 
+  @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
   }

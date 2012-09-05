@@ -161,6 +161,7 @@ class Display extends FsCommand {
       outbuf = new DataOutputBuffer();
     }
 
+    @Override
     public int read() throws IOException {
       int ret;
       if (null == inbuf || -1 == (ret = inbuf.read())) {
@@ -180,6 +181,7 @@ class Display extends FsCommand {
       return ret;
     }
 
+    @Override
     public void close() throws IOException {
       r.close();
       super.close();

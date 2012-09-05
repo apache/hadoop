@@ -23,6 +23,7 @@ import org.junit.Before;
 public class TestLocalFSFileContextCreateMkdir extends
   FileContextCreateMkdirBaseTest {
 
+  @Override
   @Before
   public void setUp() throws Exception {
     fc = FileContext.getLocalFSFileContext();

@@ -33,9 +33,11 @@ public class ToCpp extends TestCase {
     super(testName);
   }
 
+  @Override
   protected void setUp() throws Exception {
   }
 
+  @Override
   protected void tearDown() throws Exception {
   }
     

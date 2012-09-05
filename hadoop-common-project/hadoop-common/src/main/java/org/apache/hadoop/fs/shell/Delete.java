@@ -114,6 +114,7 @@ class Delete {
   static class Rmr extends Rm {
     public static final String NAME = "rmr";
     
+    @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       args.addFirst("-r");
       super.processOptions(args);
@@ -136,6 +137,7 @@ class Delete {
     
     private boolean ignoreNonEmpty = false;
     
+    @Override
     protected void processOptions(LinkedList<String> args) throws IOException {
       CommandFormat cf = new CommandFormat(
           1, Integer.MAX_VALUE, "-ignore-fail-on-non-empty");

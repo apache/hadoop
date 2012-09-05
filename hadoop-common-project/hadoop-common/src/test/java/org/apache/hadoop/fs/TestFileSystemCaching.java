@@ -110,6 +110,7 @@ public class TestFileSystemCaching {
   
   public static class InitializeForeverFileSystem extends LocalFileSystem {
     final static Semaphore sem = new Semaphore(0);
+    @Override
     public void initialize(URI uri, Configuration conf) throws IOException {
       // notify that InitializeForeverFileSystem started initialization
       sem.release();
@@ -127,6 +128,7 @@ public class TestFileSystemCaching {
   public void testCacheEnabledWithInitializeForeverFS() throws Exception {
     final Configuration conf = new Configuration();
     Thread t = new Thread() {
+      @Override
       public void run() {
         conf.set("fs.localfs1.impl", "org.apache.hadoop.fs." +
          "TestFileSystemCaching$InitializeForeverFileSystem");
@@ -167,11 +169,13 @@ public class TestFileSystemCaching {
     UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
     UserGroupInformation ugiB = UserGroupInformation.createRemoteUser("bar");
     FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws Exception {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }
     });
     FileSystem fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws Exception {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }
@@ -180,6 +184,7 @@ public class TestFileSystemCaching {
     assertSame(fsA, fsA1);
     
     FileSystem fsB = ugiB.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws Exception {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }
@@ -192,6 +197,7 @@ public class TestFileSystemCaching {
     UserGroupInformation ugiA2 = UserGroupInformation.createRemoteUser("foo");
     
     fsA = ugiA2.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws Exception {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }
@@ -203,6 +209,7 @@ public class TestFileSystemCaching {
     ugiA.addToken(t1);
     
     fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws Exception {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }
@@ -245,12 +252,14 @@ public class TestFileSystemCaching {
     conf.set("fs.cachedfile.impl", FileSystem.getFileSystemClass("file", null).getName());
     UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
     FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws Exception {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }
     });
     //Now we should get the cached filesystem
     FileSystem fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws Exception {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }
@@ -261,6 +270,7 @@ public class TestFileSystemCaching {
     
     //Now we should get a different (newly created) filesystem
     fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      @Override
       public FileSystem run() throws Exception {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }

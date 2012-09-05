@@ -300,6 +300,7 @@ final class BCFile {
      * Close the BCFile Writer. Attempting to use the Writer after calling
      * <code>close</code> is not allowed and may lead to undetermined results.
      */
+    @Override
     public void close() throws IOException {
       if (closed == true) {
         return;
@@ -447,6 +448,7 @@ final class BCFile {
         this.compressAlgo = compressAlgo;
       }
 
+      @Override
       public void register(long raw, long begin, long end) {
         metaIndex.addEntry(new MetaIndexEntry(name, compressAlgo,
             new BlockRegion(begin, end - begin, raw)));
@@ -463,6 +465,7 @@ final class BCFile {
         // do nothing
       }
 
+      @Override
       public void register(long raw, long begin, long end) {
         dataIndex.addBlockRegion(new BlockRegion(begin, end - begin, raw));
       }
@@ -671,6 +674,7 @@ final class BCFile {
     /**
      * Finishing reading the BCFile. Release all resources.
      */
+    @Override
     public void close() {
       // nothing to be done now
     }

@@ -26,6 +26,9 @@ import java.net.URI;
 import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.junit.Test;
 
 public class TestFSNamesystem {
@@ -45,4 +48,20 @@ public class TestFSNamesystem {
     assertEquals(2, editsDirs.size());
   }
 
+  /**
+   * Test that FSNamesystem#clear clears all leases.
+   */
+  @Test
+  public void testFSNamespaceClearLeases() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
+    DFSTestUtil.formatNameNode(conf);
+    FSNamesystem fsn = FSNamesystem.loadFromDisk(conf);
+    LeaseManager leaseMan = fsn.getLeaseManager();
+    leaseMan.addLease("client1", "importantFile");
+    assertEquals(1, leaseMan.countLease());
+    fsn.clear();
+    leaseMan = fsn.getLeaseManager();
+    assertEquals(0, leaseMan.countLease());
+  }
 }

@@ -101,9 +101,6 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
         blocksize, maxNodesPerRack, results);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   protected void adjustExcludedNodes(HashMap<Node, Node> excludedNodes,
       Node chosenNode) {
@@ -121,9 +118,6 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   protected DatanodeDescriptor chooseLocalRack(
                                              DatanodeDescriptor localMachine,
@@ -172,9 +166,6 @@ public class BlockPlacementPolicyWithNodeGroup extends BlockPlacementPolicyDefau
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   protected void chooseRemoteRack(int numOfReplicas,
           DatanodeDescriptor localMachine,

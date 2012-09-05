@@ -50,6 +50,7 @@ public class OutputBuffer extends FilterOutputStream {
   private static class Buffer extends ByteArrayOutputStream {
     public byte[] getData() { return buf; }
     public int getLength() { return count; }
+    @Override
     public void reset() { count = 0; }
 
     public void write(InputStream in, int len) throws IOException {

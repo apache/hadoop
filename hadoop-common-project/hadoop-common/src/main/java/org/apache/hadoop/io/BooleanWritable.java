@@ -57,12 +57,14 @@ public class BooleanWritable implements WritableComparable<BooleanWritable> {
 
   /**
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
     value = in.readBoolean();
   }
 
   /**
    */
+  @Override
   public void write(DataOutput out) throws IOException {
     out.writeBoolean(value);
   }

@@ -55,6 +55,7 @@ public class Text extends BinaryComparable
   
   private static ThreadLocal<CharsetEncoder> ENCODER_FACTORY =
     new ThreadLocal<CharsetEncoder>() {
+      @Override
       protected CharsetEncoder initialValue() {
         return Charset.forName("UTF-8").newEncoder().
                onMalformedInput(CodingErrorAction.REPORT).
@@ -64,6 +65,7 @@ public class Text extends BinaryComparable
   
   private static ThreadLocal<CharsetDecoder> DECODER_FACTORY =
     new ThreadLocal<CharsetDecoder>() {
+    @Override
     protected CharsetDecoder initialValue() {
       return Charset.forName("UTF-8").newDecoder().
              onMalformedInput(CodingErrorAction.REPORT).
@@ -112,11 +114,13 @@ public class Text extends BinaryComparable
    * valid. Please use {@link #copyBytes()} if you
    * need the returned array to be precisely the length of the data.
    */
+  @Override
   public byte[] getBytes() {
     return bytes;
   }
 
   /** Returns the number of bytes in the byte array */ 
+  @Override
   public int getLength() {
     return length;
   }
@@ -281,6 +285,7 @@ public class Text extends BinaryComparable
   
   /** deserialize 
    */
+  @Override
   public void readFields(DataInput in) throws IOException {
     int newLength = WritableUtils.readVInt(in);
     setCapacity(newLength, false);
@@ -313,6 +318,7 @@ public class Text extends BinaryComparable
    * length uses zero-compressed encoding
    * @see Writable#write(DataOutput)
    */
+  @Override
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, length);
     out.write(bytes, 0, length);
@@ -329,6 +335,7 @@ public class Text extends BinaryComparable
   }
 
   /** Returns true iff <code>o</code> is a Text with the same contents.  */
+  @Override
   public boolean equals(Object o) {
     if (o instanceof Text)
       return super.equals(o);
@@ -346,6 +353,7 @@ public class Text extends BinaryComparable
       super(Text.class);
     }
 
+    @Override
     public int compare(byte[] b1, int s1, int l1,
                        byte[] b2, int s2, int l2) {
       int n1 = WritableUtils.decodeVIntSize(b1[s1]);

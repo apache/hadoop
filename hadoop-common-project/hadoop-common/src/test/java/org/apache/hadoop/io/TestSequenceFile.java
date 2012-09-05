@@ -481,6 +481,7 @@ public class TestSequenceFile extends TestCase {
       super(in);
     }
 
+    @Override
     public void close() throws IOException {
       closed = true;
       super.close();
@@ -505,6 +506,7 @@ public class TestSequenceFile extends TestCase {
     try {
       new SequenceFile.Reader(fs, path, conf) {
         // this method is called by the SequenceFile.Reader constructor, overwritten, so we can access the opened file
+        @Override
         protected FSDataInputStream openFile(FileSystem fs, Path file, int bufferSize, long length) throws IOException {
           final InputStream in = super.openFile(fs, file, bufferSize, length);
           openedFile[0] = new TestFSDataInputStream(in);

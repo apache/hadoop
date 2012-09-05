@@ -29,6 +29,7 @@ public abstract class BooleanParam extends Param<Boolean> {
     super(name, defaultValue);
   }
 
+  @Override
   protected Boolean parse(String str) throws Exception {
     if (str.equalsIgnoreCase("true")) {
       return true;

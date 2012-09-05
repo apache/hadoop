@@ -206,12 +206,15 @@ class NameNodeRpcServer implements NamenodeProtocols {
         conf.getInt(DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
                     DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
       // Add all the RPC protocols that the namenode implements
-      this.serviceRpcServer = 
-          RPC.getServer(org.apache.hadoop.hdfs.protocolPB.
-              ClientNamenodeProtocolPB.class, clientNNPbService,
-          dnSocketAddr.getHostName(), dnSocketAddr.getPort(), 
-          serviceHandlerCount,
-          false, conf, namesystem.getDelegationTokenSecretManager());
+      this.serviceRpcServer = new RPC.Builder(conf)
+          .setProtocol(
+              org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
+          .setInstance(clientNNPbService)
+          .setBindAddress(dnSocketAddr.getHostName())
+          .setPort(dnSocketAddr.getPort()).setNumHandlers(serviceHandlerCount)
+          .setVerbose(false)
+          .setSecretManager(namesystem.getDelegationTokenSecretManager())
+          .build();
       DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
           serviceRpcServer);
       DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
@@ -232,11 +235,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
       serviceRPCAddress = null;
     }
     // Add all the RPC protocols that the namenode implements
-    this.clientRpcServer = RPC.getServer(
-        org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class, 
-        clientNNPbService, socAddr.getHostName(),
-            socAddr.getPort(), handlerCount, false, conf,
-            namesystem.getDelegationTokenSecretManager());
+    this.clientRpcServer = new RPC.Builder(conf)
+        .setProtocol(
+            org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
+        .setInstance(clientNNPbService).setBindAddress(socAddr.getHostName())
+        .setPort(socAddr.getPort()).setNumHandlers(handlerCount)
+        .setVerbose(false)
+        .setSecretManager(namesystem.getDelegationTokenSecretManager()).build();
     DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
         clientRpcServer);
     DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
@@ -703,6 +708,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
   public void saveNamespace() throws IOException {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.saveNamespace();
+  }
+  
+  @Override // ClientProtocol
+  public long rollEdits() throws AccessControlException, IOException {
+    namesystem.checkOperation(OperationCategory.JOURNAL);
+    CheckpointSignature sig = namesystem.rollEditLog();
+    return sig.getCurSegmentTxId();
   }
 
   @Override // ClientProtocol

@@ -140,6 +140,11 @@ public class SecondaryNameNode implements Runnable {
   FSImage getFSImage() {
     return checkpointImage;
   }
+
+  @VisibleForTesting
+  FSNamesystem getFSNamesystem() {
+    return namesystem;
+  }
   
   @VisibleForTesting
   void setFSImage(CheckpointStorage image) {

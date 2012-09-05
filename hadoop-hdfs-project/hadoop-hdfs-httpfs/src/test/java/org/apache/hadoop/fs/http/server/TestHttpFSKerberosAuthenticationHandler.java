@@ -34,7 +34,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.HFSTestCase;
 import org.apache.hadoop.test.TestDir;
 import org.apache.hadoop.test.TestDirHelper;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.Test;

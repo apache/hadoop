@@ -37,14 +37,17 @@ public class DefaultCodec implements Configurable, CompressionCodec {
   
   Configuration conf;
 
+  @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
   }
   
+  @Override
   public Configuration getConf() {
     return conf;
   }
   
+  @Override
   public CompressionOutputStream createOutputStream(OutputStream out) 
   throws IOException {
     // This may leak memory if called in a loop. The createCompressor() call
@@ -57,6 +60,7 @@ public class DefaultCodec implements Configurable, CompressionCodec {
                                 conf.getInt("io.file.buffer.size", 4*1024));
   }
 
+  @Override
   public CompressionOutputStream createOutputStream(OutputStream out, 
                                                     Compressor compressor) 
   throws IOException {
@@ -64,20 +68,24 @@ public class DefaultCodec implements Configurable, CompressionCodec {
                                 conf.getInt("io.file.buffer.size", 4*1024));
   }
 
+  @Override
   public Class<? extends Compressor> getCompressorType() {
     return ZlibFactory.getZlibCompressorType(conf);
   }
 
+  @Override
   public Compressor createCompressor() {
     return ZlibFactory.getZlibCompressor(conf);
   }
 
+  @Override
   public CompressionInputStream createInputStream(InputStream in) 
   throws IOException {
     return new DecompressorStream(in, createDecompressor(),
                                   conf.getInt("io.file.buffer.size", 4*1024));
   }
 
+  @Override
   public CompressionInputStream createInputStream(InputStream in, 
                                                   Decompressor decompressor) 
   throws IOException {
@@ -85,14 +93,17 @@ public class DefaultCodec implements Configurable, CompressionCodec {
                                   conf.getInt("io.file.buffer.size", 4*1024));
   }
 
+  @Override
   public Class<? extends Decompressor> getDecompressorType() {
     return ZlibFactory.getZlibDecompressorType(conf);
   }
 
+  @Override
   public Decompressor createDecompressor() {
     return ZlibFactory.getZlibDecompressor(conf);
   }
   
+  @Override
   public String getDefaultExtension() {
     return ".deflate";
   }

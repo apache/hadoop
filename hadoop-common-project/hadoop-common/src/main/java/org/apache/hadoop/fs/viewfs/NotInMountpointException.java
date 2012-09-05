@@ -20,10 +20,6 @@ package org.apache.hadoop.fs.viewfs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-
 import org.apache.hadoop.fs.Path;
 
 /**
