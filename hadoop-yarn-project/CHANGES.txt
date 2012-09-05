@@ -70,6 +70,8 @@ Release 0.23.4 - UNRELEASED
 
   IMPROVEMENTS
 
+     Change package of YarnClient to org.apache.hadoop. (Bikas Saha via vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
