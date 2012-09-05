@@ -148,6 +148,19 @@ public class TestJournal {
     assertEquals(1, newEpoch.getLastSegmentTxId());
   }
   
+  @Test
+  public void testFormatResetsCachedValues() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 12345L);
+    journal.startLogSegment(new RequestInfo(JID, 12345L, 1L, 0L), 1L);
+
+    assertEquals(12345L, journal.getLastPromisedEpoch());
+    assertEquals(12345L, journal.getLastWriterEpoch());
+
+    journal.format(FAKE_NSINFO_2);
+    assertEquals(0, journal.getLastPromisedEpoch());
+    assertEquals(0, journal.getLastWriterEpoch());
+  }
+  
   /**
    * Test that, if the writer crashes at the very beginning of a segment,
    * before any transactions are written, that the next newEpoch() call

@@ -105,6 +105,19 @@ class Journal implements Closeable {
   Journal(File logDir, StorageErrorReporter errorReporter) throws IOException {
     storage = new JNStorage(logDir, errorReporter);
 
+    refreshCachedData();
+    
+    this.fjm = storage.getJournalManager();
+  }
+
+  /**
+   * Reload any data that may have been cached. This is necessary
+   * when we first load the Journal, but also after any formatting
+   * operation, since the cached data is no longer relevant.
+   */
+  private synchronized void refreshCachedData() {
+    IOUtils.closeStream(committedTxnId);
+    
     File currentDir = storage.getSingularStorageDir().getCurrentDir();
     this.lastPromisedEpoch = new PersistentLongFile(
         new File(currentDir, LAST_PROMISED_FILENAME), 0);
@@ -113,8 +126,6 @@ class Journal implements Closeable {
     this.committedTxnId = new BestEffortLongFile(
         new File(currentDir, COMMITTED_TXID_FILENAME),
         HdfsConstants.INVALID_TXID);
-    
-    this.fjm = storage.getJournalManager();
   }
   
   /**
@@ -156,6 +167,7 @@ class Journal implements Closeable {
     LOG.info("Formatting " + this + " with namespace info: " +
         nsInfo);
     storage.format(nsInfo);
+    refreshCachedData();
   }
 
   /**
@@ -179,6 +191,11 @@ class Journal implements Closeable {
   synchronized long getLastPromisedEpoch() throws IOException {
     checkFormatted();
     return lastPromisedEpoch.get();
+  }
+
+  synchronized public long getLastWriterEpoch() throws IOException {
+    checkFormatted();
+    return lastWriterEpoch.get();
   }
   
   synchronized long getCommittedTxnIdForTests() throws IOException {
