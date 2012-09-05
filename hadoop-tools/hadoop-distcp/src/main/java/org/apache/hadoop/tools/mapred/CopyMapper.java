@@ -255,7 +255,7 @@ public class CopyMapper extends Mapper<Text, FileStatus, Text, Text> {
 
     long bytesCopied;
     try {
-      bytesCopied = (Long)new RetriableFileCopyCommand(description)
+      bytesCopied = (Long)new RetriableFileCopyCommand(skipCrc, description)
                        .execute(sourceFileStatus, target, context, fileAttributes);
     } catch (Exception e) {
       context.setStatus("Copy Failure: " + sourceFileStatus.getPath());
