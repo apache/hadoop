@@ -17,17 +17,27 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.List;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.http.HttpServerFunctionalTest;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
@@ -98,6 +108,47 @@ public class TestTransferFsImage {
           localPaths.get(1).length() > 0);
     } finally {
       cluster.shutdown();      
+    }
+  }
+
+  /**
+   * Test to verify the read timeout
+   */
+  @Test(timeout = 5000)
+  public void testImageTransferTimeout() throws Exception {
+    HttpServer testServer = HttpServerFunctionalTest.createServer("hdfs");
+    try {
+      testServer.addServlet("GetImage", "/getimage", TestGetImageServlet.class);
+      testServer.start();
+      URL serverURL = HttpServerFunctionalTest.getServerURL(testServer);
+      TransferFsImage.timeout = 2000;
+      try {
+        TransferFsImage.getFileClient(serverURL.getAuthority(), "txid=1", null,
+            null, false);
+        fail("TransferImage Should fail with timeout");
+      } catch (SocketTimeoutException e) {
+        assertEquals("Read should timeout", "Read timed out", e.getMessage());
+      }
+    } finally {
+      if (testServer != null) {
+        testServer.stop();
+      }
+    }
+  }
+
+  public static class TestGetImageServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp)
+        throws ServletException, IOException {
+      synchronized (this) {
+        try {
+          wait(5000);
+        } catch (InterruptedException e) {
+          // Ignore
+        }
+      }
     }
   }
 }
