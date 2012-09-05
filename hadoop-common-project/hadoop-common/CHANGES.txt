@@ -252,6 +252,8 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8722. Update BUILDING.txt with latest snappy info.
     (Colin Patrick McCabe via eli)
 
+    HADOOP-8764. CMake: HADOOP-8737 broke ARM build. (Trevor Robinson via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
