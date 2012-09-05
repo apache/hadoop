@@ -59,6 +59,9 @@ Release 2.1.0-alpha - Unreleased
     YARN-79. Implement close on all clients to YARN so that RPC clients don't
     throw exceptions on shut-down. (Vinod Kumar Vavilapalli)
 
+    YARN-42. Modify NM's non-aggregating logs' handler to stop properly so that
+    NMs don't get NPEs on startup errors. (Devaraj K via vinodkv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
