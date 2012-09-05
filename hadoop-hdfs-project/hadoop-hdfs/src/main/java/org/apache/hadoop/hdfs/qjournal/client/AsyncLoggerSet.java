@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentSt
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.jasper.compiler.JspUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -189,6 +190,24 @@ class AsyncLoggerSet {
    */
   int size() {
     return loggers.size();
+  }
+  
+  /**
+   * Append an HTML-formatted status readout on the current
+   * state of the underlying loggers.
+   * @param sb the StringBuilder to append to
+   */
+  void appendHtmlReport(StringBuilder sb) {
+    sb.append("<table class=\"storage\">");
+    sb.append("<thead><tr><td>JN</td><td>Status</td></tr></thead>\n");
+    for (AsyncLogger l : loggers) {
+      sb.append("<tr>");
+      sb.append("<td>" + JspUtil.escapeXml(l.toString()) + "</td>");
+      sb.append("<td>");
+      l.appendHtmlReport(sb);
+      sb.append("</td></tr>\n");
+    }
+    sb.append("</table>");
   }
 
   /**

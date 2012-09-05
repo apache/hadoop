@@ -109,4 +109,13 @@ class QuorumOutputStream extends EditLogOutputStream {
       loggers.setCommittedTxId(firstTxToFlush + numReadyTxns - 1);
     }
   }
+
+  @Override
+  public String generateHtmlReport() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("Writing segment beginning at txid " + segmentTxId + "<br/>\n");
+    loggers.appendHtmlReport(sb);
+    return sb.toString();
+  }
+  
 }

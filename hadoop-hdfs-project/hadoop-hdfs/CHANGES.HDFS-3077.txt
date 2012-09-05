@@ -38,3 +38,5 @@ HDFS-3845. Fixes for edge cases in QJM recovery protocol (todd)
 HDFS-3877. QJM: Provide defaults for dfs.journalnode.*address (eli)
 
 HDFS-3863. Track last "committed" txid in QJM (todd)
+
+HDFS-3869. Expose non-file journal manager details in web UI (todd)

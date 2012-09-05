@@ -24,6 +24,7 @@ import static org.apache.hadoop.util.Time.now;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.jasper.compiler.JspUtil;
 
 /**
  * A generic abstract class to support journaling of edits logs into 
@@ -131,5 +132,13 @@ public abstract class EditLogOutputStream implements Closeable {
    */
   protected long getNumSync() {
     return numSync;
+  }
+
+  /**
+   * @return a short HTML snippet suitable for describing the current
+   * status of the stream
+   */
+  public String generateHtmlReport() {
+    return JspUtil.escapeXml(this.toString());
   }
 }

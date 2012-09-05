@@ -84,7 +84,12 @@ public class IPCLoggerChannel implements AsyncLogger {
    * The number of bytes of edits data still in the queue.
    */
   private int queuedEditsSizeBytes = 0;
-
+  
+  /**
+   * The highest txid that has been successfully logged on the remote JN.
+   */
+  private long highestAckedTxId = 0;
+  
   /**
    * The maximum number of bytes that can be pending in the queue.
    * This keeps the writer from hitting OOME if one of the loggers
@@ -262,6 +267,9 @@ public class IPCLoggerChannel implements AsyncLogger {
         public Void call() throws IOException {
           getProxy().journal(createReqInfo(),
               segmentTxId, firstTxnId, numTxns, data);
+          synchronized (IPCLoggerChannel.this) {
+            highestAckedTxId = firstTxnId + numTxns - 1;
+          }
           return null;
         }
       });
@@ -397,5 +405,15 @@ public class IPCLoggerChannel implements AsyncLogger {
   @Override
   public String toString() {
     return "Channel to journal node " + addr; 
+  }
+
+  @Override
+  public synchronized void appendHtmlReport(StringBuilder sb) {
+    sb.append("Written txid ").append(highestAckedTxId);
+    long behind = committedTxId - highestAckedTxId;
+    assert behind >= 0;
+    if (behind > 0) {
+      sb.append(" (" + behind + " behind)");
+    }
   }
 }

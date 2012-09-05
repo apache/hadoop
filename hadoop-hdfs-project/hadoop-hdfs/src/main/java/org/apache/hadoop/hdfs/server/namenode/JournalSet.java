@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.SortedSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -147,7 +148,7 @@ public class JournalSet implements JournalManager {
       return journal;
     }
 
-    private boolean isDisabled() {
+    boolean isDisabled() {
       return disabled;
     }
 
@@ -165,8 +166,12 @@ public class JournalSet implements JournalManager {
       return required;
     }
   }
-  
-  private List<JournalAndStream> journals = Lists.newArrayList();
+ 
+  // COW implementation is necessary since some users (eg the web ui) call
+  // getAllJournalStreams() and then iterate. Since this is rarely
+  // mutated, there is no performance concern.
+  private List<JournalAndStream> journals =
+      new CopyOnWriteArrayList<JournalSet.JournalAndStream>();
   final int minimumRedundantJournals;
   
   JournalSet(int minimumRedundantResources) {
@@ -519,7 +524,6 @@ public class JournalSet implements JournalManager {
     }
   }
   
-  @VisibleForTesting
   List<JournalAndStream> getAllJournalStreams() {
     return journals;
   }

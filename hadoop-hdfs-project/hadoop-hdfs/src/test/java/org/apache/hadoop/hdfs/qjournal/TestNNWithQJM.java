@@ -17,17 +17,18 @@
  */
 package org.apache.hadoop.hdfs.qjournal;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -184,5 +185,42 @@ public class TestNNWithQJM {
       GenericTestUtils.assertExceptionContains(
           "Unable to start log segment 1: too few journals", ioe);
     }
+  }
+  
+  @Test
+  public void testWebPageHasQjmInfo() throws Exception {
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
+        MiniDFSCluster.getBaseDirectory() + "/TestNNWithQJM/image");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+        mjc.getQuorumJournalURI("myjournal").toString());
+    
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+      .numDataNodes(0)
+      .manageNameDfsDirs(false)
+      .build();
+    try {
+      URL url = new URL("http://localhost:"
+          + NameNode.getHttpAddress(cluster.getConfiguration(0)).getPort()
+          + "/dfshealth.jsp");
+      
+      cluster.getFileSystem().mkdirs(TEST_PATH);
+      
+      String contents = DFSTestUtil.urlGet(url); 
+      assertTrue(contents.contains("Channel to journal node"));
+      assertTrue(contents.contains("Written txid 2"));
+
+      // Stop one JN, do another txn, and make sure it shows as behind
+      // stuck behind the others.
+      mjc.getJournalNode(0).stopAndJoin(0);
+      
+      cluster.getFileSystem().delete(TEST_PATH, true);
+      
+      contents = DFSTestUtil.urlGet(url); 
+      System.out.println(contents);
+      assertTrue(contents.contains("(1 behind)"));
+    } finally {
+      cluster.shutdown();
+    }
+
   }
 }
