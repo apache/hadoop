@@ -467,6 +467,9 @@ Branch-2 ( Unreleased changes )
 
     HADOOP-8770. NN should not RPC to self to find trash defaults. (eli)
 
+    HADOOP-8648. libhadoop: native CRC32 validation crashes when
+    io.bytes.per.checksum=1. (Colin Patrick McCabe via eli)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
