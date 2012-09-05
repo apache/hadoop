@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,8 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -137,10 +136,32 @@ public class LogAggregationService extends AbstractService implements
   @Override
   public synchronized void stop() {
     LOG.info(this.getName() + " waiting for pending aggregation during exit");
-    for (AppLogAggregator appLogAggregator : this.appLogAggregators.values()) {
-      appLogAggregator.join();
-    }
+    stopAggregators();
     super.stop();
+  }
+   
+  private void stopAggregators() {
+    threadPool.shutdown();
+    // politely ask to finish
+    for (AppLogAggregator aggregator : appLogAggregators.values()) {
+      aggregator.finishLogAggregation();
+    }
+    while (!threadPool.isTerminated()) { // wait for all threads to finish
+      for (ApplicationId appId : appLogAggregators.keySet()) {
+        LOG.info("Waiting for aggregation to complete for " + appId);
+      }
+      try {
+        if (!threadPool.awaitTermination(30, TimeUnit.SECONDS)) {
+          threadPool.shutdownNow(); // send interrupt to hurry them along
+        }
+      } catch (InterruptedException e) {
+        LOG.warn("Aggregation stop interrupted!");
+        break;
+      }
+    }
+    for (ApplicationId appId : appLogAggregators.keySet()) {
+      LOG.warn("Some logs may not have been aggregated for " + appId);
+    }
   }
   
   private void verifyAndCreateRemoteLogDir(Configuration conf) {
@@ -293,10 +314,7 @@ public class LogAggregationService extends AbstractService implements
     final UserGroupInformation userUgi =
         UserGroupInformation.createRemoteUser(user);
     if (credentials != null) {
-      for (Token<? extends TokenIdentifier> token : credentials
-          .getAllTokens()) {
-        userUgi.addToken(token);
-      }
+      userUgi.addCredentials(credentials);
     }
 
     // New application
@@ -312,9 +330,13 @@ public class LogAggregationService extends AbstractService implements
     try {
       // Create the app dir
       createAppDir(user, appId, userUgi);
-    } catch (YarnException e) {
+    } catch (Exception e) {
+      appLogAggregators.remove(appId);
       closeFileSystems(userUgi);
-      throw e;
+      if (!(e instanceof YarnException)) {
+        e = new YarnException(e);
+      }
+      throw (YarnException)e;
     }
 
 
