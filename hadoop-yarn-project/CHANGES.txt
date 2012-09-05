@@ -68,3 +68,6 @@ Release 0.23.3 - Unreleased
 
     YARN-60. Fixed a bug in ResourceManager which causes all NMs to get NPEs and
     thus causes all containers to be rejected. (vinodkv)
+
+    YARN-68. NodeManager will refuse to shutdown indefinitely due to container
+    log aggregation (daryn via bobby)
