@@ -702,6 +702,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.saveNamespace();
   }
+  
+  @Override // ClientProtocol
+  public long rollEdits() throws AccessControlException, IOException {
+    namesystem.checkOperation(OperationCategory.JOURNAL);
+    CheckpointSignature sig = namesystem.rollEditLog();
+    return sig.getCurSegmentTxId();
+  }
 
   @Override // ClientProtocol
   public void refreshNodes() throws IOException {

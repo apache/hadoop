@@ -27,6 +27,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3150. Add option for clients to contact DNs via hostname. (eli)
 
+    HDFS-2793. Add an admin command to trigger an edit log roll. (todd)
+
   IMPROVEMENTS
 
     HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG

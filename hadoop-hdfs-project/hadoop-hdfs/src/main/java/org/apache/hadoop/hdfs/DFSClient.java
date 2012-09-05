@@ -1908,6 +1908,20 @@ public class DFSClient implements java.io.Closeable {
       throw re.unwrapRemoteException(AccessControlException.class);
     }
   }
+
+  /**
+   * Rolls the edit log on the active NameNode.
+   * @return the txid of the new log segment 
+   *
+   * @see ClientProtocol#rollEdits()
+   */
+  long rollEdits() throws AccessControlException, IOException {
+    try {
+      return namenode.rollEdits();
+    } catch(RemoteException re) {
+      throw re.unwrapRemoteException(AccessControlException.class);
+    }
+  }
   
   /**
    * enable/disable restore failed storage.

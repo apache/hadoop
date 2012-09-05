@@ -276,6 +276,13 @@ message SaveNamespaceRequestProto { // no parameters
 message SaveNamespaceResponseProto { // void response
 }
 
+message RollEditsRequestProto { // no parameters
+}
+
+message RollEditsResponseProto { // response
+  required uint64 newSegmentTxId = 1;
+}
+
 message RestoreFailedStorageRequestProto {
   required string arg = 1;
 }
@@ -472,6 +479,8 @@ service ClientNamenodeProtocol {
       returns(SetSafeModeResponseProto);
   rpc saveNamespace(SaveNamespaceRequestProto)
       returns(SaveNamespaceResponseProto);
+  rpc rollEdits(RollEditsRequestProto)
+      returns(RollEditsResponseProto);
   rpc restoreFailedStorage(RestoreFailedStorageRequestProto)
       returns(RestoreFailedStorageResponseProto);
   rpc refreshNodes(RefreshNodesRequestProto) returns(RefreshNodesResponseProto);
