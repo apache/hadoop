@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ProtoUtils;
-import org.hadoop.yarn.client.YarnClientImpl;
+import org.apache.hadoop.yarn.client.YarnClientImpl;
 
 public class ResourceMgrDelegate extends YarnClientImpl {
   private static final Log LOG = LogFactory.getLog(ResourceMgrDelegate.class);
