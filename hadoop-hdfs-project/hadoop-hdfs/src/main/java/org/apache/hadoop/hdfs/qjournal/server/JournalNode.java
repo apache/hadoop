@@ -73,7 +73,7 @@ public class JournalNode implements Tool, Configurable {
     if (journal == null) {
       File logDir = getLogDir(jid);
       LOG.info("Initializing journal in directory " + logDir);      
-      journal = new Journal(logDir, new ErrorReporter());
+      journal = new Journal(logDir, jid, new ErrorReporter());
       journalsById.put(jid, journal);
     }
     

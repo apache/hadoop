@@ -40,8 +40,10 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRe
 import org.apache.hadoop.hdfs.qjournal.server.Journal;
 import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.MetricsAsserts;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -86,12 +88,22 @@ public class TestJournalNode {
   
   @Test
   public void testJournal() throws Exception {
+    MetricsRecordBuilder metrics = MetricsAsserts.getMetrics(
+        journal.getMetricsForTests().getName());
+    MetricsAsserts.assertCounter("BatchesWritten", 0L, metrics);
+    MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 0L, metrics);
+
     IPCLoggerChannel ch = new IPCLoggerChannel(
         conf, FAKE_NSINFO, JID, jn.getBoundIpcAddress());
     ch.newEpoch(1).get();
     ch.setEpoch(1);
     ch.startLogSegment(1).get();
     ch.sendEdits(1L, 1, 1, "hello".getBytes(Charsets.UTF_8)).get();
+    
+    metrics = MetricsAsserts.getMetrics(
+        journal.getMetricsForTests().getName());
+    MetricsAsserts.assertCounter("BatchesWritten", 1L, metrics);
+    MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 0L, metrics);
   }
   
   

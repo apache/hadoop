@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,7 +51,9 @@ import org.apache.hadoop.hdfs.util.BestEffortLongFile;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Range;
 import com.google.common.collect.Ranges;
 import com.google.protobuf.ByteString;
@@ -69,6 +72,8 @@ class Journal implements Closeable {
   private EditLogOutputStream curSegment;
   private long curSegmentTxId = HdfsConstants.INVALID_TXID;
   private long nextTxId = HdfsConstants.INVALID_TXID;
+  
+  private final String journalId;
   
   private final JNStorage storage;
 
@@ -102,12 +107,19 @@ class Journal implements Closeable {
   
   private final FileJournalManager fjm;
 
-  Journal(File logDir, StorageErrorReporter errorReporter) throws IOException {
+  private final JournalMetrics metrics;
+
+
+  Journal(File logDir, String journalId,
+      StorageErrorReporter errorReporter) throws IOException {
     storage = new JNStorage(logDir, errorReporter);
+    this.journalId = journalId;
 
     refreshCachedData();
     
     this.fjm = storage.getJournalManager();
+    
+    this.metrics = JournalMetrics.create(this);
   }
 
   /**
@@ -183,6 +195,10 @@ class Journal implements Closeable {
   JNStorage getStorage() {
     return storage;
   }
+  
+  String getJournalId() {
+    return journalId;
+  }
 
   /**
    * @return the last epoch which this node has promised not to accept
@@ -200,6 +216,11 @@ class Journal implements Closeable {
   
   synchronized long getCommittedTxnIdForTests() throws IOException {
     return committedTxnId.get();
+  }
+  
+  @VisibleForTesting
+  JournalMetrics getMetricsForTests() {
+    return metrics;
   }
 
   /**
@@ -279,13 +300,34 @@ class Journal implements Closeable {
     Preconditions.checkState(nextTxId == firstTxnId,
         "Can't write txid " + firstTxnId + " expecting nextTxId=" + nextTxId);
     
+    long lastTxnId = firstTxnId + numTxns - 1;
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Writing txid " + firstTxnId + "-" + (firstTxnId + numTxns - 1));
+      LOG.trace("Writing txid " + firstTxnId + "-" + lastTxnId);
     }
     
     curSegment.writeRaw(records, 0, records.length);
     curSegment.setReadyToFlush();
+    Stopwatch sw = new Stopwatch();
+    sw.start();
     curSegment.flush();
+    sw.stop();
+    
+    metrics.addSync(sw.elapsedTime(TimeUnit.MICROSECONDS));
+    
+    if (committedTxnId.get() > lastTxnId) {
+      // This batch of edits has already been committed on a quorum of other
+      // nodes. So, we are in "catch up" mode. This gets its own metric.
+      metrics.batchesWrittenWhileLagging.incr(1);
+      metrics.currentLagTxns.set(committedTxnId.get() - lastTxnId);
+    } else {
+      metrics.currentLagTxns.set(0L);
+    }
+    
+    metrics.batchesWritten.incr(1);
+    metrics.bytesWritten.incr(records.length);
+    metrics.txnsWritten.incr(numTxns);
+    metrics.lastWrittenTxId.set(lastTxnId);
+    
     nextTxId += numTxns;
   }
 
