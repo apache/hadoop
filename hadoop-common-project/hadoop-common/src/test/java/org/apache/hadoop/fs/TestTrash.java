@@ -99,7 +99,6 @@ public class TestTrash extends TestCase {
   }
 
   /**
-   * 
    * Test trash for the shell's delete command for the default file system
    * specified in the paramter conf
    * @param conf 
@@ -429,8 +428,10 @@ public class TestTrash extends TestCase {
       String output = byteStream.toString();
       System.setOut(stdout);
       System.setErr(stderr);
-      assertTrue("skipTrash wasn't suggested as remedy to failed rm command",
-        output.indexOf(("Consider using -skipTrash option")) != -1 );
+      assertTrue("skipTrash wasn't suggested as remedy to failed rm command" +
+          " or we deleted / even though we could not get server defaults",
+          output.indexOf("Consider using -skipTrash option") != -1 ||
+          output.indexOf("Failed to determine server trash configuration") != -1);
     }
 
   }

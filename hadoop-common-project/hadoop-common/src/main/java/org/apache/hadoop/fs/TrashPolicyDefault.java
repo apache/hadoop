@@ -79,24 +79,9 @@ public class TrashPolicyDefault extends TrashPolicy {
     this.trash = new Path(home, TRASH);
     this.homesParent = home.getParent();
     this.current = new Path(trash, CURRENT);
-    long trashInterval = 0;
-    try {
-      trashInterval = fs.getServerDefaults(home).getTrashInterval();
-    } catch (IOException ioe) {
-      LOG.warn("Unable to get server defaults", ioe);
-    }
-    // If the trash interval is not configured or is disabled on the
-    // server side then check the config which may be client side.
-    if (0 == trashInterval) {
-      this.deletionInterval = (long)(conf.getFloat(
-          FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT)
-          * MSECS_PER_MINUTE);
-    } else {
-      this.deletionInterval = trashInterval * MSECS_PER_MINUTE;
-    }
-    // For the checkpoint interval use the given config instead of
-    // checking the server as it's OK if a client starts an emptier
-    // with a different interval than the server.
+    this.deletionInterval = (long)(conf.getFloat(
+        FS_TRASH_INTERVAL_KEY, FS_TRASH_INTERVAL_DEFAULT)
+        * MSECS_PER_MINUTE);
     this.emptierInterval = (long)(conf.getFloat(
         FS_TRASH_CHECKPOINT_INTERVAL_KEY, FS_TRASH_CHECKPOINT_INTERVAL_DEFAULT)
         * MSECS_PER_MINUTE);

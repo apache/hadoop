@@ -23,11 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.TestTrash;
-import org.apache.hadoop.fs.Trash;
-
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -61,54 +56,5 @@ public class TestHDFSTrash {
     Configuration conf = fs.getConf();
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, fs.getUri().toString());
     TestTrash.trashNonDefaultFS(conf);
-  }
-
-  /** Clients should always use trash if enabled server side */
-  @Test
-  public void testTrashEnabledServerSide() throws IOException {
-    Configuration serverConf = new HdfsConfiguration();
-    Configuration clientConf = new Configuration();
-
-    // Enable trash on the server and client
-    serverConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
-    clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
-
-    MiniDFSCluster cluster2 = null;
-    try {
-      cluster2 = new MiniDFSCluster.Builder(serverConf).numDataNodes(1).build();
-      FileSystem fs = cluster2.getFileSystem();
-      assertTrue(new Trash(fs, clientConf).isEnabled());
-
-      // Disabling trash on the client is ignored
-      clientConf.setLong(FS_TRASH_INTERVAL_KEY, 0);
-      assertTrue(new Trash(fs, clientConf).isEnabled());
-    } finally {
-      if (cluster2 != null) cluster2.shutdown();
-    }
-  }
-
-  /** Clients should always use trash if enabled client side */
-  @Test
-  public void testTrashEnabledClientSide() throws IOException {
-    Configuration serverConf = new HdfsConfiguration();
-    Configuration clientConf = new Configuration();
-    
-    // Disable server side
-    serverConf.setLong(FS_TRASH_INTERVAL_KEY, 0);
-
-    MiniDFSCluster cluster2 = null;
-    try {
-      cluster2 = new MiniDFSCluster.Builder(serverConf).numDataNodes(1).build();
-
-      // Client side is disabled by default
-      FileSystem fs = cluster2.getFileSystem();
-      assertFalse(new Trash(fs, clientConf).isEnabled());
-
-      // Enabling on the client works even though its disabled on the server
-      clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
-      assertTrue(new Trash(fs, clientConf).isEnabled());
-    } finally {
-      if (cluster2 != null) cluster2.shutdown();
-    }
   }
 }

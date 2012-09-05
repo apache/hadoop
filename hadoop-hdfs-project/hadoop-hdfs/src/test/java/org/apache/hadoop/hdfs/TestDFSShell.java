@@ -57,6 +57,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+
 /**
  * This class tests commands from DFSShell.
  */
@@ -1480,4 +1482,95 @@ public class TestDFSShell {
 
   }
 
+  /**
+   * Delete a file optionally configuring trash on the server and client.
+   */
+  private void deleteFileUsingTrash(
+      boolean serverTrash, boolean clientTrash) throws Exception {
+    // Run a cluster, optionally with trash enabled on the server
+    Configuration serverConf = new HdfsConfiguration();
+    if (serverTrash) {
+      serverConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    }
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(serverConf)
+      .numDataNodes(1).format(true).build();
+    Configuration clientConf = new Configuration(serverConf);
+
+    // Create a client, optionally with trash enabled
+    if (clientTrash) {
+      clientConf.setLong(FS_TRASH_INTERVAL_KEY, 1);
+    } else {
+      clientConf.setLong(FS_TRASH_INTERVAL_KEY, 0);
+    }
+
+    FsShell shell = new FsShell(clientConf);
+    FileSystem fs = null;
+
+    try {
+      // Create and delete a file
+      fs = cluster.getFileSystem();
+      writeFile(fs, new Path(TEST_ROOT_DIR, "foo"));
+      final String testFile = TEST_ROOT_DIR + "/foo";
+      final String trashFile = shell.getCurrentTrashDir() + "/" + testFile;
+      String[] argv = new String[] { "-rm", testFile };
+      int res = ToolRunner.run(shell, argv);
+      assertEquals("rm failed", 0, res);
+
+      if (serverTrash) {
+        // If the server config was set we should use it unconditionally
+        assertTrue("File not in trash", fs.exists(new Path(trashFile)));
+      } else if (clientTrash) {
+        // If the server config was not set but the client config was
+        // set then we should use it
+        assertTrue("File not in trashed", fs.exists(new Path(trashFile)));
+      } else {
+        // If neither was set then we should not have trashed the file
+        assertFalse("File was not removed", fs.exists(new Path(testFile)));
+        assertFalse("File was trashed", fs.exists(new Path(trashFile)));
+      }
+    } finally {
+      if (fs != null) {
+        fs.close();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
+   * Test that the server trash configuration is respected when
+   * the client configuration is not set.
+   */
+  @Test
+  public void testServerConfigRespected() throws Exception {
+    deleteFileUsingTrash(true, false);
+  }
+
+  /**
+   * Test that server trash configuration is respected even when the
+   * client configuration is set.
+   */
+  @Test
+  public void testServerConfigRespectedWithClient() throws Exception {
+    deleteFileUsingTrash(true, true);
+  }
+
+  /**
+   * Test that the client trash configuration is respected when
+   * the server configuration is not set.
+   */
+  @Test
+  public void testClientConfigRespected() throws Exception {
+    deleteFileUsingTrash(false, true);
+  }
+
+  /**
+   * Test that trash is disabled by default.
+   */
+  @Test
+  public void testNoTrashConfig() throws Exception {
+    deleteFileUsingTrash(false, false);
+  }
 }
