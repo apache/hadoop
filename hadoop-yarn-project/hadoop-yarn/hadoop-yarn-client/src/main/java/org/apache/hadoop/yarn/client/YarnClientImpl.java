@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.hadoop.yarn.client;
+package org.apache.hadoop.yarn.client;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
