@@ -559,6 +559,9 @@ Release 2.0.1-alpha - UNRELEASED
     (Vinay via umamahesh)
 
     HDFS-1490. TransferFSImage should timeout (Dmytro Molkov and Vinay via todd)
+
+    HDFS-3828. Block Scanner rescans blocks too frequently.
+    (Andy Isaacson via eli)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
