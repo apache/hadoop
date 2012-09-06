@@ -65,6 +65,9 @@ Release 2.1.0-alpha - Unreleased
     YARN-15. Updated default classpath for YARN applications to reflect split of
     YARN into a sub-project. (Arun C Murthy via vinodkv)
 
+    YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
+    event at RUNNING state. (Siddharth Seth via vinodkv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
