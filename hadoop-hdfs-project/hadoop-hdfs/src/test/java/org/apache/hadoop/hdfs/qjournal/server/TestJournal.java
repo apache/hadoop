@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.protocol.RequestInfo;
+import org.apache.hadoop.hdfs.qjournal.protocol.JournalOutOfSyncException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProtoOrBuilder;
 import org.apache.hadoop.hdfs.qjournal.server.Journal;
@@ -219,9 +220,9 @@ public class TestJournal {
     try {
       journal.finalizeLogSegment(makeRI(3), 1, 6);
       fail("did not fail to finalize");
-    } catch (IllegalStateException ise) {
+    } catch (JournalOutOfSyncException e) {
       GenericTestUtils.assertExceptionContains(
-          "but current state of log is", ise);
+          "but current state of log is", e);
     }
     
     // Check that, even if we re-construct the journal by scanning the
@@ -232,9 +233,9 @@ public class TestJournal {
     try {
       journal.finalizeLogSegment(makeRI(4), 1, 6);
       fail("did not fail to finalize");
-    } catch (IllegalStateException ise) {
+    } catch (JournalOutOfSyncException e) {
       GenericTestUtils.assertExceptionContains(
-          "but current state of log is", ise);
+          "but current state of log is", e);
     }
   }
   
@@ -248,9 +249,9 @@ public class TestJournal {
     try {
       journal.finalizeLogSegment(makeRI(1), 1000, 1001);
       fail("did not fail to finalize");
-    } catch (IllegalStateException ise) {
+    } catch (JournalOutOfSyncException e) {
       GenericTestUtils.assertExceptionContains(
-          "No log file to finalize at transaction ID 1000", ise);
+          "No log file to finalize at transaction ID 1000", e);
     }
   }
 

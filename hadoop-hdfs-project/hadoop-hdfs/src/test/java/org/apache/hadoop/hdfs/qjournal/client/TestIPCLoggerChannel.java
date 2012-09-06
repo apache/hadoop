@@ -128,5 +128,51 @@ public class TestIPCLoggerChannel {
       }
     }, 10, 1000);
   }
+  
+  /**
+   * Test that, if the remote node gets unsynchronized (eg some edits were
+   * missed or the node rebooted), the client stops sending edits until
+   * the next roll. Test for HDFS-3726.
+   */
+  @Test
+  public void testStopSendingEditsWhenOutOfSync() throws Exception {
+    Mockito.doThrow(new IOException("injected error"))
+      .when(mockProxy).journal(
+        Mockito.<RequestInfo>any(),
+        Mockito.eq(1L), Mockito.eq(1L),
+        Mockito.eq(1), Mockito.same(FAKE_DATA));
 
+    try {
+      ch.sendEdits(1L, 1L, 1, FAKE_DATA).get();
+      fail("Injected JOOSE did not cause sendEdits() to throw");
+    } catch (ExecutionException ee) {
+      GenericTestUtils.assertExceptionContains("injected", ee);
+    }
+    Mockito.verify(mockProxy).journal(
+        Mockito.<RequestInfo>any(),
+        Mockito.eq(1L), Mockito.eq(1L),
+        Mockito.eq(1), Mockito.same(FAKE_DATA));
+
+    assertTrue(ch.isOutOfSync());
+    
+    try {
+      ch.sendEdits(1L, 2L, 1, FAKE_DATA).get();
+      fail("sendEdits() should throw until next roll");
+    } catch (ExecutionException ee) {
+      GenericTestUtils.assertExceptionContains("disabled until next roll",
+          ee.getCause());
+    }
+    
+    // It should have failed without even sending an RPC, since it was not sync.
+    Mockito.verify(mockProxy, Mockito.never()).journal(
+        Mockito.<RequestInfo>any(),
+        Mockito.eq(1L), Mockito.eq(2L),
+        Mockito.eq(1), Mockito.same(FAKE_DATA));
+    
+    // After a roll, sending new edits should not fail.
+    ch.startLogSegment(3L).get();
+    assertFalse(ch.isOutOfSync());
+
+    ch.sendEdits(3L, 3L, 1, FAKE_DATA).get();
+  }
 }

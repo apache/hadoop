@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.protocol.JournalNotFormattedException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
+import org.apache.hadoop.hdfs.qjournal.protocol.JournalOutOfSyncException;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.NewEpochResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PersistedRecoveryPaxosData;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.PrepareRecoveryResponseProto;
@@ -273,14 +274,8 @@ class Journal implements Closeable {
       int numTxns, byte[] records) throws IOException {
     checkFormatted();
     checkWriteRequest(reqInfo);
-    
-    // TODO: if a JN goes down and comes back up, then it will throw
-    // this exception on every edit. We should instead send back
-    // a response indicating the log needs to be rolled, which would
-    // mark the logger on the client side as "pending" -- and have the
-    // NN code look for this condition and trigger a roll when it happens.
-    // That way the node can catch back up and rejoin
-    Preconditions.checkState(curSegment != null,
+
+    checkSync(curSegment != null,
         "Can't write, no segment open");
     
     if (curSegmentTxId != segmentTxId) {
@@ -297,7 +292,7 @@ class Journal implements Closeable {
           + " but current segment is " + curSegmentTxId);
     }
       
-    Preconditions.checkState(nextTxId == firstTxnId,
+    checkSync(nextTxId == firstTxnId,
         "Can't write txid " + firstTxnId + " expecting nextTxId=" + nextTxId);
     
     long lastTxnId = firstTxnId + numTxns - 1;
@@ -379,6 +374,18 @@ class Journal implements Closeable {
   }
 
   /**
+   * @throws JournalOutOfSyncException if the given expression is not true.
+   * The message of the exception is formatted using the 'msg' and
+   * 'formatArgs' parameters.
+   */
+  private void checkSync(boolean expression, String msg,
+      Object... formatArgs) throws JournalOutOfSyncException {
+    if (!expression) {
+      throw new JournalOutOfSyncException(String.format(msg, formatArgs));
+    }
+  }
+
+  /**
    * Start a new segment at the given txid. The previous segment
    * must have already been finalized.
    */
@@ -453,7 +460,7 @@ class Journal implements Closeable {
     
     FileJournalManager.EditLogFile elf = fjm.getLogFile(startTxId);
     if (elf == null) {
-      throw new IllegalStateException("No log file to finalize at " +
+      throw new JournalOutOfSyncException("No log file to finalize at " +
           "transaction ID " + startTxId);
     }
 
@@ -463,8 +470,8 @@ class Journal implements Closeable {
 
       LOG.info("Validating log about to be finalized: " + elf);
       elf.validateLog();
-      
-      Preconditions.checkState(elf.getLastTxId() == endTxId,
+
+      checkSync(elf.getLastTxId() == endTxId,
           "Trying to finalize log %s-%s, but current state of log " +
           "is %s", startTxId, endTxId, elf);
       fjm.finalizeLogSegment(startTxId, endTxId);
