@@ -31,6 +31,9 @@ Release 2.0.1-alpha - UNRELEASED
 
   IMPROVEMENTS
 
+    HDFS-3040. TestMulitipleNNDataBlockScanner is misspelled. (Madhukara Phatak
+    via atm)
+
     HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG
     logging is enabled. (atm)
 
