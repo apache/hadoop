@@ -62,6 +62,9 @@ Release 2.1.0-alpha - Unreleased
     YARN-42. Modify NM's non-aggregating logs' handler to stop properly so that
     NMs don't get NPEs on startup errors. (Devaraj K via vinodkv)
 
+    YARN-15. Updated default classpath for YARN applications to reflect split of
+    YARN into a sub-project. (Arun C Murthy via vinodkv)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -75,9 +78,6 @@ Release 0.23.4 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
-
-    YARN-15. Updated default classpath for YARN applications to reflect split of
-    YARN into a sub-project. (Arun C Murthy via vinodkv)
 
 Release 0.23.3 - Unreleased 
 
