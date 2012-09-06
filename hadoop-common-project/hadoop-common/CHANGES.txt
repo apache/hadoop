@@ -260,6 +260,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8766. FileContextMainOperationsBaseTest should randomize the root
     dir. (Colin Patrick McCabe via atm)
 
+    HADOOP-8749. HADOOP-8031 changed the way in which relative xincludes are handled in 
+    Configuration. (ahmed via tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active

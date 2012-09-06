@@ -1833,11 +1833,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (url == null) {
       return null;
     }
-    return parse(builder, url.openStream());
+    return parse(builder, url.openStream(), url.toString());
   }
 
-  private Document parse(DocumentBuilder builder, InputStream is)
-      throws IOException, SAXException {
+  private Document parse(DocumentBuilder builder, InputStream is,
+      String systemId) throws IOException, SAXException {
     if (!quietmode) {
       LOG.info("parsing input stream " + is);
     }
@@ -1845,7 +1845,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return null;
     }
     try {
-      return builder.parse(is);
+      return (systemId == null) ? builder.parse(is) : builder.parse(is,
+          systemId);
     } finally {
       is.close();
     }
@@ -1913,10 +1914,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
           if (!quiet) {
             LOG.info("parsing File " + file);
           }
-          doc = parse(builder, new BufferedInputStream(new FileInputStream(file)));
+          doc = parse(builder, new BufferedInputStream(
+              new FileInputStream(file)), ((Path)resource).toString());
         }
       } else if (resource instanceof InputStream) {
-        doc = parse(builder, (InputStream) resource);
+        doc = parse(builder, (InputStream) resource, null);
         returnCachedProperties = true;
       } else if (resource instanceof Properties) {
         overlay(properties, (Properties)resource);
