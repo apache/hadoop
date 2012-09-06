@@ -571,8 +571,8 @@ public class YarnConfiguration extends Configuration {
       "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
       "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
       "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
-      "$YARN_HOME/share/hadoop/mapreduce/*",
-      "$YARN_HOME/share/hadoop/mapreduce/lib/*"};
+      "$YARN_HOME/share/hadoop/yarn/*",
+      "$YARN_HOME/share/hadoop/yarn/lib/*"};
 
   /** Container temp directory */
   public static final String DEFAULT_CONTAINER_TEMP_DIR = "./tmp";
