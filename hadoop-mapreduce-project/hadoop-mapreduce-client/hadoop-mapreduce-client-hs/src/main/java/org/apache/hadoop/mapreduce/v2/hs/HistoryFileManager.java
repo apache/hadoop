@@ -392,6 +392,7 @@ public class HistoryFileManager extends AbstractService {
       doneDirPrefixPath = FileContext.getFileContext(conf).makeQualified(
           new Path(doneDirPrefix));
       doneDirFc = FileContext.getFileContext(doneDirPrefixPath.toUri(), conf);
+      doneDirFc.setUMask(JobHistoryUtils.HISTORY_DONE_DIR_UMASK);
       mkdir(doneDirFc, doneDirPrefixPath, new FsPermission(
           JobHistoryUtils.HISTORY_DONE_DIR_PERMISSION));
     } catch (IOException e) {

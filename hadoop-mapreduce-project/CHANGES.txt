@@ -756,6 +756,9 @@ Release 0.23.3 - UNRELEASED
     mapreduce.reduce.maxattempts defaults are set to 4 as well as
     mapreduce.job.maxtaskfailures.per.tracker. (Ravi Prakash via jeagles)
 
+    MAPREDUCE-4633. history server doesn't set permissions on all subdirs
+    (tgraves via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
