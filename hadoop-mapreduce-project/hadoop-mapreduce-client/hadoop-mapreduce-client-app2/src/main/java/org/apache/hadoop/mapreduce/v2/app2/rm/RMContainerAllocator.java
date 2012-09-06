@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -83,8 +84,6 @@ import org.apache.hadoop.yarn.util.RackResolver;
  */
 public class RMContainerAllocator extends AbstractService
     implements ContainerAllocator {
-
-// TODO XXX: Factor in MAPREDUCE-4437. Reduce scheduling needs to be looked into IAC
 
   static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
   
@@ -115,8 +114,7 @@ public class RMContainerAllocator extends AbstractService
   @SuppressWarnings("rawtypes")
   private final EventHandler eventHandler;
   private final AMContainerMap containerMap;
-  
-  //TODO XXX Make Configurable.
+
   // Run the scheduler if it hasn't run for this interval.
   private long scheduleInterval = 1000l;
   
@@ -219,7 +217,8 @@ public class RMContainerAllocator extends AbstractService
     LOG.info("AMSchedulerConfiguration: " + "ReUseEnabled: " + shouldReUse
         + ", reduceSlowStart: " + reduceSlowStart + ", maxReduceRampupLimit: "
         + maxReduceRampupLimit + ", maxReducePreemptionLimit: "
-        + maxReducePreemptionLimit);
+        + maxReducePreemptionLimit + ", scheduleThreadInterval: "
+        + scheduleInterval + " ms");
     RackResolver.init(conf);
   }
 
@@ -351,7 +350,7 @@ public class RMContainerAllocator extends AbstractService
     case S_CONTAINER_COMPLETED: //Nothing specific to be done in this scheduler.
       break;
     case S_NODE_BLACKLISTED:
-      // TODO XXX Withdraw requests related to this node and place new ones.
+      handleNodeBlacklisted((AMSchedulerEventNodeBlacklisted) sEvent);
       break;
     case S_NODE_UNHEALTHY:
       // Ignore. RM will not allocated containers on this node.
@@ -376,10 +375,12 @@ public class RMContainerAllocator extends AbstractService
       event.getCapability().setMemory(reduceResourceReqt);
       if (event.isRescheduled()) {
         pendingReduces.addFirst(new ContainerRequestInfo(new ContainerRequest(
-            event, PRIORITY_REDUCE), event));
+            event.getCapability(), event.getHosts(), event.getRacks(),
+            PRIORITY_REDUCE), event));
       } else {
         pendingReduces.addLast(new ContainerRequestInfo(new ContainerRequest(
-            event, PRIORITY_REDUCE), event));
+            event.getCapability(), event.getHosts(), event.getRacks(),
+            PRIORITY_REDUCE), event));
       }
     }
   }
@@ -392,7 +393,7 @@ public class RMContainerAllocator extends AbstractService
       removed = scheduledRequests.remove(aId);
       if (!removed) {
         // Maybe assigned.
-        ContainerId containerId = assignedRequests.getContainerId(aId);
+        ContainerId containerId = assignedRequests.remove(aId);
         if (containerId != null) {
           // Ask the container to stop.
           sendEvent(new AMContainerEvent(containerId,
@@ -425,8 +426,6 @@ public class RMContainerAllocator extends AbstractService
           + event.getAttemptID() + ". Full event: " + event);
     }
   }
-
-  // TODO XXX: Deal with node blacklisting.
   
   private void handleContainersAllocated(
       AMSchedulerEventContainersAllocated event) {
@@ -447,9 +446,23 @@ public class RMContainerAllocator extends AbstractService
     schedule();
   }
 
-  // TODO XXX: Deal with node blacklisting.
-  
-  
+  // TODO Add a test later if TestRMContainerAllocator does not have one for
+  // blacklisting.
+  private void handleNodeBlacklisted(AMSchedulerEventNodeBlacklisted event) {
+    NodeId nodeId = event.getNodeId();
+    String host = nodeId.getHost();
+    // Only maps would have asked for containers on a specific node.
+    List<TaskAttemptId> affectedAttemptIds = scheduledRequests.mapsHostMapping.get(host);
+    for (TaskAttemptId taId : affectedAttemptIds) {
+      ContainerRequestInfo cr = scheduledRequests.maps.get(taId);
+      scheduledRequests.remove(taId);
+      scheduledRequests.addMap(cr.launchRequestEvent);
+    }
+    // Instead of removing / re-adding each individual request, it may be more
+    // efficient to modify internal data structures, and send a request to the
+    // RMComm to completely forget about a host. 
+  }
+
   // TODO Override for re-use.
   protected synchronized void assignContainers() {
     if (availableContainerIds.size() > 0) {
@@ -771,14 +784,20 @@ public class RMContainerAllocator extends AbstractService
       return null;
     }
     
+    /**
+     * Considers node blacklisting while create container ask requests for the 
+     * RMContainerAllocator.
+     */
     void addMap(AMSchedulerTALaunchRequestEvent event) {
       ContainerRequest request = null;
-      
+
       if (event.isRescheduled()) {
         earlierFailedMaps.add(event.getAttemptID());
-        request = new ContainerRequest(event, PRIORITY_FAST_FAIL_MAP);
+        request = new ContainerRequest(event.getCapability(), event.getHosts(),
+            event.getRacks(), PRIORITY_FAST_FAIL_MAP);
         LOG.info("Added "+event.getAttemptID()+" to list of failed maps");
       } else {
+        List<String> hosts = new LinkedList<String>();
         for (String host : event.getHosts()) {
           LinkedList<TaskAttemptId> list = mapsHostMapping.get(host);
           if (list == null) {
@@ -788,6 +807,14 @@ public class RMContainerAllocator extends AbstractService
           list.add(event.getAttemptID());
           if (LOG.isDebugEnabled()) {
             LOG.debug("Added attempt req to host " + host);
+          }
+          if (!appContext.getAllNodes().isHostBlackListed(host)) {
+            hosts.add(host);
+          } else {
+            // Leaving the entries in mapsHostMapping etc. Will allow allocation
+            // in case all nodes get blacklisted / blacklisting gets enabled.
+            LOG.info("XXX: Host: " + host
+                + " is blacklisted. Not including in Container request");
           }
        }
        for (String rack: event.getRacks()) {
@@ -801,9 +828,13 @@ public class RMContainerAllocator extends AbstractService
             LOG.debug("Added attempt req to rack " + rack);
          }
        }
-       request = new ContainerRequest(event, PRIORITY_MAP);
+        request = new ContainerRequest(event.getCapability(),
+            hosts.toArray(new String[0]), event.getRacks(), PRIORITY_MAP);
       }
-//      ContainerRequestInfo csInfo = new ContainerRequestInfo(request, event.getAttemptID());
+      // ContainerRequestInfo ends up with the correct ContainerRequest, and the
+      // original event.
+      // Remove works on the basis of the ContainerRequest while asking the
+      // RMComm to decrement a container request.
       maps.put(event.getAttemptID(), new ContainerRequestInfo(request, event));
       requestor.addContainerReq(request);
     }
@@ -864,40 +895,38 @@ public class RMContainerAllocator extends AbstractService
             isAssignable = false;
           }
         }          
-        
-//        boolean blackListed = false;
-        boolean nodeUsable = true;
+
+        boolean nodeUnhealthy = false;
+        boolean blackListed = false;
         ContainerRequestInfo assigned = null;
         
         if (isAssignable) {
-          // do not assign if allocated container is on a  
-          // blacklisted host
           String allocatedHost = allocated.getNodeId().getHost();
-          // TODO XXX: Modify the Request table as and when containers are allocated on bad hosts, as against updating the table as soon as a node is blacklisted / lost. 
-          // Blakclisted nodes should likely be removed immediately.
           
           // TODO Differentiation between blacklisted versus unusable nodes ?
-          boolean blackListed = appContext.getAllNodes().isHostBlackListed(allocatedHost);
-          nodeUsable = appContext.getNode(allocated.getNodeId()).isUsable();
+          // Ideally there should be no assignments on unhealthy nodes.
+          blackListed = appContext.getAllNodes().isHostBlackListed(allocatedHost);
+          nodeUnhealthy = appContext.getNode(allocated.getNodeId()).isUnhealthy();
           
-          if (!nodeUsable || blackListed) {
+          if (nodeUnhealthy || blackListed) {
             // we need to request for a new container 
             // and release the current one
-            LOG.info("Got allocated container on an unusable "
-                + " host "+allocatedHost
-                +". Releasing container " + allocated);
+            LOG.info("Got allocated container on an unusable " + " host "
+                + allocatedHost + ". Releasing container " + allocated
+                + " NodeUnhealthy: " + nodeUnhealthy + ", NodeBlackListed: "
+                + blackListed);
 
-            // find the request matching this allocated container 
-            // and replace it with a new one 
+            // find the request matching this allocated container and replace it
+            // with a new one. Have to ensure a request goes out to the RM
+            // asking for a new container. Hence a decRequest + addRequest.
             ContainerRequestInfo toBeReplacedReq = 
                 getContainerReqToReplace(allocated);
-            
-            // TODO XXX: Requirement here is to be able to figure out the taskAttemptId for which this request was put. If that's being replaced, update corresponding maps with info.
-            // Effectively a RequestInfo to attemptId map - or a structure which includes both.
-            
+
             if (toBeReplacedReq != null) {
               LOG.info("Placing a new container request for task attempt " 
                   + toBeReplacedReq.getAttemptId());
+              // This isn't necessarily needed, since the request should have changed
+              // when the node blacklist event was received.
               ContainerRequestInfo newReq = 
                   getFilteredContainerRequest(toBeReplacedReq);
               requestor.decContainerReq(toBeReplacedReq.getContainerRequest());
@@ -922,15 +951,16 @@ public class RMContainerAllocator extends AbstractService
               requestor.decContainerReq(assigned.getContainerRequest());
 
               // TODO Maybe: ApplicationACLs should be populated into the appContext from the RMCommunicator.
-              
-              
-              // TODO XXX: Launch only if not already running.
-              // TODO XXX: Change this event to be more specific.
+
               if (appContext.getContainer(containerId).getState() == AMContainerState.ALLOCATED) {
-                eventHandler.handle(new AMContainerLaunchRequestEvent(containerId, attemptToLaunchRequestMap.get(assigned.getAttemptId()), requestor.getApplicationAcls(), getJob().getID()));
+                eventHandler.handle(new AMContainerLaunchRequestEvent(
+                    containerId, attemptToLaunchRequestMap.get(assigned
+                        .getAttemptId()), requestor.getApplicationAcls(),
+                    getJob().getID()));
               }
-              eventHandler.handle(new AMContainerAssignTAEvent(containerId, assigned.getAttemptId(), attemptToLaunchRequestMap.get(assigned.getAttemptId()).getRemoteTask()));
-              // TODO XXX: If re-using, get rid of one request.
+              eventHandler.handle(new AMContainerAssignTAEvent(containerId,
+                  assigned.getAttemptId(), attemptToLaunchRequestMap.get(
+                      assigned.getAttemptId()).getRemoteTask()));
 
               assignedRequests.add(allocated, assigned.getAttemptId());
 
@@ -951,15 +981,13 @@ public class RMContainerAllocator extends AbstractService
         
         // release container if it was blacklisted 
         // or if we could not assign it 
-        if (!nodeUsable || assigned == null) {
+        if (blackListed || nodeUnhealthy || assigned == null) {
           containersReleased++;
           sendEvent(new AMContainerEvent(containerId, AMContainerEventType.C_STOP_REQUEST));
         }
       }
     }
-    
-    // TODO XXX: Check whether the node is bad before an assign.
-    
+
     private ContainerRequestInfo assign(Container allocated) {
       ContainerRequestInfo assigned = null;
       
@@ -1070,7 +1098,8 @@ public class RMContainerAllocator extends AbstractService
             assigned = maps.remove(tId);
             JobCounterUpdateEvent jce =
               new JobCounterUpdateEvent(tId.getTaskId().getJobId());
-            // TODO XXX: Move these counter updated to go out from the TaskAttempt.
+            // TODO XXX (After MR-3902 if the counter updates are correct): Move
+            // these counter updated to go out from the TaskAttempt.
             jce.addCounterUpdate(JobCounter.DATA_LOCAL_MAPS, 1);
             eventHandler.handle(jce);
             hostLocalAssigned++;
@@ -1158,20 +1187,7 @@ public class RMContainerAllocator extends AbstractService
         eventHandler.handle(new TaskAttemptEventKillRequest(id, "Pre-empting reduce"));
       }
     }
-    
-    ContainerId getContainerId(TaskAttemptId taId) {
-      ContainerId containerId = null;
-      if (taId.getTaskId().getTaskType().equals(TaskType.MAP)) {
-        containerId = maps.get(taId).getId();
-      } else {
-        containerId = reduces.get(taId).getId();
-      }
-      return containerId;
-    }
-    
-    // TODO XXX Check where all this is being used.
-    // XXX: Likely needed in case of TA failed / killed / terminated as well.
-    // Old code was removing when CONTAINER_COMPLETED was received fromthe RM.
+
     ContainerId remove(TaskAttemptId tId) {
       ContainerId containerId = null;
       if (tId.getTaskId().getTaskType().equals(TaskType.MAP)) {
@@ -1179,7 +1195,6 @@ public class RMContainerAllocator extends AbstractService
       } else {
         containerId = reduces.remove(tId).getId();
         if (containerId != null) {
-          // TODO XXX -> Revisit remove(), semantics change.
           boolean preempted = preemptionWaitingReduces.remove(tId);
           if (preempted) {
             LOG.info("Reduce preemption successful " + tId);

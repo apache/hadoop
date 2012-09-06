@@ -38,6 +38,7 @@ import org.apache.hadoop.mapreduce.v2.app2.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventReleased;
+import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeEventNodeCountUpdated;
 import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeEventStateChanged;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
@@ -95,12 +96,12 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
   private final List<ContainerId> emptyReleaseList = new ArrayList<ContainerId>(0);
   private final List<ResourceRequest> emptyAskList = new ArrayList<ResourceRequest>();
   
-  // TODO XXX: May need to pass this to the AMNodeMap
   private int clusterNmCount = 0;
   
   // TODO XXX Consider allowing sync comm between the requestor and allocator... 
   
-  // TODO (after 3902): Why does the RMRequestor require the ClientService ?? (for the RPC address. get rid of this.)
+  // TODO (after 3902): Why does the RMRequestor require the ClientService ??
+  // (for the RPC address. get rid of this.)
   public RMContainerRequestor(ClientService clientService, AppContext context) {
     super(clientService, context);
     this.clock = context.getClock();
@@ -111,11 +112,6 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
     final String[] hosts;
     final String[] racks;
     final Priority priority;
-
-    public ContainerRequest(AMSchedulerTALaunchRequestEvent event,
-        Priority priority) {
-      this(event.getCapability(), event.getHosts(), event.getRacks(), priority);
-    }
 
     public ContainerRequest(Resource capability, String[] hosts,
         String[] racks, Priority priority) {
@@ -157,9 +153,9 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
     // Create resource requests
     for (String host : req.hosts) {
       // Data-local
-      if (!context.getAllNodes().isHostBlackListed(host)) {
-        addResourceRequest(req.priority, host, req.capability);
-      }      
+      // Assumes the scheduler is handling bad nodes. Tracking them here would
+      // lead to an out-of-sync scheduler / requestor.
+      addResourceRequest(req.priority, host, req.capability);
     }
 
     // Nothing Rack-local for now
@@ -316,6 +312,7 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
     LOG.info("BeforeHeartbeat: " + getStat());
     int headRoom = getAvailableResources() != null ? getAvailableResources()
         .getMemory() : 0;// first time it would be null
+    int lastClusterNmCount = clusterNmCount;
     AMResponse response = errorCheckedMakeRemoteRequest();
     
     int newHeadRoom = getAvailableResources() != null ? getAvailableResources()
@@ -334,6 +331,12 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
  
     LOG.info("AfterHeartbeat: " + getStat());
     
+    if (clusterNmCount != lastClusterNmCount) {
+      LOG.info("Num cluster nodes changed from " + lastClusterNmCount + " to "
+          + clusterNmCount);
+      eventHandler.handle(new AMNodeEventNodeCountUpdated(clusterNmCount));
+    }
+    
     // Inform the Containers about completion..
     for (ContainerStatus c : finishedContainers) {
       eventHandler.handle(new AMContainerEventReleased(c));
@@ -344,7 +347,6 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
     if (newContainers.size() > 0) {
       newContainerIds = new ArrayList<ContainerId>(newContainers.size());
       for (Container container : newContainers) {
-        // TODO XXX Re-factor AMNodes and AMContainers.
         context.getAllContainers().addNewContainer(container);
         newContainerIds.add(container.getId()); 
         context.getAllNodes().nodeSeen(container.getNodeId());
@@ -432,7 +434,6 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
       RMCommunicatorContainerDeAllocateRequestEvent event = (RMCommunicatorContainerDeAllocateRequestEvent) rawEvent;
       releaseLock.lock();
       try {
-        // TODO XXX: Currently the RM does not handle release requests for RUNNING containers.
         numContainerReleaseRequests++;
         release.add(event.getContainerId());
       } finally {

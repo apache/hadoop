@@ -18,19 +18,16 @@
 
 package org.apache.hadoop.mapreduce.v2.app2.rm.node;
 
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.event.AbstractEvent;
+public class AMNodeEventNodeCountUpdated extends AMNodeEvent {
 
-public class AMNodeEvent extends AbstractEvent<AMNodeEventType> {
-
-  private final NodeId nodeId;
-
-  public AMNodeEvent(NodeId nodeId, AMNodeEventType type) {
-    super(type);
-    this.nodeId = nodeId;
+  private final int count;
+  
+  public AMNodeEventNodeCountUpdated(int nodeCount) {
+    super(null, AMNodeEventType.N_NODE_COUNT_UPDATED);
+    this.count = nodeCount;
   }
-
-  public NodeId getNodeId() {
-    return this.nodeId;
+  
+  public int getNodeCount() {
+    return this.count;
   }
 }

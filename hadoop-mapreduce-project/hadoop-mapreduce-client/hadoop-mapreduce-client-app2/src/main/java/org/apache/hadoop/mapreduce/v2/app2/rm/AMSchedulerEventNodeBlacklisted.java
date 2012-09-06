@@ -16,17 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapreduce.v2.app2.rm.node;
+package org.apache.hadoop.mapreduce.v2.app2.rm;
 
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.event.AbstractEvent;
 
-public class AMNodeEvent extends AbstractEvent<AMNodeEventType> {
+public class AMSchedulerEventNodeBlacklisted extends AMSchedulerEvent {
 
-  private final NodeId nodeId;
+  private final NodeId nodeId; // May need to be host instead.
 
-  public AMNodeEvent(NodeId nodeId, AMNodeEventType type) {
-    super(type);
+  public AMSchedulerEventNodeBlacklisted(NodeId nodeId, boolean headRoomChanged) {
+    super(AMSchedulerEventType.S_NODE_BLACKLISTED);
     this.nodeId = nodeId;
   }
 

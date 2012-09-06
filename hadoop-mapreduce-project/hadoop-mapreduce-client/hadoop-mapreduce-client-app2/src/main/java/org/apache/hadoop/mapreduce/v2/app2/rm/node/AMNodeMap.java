@@ -1,3 +1,21 @@
+/**
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 package org.apache.hadoop.mapreduce.v2.app2.rm.node;
 
 import java.util.ArrayList;
@@ -15,26 +33,28 @@ import org.apache.hadoop.yarn.service.AbstractService;
 
 public class AMNodeMap extends AbstractService implements
     EventHandler<AMNodeEvent> {
-
+  
   static final Log LOG = LogFactory.getLog(AMNodeMap.class);
   
   private final ConcurrentHashMap<NodeId, AMNode> nodeMap;
-  // TODO XXX -> blacklistMap is also used for computing forcedUnblacklisting.
   private final ConcurrentHashMap<String, ArrayList<NodeId>> blacklistMap;
   private final EventHandler<?> eventHandler;
   private final AppContext appContext;
+  private int numClusterNodes;
+  private boolean ignoreBlacklisting = false;
   private int maxTaskFailuresPerNode;
   private boolean nodeBlacklistingEnabled;
   private int blacklistDisablePercent;
   
+  
+  // TODO XXX Ensure there's a test for IgnoreBlacklisting in
+  // TestRMContainerAllocator. Otherwise add one.
   public AMNodeMap(EventHandler<?> eventHandler, AppContext appContext) {
     super("AMNodeMap");
     this.nodeMap = new ConcurrentHashMap<NodeId, AMNode>();
     this.blacklistMap = new ConcurrentHashMap<String, ArrayList<NodeId>>();
     this.eventHandler = eventHandler;
     this.appContext = appContext;
-  
-    // TODO XXX: Get a handle of allowed failures.
   }
   
   @Override
@@ -66,13 +86,14 @@ public class AMNodeMap extends AbstractService implements
   }
   
   public boolean isHostBlackListed(String hostname) {
-    if (!nodeBlacklistingEnabled) {
+    // TODO Maybe: For now, forced unblacklisting is being handled
+    // here. An AMNode will never go into the BLACKLISTED / FORCED_ACTIVE state.
+    if (!nodeBlacklistingEnabled || ignoreBlacklisting) {
       return false;
     }
-    
     return blacklistMap.containsKey(hostname);
   }
-  
+
   private void addToBlackList(NodeId nodeId) {
     String host = nodeId.getHost();
     ArrayList<NodeId> nodes;
@@ -99,23 +120,59 @@ public class AMNodeMap extends AbstractService implements
     }
   }
   */
-  
-  public void handle(AMNodeEvent event) {
-    if (event.getType() == AMNodeEventType.N_NODE_WAS_BLACKLISTED) {
-      NodeId nodeId = event.getNodeId();
+
+  public void handle(AMNodeEvent rEvent) {
+    // No synchronization required until there's multiple dispatchers.
+    NodeId nodeId = rEvent.getNodeId();
+    switch (rEvent.getType()) {
+    case N_NODE_WAS_BLACKLISTED:
       addToBlackList(nodeId);
-    } else {
-      NodeId nodeId = event.getNodeId();
-      nodeMap.get(nodeId).handle(event);
+      computeIgnoreBlacklisting();
+      break;
+    case N_NODE_COUNT_UPDATED:
+      AMNodeEventNodeCountUpdated event = (AMNodeEventNodeCountUpdated) rEvent;
+      numClusterNodes = event.getNodeCount();
+      computeIgnoreBlacklisting();
+      break;
+    default:
+      nodeMap.get(nodeId).handle(rEvent);
     }
   }
-  
+
+  // May be incorrect if there's multiple NodeManagers running on a single host.
+  // knownNodeCount is based on node managers, not hosts. blacklisting is
+  // currently based on hosts.
+  protected void computeIgnoreBlacklisting() {
+    if (!nodeBlacklistingEnabled) {
+      return;
+    }
+    if (blacklistDisablePercent != -1) {
+      if (numClusterNodes == 0) {
+        LOG.info("KnownNode Count at 0. Not computing ignoreBlacklisting");
+        return;
+      }
+      int val = (int) ((float) blacklistMap.size() / numClusterNodes * 100);
+      if (val >= blacklistDisablePercent) {
+        if (ignoreBlacklisting == false) {
+          ignoreBlacklisting = true;
+          LOG.info("Ignore Blacklisting set to true. Known: " + numClusterNodes
+              + ", Blacklisted: " + blacklistMap.size());
+        }
+      } else {
+        if (ignoreBlacklisting == true) {
+          ignoreBlacklisting = false;
+          LOG.info("Ignore blacklisting set to false. Known: "
+              + numClusterNodes + ", Blacklisted: " + blacklistMap.size());
+        }
+      }
+    }
+  }
+
   public AMNode get(NodeId nodeId) {
     return nodeMap.get(nodeId);
   }
-  
+
   public int size() {
     return nodeMap.size();
   }
-  
 }
