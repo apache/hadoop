@@ -759,6 +759,9 @@ Release 0.23.3 - UNRELEASED
     MAPREDUCE-4633. history server doesn't set permissions on all subdirs
     (tgraves via bobby)
 
+    MAPREDUCE-4641. Exception in commitJob marks job as successful in job
+    history (Jason Lowe via bobby)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES

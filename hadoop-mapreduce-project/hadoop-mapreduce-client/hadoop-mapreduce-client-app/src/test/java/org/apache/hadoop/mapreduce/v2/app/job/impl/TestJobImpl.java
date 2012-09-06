@@ -19,9 +19,11 @@
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -91,8 +93,6 @@ public class TestJobImpl {
     when(mockJob.getCommitter()).thenReturn(mockCommitter);
     when(mockJob.getEventHandler()).thenReturn(mockEventHandler);
     when(mockJob.getJobContext()).thenReturn(mockJobContext);
-    doNothing().when(mockJob).setFinishTime();
-    doNothing().when(mockJob).logJobHistoryFinishedEvent();
     when(mockJob.finished(JobState.KILLED)).thenReturn(JobState.KILLED);
     when(mockJob.finished(JobState.FAILED)).thenReturn(JobState.FAILED);
     when(mockJob.finished(JobState.SUCCEEDED)).thenReturn(JobState.SUCCEEDED);
@@ -103,11 +103,13 @@ public class TestJobImpl {
       // commitJob stubbed out, so this can't happen
     }
     doNothing().when(mockEventHandler).handle(any(JobHistoryEvent.class));
+    JobState jobState = JobImpl.checkJobCompleteSuccess(mockJob);
     Assert.assertNotNull("checkJobCompleteSuccess incorrectly returns null " +
-      "for successful job",
-      JobImpl.checkJobCompleteSuccess(mockJob));
+      "for successful job", jobState);
     Assert.assertEquals("checkJobCompleteSuccess returns incorrect state",
-        JobState.FAILED, JobImpl.checkJobCompleteSuccess(mockJob));
+        JobState.FAILED, jobState);
+    verify(mockJob).abortJob(
+        eq(org.apache.hadoop.mapreduce.JobStatus.State.FAILED));
   }
 
   @Test
