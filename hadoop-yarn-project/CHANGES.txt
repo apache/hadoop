@@ -76,6 +76,9 @@ Release 0.23.4 - UNRELEASED
 
   BUG FIXES
 
+    YARN-15. Updated default classpath for YARN applications to reflect split of
+    YARN into a sub-project. (Arun C Murthy via vinodkv)
+
 Release 0.23.3 - Unreleased 
 
   INCOMPATIBLE CHANGES
