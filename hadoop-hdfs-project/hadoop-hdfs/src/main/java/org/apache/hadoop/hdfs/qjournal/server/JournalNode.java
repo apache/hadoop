@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.common.StorageErrorReporter;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -133,6 +134,10 @@ public class JournalNode implements Tool, Configurable {
     JvmMetrics.create("JournalNode",
         conf.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
         DefaultMetricsSystem.instance());
+
+    InetSocketAddress socAddr = JournalNodeRpcServer.getAddress(conf);
+    SecurityUtil.login(conf, DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_USER_NAME_KEY, socAddr.getHostName());
     
     httpServer = new JournalNodeHttpServer(conf, this);
     httpServer.start();

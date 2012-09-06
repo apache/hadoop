@@ -22,6 +22,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
@@ -34,15 +36,19 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.qjournal.client.QuorumJournalManager;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager.EditLogFile;
 import org.apache.hadoop.hdfs.server.namenode.GetImageServlet;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ServletUtil;
@@ -67,34 +73,53 @@ public class GetJournalEditServlet extends HttpServlet {
   static final String JOURNAL_ID_PARAM = "jid";
   static final String SEGMENT_TXID_PARAM = "segmentTxId";
 
-  // TODO: create security tests
-  protected boolean isValidRequestor(String remoteUser, Configuration conf)
+  protected boolean isValidRequestor(HttpServletRequest request, Configuration conf)
       throws IOException {
-    if (remoteUser == null) { // This really shouldn't happen...
+    String remotePrincipal = request.getUserPrincipal().getName();
+    String remoteShortName = request.getRemoteUser();
+    if (remotePrincipal == null) { // This really shouldn't happen...
       LOG.warn("Received null remoteUser while authorizing access to " +
           "GetJournalEditServlet");
       return false;
     }
 
-    String[] validRequestors = {
-        SecurityUtil.getServerPrincipal(conf
-            .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY), NameNode
-            .getAddress(conf).getHostName()),
-        SecurityUtil.getServerPrincipal(conf
-            .get(DFSConfigKeys.DFS_JOURNALNODE_USER_NAME_KEY),
-            NameNode.getAddress(conf).getHostName()) };
-    // TODO: above principal is not correct, since each JN will have a
-    // different hostname.
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Validating request made by " + remotePrincipal +
+          " / " + remoteShortName + ". This user is: " +
+          UserGroupInformation.getLoginUser());
+    }
 
+    Set<String> validRequestors = new HashSet<String>();
+    validRequestors.addAll(DFSUtil.getAllNnPrincipals(conf));
+    validRequestors.add(
+        SecurityUtil.getServerPrincipal(conf
+            .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY),
+            SecondaryNameNode.getHttpAddress(conf).getHostName()));
+
+    // Check the full principal name of all the configured valid requestors.
     for (String v : validRequestors) {
-      if (v != null && v.equals(remoteUser)) {
+      if (LOG.isDebugEnabled())
+        LOG.debug("isValidRequestor is comparing to valid requestor: " + v);
+      if (v != null && v.equals(remotePrincipal)) {
         if (LOG.isDebugEnabled())
-          LOG.debug("isValidRequestor is allowing: " + remoteUser);
+          LOG.debug("isValidRequestor is allowing: " + remotePrincipal);
         return true;
       }
     }
+
+    // Additionally, we compare the short name of the requestor to this JN's
+    // username, because we want to allow requests from other JNs during
+    // recovery, but we can't enumerate the full list of JNs.
+    if (remoteShortName.equals(
+          UserGroupInformation.getLoginUser().getShortUserName())) {
+      if (LOG.isDebugEnabled())
+        LOG.debug("isValidRequestor is allowing other JN principal: " +
+            remotePrincipal);
+      return true;
+    }
+
     if (LOG.isDebugEnabled())
-      LOG.debug("isValidRequestor is rejecting: " + remoteUser);
+      LOG.debug("isValidRequestor is rejecting: " + remotePrincipal);
     return false;
   }
   
@@ -102,7 +127,7 @@ public class GetJournalEditServlet extends HttpServlet {
       HttpServletRequest request, HttpServletResponse response)
           throws IOException {
     if (UserGroupInformation.isSecurityEnabled()
-        && !isValidRequestor(request.getRemoteUser(), conf)) {
+        && !isValidRequestor(request, conf)) {
       response.sendError(HttpServletResponse.SC_FORBIDDEN,
           "Only Namenode and another JournalNode may access this servlet");
       LOG.warn("Received non-NN/JN request for edits from "

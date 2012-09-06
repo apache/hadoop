@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.qjournal.server;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_KEYTAB_FILE_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_USER_NAME_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -34,8 +34,9 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.SecurityUtil;
 
 /**
  * Encapsulates the HTTP server started by the Journal Service.
@@ -62,8 +63,9 @@ public class JournalNodeHttpServer {
     final InetSocketAddress bindAddr = getAddress(conf);
 
     // initialize the webserver for uploading/downloading files.
-    LOG.info("Starting web server as: "
-        + UserGroupInformation.getCurrentUser().getUserName());
+    LOG.info("Starting web server as: "+ SecurityUtil.getServerPrincipal(conf
+        .get(DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY),
+        bindAddr.getHostName()));
 
     int tmpInfoPort = bindAddr.getPort();
     httpServer = new HttpServer("journal", bindAddr.getHostName(),
@@ -71,7 +73,7 @@ public class JournalNodeHttpServer {
             .get(DFS_ADMIN, " "))) {
       {
         if (UserGroupInformation.isSecurityEnabled()) {
-          initSpnego(conf, DFS_JOURNALNODE_USER_NAME_KEY,
+          initSpnego(conf, DFS_JOURNALNODE_INTERNAL_SPNEGO_USER_NAME_KEY,
               DFS_JOURNALNODE_KEYTAB_FILE_KEY);
         }
       }

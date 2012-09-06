@@ -48,3 +48,5 @@ HDFS-3870. Add metrics to JournalNode (todd)
 HDFS-3891. Make selectInputStreams throw IOE instead of RTE (todd)
 
 HDFS-3726. If a logger misses an RPC, don't retry that logger until next segment (todd)
+
+HDFS-3893. QJM: Make QJM work with security enabled. (atm)

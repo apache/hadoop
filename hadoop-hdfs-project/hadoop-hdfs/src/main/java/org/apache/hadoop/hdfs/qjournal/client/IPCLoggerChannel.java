@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.SecurityUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -164,13 +166,19 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
   
   protected QJournalProtocol createProxy() throws IOException {
-    RPC.setProtocolEngine(conf,
-        QJournalProtocolPB.class, ProtobufRpcEngine.class);
-    QJournalProtocolPB pbproxy = RPC.getProxy(
-        QJournalProtocolPB.class,
-        RPC.getProtocolVersion(QJournalProtocolPB.class),
-        addr, conf);
-    return new QJournalProtocolTranslatorPB(pbproxy);
+    return SecurityUtil.doAsLoginUser(
+        new PrivilegedExceptionAction<QJournalProtocol>() {
+          @Override
+          public QJournalProtocol run() throws IOException {
+            RPC.setProtocolEngine(conf,
+                QJournalProtocolPB.class, ProtobufRpcEngine.class);
+            QJournalProtocolPB pbproxy = RPC.getProxy(
+                QJournalProtocolPB.class,
+                RPC.getProtocolVersion(QJournalProtocolPB.class),
+                addr, conf);
+            return new QJournalProtocolTranslatorPB(pbproxy);
+          }
+        });
   }
   
   

@@ -22,7 +22,9 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
@@ -65,6 +67,12 @@ class JournalNodeRpcServer implements QJournalProtocol {
         service, addr.getHostName(),
             addr.getPort(), HANDLER_COUNT, false, conf,
             null /*secretManager*/);
+
+    // set service-level authorization security policy
+    if (conf.getBoolean(
+      CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
+          server.refreshServiceAcl(conf, new HDFSPolicyProvider());
+    }
   }
 
   void start() {
@@ -83,7 +91,7 @@ class JournalNodeRpcServer implements QJournalProtocol {
     this.server.stop();
   }
   
-  private static InetSocketAddress getAddress(Configuration conf) {
+  static InetSocketAddress getAddress(Configuration conf) {
     String addr = conf.get(
         DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY,
         DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_DEFAULT);

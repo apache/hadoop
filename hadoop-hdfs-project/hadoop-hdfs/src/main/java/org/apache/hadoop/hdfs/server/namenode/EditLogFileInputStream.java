@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -367,30 +368,36 @@ public class EditLogFileInputStream extends EditLogInputStream {
 
     @Override
     public InputStream getInputStream() throws IOException {
-      HttpURLConnection connection = (HttpURLConnection)
-          SecurityUtil.openSecureHttpConnection(url);
-      
-      if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-        throw new HttpGetFailedException(
-            "Fetch of " + url +
-            " failed with status code " + connection.getResponseCode() +
-            "\nResponse message:\n" + connection.getResponseMessage(),
-            connection);
-      }
-
-      String contentLength = connection.getHeaderField(CONTENT_LENGTH);
-      if (contentLength != null) {
-        advertisedSize = Long.parseLong(contentLength);
-        if (advertisedSize <= 0) {
-          throw new IOException("Invalid " + CONTENT_LENGTH + " header: " +
-              contentLength);
-        }
-      } else {
-        throw new IOException(CONTENT_LENGTH + " header is not provided " +
-                              "by the server when trying to fetch " + url);
-      }
-
-      return connection.getInputStream();
+      return SecurityUtil.doAsCurrentUser(
+          new PrivilegedExceptionAction<InputStream>() {
+            @Override
+            public InputStream run() throws IOException {
+              HttpURLConnection connection = (HttpURLConnection)
+                  SecurityUtil.openSecureHttpConnection(url);
+              
+              if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                throw new HttpGetFailedException(
+                    "Fetch of " + url +
+                    " failed with status code " + connection.getResponseCode() +
+                    "\nResponse message:\n" + connection.getResponseMessage(),
+                    connection);
+              }
+        
+              String contentLength = connection.getHeaderField(CONTENT_LENGTH);
+              if (contentLength != null) {
+                advertisedSize = Long.parseLong(contentLength);
+                if (advertisedSize <= 0) {
+                  throw new IOException("Invalid " + CONTENT_LENGTH + " header: " +
+                      contentLength);
+                }
+              } else {
+                throw new IOException(CONTENT_LENGTH + " header is not provided " +
+                                      "by the server when trying to fetch " + url);
+              }
+        
+              return connection.getInputStream();
+            }
+          });
     }
 
     @Override

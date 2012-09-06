@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -51,6 +52,7 @@ import org.apache.hadoop.hdfs.util.AtomicFileOutputStream;
 import org.apache.hadoop.hdfs.util.BestEffortLongFile;
 import org.apache.hadoop.hdfs.util.PersistentLongFile;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.SecurityUtil;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -708,31 +710,37 @@ class Journal implements Closeable {
    * @throws IOException
    */
   private void syncLog(RequestInfo reqInfo,
-      SegmentStateProto segment, URL url) throws IOException {
+      final SegmentStateProto segment, final URL url) throws IOException {
     String tmpFileName =
         "synclog_" + segment.getStartTxId() + "_" +
         reqInfo.getEpoch() + "." + reqInfo.getIpcSerialNumber();
     
-    List<File> localPaths = storage.getFiles(null, tmpFileName);
+    final List<File> localPaths = storage.getFiles(null, tmpFileName);
     assert localPaths.size() == 1;
-    File tmpFile = localPaths.get(0);
- 
-    boolean success = false;
+    final File tmpFile = localPaths.get(0);
 
     LOG.info("Synchronizing log " +
         TextFormat.shortDebugString(segment) + " from " + url);
-    TransferFsImage.doGetUrl(url, localPaths, storage, true);
-    assert tmpFile.exists();
-    try {
-      success = tmpFile.renameTo(storage.getInProgressEditLog(
-          segment.getStartTxId()));
-    } finally {
-      if (!success) {
-        if (!tmpFile.delete()) {
-          LOG.warn("Failed to delete temporary file " + tmpFile);
-        }
-      }
-    }
+    SecurityUtil.doAsLoginUser(
+        new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws IOException {
+            TransferFsImage.doGetUrl(url, localPaths, storage, true);
+            assert tmpFile.exists();
+            boolean success = false;
+            try {
+              success = tmpFile.renameTo(storage.getInProgressEditLog(
+                  segment.getStartTxId()));
+            } finally {
+              if (!success) {
+                if (!tmpFile.delete()) {
+                  LOG.warn("Failed to delete temporary file " + tmpFile);
+                }
+              }
+            }
+            return null;
+          }
+        });
   }
 
   /**
