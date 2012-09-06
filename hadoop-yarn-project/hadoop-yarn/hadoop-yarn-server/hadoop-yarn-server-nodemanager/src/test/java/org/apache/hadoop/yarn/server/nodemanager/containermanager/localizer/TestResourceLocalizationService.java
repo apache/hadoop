@@ -50,6 +50,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
@@ -116,6 +117,7 @@ public class TestResourceLocalizationService {
   @Test
   public void testLocalizationInit() throws Exception {
     final Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(new Configuration());
 
@@ -151,14 +153,18 @@ public class TestResourceLocalizationService {
       // initialize ResourceLocalizationService
       locService.init(conf);
 
+      final FsPermission defaultPerm = new FsPermission((short)0755);
+
       // verify directory creation
       for (Path p : localDirs) {
         Path usercache = new Path(p, ContainerLocalizer.USERCACHE);
         verify(spylfs)
-          .mkdir(eq(usercache), isA(FsPermission.class), eq(true));
+          .mkdir(eq(usercache),
+              eq(defaultPerm), eq(true));
         Path publicCache = new Path(p, ContainerLocalizer.FILECACHE);
         verify(spylfs)
-          .mkdir(eq(publicCache), isA(FsPermission.class), eq(true));
+          .mkdir(eq(publicCache),
+              eq(defaultPerm), eq(true));
         Path nmPriv = new Path(p, ResourceLocalizationService.NM_PRIVATE_DIR);
         verify(spylfs).mkdir(eq(nmPriv),
             eq(ResourceLocalizationService.NM_PRIVATE_PERM), eq(true));
