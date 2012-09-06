@@ -51,6 +51,8 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Scans the block files under a block pool and verifies that the
  * files are not corrupt.
@@ -253,6 +255,11 @@ class BlockPoolSliceScanner {
     if ( info != null ) {
       delBlockInfo(info);
     }
+  }
+
+  @VisibleForTesting
+  long getTotalScans() {
+    return totalScans;
   }
 
   /** @return the last scan time for the block pool. */
@@ -563,7 +570,24 @@ class BlockPoolSliceScanner {
     currentPeriodStart = Time.now();
   }
   
+  private synchronized boolean workRemainingInCurrentPeriod() {
+    if (bytesLeft <= 0 && Time.now() < currentPeriodStart + scanPeriod) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skipping scan since bytesLeft=" + bytesLeft + ", Start=" +
+                  currentPeriodStart + ", period=" + scanPeriod + ", now=" +
+                  Time.now() + " " + blockPoolId);
+      }
+      return false;
+    } else {
+      return true;
+    }
+  }
+
   void scanBlockPoolSlice() {
+    if (!workRemainingInCurrentPeriod()) {
+      return;
+    }
+
     // Create a new processedBlocks structure
     processedBlocks = new HashMap<Long, Integer>();
     if (!assignInitialVerificationTimes()) {
@@ -608,14 +632,14 @@ class BlockPoolSliceScanner {
       LOG.warn("RuntimeException during BlockPoolScanner.scan()", e);
       throw e;
     } finally {
-      cleanUp();
+      rollVerificationLogs();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Done scanning block pool: " + blockPoolId);
       }
     }
   }
   
-  private synchronized void cleanUp() {
+  private synchronized void rollVerificationLogs() {
     if (verificationLog != null) {
       try {
         verificationLog.logs.roll();
