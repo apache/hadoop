@@ -730,6 +730,8 @@ Branch-2 ( Unreleased changes )
     (Andy Isaacson via eli)
 
     HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
+
+    HDFS-3895. hadoop-client must include commons-cli (tucu)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
