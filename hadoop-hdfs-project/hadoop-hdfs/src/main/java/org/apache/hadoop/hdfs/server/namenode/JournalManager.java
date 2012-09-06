@@ -65,9 +65,11 @@ public interface JournalManager extends Closeable, FormatConfirmable,
    * @param inProgressOk whether or not in-progress streams should be returned
    *
    * @return a list of streams
+   * @throws IOException if the underlying storage has an error or is otherwise
+   * inaccessible
    */
   void selectInputStreams(Collection<EditLogInputStream> streams,
-      long fromTxnId, boolean inProgressOk);
+      long fromTxnId, boolean inProgressOk) throws IOException;
 
   /**
    * Set the amount of memory that this stream should use to buffer edits

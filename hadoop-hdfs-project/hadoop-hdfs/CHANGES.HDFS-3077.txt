@@ -44,3 +44,5 @@ HDFS-3869. Expose non-file journal manager details in web UI (todd)
 HDFS-3884. Journal format() should reset cached values (todd)
 
 HDFS-3870. Add metrics to JournalNode (todd)
+
+HDFS-3891. Make selectInputStreams throw IOE instead of RTE (todd)

@@ -242,15 +242,8 @@ public class FileJournalManager implements JournalManager {
   @Override
   synchronized public void selectInputStreams(
       Collection<EditLogInputStream> streams, long fromTxId,
-      boolean inProgressOk) {
-    List<EditLogFile> elfs;
-    try {
-      elfs = matchEditLogs(sd.getCurrentDir());
-    } catch (IOException e) {
-      LOG.error("error listing files in " + this + ". " +
-          "Skipping all edit logs in this directory.", e);
-      return;
-    }
+      boolean inProgressOk) throws IOException {
+    List<EditLogFile> elfs = matchEditLogs(sd.getCurrentDir());
     LOG.debug(this + ": selecting input streams starting at " + fromTxId + 
         (inProgressOk ? " (inProgress ok) " : " (excluding inProgress) ") +
         "from among " + elfs.size() + " candidate file(s)");

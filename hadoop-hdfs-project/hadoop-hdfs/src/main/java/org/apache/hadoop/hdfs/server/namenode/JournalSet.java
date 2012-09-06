@@ -247,7 +247,12 @@ public class JournalSet implements JournalManager {
         LOG.info("Skipping jas " + jas + " since it's disabled");
         continue;
       }
-      jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk);
+      try {
+        jas.getManager().selectInputStreams(allStreams, fromTxId, inProgressOk);
+      } catch (IOException ioe) {
+        LOG.warn("Unable to determine input streams from " + jas.getManager() +
+            ". Skipping.", ioe);
+      }
     }
     chainAndMakeRedundantStreams(streams, allStreams, fromTxId, inProgressOk);
   }

@@ -212,6 +212,26 @@ public class TestQuorumJournalManager {
   }
   
   /**
+   * Regression test for HDFS-3891: selectInputStreams should throw
+   * an exception when a majority of journalnodes have crashed.
+   */
+  @Test
+  public void testSelectInputStreamsMajorityDown() throws Exception {
+    // Shut down all of the JNs.
+    cluster.shutdown();
+
+    List<EditLogInputStream> streams = Lists.newArrayList();
+    try {
+      qjm.selectInputStreams(streams, 0, false);
+      fail("Did not throw IOE");
+    } catch (QuorumException ioe) {
+      GenericTestUtils.assertExceptionContains(
+          "Got too many exceptions", ioe);
+      assertTrue(streams.isEmpty());
+    }
+  }
+  
+  /**
    * Test the case where the NN crashes after starting a new segment
    * on all nodes, but before writing the first transaction to it.
    */

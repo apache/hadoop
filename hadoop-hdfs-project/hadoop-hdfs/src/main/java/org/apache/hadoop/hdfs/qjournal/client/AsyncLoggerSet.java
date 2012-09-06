@@ -158,9 +158,11 @@ class AsyncLoggerSet {
           timeoutMs);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      throw new IOException("Interrupted waiting for quorum results");
+      throw new IOException("Interrupted waiting " + timeoutMs + "ms for a " +
+          "quorum of nodes to respond.");
     } catch (TimeoutException e) {
-      throw new IOException("Timed out waiting " + timeoutMs + " for write quorum");
+      throw new IOException("Timed out waiting " + timeoutMs + "ms for a " +
+          "quorum of nodes to respond.");
     }
     
     if (q.countSuccesses() < majority) {
