@@ -1493,6 +1493,9 @@ Release 0.23.3 - UNRELEASED
 
     HDFS-3852. TestHftpDelegationToken is broken after HADOOP-8225 (daryn)
 
+    HDFS-3890. filecontext mkdirs doesn't apply umask as expected
+    (Tom Graves via daryn)
+
 Release 0.23.2 - UNRELEASED
 
   INCOMPATIBLE CHANGES
