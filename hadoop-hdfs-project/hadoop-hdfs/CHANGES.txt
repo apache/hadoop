@@ -728,6 +728,8 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3828. Block Scanner rescans blocks too frequently.
     (Andy Isaacson via eli)
+
+    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
