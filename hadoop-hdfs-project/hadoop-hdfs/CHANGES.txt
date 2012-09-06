@@ -562,6 +562,8 @@ Release 2.0.1-alpha - UNRELEASED
 
     HDFS-3828. Block Scanner rescans blocks too frequently.
     (Andy Isaacson via eli)
+
+    HDFS-3895. hadoop-client must include commons-cli (tucu)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
