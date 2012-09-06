@@ -2,27 +2,34 @@ branch-hadoop-1-win - unreleased
 
   IMPROVEMENTS
 
-    HADOOP-8223 Initial patch for branch-1-win (David Lao via Sanjay)
+    HADOOP-8223 Initial patch for branch-1-win. (David Lao via Sanjay)
 
-    HADOOP-8234 Enable user group mappings on Windows (Bikas Saha via Sanjay)
+    HADOOP-8234 Enable user group mappings on Windows. (Bikas Saha via Sanjay)
 
-    MAPREDUCE-4201 Getting PID not working on Windows. Termination of Task/TaskJVM's not working (Bikas Saha via Sanjay)
+    MAPREDUCE-4201 Getting PID not working on Windows. Termination of 
+    Task/TaskJVM's not working. (Bikas Saha via Sanjay)
 
-    MAPREDUCE-4204 Refactor ProcfsBasedProcessTree to make the resource collection object pluggable (Bikas Saha via Sanjay)
+    MAPREDUCE-4204 Refactor ProcfsBasedProcessTree to make the resource 
+    collection object pluggable. (Bikas Saha via Sanjay)
 
     HADOOP-8412 TestModTime, TestDelegationToken and TestAuthenticationToken fail
-                intermittently on Windows  (Ivan Mitic via Sanjay Radia)
+    intermittently on Windows. (Ivan Mitic via Sanjay Radia)
 
-    HADOOP-8235 Support file permissions and ownership on Windows for RawLocalFileSystem  (Chuan Liu via sanjay)
+    HADOOP-8235 Support file permissions and ownership on Windows for 
+    RawLocalFileSystem. (Chuan Liu via sanjay)
 
-    HADOOP-8411 TestStorageDirecotyFailure, TestTaskLogsTruncater, TestWebHdfsUrl and TestSecurityUtil
-                fail on Windows  (Ivan Mitic via Sanjay Radia)
+    HADOOP-8411 TestStorageDirecotyFailure, TestTaskLogsTruncater, 
+    TestWebHdfsUrl and TestSecurityUtil fail on Windows.
+    (Ivan Mitic via Sanjay Radia)
 
-    HADOOP-8440 HarFileSystem.decodeHarURI fails for URIs whose host contains numbers  (Ivan Mitic via Sanjay Radia)
+    HADOOP-8440 HarFileSystem.decodeHarURI fails for URIs whose host contains 
+    numbers. (Ivan Mitic via Sanjay Radia)
 
-    HADOOP-8374 Improve support for hard link manipulation on Windows (Bikas Saha via Sanjay)
+    HADOOP-8374 Improve support for hard link manipulation on Windows.
+    (Bikas Saha via Sanjay)
 
-    HDFS-3424 TestDatanodeBlockScanner and TestReplication fail intermittently on Windows (Bikas Saha via Sanjay)
+    HDFS-3424 TestDatanodeBlockScanner and TestReplication fail intermittently 
+    on Windows (Bikas Saha via Sanjay)
 
     HADOOP-8424. Fix classpath so that web-ui works on Windows. (Bikas Saha
     via acmurthy) 
@@ -32,22 +39,24 @@ branch-hadoop-1-win - unreleased
 
     MAPREDUCE-4260 Use JobObject to spawn tasks on Windows (Bikas Saha via Sanjay)
 
-    HADOOP-8440 HarFileSystem.decodeHarURI 2nd patch (HADOOP-8440-branch-1-win.2.patch) (Ivan Mitic via Sanjay Radia)
+    HADOOP-8440 HarFileSystem.decodeHarURI 2nd patch.
+    (Ivan Mitic via Sanjay Radia)
 
-    HADOOP-8409 Fix TestCommandLineJobSubmission and TestGenericOptionsParser to work for windows (Ivan Mitic via Sanjay Radia) 
+    HADOOP-8409 Fix TestCommandLineJobSubmission and TestGenericOptionsParser
+    to work for windows (Ivan Mitic via Sanjay Radia) 
 
-    HADOOP-8454 Fix the ‘chmod =[perm]’ bug in winutils (Chuan Liu via sanjay)
+    HADOOP-8454 Fix the ‘chmod =[perm]’ bug in winutils. (Chuan Liu via sanjay)
 
     MAPREDUCE-4203. Added an implementation of the process tree for Windows.
     (Bikas Saha via acmurthy) 
 
-    HADOOP-8486 Resource leak ... SequenceFile  (Kanna Karanam via Sanjay)
+    HADOOP-8486 Resource leak ... SequenceFile. (Kanna Karanam via Sanjay)
 
-    HADOOP-8486 Resource leak ... SequenceFile  (Fix with HADOOP-8486-branch-1-win-(5).patch) (Kanna Karanam via Sanjay)
+    HADOOP-8534 Some tests leave a config file open causing failure on windows.
+    (Ivan Mitic via Sanjay Radia)
 
-    HADOOP-8534 Some tests leave a config file open causing failure on windows   (Ivan Mitic via Sanjay Radia)
-
-    HADOOP-8487 Many HDFS tests use a test path intended for local file system tests (Ivan Mitic via Sanjay Radia)
+    HADOOP-8487 Many HDFS tests use a test path intended for local file system
+    tests. (Ivan Mitic via Sanjay Radia)
 
     MAPREDUCE-4332 Fix command-length abort issues on Windows. (Ivan Mitic via
     acmurthy)
@@ -58,16 +67,17 @@ branch-hadoop-1-win - unreleased
     MAPREDUCE-4368. Fix TaskRunner to deal with java.library.path with a
     quoted path on Windows. (John Gordon via acmurthy) 
 
-    HADOOP-8414 Address problems related to localhost resolving to 127.0.0.1 on Windows
-    (Ivan Mitic via Sanjay Radia)
+    HADOOP-8414 Address problems related to localhost resolving to 127.0.0.1 
+    on Windows. (Ivan Mitic via Sanjay Radia)
 
-    HADOOP-8544 Move an assertion location in 'winutils chmod' (Chuan Liu via sanjay)
+    HADOOP-8544 Move an assertion location in 'winutils chmod'.
+    (Chuan Liu via sanjay)
 
-    MAPREDUCE-4598. Add support for NodeHealthCheck script for Windows. (Bikas
-    Saha via acmurthy)
+    MAPREDUCE-4598. Add support for NodeHealthCheck script for Windows.
+    (Bikas Saha via acmurthy)
 
-    MAPREDUCE-4510. Fix needless check/logging of getconf in Windows. (Bikas
-    Saha via acmurthy)
+    MAPREDUCE-4510. Fix needless check/logging of getconf in Windows.
+    (Bikas Saha via acmurthy)
 
     HADOOP-8453. Added unit tests for winutils. (Chuan Liu via acmurthy)
 
@@ -89,8 +99,8 @@ BUG FIXES
     HADOOP-8657. Fix TestCLI to not hardcode file length since it's
     encoding/platform dependent. (Bikas Saha via acmurthy) 
 
-    MAPREDUCE-4597. Fix intermittent failures in TestKillSubProcesses. (Bikas
-    Saha via acmurthy)
+    MAPREDUCE-4597. Fix intermittent failures in TestKillSubProcesses.
+    (Bikas Saha via acmurthy)
 
     HADOOP-8732. Fix intermittent failures in tests by serializing process
     creation to get around a bug in MS Windows. (Ivan Mitic via acmurthy)
