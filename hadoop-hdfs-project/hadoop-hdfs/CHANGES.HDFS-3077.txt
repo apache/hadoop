@@ -50,3 +50,5 @@ HDFS-3891. Make selectInputStreams throw IOE instead of RTE (todd)
 HDFS-3726. If a logger misses an RPC, don't retry that logger until next segment (todd)
 
 HDFS-3893. QJM: Make QJM work with security enabled. (atm)
+
+HDFS-3897. QJM: TestBlockToken fails after HDFS-3893. (atm)
