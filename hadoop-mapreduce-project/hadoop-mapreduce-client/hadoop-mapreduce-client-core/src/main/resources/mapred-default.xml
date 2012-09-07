@@ -1203,6 +1203,8 @@
 
 <!--  end of node health script variables -->
 
+<!-- MR YARN Application properties -->
+
 <property>
  <name>mapreduce.job.counters.limit</name>
   <value>120</value>
@@ -1310,6 +1312,13 @@
   <name>yarn.app.mapreduce.am.resource.mb</name>
   <value>1536</value>
   <description>The amount of memory the MR AppMaster needs.</description>
+</property>
+
+<property>
+  <description>CLASSPATH for MR applications. A comma-separated list
+  of CLASSPATH entries</description>
+   <name>mapreduce.application.classpath</name>
+   <value>$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/*,$HADOOP_MAPRED_HOME/share/hadoop/mapreduce/lib/*</value>
 </property>
 
 <!-- jobhistory properties -->

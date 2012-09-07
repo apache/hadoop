@@ -140,11 +140,19 @@ public class TestMRApps {
     Map<String, String> environment = new HashMap<String, String>();
     MRApps.setClasspath(environment, job.getConfiguration());
     assertTrue(environment.get("CLASSPATH").startsWith("$PWD:"));
-    String confClasspath = job.getConfiguration().get(YarnConfiguration.YARN_APPLICATION_CLASSPATH);
-    if (confClasspath != null) {
-      confClasspath = confClasspath.replaceAll(",\\s*", ":").trim();
+    String yarnAppClasspath = 
+        job.getConfiguration().get(
+            YarnConfiguration.YARN_APPLICATION_CLASSPATH);
+    if (yarnAppClasspath != null) {
+      yarnAppClasspath = yarnAppClasspath.replaceAll(",\\s*", ":").trim();
     }
-    assertTrue(environment.get("CLASSPATH").contains(confClasspath));
+    assertTrue(environment.get("CLASSPATH").contains(yarnAppClasspath));
+    String mrAppClasspath = 
+        job.getConfiguration().get(MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH);
+    if (mrAppClasspath != null) {
+      mrAppClasspath = mrAppClasspath.replaceAll(",\\s*", ":").trim();
+    }
+    assertTrue(environment.get("CLASSPATH").contains(mrAppClasspath));
   }
 
  @Test public void testSetClasspathWithUserPrecendence() {

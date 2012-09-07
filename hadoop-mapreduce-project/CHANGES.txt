@@ -111,6 +111,9 @@ Release 2.1.0-alpha - Unreleased
     MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
     jdk7. (Thomas Graves via vinodkv)
 
+    MAPREDUCE-4638. MR AM supplies MapReduce jars in classpath rather than
+    rely on YARN. (acmurthy) 
+
   OPTIMIZATIONS
 
   BUG FIXES
