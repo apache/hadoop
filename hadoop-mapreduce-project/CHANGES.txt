@@ -67,6 +67,8 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4610. Support deprecated mapreduce.job.counters.limit property in
     MR2. (tomwhite)
 
+    MAPREDUCE-4629. Remove JobHistory.DEBUG_MODE (Karthik Kambatla via bobby)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES

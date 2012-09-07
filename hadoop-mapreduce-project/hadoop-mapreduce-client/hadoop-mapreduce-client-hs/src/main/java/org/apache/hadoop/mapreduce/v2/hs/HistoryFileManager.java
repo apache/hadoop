@@ -358,7 +358,6 @@ public class HistoryFileManager extends AbstractService {
 
   private Configuration conf;
 
-  private boolean debugMode;
   private String serialNumberFormat;
 
   private Path doneDirPrefixPath = null; // folder for completed jobs
@@ -379,8 +378,7 @@ public class HistoryFileManager extends AbstractService {
   public void init(Configuration conf) {
     this.conf = conf;
 
-    debugMode = conf.getBoolean(JHAdminConfig.MR_HISTORY_DEBUG_MODE, false);
-    int serialNumberLowDigits = debugMode ? 1 : 3;
+    int serialNumberLowDigits = 3;
     serialNumberFormat = ("%0"
         + (JobHistoryUtils.SERIAL_NUMBER_DIRECTORY_DIGITS + serialNumberLowDigits)
         + "d");
@@ -780,8 +778,8 @@ public class HistoryFileManager extends AbstractService {
   }
 
   private Path canonicalHistoryLogPath(JobId id, long millisecondTime) {
-    String timestampComponent = JobHistoryUtils.timestampDirectoryComponent(
-        millisecondTime, debugMode);
+    String timestampComponent = JobHistoryUtils
+        .timestampDirectoryComponent(millisecondTime);
     return new Path(doneDirPrefixPath, JobHistoryUtils.historyLogSubdirectory(
         id, timestampComponent, serialNumberFormat));
   }
