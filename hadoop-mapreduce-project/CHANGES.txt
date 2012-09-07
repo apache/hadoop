@@ -1,6 +1,18 @@
 Hadoop MapReduce Change Log
 
-Branch-2 ( Unreleased changes )
+Release 2.0.3-alpha - Unreleased
+  
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES 
+
+Release 2.0.2-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -10,6 +22,13 @@ Branch-2 ( Unreleased changes )
     command-line. (ahmed via tucu)
 
     MAPREDUCE-4417. add support for encrypted shuffle (tucu)
+
+    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+
+    MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
+
+    MAPREDUCE-4438. Add a simple, generic client to run 'easy' AMs in YARN.
+    (Bikas Saha via acmurthy) 
 
   IMPROVEMENTS
 
@@ -23,6 +42,38 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-2786. Add compression option for TestDFSIO.
     (Plamen Jeliazkov via shv)
+
+    MAPREDUCE-4440. Changed SchedulerApp and SchedulerNode to be a minimal
+    interface to allow schedulers to maintain their own. (acmurthy) 
+
+    MAPREDUCE-4146. Support limits on task status string length and number of
+    block locations in branch-2. (Ahmed Radwan via tomwhite)
+
+    MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
+    (tomwhite)
+
+    MAPREDUCE-3921. MR AM should act on node health status changes. 
+    (Bikas Saha via sseth)
+
+    MAPREDUCE-4253. Tests for mapreduce-client-core are lying under
+    mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
+
+    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+
+    MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
+    development of new applications. (Bikas Saha via acmurthy) 
+
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Siddharth Seth via sseth)
+
+    MAPREDUCE-4580. Change MapReduce to use the yarn-client module.
+    (Vinod Kumar Vavilapalli via sseth)
+
+    MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
+    jdk7. (Thomas Graves via vinodkv)
+
+    MAPREDUCE-4638. MR AM supplies MapReduce jars in classpath rather than
+    rely on YARN. (acmurthy) 
 
   BUG FIXES
 
@@ -70,57 +121,6 @@ Branch-2 ( Unreleased changes )
     MAPREDUCE-4629. Remove JobHistory.DEBUG_MODE (Karthik Kambatla via bobby)
 
     MAPREDUCE-4642. MiniMRClientClusterFactory should not use job.setJar() (rkanter via tucu)
-
-Release 2.1.0-alpha - Unreleased 
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
-
-    MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
-
-    MAPREDUCE-4438. Add a simple, generic client to run 'easy' AMs in YARN.
-    (Bikas Saha via acmurthy) 
-
-  IMPROVEMENTS
-
-    MAPREDUCE-4440. Changed SchedulerApp and SchedulerNode to be a minimal
-    interface to allow schedulers to maintain their own. (acmurthy) 
-
-    MAPREDUCE-4146. Support limits on task status string length and number of
-    block locations in branch-2. (Ahmed Radwan via tomwhite)
-
-    MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
-    (tomwhite)
-
-    MAPREDUCE-3921. MR AM should act on node health status changes. 
-    (Bikas Saha via sseth)
-
-    MAPREDUCE-4253. Tests for mapreduce-client-core are lying under
-    mapreduce-client-jobclient (Tsuyoshi Ozawa via harsh)
-
-    MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
-
-    MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease
-    development of new applications. (Bikas Saha via acmurthy) 
-
-    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
-    (Todd Lipcon and Siddharth Seth via sseth)
-
-    MAPREDUCE-4580. Change MapReduce to use the yarn-client module.
-    (Vinod Kumar Vavilapalli via sseth)
-
-    MAPREDUCE-4579. Split TestTaskAttempt into two so as to pass tests on
-    jdk7. (Thomas Graves via vinodkv)
-
-    MAPREDUCE-4638. MR AM supplies MapReduce jars in classpath rather than
-    rely on YARN. (acmurthy) 
-
-  OPTIMIZATIONS
-
-  BUG FIXES
 
     MAPREDUCE-4148. MapReduce should not have a compile-time dependency on
     HDFS. (tomwhite)

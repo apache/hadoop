@@ -1,37 +1,18 @@
 Hadoop MapReduce Change Log
 
-Trunk (unreleased changes)
-
+Release 2.0.3-alpha - Unreleased
+  
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
 
   IMPROVEMENTS
 
-  OPTIMAZATIONS
+  OPTIMIZATIONS
 
-  BUG FIXES
+  BUG FIXES 
 
-Branch-2 ( Unreleased changes )
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-
-  OPTIMAZATIONS
-
-  BUG FIXES
-
-    YARN-13. Fix pom versions for YARN in branch-2 (todd)
-
-    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
-    via atm)
-
-Release 2.1.0-alpha - Unreleased 
-
-  INCOMPATIBLE CHANGES
+Release 2.0.2-alpha - Unreleased 
 
   NEW FEATURES
 
@@ -47,9 +28,14 @@ Release 2.1.0-alpha - Unreleased
     YARN-80. Add support for delaying rack-local containers in
     CapacityScheduler. (acmurthy) 
 
-  OPTIMAZATIONS
+  OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-13. Fix pom versions for YARN in branch-2 (todd)
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
 
     YARN-12. Fix findbugs warnings in FairScheduler. (Junping Du via acmurthy) 
 
