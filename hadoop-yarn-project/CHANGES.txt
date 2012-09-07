@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Trunk (unreleased changes)
+Trunk - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -17,7 +17,7 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
-Branch-2 ( Unreleased changes )
+Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -25,14 +25,11 @@ Branch-2 ( Unreleased changes )
 
   IMPROVEMENTS
 
-  OPTIMAZATIONS
+  OPTIMIZATIONS
 
   BUG FIXES
 
-    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
-    via atm)
-
-Release 2.1.0-alpha - Unreleased 
+Release 2.0.2-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -73,6 +70,9 @@ Release 2.1.0-alpha - Unreleased
 
     YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
     event at RUNNING state. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
 
 Release 0.23.4 - UNRELEASED
 

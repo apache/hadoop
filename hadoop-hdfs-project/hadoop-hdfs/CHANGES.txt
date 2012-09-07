@@ -1,6 +1,6 @@
 Hadoop HDFS Change Log
 
-Trunk (unreleased changes)
+Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
 
@@ -215,7 +215,19 @@ Trunk (unreleased changes)
 
     HDFS-3678. Edit log files are never being purged from 2NN. (atm)
 
-Branch-2 ( Unreleased changes )
+Release 2.0.3-alpha - Unreleased 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.0.2-alpha - Unreleased
 
   INCOMPATIBLE CHANGES
 
