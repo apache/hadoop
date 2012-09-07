@@ -69,6 +69,8 @@ Branch-2 ( Unreleased changes )
 
     MAPREDUCE-4629. Remove JobHistory.DEBUG_MODE (Karthik Kambatla via bobby)
 
+    MAPREDUCE-4642. MiniMRClientClusterFactory should not use job.setJar() (rkanter via tucu)
+
 Release 2.1.0-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
