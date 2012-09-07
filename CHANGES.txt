@@ -223,6 +223,8 @@ Release 1.2.0 - unreleased
     HDFS-2815. Namenode is not coming out of safemode when we perform ( NN crash + restart ). 
     Also FSCK report shows blocks missed. (umamahesh)
 
+    MAPREDUCE-4629. Remove JobHistory.DEBUG_MODE (Karthik Kambatla via bobby)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

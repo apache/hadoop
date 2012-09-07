@@ -119,8 +119,6 @@ public class JobHistory {
   
   public static final int JOB_NAME_TRIM_LENGTH = 50;
   private static String JOBTRACKER_UNIQUE_STRING = null;
-  private static final String JOBHISTORY_DEBUG_MODE =
-    "mapreduce.jobhistory.debug.mode";
   private static String LOG_DIR = null;
   private static final String SECONDARY_FILE_SUFFIX = ".recover";
   private static long jobHistoryBlockSize = 0;
@@ -140,8 +138,6 @@ public class JobHistory {
 
   static final String CONF_FILE_NAME_SUFFIX = "_conf.xml";
 
-  // XXXXX debug mode -- set this to false for production
-  private static boolean DEBUG_MODE;
   private static final int SERIAL_NUMBER_DIRECTORY_DIGITS = 6;
   private static int SERIAL_NUMBER_LOW_DIGITS;
 
@@ -368,8 +364,8 @@ public class JobHistory {
            timestamp.get(Calendar.YEAR),
            // months are 0-based in Calendar, but people will expect January
            // to be month #1.
-           timestamp.get(DEBUG_MODE ? Calendar.HOUR : Calendar.MONTH) + 1,
-           timestamp.get(DEBUG_MODE ? Calendar.MINUTE : Calendar.DAY_OF_MONTH));
+            timestamp.get(Calendar.MONTH) + 1,
+            timestamp.get(Calendar.DAY_OF_MONTH));
 
         dateString = dateString.intern();
 
@@ -391,9 +387,9 @@ public class JobHistory {
 
     synchronized (existingDoneSubdirs) {
       if (existingDoneSubdirs.contains(dir)) {
-        if (DEBUG_MODE && !DONEDIR_FS.exists(dir)) {
-          System.err.println("JobHistory.maybeMakeSubdirectory -- We believed "
-                             + dir + " already existed, but it didn't.");
+        if (LOG.isDebugEnabled() && !DONEDIR_FS.exists(dir)) {
+          LOG.error("JobHistory.maybeMakeSubdirectory -- We believed " + dir
+              + " already existed, but it didn't.");
         }
           
         return true;
@@ -411,9 +407,9 @@ public class JobHistory {
 
         return false;
       } else {
-        if (DEBUG_MODE) {
-          System.err.println("JobHistory.maybeMakeSubdirectory -- We believed "
-                             + dir + " didn't already exist, but it did.");
+        if (LOG.isDebugEnabled()) {
+          LOG.error("JobHistory.maybeMakeSubdirectory -- We believed " + dir
+              + " didn't already exist, but it did.");
         }
 
         return false;
@@ -497,8 +493,7 @@ public class JobHistory {
   public static void init(JobTracker jobTracker, JobConf conf,
              String hostname, long jobTrackerStartTime) throws IOException {
     initLogDir(conf);
-    DEBUG_MODE = conf.getBoolean(JOBHISTORY_DEBUG_MODE, false);
-    SERIAL_NUMBER_LOW_DIGITS = DEBUG_MODE ? 1 : 3;
+    SERIAL_NUMBER_LOW_DIGITS = 3;
     SERIAL_NUMBER_FORMAT = ("%0"
        + (SERIAL_NUMBER_DIRECTORY_DIGITS + SERIAL_NUMBER_LOW_DIGITS)
        + "d");
@@ -1390,17 +1385,16 @@ public class JobHistory {
       FileStatus[] statuses = null;
 
       if (dir == DONE) {
-        final String snDirectoryComponent
-          = serialNumberDirectoryComponent(id);
-
         final String scanTail
           = (DONE_BEFORE_SERIAL_TAIL
              + "/" + serialNumberDirectoryComponent(id));
 
-        if (DEBUG_MODE) {
-          System.err.println("JobHistory.getJobHistoryFileName DONE dir: scanning " + scanTail);
-
-          (new IOException("debug exception")).printStackTrace(System.err);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("JobHistory.getJobHistoryFileName DONE dir: scanning "
+              + scanTail);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace(Thread.currentThread().getStackTrace());
+          }
         }
 
         statuses = localGlobber(fs, DONE, scanTail, filter);
@@ -1410,9 +1404,6 @@ public class JobHistory {
       
       String filename = null;
       if (statuses == null || statuses.length == 0) {
-        if (DEBUG_MODE) {
-          System.err.println("Nothing to recover for job " + id);
-        }
         LOG.info("Nothing to recover for job " + id);
       } else {
         // return filename considering that fact the name can be a 
@@ -2534,11 +2525,9 @@ public class JobHistory {
     // months are 0-based in Calendar, but people will expect January
     // to be month #1 .  Therefore the number is bumped before we make the 
     // directory name and must be debumped to seek the time.
-    result.set(DEBUG_MODE ? Calendar.HOUR : Calendar.MONTH,
-               Integer.parseInt(seg2) - 1);
+    result.set(Calendar.MONTH, Integer.parseInt(seg2) - 1);
 
-    result.set(DEBUG_MODE ? Calendar.MINUTE : Calendar.DAY_OF_MONTH,
-               Integer.parseInt(seg3));
+    result.set(Calendar.DAY_OF_MONTH, Integer.parseInt(seg3));
 
     return result.getTimeInMillis();
   }
@@ -2551,10 +2540,8 @@ public class JobHistory {
    */
   public static class HistoryCleaner implements Runnable {
     static final long ONE_DAY_IN_MS = 24 * 60 * 60 * 1000L;
-    static final long DIRECTORY_LIFE_IN_MS
-      = DEBUG_MODE ? 20 * 60 * 1000L : 30 * ONE_DAY_IN_MS;
-    static final long RUN_INTERVAL
-      = DEBUG_MODE ? 10L * 60L * 1000L : ONE_DAY_IN_MS;
+    static final long DIRECTORY_LIFE_IN_MS = 30 * ONE_DAY_IN_MS;
+    static final long RUN_INTERVAL = ONE_DAY_IN_MS;
     private long now; 
     private static final AtomicBoolean isRunning = new AtomicBoolean(false); 
     private static long lastRan = 0; 
@@ -2597,26 +2584,22 @@ public class JobHistory {
                                          pathMatcher.group(2),
                                          pathMatcher.group(3));
 
-            if (DEBUG_MODE) {
-              System.err.println("HistoryCleaner.run just parsed " + thisDir
-                                 + " as year/month/day = " + pathMatcher.group(1)
-                                 + "/" + pathMatcher.group(2) + "/"
-                                 + pathMatcher.group(3));
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("HistoryCleaner.run just parsed " + thisDir
+                  + " as year/month/day = " + pathMatcher.group(1) + "/"
+                  + pathMatcher.group(2) + "/" + pathMatcher.group(3));
             }
 
             if (dirTime < now - DIRECTORY_LIFE_IN_MS) {
 
-              if (DEBUG_MODE) {
+              if (LOG.isDebugEnabled()) {
                 Calendar then = Calendar.getInstance();
                 then.setTimeInMillis(dirTime);
                 Calendar nnow = Calendar.getInstance();
                 nnow.setTimeInMillis(now);
                 
-                System.err.println("HistoryCleaner.run directory: " + thisDir
-                                   + " because its time is " + then
-                                   + " but it's now " + nnow);
-                System.err.println("then = " + dirTime);
-                System.err.println("now  = " + now);
+                LOG.debug("HistoryCleaner.run directory: " + thisDir
+                    + " because its time is " + then + " but it's now " + nnow);
               }
 
               // remove every file in the directory and save the name
@@ -2629,8 +2612,9 @@ public class JobHistory {
 
               for (int j = 0; j < deletees.length; ++j) {
 
-                if (DEBUG_MODE && !printedOneDeletee) {
-                  System.err.println("HistoryCleaner.run deletee: " + deletees[j].toString());
+                if (LOG.isDebugEnabled() && !printedOneDeletee) {
+                  LOG.debug("HistoryCleaner.run deletee: "
+                      + deletees[j].toString());
                   printedOneDeletee = true;
                 }
 
@@ -2657,8 +2641,8 @@ public class JobHistory {
           while (it.hasNext()) {
             MovedFileInfo info = it.next().getValue();
 
-            if (DEBUG_MODE && !printedOneMovedFile) {
-              System.err.println("HistoryCleaner.run a moved file: " + info.historyFile);
+            if (LOG.isDebugEnabled() && !printedOneMovedFile) {
+              LOG.debug("HistoryCleaner.run a moved file: " + info.historyFile);
               printedOneMovedFile = true;
             }            
 
