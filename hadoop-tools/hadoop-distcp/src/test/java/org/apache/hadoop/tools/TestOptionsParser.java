@@ -110,6 +110,24 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/target/"});
     Assert.assertEquals(options.getMapBandwidth(), 11);
   }
+  
+  @Test(expected=IllegalArgumentException.class)
+  public void testParseNonPositiveBandwidth() {
+    OptionsParser.parse(new String[] {
+        "-bandwidth",
+        "-11",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+  }
+  
+  @Test(expected=IllegalArgumentException.class)
+  public void testParseZeroBandwidth() {
+    OptionsParser.parse(new String[] {
+        "-bandwidth",
+        "0",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+  }
 
   @Test
   public void testParseSkipCRC() {

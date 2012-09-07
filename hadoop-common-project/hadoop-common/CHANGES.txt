@@ -269,6 +269,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8431. Running distcp wo args throws IllegalArgumentException.
     (Sandy Ryza via eli)
 
+    HADOOP-8775. MR2 distcp permits non-positive value to -bandwidth option
+    which causes job never to complete. (Sandy Ryza via atm)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
