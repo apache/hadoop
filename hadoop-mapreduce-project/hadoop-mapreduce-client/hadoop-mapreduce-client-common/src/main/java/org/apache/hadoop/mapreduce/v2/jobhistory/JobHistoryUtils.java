@@ -343,20 +343,19 @@ public class JobHistoryUtils {
   /**
    * Gets the timestamp component based on millisecond time.
    * @param millisecondTime
-   * @param debugMode
    * @return the timestamp component based on millisecond time
    */
-  public static String timestampDirectoryComponent(long millisecondTime, boolean debugMode) {
+  public static String timestampDirectoryComponent(long millisecondTime) {
     Calendar timestamp = Calendar.getInstance();
     timestamp.setTimeInMillis(millisecondTime);
     String dateString = null;
-    dateString = String.format(
-        TIMESTAMP_DIR_FORMAT,
-        timestamp.get(Calendar.YEAR),
-        // months are 0-based in Calendar, but people will expect January
-        // to be month #1.
-        timestamp.get(debugMode ? Calendar.HOUR : Calendar.MONTH) + 1,
-        timestamp.get(debugMode ? Calendar.MINUTE : Calendar.DAY_OF_MONTH));
+    dateString = String
+        .format(TIMESTAMP_DIR_FORMAT,
+            timestamp.get(Calendar.YEAR),
+            // months are 0-based in Calendar, but people will expect January to
+            // be month #1.
+            timestamp.get(Calendar.MONTH) + 1,
+            timestamp.get(Calendar.DAY_OF_MONTH));
     dateString = dateString.intern();
     return dateString;
   }
