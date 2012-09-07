@@ -109,6 +109,9 @@ Release 2.0.1-alpha - UNRELEASED
     HADOOP-8748. Refactor DFSClient retry utility methods to a new class
     in org.apache.hadoop.io.retry.  (Arun C Murthy via szetszwo)
 
+    HADOOP-8754. Deprecate all the RPC.getServer() variants.  (Brandon Li
+    via szetszwo)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
