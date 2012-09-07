@@ -10,6 +10,9 @@ Trunk (unreleased changes)
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
 
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
+
   OPTIMAZATIONS
 
   BUG FIXES
