@@ -228,6 +228,9 @@ Release 1.2.0 - unreleased
     HADOOP-8745. Incorrect version numbers in hadoop-core POM.
     (Matthias Friedrich via eli)
 
+    HDFS-2757. Cannot read a local block that's being written to when
+    using the local read short circuit. (Jean-Daniel Cryans via eli)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

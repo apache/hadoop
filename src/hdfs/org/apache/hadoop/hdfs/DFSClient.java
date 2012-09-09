@@ -2019,6 +2019,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       return (locatedBlocks == null) ? 0 : locatedBlocks.getFileLength();
     }
 
+    private synchronized boolean blockUnderConstruction() {
+      return locatedBlocks.isUnderConstruction();
+    }
+
     /**
      * Returns the datanode from which the stream is currently reading.
      */
@@ -2130,10 +2134,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     private boolean shouldTryShortCircuitRead(InetSocketAddress targetAddr)
         throws IOException {
-      if (shortCircuitLocalReads && isLocalAddress(targetAddr)) {
-        return true;
-      }
-      return false;
+      // Can't local read a block under construction, see HDFS-2757
+      return shortCircuitLocalReads && !blockUnderConstruction()
+        && isLocalAddress(targetAddr);
     }
     
     /**
