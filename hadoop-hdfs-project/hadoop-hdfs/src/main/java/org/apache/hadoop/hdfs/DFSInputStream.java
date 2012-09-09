@@ -243,6 +243,10 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
         locatedBlocks.getFileLength() + lastBlockBeingWrittenLength;
   }
 
+  private synchronized boolean blockUnderConstruction() {
+    return locatedBlocks.isUnderConstruction();
+  }
+
   /**
    * Returns the datanode from which the stream is currently reading.
    */
@@ -878,7 +882,9 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable 
                                        String clientName)
       throws IOException {
     
-    if (dfsClient.shouldTryShortCircuitRead(dnAddr)) {
+    // Can't local read a block under construction, see HDFS-2757
+    if (dfsClient.shouldTryShortCircuitRead(dnAddr) &&
+        !blockUnderConstruction()) {
       return DFSClient.getLocalBlockReader(dfsClient.conf, src, block,
           blockToken, chosenNode, dfsClient.hdfsTimeout, startOffset,
           dfsClient.connectToDnViaHostname());

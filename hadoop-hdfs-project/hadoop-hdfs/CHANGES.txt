@@ -577,6 +577,9 @@ Release 2.0.2-alpha - 2012-09-07
     (Andy Isaacson via eli)
 
     HDFS-3895. hadoop-client must include commons-cli (tucu)
+
+    HDFS-2757. Cannot read a local block that's being written to when
+    using the local read short circuit. (Jean-Daniel Cryans via eli)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
