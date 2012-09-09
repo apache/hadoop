@@ -2074,10 +2074,7 @@ public class DFSClient implements java.io.Closeable {
   }
   
   boolean shouldTryShortCircuitRead(InetSocketAddress targetAddr) {
-    if (shortCircuitLocalReads && isLocalAddress(targetAddr)) {
-      return true;
-    }
-    return false;
+    return shortCircuitLocalReads && isLocalAddress(targetAddr);
   }
 
   void reportChecksumFailure(String file, ExtendedBlock blk, DatanodeInfo dn) {
