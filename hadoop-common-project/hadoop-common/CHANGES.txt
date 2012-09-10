@@ -285,6 +285,8 @@ Release 2.0.2-alpha - 2012-09-07
     HADOOP-8775. MR2 distcp permits non-positive value to -bandwidth option
     which causes job never to complete. (Sandy Ryza via atm)
 
+    HADOOP-8781. hadoop-config.sh should add JAVA_LIBRARY_PATH to LD_LIBRARY_PATH. (tucu)
+
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HADOOP-8220. ZKFailoverController doesn't handle failure to become active
