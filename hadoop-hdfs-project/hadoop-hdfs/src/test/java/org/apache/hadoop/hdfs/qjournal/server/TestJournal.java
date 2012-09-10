@@ -222,7 +222,7 @@ public class TestJournal {
       fail("did not fail to finalize");
     } catch (JournalOutOfSyncException e) {
       GenericTestUtils.assertExceptionContains(
-          "but current state of log is", e);
+          "but only written up to txid 3", e);
     }
     
     // Check that, even if we re-construct the journal by scanning the
@@ -235,7 +235,7 @@ public class TestJournal {
       fail("did not fail to finalize");
     } catch (JournalOutOfSyncException e) {
       GenericTestUtils.assertExceptionContains(
-          "but current state of log is", e);
+          "disk only contains up to txid 3", e);
     }
   }
   
