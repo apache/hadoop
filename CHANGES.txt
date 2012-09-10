@@ -231,6 +231,8 @@ Release 1.2.0 - unreleased
     HDFS-2757. Cannot read a local block that's being written to when
     using the local read short circuit. (Jean-Daniel Cryans via eli)
 
+    HADOOP-8781. hadoop-config.sh should add JAVA_LIBRARY_PATH to LD_LIBRARY_PATH. (tucu)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
