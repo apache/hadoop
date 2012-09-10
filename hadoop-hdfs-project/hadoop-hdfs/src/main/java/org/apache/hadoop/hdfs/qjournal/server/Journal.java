@@ -683,6 +683,9 @@ class Journal implements Closeable {
       throws IOException {
     checkFormatted();
     checkRequest(reqInfo);
+    
+    abortCurSegment();
+
     long segmentTxId = segment.getStartTxId();
 
     // TODO: right now, a recovery of a segment when the log is

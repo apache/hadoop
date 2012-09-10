@@ -62,3 +62,5 @@ HDFS-3900. QJM: avoid validating log segments on log rolls (todd)
 HDFS-3901. QJM: send 'heartbeat' messages to JNs even when they are out-of-sync (todd)
 
 HDFS-3899. QJM: Add client-side metrics (todd)
+
+HDFS-3914. QJM: acceptRecovery should abort current segment (todd)
