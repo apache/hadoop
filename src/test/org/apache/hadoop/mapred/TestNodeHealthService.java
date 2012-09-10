@@ -108,7 +108,9 @@ public class TestNodeHealthService extends TestCase {
     TaskTrackerHealthStatus healthStatus = new TaskTrackerHealthStatus();
     String errorScript = "echo ERROR\n echo \"Tracker not healthy\"";
     String normalScript = "echo \"I am all fine\"";
-    String timeOutScript = "sleep 4\n echo \"I am fine\"";
+    // use extremely large sleep time in script to make sure junit test times
+    // out if script termination fails upon timeout.
+    String timeOutScript = "sleep 60000\n echo \" I am fine\"";
     Configuration conf = getConfForNodeHealthScript();
     conf.writeXml(new FileOutputStream(nodeHealthConfigFile));
 

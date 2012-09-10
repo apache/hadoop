@@ -113,3 +113,6 @@ BUG FIXES
 
     HADOOP-8664. hadoop streaming job need the full path to commands even 
     when they are in the path. (Bikas Saha via suresh)
+
+    MAPREDUCE-4564. Fix issues with timing out shell processes. (Bikas Saha
+    via acmurthy)

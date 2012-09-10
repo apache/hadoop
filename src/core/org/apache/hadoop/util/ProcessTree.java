@@ -232,8 +232,10 @@ public class ProcessTree {
   public static boolean isProcessGroupAlive(String pgrpId) {
     if (Shell.WINDOWS) {
       try {
-        String result = Shell.execCommand("cmd", "/c", Shell.WINUTILS
-            + " task isAlive " + pgrpId);
+        ShellCommandExecutor shexec = 
+            new ShellCommandExecutor(new String[] {Shell.WINUTILS, "task", "isAlive", pgrpId});
+        shexec.execute();
+        String result = shexec.getOutput();
         return (result.contains("IsAlive"));
       } catch (IOException ioe) {
         LOG.warn("Error executing shell command", ioe);

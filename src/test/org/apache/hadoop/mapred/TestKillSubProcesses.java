@@ -207,8 +207,7 @@ public class TestKillSubProcesses extends TestCase {
           int numChildren = 0;
           while(sleepCount-- > 0) {
             Thread.sleep(1000);
-            String result = Shell.execCommand("cmd", "/c", Shell.WINUTILS
-                + " task isAlive " + pid);
+            String result = runAliveCommand(pid);
             assertTrue("Map process tree not alive", result.contains("IsAlive"));
             String[] parts = result.split("[,\r\n]");
             assertTrue(parts.length >= 2);
@@ -285,8 +284,7 @@ public class TestKillSubProcesses extends TestCase {
     // Checking if the descendant processes of map task are killed properly
     if(ProcessTree.isSetsidAvailable) {
       if(Shell.WINDOWS) {
-        String result = Shell.execCommand("cmd", "/c", Shell.WINUTILS
-            + " task isAlive " + pid);
+        String result = runAliveCommand(pid);
         assertTrue("Map process tree not alive", !result.contains("IsAlive"));
       } else {
         for(int i=0; i <= numLevelsOfSubProcesses; i++) {
@@ -305,6 +303,14 @@ public class TestKillSubProcesses extends TestCase {
     if(fs.exists(scriptDir)) {
       fs.delete(scriptDir, true);
     }
+  }
+  
+  private static String runAliveCommand(String pid) throws IOException {
+    ShellCommandExecutor shexec = 
+        new ShellCommandExecutor(
+            new String[] {Shell.WINUTILS, "task", "isAlive", pid});
+    shexec.execute();
+    return shexec.getOutput();
   }
   
   private static RunningJob runJob(JobConf conf) throws IOException {

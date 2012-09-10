@@ -101,21 +101,29 @@ DWORD createTask(_TCHAR* jobObjName, _TCHAR* cmdLine)
   PROCESS_INFORMATION pi;
   SECURITY_ATTRIBUTES sa;
   HANDLE jobObject = NULL;
+  JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = { 0 };
 
-  // make the job object handle inheritable so that it can be inherited 
-  // via CreateProcess. If CreateProcess is used in this manner, then spawned 
-  // processes will keep the handle to the job object alive and it can be 
-  // manipulated via name by another process (say winutils task kill)
-  sa.nLength = sizeof(SECURITY_ATTRIBUTES);
-  sa.lpSecurityDescriptor = NULL;
-  sa.bInheritHandle = TRUE;
-  jobObject = CreateJobObject(&sa, jobObjName);
+  // Create un-inheritable job object handle and set job object to terminate 
+  // when last handle is closed. So winutils.exe invocation has the only open 
+  // job object handle. Exit of winutils.exe ensures termination of job object.
+  // Either a clean exit of winutils or crash or external termination.
+  jobObject = CreateJobObject(NULL, jobObjName);
   err = GetLastError();
   if(jobObject == NULL || err ==  ERROR_ALREADY_EXISTS)
   {
     return err;
   }
-  
+  jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+  if(SetInformationJobObject(jobObject, 
+                             JobObjectExtendedLimitInformation, 
+                             &jeli, 
+                             sizeof(jeli)) == 0)
+  {
+    err = GetLastError();
+    CloseHandle(jobObject);
+    return err;
+  }      
+
   if(AssignProcessToJobObject(jobObject, GetCurrentProcess()) == 0)
   {
     err = GetLastError();
@@ -135,8 +143,6 @@ DWORD createTask(_TCHAR* jobObjName, _TCHAR* cmdLine)
   ZeroMemory( &si, sizeof(si) );
   si.cb = sizeof(si);
   ZeroMemory( &pi, sizeof(pi) );
-  // inherit the job object handle so that it can be manipulated via its name 
-  // by another program (say winutils task kill) even if winutils crashes.
   if(CreateProcess(NULL, cmdLine, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi) == 0)
   {
     err = GetLastError();
