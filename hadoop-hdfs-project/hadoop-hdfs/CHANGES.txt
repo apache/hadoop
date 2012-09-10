@@ -6,6 +6,9 @@ Release 2.0.3-alpha - Unreleased
 
   NEW FEATURES
 
+    HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
+    (Jaimin D Jetly and Jing Zhao via szetszwo)
+
   IMPROVEMENTS
 
   OPTIMIZATIONS
