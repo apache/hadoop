@@ -20,30 +20,25 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.DU;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLogLoader.EditLogValidation;
 import org.apache.hadoop.util.StringUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
+/**
+ * Test the EditLogFileOutputStream
+ */
 public class TestEditLogFileOutputStream {
-  private final static int HEADER_LEN = 17;
+  private final static File TEST_DIR =
+      new File(System.getProperty("test.build.data", "/tmp"));
   private static final File TEST_EDITS =
-    new File(System.getProperty("test.build.data","/tmp"),
-             "editLogStream.dat");
+      new File(TEST_DIR, "testEditLogFileOutput.log");
+  final static int MIN_PREALLOCATION_LENGTH =
+      EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH;
 
   static {
     // No need to fsync for the purposes of tests. This makes
@@ -52,69 +47,54 @@ public class TestEditLogFileOutputStream {
   }
 
   @Before
+  @After
   public void deleteEditsFile() {
-    TEST_EDITS.delete();
+    if (TEST_EDITS.exists()) TEST_EDITS.delete();
   }
 
-  @Test
-  public void testPreallocation() throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
-        .build();
-
-    final long START_TXID = 1;
-    StorageDirectory sd = cluster.getNameNode().getFSImage()
-      .getStorage().getStorageDir(0);
-    File editLog = NNStorage.getInProgressEditsFile(sd, START_TXID);
-
-    EditLogValidation validation = EditLogFileInputStream.validateEditLog(editLog);
-    assertEquals("Edit log should contain a header as valid length",
-        HEADER_LEN, validation.getValidLength());
-    assertEquals(validation.getEndTxId(), START_TXID);
-    assertEquals("Edit log should have 1MB pre-allocated, plus 4 bytes " +
-        "for the version number",
-        EditLogFileOutputStream.PREALLOCATION_LENGTH + 4, editLog.length());
-    
-
-    cluster.getFileSystem().mkdirs(new Path("/tmp"),
-        new FsPermission((short)777));
-
-    long oldLength = validation.getValidLength();
-    validation = EditLogFileInputStream.validateEditLog(editLog);
-    assertTrue("Edit log should have more valid data after writing a txn " +
-        "(was: " + oldLength + " now: " + validation.getValidLength() + ")",
-        validation.getValidLength() > oldLength);
-    assertEquals(1, validation.getEndTxId() - START_TXID);
-
-    assertEquals("Edit log should be 1MB long, plus 4 bytes for the version number",
-        EditLogFileOutputStream.PREALLOCATION_LENGTH + 4, editLog.length());
-    // 256 blocks for the 1MB of preallocation space
-    assertTrue("Edit log disk space used should be at least 257 blocks",
-        256 * 4096 <= new DU(editLog, conf).getUsed());
+  static void flushAndCheckLength(EditLogFileOutputStream elos,
+      long expectedLength) throws IOException {
+    elos.setReadyToFlush();
+    elos.flushAndSync();
+    assertEquals(expectedLength, elos.getFile().length());
   }
   
+  /**
+   * Tests writing to the EditLogFileOutputStream.  Due to preallocation, the
+   * length of the edit log will usually be longer than its valid contents.
+   */
+  
   @Test
-  public void testClose() throws IOException {
-    String errorMessage = "TESTING: fc.truncate() threw IOE";
-    
-    File testDir = new File(System.getProperty("test.build.data", "/tmp"));
-    assertTrue("could not create test directory", testDir.exists() || testDir.mkdirs());
-    File f = new File(testDir, "edits");
-    assertTrue("could not create test file", f.createNewFile());
-    EditLogFileOutputStream elos = new EditLogFileOutputStream(f, 0);
-    
-    FileChannel mockFc = Mockito.spy(elos.getFileChannelForTesting());
-    Mockito.doThrow(new IOException(errorMessage)).when(mockFc).truncate(Mockito.anyLong());
-    elos.setFileChannelForTesting(mockFc);
-    
+  public void testRawWrites() throws IOException {
+    EditLogFileOutputStream elos = new EditLogFileOutputStream(TEST_EDITS, 0);
     try {
-      elos.close();
-      fail("elos.close() succeeded, but should have thrown");
-    } catch (IOException e) {
-      assertEquals("wrong IOE thrown from elos.close()", e.getMessage(), errorMessage);
+      byte[] small = new byte[] {1,2,3,4,5,8,7};
+      elos.create();
+      // The first (small) write we make extends the file by 1 MB due to
+      // preallocation.
+      elos.writeRaw(small, 0, small.length);
+      flushAndCheckLength(elos, MIN_PREALLOCATION_LENGTH);
+      // The next small write we make goes into the area that was already
+      // preallocated.
+      elos.writeRaw(small, 0, small.length);
+      flushAndCheckLength(elos, MIN_PREALLOCATION_LENGTH);
+      // Now we write enough bytes so that we exceed the minimum preallocated
+      // length.
+      final int BIG_WRITE_LENGTH = 3 * MIN_PREALLOCATION_LENGTH;
+      byte[] buf = new byte[4096];
+      for (int i = 0; i < buf.length; i++) {
+        buf[i] = 0;
+      }
+      int total = BIG_WRITE_LENGTH;
+      while (total > 0) {
+        int toWrite = (total > buf.length) ? buf.length : total;
+        elos.writeRaw(buf, 0, toWrite);
+        total -= toWrite;
+      }
+      flushAndCheckLength(elos, 4 * MIN_PREALLOCATION_LENGTH);
+    } finally {
+      if (elos != null) elos.close();
     }
-    
-    assertEquals("fc was not nulled when elos.close() failed", elos.getFileChannelForTesting(), null);
   }
 
   /**
@@ -160,5 +140,4 @@ public class TestEditLogFileOutputStream {
     editLogStream.abort();
     editLogStream.abort();
   }
-
 }

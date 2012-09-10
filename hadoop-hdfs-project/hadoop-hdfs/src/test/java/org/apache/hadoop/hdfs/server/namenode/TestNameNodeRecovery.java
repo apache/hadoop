@@ -136,6 +136,9 @@ public class TestNameNodeRecovery {
     }
   }
 
+  /**
+   * A test scenario for the edit log
+   */
   private interface EditLogTestSetup {
     /** 
      * Set up the edit log.
@@ -157,10 +160,50 @@ public class TestNameNodeRecovery {
     abstract public Set<Long> getValidTxIds();
   }
   
-  private class EltsTestEmptyLog implements EditLogTestSetup {
+  static void padEditLog(EditLogOutputStream elos, int paddingLength)
+      throws IOException {
+    if (paddingLength <= 0) {
+      return;
+    }
+    byte buf[] = new byte[4096];
+    for (int i = 0; i < buf.length; i++) {
+      buf[i] = (byte)-1;
+    }
+    int pad = paddingLength;
+    while (pad > 0) {
+      int toWrite = pad > buf.length ? buf.length : pad;
+      elos.writeRaw(buf, 0, toWrite);
+      pad -= toWrite;
+    }
+  }
+
+  static void addDeleteOpcode(EditLogOutputStream elos,
+        OpInstanceCache cache) throws IOException {
+    DeleteOp op = DeleteOp.getInstance(cache);
+    op.setTransactionId(0x0);
+    op.setPath("/foo");
+    op.setTimestamp(0);
+    elos.write(op);
+  }
+  
+  /**
+   * Test the scenario where we have an empty edit log.
+   *
+   * This class is also useful in testing whether we can correctly handle
+   * various amounts of padding bytes at the end of the log.  We should be
+   * able to handle any amount of padding (including no padding) without
+   * throwing an exception.
+   */
+  private static class EltsTestEmptyLog implements EditLogTestSetup {
+    private int paddingLength;
+
+    public EltsTestEmptyLog(int paddingLength) {
+      this.paddingLength = paddingLength;
+    }
+
     public void addTransactionsToLog(EditLogOutputStream elos,
         OpInstanceCache cache) throws IOException {
-        // do nothing
+      padEditLog(elos, paddingLength);
     }
 
     public long getLastValidTxId() {
@@ -175,10 +218,65 @@ public class TestNameNodeRecovery {
   /** Test an empty edit log */
   @Test(timeout=180000)
   public void testEmptyLog() throws IOException {
-    runEditLogTest(new EltsTestEmptyLog());
+    runEditLogTest(new EltsTestEmptyLog(0));
+  }
+
+  /** Test an empty edit log with padding */
+  @Test(timeout=180000)
+  public void testEmptyPaddedLog() throws IOException {
+    runEditLogTest(new EltsTestEmptyLog(
+        EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH));
   }
   
-  private class EltsTestGarbageInEditLog implements EditLogTestSetup {
+  /** Test an empty edit log with extra-long padding */
+  @Test(timeout=180000)
+  public void testEmptyExtraPaddedLog() throws IOException {
+    runEditLogTest(new EltsTestEmptyLog(
+        3 * EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH));
+  }
+
+  /**
+   * Test the scenario where an edit log contains some padding (0xff) bytes
+   * followed by valid opcode data.
+   *
+   * These edit logs are corrupt, but all the opcodes should be recoverable
+   * with recovery mode.
+   */
+  private static class EltsTestOpcodesAfterPadding implements EditLogTestSetup {
+    private int paddingLength;
+
+    public EltsTestOpcodesAfterPadding(int paddingLength) {
+      this.paddingLength = paddingLength;
+    }
+
+    public void addTransactionsToLog(EditLogOutputStream elos,
+        OpInstanceCache cache) throws IOException {
+      padEditLog(elos, paddingLength);
+      addDeleteOpcode(elos, cache);
+    }
+
+    public long getLastValidTxId() {
+      return 0;
+    }
+
+    public Set<Long> getValidTxIds() {
+      return Sets.newHashSet(0L);
+    } 
+  }
+
+  @Test(timeout=180000)
+  public void testOpcodesAfterPadding() throws IOException {
+    runEditLogTest(new EltsTestOpcodesAfterPadding(
+        EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH));
+  }
+
+  @Test(timeout=180000)
+  public void testOpcodesAfterExtraPadding() throws IOException {
+    runEditLogTest(new EltsTestOpcodesAfterPadding(
+        3 * EditLogFileOutputStream.MIN_PREALLOCATION_LENGTH));
+  }
+
+  private static class EltsTestGarbageInEditLog implements EditLogTestSetup {
     final private long BAD_TXID = 4;
     final private long MAX_TXID = 10;
     
