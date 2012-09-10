@@ -22,8 +22,10 @@ import static org.junit.Assert.*;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -193,6 +195,9 @@ public class TestNNWithQJM {
         MiniDFSCluster.getBaseDirectory() + "/TestNNWithQJM/image");
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
         mjc.getQuorumJournalURI("myjournal").toString());
+    // Speed up the test
+    conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 1);
     
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(0)
@@ -217,7 +222,18 @@ public class TestNNWithQJM {
       
       contents = DFSTestUtil.urlGet(url); 
       System.out.println(contents);
-      assertTrue(contents.contains("(1 behind)"));
+      assertTrue(Pattern.compile("1 txns/\\d+ms behind").matcher(contents)
+          .find());
+
+      // Restart NN while JN0 is still down.
+      cluster.restartNameNode();
+
+      contents = DFSTestUtil.urlGet(url); 
+      System.out.println(contents);
+      assertTrue(Pattern.compile("never written").matcher(contents)
+          .find());
+      
+
     } finally {
       cluster.shutdown();
     }

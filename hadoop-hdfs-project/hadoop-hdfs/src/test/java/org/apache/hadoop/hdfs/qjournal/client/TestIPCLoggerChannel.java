@@ -163,11 +163,14 @@ public class TestIPCLoggerChannel {
           ee.getCause());
     }
     
-    // It should have failed without even sending an RPC, since it was not sync.
+    // It should have failed without even sending the edits, since it was not sync.
     Mockito.verify(mockProxy, Mockito.never()).journal(
         Mockito.<RequestInfo>any(),
         Mockito.eq(1L), Mockito.eq(2L),
         Mockito.eq(1), Mockito.same(FAKE_DATA));
+    // It should have sent a heartbeat instead.
+    Mockito.verify(mockProxy).heartbeat(
+        Mockito.<RequestInfo>any());
     
     // After a roll, sending new edits should not fail.
     ch.startLogSegment(3L).get();

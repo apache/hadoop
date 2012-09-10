@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLo
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetEditLogManifestResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.HeartbeatRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.HeartbeatResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.JournalIdProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.JournalRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.JournalResponseProto;
@@ -116,6 +118,18 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
       throw new ServiceException(e);
     }
     return JournalResponseProto.newBuilder().build();
+  }
+
+  /** @see JournalProtocol#heartbeat */
+  @Override
+  public HeartbeatResponseProto heartbeat(RpcController controller,
+      HeartbeatRequestProto req) throws ServiceException {
+    try {
+      impl.heartbeat(convert(req.getReqInfo()));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return HeartbeatResponseProto.getDefaultInstance();
   }
 
   /** @see JournalProtocol#startLogSegment */

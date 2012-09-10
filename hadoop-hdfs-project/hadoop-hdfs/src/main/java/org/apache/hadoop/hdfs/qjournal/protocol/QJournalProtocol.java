@@ -77,6 +77,15 @@ public interface QJournalProtocol {
                       int numTxns,
                       byte[] records) throws IOException;
 
+  
+  /**
+   * Heartbeat.
+   * This is a no-op on the server, except that it verifies that the
+   * caller is in fact still the active writer, and provides up-to-date
+   * information on the most recently committed txid.
+   */
+  public void heartbeat(RequestInfo reqInfo) throws IOException;
+  
   /**
    * Start writing to a new log segment on the JournalNode.
    * Before calling this, one should finalize the previous segment

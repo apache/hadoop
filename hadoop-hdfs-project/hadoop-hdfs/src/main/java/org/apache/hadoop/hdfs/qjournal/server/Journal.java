@@ -75,6 +75,7 @@ class Journal implements Closeable {
   private EditLogOutputStream curSegment;
   private long curSegmentTxId = HdfsConstants.INVALID_TXID;
   private long nextTxId = HdfsConstants.INVALID_TXID;
+  private long highestWrittenTxId = 0;
   
   private final String journalId;
   
@@ -123,6 +124,11 @@ class Journal implements Closeable {
     this.fjm = storage.getJournalManager();
     
     this.metrics = JournalMetrics.create(this);
+    
+    EditLogFile latest = scanStorageForLatestEdits();
+    if (latest != null) {
+      highestWrittenTxId = latest.getLastTxId();
+    }
   }
 
   /**
@@ -222,6 +228,19 @@ class Journal implements Closeable {
   
   synchronized long getCommittedTxnIdForTests() throws IOException {
     return committedTxnId.get();
+  }
+  
+  synchronized long getCurrentLagTxns() throws IOException {
+    long committed = committedTxnId.get();
+    if (committed == 0) {
+      return 0;
+    }
+    
+    return Math.max(committed - highestWrittenTxId, 0L);
+  }
+  
+  synchronized long getHighestWrittenTxId() {
+    return highestWrittenTxId;
   }
   
   @VisibleForTesting
@@ -329,19 +348,20 @@ class Journal implements Closeable {
       // This batch of edits has already been committed on a quorum of other
       // nodes. So, we are in "catch up" mode. This gets its own metric.
       metrics.batchesWrittenWhileLagging.incr(1);
-      metrics.currentLagTxns.set(committedTxnId.get() - lastTxnId);
-    } else {
-      metrics.currentLagTxns.set(0L);
     }
     
     metrics.batchesWritten.incr(1);
     metrics.bytesWritten.incr(records.length);
     metrics.txnsWritten.incr(numTxns);
-    metrics.lastWrittenTxId.set(lastTxnId);
     
-    nextTxId += numTxns;
+    highestWrittenTxId = lastTxnId;
+    nextTxId = lastTxnId + 1;
   }
 
+  public void heartbeat(RequestInfo reqInfo) throws IOException {
+    checkRequest(reqInfo);
+  }
+  
   /**
    * Ensure that the given request is coming from the correct writer and in-order.
    * @param reqInfo the request info
@@ -690,6 +710,10 @@ class Journal implements Closeable {
       if (currentSegment == null) {
         LOG.info("Synchronizing log " + TextFormat.shortDebugString(segment) +
             ": no current segment in place");
+        
+        // Update the highest txid for lag metrics
+        highestWrittenTxId = Math.max(segment.getEndTxId(),
+            highestWrittenTxId);
       } else {
         LOG.info("Synchronizing log " + TextFormat.shortDebugString(segment) +
             ": old segment " + TextFormat.shortDebugString(currentSegment) +
@@ -708,8 +732,15 @@ class Journal implements Closeable {
               ": would discard already-committed txn " +
               committedTxnId.get());
         }
+        
+        // If we're shortening the log, update our highest txid
+        // used for lag metrics.
+        if (txnRange(currentSegment).contains(highestWrittenTxId)) {
+          highestWrittenTxId = segment.getEndTxId();
+        }
       }
       syncLog(reqInfo, segment, fromUrl);
+      
     } else {
       LOG.info("Skipping download of log " +
           TextFormat.shortDebugString(segment) +

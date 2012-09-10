@@ -137,6 +137,12 @@ class JournalNodeRpcServer implements QJournalProtocol {
     jn.getOrCreateJournal(reqInfo.getJournalId())
        .journal(reqInfo, segmentTxId, firstTxnId, numTxns, records);
   }
+  
+  @Override
+  public void heartbeat(RequestInfo reqInfo) throws IOException {
+    jn.getOrCreateJournal(reqInfo.getJournalId())
+      .heartbeat(reqInfo);
+  }
 
   @Override
   public void startLogSegment(RequestInfo reqInfo, long txid)

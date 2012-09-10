@@ -72,6 +72,17 @@ message JournalResponseProto {
 }
 
 /**
+ * heartbeat()
+ */
+
+message HeartbeatRequestProto {
+  required RequestInfoProto reqInfo = 1;
+}
+
+message HeartbeatResponseProto { // void response
+}
+
+/**
  * startLogSegment()
  */
 message StartLogSegmentRequestProto {
@@ -206,6 +217,8 @@ service QJournalProtocolService {
   rpc format(FormatRequestProto) returns (FormatResponseProto);
 
   rpc journal(JournalRequestProto) returns (JournalResponseProto);
+
+  rpc heartbeat(HeartbeatRequestProto) returns (HeartbeatResponseProto);
 
   rpc startLogSegment(StartLogSegmentRequestProto) 
       returns (StartLogSegmentResponseProto);

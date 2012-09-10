@@ -51,12 +51,6 @@ class JournalMetrics {
   
   MutableQuantiles[] syncsQuantiles;
   
-  @Metric("Transaction lag behind the most recent commit")
-  MutableGaugeLong currentLagTxns;
-  
-  @Metric("Last written txid")
-  MutableGaugeLong lastWrittenTxId;
-  
   private final Journal journal;
 
   JournalMetrics(Journal journal) {
@@ -94,6 +88,20 @@ class JournalMetrics {
   public long getLastPromisedEpoch() {
     try {
       return journal.getLastPromisedEpoch();
+    } catch (IOException e) {
+      return -1L;
+    }
+  }
+  
+  @Metric("The highest txid stored on this JN")
+  public long getLastWrittenTxId() {
+    return journal.getHighestWrittenTxId();
+  }
+  
+  @Metric("Number of transactions that this JN is lagging")
+  public long getCurrentLagTxns() {
+    try {
+      return journal.getCurrentLagTxns();
     } catch (IOException e) {
       return -1L;
     }

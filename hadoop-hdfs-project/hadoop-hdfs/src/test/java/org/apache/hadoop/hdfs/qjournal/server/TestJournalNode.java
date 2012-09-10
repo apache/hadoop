@@ -101,6 +101,7 @@ public class TestJournalNode {
         journal.getMetricsForTests().getName());
     MetricsAsserts.assertCounter("BatchesWritten", 0L, metrics);
     MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 0L, metrics);
+    MetricsAsserts.assertGauge("CurrentLagTxns", 0L, metrics);
 
     IPCLoggerChannel ch = new IPCLoggerChannel(
         conf, FAKE_NSINFO, JID, jn.getBoundIpcAddress());
@@ -113,6 +114,17 @@ public class TestJournalNode {
         journal.getMetricsForTests().getName());
     MetricsAsserts.assertCounter("BatchesWritten", 1L, metrics);
     MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 0L, metrics);
+    MetricsAsserts.assertGauge("CurrentLagTxns", 0L, metrics);
+
+    ch.setCommittedTxId(100L);
+    ch.sendEdits(1L, 2, 1, "goodbye".getBytes(Charsets.UTF_8)).get();
+
+    metrics = MetricsAsserts.getMetrics(
+        journal.getMetricsForTests().getName());
+    MetricsAsserts.assertCounter("BatchesWritten", 2L, metrics);
+    MetricsAsserts.assertCounter("BatchesWrittenWhileLagging", 1L, metrics);
+    MetricsAsserts.assertGauge("CurrentLagTxns", 98L, metrics);
+
   }
   
   
