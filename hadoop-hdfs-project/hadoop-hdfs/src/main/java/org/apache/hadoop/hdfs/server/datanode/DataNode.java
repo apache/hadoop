@@ -281,7 +281,7 @@ public class DataNode extends Configured
   private AbstractList<File> dataDirs;
   private Configuration conf;
 
-  private final String userWithLocalPathAccess;
+  private final List<String> usersWithLocalPathAccess;
   private boolean connectToDnViaHostname;
   ReadaheadPool readaheadPool;
   private final boolean getHdfsBlockLocationsEnabled;
@@ -304,8 +304,8 @@ public class DataNode extends Configured
            final SecureResources resources) throws IOException {
     super(conf);
 
-    this.userWithLocalPathAccess =
-        conf.get(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY);
+    this.usersWithLocalPathAccess = Arrays.asList(
+        conf.getTrimmedStrings(DFSConfigKeys.DFS_BLOCK_LOCAL_PATH_ACCESS_USER_KEY));
     this.connectToDnViaHostname = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
         DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
@@ -1012,7 +1012,7 @@ public class DataNode extends Configured
   private void checkBlockLocalPathAccess() throws IOException {
     checkKerberosAuthMethod("getBlockLocalPathInfo()");
     String currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
-    if (!currentUser.equals(this.userWithLocalPathAccess)) {
+    if (!usersWithLocalPathAccess.contains(currentUser)) {
       throw new AccessControlException(
           "Can't continue with getBlockLocalPathInfo() "
               + "authorization. The user " + currentUser

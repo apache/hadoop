@@ -265,6 +265,8 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3888. Clean up BlockPlacementPolicyDefault.  (Jing Zhao via szetszwo)
 
+    HDFS-3907. Allow multiple users for local block readers. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log
