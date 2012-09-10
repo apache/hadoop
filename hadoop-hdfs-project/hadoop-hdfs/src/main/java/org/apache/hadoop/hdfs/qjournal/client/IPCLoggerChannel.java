@@ -85,6 +85,8 @@ public class IPCLoggerChannel implements AsyncLogger {
   private final NamespaceInfo nsInfo;
   private int httpPort = -1;
   
+  private final IPCLoggerChannelMetrics metrics;
+  
   /**
    * The number of bytes of edits data still in the queue.
    */
@@ -154,6 +156,8 @@ public class IPCLoggerChannel implements AsyncLogger {
     
     executor = MoreExecutors.listeningDecorator(
         createExecutor());
+    
+    metrics = IPCLoggerChannelMetrics.create(this);
   }
   
   @Override
@@ -261,6 +265,10 @@ public class IPCLoggerChannel implements AsyncLogger {
   public synchronized int getQueuedEditsSize() {
     return queuedEditsSizeBytes;
   }
+  
+  public InetSocketAddress getRemoteAddress() {
+    return addr;
+  }
 
   /**
    * @return true if the server has gotten out of sync from the client,
@@ -330,6 +338,7 @@ public class IPCLoggerChannel implements AsyncLogger {
         public Void call() throws IOException {
           throwIfOutOfSync();
 
+          long rpcSendTimeNanos = System.nanoTime();
           try {
             getProxy().journal(createReqInfo(),
                 segmentTxId, firstTxnId, numTxns, data);
@@ -343,6 +352,14 @@ public class IPCLoggerChannel implements AsyncLogger {
               outOfSync = true;
             }
             throw e;
+          } finally {
+            long now = System.nanoTime();
+            long rpcTime = TimeUnit.MICROSECONDS.convert(
+                now - rpcSendTimeNanos, TimeUnit.NANOSECONDS);
+            long endToEndTime = TimeUnit.MICROSECONDS.convert(
+                now - submitNanos, TimeUnit.NANOSECONDS);
+            metrics.addWriteEndToEndLatency(endToEndTime);
+            metrics.addWriteRpcLatency(rpcTime);
           }
           synchronized (IPCLoggerChannel.this) {
             highestAckedTxId = firstTxnId + numTxns - 1;
@@ -547,11 +564,11 @@ public class IPCLoggerChannel implements AsyncLogger {
     }
   }
   
-  private long getLagTxns() {
+  public synchronized long getLagTxns() {
     return Math.max(committedTxId - highestAckedTxId, 0);
   }
   
-  private long getLagTimeMillis() {
+  public synchronized long getLagTimeMillis() {
     return TimeUnit.MILLISECONDS.convert(
         Math.max(lastCommitNanos - lastAckNanos, 0),
         TimeUnit.NANOSECONDS);

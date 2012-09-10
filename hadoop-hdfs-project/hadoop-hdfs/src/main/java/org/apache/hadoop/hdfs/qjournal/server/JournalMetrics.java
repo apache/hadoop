@@ -27,6 +27,10 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
+/**
+ * The server-side metrics for a journal from the JournalNode's
+ * perspective.
+ */
 @Metrics(about="Journal metrics", context="dfs")
 class JournalMetrics {
   final MetricsRegistry registry = new MetricsRegistry("JournalNode");

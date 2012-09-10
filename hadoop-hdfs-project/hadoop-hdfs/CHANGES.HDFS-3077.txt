@@ -60,3 +60,5 @@ HDFS-3885. QJM: optimize log sync when JN is lagging behind (todd)
 HDFS-3900. QJM: avoid validating log segments on log rolls (todd)
 
 HDFS-3901. QJM: send 'heartbeat' messages to JNs even when they are out-of-sync (todd)
+
+HDFS-3899. QJM: Add client-side metrics (todd)
