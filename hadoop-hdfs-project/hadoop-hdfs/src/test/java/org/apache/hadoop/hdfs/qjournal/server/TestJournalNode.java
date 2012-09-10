@@ -23,15 +23,17 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
+import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.client.IPCLoggerChannel;
@@ -49,6 +51,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Bytes;
 import com.google.common.primitives.Ints;
 
@@ -70,6 +73,12 @@ public class TestJournalNode {
   
   @Before
   public void setup() throws Exception {
+    File editsDir = new File(MiniDFSCluster.getBaseDirectory() +
+        File.separator + "TestJournalNode");
+    FileUtil.fullyDelete(editsDir);
+    
+    conf.set(DFSConfigKeys.DFS_JOURNALNODE_EDITS_DIR_KEY,
+        editsDir.getAbsolutePath());
     conf.set(DFSConfigKeys.DFS_JOURNALNODE_RPC_ADDRESS_KEY,
         "0.0.0.0:0");
     jn = new JournalNode();
@@ -274,6 +283,39 @@ public class TestJournalNode {
     } catch (Exception e) {
       GenericTestUtils.assertExceptionContains(errString, e);
     }
+  }
+  
+  /**
+   * Simple test of how fast the code path is to write edits.
+   * This isn't a true unit test, but can be run manually to
+   * check performance.
+   * 
+   * At the time of development, this test ran in ~4sec on an
+   * SSD-enabled laptop (1.8ms/batch).
+   */
+  @Test(timeout=100000)
+  public void testPerformance() throws Exception {
+    doPerfTest(8192, 1024); // 8MB
+  }
+  
+  private void doPerfTest(int editsSize, int numEdits) throws Exception {
+    byte[] data = new byte[editsSize];
+    ch.newEpoch(1).get();
+    ch.setEpoch(1);
+    ch.startLogSegment(1).get();
+    
+    Stopwatch sw = new Stopwatch().start();
+    for (int i = 1; i < numEdits; i++) {
+      ch.sendEdits(1L, i, 1, data).get();
+    }
+    long time = sw.elapsedMillis();
+    
+    System.err.println("Wrote " + numEdits + " batches of " + editsSize +
+        " bytes in " + time + "ms");
+    float avgRtt = (float)time/(float)numEdits;
+    long throughput = ((long)numEdits * editsSize * 1000L)/time;
+    System.err.println("Time per batch: " + avgRtt);
+    System.err.println("Throughput: " + throughput + " bytes/sec");
   }
   
   // TODO:

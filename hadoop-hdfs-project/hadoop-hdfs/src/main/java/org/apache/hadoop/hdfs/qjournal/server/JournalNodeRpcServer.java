@@ -23,6 +23,7 @@ import java.net.URL;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
@@ -54,8 +55,15 @@ class JournalNodeRpcServer implements QJournalProtocol {
   JournalNodeRpcServer(Configuration conf, JournalNode jn) throws IOException {
     this.jn = jn;
     
-    InetSocketAddress addr = getAddress(conf);
-    RPC.setProtocolEngine(conf, QJournalProtocolPB.class,
+    Configuration confCopy = new Configuration(conf);
+    
+    // Ensure that nagling doesn't kick in, which could cause latency issues.
+    confCopy.setBoolean(
+        CommonConfigurationKeysPublic.IPC_SERVER_TCPNODELAY_KEY,
+        true);
+    
+    InetSocketAddress addr = getAddress(confCopy);
+    RPC.setProtocolEngine(confCopy, QJournalProtocolPB.class,
         ProtobufRpcEngine.class);
     QJournalProtocolServerSideTranslatorPB translator =
         new QJournalProtocolServerSideTranslatorPB(this);
@@ -65,13 +73,13 @@ class JournalNodeRpcServer implements QJournalProtocol {
     this.server = RPC.getServer(
         QJournalProtocolPB.class,
         service, addr.getHostName(),
-            addr.getPort(), HANDLER_COUNT, false, conf,
+            addr.getPort(), HANDLER_COUNT, false, confCopy,
             null /*secretManager*/);
 
     // set service-level authorization security policy
-    if (conf.getBoolean(
+    if (confCopy.getBoolean(
       CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
-          server.refreshServiceAcl(conf, new HDFSPolicyProvider());
+          server.refreshServiceAcl(confCopy, new HDFSPolicyProvider());
     }
   }
 

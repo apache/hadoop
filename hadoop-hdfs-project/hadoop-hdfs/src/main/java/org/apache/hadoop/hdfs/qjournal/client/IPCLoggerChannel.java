@@ -29,6 +29,7 @@ import java.util.concurrent.Executors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.PBHelper;
@@ -166,16 +167,26 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
   
   protected QJournalProtocol createProxy() throws IOException {
+    final Configuration confCopy = new Configuration(conf);
+    
+    // Need to set NODELAY or else batches larger than MTU can trigger 
+    // 40ms nagling delays.
+    confCopy.setBoolean(
+        CommonConfigurationKeysPublic.IPC_CLIENT_TCPNODELAY_KEY,
+        true);
+    
+    RPC.setProtocolEngine(confCopy,
+        QJournalProtocolPB.class, ProtobufRpcEngine.class);
     return SecurityUtil.doAsLoginUser(
         new PrivilegedExceptionAction<QJournalProtocol>() {
           @Override
           public QJournalProtocol run() throws IOException {
-            RPC.setProtocolEngine(conf,
+            RPC.setProtocolEngine(confCopy,
                 QJournalProtocolPB.class, ProtobufRpcEngine.class);
             QJournalProtocolPB pbproxy = RPC.getProxy(
                 QJournalProtocolPB.class,
                 RPC.getProtocolVersion(QJournalProtocolPB.class),
-                addr, conf);
+                addr, confCopy);
             return new QJournalProtocolTranslatorPB(pbproxy);
           }
         });
