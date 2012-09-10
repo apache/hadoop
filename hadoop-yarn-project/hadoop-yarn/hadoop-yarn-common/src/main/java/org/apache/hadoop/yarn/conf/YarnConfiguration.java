@@ -416,10 +416,13 @@ public class YarnConfiguration extends Configuration {
   public final static String NM_CONTAINER_MON_INTERVAL_MS =
     NM_PREFIX + "container-monitor.interval-ms";
   public final static int DEFAULT_NM_CONTAINER_MON_INTERVAL_MS = 3000;
-  
+
   /** Class that calculates containers current resource utilization.*/
   public static final String NM_CONTAINER_MON_RESOURCE_CALCULATOR =
     NM_PREFIX + "container-monitor.resource-calculator.class";
+  /** Class that calculates process tree resource utilization.*/
+  public static final String NM_CONTAINER_MON_PROCESS_TREE =
+    NM_PREFIX + "container-monitor.process-tree.class";
 
   /**
    * Enable/Disable disks' health checker. Default is true.
@@ -571,8 +574,8 @@ public class YarnConfiguration extends Configuration {
       "$HADOOP_COMMON_HOME/share/hadoop/common/lib/*",
       "$HADOOP_HDFS_HOME/share/hadoop/hdfs/*",
       "$HADOOP_HDFS_HOME/share/hadoop/hdfs/lib/*",
-      "$YARN_HOME/share/hadoop/mapreduce/*",
-      "$YARN_HOME/share/hadoop/mapreduce/lib/*"};
+      "$YARN_HOME/share/hadoop/yarn/*",
+      "$YARN_HOME/share/hadoop/yarn/lib/*"};
 
   /** Container temp directory */
   public static final String DEFAULT_CONTAINER_TEMP_DIR = "./tmp";

@@ -82,7 +82,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
 
   /**
    * Test to verify the check for whether a process tree is over limit or not.
-   * 
+   *
    * @throws IOException
    *           if there was a problem setting up the fake procfs directories or
    *           files.
@@ -132,7 +132,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       // tree rooted at 100 is over limit immediately, as it is
       // twice over the mem limit.
       ProcfsBasedProcessTree pTree = new ProcfsBasedProcessTree(
-                                          "100", true,
+                                          "100",
                                           procfsRootDir.getAbsolutePath());
       pTree.getProcessTree();
       assertTrue("tree rooted at 100 should be over limit " +
@@ -140,7 +140,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
 
       // the tree rooted at 200 is initially below limit.
-      pTree = new ProcfsBasedProcessTree("200", true,
+      pTree = new ProcfsBasedProcessTree("200",
                                           procfsRootDir.getAbsolutePath());
       pTree.getProcessTree();
       assertFalse("tree rooted at 200 shouldn't be over limit " +
@@ -154,7 +154,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
 
       // the tree rooted at 600 is never over limit.
-      pTree = new ProcfsBasedProcessTree("600", true,
+      pTree = new ProcfsBasedProcessTree("600",
                                             procfsRootDir.getAbsolutePath());
       pTree.getProcessTree();
       assertFalse("tree rooted at 600 should never be over limit.",
@@ -198,7 +198,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
         recordFactory.newRecordInstance(ApplicationId.class);
     appId.setClusterTimestamp(0);
     appId.setId(0);
-    ApplicationAttemptId appAttemptId = 
+    ApplicationAttemptId appAttemptId =
         recordFactory.newRecordInstance(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(appId);
     appAttemptId.setAttemptId(1);
@@ -220,7 +220,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     rsrc_alpha.setType(LocalResourceType.FILE);
     rsrc_alpha.setTimestamp(scriptFile.lastModified());
     String destinationFile = "dest_file";
-    Map<String, LocalResource> localResources = 
+    Map<String, LocalResource> localResources =
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);

@@ -1,6 +1,6 @@
 Hadoop HDFS Change Log
 
-Trunk (unreleased changes)
+Trunk (Unreleased)
 
   INCOMPATIBLE CHANGES
 
@@ -215,7 +215,22 @@ Trunk (unreleased changes)
 
     HDFS-3678. Edit log files are never being purged from 2NN. (atm)
 
-Branch-2 ( Unreleased changes )
+Release 2.0.3-alpha - Unreleased 
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
+    HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
+    (Jaimin D Jetly and Jing Zhao via szetszwo)
+
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
 
@@ -723,6 +738,18 @@ Branch-2 ( Unreleased changes )
 
     HDFS-3469. start-dfs.sh will start zkfc, but stop-dfs.sh will not stop zkfc similarly.
     (Vinay via umamahesh)
+
+    HDFS-1490. TransferFSImage should timeout (Dmytro Molkov and Vinay via todd)
+
+    HDFS-3828. Block Scanner rescans blocks too frequently.
+    (Andy Isaacson via eli)
+
+    HDFS-3809. Make BKJM use protobufs for all serialization with ZK.(Ivan Kelly via umamahesh)
+
+    HDFS-3895. hadoop-client must include commons-cli (tucu)
+
+    HDFS-2757. Cannot read a local block that's being written to when
+    using the local read short circuit. (Jean-Daniel Cryans via eli)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
@@ -1622,6 +1649,9 @@ Release 0.23.3 - UNRELEASED
     HDFS-3873. Hftp assumes security is disabled if token fetch fails (daryn)
 
     HDFS-3852. TestHftpDelegationToken is broken after HADOOP-8225 (daryn)
+
+    HDFS-3890. filecontext mkdirs doesn't apply umask as expected
+    (Tom Graves via daryn)
 
 Release 0.23.2 - UNRELEASED
 

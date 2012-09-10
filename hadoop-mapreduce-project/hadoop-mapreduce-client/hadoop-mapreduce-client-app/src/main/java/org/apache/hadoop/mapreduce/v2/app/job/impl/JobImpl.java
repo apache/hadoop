@@ -759,7 +759,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
         job.getCommitter().commitJob(job.getJobContext());
       } catch (IOException e) {
         LOG.error("Could not do commit for Job", e);
-        job.logJobHistoryFinishedEvent();
+        job.addDiagnostic("Job commit failed: " + e.getMessage());
+        job.abortJob(org.apache.hadoop.mapreduce.JobStatus.State.FAILED);
         return job.finished(JobState.FAILED);
       }
       job.logJobHistoryFinishedEvent();
@@ -1199,7 +1200,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
 
-  private void abortJob(
+  protected void abortJob(
       org.apache.hadoop.mapreduce.JobStatus.State finalState) {
     try {
       committer.abortJob(jobContext, finalState);
@@ -1501,7 +1502,7 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
     }
   }
 
-  private void addDiagnostic(String diag) {
+  protected void addDiagnostic(String diag) {
     diagnostics.add(diag);
   }
   

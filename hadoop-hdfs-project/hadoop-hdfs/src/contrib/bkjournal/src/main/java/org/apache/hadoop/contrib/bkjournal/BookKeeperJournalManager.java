@@ -50,6 +50,11 @@ import java.io.IOException;
 
 import java.net.URI;
 
+import org.apache.hadoop.hdfs.protocolPB.PBHelper;
+import org.apache.hadoop.contrib.bkjournal.BKJournalProtos.VersionProto;
+import com.google.protobuf.TextFormat;
+import static com.google.common.base.Charsets.UTF_8;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import com.google.common.annotations.VisibleForTesting;
@@ -143,29 +148,8 @@ public class BookKeeperJournalManager implements JournalManager {
   private final int quorumSize;
   private final String digestpw;
   private final CountDownLatch zkConnectLatch;
-
+  private final NamespaceInfo nsInfo;
   private LedgerHandle currentLedger = null;
-
-  private int bytesToInt(byte[] b) {
-    assert b.length >= 4;
-    return b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3];
-  }
-
-  private byte[] intToBytes(int i) {
-    return new byte[] {
-      (byte)(i >> 24),
-      (byte)(i >> 16),
-      (byte)(i >> 8),
-      (byte)(i) };
-  }
-
-  BookKeeperJournalManager(Configuration conf, URI uri) throws IOException {
-    this(conf, uri, null);
-    // TODO(ivank): update BookKeeperJournalManager to do something
-    // with the NamespaceInfo. This constructor has been added
-    // for compatibility with the old tests, and may be removed
-    // when the tests are updated.
-  }
 
   /**
    * Construct a Bookkeeper journal manager.
@@ -173,6 +157,8 @@ public class BookKeeperJournalManager implements JournalManager {
   public BookKeeperJournalManager(Configuration conf, URI uri,
       NamespaceInfo nsInfo) throws IOException {
     this.conf = conf;
+    this.nsInfo = nsInfo;
+
     String zkConnect = uri.getAuthority().replace(";", ",");
     String zkPath = uri.getPath();
     ensembleSize = conf.getInt(BKJM_BOOKKEEPER_ENSEMBLE_SIZE,
@@ -202,10 +188,32 @@ public class BookKeeperJournalManager implements JournalManager {
       Stat versionStat = zkc.exists(versionPath, false);
       if (versionStat != null) {
         byte[] d = zkc.getData(versionPath, false, versionStat);
+        VersionProto.Builder builder = VersionProto.newBuilder();
+        TextFormat.merge(new String(d, UTF_8), builder);
+        if (!builder.isInitialized()) {
+          throw new IOException("Invalid/Incomplete data in znode");
+        }
+        VersionProto vp = builder.build();
+
         // There's only one version at the moment
-        assert bytesToInt(d) == BKJM_LAYOUT_VERSION;
-      } else {
-        zkc.create(versionPath, intToBytes(BKJM_LAYOUT_VERSION),
+        assert vp.getLayoutVersion() == BKJM_LAYOUT_VERSION;
+
+        NamespaceInfo readns = PBHelper.convert(vp.getNamespaceInfo());
+
+        if (nsInfo.getNamespaceID() != readns.getNamespaceID() ||
+            !nsInfo.clusterID.equals(readns.getClusterID()) ||
+            !nsInfo.getBlockPoolID().equals(readns.getBlockPoolID())) {
+          String err = String.format("Environment mismatch. Running process %s"
+                                     +", stored in ZK %s", nsInfo, readns);
+          LOG.error(err);
+          throw new IOException(err);
+        }
+      } else if (nsInfo.getNamespaceID() > 0) {
+        VersionProto.Builder builder = VersionProto.newBuilder();
+        builder.setNamespaceInfo(PBHelper.convert(nsInfo))
+          .setLayoutVersion(BKJM_LAYOUT_VERSION);
+        byte[] data = TextFormat.printToString(builder.build()).getBytes(UTF_8);
+        zkc.create(versionPath, data,
                    Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
       }
 
@@ -214,11 +222,11 @@ public class BookKeeperJournalManager implements JournalManager {
             Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
       }
       prepareBookKeeperEnv();
-      bkc = new BookKeeper(new ClientConfiguration(),
-                           zkc);
+      bkc = new BookKeeper(new ClientConfiguration(), zkc);
     } catch (KeeperException e) {
       throw new IOException("Error initializing zk", e);
     } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
       throw new IOException("Interrupted while initializing bk journal manager",
                             ie);
     }
@@ -322,13 +330,14 @@ public class BookKeeperJournalManager implements JournalManager {
     } catch (KeeperException ke) {
       throw new IOException("Error in zookeeper while creating ledger", ke);
     } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
       throw new IOException("Interrupted creating ledger", ie);
     }
 
     try {
       String znodePath = inprogressZNode(txId);
       EditLogLedgerMetadata l = new EditLogLedgerMetadata(znodePath,
-          HdfsConstants.LAYOUT_VERSION,  currentLedger.getId(), txId);
+          HdfsConstants.LAYOUT_VERSION, currentLedger.getId(), txId);
       /* Write the ledger metadata out to the inprogress ledger znode
        * This can fail if for some reason our write lock has
        * expired (@see WriteLock) and another process has managed to
@@ -356,6 +365,7 @@ public class BookKeeperJournalManager implements JournalManager {
       //log & ignore, an IOException will be thrown soon
       LOG.error("Error closing ledger", bke);
     } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
       LOG.warn("Interrupted while closing ledger", ie);
     }
   }
@@ -425,6 +435,7 @@ public class BookKeeperJournalManager implements JournalManager {
     } catch (KeeperException e) {
       throw new IOException("Error finalising ledger", e);
     } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
       throw new IOException("Error finalising ledger", ie);
     } 
   }
@@ -454,6 +465,7 @@ public class BookKeeperJournalManager implements JournalManager {
         } catch (BKException e) {
           throw new IOException("Could not open ledger for " + fromTxId, e);
         } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
           throw new IOException("Interrupted opening ledger for "
                                          + fromTxId, ie);
         }
@@ -567,6 +579,7 @@ public class BookKeeperJournalManager implements JournalManager {
       } catch (KeeperException ke) {
         throw new IOException("Couldn't get list of inprogress segments", ke);
       } catch (InterruptedException ie) {
+        Thread.currentThread().interrupt();
         throw new IOException("Interrupted getting list of inprogress segments",
                               ie);
       }
@@ -583,6 +596,7 @@ public class BookKeeperJournalManager implements JournalManager {
           zkc.delete(l.getZkPath(), stat.getVersion());
           bkc.deleteLedger(l.getLedgerId());
         } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
           LOG.error("Interrupted while purging " + l, ie);
         } catch (BKException bke) {
           LOG.error("Couldn't delete ledger from bookkeeper", bke);
@@ -601,6 +615,7 @@ public class BookKeeperJournalManager implements JournalManager {
     } catch (BKException bke) {
       throw new IOException("Couldn't close bookkeeper client", bke);
     } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
       throw new IOException("Interrupted while closing journal manager", ie);
     }
   }
@@ -635,6 +650,7 @@ public class BookKeeperJournalManager implements JournalManager {
     } catch (BKException bke) {
       throw new IOException("Exception opening ledger for " + l, bke);
     } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
       throw new IOException("Interrupted opening ledger for " + l, ie);
     }
 
@@ -692,6 +708,7 @@ public class BookKeeperJournalManager implements JournalManager {
     } catch (KeeperException e) {
       throw new IOException("Exception reading ledger list from zk", e);
     } catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
       throw new IOException("Interrupted getting list of ledgers from zk", ie);
     }
 

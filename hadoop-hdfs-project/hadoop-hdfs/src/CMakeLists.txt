@@ -147,4 +147,7 @@ target_link_libraries(test_libhdfs_threaded
     pthread
 )
 
+IF(REQUIRE_LIBWEBHDFS)
+    add_subdirectory(contrib/libwebhdfs)
+ENDIF(REQUIRE_LIBWEBHDFS)
 add_subdirectory(main/native/fuse-dfs)

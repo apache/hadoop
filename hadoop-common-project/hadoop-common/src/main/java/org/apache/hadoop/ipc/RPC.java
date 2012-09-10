@@ -629,7 +629,7 @@ public class RPC {
 
   /** Construct a server for a protocol implementation instance listening on a
    * port and address.
-   * @deprecated protocol interface should be passed.
+   * @deprecated Please use {@link Builder} to build the {@link Server}
    */
   @Deprecated
   public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf) 
@@ -639,7 +639,7 @@ public class RPC {
 
   /** Construct a server for a protocol implementation instance listening on a
    * port and address.
-   * @deprecated protocol interface should be passed.
+   * @deprecated Please use {@link Builder} to build the {@link Server}
    */
   @Deprecated
   public static Server getServer(final Object instance, final String bindAddress, final int port,
@@ -651,7 +651,10 @@ public class RPC {
                      null);
   }
 
-  /** Construct a server for a protocol implementation instance. */
+  /** Construct a server for a protocol implementation instance.
+   *  @deprecated Please use {@link Builder} to build the {@link Server}
+   */
+  @Deprecated
   public static Server getServer(Class<?> protocol,
                                  Object instance, String bindAddress,
                                  int port, Configuration conf) 
@@ -661,7 +664,7 @@ public class RPC {
   }
 
   /** Construct a server for a protocol implementation instance.
-   * @deprecated secretManager should be passed.
+   * @deprecated Please use {@link Builder} to build the {@link Server}
    */
   @Deprecated
   public static Server getServer(Class<?> protocol,
@@ -674,7 +677,10 @@ public class RPC {
                  conf, null, null);
   }
   
-  /** Construct a server for a protocol implementation instance. */
+  /** Construct a server for a protocol implementation instance. 
+   *  @deprecated Please use {@link Builder} to build the {@link Server}
+   */
+  @Deprecated
   public static Server getServer(Class<?> protocol,
                                  Object instance, String bindAddress, int port,
                                  int numHandlers,
@@ -685,6 +691,10 @@ public class RPC {
         conf, secretManager, null);
   }
   
+  /**
+   *  @deprecated Please use {@link Builder} to build the {@link Server}
+   */
+  @Deprecated
   public static Server getServer(Class<?> protocol,
       Object instance, String bindAddress, int port,
       int numHandlers,
@@ -697,8 +707,10 @@ public class RPC {
                  verbose, conf, secretManager, portRangeConfig);
   }
 
-  /** Construct a server for a protocol implementation instance. */
-
+  /** Construct a server for a protocol implementation instance.
+   *  @deprecated Please use {@link Builder} to build the {@link Server}
+   */
+  @Deprecated
   public static <PROTO extends VersionedProtocol, IMPL extends PROTO> 
         Server getServer(Class<PROTO> protocol,
                                  IMPL instance, String bindAddress, int port,

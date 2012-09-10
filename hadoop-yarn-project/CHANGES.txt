@@ -1,6 +1,6 @@
 Hadoop MapReduce Change Log
 
-Trunk (unreleased changes)
+Trunk - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -10,11 +10,14 @@ Trunk (unreleased changes)
 
     YARN-84. Use Builder to build RPC server. (Brandon Li via suresh)
 
+    YARN-57. Allow process-tree based resource calculation et al. to be
+    pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
+
   OPTIMAZATIONS
 
   BUG FIXES
 
-Branch-2 ( Unreleased changes )
+Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
 
@@ -22,14 +25,11 @@ Branch-2 ( Unreleased changes )
 
   IMPROVEMENTS
 
-  OPTIMAZATIONS
+  OPTIMIZATIONS
 
   BUG FIXES
 
-    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
-    via atm)
-
-Release 2.1.0-alpha - Unreleased 
+Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
 
@@ -43,6 +43,9 @@ Release 2.1.0-alpha - Unreleased
 
     YARN-10. Fix DistributedShell module to not have a dependency on 
     hadoop-mapreduce-client-core. (Hitesh Shah via vinodkv)
+
+    YARN-80. Add support for delaying rack-local containers in
+    CapacityScheduler. (acmurthy) 
 
   OPTIMAZATIONS
 
@@ -62,6 +65,15 @@ Release 2.1.0-alpha - Unreleased
     YARN-42. Modify NM's non-aggregating logs' handler to stop properly so that
     NMs don't get NPEs on startup errors. (Devaraj K via vinodkv)
 
+    YARN-15. Updated default classpath for YARN applications to reflect split of
+    YARN into a sub-project. (Arun C Murthy via vinodkv)
+
+    YARN-75. Modified ResourceManager's RMContainer to handle a valid RELEASE
+    event at RUNNING state. (Siddharth Seth via vinodkv)
+
+    MAPREDUCE-2374. "Text File Busy" errors launching MR tasks. (Andy Isaacson
+    via atm)
+
 Release 0.23.4 - UNRELEASED
 
   INCOMPATIBLE CHANGES
@@ -69,6 +81,8 @@ Release 0.23.4 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+     Change package of YarnClient to org.apache.hadoop. (Bikas Saha via vinodkv)
 
   OPTIMIZATIONS
 
@@ -109,3 +123,9 @@ Release 0.23.3 - Unreleased
     thus causes all containers to be rejected. (vinodkv)
 
     YARN-66. aggregated logs permissions not set properly (tgraves via bobby)
+
+    YARN-68. NodeManager will refuse to shutdown indefinitely due to container
+    log aggregation (daryn via bobby)
+
+    YARN-87. NM ResourceLocalizationService does not set permissions of local 
+    cache directories (Jason Lowe via tgraves)

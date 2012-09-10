@@ -44,7 +44,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class ProcfsBasedProcessTree {
+public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
 
   static final Log LOG = LogFactory
       .getLog(ProcfsBasedProcessTree.class);
@@ -91,44 +91,36 @@ public class ProcfsBasedProcessTree {
   // to enable testing, using this variable which can be configured
   // to a test directory.
   private String procfsDir;
-  
+
   static private String deadPid = "-1";
   private String pid = deadPid;
   static private Pattern numberPattern = Pattern.compile("[1-9][0-9]*");
   private Long cpuTime = 0L;
-  private boolean setsidUsed = false;
 
   protected Map<String, ProcessInfo> processTree =
     new HashMap<String, ProcessInfo>();
 
   public ProcfsBasedProcessTree(String pid) {
-    this(pid, false);
-  }
-
-  public ProcfsBasedProcessTree(String pid, boolean setsidUsed) {
-    this(pid, setsidUsed, PROCFS);
+    this(pid, PROCFS);
   }
 
   /**
    * Build a new process tree rooted at the pid.
-   * 
+   *
    * This method is provided mainly for testing purposes, where
    * the root of the proc file system can be adjusted.
-   * 
+   *
    * @param pid root of the process tree
-   * @param setsidUsed true, if setsid was used for the root pid
-   * @param procfsDir the root of a proc file system - only used for testing. 
+   * @param procfsDir the root of a proc file system - only used for testing.
    */
-  public ProcfsBasedProcessTree(String pid, boolean setsidUsed,
-      String procfsDir) {
+  public ProcfsBasedProcessTree(String pid, String procfsDir) {
     this.pid = getValidPID(pid);
-    this.setsidUsed = setsidUsed;
     this.procfsDir = procfsDir;
   }
 
   /**
    * Checks if the ProcfsBasedProcessTree is available on this system.
-   * 
+   *
    * @return true if ProcfsBasedProcessTree is available. False otherwise.
    */
   public static boolean isAvailable() {
@@ -149,18 +141,19 @@ public class ProcfsBasedProcessTree {
   /**
    * Get the process-tree with latest state. If the root-process is not alive,
    * an empty tree will be returned.
-   * 
+   *
    * @return the process-tree with latest state.
    */
-  public ProcfsBasedProcessTree getProcessTree() {
+  @Override
+  public ResourceCalculatorProcessTree getProcessTree() {
     if (!pid.equals(deadPid)) {
       // Get the list of processes
       List<String> processList = getProcessList();
 
       Map<String, ProcessInfo> allProcessInfo = new HashMap<String, ProcessInfo>();
-      
+
       // cache the processTree to get the age for processes
-      Map<String, ProcessInfo> oldProcs = 
+      Map<String, ProcessInfo> oldProcs =
               new HashMap<String, ProcessInfo>(processTree);
       processTree.clear();
 
@@ -178,7 +171,7 @@ public class ProcfsBasedProcessTree {
       }
 
       if (me == null) {
-        return this; 
+        return this;
       }
 
       // Add each process to its parent.
@@ -210,7 +203,7 @@ public class ProcfsBasedProcessTree {
         if (procs.getValue() != null) {
           procs.getValue().updateJiffy(oldInfo);
           if (oldInfo != null) {
-            procs.getValue().updateAge(oldInfo);  
+            procs.getValue().updateAge(oldInfo);
           }
         }
       }
@@ -226,6 +219,7 @@ public class ProcfsBasedProcessTree {
   /** Verify that the given process id is same as its process group id.
    * @return true if the process id matches else return false.
    */
+  @Override
   public boolean checkPidPgrpidForMatch() {
     return checkPidPgrpidForMatch(pid, PROCFS);
   }
@@ -252,10 +246,11 @@ public class ProcfsBasedProcessTree {
 
   /**
    * Get a dump of the process-tree.
-   * 
+   *
    * @return a string concatenating the dump of information of all the processes
    *         in the process-tree
    */
+  @Override
   public String getProcessTreeDump() {
     StringBuilder ret = new StringBuilder();
     // The header.
@@ -275,36 +270,14 @@ public class ProcfsBasedProcessTree {
 
   /**
    * Get the cumulative virtual memory used by all the processes in the
-   * process-tree.
-   * 
-   * @return cumulative virtual memory used by the process-tree in bytes.
-   */
-  public long getCumulativeVmem() {
-    // include all processes.. all processes will be older than 0.
-    return getCumulativeVmem(0);
-  }
-
-  /**
-   * Get the cumulative resident set size (rss) memory used by all the processes
-   * in the process-tree.
-   *
-   * @return cumulative rss memory used by the process-tree in bytes. return 0
-   *         if it cannot be calculated
-   */
-  public long getCumulativeRssmem() {
-    // include all processes.. all processes will be older than 0.
-    return getCumulativeRssmem(0);
-  }
-
-  /**
-   * Get the cumulative virtual memory used by all the processes in the
    * process-tree that are older than the passed in age.
-   * 
+   *
    * @param olderThanAge processes above this age are included in the
    *                      memory addition
    * @return cumulative virtual memory used by the process-tree in bytes,
    *          for processes older than this age.
    */
+  @Override
   public long getCumulativeVmem(int olderThanAge) {
     long total = 0;
     for (ProcessInfo p : processTree.values()) {
@@ -314,7 +287,7 @@ public class ProcfsBasedProcessTree {
     }
     return total;
   }
-  
+
   /**
    * Get the cumulative resident set size (rss) memory used by all the processes
    * in the process-tree that are older than the passed in age.
@@ -325,6 +298,7 @@ public class ProcfsBasedProcessTree {
    *          for processes older than this age. return 0 if it cannot be
    *          calculated
    */
+  @Override
   public long getCumulativeRssmem(int olderThanAge) {
     if (PAGE_SIZE < 0) {
       return 0;
@@ -345,6 +319,7 @@ public class ProcfsBasedProcessTree {
    * @return cumulative CPU time in millisecond since the process-tree created
    *         return 0 if it cannot be calculated
    */
+  @Override
   public long getCumulativeCpuTime() {
     if (JIFFY_LENGTH_IN_MILLIS < 0) {
       return 0;
@@ -352,7 +327,7 @@ public class ProcfsBasedProcessTree {
     long incJiffies = 0;
     for (ProcessInfo p : processTree.values()) {
       if (p != null) {
-        incJiffies += p.dtime;
+        incJiffies += p.getDtime();
       }
     }
     cpuTime += incJiffies * JIFFY_LENGTH_IN_MILLIS;
@@ -391,14 +366,14 @@ public class ProcfsBasedProcessTree {
    * Construct the ProcessInfo using the process' PID and procfs rooted at the
    * specified directory and return the same. It is provided mainly to assist
    * testing purposes.
-   * 
+   *
    * Returns null on failing to read from procfs,
    *
    * @param pinfo ProcessInfo that needs to be updated
    * @param procfsDir root of the proc file system
    * @return updated ProcessInfo, null on errors.
    */
-  private static ProcessInfo constructProcessInfo(ProcessInfo pinfo, 
+  private static ProcessInfo constructProcessInfo(ProcessInfo pinfo,
                                                     String procfsDir) {
     ProcessInfo ret = null;
     // Read "procfsDir/<pid>/stat" file - typically /proc/<pid>/stat
@@ -454,6 +429,7 @@ public class ProcfsBasedProcessTree {
    * Returns a string printing PIDs of process present in the
    * ProcfsBasedProcessTree. Output format : [pid pid ..]
    */
+  @Override
   public String toString() {
     StringBuffer pTree = new StringBuffer("[ ");
     for (String p : processTree.keySet()) {
@@ -464,9 +440,9 @@ public class ProcfsBasedProcessTree {
   }
 
   /**
-   * 
+   *
    * Class containing information of a process.
-   * 
+   *
    */
   private static class ProcessInfo {
     private String pid; // process-id
@@ -480,7 +456,7 @@ public class ProcfsBasedProcessTree {
     private final BigInteger MAX_LONG = BigInteger.valueOf(Long.MAX_VALUE);
     private BigInteger stime = new BigInteger("0"); // # of jiffies in kernel mode
     // how many times has this process been seen alive
-    private int age; 
+    private int age;
 
     // # of jiffies used since last update:
     private Long dtime = 0L;
@@ -539,13 +515,6 @@ public class ProcfsBasedProcessTree {
     public int getAge() {
       return age;
     }
-    
-    public boolean isParent(ProcessInfo p) {
-      if (pid.equals(p.getPpid())) {
-        return true;
-      }
-      return false;
-    }
 
     public void updateProcessInfo(String name, String ppid, Integer pgrpId,
         Integer sessionId, Long utime, BigInteger stime, Long vmem, Long rssmem) {
@@ -558,7 +527,7 @@ public class ProcfsBasedProcessTree {
       this.vmem = vmem;
       this.rssmemPage = rssmem;
     }
-    
+
     public void updateJiffy(ProcessInfo oldInfo) {
       if (oldInfo == null) {
         BigInteger sum = this.stime.add(BigInteger.valueOf(this.utime));
@@ -578,7 +547,7 @@ public class ProcfsBasedProcessTree {
     public void updateAge(ProcessInfo oldInfo) {
       this.age = oldInfo.age + 1;
     }
-    
+
     public boolean addChild(ProcessInfo p) {
       return children.add(p);
     }
