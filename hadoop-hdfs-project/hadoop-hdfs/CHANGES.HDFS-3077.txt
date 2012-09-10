@@ -54,3 +54,5 @@ HDFS-3893. QJM: Make QJM work with security enabled. (atm)
 HDFS-3897. QJM: TestBlockToken fails after HDFS-3893. (atm)
 
 HDFS-3898. QJM: enable TCP_NODELAY for IPC (todd)
+
+HDFS-3885. QJM: optimize log sync when JN is lagging behind (todd)

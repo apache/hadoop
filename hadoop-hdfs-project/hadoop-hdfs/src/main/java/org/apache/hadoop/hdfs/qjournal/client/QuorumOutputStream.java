@@ -77,7 +77,7 @@ class QuorumOutputStream extends EditLogOutputStream {
   }
 
   @Override
-  protected void flushAndSync() throws IOException {
+  protected void flushAndSync(boolean durable) throws IOException {
     int numReadyBytes = buf.countReadyBytes();
     if (numReadyBytes > 0) {
       int numReadyTxns = buf.countReadyTxns();

@@ -56,7 +56,7 @@ public class BinaryEditsVisitor implements OfflineEditsVisitor {
   @Override
   public void close(Throwable error) throws IOException {
     elfos.setReadyToFlush();
-    elfos.flushAndSync();
+    elfos.flushAndSync(true);
     elfos.close();
   }
 

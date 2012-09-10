@@ -301,17 +301,23 @@ class Journal implements Closeable {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Writing txid " + firstTxnId + "-" + lastTxnId);
     }
+
+    // If the edit has already been marked as committed, we know
+    // it has been fsynced on a quorum of other nodes, and we are
+    // "catching up" with the rest. Hence we do not need to fsync.
+    boolean isLagging = lastTxnId <= committedTxnId.get();
+    boolean shouldFsync = !isLagging;
     
     curSegment.writeRaw(records, 0, records.length);
     curSegment.setReadyToFlush();
     Stopwatch sw = new Stopwatch();
     sw.start();
-    curSegment.flush();
+    curSegment.flush(shouldFsync);
     sw.stop();
     
     metrics.addSync(sw.elapsedTime(TimeUnit.MICROSECONDS));
-    
-    if (committedTxnId.get() > lastTxnId) {
+
+    if (isLagging) {
       // This batch of edits has already been committed on a quorum of other
       // nodes. So, we are in "catch up" mode. This gets its own metric.
       metrics.batchesWrittenWhileLagging.incr(1);
