@@ -123,21 +123,31 @@ goto :eof
   @echo ^</service^>
   goto :eof
 
+@rem This changes %1, %2 etc. Hence those cannot be used after calling this.
 :make_command_arguments
   if "%2" == "" goto :eof
   set _count=0
+  set _hdfsarguments=
   if defined service_entry (set _shift=2) else (set _shift=1)
   if defined config_override (set /a _shift=!_shift! + 2)
-  for %%i in (%*) do (
-    set /a _count=!_count!+1
-    if !_count! GTR %_shift% ( 
-	if not defined _hdfsarguments (
-	  set _hdfsarguments=%%i
-	) else (
-          set _hdfsarguments=!_hdfsarguments! %%i
-	)
-    )
+  :SHIFTLOOP
+  set /a _count=!_count!+1
+  if !_count! GTR %_shift% goto :MakeCmdArgsLoop
+  shift
+  goto :SHIFTLOOP
+
+  :MakeCmdArgsLoop
+  if [%1]==[] goto :EndLoop 
+
+  if not defined _hdfsarguments (
+    set _hdfsarguments=%1
+  ) else (
+    set _hdfsarguments=!_hdfsarguments! %1
   )
+  shift
+  goto :MakeCmdArgsLoop 
+  :EndLoop 
+
   set hdfs-command-arguments=%_hdfsarguments%
   goto :eof
 

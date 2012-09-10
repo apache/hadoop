@@ -94,6 +94,9 @@ BUG FIXES
 
     HDFS-3763. TestNameNodeMXBean fails on Windows. (Brandon Li via suresh)
 
+    HADOOP-8739. Fix command line parsing on Windows. (Bikas Saha via
+    acmurthy)
+
     HDFS-3766. Fix TestStorageRestore on Windows. (Brandon Li via suresh)
 
     HADOOP-8657. Fix TestCLI to not hardcode file length since it's
