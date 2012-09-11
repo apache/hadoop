@@ -108,6 +108,11 @@ class JournalNodeRpcServer implements QJournalProtocol {
   }
 
   @Override
+  public boolean isFormatted(String journalId) throws IOException {
+    return jn.getOrCreateJournal(journalId).isFormatted();
+  }
+
+  @Override
   public GetJournalStateResponseProto getJournalState(String journalId)
         throws IOException {
     long epoch = jn.getOrCreateJournal(journalId).getLastPromisedEpoch(); 

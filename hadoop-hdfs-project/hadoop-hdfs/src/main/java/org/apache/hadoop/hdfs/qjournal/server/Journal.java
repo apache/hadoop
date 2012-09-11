@@ -402,10 +402,14 @@ class Journal implements Closeable {
     }
   }
   
+  public synchronized boolean isFormatted() {
+    return storage.isFormatted();
+  }
+
   private void checkFormatted() throws JournalNotFormattedException {
-    if (!storage.isFormatted()) {
-      throw new JournalNotFormattedException("Journal " + storage +
-          " not formatted");
+    if (!isFormatted()) {
+      throw new JournalNotFormattedException("Journal " +
+          storage.getSingularStorageDir() + " not formatted");
     }
   }
 

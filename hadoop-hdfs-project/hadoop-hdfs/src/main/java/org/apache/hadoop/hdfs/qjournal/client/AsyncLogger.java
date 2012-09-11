@@ -91,6 +91,11 @@ interface AsyncLogger {
   public ListenableFuture<Void> format(NamespaceInfo nsInfo);
 
   /**
+   * @return whether or not the remote node has any valid data.
+   */
+  public ListenableFuture<Boolean> isFormatted();
+  
+  /**
    * @return the state of the last epoch on the target node.
    */
   public ListenableFuture<GetJournalStateResponseProto> getJournalState();

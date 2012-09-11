@@ -294,6 +294,16 @@ public class IPCLoggerChannel implements AsyncLogger {
   }
 
   @Override
+  public ListenableFuture<Boolean> isFormatted() {
+    return executor.submit(new Callable<Boolean>() {
+      @Override
+      public Boolean call() throws IOException {
+        return getProxy().isFormatted(journalId);
+      }
+    });
+  }
+
+  @Override
   public ListenableFuture<GetJournalStateResponseProto> getJournalState() {
     return executor.submit(new Callable<GetJournalStateResponseProto>() {
       @Override

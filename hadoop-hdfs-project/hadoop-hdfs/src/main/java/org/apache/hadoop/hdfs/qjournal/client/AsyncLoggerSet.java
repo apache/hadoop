@@ -216,29 +216,7 @@ class AsyncLoggerSet {
   public QuorumCall<AsyncLogger, Boolean> isFormatted() {
     Map<AsyncLogger, ListenableFuture<Boolean>> calls = Maps.newHashMap();
     for (AsyncLogger logger : loggers) {
-      final SettableFuture<Boolean> ret = SettableFuture.create();
-      ListenableFuture<GetJournalStateResponseProto> jstate =
-          logger.getJournalState();
-      Futures.addCallback(jstate, new FutureCallback<GetJournalStateResponseProto>() {
-        @Override
-        public void onFailure(Throwable t) {
-          if (t instanceof RemoteException) {
-            t = ((RemoteException)t).unwrapRemoteException();
-          }
-          if (t instanceof JournalNotFormattedException) {
-            ret.set(false);
-          } else {
-            ret.setException(t);
-          }
-        }
-
-        @Override
-        public void onSuccess(GetJournalStateResponseProto jstate) {
-          ret.set(true);
-        }
-      });
-      
-      calls.put(logger, ret);
+      calls.put(logger, logger.isFormatted());
     }
     return QuorumCall.create(calls);
   }

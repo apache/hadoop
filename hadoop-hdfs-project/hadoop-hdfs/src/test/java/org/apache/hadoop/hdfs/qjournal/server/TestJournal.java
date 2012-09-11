@@ -156,10 +156,13 @@ public class TestJournal {
 
     assertEquals(12345L, journal.getLastPromisedEpoch());
     assertEquals(12345L, journal.getLastWriterEpoch());
-
+    assertTrue(journal.isFormatted());
+    
     journal.format(FAKE_NSINFO_2);
+    
     assertEquals(0, journal.getLastPromisedEpoch());
     assertEquals(0, journal.getLastWriterEpoch());
+    assertTrue(journal.isFormatted());
   }
   
   /**

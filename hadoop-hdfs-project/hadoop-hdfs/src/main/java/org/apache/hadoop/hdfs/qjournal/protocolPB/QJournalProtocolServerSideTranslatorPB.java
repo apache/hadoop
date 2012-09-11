@@ -32,6 +32,8 @@ import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJourna
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.GetJournalStateResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.HeartbeatRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.HeartbeatResponseProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.IsFormattedRequestProto;
+import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.IsFormattedResponseProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.JournalIdProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.JournalRequestProto;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.JournalResponseProto;
@@ -66,6 +68,22 @@ public class QJournalProtocolServerSideTranslatorPB implements QJournalProtocolP
   public QJournalProtocolServerSideTranslatorPB(QJournalProtocol impl) {
     this.impl = impl;
   }
+
+  
+  @Override
+  public IsFormattedResponseProto isFormatted(RpcController controller,
+      IsFormattedRequestProto request) throws ServiceException {
+    try {
+      boolean ret = impl.isFormatted(
+          convert(request.getJid()));
+      return IsFormattedResponseProto.newBuilder()
+          .setIsFormatted(ret)
+          .build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
 
   @Override
   public GetJournalStateResponseProto getJournalState(RpcController controller,

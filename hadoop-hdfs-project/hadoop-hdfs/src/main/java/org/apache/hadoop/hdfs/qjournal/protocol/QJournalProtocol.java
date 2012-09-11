@@ -48,6 +48,12 @@ public interface QJournalProtocol {
   public static final long versionID = 1L;
 
   /**
+   * @return true if the given journal has been formatted and
+   * contains valid data.
+   */
+  public boolean isFormatted(String journalId) throws IOException;
+
+  /**
    * Get the current state of the journal, including the most recent
    * epoch number and the HTTP port.
    */

@@ -117,6 +117,17 @@ message PurgeLogsResponseProto {
 }
 
 /**
+ * isFormatted()
+ */
+message IsFormattedRequestProto {
+  required JournalIdProto jid = 1;
+}
+
+message IsFormattedResponseProto {
+  required bool isFormatted = 1;
+}
+
+/**
  * getJournalState()
  */
 message GetJournalStateRequestProto {
@@ -210,6 +221,8 @@ message AcceptRecoveryResponseProto {
  * See the request and response for details of rpc call.
  */
 service QJournalProtocolService {
+  rpc isFormatted(IsFormattedRequestProto) returns (IsFormattedResponseProto);
+
   rpc getJournalState(GetJournalStateRequestProto) returns (GetJournalStateResponseProto);
 
   rpc newEpoch(NewEpochRequestProto) returns (NewEpochResponseProto);
