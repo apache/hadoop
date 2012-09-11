@@ -6,6 +6,9 @@ Release 2.0.3-alpha - Unreleased
 
   NEW FEATURES
 
+    HADOOP-8597. Permit FsShell's text command to read Avro files.
+    (Ivan Vladimirov Ivanov via cutting)
+
   IMPROVEMENTS
 
     HADOOP-8789. Tests setLevel(Level.OFF) should be Level.ERROR.
