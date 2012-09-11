@@ -4,18 +4,11 @@ Release 1.2.0 - unreleased
 
   INCOMPATIBLE CHANGES
 
-    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck with
-    SPNEGO-based solution. (Jakob Homan, Owen O'Malley, Alejandro Abdelnur and
-    Aaron T. Myers via atm)
-
   NEW FEATURES
 
     HADOOP-8023. Add unset() method to Configuration (tucu)
 
     MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
-
-    HADOOP-7823. Port HADOOP-4012 providing split support for bzip2 compressed
-    files to branch-1. (Andrew Purtell via cdouglas)
 
     MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process 
     command-line (philip and ahmed via tucu)
@@ -83,9 +76,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
     (Todd Lipcon and Brandon Li via sseth)
 
-    HADOOP-8656 Backport forced daemon shutdown of HADOOP-8353 into branch-1
-    (Roman Shaposhnik via stevel)
-
     MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
 
     MAPREDUCE-4565. Backport MR-2855 to branch-1: ResourceBundle lookup during
@@ -108,6 +98,8 @@ Release 1.2.0 - unreleased
 
     HDFS-3871. Change DFSClient to use RetryUtils.  (Arun C Murthy
     via szetszwo)
+
+    HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
 
   OPTIMIZATIONS
 
@@ -184,9 +176,6 @@ Release 1.2.0 - unreleased
     HDFS-3727. When using SPNEGO, NN should not try to log in using KSSL
     principal. (atm)
 
-    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
-    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
-
     HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token
     auth type. (daryn)
 
@@ -243,6 +232,10 @@ Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
 
+    HDFS-2617. Replaced Kerberized SSL for image transfer and fsck with
+    SPNEGO-based solution. (Jakob Homan, Owen O'Malley, Alejandro Abdelnur and
+    Aaron T. Myers via atm)
+
     HDFS-3044. fsck move should be non-destructive by default.
     (Colin Patrick McCabe via eli)
 
@@ -272,7 +265,13 @@ Release 1.1.0 - unreleased
     HDFS-3518. Add a utility method DistributedFileSystem.isHealthy(uri) for
     checking if the given HDFS is healthy. (szetszwo)
 
+    HADOOP-7823. Port HADOOP-4012 providing split support for bzip2 compressed
+    files to branch-1. (Andrew Purtell via cdouglas)
+
   IMPROVEMENTS
+
+    HADOOP-8656 Backport forced daemon shutdown of HADOOP-8353 into branch-1
+    (Roman Shaposhnik via stevel)
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
     from Rumen tool. (ravigummadi)
@@ -356,8 +355,6 @@ Release 1.1.0 - unreleased
 
     HDFS-3516. Check content-type in WebHdfsFileSystem.  (szetszwo)
 
-    HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
-
     HADOOP-7753. Support fadvise and sync_file_range in NativeIO. Add
     ReadaheadPool infrastructure for use in HDFS and MR.
     (Brandon Li and todd via suresh)
@@ -378,6 +375,9 @@ Release 1.1.0 - unreleased
     (Jing Zhao via suresh)
 
   BUG FIXES
+
+    HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
+    to get around a Java library bug causing OutOfMemoryError.  (szetszwo)
 
     MAPREDUCE-4087. [Gridmix] GenerateDistCacheData job of Gridmix can
     become slow in some cases (ravigummadi)
