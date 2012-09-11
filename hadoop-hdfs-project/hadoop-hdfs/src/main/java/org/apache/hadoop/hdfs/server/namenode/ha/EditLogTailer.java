@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 
 import org.apache.commons.logging.Log;
@@ -172,11 +173,20 @@ public class EditLogTailer {
     Preconditions.checkState(tailerThread == null ||
         !tailerThread.isAlive(),
         "Tailer thread should not be running once failover starts");
-    try {
-      doTailEdits();
-    } catch (InterruptedException e) {
-      throw new IOException(e);
-    }
+    // Important to do tailing as the login user, in case the shared
+    // edits storage is implemented by a JournalManager that depends
+    // on security credentials to access the logs (eg QuorumJournalManager).
+    SecurityUtil.doAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        try {
+          doTailEdits();
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+        return null;
+      }
+    });
   }
   
   @VisibleForTesting

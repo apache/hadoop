@@ -64,3 +64,5 @@ HDFS-3901. QJM: send 'heartbeat' messages to JNs even when they are out-of-sync 
 HDFS-3899. QJM: Add client-side metrics (todd)
 
 HDFS-3914. QJM: acceptRecovery should abort current segment (todd)
+
+HDFS-3915. QJM: Failover fails with auth error in secure cluster (todd)
