@@ -233,6 +233,9 @@ Release 1.2.0 - unreleased
 
     HADOOP-8781. hadoop-config.sh should add JAVA_LIBRARY_PATH to LD_LIBRARY_PATH. (tucu)
 
+    MAPREDUCE-4576. Large dist cache can block tasktracker heartbeat
+    (Robert Evans via tgraves)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
