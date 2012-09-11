@@ -8,6 +8,9 @@ Release 2.0.3-alpha - Unreleased
 
   IMPROVEMENTS
 
+    HADOOP-8789. Tests setLevel(Level.OFF) should be Level.ERROR.
+    (Andy Isaacson via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES 
