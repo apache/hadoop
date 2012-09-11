@@ -52,11 +52,11 @@ public class TestHadoopArchives extends TestCase {
 
   {
     ((Log4JLogger)LogFactory.getLog(org.apache.hadoop.security.Groups.class)
-        ).getLogger().setLevel(Level.OFF);
+        ).getLogger().setLevel(Level.ERROR);
     ((Log4JLogger)org.apache.hadoop.ipc.Server.LOG
-        ).getLogger().setLevel(Level.OFF);
+        ).getLogger().setLevel(Level.ERROR);
     ((Log4JLogger)org.apache.hadoop.util.AsyncDiskService.LOG
-        ).getLogger().setLevel(Level.OFF);
+        ).getLogger().setLevel(Level.ERROR);
   }
 
   private static final String inputDir = "input";
