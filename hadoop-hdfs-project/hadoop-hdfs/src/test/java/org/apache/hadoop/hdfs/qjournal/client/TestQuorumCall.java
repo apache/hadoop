@@ -42,8 +42,8 @@ public class TestQuorumCall {
     assertEquals(0, q.countResponses());
     
     futures.get("f1").set("first future");
-    q.waitFor(1, 0, 0, 100000); // wait for 1 response
-    q.waitFor(0, 1, 0, 100000); // wait for 1 success
+    q.waitFor(1, 0, 0, 100000, "test"); // wait for 1 response
+    q.waitFor(0, 1, 0, 100000, "test"); // wait for 1 success
     assertEquals(1, q.countResponses());
     
     
@@ -51,8 +51,8 @@ public class TestQuorumCall {
     assertEquals(2, q.countResponses());
     
     futures.get("f3").set("second future");
-    q.waitFor(3, 0, 100, 100000); // wait for 3 responses
-    q.waitFor(0, 2, 100, 100000); // 2 successes
+    q.waitFor(3, 0, 100, 100000, "test"); // wait for 3 responses
+    q.waitFor(0, 2, 100, 100000, "test"); // 2 successes
 
     assertEquals(3, q.countResponses());
     assertEquals("f1=first future,f3=second future",
@@ -60,7 +60,7 @@ public class TestQuorumCall {
             new TreeMap<String, String>(q.getResults())));
     
     try {
-      q.waitFor(0, 4, 100, 10);
+      q.waitFor(0, 4, 100, 10, "test");
       fail("Didn't time out waiting for more responses than came back");
     } catch (TimeoutException te) {
       // expected

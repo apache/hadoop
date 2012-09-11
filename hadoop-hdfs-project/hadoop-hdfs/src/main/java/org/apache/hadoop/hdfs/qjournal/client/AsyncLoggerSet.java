@@ -52,8 +52,6 @@ import com.google.common.util.concurrent.SettableFuture;
 class AsyncLoggerSet {
   static final Log LOG = LogFactory.getLog(AsyncLoggerSet.class);
 
-  private static final int NEWEPOCH_TIMEOUT_MS = 10000;
-  
   private final List<AsyncLogger> loggers;
   
   private static final long INVALID_EPOCH = -1;
@@ -63,43 +61,14 @@ class AsyncLoggerSet {
     this.loggers = ImmutableList.copyOf(loggers);
   }
   
-  /**
-   * Fence any previous writers, and obtain a unique epoch number
-   * for write-access to the journal nodes.
-   *
-   * @param nsInfo the expected namespace information. If the remote
-   * node does not match with this namespace, the request will be rejected.
-   * @return the new, unique epoch number
-   * @throws IOException
-   */
-  Map<AsyncLogger, NewEpochResponseProto> createNewUniqueEpoch(
-      NamespaceInfo nsInfo) throws IOException {
-    Preconditions.checkState(myEpoch == -1,
-        "epoch already created: epoch=" + myEpoch);
-    
-    Map<AsyncLogger, GetJournalStateResponseProto> lastPromises =
-      waitForWriteQuorum(getJournalState(), NEWEPOCH_TIMEOUT_MS);
-    
-    long maxPromised = Long.MIN_VALUE;
-    for (GetJournalStateResponseProto resp : lastPromises.values()) {
-      maxPromised = Math.max(maxPromised, resp.getLastPromisedEpoch());
-    }
-    assert maxPromised >= 0;
-    
-    long myEpoch = maxPromised + 1;
-    Map<AsyncLogger, NewEpochResponseProto> resps =
-        waitForWriteQuorum(newEpoch(nsInfo, myEpoch), NEWEPOCH_TIMEOUT_MS);
-    this.myEpoch = myEpoch;
-    setEpoch(myEpoch);
-    return resps;
-  }
-  
-  private void setEpoch(long e) {
+  void setEpoch(long e) {
+    Preconditions.checkState(!isEpochEstablished(),
+        "Epoch already established: epoch=%s", myEpoch);
+    myEpoch = e;
     for (AsyncLogger l : loggers) {
       l.setEpoch(e);
     }
   }
-
 
   /**
    * Set the highest successfully committed txid seen by the writer.
@@ -112,6 +81,13 @@ class AsyncLoggerSet {
     }
   }
 
+  /**
+   * @return true if an epoch has been established.
+   */
+  boolean isEpochEstablished() {
+    return myEpoch != INVALID_EPOCH;
+  }
+  
   /**
    * @return the epoch number for this writer. This may only be called after
    * a successful call to {@link #createNewUniqueEpoch(NamespaceInfo)}.
@@ -143,19 +119,20 @@ class AsyncLoggerSet {
    * can't be achieved, throws a QuorumException.
    * @param q the quorum call
    * @param timeoutMs the number of millis to wait
+   * @param operationName textual description of the operation, for logging
    * @return a map of successful results
    * @throws QuorumException if a quorum doesn't respond with success
    * @throws IOException if the thread is interrupted or times out
    */
   <V> Map<AsyncLogger, V> waitForWriteQuorum(QuorumCall<AsyncLogger, V> q,
-      int timeoutMs) throws IOException {
+      int timeoutMs, String operationName) throws IOException {
     int majority = getMajoritySize();
     try {
       q.waitFor(
           loggers.size(), // either all respond 
           majority, // or we get a majority successes
           majority, // or we get a majority failures,
-          timeoutMs);
+          timeoutMs, operationName);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new IOException("Interrupted waiting " + timeoutMs + "ms for a " +
@@ -227,7 +204,7 @@ class AsyncLoggerSet {
   // in a QuorumCall.
   ///////////////////////////////////////////////////////////////////////////
   
-  private QuorumCall<AsyncLogger, GetJournalStateResponseProto> getJournalState() {
+  public QuorumCall<AsyncLogger, GetJournalStateResponseProto> getJournalState() {
     Map<AsyncLogger, ListenableFuture<GetJournalStateResponseProto>> calls =
         Maps.newHashMap();
     for (AsyncLogger logger : loggers) {
@@ -266,7 +243,7 @@ class AsyncLoggerSet {
     return QuorumCall.create(calls);
   }
 
-  private QuorumCall<AsyncLogger,NewEpochResponseProto> newEpoch(
+  public QuorumCall<AsyncLogger,NewEpochResponseProto> newEpoch(
       NamespaceInfo nsInfo,
       long epoch) {
     Map<AsyncLogger, ListenableFuture<NewEpochResponseProto>> calls =

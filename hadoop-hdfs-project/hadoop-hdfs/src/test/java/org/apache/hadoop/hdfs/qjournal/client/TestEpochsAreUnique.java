@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.qjournal.client;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.List;
 import java.util.Random;
@@ -56,35 +57,43 @@ public class TestEpochsAreUnique {
     URI uri = cluster.getQuorumJournalURI(JID);
     QuorumJournalManager qjm = new QuorumJournalManager(
         conf, uri, FAKE_NSINFO);
-    qjm.format(FAKE_NSINFO);
+    try {
+      qjm.format(FAKE_NSINFO);
+    } finally {
+      qjm.close();
+    }
     
     try {
       // With no failures or contention, epochs should increase one-by-one
       for (int i = 0; i < 5; i++) {
-        AsyncLoggerSet als = new AsyncLoggerSet(
-            QuorumJournalManager.createLoggers(conf, uri, FAKE_NSINFO,
-                IPCLoggerChannel.FACTORY));
-        als.createNewUniqueEpoch(FAKE_NSINFO);
-        assertEquals(i + 1, als.getEpoch());
+        qjm = new QuorumJournalManager(
+            conf, uri, FAKE_NSINFO);
+        try {
+          qjm.createNewUniqueEpoch();
+          assertEquals(i + 1, qjm.getLoggerSetForTests().getEpoch());
+        } finally {
+          qjm.close();
+        }
       }
       
       long prevEpoch = 5;
       // With some failures injected, it should still always increase, perhaps
       // skipping some
       for (int i = 0; i < 20; i++) {
-        AsyncLoggerSet als = new AsyncLoggerSet(
-            makeFaulty(QuorumJournalManager.createLoggers(conf, uri, FAKE_NSINFO,
-                IPCLoggerChannel.FACTORY)));
         long newEpoch = -1;
         while (true) {
+          qjm = new QuorumJournalManager(
+              conf, uri, FAKE_NSINFO, new FaultyLoggerFactory());
           try {
-            als.createNewUniqueEpoch(FAKE_NSINFO);
-            newEpoch = als.getEpoch();
+            qjm.createNewUniqueEpoch();
+            newEpoch = qjm.getLoggerSetForTests().getEpoch();
             break;
           } catch (IOException ioe) {
             // It's OK to fail to create an epoch, since we randomly inject
             // faults. It's possible we'll inject faults in too many of the
             // underlying nodes, and a failure is expected in that case
+          } finally {
+            qjm.close();
           }
         }
         LOG.info("Created epoch " + newEpoch);
@@ -97,20 +106,23 @@ public class TestEpochsAreUnique {
     }
   }
 
-
-  private List<AsyncLogger> makeFaulty(List<AsyncLogger> loggers) {
-    List<AsyncLogger> ret = Lists.newArrayList();
-    for (AsyncLogger l : loggers) {
-      AsyncLogger spy = Mockito.spy(l);
+  private class FaultyLoggerFactory implements AsyncLogger.Factory {
+    @Override
+    public AsyncLogger createLogger(Configuration conf, NamespaceInfo nsInfo,
+        String journalId, InetSocketAddress addr) {
+      AsyncLogger ch = IPCLoggerChannel.FACTORY.createLogger(
+          conf, nsInfo, journalId, addr);
+      AsyncLogger spy = Mockito.spy(ch);
       Mockito.doAnswer(new SometimesFaulty<Long>(0.10f))
           .when(spy).getJournalState();
       Mockito.doAnswer(new SometimesFaulty<Void>(0.40f))
           .when(spy).newEpoch(Mockito.anyLong());
-      ret.add(spy);
+
+      return spy;
     }
-    return ret;
+    
   }
-  
+
   private class SometimesFaulty<T> implements Answer<ListenableFuture<T>> {
     private float faultProbability;
 

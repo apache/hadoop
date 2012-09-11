@@ -101,7 +101,7 @@ class QuorumOutputStream extends EditLogOutputStream {
       QuorumCall<AsyncLogger, Void> qcall = loggers.sendEdits(
           segmentTxId, firstTxToFlush,
           numReadyTxns, data);
-      loggers.waitForWriteQuorum(qcall, 20000); // TODO: configurable timeout
+      loggers.waitForWriteQuorum(qcall, 20000, "sendEdits"); // TODO: configurable timeout
       
       // Since we successfully wrote this batch, let the loggers know. Any future
       // RPCs will thus let the loggers know of the most recent transaction, even

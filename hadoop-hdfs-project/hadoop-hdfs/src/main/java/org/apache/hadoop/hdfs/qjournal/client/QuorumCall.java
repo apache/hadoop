@@ -39,6 +39,23 @@ import com.google.protobuf.TextFormat;
 class QuorumCall<KEY, RESULT> {
   private final Map<KEY, RESULT> successes = Maps.newHashMap();
   private final Map<KEY, Throwable> exceptions = Maps.newHashMap();
+
+  /**
+   * Interval, in milliseconds, at which a log message will be made
+   * while waiting for a quorum call.
+   */
+  private static final int WAIT_PROGRESS_INTERVAL_MILLIS = 1000;
+  
+  /**
+   * Start logging messages at INFO level periodically after waiting for
+   * this fraction of the configured timeout for any call.
+   */
+  private static final float WAIT_PROGRESS_INFO_THRESHOLD = 0.3f;
+  /**
+   * Start logging messages at WARN level after waiting for this
+   * fraction of the configured timeout for any call.
+   */
+  private static final float WAIT_PROGRESS_WARN_THRESHOLD = 0.7f;
   
   static <KEY, RESULT> QuorumCall<KEY, RESULT> create(
       Map<KEY, ? extends ListenableFuture<RESULT>> calls) {
@@ -85,17 +102,35 @@ class QuorumCall<KEY, RESULT> {
    */
   public synchronized void waitFor(
       int minResponses, int minSuccesses, int maxExceptions,
-      int millis)
+      int millis, String operationName)
       throws InterruptedException, TimeoutException {
-    long et = Time.monotonicNow() + millis;
+    long st = Time.monotonicNow();
+    long nextLogTime = st + (long)(millis * WAIT_PROGRESS_INFO_THRESHOLD);
+    long et = st + millis;
     while (true) {
       if (minResponses > 0 && countResponses() >= minResponses) return;
       if (minSuccesses > 0 && countSuccesses() >= minSuccesses) return;
       if (maxExceptions >= 0 && countExceptions() > maxExceptions) return;
-      long rem = et - Time.monotonicNow();
+      long now = Time.monotonicNow();
+      
+      if (now > nextLogTime) {
+        long waited = now - st;
+        String msg = String.format(
+            "Waited %s ms (timeout=%s ms) for a response for %s",
+            waited, millis, operationName);
+        if (waited > millis * WAIT_PROGRESS_WARN_THRESHOLD) {
+          QuorumJournalManager.LOG.warn(msg);
+        } else {
+          QuorumJournalManager.LOG.info(msg);
+        }
+        nextLogTime = now + WAIT_PROGRESS_INTERVAL_MILLIS;
+      }
+      long rem = et - now;
       if (rem <= 0) {
         throw new TimeoutException();
       }
+      rem = Math.min(rem, nextLogTime - now);
+      rem = Math.max(rem, 1);
       wait(rem);
     }
   }
