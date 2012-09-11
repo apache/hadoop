@@ -236,6 +236,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4576. Large dist cache can block tasktracker heartbeat
     (Robert Evans via tgraves)
 
+    HADOOP-8767. Secondary namenode is started on slave nodes instead of
+    master nodes. (Giovanni Delussu via suresh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

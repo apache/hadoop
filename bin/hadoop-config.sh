@@ -53,6 +53,10 @@ else
 fi
 HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_PREFIX/$DEFAULT_CONF_DIR}"
 
+if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
+  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
+fi
+
 #check to see it is specified whether to use the slaves or the
 # masters file
 if [ $# -gt 1 ]
@@ -66,9 +70,6 @@ then
     fi
 fi
 
-if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
-fi
 
 if [ "$HADOOP_HOME_WARN_SUPPRESS" = "" ] && [ "$HADOOP_HOME" != "" ]; then
   echo "Warning: \$HADOOP_HOME is deprecated." 1>&2

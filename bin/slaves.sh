@@ -38,20 +38,17 @@ fi
 bin=`dirname "$0"`
 bin=`cd "$bin"; pwd`
 
+# If the slaves file is specified in the command line,
+# then it takes precedence over the definition in 
+# hadoop-env.sh. Save it here.
+HOSTLIST=$HADOOP_SLAVES
+
 if [ -e "$bin/../libexec/hadoop-config.sh" ]; then
   . "$bin"/../libexec/hadoop-config.sh
 else
   . "$bin/hadoop-config.sh"
 fi
 
-# If the slaves file is specified in the command line,
-# then it takes precedence over the definition in 
-# hadoop-env.sh. Save it here.
-HOSTLIST=$HADOOP_SLAVES
-
-if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
-  . "${HADOOP_CONF_DIR}/hadoop-env.sh"
-fi
 
 if [ "$HOSTLIST" = "" ]; then
   if [ "$HADOOP_SLAVES" = "" ]; then
