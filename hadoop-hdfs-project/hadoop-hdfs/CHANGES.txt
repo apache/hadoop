@@ -270,6 +270,8 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3510. Editlog pre-allocation is performed prior to writing edits
     to avoid partial edits case disk out of space. (Colin McCabe via todd)
 
+    HDFS-3910. DFSTestUtil#waitReplication should timeout. (eli)
+
   OPTIMIZATIONS
 
     HDFS-2982. Startup performance suffers when there are many edit log

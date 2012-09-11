@@ -114,7 +114,7 @@ public class TestFSEditLogLoader {
    * automatically bumped up to the new minimum upon restart.
    */
   @Test
-  public void testReplicationAdjusted() throws IOException {
+  public void testReplicationAdjusted() throws Exception {
     // start a cluster 
     Configuration conf = new HdfsConfiguration();
     // Replicate and heartbeat fast to shave a few seconds off test
