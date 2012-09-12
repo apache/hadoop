@@ -364,11 +364,10 @@ public class BlockManager {
         replicationThread.join(3000);
       }
     } catch (InterruptedException ie) {
-    } finally {
-      if (pendingReplications != null) pendingReplications.stop();
-      blocksMap.close();
-      datanodeManager.close();
     }
+    datanodeManager.close();
+    pendingReplications.stop();
+    blocksMap.close();
   }
 
   /** @return the datanodeManager */

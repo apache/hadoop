@@ -183,7 +183,13 @@ public class DatanodeManager {
   }
 
   void close() {
-    if (decommissionthread != null) decommissionthread.interrupt();
+    if (decommissionthread != null) {
+      decommissionthread.interrupt();
+      try {
+        decommissionthread.join(3000);
+      } catch (InterruptedException e) {
+      }
+    }
     heartbeatManager.close();
   }
 
