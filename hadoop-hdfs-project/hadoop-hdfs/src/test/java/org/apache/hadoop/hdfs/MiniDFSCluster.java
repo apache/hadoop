@@ -1352,6 +1352,7 @@ public class MiniDFSCluster {
       if (ExitUtil.terminateCalled()) {
         LOG.fatal("Test resulted in an unexpected exit",
             ExitUtil.getFirstExitException());
+        ExitUtil.resetFirstExitException();
         throw new AssertionError("Test resulted in an unexpected exit");
       }
     }
