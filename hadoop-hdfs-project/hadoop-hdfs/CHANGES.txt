@@ -10,6 +10,9 @@ Release 2.0.3-alpha - Unreleased
     (Jaimin D Jetly and Jing Zhao via szetszwo)
 
   IMPROVEMENTS
+  
+    HDFS-3925. Prettify PipelineAck#toString() for printing to a log
+    (Andrew Wang via todd)
 
   OPTIMIZATIONS
 
