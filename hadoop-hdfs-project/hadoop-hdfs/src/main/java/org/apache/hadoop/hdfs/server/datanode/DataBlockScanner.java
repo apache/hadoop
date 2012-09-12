@@ -172,7 +172,8 @@ public class DataBlockScanner implements Runnable {
     return blockPoolScannerMap.size();
   }
   
-  private synchronized BlockPoolSliceScanner getBPScanner(String bpid) {
+  @VisibleForTesting
+  synchronized BlockPoolSliceScanner getBPScanner(String bpid) {
     return blockPoolScannerMap.get(bpid);
   }
   

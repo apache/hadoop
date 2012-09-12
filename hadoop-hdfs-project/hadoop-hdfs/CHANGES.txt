@@ -616,6 +616,9 @@ Release 2.0.2-alpha - 2012-09-07
     
     HDFS-3432. TestDFSZKFailoverController tries to fail over too early (todd)
 
+    HDFS-3902. TestDatanodeBlockScanner#testBlockCorruptionPolicy is broken.
+    (Andy Isaacson via eli)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
