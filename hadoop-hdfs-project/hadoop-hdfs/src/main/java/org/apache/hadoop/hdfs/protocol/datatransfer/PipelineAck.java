@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.PipelineAckProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 
+import com.google.protobuf.TextFormat;
+
 /** Pipeline Acknowledgment **/
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -120,6 +122,6 @@ public class PipelineAck {
   
   @Override //Object
   public String toString() {
-    return proto.toString();
+    return TextFormat.shortDebugString(proto);
   }
 }
