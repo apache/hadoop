@@ -15,6 +15,9 @@ Release 2.0.3-alpha - Unreleased
 
   BUG FIXES 
 
+    HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.
+    (Andy Isaacson via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
