@@ -34,14 +34,19 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
 import org.junit.Test;
 
 /**
@@ -59,6 +64,10 @@ public class TestDatanodeBlockScanner {
   
   private static Pattern pattern_blockVerify = 
              Pattern.compile(".*?(SCAN_PERIOD)\\s*:\\s*(\\d+.*?)");
+  
+  static {
+    ((Log4JLogger)FSNamesystem.auditLog).getLogger().setLevel(Level.WARN);
+  }
   /**
    * This connects to datanode and fetches block verification data.
    * It repeats this until the given block has a verification time > newTime.
@@ -206,12 +215,12 @@ public class TestDatanodeBlockScanner {
     assertTrue(MiniDFSCluster.corruptReplica(1, block));
     assertTrue(MiniDFSCluster.corruptReplica(2, block));
 
-    // Read the file to trigger reportBadBlocks by client
-    try {
-      IOUtils.copyBytes(fs.open(file1), new IOUtils.NullOutputStream(), 
-                        conf, true);
-    } catch (IOException e) {
-      // Ignore exception
+    // Trigger each of the DNs to scan this block immediately.
+    // The block pool scanner doesn't run frequently enough on its own
+    // to notice these, and due to HDFS-1371, the client won't report
+    // bad blocks to the NN when all replicas are bad.
+    for (DataNode dn : cluster.getDataNodes()) {
+      DataNodeTestUtils.runBlockScannerForBlock(dn, block);
     }
 
     // We now have the blocks to be marked as corrupt and we get back all

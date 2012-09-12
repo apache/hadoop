@@ -783,6 +783,9 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3833. TestDFSShell fails on windows due to concurrent file 
     read/write. (Brandon Li via suresh)
 
+    HDFS-3902. TestDatanodeBlockScanner#testBlockCorruptionPolicy is broken.
+    (Andy Isaacson via eli)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES

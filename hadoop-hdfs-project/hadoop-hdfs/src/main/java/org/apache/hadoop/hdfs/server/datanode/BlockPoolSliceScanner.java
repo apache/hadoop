@@ -374,7 +374,8 @@ class BlockPoolSliceScanner {
     throttler.setBandwidth(Math.min(bw, MAX_SCAN_RATE));
   }
   
-  private void verifyBlock(ExtendedBlock block) {
+  @VisibleForTesting
+  void verifyBlock(ExtendedBlock block) {
     BlockSender blockSender = null;
 
     /* In case of failure, attempt to read second time to reduce
