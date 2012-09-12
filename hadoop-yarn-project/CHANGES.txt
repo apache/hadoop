@@ -8,6 +8,9 @@ Release 2.0.3-alpha - Unreleased
 
   IMPROVEMENTS
 
+    YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES 
