@@ -52,7 +52,7 @@ Release 1.1.0 - 2012.08.20
 
   IMPROVEMENTS
 
-    HADOOP-8656 Backport forced daemon shutdown of HADOOP-8353 into branch-1
+    HADOOP-8656. Backport forced daemon shutdown of HADOOP-8353 into branch-1
     (Roman Shaposhnik via stevel)
 
     MAPREDUCE-3597. [Rumen] Provide a way to access other info of history file
