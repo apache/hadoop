@@ -590,6 +590,9 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-2757. Cannot read a local block that's being written to when
     using the local read short circuit. (Jean-Daniel Cryans via eli)
+
+    HDFS-3664. BlockManager race when stopping active services.
+    (Colin Patrick McCabe via eli)
     
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
