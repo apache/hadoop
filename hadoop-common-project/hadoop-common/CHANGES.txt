@@ -24,6 +24,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8795. BASH tab completion doesn't look in PATH, assumes path to
     executable is specified. (Sean Mackrory via atm)
 
+    HADOOP-8786. HttpServer continues to start even if AuthenticationFilter 
+    fails to init. (Todd Lipcon via umamahesh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

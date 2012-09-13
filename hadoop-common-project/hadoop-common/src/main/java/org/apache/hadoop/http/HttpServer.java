@@ -676,6 +676,15 @@ public class HttpServer implements FilterContainer {
               "Problem in starting http server. Server handlers failed");
         }
       }
+      // Make sure there are no errors initializing the context.
+      Throwable unavailableException = webAppContext.getUnavailableException();
+      if (unavailableException != null) {
+        // Have to stop the webserver, or else its non-daemon threads
+        // will hang forever.
+        webServer.stop();
+        throw new IOException("Unable to initialize WebAppContext",
+            unavailableException);
+      }
     } catch (IOException e) {
       throw e;
     } catch (Exception e) {
