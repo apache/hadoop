@@ -70,3 +70,5 @@ HDFS-3915. QJM: Failover fails with auth error in secure cluster (todd)
 HDFS-3906. QJM: quorum timeout on failover with large log segment (todd)
 
 HDFS-3840. JournalNodes log JournalNotFormattedException backtrace error before being formatted (todd)
+
+HDFS-3894. QJM: testRecoverAfterDoubleFailures can be flaky due to IPC client caching (todd)

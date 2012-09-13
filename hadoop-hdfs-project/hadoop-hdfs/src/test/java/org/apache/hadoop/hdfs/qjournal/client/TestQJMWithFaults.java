@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.Holder;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.log4j.Level;
@@ -90,9 +91,10 @@ public class TestQJMWithFaults {
   private static long determineMaxIpcNumber() throws Exception {
     Configuration conf = new Configuration();
     MiniJournalCluster cluster = new MiniJournalCluster.Builder(conf).build();
+    QuorumJournalManager qjm = null;
     long ret;
     try {
-      QuorumJournalManager qjm = createInjectableQJM(cluster);
+      qjm = createInjectableQJM(cluster);
       qjm.format(FAKE_NSINFO);
       doWorkload(cluster, qjm);
       
@@ -110,6 +112,7 @@ public class TestQJMWithFaults {
       ret = ipcCounts.first();
       LOG.info("Max IPC count = " + ret);
     } finally {
+      IOUtils.closeStream(qjm);
       cluster.shutdown();
     }
     return ret;
@@ -136,8 +139,8 @@ public class TestQJMWithFaults {
         
         MiniJournalCluster cluster = new MiniJournalCluster.Builder(conf)
           .build();
+        QuorumJournalManager qjm = null;
         try {
-          QuorumJournalManager qjm;
           qjm = createInjectableQJM(cluster);
           qjm.format(FAKE_NSINFO);
           List<AsyncLogger> loggers = qjm.getLoggerSetForTests().getLoggersForTests();
@@ -150,6 +153,8 @@ public class TestQJMWithFaults {
                 ". This is expected since we injected a failure in the " +
                 "majority.");
           }
+          qjm.close();
+          qjm = null;
 
           // Now should be able to recover
           qjm = createInjectableQJM(cluster);
@@ -165,6 +170,8 @@ public class TestQJMWithFaults {
         } finally {
           cluster.shutdown();
           cluster = null;
+          IOUtils.closeStream(qjm);
+          qjm = null;
         }
       }
     }
@@ -405,7 +412,6 @@ public class TestQJMWithFaults {
         Mockito.withSettings()
           .defaultAnswer(wrapper)
           .extraInterfaces(Closeable.class));
-    Mockito.doNothing().when((Closeable)mock).close();
     return mock;
   }
 
@@ -418,7 +424,12 @@ public class TestQJMWithFaults {
     @SuppressWarnings("unchecked")
     @Override
     public T answer(InvocationOnMock invocation) throws Throwable {
-      beforeCall(invocation);
+      // Don't want to inject an error on close() since that isn't
+      // actually an IPC call!
+      if (!Closeable.class.equals(
+            invocation.getMethod().getDeclaringClass())) {
+        beforeCall(invocation);
+      }
 
       try {
         return (T) invocation.getMethod().invoke(realObj,
