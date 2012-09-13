@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -31,10 +32,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 public class HdfsVolumeId implements VolumeId {
 
-  private final byte id;
+  private final byte[] id;
   private final boolean isValid;
 
-  public HdfsVolumeId(byte id, boolean isValid) {
+  public HdfsVolumeId(byte[] id, boolean isValid) {
     this.id = id;
     this.isValid = isValid;
   }
@@ -69,6 +70,6 @@ public class HdfsVolumeId implements VolumeId {
 
   @Override
   public String toString() {
-    return Byte.toString(id);
+    return Base64.encodeBase64String(id);
   }
 }
