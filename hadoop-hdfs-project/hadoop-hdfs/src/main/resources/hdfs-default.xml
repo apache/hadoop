@@ -961,6 +961,30 @@
 </property>
 
 <property>
+  <name>dfs.namenode.check.stale.datanode</name>
+  <value>false</value>
+  <description>
+  	Indicate whether or not to check "stale" datanodes whose 
+  	heartbeat messages have not been received by the namenode 
+  	for more than a specified time interval. If this configuration 
+  	parameter is set as true, the stale datanodes will be moved to 
+  	the end of the target node list for reading. The writing will 
+  	also try to avoid stale nodes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.stale.datanode.interval</name>
+  <value>30000</value>
+  <description>
+  	Default time interval for marking a datanode as "stale", i.e., if 
+  	the namenode has not received heartbeat msg from a datanode for 
+  	more than this time interval, the datanode will be marked and treated 
+  	as "stale" by default.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.invalidate.work.pct.per.iteration</name>
   <value>0.32f</value>
   <description>

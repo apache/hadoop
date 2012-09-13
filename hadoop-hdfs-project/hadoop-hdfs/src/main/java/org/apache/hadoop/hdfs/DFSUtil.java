@@ -133,6 +133,43 @@ public class DFSUtil {
           a.isDecommissioned() ? 1 : -1;
       }
     };
+    
+      
+  /**
+   * Comparator for sorting DataNodeInfo[] based on decommissioned/stale states.
+   * Decommissioned/stale nodes are moved to the end of the array on sorting
+   * with this compartor.
+   */ 
+  @InterfaceAudience.Private 
+  public static class DecomStaleComparator implements Comparator<DatanodeInfo> {
+    private long staleInterval;
+
+    /**
+     * Constructor of DecomStaleComparator
+     * 
+     * @param interval
+     *          The time invertal for marking datanodes as stale is passed from
+     *          outside, since the interval may be changed dynamically
+     */
+    public DecomStaleComparator(long interval) {
+      this.staleInterval = interval;
+    }
+
+    @Override
+    public int compare(DatanodeInfo a, DatanodeInfo b) {
+      // Decommissioned nodes will still be moved to the end of the list
+      if (a.isDecommissioned()) {
+        return b.isDecommissioned() ? 0 : 1;
+      } else if (b.isDecommissioned()) {
+        return -1;
+      }
+      // Stale nodes will be moved behind the normal nodes
+      boolean aStale = a.isStale(staleInterval);
+      boolean bStale = b.isStale(staleInterval);
+      return aStale == bStale ? 0 : (aStale ? 1 : -1);
+    }
+  }    
+    
   /**
    * Address matcher for matching an address to local address
    */

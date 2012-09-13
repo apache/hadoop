@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -129,6 +130,11 @@ public class DatanodeManager {
    */
   private boolean hasClusterEverBeenMultiRack = false;
   
+  /** Whether or not to check the stale datanodes */
+  private volatile boolean checkForStaleNodes;
+  /** The time interval for detecting stale datanodes */
+  private volatile long staleInterval;
+  
   DatanodeManager(final BlockManager blockManager,
       final Namesystem namesystem, final Configuration conf
       ) throws IOException {
@@ -166,6 +172,21 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY, blockInvalidateLimit);
     LOG.info(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_KEY
         + "=" + this.blockInvalidateLimit);
+    // set the value of stale interval based on configuration
+    this.checkForStaleNodes = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_DEFAULT);
+    if (this.checkForStaleNodes) {
+      this.staleInterval = conf.getLong(
+          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT);
+      if (this.staleInterval < DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT) {
+        LOG.warn("The given interval for marking stale datanode = "
+            + this.staleInterval + ", which is smaller than the default value "
+            + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT
+            + ".");
+      }
+    }
   }
 
   private Daemon decommissionthread = null;
@@ -213,14 +234,17 @@ public class DatanodeManager {
       final List<LocatedBlock> locatedblocks) {
     //sort the blocks
     final DatanodeDescriptor client = getDatanodeByHost(targethost);
+    
+    Comparator<DatanodeInfo> comparator = checkForStaleNodes ? 
+                    new DFSUtil.DecomStaleComparator(staleInterval) : 
+                    DFSUtil.DECOM_COMPARATOR;
     for (LocatedBlock b : locatedblocks) {
       networktopology.pseudoSortByDistance(client, b.getLocations());
-      
-      // Move decommissioned datanodes to the bottom
-      Arrays.sort(b.getLocations(), DFSUtil.DECOM_COMPARATOR);
+      // Move decommissioned/stale datanodes to the bottom
+      Arrays.sort(b.getLocations(), comparator);
     }    
   }
-
+  
   CyclicIteration<String, DatanodeDescriptor> getDatanodeCyclicIteration(
       final String firstkey) {
     return new CyclicIteration<String, DatanodeDescriptor>(

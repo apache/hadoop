@@ -9,6 +9,10 @@ Release 2.0.3-alpha - Unreleased
     HDFS-2656. Add libwebhdfs, a pure C client based on WebHDFS.
     (Jaimin D Jetly and Jing Zhao via szetszwo)
 
+    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
+    configured timeout and are selected as the last location to read from.
+    (Jing Zhao via suresh)
+
   IMPROVEMENTS
   
     HDFS-3925. Prettify PipelineAck#toString() for printing to a log

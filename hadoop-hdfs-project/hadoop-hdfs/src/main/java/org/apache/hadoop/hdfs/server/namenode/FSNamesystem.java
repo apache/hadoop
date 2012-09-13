@@ -1158,6 +1158,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     if (blocks != null) {
       blockManager.getDatanodeManager().sortLocatedBlocks(
           clientMachine, blocks.getLocatedBlocks());
+      
+      LocatedBlock lastBlock = blocks.getLastLocatedBlock();
+      if (lastBlock != null) {
+        ArrayList<LocatedBlock> lastBlockList = new ArrayList<LocatedBlock>();
+        lastBlockList.add(lastBlock);
+        blockManager.getDatanodeManager().sortLocatedBlocks(
+                              clientMachine, lastBlockList);
+      }
     }
     return blocks;
   }
