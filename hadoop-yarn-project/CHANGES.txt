@@ -11,6 +11,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
     vinodkv)
 
+    YARN-93. Fixed RM to propagate diagnostics from applications that have
+    finished but failed (Jason Lowe via vinodkv). 
+
   OPTIMIZATIONS
 
   BUG FIXES 

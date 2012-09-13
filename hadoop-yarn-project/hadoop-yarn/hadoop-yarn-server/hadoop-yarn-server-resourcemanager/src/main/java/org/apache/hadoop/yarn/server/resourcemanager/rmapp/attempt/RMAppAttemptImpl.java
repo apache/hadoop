@@ -56,6 +56,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFailedAttemptEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppFinishedAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppRejectedEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerAcquiredEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptContainerFinishedEvent;
@@ -688,8 +689,8 @@ public class RMAppAttemptImpl implements RMAppAttempt {
       switch (finalAttemptState) {
         case FINISHED:
         {
-          appEvent =
-              new RMAppEvent(applicationId, RMAppEventType.ATTEMPT_FINISHED);
+          appEvent = new RMAppFinishedAttemptEvent(applicationId,
+              appAttempt.getDiagnostics());
         }
         break;
         case KILLED:
