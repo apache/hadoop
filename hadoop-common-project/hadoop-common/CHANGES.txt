@@ -134,6 +134,8 @@ Release 2.0.2-alpha - 2012-09-07
     HADOOP-8754. Deprecate all the RPC.getServer() variants.  (Brandon Li
     via szetszwo)
 
+    HADOOP-8801. ExitUtil#terminate should capture the exception stack trace. (eli)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
