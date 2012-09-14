@@ -50,6 +50,10 @@ Release 1.1.0 - 2012.08.20
     HADOOP-7823. Port HADOOP-4012 providing split support for bzip2 compressed
     files. (Andrew Purtell via cdouglas)
 
+    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
+    configured timeout and are selected as the last location to read from.
+    (Jing Zhao via szetszwo)
+
   IMPROVEMENTS
 
     HADOOP-8656. Backport forced daemon shutdown of HADOOP-8353 into branch-1
