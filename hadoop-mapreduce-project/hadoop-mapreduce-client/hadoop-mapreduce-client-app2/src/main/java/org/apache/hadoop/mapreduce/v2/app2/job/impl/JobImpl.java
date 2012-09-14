@@ -784,6 +784,8 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app2.job.Job,
         return job.finished(JobState.FAILED);
       }
       job.logJobHistoryFinishedEvent();
+      // TODO: Maybe set cleanup progress. Otherwise job progress will
+      // always stay at 0.95 when reported from an AM.
       return job.finished(JobState.SUCCEEDED);
     }
     return null;

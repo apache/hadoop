@@ -882,7 +882,8 @@ public abstract class TaskAttemptImpl implements TaskAttempt,
 
       // TODO XXX What all changes here after CLC construction is done. Remove TODOs after that.
       
-      Container container = ta.appContext.getContainer(event.getContainerId()).getContainer();
+      Container container = ta.appContext.getAllContainers()
+          .get(event.getContainerId()).getContainer();
       
       ta.containerId = event.getContainerId();
       ta.containerNodeId = container.getNodeId();

@@ -90,9 +90,9 @@ public class RMContainerAllocator extends AbstractService
   public static final 
   float DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART = 0.05f;
   
-  private static final Priority PRIORITY_FAST_FAIL_MAP;
-  private static final Priority PRIORITY_REDUCE;
-  private static final Priority PRIORITY_MAP;
+  protected static final Priority PRIORITY_FAST_FAIL_MAP;
+  protected static final Priority PRIORITY_REDUCE;
+  protected static final Priority PRIORITY_MAP;
 
   private Thread eventHandlingThread;
   private volatile boolean stopEventHandling;
@@ -106,10 +106,10 @@ public class RMContainerAllocator extends AbstractService
     PRIORITY_MAP.setPriority(20);
   }
   
-  private final AppContext appContext;
-  private final Clock clock;
-  private Job job;
-  private final JobId jobId;
+  protected final AppContext appContext;
+  protected final Clock clock;
+  protected Job job;
+  protected final JobId jobId;
   private final RMContainerRequestor requestor;
   @SuppressWarnings("rawtypes")
   private final EventHandler eventHandler;
@@ -328,26 +328,32 @@ public class RMContainerAllocator extends AbstractService
   }
 
   protected synchronized void handleEvent(AMSchedulerEvent sEvent) {
-    // Recalculating reduce schedule here since it's required for most events.
-    recalculateReduceSchedule = true;
     LOG.info("XXX: Processing the event " + sEvent.toString());
-    switch(sEvent.getType()) {
+    switch (sEvent.getType()) {
     case S_TA_LAUNCH_REQUEST:
+      recalculateReduceSchedule = true;
       handleTaLaunchRequest((AMSchedulerTALaunchRequestEvent) sEvent);
       break;
-    case S_TA_STOP_REQUEST: //Effectively means a failure.
-      handleTaStopRequest((AMSchedulerTAStopRequestEvent)sEvent);
+    case S_TA_STOP_REQUEST: // Effectively means a failure.
+      recalculateReduceSchedule = true;
+      handleTaStopRequest((AMSchedulerTAStopRequestEvent) sEvent);
       break;
     case S_TA_SUCCEEDED:
-      handleTaSucceededRequest((AMSchedulerTASucceededEvent)sEvent);
+      recalculateReduceSchedule = true;
+      handleTaSucceededRequest((AMSchedulerTASucceededEvent) sEvent);
       break;
     case S_TA_ENDED:
-      // TODO XXX XXX: Not generated yet. Depends on E05 etc. Also look at TaskAttempt transitions.
+      recalculateReduceSchedule = true;
+      // TODO XXX XXX: Not generated yet. Depends on E05 etc. Also look at
+      // TaskAttempt transitions.
       break;
     case S_CONTAINERS_ALLOCATED:
+      // Conditional recalculateReduceSchedule
       handleContainersAllocated((AMSchedulerEventContainersAllocated) sEvent);
       break;
-    case S_CONTAINER_COMPLETED: //Nothing specific to be done in this scheduler.
+    case S_CONTAINER_COMPLETED: // Nothing specific to be done in this
+                                // scheduler.
+      recalculateReduceSchedule = true;
       break;
     case S_NODE_BLACKLISTED:
       handleNodeBlacklisted((AMSchedulerEventNodeBlacklisted) sEvent);
@@ -356,13 +362,15 @@ public class RMContainerAllocator extends AbstractService
       // Ignore. RM will not allocated containers on this node.
       break;
     case S_NODE_HEALTHY:
-      // Ignore. RM will start allocating containers if there's pending requests.
+      // Ignore. RM will start allocating containers if there's pending
+      // requests.
       break;
     }
   }
 
   private void handleTaLaunchRequest(AMSchedulerTALaunchRequestEvent event) {
     // Add to queue of pending tasks.
+    recalculateReduceSchedule = true;
     attemptToLaunchRequestMap.put(event.getAttemptID(), event);
     if (event.getAttemptID().getTaskId().getTaskType() == TaskType.MAP) {
       mapResourceReqt = maybeComputeNormalizedRequestForType(event,
@@ -905,8 +913,10 @@ public class RMContainerAllocator extends AbstractService
           
           // TODO Differentiation between blacklisted versus unusable nodes ?
           // Ideally there should be no assignments on unhealthy nodes.
-          blackListed = appContext.getAllNodes().isHostBlackListed(allocatedHost);
-          nodeUnhealthy = appContext.getNode(allocated.getNodeId()).isUnhealthy();
+          blackListed = appContext.getAllNodes().isHostBlackListed(
+              allocatedHost);
+          nodeUnhealthy = appContext.getAllNodes().get(allocated.getNodeId())
+              .isUnhealthy();
           
           if (nodeUnhealthy || blackListed) {
             // we need to request for a new container 
@@ -952,7 +962,7 @@ public class RMContainerAllocator extends AbstractService
 
               // TODO Maybe: ApplicationACLs should be populated into the appContext from the RMCommunicator.
 
-              if (appContext.getContainer(containerId).getState() == AMContainerState.ALLOCATED) {
+              if (appContext.getAllContainers().get(containerId).getState() == AMContainerState.ALLOCATED) {
                 eventHandler.handle(new AMContainerLaunchRequestEvent(
                     containerId, attemptToLaunchRequestMap.get(assigned
                         .getAttemptId()), requestor.getApplicationAcls(),

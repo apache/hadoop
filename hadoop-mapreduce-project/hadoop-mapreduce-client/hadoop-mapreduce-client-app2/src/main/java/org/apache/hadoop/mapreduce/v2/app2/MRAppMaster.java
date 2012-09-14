@@ -984,20 +984,10 @@ public class MRAppMaster extends CompositeService {
     public ClusterInfo getClusterInfo() {
       return this.clusterInfo;
     }
-    
-    @Override
-    public AMContainer getContainer(ContainerId containerId) {
-      return containers.get(containerId);
-    }
 
     @Override
     public AMContainerMap getAllContainers() {
       return containers;
-    }
-
-    @Override
-    public AMNode getNode(NodeId nodeId) {
-      return nodes.get(nodeId);
     }
 
     @Override

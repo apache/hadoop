@@ -46,16 +46,13 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app2.AppContext;
 import org.apache.hadoop.mapreduce.v2.app2.job.Job;
 import org.apache.hadoop.mapreduce.v2.app2.job.Task;
 import org.apache.hadoop.mapreduce.v2.app2.job.TaskAttempt;
+import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskEventType;
-import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
-import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainer;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerMap;
-import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNode;
 import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeMap;
 import org.apache.hadoop.mapreduce.v2.app2.speculate.DefaultSpeculator;
 import org.apache.hadoop.mapreduce.v2.app2.speculate.ExponentiallySmoothedTaskRuntimeEstimator;
@@ -855,19 +852,7 @@ public class TestRuntimeEstimators {
     }
 
     @Override
-    public AMContainer getContainer(ContainerId containerId) {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
     public AMContainerMap getAllContainers() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public AMNode getNode(NodeId nodeId) {
       // TODO Auto-generated method stub
       return null;
     }

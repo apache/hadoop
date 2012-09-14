@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.v2.app2.AppContext;
@@ -67,15 +68,16 @@ public class AMNodeMap extends AbstractService implements
     this.blacklistDisablePercent = config.getInt(
           MRJobConfig.MR_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERECENT,
           MRJobConfig.DEFAULT_MR_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERCENT);
-    
-    LOG.info("maxTaskFailuresPerNode is " + maxTaskFailuresPerNode);
+
+    LOG.info("blacklistDisablePercent is " + blacklistDisablePercent +
+        ", blacklistingEnabled: " + nodeBlacklistingEnabled + 
+        ", maxTaskFailuresPerNode: " + maxTaskFailuresPerNode);
+
     if (blacklistDisablePercent < -1 || blacklistDisablePercent > 100) {
       throw new YarnException("Invalid blacklistDisablePercent: "
           + blacklistDisablePercent
           + ". Should be an integer between 0 and 100 or -1 to disabled");
-    }
-    LOG.info("blacklistDisablePercent is " + blacklistDisablePercent);
-    
+    }    
     super.init(conf);
   }
   
@@ -174,5 +176,10 @@ public class AMNodeMap extends AbstractService implements
 
   public int size() {
     return nodeMap.size();
+  }
+  
+  @Private
+  public boolean isBlacklistingIgnored() {
+    return this.ignoreBlacklisting;
   }
 }

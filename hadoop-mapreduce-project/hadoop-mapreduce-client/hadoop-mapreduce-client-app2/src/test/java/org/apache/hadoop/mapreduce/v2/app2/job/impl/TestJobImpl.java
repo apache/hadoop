@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
@@ -41,15 +42,23 @@ import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.app2.MRApp;
+import org.apache.hadoop.mapreduce.v2.app2.job.Job;
 import org.apache.hadoop.mapreduce.v2.app2.job.Task;
+import org.apache.hadoop.mapreduce.v2.app2.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.impl.JobImpl.InitTransition;
 import org.apache.hadoop.mapreduce.v2.app2.job.impl.JobImpl.JobNoTasksCompletedTransition;
 import org.apache.hadoop.mapreduce.v2.app2.metrics.MRAppMetrics;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.junit.Assert;
 import org.junit.Test;
@@ -278,7 +287,152 @@ public class TestJobImpl {
     isUber = testUberDecision(conf);
     Assert.assertFalse(isUber);
   }
+  
+  @Test
+  public void testReportedAppProgress() throws Exception {
+    ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(appId, 1);
+    
+    int numMaps = 10;
+    int numReduces = 10;
+    int numTasks = numMaps + numReduces;
+    Configuration conf = new Configuration();
+    MRApp mrApp = new MRApp(appAttemptId, BuilderUtils.newContainerId(
+        appAttemptId, 0), numMaps, numReduces, false,
+        this.getClass().getName(), true, 1) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return new DrainDispatcher();
+      }
+    };
+    Job job = mrApp.submit(conf);
+    DrainDispatcher dispatcher = (DrainDispatcher) mrApp.getDispatcher();
+    
+    mrApp.waitForState(job, JobState.RUNNING);
+    
+    // Empty the queue. All Attempts in RUNNING state.
+    // Using waitForState can be slow.
 
+    dispatcher.await();
+    // At this point, setup is complete. Tasks may be running.
+    float expected = 0.05f;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+    
+    Iterator<Task> it = job.getTasks().values().iterator();
+
+    // finish 1 map.
+    int toFinish = 1;
+    finishNextNTasks(mrApp, it, toFinish, dispatcher);
+    expected += toFinish * 0.9/numTasks;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+      
+    // finish 7 more maps.
+    toFinish = 7;
+    finishNextNTasks(mrApp, it, toFinish, dispatcher);
+    expected += toFinish * 0.9/numTasks;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+    
+    // finish remaining 2 maps.
+    toFinish = 2;
+    finishNextNTasks(mrApp, it, toFinish, dispatcher);
+    expected += toFinish * 0.9/numTasks;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+    
+    // finish 2 reduces
+    toFinish = 2;
+    finishNextNTasks(mrApp, it, toFinish, dispatcher);
+    expected += toFinish * 0.9/numTasks;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+    
+    // finish remaining 8 reduces.
+    toFinish = 8;
+    finishNextNTasks(mrApp, it, toFinish, dispatcher);
+    expected += toFinish * 0.9/numTasks;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+    
+    mrApp.waitForState(job, JobState.SUCCEEDED);
+  }
+  
+  @Test
+  // Refer to comments for the previous test.
+  public void testReportedAppProgressWithOnlyMaps() throws Exception {
+    ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(appId, 1);
+    
+    int numMaps = 10;
+    int numReduces = 0;
+    int numTasks = numMaps + numReduces;
+    Configuration conf = new Configuration();
+    MRApp mrApp = new MRApp(appAttemptId, BuilderUtils.newContainerId(
+        appAttemptId, 0), numMaps, numReduces, false,
+        this.getClass().getName(), true, 1) {
+      @Override
+      protected Dispatcher createDispatcher() {
+        return new DrainDispatcher();
+      }
+    };
+    Job job = mrApp.submit(conf);
+    DrainDispatcher dispatcher = (DrainDispatcher) mrApp.getDispatcher();
+    
+    mrApp.waitForState(job, JobState.RUNNING);
+    
+    // Empty the queue. All Attempts in RUNNING state.
+    // Using waitForState can be slow.
+
+    dispatcher.await();
+    // At this point, setup is complete. Tasks may be running.
+    float expected = 0.05f;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+    
+    Iterator<Task> it = job.getTasks().values().iterator();
+
+    // finish 1 map.
+    int toFinish = 1;
+    finishNextNTasks(mrApp, it, toFinish, dispatcher);
+    expected += toFinish * 0.9/numTasks;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+
+    // finish 5 more maps.
+    toFinish = 5;
+    finishNextNTasks(mrApp, it, toFinish, dispatcher);
+    expected += toFinish * 0.9/numTasks;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+
+    // finish the rest.
+    toFinish = 4;
+    finishNextNTasks(mrApp, it, toFinish, dispatcher);
+    expected += toFinish * 0.9/numTasks;
+    Assert.assertEquals(expected, job.getProgress(), 0.001f);
+    // TODO This last verification should've been a race. Since the AM never
+    // goes beyond 0.95f, this is ok for now.
+    
+    // TODO. Ideally MRApp should be provide a way to signal job completion.
+    // i.e. Do not auto complete a job after all tasks completed. Use in prev
+    // test as well. 
+    mrApp.waitForState(job, JobState.SUCCEEDED);
+  }
+  
+  private void finishNextNTasks(MRApp mrApp, Iterator<Task> it, int n,
+      DrainDispatcher dispatcher) throws Exception {
+    finishNextNTasks(mrApp, it, n);
+    dispatcher.await();
+  }
+  
+  private void finishNextNTasks(MRApp mrApp, Iterator<Task> it, int n)
+      throws Exception {
+    for (int i = 0; i < n; i++) {
+      if (!it.hasNext()) {
+        throw new RuntimeException("Attempt to finish a non-existing task");
+      }
+      Task task = it.next();
+      finishTask(mrApp, task);
+    }
+  }
+
+  private void finishTask(MRApp mrApp, Task task) throws Exception {
+    TaskAttempt attempt = task.getAttempts().values().iterator().next();
+    mrApp.sendFinishToTaskAttempt(attempt, TaskAttemptState.SUCCEEDED);
+  }
   private boolean testUberDecision(Configuration conf) {
     JobID jobID = JobID.forName("job_1234567890000_0001");
     JobId jobId = TypeConverter.toYarn(jobID);

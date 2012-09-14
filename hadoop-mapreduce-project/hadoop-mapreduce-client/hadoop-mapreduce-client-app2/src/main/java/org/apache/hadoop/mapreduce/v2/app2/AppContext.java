@@ -63,9 +63,7 @@ public interface AppContext {
   
   ClusterInfo getClusterInfo();
   
-  AMContainer getContainer(ContainerId containerId);
   AMContainerMap getAllContainers();
   
-  AMNode getNode(NodeId nodeId);
   AMNodeMap getAllNodes();
 }

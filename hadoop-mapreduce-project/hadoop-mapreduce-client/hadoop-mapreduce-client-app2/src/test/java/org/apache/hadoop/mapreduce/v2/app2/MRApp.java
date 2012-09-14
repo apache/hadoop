@@ -60,6 +60,7 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobFinishEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEvent;
+import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventKillRequest;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptRemoteStartEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.impl.JobImpl;
@@ -135,6 +136,8 @@ public class MRApp extends MRAppMaster {
 
   static ApplicationId applicationId;
 
+  // TODO: Look at getting rid of this. Each test should generate it's own id, 
+  // or have it provided.. Using a custom id without updating this causes problems.
   static {
     applicationId = recordFactory.newRecordInstance(ApplicationId.class);
     applicationId.setClusterTimestamp(0);
@@ -189,6 +192,7 @@ public class MRApp extends MRAppMaster {
       }
     }
 
+    applicationId = appAttemptId.getApplicationId();
     this.maps = maps;
     this.reduces = reduces;
     this.autoComplete = autoComplete;
@@ -239,6 +243,27 @@ public class MRApp extends MRAppMaster {
     conf.writeXml(new FileOutputStream(jobFile));
 
     return job;
+  }
+
+  /**
+   * Helper method to move a task attempt into a final state.
+   */
+  public void sendFinishToTaskAttempt(TaskAttempt taskAttempt,
+      TaskAttemptState finalState) throws Exception {
+    if (finalState == TaskAttemptState.SUCCEEDED) {
+      getContext().getEventHandler().handle(
+          new TaskAttemptEvent(taskAttempt.getID(),
+              TaskAttemptEventType.TA_DONE));
+    } else if (finalState == TaskAttemptState.KILLED) {
+      getContext().getEventHandler()
+          .handle(
+              new TaskAttemptEventKillRequest(taskAttempt.getID(),
+                  "Kill requested"));
+    } else if (finalState == TaskAttemptState.FAILED) {
+      getContext().getEventHandler().handle(
+          new TaskAttemptEvent(taskAttempt.getID(),
+              TaskAttemptEventType.TA_FAIL_REQUEST));
+    }
   }
 
   public void waitForState(TaskAttempt attempt, 
@@ -487,7 +512,7 @@ public class MRApp extends MRAppMaster {
       case CONTAINER_LAUNCH_REQUEST:
         LOG.info("XXX: Handling CONTAINER_LAUNCH_REQUEST for: " + event.getContainerId());
         
-        AMContainer amContainer = getContext().getContainer(event.getContainerId());
+        AMContainer amContainer = getContext().getAllContainers().get(event.getContainerId());
         TaskAttemptId attemptIdForContainer = amContainer.getQueuedTaskAttempts().iterator().next();
         // Container Launched.
         getContext().getEventHandler().handle(
@@ -601,7 +626,7 @@ public class MRApp extends MRAppMaster {
             new NormalizedResourceEvent(TaskType.MAP, 100)));
         
         attemptToContainerIdMap.put(lEvent.getAttemptID(), cId);
-        if (getContext().getContainer(cId).getState() == AMContainerState.ALLOCATED) {
+        if (getContext().getAllContainers().get(cId).getState() == AMContainerState.ALLOCATED) {
           LOG.info("XXX: Sending launch request for container: " + lEvent);
           getContext().getEventHandler().handle(
               new AMContainerLaunchRequestEvent(cId, lEvent, appAcls, jobId));

@@ -14,3 +14,5 @@ Branch MR-3902
   MAPREDUCE-4619. Change AMContainerMap to extend AbstractService (Tsuyoshi OZAWA via sseth)
 
   MAPREDUCE-4620. RMContainerAllocator should factor in nodes being blacklisted. (sseth)
+
+  MAPREDUCE-4626. Fix and re-enable RMContainerAllocator unit tests (sseth)

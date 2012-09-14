@@ -1,7 +1,26 @@
+/**
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 package org.apache.hadoop.mapreduce.v2.app2.rm;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -101,6 +120,35 @@ public class TestRMContainerRequestor {
     verifyAsks(askSet, 4, 3, 4, 4);
   }
   
+  /**
+   * Verify job progress is being reported to the RM.
+   */
+  @Test
+  public void testProgressReportedToRM() throws Exception {
+    AppContext appContext = setupDefaultTestContext();
+    TrackingAMRMProtocol amrm = new TrackingAMRMProtocol();
+    RMContainerRequestorForTest rmComm = new RMContainerRequestorForTest(appContext, amrm);
+    rmComm.init(new YarnConfiguration());
+    rmComm.start();
+
+    JobId jobId = TypeConverter.toYarn(TypeConverter.fromYarn(appContext
+        .getApplicationID()));
+    Job job = appContext.getJob(jobId);
+    
+    rmComm.heartbeat();
+    assertEquals(0.0f, amrm.allocateRequest.getProgress(), 0.001);
+    
+    doReturn(0.11f).when(job).getProgress();
+    rmComm.heartbeat();
+    assertEquals(0.11f, amrm.allocateRequest.getProgress(), 0.001);
+    
+    doReturn(0.95f).when(job).getProgress();
+    rmComm.heartbeat();
+    assertEquals(0.95f, amrm.allocateRequest.getProgress(), 0.001);
+  }
+  
+  
+  
   private void verifyAsks(Set<ResourceRequest> askSet, int host1, int host2, int rack1, int generic) {
     for (ResourceRequest rr : askSet) {
       if (rr.getHostName().equals("*")) {
@@ -177,10 +225,6 @@ public class TestRMContainerRequestor {
   class RMContainerRequestorForTest extends RMContainerRequestor {
 
     private AMRMProtocol amRmProtocol;
-    
-    public RMContainerRequestorForTest(AppContext context) {
-      super(null, context);
-    }
 
     public RMContainerRequestorForTest(AppContext context, AMRMProtocol amrm) {
       super(null, context);
@@ -211,6 +255,46 @@ public class TestRMContainerRequestor {
     @Override public void startAllocatorThread() {}
   }
 
+  private static class TrackingAMRMProtocol implements AMRMProtocol {
+
+    RegisterApplicationMasterRequest registerRequest;
+    FinishApplicationMasterRequest finishApplicationMasterRequest;
+    AllocateRequest allocateRequest;
+
+    public void reset() {
+      this.registerRequest = null;
+      this.finishApplicationMasterRequest = null;
+      this.allocateRequest = null;
+    }
+
+    @Override
+    public RegisterApplicationMasterResponse registerApplicationMaster(
+        RegisterApplicationMasterRequest request) throws YarnRemoteException {
+      this.registerRequest = request;
+      return null;
+    }
+
+    @Override
+    public FinishApplicationMasterResponse finishApplicationMaster(
+        FinishApplicationMasterRequest request) throws YarnRemoteException {
+      this.finishApplicationMasterRequest = request;
+      return null;
+    }
+
+    @Override
+    public AllocateResponse allocate(AllocateRequest request)
+        throws YarnRemoteException {
+      this.allocateRequest = request;
+      AMResponse amResponse = BuilderUtils.newAMResponse(
+          new ArrayList<Container>(), BuilderUtils.newResource(1024),
+          new ArrayList<ContainerStatus>(), false, 1,
+          new ArrayList<NodeReport>());
+      AllocateResponse allocateResponse = BuilderUtils.newAllocateResponse(
+          amResponse, 2);
+      return allocateResponse;
+    }
+  }
+
   private AppContext setupDefaultTestContext() {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
@@ -219,8 +303,8 @@ public class TestRMContainerRequestor {
     JobId jobId = TypeConverter.toYarn(id);
 
     Job mockJob = mock(Job.class);
-    when(mockJob.getID()).thenReturn(jobId);
-    when(mockJob.getProgress()).thenReturn(0.0f);
+    doReturn(0.0f).when(mockJob).getProgress();
+    doReturn(jobId).when(mockJob).getID();
 
     @SuppressWarnings("rawtypes")
     EventHandler handler = mock(EventHandler.class);

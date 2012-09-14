@@ -321,7 +321,7 @@ public class AMContainerImpl implements AMContainer {
       // launch. Save AM resources.
       
       container.jvmId = new WrappedJvmID(taEvent.getRemoteTask().getJobID(), taEvent.getRemoteTask().isMapTask(), container.containerId.getId());
-      
+
       container.clc = createContainerLaunchContext(
           event.getApplicationAcls(), container.getContainerId(),
           container.appContext.getJob(event.getJobId()).getConf(), taEvent.getJobToken(),

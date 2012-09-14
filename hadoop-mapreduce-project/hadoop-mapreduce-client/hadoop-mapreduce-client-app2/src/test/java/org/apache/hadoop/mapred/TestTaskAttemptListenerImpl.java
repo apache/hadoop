@@ -88,8 +88,6 @@ public class TestTaskAttemptListenerImpl {
     when(amContainers.get(containerId2)).thenReturn(amContainer2);
     
     when(appCtx.getAllContainers()).thenReturn(amContainers);
-    when(appCtx.getContainer(containerId1)).thenReturn(amContainer1);
-    when(appCtx.getContainer(containerId2)).thenReturn(amContainer2);
     when(appCtx.getEventHandler()).thenReturn(mockHandler);
     
     JobTokenSecretManager secret = mock(JobTokenSecretManager.class); 

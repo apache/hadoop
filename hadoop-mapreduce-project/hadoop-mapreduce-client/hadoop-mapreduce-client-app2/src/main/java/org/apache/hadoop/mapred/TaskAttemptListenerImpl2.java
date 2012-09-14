@@ -505,8 +505,8 @@ public class TaskAttemptListenerImpl2 extends CompositeService
 
   public org.apache.hadoop.mapred.Task pullTaskAttempt(ContainerId containerId) {
     // TODO XXX: pullTaskAttempt as part of the interface.
-    AMContainerImpl container = (AMContainerImpl) context
-        .getContainer(containerId);
+    AMContainerImpl container = (AMContainerImpl) context.getAllContainers()
+        .get(containerId);
     return container.pullTaskAttempt();
   }
 
