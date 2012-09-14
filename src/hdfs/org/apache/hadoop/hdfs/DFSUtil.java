@@ -22,7 +22,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Comparator;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -168,32 +167,5 @@ public class DFSUtil {
     }
     return blocksReplWorkMultiplier;
   }
-   
-  /**
-   * Comparator for sorting DataNodeInfo[] based on stale states. Stale nodes
-   * are moved to the end of the array on sorting with this comparator.
-   */
-  public static class StaleComparator implements Comparator<DatanodeInfo> {
-    private long staleInterval;
-
-    /**
-     * Constructor of StaleComparator
-     * 
-     * @param interval
-     *          The time invertal for marking datanodes as stale is passed from
-     *          outside, since the interval may be changed dynamically
-     */
-    public StaleComparator(long interval) {
-      this.staleInterval = interval;
-    }
-
-    @Override
-    public int compare(DatanodeInfo a, DatanodeInfo b) {
-      // Stale nodes will be moved behind the normal nodes
-      boolean aStale = a.isStale(staleInterval);
-      boolean bStale = b.isStale(staleInterval);
-      return aStale == bStale ? 0 : (aStale ? 1 : -1);
-    }
-  }   
 }
 
