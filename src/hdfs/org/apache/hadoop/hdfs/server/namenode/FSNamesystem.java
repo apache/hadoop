@@ -365,6 +365,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private long accessTimePrecision = 0;
   private String nameNodeHostName;
   
+  /** Whether or not to check the stale datanodes */
+  private volatile boolean checkForStaleNodes;
+  /** The time interval for detecting stale datanodes */
+  private volatile long staleInterval;
+  
   /**
    * FSNamesystem constructor.
    */
@@ -570,6 +575,22 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         + " accessKeyUpdateInterval=" + accessKeyUpdateInterval / (60 * 1000)
         + " min(s), accessTokenLifetime=" + accessTokenLifetime / (60 * 1000)
         + " min(s)");
+    
+    // set the value of stale interval based on configuration
+    this.checkForStaleNodes = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_CHECK_STALE_DATANODE_DEFAULT);
+    if (this.checkForStaleNodes) {
+      this.staleInterval = conf.getLong(
+          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+          DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT);
+      if (this.staleInterval < DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT) {
+        LOG.warn("The given interval for marking stale datanode = "
+            + this.staleInterval + ", which is smaller than the default value "
+            + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT
+            + ".");
+      }
+    }
   }
 
   /**
@@ -933,8 +954,16 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       //sort the blocks
       DatanodeDescriptor client = host2DataNodeMap.getDatanodeByHost(
           clientMachine);
+      DFSUtil.StaleComparator comparator = null;
+      if (checkForStaleNodes) {
+        comparator = new DFSUtil.StaleComparator(staleInterval);
+      }
+      // Note: the last block is also included and sorted
       for (LocatedBlock b : blocks.getLocatedBlocks()) {
         clusterMap.pseudoSortByDistance(client, b.getLocations());
+        if (checkForStaleNodes) {
+          Arrays.sort(b.getLocations(), comparator);
+        }
       }
     }
     return blocks;
@@ -4272,7 +4301,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return getDatanodeListForReport(type).size(); 
   }
 
-  private synchronized ArrayList<DatanodeDescriptor> getDatanodeListForReport(
+  public synchronized ArrayList<DatanodeDescriptor> getDatanodeListForReport(
                                                       DatanodeReportType type) {                  
     
     boolean listLiveNodes = type == DatanodeReportType.ALL ||
