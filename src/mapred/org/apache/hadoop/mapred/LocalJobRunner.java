@@ -122,6 +122,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
         trackerDistributedCacheManager.newTaskDistributedCacheManager(
             jobid, conf);
       taskDistributedCacheManager.setupCache(conf, "archive", "archive");
+      // Localize private distributed cache
+      JobLocalizer.downloadPrivateCache(conf);
       
       if (DistributedCache.getSymlink(conf)) {
         // This is not supported largely because,

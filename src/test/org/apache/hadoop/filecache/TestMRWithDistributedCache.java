@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
@@ -133,6 +134,10 @@ public class TestMRWithDistributedCache extends TestCase {
         makeJar(new Path(TEST_ROOT_DIR, "distributed.third.jar"), 3);
     Path fourth =
         makeJar(new Path(TEST_ROOT_DIR, "distributed.fourth.jar"), 4);
+    // Change permissions on one file to be private (others cannot read
+    // the file) to make sure private distributed cache works fine with
+    // the LocalJobRunner.
+    FileUtil.chmod(fourth.toUri().getPath(), "700");
 
     // Creates the Job Configuration
     DistributedCache.addCacheFile(

@@ -1,4 +1,6 @@
-branch-hadoop-1-win - unreleased
+Branch-hadoop-1-win - unreleased
+
+  NEW FEATURES
 
   IMPROVEMENTS
 
@@ -83,6 +85,11 @@ branch-hadoop-1-win - unreleased
 
     MAPREDUCE-4374. Completed support for configurable environment for child
     map/reduce tasks. (Chuan Liu via acmurthy)
+
+    HADOOP-8734. Modify LocalJobRunner to support private distributed cache.
+    (Ivan Mitic via vinodkv)
+
+OPTIMAZATIONS
 
 BUG FIXES
 
