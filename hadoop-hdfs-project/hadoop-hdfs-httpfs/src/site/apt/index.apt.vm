@@ -81,8 +81,3 @@ Hadoop HDFS over HTTP - Documentation Sets ${project.version}
 
   * {{{./UsingHttpTools.html}Using HTTP Tools}}
 
-* Current Limitations
-
-  <<<GETDELEGATIONTOKEN, RENEWDELEGATIONTOKEN and CANCELDELEGATIONTOKEN>>>
-  operations are not supported.
-
