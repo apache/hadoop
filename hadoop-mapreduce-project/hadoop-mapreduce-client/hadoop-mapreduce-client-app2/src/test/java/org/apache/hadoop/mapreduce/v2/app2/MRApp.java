@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.WrappedJvmID;
+import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -47,6 +48,7 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
+import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -63,11 +65,14 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventKillRequest;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptRemoteStartEvent;
+import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptStatusUpdateEvent;
+import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.mapreduce.v2.app2.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTALaunchRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTAStopRequestEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTASucceededEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicatorContainerDeAllocateRequestEvent;
@@ -77,7 +82,7 @@ import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainer;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerAssignTAEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventLaunched;
-import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventReleased;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventCompleted;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerLaunchRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerState;
@@ -123,6 +128,7 @@ public class MRApp extends MRAppMaster {
   private File testWorkDir;
   private Path testAbsPath;
   private ClusterInfo clusterInfo;
+  private volatile boolean exited = false;
 
   public static String NM_HOST = "localhost";
   public static int NM_PORT = 1234;
@@ -245,26 +251,6 @@ public class MRApp extends MRAppMaster {
     return job;
   }
 
-  /**
-   * Helper method to move a task attempt into a final state.
-   */
-  public void sendFinishToTaskAttempt(TaskAttempt taskAttempt,
-      TaskAttemptState finalState) throws Exception {
-    if (finalState == TaskAttemptState.SUCCEEDED) {
-      getContext().getEventHandler().handle(
-          new TaskAttemptEvent(taskAttempt.getID(),
-              TaskAttemptEventType.TA_DONE));
-    } else if (finalState == TaskAttemptState.KILLED) {
-      getContext().getEventHandler()
-          .handle(
-              new TaskAttemptEventKillRequest(taskAttempt.getID(),
-                  "Kill requested"));
-    } else if (finalState == TaskAttemptState.FAILED) {
-      getContext().getEventHandler().handle(
-          new TaskAttemptEvent(taskAttempt.getID(),
-              TaskAttemptEventType.TA_FAIL_REQUEST));
-    }
-  }
 
   public void waitForState(TaskAttempt attempt, 
       TaskAttemptState finalState) throws Exception {
@@ -300,6 +286,16 @@ public class MRApp extends MRAppMaster {
         report.getTaskState());
   }
 
+  public void waitForAMExit() throws Exception {
+    int timeoutSecs = 0;
+    while (!exited && timeoutSecs ++ < 20) {
+      System.out.println("Waiting for AM exit");
+      Thread.sleep(500);
+    }
+    System.out.print("AM Exit State is: " + exited);
+    Assert.assertEquals("AM did not exit (timedout)", true, exited);
+  }
+  
   public void waitForState(Job job, JobState finalState) throws Exception {
     int timeoutSecs = 0;
     JobReport report = job.getReport();
@@ -396,8 +392,10 @@ public class MRApp extends MRAppMaster {
   }
   
   protected class MRAppJobFinishHandler extends JobFinishEventHandlerCR {
+    
     @Override
     protected void exit() {
+      exited = true;
     }
     
     @Override
@@ -506,7 +504,7 @@ public class MRApp extends MRAppMaster {
     public MockContainerLauncher() {
     }
 
-//    @Override
+    @Override
     public void handle(NMCommunicatorEvent event) {
       switch (event.getType()) {
       case CONTAINER_LAUNCH_REQUEST:
@@ -534,7 +532,7 @@ public class MRApp extends MRAppMaster {
       case CONTAINER_STOP_REQUEST:
         ContainerStatus cs = Records.newRecord(ContainerStatus.class);
         cs.setContainerId(event.getContainerId());
-        getContext().getEventHandler().handle(new AMContainerEventReleased(cs));
+        getContext().getEventHandler().handle(new AMContainerEventCompleted(cs));
         break;
       }
     }
@@ -572,13 +570,14 @@ public class MRApp extends MRAppMaster {
     @Override public void decContainerReq(ContainerRequest req) {}
 
     public void handle(RMCommunicatorEvent rawEvent) {
-      LOG.info("XXX: MRAppContainerRequestor handling event of type:" + rawEvent.getType() + ", event: " + rawEvent);
+      LOG.info("XXX: MRAppContainerRequestor handling event of type:" + rawEvent.getType() + ", event: " + rawEvent + ", for containerId: ");
       switch (rawEvent.getType()) {
       case CONTAINER_DEALLOCATE:
         numReleaseRequests++;
         ContainerStatus cs = Records.newRecord(ContainerStatus.class);
         cs.setContainerId(((RMCommunicatorContainerDeAllocateRequestEvent)rawEvent).getContainerId());
-        getContext().getEventHandler().handle(new AMContainerEventReleased(cs));
+        getContext().getEventHandler().handle(new AMContainerEventCompleted(cs));
+        LOG.info("XXX: Sending out C_COMPLETE for containerId: " + cs.getContainerId());
         break;
       default:
         LOG.warn("Invalid event of type: " + rawEvent.getType() + ", Event: "
@@ -615,7 +614,7 @@ public class MRApp extends MRAppMaster {
         Container container = BuilderUtils.newContainer(cId, nodeId,
             NM_HOST + ":" + NM_HTTP_PORT, null, null, null);
         
-        getContext().getAllContainers().addNewContainer(container);
+        getContext().getAllContainers().addContainerIfNew(container);
         getContext().getAllNodes().nodeSeen(nodeId);
         
         JobID id = TypeConverter.fromYarn(applicationId);
@@ -627,11 +626,13 @@ public class MRApp extends MRAppMaster {
         
         attemptToContainerIdMap.put(lEvent.getAttemptID(), cId);
         if (getContext().getAllContainers().get(cId).getState() == AMContainerState.ALLOCATED) {
-          LOG.info("XXX: Sending launch request for container: " + lEvent);
+          LOG.info("XXX: Sending launch request for container: " + cId
+              + " for taskAttemptId: " + lEvent.getAttemptID());
           getContext().getEventHandler().handle(
               new AMContainerLaunchRequestEvent(cId, lEvent, appAcls, jobId));
         }
-        LOG.info("XXX: Assigning attempt [" + lEvent.getAttemptID() + "] to Container [" + cId + "]");
+        LOG.info("XXX: Assigning attempt [" + lEvent.getAttemptID()
+            + "] to Container [" + cId + "]");
         getContext().getEventHandler().handle(
             new AMContainerAssignTAEvent(cId, lEvent.getAttemptID(), lEvent
                 .getRemoteTask()));
@@ -640,12 +641,20 @@ public class MRApp extends MRAppMaster {
       case S_TA_STOP_REQUEST:
         // Send out a Container_stop_request.
         AMSchedulerTAStopRequestEvent stEvent = (AMSchedulerTAStopRequestEvent) rawEvent;
+        LOG.info("XXX: Handling S_TA_STOP_REQUEST for attemptId:" + stEvent.getAttemptID());
         getContext().getEventHandler().handle(
             new AMContainerEvent(attemptToContainerIdMap.get(stEvent
                 .getAttemptID()), AMContainerEventType.C_STOP_REQUEST));
 
         break;
       case S_TA_SUCCEEDED:
+        // No re-use in MRApp. Stop the container.
+        AMSchedulerTASucceededEvent suEvent = (AMSchedulerTASucceededEvent) rawEvent;
+        LOG.info("XXX: Handling S_TA_SUCCEEDED for attemptId: "
+            + suEvent.getAttemptID());
+        getContext().getEventHandler().handle(
+            new AMContainerEvent(attemptToContainerIdMap.get(suEvent
+                .getAttemptID()), AMContainerEventType.C_STOP_REQUEST));
         break;
       case S_CONTAINERS_ALLOCATED:
         break;
@@ -759,6 +768,50 @@ public class MRApp extends MRAppMaster {
       return splits;
     }
   }
+  
 
+  private TaskAttemptStatus createTaskAttemptStatus(TaskAttemptId taskAttemptId,
+      TaskAttemptState finalState) {
+    TaskAttemptStatus tas = new TaskAttemptStatus();
+    tas.id = taskAttemptId;
+    tas.progress = 1.0f;
+    tas.phase = Phase.CLEANUP;
+    tas.stateString = finalState.name();
+    tas.taskState = finalState;
+    Counters counters = new Counters();
+    tas.counters = counters;
+    return tas;
+  }
+
+  private void sendStatusUpdate(TaskAttemptId taskAttemptId,
+      TaskAttemptState finalState) {
+    TaskAttemptStatus tas = createTaskAttemptStatus(taskAttemptId, finalState);
+    getContext().getEventHandler().handle(
+        new TaskAttemptStatusUpdateEvent(taskAttemptId, tas));
+  }
+
+  /*
+   * Helper method to move a task attempt into a final state.
+   */
+  // TODO maybe rename to something like succeedTaskAttempt
+  public void sendFinishToTaskAttempt(TaskAttemptId taskAttemptId,
+      TaskAttemptState finalState, boolean sendStatusUpdate) throws Exception {
+    if (sendStatusUpdate) {
+      sendStatusUpdate(taskAttemptId, finalState);
+    }
+    if (finalState == TaskAttemptState.SUCCEEDED) {
+      getContext().getEventHandler().handle(
+          new TaskAttemptEvent(taskAttemptId,
+              TaskAttemptEventType.TA_DONE));
+    } else if (finalState == TaskAttemptState.KILLED) {
+      getContext().getEventHandler()
+          .handle(new TaskAttemptEventKillRequest(taskAttemptId,
+                  "Kill requested"));
+    } else if (finalState == TaskAttemptState.FAILED) {
+      getContext().getEventHandler().handle(
+          new TaskAttemptEvent(taskAttemptId,
+              TaskAttemptEventType.TA_FAIL_REQUEST));
+    }
+  }
 }
  

@@ -396,6 +396,8 @@ public class RMContainerAllocator extends AbstractService
   private void handleTaStopRequest(AMSchedulerTAStopRequestEvent event) {
     TaskAttemptId aId = event.getAttemptID();
     attemptToLaunchRequestMap.remove(aId);
+    // TODO XXX: This remove may need to be deferred. Possible for a SUCCESSFUL taskAttempt to fail,
+    // which means the scheduler needs to remember taskAttempt to container assignments for a longer time.
     boolean removed = pendingReduces.remove(aId);
     if (!removed) {
       removed = scheduledRequests.remove(aId);
@@ -414,12 +416,17 @@ public class RMContainerAllocator extends AbstractService
         } else {
           LOG.warn("Received a STOP request for absent taskAttempt: "
               + event.getAttemptID());
+          // This could be generated in case of recovery, with unhealthy nodes/
+          // fetch failures. Can be ignored, since Recovered containers don't
+          // need to be stopped.
         }
       }
     }
   }
   
   private void handleTaSucceededRequest(AMSchedulerTASucceededEvent event) {
+    // TODO XXX Remember the assigned containerId even after task success.
+    // Required for TOO_MANY_FETCH_FAILURES
     attemptToLaunchRequestMap.remove(event.getAttemptID());
     ContainerId containerId = assignedRequests.remove(event.getAttemptID());
     if (containerId != null) { // TODO Should not be null. Confirm.

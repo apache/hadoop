@@ -1,3 +1,21 @@
+/**
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 package org.apache.hadoop.mapreduce.v2.app2.rm.container;
 
 import java.io.IOException;
@@ -39,7 +57,7 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventKillRequest;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventTerminated;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskAttemptEventType;
-import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventContaienrCompleted;
+import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventContainerCompleted;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTALaunchRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorLaunchRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorStopRequestEvent;
@@ -346,8 +364,7 @@ public class AMContainerImpl implements AMContainer {
     public void transition(AMContainerImpl container, AMContainerEvent cEvent) {
       AMContainerAssignTAEvent event = (AMContainerAssignTAEvent) cEvent;
       container.inError = true;
-      container.sendEvent(new TaskAttemptEventTerminated(event
-          .getTaskAttemptId()));
+      container.sendTerminatedToTaskAttempt(event.getTaskAttemptId());
       container.sendCompletedToScheduler();
       container.deAllocate();
       LOG.warn("Unexpected TA Assignment: TAId: " + event.getTaskAttemptId()
@@ -403,10 +420,10 @@ public class AMContainerImpl implements AMContainer {
   }
   
   protected void sendCompletedToScheduler() {
-    sendEvent(new AMSchedulerEventContaienrCompleted(containerId));
+    sendEvent(new AMSchedulerEventContainerCompleted(containerId));
   }
   
-  protected void sendCompletedToTaskAttempt(TaskAttemptId taId) {
+  protected void sendTerminatedToTaskAttempt(TaskAttemptId taId) {
     sendEvent(new TaskAttemptEventTerminated(taId));
   }
 
@@ -445,7 +462,7 @@ public class AMContainerImpl implements AMContainer {
       AMContainerAssignTAEvent event = (AMContainerAssignTAEvent) cEvent;
       if (container.pendingAttempt != null) {
         container.inError = true;
-        container.sendCompletedToTaskAttempt(event.getTaskAttemptId());
+        container.sendTerminatedToTaskAttempt(event.getTaskAttemptId());
         container.deAllocate();
         return AMContainerState.STOPPING;
       }
@@ -534,7 +551,7 @@ public class AMContainerImpl implements AMContainer {
     @Override
     public void transition(AMContainerImpl container, AMContainerEvent cEvent) {
       if (container.pendingAttempt != null) {
-        container.sendCompletedToTaskAttempt(container.pendingAttempt);
+        container.sendTerminatedToTaskAttempt(container.pendingAttempt);
         // TODO XXX Maybe nullify pendingAttempt.
       }
       container.sendCompletedToScheduler();
@@ -588,7 +605,7 @@ public class AMContainerImpl implements AMContainer {
       AMContainerAssignTAEvent event = (AMContainerAssignTAEvent) cEvent;
       if (container.pendingAttempt != null) {
         container.inError = true;
-        container.sendCompletedToTaskAttempt(event.getTaskAttemptId());
+        container.sendTerminatedToTaskAttempt(event.getTaskAttemptId());
         container.sendStopRequestToNM();
         container.deAllocate();
         container.containerHeartbeatHandler.unregister(container.containerId);
@@ -614,8 +631,7 @@ public class AMContainerImpl implements AMContainer {
       LOG.info("Cotnainer with id: " + container.getContainerId()
           + " Completed." + " Previous state was: " + container.getState());
       if (container.pendingAttempt != null) {
-        container.sendEvent(new TaskAttemptEvent(container.pendingAttempt,
-            TaskAttemptEventType.TA_TERMINATED));
+        container.sendTerminatedToTaskAttempt(container.pendingAttempt);
       }
       container.sendCompletedToScheduler();
       container.containerHeartbeatHandler.unregister(container.containerId);
@@ -673,7 +689,7 @@ public class AMContainerImpl implements AMContainer {
       SingleArcTransition<AMContainerImpl, AMContainerEvent> {
     @Override
     public void transition(AMContainerImpl container, AMContainerEvent cEvent) {
-      container.sendCompletedToTaskAttempt(container.runningAttempt);
+      container.sendTerminatedToTaskAttempt(container.runningAttempt);
       container.sendCompletedToScheduler();
       container.containerHeartbeatHandler.unregister(container.containerId);
       container.unregisterAttemptFromListener(container.runningAttempt);
@@ -694,7 +710,7 @@ public class AMContainerImpl implements AMContainer {
     public void transition(AMContainerImpl container, AMContainerEvent cEvent) {
       super.transition(container, cEvent);
       container.unregisterAttemptFromListener(container.runningAttempt);
-      container.unregisterJvmFromListener(container.jvmId);
+//      container.unregisterJvmFromListener(container.jvmId);
       // TODO XXX: All running transition. verify whether runningAttempt should be null.
       container.interruptedEvent = container.runningAttempt;
       container.runningAttempt = null;
@@ -740,7 +756,7 @@ public class AMContainerImpl implements AMContainer {
     public void transition(AMContainerImpl container, AMContainerEvent cEvent) {
       AMContainerAssignTAEvent event = (AMContainerAssignTAEvent) cEvent;
       container.inError = true;
-      container.sendCompletedToTaskAttempt(event.getTaskAttemptId());
+      container.sendTerminatedToTaskAttempt(event.getTaskAttemptId());
     }
   }
 
@@ -768,7 +784,7 @@ public class AMContainerImpl implements AMContainer {
     @Override
     public void transition(AMContainerImpl container, AMContainerEvent cEvent) {
       AMContainerAssignTAEvent event = (AMContainerAssignTAEvent) cEvent;
-      container.sendCompletedToTaskAttempt(event.getTaskAttemptId());
+      container.sendTerminatedToTaskAttempt(event.getTaskAttemptId());
     }
   }
   
@@ -782,13 +798,13 @@ public class AMContainerImpl implements AMContainer {
     @Override
     public void transition(AMContainerImpl container, AMContainerEvent cEvent) {
       if (container.pendingAttempt != null) {
-        container.sendCompletedToTaskAttempt(container.pendingAttempt);
+        container.sendTerminatedToTaskAttempt(container.pendingAttempt);
       }
       if (container.runningAttempt != null) {
-        container.sendCompletedToTaskAttempt(container.runningAttempt);
+        container.sendTerminatedToTaskAttempt(container.runningAttempt);
       }
       if (container.interruptedEvent != null) {
-        container.sendCompletedToTaskAttempt(container.interruptedEvent);
+        container.sendTerminatedToTaskAttempt(container.interruptedEvent);
       }
       container.sendCompletedToScheduler();
     }
@@ -860,7 +876,7 @@ public class AMContainerImpl implements AMContainer {
     public void transition(AMContainerImpl container, AMContainerEvent cEvent) {
       AMContainerAssignTAEvent event = (AMContainerAssignTAEvent) cEvent;
       container.inError = true;
-      container.sendCompletedToTaskAttempt(event.getTaskAttemptId());
+      container.sendTerminatedToTaskAttempt(event.getTaskAttemptId());
       container.sendStopRequestToNM();
       container.deAllocate();
       container.unregisterAttemptFromListener(container.runningAttempt);

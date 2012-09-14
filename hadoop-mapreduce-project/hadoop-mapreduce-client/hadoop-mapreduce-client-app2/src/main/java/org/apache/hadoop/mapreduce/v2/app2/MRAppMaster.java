@@ -70,6 +70,7 @@ import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncherImpl;
 import org.apache.hadoop.mapreduce.v2.app2.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.app2.recover.Recovery;
+import org.apache.hadoop.mapreduce.v2.app2.recover.RecoveryService;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
@@ -81,7 +82,6 @@ import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainer;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerMap;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerState;
-import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNode;
 import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeMap;
 import org.apache.hadoop.mapreduce.v2.app2.speculate.DefaultSpeculator;
@@ -106,7 +106,6 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -585,10 +584,7 @@ public class MRAppMaster extends CompositeService {
    * @return an instance of the recovery service.
    */
   protected Recovery createRecoveryService(AppContext appContext) {
-//    return new RecoveryService(appContext.getApplicationAttemptId(),
-//        appContext.getClock(), getCommitter());
-    // TODO XXX Uncomment after fixing RecoveryService
-    return null;
+    return new RecoveryService(appContext, getCommitter());
   }
   
   /**

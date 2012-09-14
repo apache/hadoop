@@ -37,7 +37,7 @@ import org.apache.hadoop.mapreduce.v2.app2.AppContext;
 import org.apache.hadoop.mapreduce.v2.app2.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobEventType;
-import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventReleased;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventCompleted;
 import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeEventNodeCountUpdated;
 import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeEventStateChanged;
 import org.apache.hadoop.yarn.Clock;
@@ -339,7 +339,7 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
     
     // Inform the Containers about completion..
     for (ContainerStatus c : finishedContainers) {
-      eventHandler.handle(new AMContainerEventReleased(c));
+      eventHandler.handle(new AMContainerEventCompleted(c));
     }
    
     // Inform the scheduler about new containers.
@@ -347,7 +347,7 @@ public class RMContainerRequestor extends RMCommunicator implements EventHandler
     if (newContainers.size() > 0) {
       newContainerIds = new ArrayList<ContainerId>(newContainers.size());
       for (Container container : newContainers) {
-        context.getAllContainers().addNewContainer(container);
+        context.getAllContainers().addContainerIfNew(container);
         newContainerIds.add(container.getId()); 
         context.getAllNodes().nodeSeen(container.getNodeId());
       }

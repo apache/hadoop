@@ -420,6 +420,7 @@ public class TaskAttemptListenerImpl2 extends CompositeService
 
     // A rough imitation of code from TaskTracker.
 
+    // TODO XXX: Does ContainerHeartbeatHandler need to be pinged on getTask() ? 
     JVMId jvmId = jvmContext.jvmId;
     LOG.info("ZZZ: JVM with ID : " + jvmId + " asked for a task");
     

@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.mapreduce.v2.app2.job.impl;
 
 import java.net.InetSocketAddress;
@@ -31,6 +49,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionE
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.Phase;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
@@ -230,6 +249,7 @@ public abstract class TaskAttemptImpl implements TaskAttempt,
     this.resourceCapability = BuilderUtils.newResource(getMemoryRequired(conf,
         taskId.getTaskType()));
     this.reportedStatus = new TaskAttemptStatus();
+    initTaskAttemptStatus(reportedStatus);
     RackResolver.init(conf);
     synchronized(stateMachineFactory) {
       if (!stateMachineInited) {
@@ -744,6 +764,9 @@ public abstract class TaskAttemptImpl implements TaskAttempt,
       // the container instead.
       ta.maybeSendSpeculatorContainerRequest();
 
+      // TODO XXX: Creating the remote task here may not be required in case of recovery.
+      // Could be solved by having the Scheduler pull the RemoteTask.
+      
       // Create the remote task.
       org.apache.hadoop.mapred.Task remoteTask = ta.createRemoteTask();
       // Create startTaskRequest
@@ -896,7 +919,7 @@ public abstract class TaskAttemptImpl implements TaskAttempt,
       // TODO jvmId only required if TAL registration happens here.
       // TODO Anything to be done with the TaskAttemptListener ? or is that in
       // the Container.
-
+ 
       ta.launchTime = ta.clock.getTime();
       ta.shufflePort = event.getShufflePort();
 
@@ -1136,6 +1159,10 @@ public abstract class TaskAttemptImpl implements TaskAttempt,
     public void transition(TaskAttemptImpl ta, TaskAttemptEvent event) {
       super.transition(ta, event);
       ta.sendTaskAttemptCleanupEvent();
+      // XXX: This may need some additional handling.
+      // TaskAttempt failed after SUCCESS -> the container should also be STOPPED if it's still RUNNING.
+      // Inform the Scheduler.
+      // XXX: Also maybe change the ougoing Task Attempt to be FETCH_FAILURE related.
       // TODO XXX: Any counter updates. 
     }
   }
@@ -1170,6 +1197,16 @@ public abstract class TaskAttemptImpl implements TaskAttempt,
       ta.addDiagnosticInfo("Too many fetch failures. Failing the attempt");
       super.transition(ta, event);
     }
+  }
+  
+  private void initTaskAttemptStatus(TaskAttemptStatus result) {
+    result.progress = 0.0f;
+    result.phase = Phase.STARTING;
+    result.stateString = "NEW";
+    result.taskState = TaskAttemptState.NEW;
+    Counters counters = EMPTY_COUNTERS;
+    //    counters.groups = new HashMap<String, CounterGroup>();
+    result.counters = counters;
   }
 
   // TODO Consolidate all the Failed / Killed methods which only differ in state.

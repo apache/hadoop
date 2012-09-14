@@ -3,6 +3,8 @@ package org.apache.hadoop.mapreduce.v2.app2.rm.container;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.jobhistory.ContainerHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app2.AppContext;
 import org.apache.hadoop.mapreduce.v2.app2.TaskAttemptListener;
@@ -14,6 +16,8 @@ import org.apache.hadoop.yarn.service.AbstractService;
 public class AMContainerMap extends AbstractService
     implements EventHandler<AMContainerEvent> {
 
+  private static final Log LOG = LogFactory.getLog(AMContainerMap.class);
+  
   private final ContainerHeartbeatHandler chh;
   private final TaskAttemptListener tal;
   @SuppressWarnings("rawtypes")
@@ -38,10 +42,10 @@ public class AMContainerMap extends AbstractService
     containerMap.get(containerId).handle(event);
   }
 
-  public void addNewContainer(Container container) {
+  public void addContainerIfNew(Container container) {
     AMContainer amc = new AMContainerImpl(container, chh, tal, eventHandler,
         context);
-    containerMap.put(container.getId(), amc);
+    containerMap.putIfAbsent(container.getId(), amc);
   }
   
   public AMContainer get(ContainerId containerId) {

@@ -431,7 +431,8 @@ public class TestJobImpl {
 
   private void finishTask(MRApp mrApp, Task task) throws Exception {
     TaskAttempt attempt = task.getAttempts().values().iterator().next();
-    mrApp.sendFinishToTaskAttempt(attempt, TaskAttemptState.SUCCEEDED);
+    mrApp.sendFinishToTaskAttempt(attempt.getID(), TaskAttemptState.SUCCEEDED,
+        false);
   }
   private boolean testUberDecision(Configuration conf) {
     JobID jobID = JobID.forName("job_1234567890000_0001");

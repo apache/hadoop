@@ -859,12 +859,12 @@ public abstract class TaskImpl implements Task, EventHandler<TaskEvent> {
       if (attempt.getAssignedContainerMgrAddress() != null) {
         //container was assigned
         // TOOD XXX: What else changes other than this one transition.
-        // TODO XXX: Get rid of all the old events, types, etc temporarily.
         
         // This can originate from TOO_MANY_FETCH_FAILURES -> the Container may still be running. Ask the scheduler to KILL it.
-        // TODO XXX ZZZ: Send out a TA_STOP_REQUEST. or the Task sends this out directly, considering the TaskAttempt may already have completed.
+        // TODO XXX: Send out a TA_STOP_REQUEST. or the Task sends this out directly, considering the TaskAttempt may already have completed.
 //        task.eventHandler.handle(new ContainerFailedEvent(attempt.getID(), 
 //            attempt.getAssignedContainerMgrAddress()));
+        // TODO XXX: This is not required here. TaskAttempt should be sending out the STOP_REQUEST
         task.eventHandler.handle(new AMSchedulerTAStopRequestEvent(castEvent.getTaskAttemptID(), true));
       }
       

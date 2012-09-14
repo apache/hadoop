@@ -761,7 +761,7 @@ public class TestRMContainerAllocator {
     Resource resource = BuilderUtils.newResource(memory);
     Container container = BuilderUtils.newContainer(containerId, nodeId, host
         + ":8000", resource, priority, null);
-    appContext.getAllContainers().addNewContainer(container);
+    appContext.getAllContainers().addContainerIfNew(container);
     return container;
   }
   
