@@ -2297,4 +2297,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * for getClassByName. {@see Configuration#getClassByNameOrNull(String)}
    */
   private static abstract class NegativeCacheSentinel {}
+
+  public static void dumpDeprecatedKeys() {
+    for (Map.Entry<String, DeprecatedKeyInfo> entry : deprecatedKeyMap.entrySet()) {
+      String newKeys = "";
+      for (String newKey : entry.getValue().newKeys) {
+        newKeys += newKey + "\t";
+      }
+      System.out.println(entry.getKey() + "\t" + newKeys);
+    }
+  }
 }

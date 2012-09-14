@@ -520,5 +520,10 @@ public class ConfigUtil {
         MRJobConfig.MR_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT   
     });
   }
+
+  public static void main(String[] args) {
+    loadResources();
+    Configuration.dumpDeprecatedKeys();
+  }
 }
 
