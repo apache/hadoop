@@ -14,6 +14,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8789. Tests setLevel(Level.OFF) should be Level.ERROR.
     (Andy Isaacson via eli)
 
+    HADOOP-8755. Print thread dump when tests fail due to timeout. (Andrey
+    Klochkov via atm)
+
   OPTIMIZATIONS
 
   BUG FIXES 

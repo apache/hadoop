@@ -181,6 +181,18 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hadoop.test.TimedOutTestsListener</value>
+            </property>
+          </properties>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.codehaus.mojo.jspc</groupId>
         <artifactId>jspc-maven-plugin</artifactId>
         <executions>
