@@ -208,6 +208,9 @@ Trunk (Unreleased)
     HADOOP-8767. Secondary namenode is started on slave nodes instead of
     master nodes. (Giovanni Delussu via suresh)
 
+    HADOOP-8818. Use equals instead == in MD5MD5CRC32FileChecksum
+    and TFileDumper. (Brandon Li via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
