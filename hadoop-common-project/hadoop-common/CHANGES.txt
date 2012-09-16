@@ -59,6 +59,9 @@ Release 2.7.3 - UNRELEASED
     HADOOP-12792. TestUserGroupInformation#testGetServerSideGroups fails in
     chroot (Eric Badger via jlowe)
 
+    HADOOP-8818. Use equals instead == in MD5MD5CRC32FileChecksum
+    and TFileDumper. (Brandon Li via suresh)
+
 Release 2.7.2 - 2016-01-25
 
   INCOMPATIBLE CHANGES
