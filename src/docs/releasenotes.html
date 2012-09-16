@@ -36,48 +36,16 @@
       
 </blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7509">HADOOP-7509</a>.
-     Trivial improvement reported by raviprak and fixed by raviprak <br>
-     <b>Improve message when Authentication is required</b><br>
-     <blockquote>                    Thanks Aaron and Suresh!<br/>
-
-Marking as resolved fixed since changes have gone in.
-</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8230">HADOOP-8230</a>.
      Major improvement reported by eli2 and fixed by eli <br>
      <b>Enable sync by default and disable append</b><br>
      <blockquote>                    Append is not supported in Hadoop 1.x. Please upgrade to 2.x if you need append. If you enabled dfs.support.append for HBase, you&#39;re OK, as durable sync (why HBase required dfs.support.append) is now enabled by default. If you really need the previous functionality, to turn on the append functionality set the flag &quot;dfs.support.broken.append&quot; to true.
 </blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8352">HADOOP-8352</a>.
-     Major improvement reported by owen.omalley and fixed by owen.omalley <br>
-     <b>We should always generate a new configure script for the c++ code</b><br>
-     <blockquote>                    If you are compiling c++, the configure script will now be automatically regenerated as it should be.<br/>
-
-This requires autoconf version 2.61 or greater.
-</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8365">HADOOP-8365</a>.
      Blocker improvement reported by eli2 and fixed by eli <br>
      <b>Add flag to disable durable sync</b><br>
      <blockquote>                    This patch enables durable sync by default. Installation where HBase was not used, that used to run without setting &quot;dfs.support.append&quot; or setting it to false explicitly in the configuration, must add a new flag &quot;dfs.durable.sync&quot; and set it to false to preserve the previous semantics.
-</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2318">HDFS-2318</a>.
-     Major sub-task reported by szetszwo and fixed by szetszwo (webhdfs)<br>
-     <b>Provide authentication to webhdfs using SPNEGO</b><br>
-     <blockquote>                                          Added two new conf properties dfs.web.authentication.kerberos.principal and dfs.web.authentication.kerberos.keytab for the SPNEGO servlet filter.
-
-      
-</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2338">HDFS-2338</a>.
-     Major sub-task reported by jnp and fixed by jnp (webhdfs)<br>
-     <b>Configuration option to enable/disable webhdfs.</b><br>
-     <blockquote>                                          Added a conf property dfs.webhdfs.enabled for enabling/disabling webhdfs.
-
-      
 </blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2465">HDFS-2465</a>.
@@ -144,6 +112,18 @@ dfs.datanode.readahead.bytes - set to a non-zero value to trigger readahead for 
      <blockquote>                                          getBlockLocations(), and hence open() for read, will now throw SafeModeException if the NameNode is still in safe mode and there are no replicas reported yet for one of the blocks in the file.
 
       
+</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3703">HDFS-3703</a>.
+     Major improvement reported by nkeywal and fixed by jingzhao (data-node, name-node)<br>
+     <b>Decrease the datanode failure detection time</b><br>
+     <blockquote>                    This jira adds a new DataNode state called &quot;stale&quot; at the NameNode. DataNodes are marked as stale if it does not send heartbeat message to NameNode within the timeout configured using the configuration parameter &quot;dfs.namenode.stale.datanode.interval&quot; in seconds (default value is 30 seconds). NameNode picks a stale datanode as the last target to read from when returning block locations for reads.<br/>
+
+<br/>
+
+This feature is by default turned * off *. To turn on the feature, set the HDFS configuration &quot;dfs.namenode.check.stale.datanode&quot; to true.<br/>
+
+
 </blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3814">HDFS-3814</a>.
@@ -236,10 +216,10 @@ Please see hdfs-default.xml for detailed description.
      <b>Error in the documentation regarding Checkpoint/Backup Node</b><br>
      <blockquote>On http://hadoop.apache.org/common/docs/r0.20.203.0/hdfs_user_guide.html#Checkpoint+Node: the command bin/hdfs namenode -checkpoint required to launch the backup/checkpoint node does not exist.<br>I have removed this from the docs.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7461">HADOOP-7461</a>.
-     Major bug reported by rbodkin and fixed by gkesavan (build)<br>
-     <b>Jackson Dependency Not Declared in Hadoop POM</b><br>
-     <blockquote>(COMMENT: This bug still affects 0.20.205.0, four months after the bug was filed.  This causes total failure, and the fix is trivial for whoever manages the POM -- just add the missing dependency! --ben)<br><br>This issue was identified and the fix &amp; workaround was documented at <br><br>https://issues.cloudera.org/browse/DISTRO-44<br><br>The issue affects use of Hadoop 0.20.203.0 from the Maven central repo. I built a job using that maven repo and ran it, resulting in this failure:<br><br>Exception in thread &quot;main&quot; ...</blockquote></li>
+<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7509">HADOOP-7509</a>.
+     Trivial improvement reported by raviprak and fixed by raviprak <br>
+     <b>Improve message when Authentication is required</b><br>
+     <blockquote>The message when security is enabled and authentication is configured to be simple is not explicit enough. It simply prints out &quot;Authentication is required&quot; and prints out a stack trace. The message should be &quot;Authorization (hadoop.security.authorization) is enabled but authentication (hadoop.security.authentication) is configured as simple. Please configure another method.&quot;</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7621">HADOOP-7621</a>.
      Critical bug reported by tucu00 and fixed by atm (security)<br>
@@ -256,20 +236,10 @@ Please see hdfs-default.xml for detailed description.
      <b>Cluster setup docs specify wrong owner for task-controller.cfg </b><br>
      <blockquote>The cluster setup docs indicate task-controller.cfg must be owned by the user running TaskTracker but the code checks for root. We should update the docs to reflect the real requirement.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7645">HADOOP-7645</a>.
-     Blocker bug reported by atm and fixed by jnp (security)<br>
-     <b>HTTP auth tests requiring Kerberos infrastructure are not disabled on branch-0.20-security</b><br>
-     <blockquote>The back-port of HADOOP-7119 to branch-0.20-security included tests which require Kerberos infrastructure in order to run. In trunk and 0.23, these are disabled unless one enables the {{testKerberos}} maven profile. In branch-0.20-security, these tests are always run regardless, and so fail most of the time.<br><br>See this Jenkins build for an example: https://builds.apache.org/view/G-L/view/Hadoop/job/Hadoop-0.20-security/26/</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7653">HADOOP-7653</a>.
      Minor bug reported by natty and fixed by natty (build)<br>
      <b>tarball doesn&apos;t include .eclipse.templates</b><br>
      <blockquote>The hadoop tarball doesn&apos;t include .eclipse.templates. This results in a failure to successfully run ant eclipse-files:<br><br>eclipse-files:<br><br>BUILD FAILED<br>/home/natty/Downloads/hadoop-0.20.2/build.xml:1606: /home/natty/Downloads/hadoop-0.20.2/.eclipse.templates not found.<br><br></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7664">HADOOP-7664</a>.
-     Minor improvement reported by raviprak and fixed by raviprak (conf)<br>
-     <b>o.a.h.conf.Configuration complains of overriding final parameter even if the value with which its attempting to override is the same. </b><br>
-     <blockquote>o.a.h.conf.Configuration complains of overriding final parameter even if the value with which its attempting to override is the same. </blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7665">HADOOP-7665</a>.
      Major bug reported by atm and fixed by atm (security)<br>
@@ -280,11 +250,6 @@ Please see hdfs-default.xml for detailed description.
      Major bug reported by atm and fixed by atm (security)<br>
      <b>branch-0.20-security doesn&apos;t include o.a.h.security.TestAuthenticationFilter</b><br>
      <blockquote>Looks like the back-port of HADOOP-7119 to branch-0.20-security missed {{o.a.h.security.TestAuthenticationFilter}}.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7674">HADOOP-7674</a>.
-     Major bug reported by jnp and fixed by jnp <br>
-     <b>TestKerberosName fails in 20 branch.</b><br>
-     <blockquote>TestKerberosName fails in 20 branch. In fact this test has got duplicated in 20, with a little change to the rules.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7745">HADOOP-7745</a>.
      Major bug reported by raviprak and fixed by raviprak <br>
@@ -336,11 +301,6 @@ Please see hdfs-default.xml for detailed description.
      <b>UserGroupInformation fails to login if thread&apos;s context classloader can&apos;t load HadoopLoginModule</b><br>
      <blockquote>In a few hard-to-reproduce situations, we&apos;ve seen a problem where the UGI login call causes a failure to login exception with the following cause:<br><br>Caused by: javax.security.auth.login.LoginException: unable to find <br>LoginModule class: org.apache.hadoop.security.UserGroupInformation <br>$HadoopLoginModule<br><br>After a bunch of debugging, I determined that this happens when the login occurs in a thread whose Context ClassLoader has been set to null.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-7987">HADOOP-7987</a>.
-     Major improvement reported by devaraj and fixed by jnp (security)<br>
-     <b>Support setting the run-as user in unsecure mode</b><br>
-     <blockquote>Some applications need to be able to perform actions (such as launch MR jobs) from map or reduce tasks. In earlier unsecure versions of hadoop (20.x), it was possible to do this by setting user.name in the configuration. But in 20.205 and 1.0, when running in unsecure mode, this does not work. (In secure mode, you can do this using the kerberos credentials).</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-7988">HADOOP-7988</a>.
      Major bug reported by jnp and fixed by jnp <br>
      <b>Upper case in hostname part of the principals doesn&apos;t work with kerberos.</b><br>
@@ -361,20 +321,10 @@ Please see hdfs-default.xml for detailed description.
      <b>Add option to relax build-version check for branch-1</b><br>
      <blockquote>In 1.x DNs currently refuse to connect to NNs if their build *revision* (ie svn revision) do not match. TTs refuse to connect to JTs if their build *version* (version, revision, user, and source checksum) do not match.<br><br>This prevents rolling upgrades, which is intentional, see the discussion in HADOOP-5203. The primary motivation in that jira was (1) it&apos;s difficult to guarantee every build on a large cluster got deployed correctly, builds don&apos;t get rolled back to old versions by accident etc,...</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8251">HADOOP-8251</a>.
-     Blocker bug reported by tlipcon and fixed by tlipcon (security)<br>
-     <b>SecurityUtil.fetchServiceTicket broken after HADOOP-6941</b><br>
-     <blockquote>HADOOP-6941 replaced direct references to some classes with reflective access so as to support other JDKs. Unfortunately there was a mistake in the name of the Krb5Util class, which broke fetchServiceTicket. This manifests itself as the inability to run checkpoints or other krb5-SSL HTTP-based transfers:<br><br>java.lang.ClassNotFoundException: sun.security.jgss.krb5</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8269">HADOOP-8269</a>.
      Trivial bug reported by eli2 and fixed by eli (documentation)<br>
      <b>Fix some javadoc warnings on branch-1</b><br>
      <blockquote>There are some javadoc warnings on branch-1, let&apos;s fix them.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8293">HADOOP-8293</a>.
-     Major bug reported by owen.omalley and fixed by owen.omalley (build)<br>
-     <b>The native library&apos;s Makefile.am doesn&apos;t include JNI path</b><br>
-     <blockquote>When compiling on centos 6, I get the following error when compiling the native library:<br><br>{code}<br> [exec] /usr/bin/ld: cannot find -ljvm<br>{code}<br><br>The problem is simply that the Makefile.am libhadoop_la_LDFLAGS doesn&apos;t include AM_LDFLAGS.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8314">HADOOP-8314</a>.
      Major bug reported by tucu00 and fixed by tucu00 (security)<br>
@@ -385,11 +335,6 @@ Please see hdfs-default.xml for detailed description.
      Major bug reported by kumarr and fixed by eli (build)<br>
      <b>Build fails with Java 7</b><br>
      <blockquote>I am seeing the following message running IBM Java 7 running branch-1.0 code.<br>compile:<br>[echo] contrib: gridmix<br>[javac] Compiling 31 source files to /home/hadoop/branch-1.0_0427/build/contrib/gridmix/classes<br>[javac] /home/hadoop/branch-1.0_0427/src/contrib/gridmix/src/java/org/apache/hadoop/mapred/gridmix/Gridmix.java:396: error: type argument ? extends T is not within bounds of type-variable E<br>[javac] private &lt;T&gt; String getEnumValues(Enum&lt;? extends T&gt;[] e) {<br>[javac] ^<br>[javac] where T,E are ty...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HADOOP-8338">HADOOP-8338</a>.
-     Major bug reported by owen.omalley and fixed by owen.omalley (security)<br>
-     <b>Can&apos;t renew or cancel HDFS delegation tokens over secure RPC</b><br>
-     <blockquote>The fetchdt tool is failing for secure deployments when given --renew or --cancel on tokens fetched using RPC. (The tokens fetched over HTTP can be renewed and canceled fine.)</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HADOOP-8399">HADOOP-8399</a>.
      Major bug reported by cos and fixed by cos (build)<br>
@@ -421,11 +366,6 @@ Please see hdfs-default.xml for detailed description.
      <b>backport forced daemon shutdown of HADOOP-8353 into branch-1</b><br>
      <blockquote>the init.d service shutdown code doesn&apos;t work if the daemon is hung -backporting the portion of HADOOP-8353 that edits bin/hadoop-daemon.sh corrects this</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-1108">HDFS-1108</a>.
-     Major sub-task reported by dhruba and fixed by tlipcon (ha, name-node)<br>
-     <b>Log newly allocated blocks</b><br>
-     <blockquote>The current HDFS design says that newly allocated blocks for a file are not persisted in the NN transaction log when the block is allocated. Instead, a hflush() or a close() on the file persists the blocks into the transaction log. It would be nice if we can immediately persist newly allocated blocks (as soon as they are allocated) for specific files.</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-1378">HDFS-1378</a>.
      Major improvement reported by tlipcon and fixed by cmccabe (name-node)<br>
      <b>Edit log replay should track and report file offsets in case of errors</b><br>
@@ -436,90 +376,15 @@ Please see hdfs-default.xml for detailed description.
      <b>when dfs.name.dir and dfs.name.edits.dir are same fsimage will be saved twice every time</b><br>
      <blockquote>when image and edits dir are configured same, the fsimage flushing from memory to disk will be done twice whenever saveNamespace is done. this may impact the performance of backupnode/snn where it does a saveNamespace during every checkpointing time.</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2065">HDFS-2065</a>.
-     Major bug reported by bharathm and fixed by umamaheswararao <br>
-     <b>Fix NPE in DFSClient.getFileChecksum</b><br>
-     <blockquote>The following code can throw NPE if callGetBlockLocations returns null.<br><br>If server returns null <br><br>{code}<br>    List&lt;LocatedBlock&gt; locatedblocks<br>        = callGetBlockLocations(namenode, src, 0, Long.MAX_VALUE).getLocatedBlocks();<br>{code}<br><br>The right fix for this is server should throw right exception.<br><br></blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2305">HDFS-2305</a>.
      Major bug reported by atm and fixed by atm (name-node)<br>
      <b>Running multiple 2NNs can result in corrupt file system</b><br>
      <blockquote>Here&apos;s the scenario:<br><br>* You run the NN and 2NN (2NN A) on the same machine.<br>* You don&apos;t have the address of the 2NN configured, so it&apos;s defaulting to 127.0.0.1.<br>* There&apos;s another 2NN (2NN B) running on a second machine.<br>* When a 2NN is done checkpointing, it says &quot;hey NN, I have an updated fsimage for you. You can download it from this URL, which includes my IP address, which is x&quot;<br><br>And here&apos;s the steps that occur to cause this issue:<br><br># Some edits happen.<br># 2NN A (on the NN machine) does a c...</blockquote></li>
 
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2317">HDFS-2317</a>.
-     Major sub-task reported by szetszwo and fixed by szetszwo <br>
-     <b>Read access to HDFS using HTTP REST</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2331">HDFS-2331</a>.
-     Major bug reported by abhijit.shingate and fixed by abhijit.shingate (hdfs client)<br>
-     <b>Hdfs compilation fails</b><br>
-     <blockquote>I am trying to perform complete build from trunk folder but the compilation fails.<br><br>*Commandline:*<br>mvn clean install  <br><br>*Error Message:*<br><br>[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:2.<br>3.2:compile (default-compile) on project hadoop-hdfs: Compilation failure<br>[ERROR] \Hadoop\SVN\trunk\hadoop-hdfs-project\hadoop-hdfs\src\main\java\org<br>\apache\hadoop\hdfs\web\WebHdfsFileSystem.java:[209,21] type parameters of &lt;T&gt;T<br>cannot be determined; no unique maximal instance...</blockquote></li>
-
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2332">HDFS-2332</a>.
      Major test reported by tlipcon and fixed by tlipcon (test)<br>
      <b>Add test for HADOOP-7629: using an immutable FsPermission as an IPC parameter</b><br>
      <blockquote>HADOOP-7629 fixes a bug where an immutable FsPermission would throw an error if used as the argument to fs.setPermission(). This JIRA is to add a test case for the common bugfix.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2333">HDFS-2333</a>.
-     Major bug reported by ikelly and fixed by szetszwo <br>
-     <b>HDFS-2284 introduced 2 findbugs warnings on trunk</b><br>
-     <blockquote>When HDFS-2284 was submitted it made DFSOutputStream public which triggered two SC_START_IN_CTOR findbug warnings.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2340">HDFS-2340</a>.
-     Major sub-task reported by szetszwo and fixed by szetszwo (webhdfs)<br>
-     <b>Support getFileBlockLocations and getDelegationToken in webhdfs</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2348">HDFS-2348</a>.
-     Major sub-task reported by szetszwo and fixed by szetszwo (webhdfs)<br>
-     <b>Support getContentSummary and getFileChecksum in webhdfs</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2356">HDFS-2356</a>.
-     Major sub-task reported by szetszwo and fixed by szetszwo (webhdfs)<br>
-     <b>webhdfs: support case insensitive query parameter names</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2361">HDFS-2361</a>.
-     Critical bug reported by rajsaha and fixed by jnp (name-node)<br>
-     <b>hftp is broken</b><br>
-     <blockquote>Distcp with hftp is failing.<br><br>{noformat}<br>$hadoop   distcp hftp://&lt;NNhostname&gt;:50070/user/hadoopqa/1316814737/newtemp 1316814737/as<br>11/09/23 21:52:33 INFO tools.DistCp: srcPaths=[hftp://&lt;NNhostname&gt;:50070/user/hadoopqa/1316814737/newtemp]<br>11/09/23 21:52:33 INFO tools.DistCp: destPath=1316814737/as<br>Retrieving token from: https://&lt;NN IP&gt;:50470/getDelegationToken<br>Retrieving token from: https://&lt;NN IP&gt;:50470/getDelegationToken?renewer=mapred<br>11/09/23 21:52:34 INFO security.TokenCache: Got dt for h...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2366">HDFS-2366</a>.
-     Major sub-task reported by arpitgupta and fixed by szetszwo (webhdfs)<br>
-     <b>webhdfs throws a npe when ugi is null from getDelegationToken</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2368">HDFS-2368</a>.
-     Major bug reported by arpitgupta and fixed by szetszwo <br>
-     <b>defaults created for web keytab and principal, these properties should not have defaults</b><br>
-     <blockquote>the following defaults are set in hdfs-defaults.xml<br><br>&lt;property&gt;<br>  &lt;name&gt;dfs.web.authentication.kerberos.principal&lt;/name&gt;<br>  &lt;value&gt;HTTP/${dfs.web.hostname}@${kerberos.realm}&lt;/value&gt;<br>  &lt;description&gt;<br>    The HTTP Kerberos principal used by Hadoop-Auth in the HTTP endpoint.<br><br>    The HTTP Kerberos principal MUST start with &apos;HTTP/&apos; per Kerberos<br>    HTTP SPENGO specification.<br>  &lt;/description&gt;<br>&lt;/property&gt;<br><br>&lt;property&gt;<br>  &lt;name&gt;dfs.web.authentication.kerberos.keytab&lt;/name&gt;<br>  &lt;value&gt;${user.home}/dfs.web....</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2427">HDFS-2427</a>.
-     Major sub-task reported by arpitgupta and fixed by szetszwo (webhdfs)<br>
-     <b>webhdfs mkdirs api call creates path with 777 permission, we should default it to 755</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2432">HDFS-2432</a>.
-     Major sub-task reported by arpitgupta and fixed by szetszwo (webhdfs)<br>
-     <b>webhdfs setreplication api should return a 403 when called on a directory</b><br>
-     <blockquote>Currently the set replication api on a directory leads to a 200.<br><br>Request URI http://NN:50070/webhdfs/tmp/webhdfs_data/dir_replication_tests?op=SETREPLICATION&amp;replication=5<br>Request Method: PUT<br>Status Line: HTTP/1.1 200 OK<br>Response Content: {&quot;boolean&quot;:false}<br><br>Since we can determine that this call did not succeed (boolean=false) we should rather just return a 403</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2453">HDFS-2453</a>.
-     Major sub-task reported by arpitgupta and fixed by szetszwo (webhdfs)<br>
-     <b>tail using a webhdfs uri throws an error</b><br>
-     <blockquote>/usr//bin/hadoop --config /etc/hadoop dfs -tail webhdfs://NN:50070/file <br>tail: HTTP_PARTIAL expected, received 200<br></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2494">HDFS-2494</a>.
-     Major sub-task reported by umamaheswararao and fixed by umamaheswararao (webhdfs)<br>
-     <b>[webhdfs] When Getting the file using OP=OPEN with DN http address, ESTABLISHED sockets are growing.</b><br>
-     <blockquote>As part of the reliable test,<br>Scenario:<br>Initially check the socket count. ---there are aroud 42 sockets are there.<br>open the file with DataNode http address using op=OPEN request parameter about 500 times in loop.<br>Wait for some time and check the socket count. --- There are thousands of ESTABLISHED sockets are growing. ~2052<br><br>Here is the netstat result:<br><br>C:\Users\uma&gt;netstat | grep 127.0.0.1 | grep ESTABLISHED |wc -l<br>2042<br>C:\Users\uma&gt;netstat | grep 127.0.0.1 | grep ESTABLISHED |wc -l<br>2042<br>C:\...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2501">HDFS-2501</a>.
-     Major sub-task reported by szetszwo and fixed by szetszwo (webhdfs)<br>
-     <b>add version prefix and root methods to webhdfs</b><br>
-     <blockquote></blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2541">HDFS-2541</a>.
      Major bug reported by qwertymaniac and fixed by qwertymaniac (data-node)<br>
@@ -530,21 +395,6 @@ Please see hdfs-default.xml for detailed description.
      Trivial bug reported by qwertymaniac and fixed by qwertymaniac (name-node)<br>
      <b>ReplicationTargetChooser has incorrect block placement comments</b><br>
      <blockquote>{code}<br>/** The class is responsible for choosing the desired number of targets<br> * for placing block replicas.<br> * The replica placement strategy is that if the writer is on a datanode,<br> * the 1st replica is placed on the local machine, <br> * otherwise a random datanode. The 2nd replica is placed on a datanode<br> * that is on a different rack. The 3rd replica is placed on a datanode<br> * which is on the same rack as the **first replca**.<br> */<br>{code}<br><br>That should read &quot;second replica&quot;. The test cases c...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2552">HDFS-2552</a>.
-     Major task reported by szetszwo and fixed by szetszwo (webhdfs)<br>
-     <b>Add WebHdfs Forrest doc</b><br>
-     <blockquote></blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2590">HDFS-2590</a>.
-     Major bug reported by szetszwo and fixed by szetszwo (webhdfs)<br>
-     <b>Some links in WebHDFS forrest doc do not work</b><br>
-     <blockquote>Some links are pointing to DistributedFileSystem javadoc but the javadoc of DistributedFileSystem is not generated by default.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/HDFS-2604">HDFS-2604</a>.
-     Minor improvement reported by szetszwo and fixed by szetszwo (webhdfs)<br>
-     <b>Add a log message to show if WebHDFS is enabled</b><br>
-     <blockquote>WebHDFS can be enabled/disabled by the conf key {{dfs.webhdfs.enabled}}.  Let&apos;s add a log message to show if it is enabled.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-2637">HDFS-2637</a>.
      Major bug reported by eli and fixed by eli (hdfs client)<br>
@@ -636,6 +486,11 @@ Please see hdfs-default.xml for detailed description.
      <b>HDFS does not use ClientProtocol in a backward-compatible way</b><br>
      <blockquote>HDFS-617 was brought into branch-0.20-security/branch-1 to support non-recursive create, along with HADOOP-6840 and HADOOP-6886. However, the changes in HDFS was done in an incompatible way, making the client unusable against older clusters, even when plain old create() is called. This is because DFS now internally calls create() through the newly introduced method. By simply changing how the methods are wired internally, we can remove this limitation. We may eventually switch back to the app...</blockquote></li>
 
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3466">HDFS-3466</a>.
+     Major bug reported by owen.omalley and fixed by owen.omalley (name-node, security)<br>
+     <b>The SPNEGO filter for the NameNode should come out of the web keytab file</b><br>
+     <blockquote>Currently, the spnego filter uses the DFS_NAMENODE_KEYTAB_FILE_KEY to find the keytab. It should use the DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY to do it.</blockquote></li>
+
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3504">HDFS-3504</a>.
      Major improvement reported by sseth and fixed by szetszwo <br>
      <b>Configurable retry in DFSClient</b><br>
@@ -650,6 +505,11 @@ Please see hdfs-default.xml for detailed description.
      Major bug reported by szetszwo and fixed by szetszwo (webhdfs)<br>
      <b>WebHDFS CREATE does not use client location for redirection</b><br>
      <blockquote>CREATE currently redirects client to a random datanode but not using the client location information.</blockquote></li>
+
+<li> <a href="https://issues.apache.org/jira/browse/HDFS-3617">HDFS-3617</a>.
+     Major improvement reported by mattf and fixed by qwertymaniac <br>
+     <b>Port HDFS-96 to branch-1 (support blocks greater than 2GB)</b><br>
+     <blockquote>Please see HDFS-96.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/HDFS-3652">HDFS-3652</a>.
      Blocker bug reported by tlipcon and fixed by tlipcon (name-node)<br>
@@ -680,11 +540,6 @@ Please see hdfs-default.xml for detailed description.
      Major bug reported by xiaokang and fixed by subrotosanyal (jobtracker)<br>
      <b>Job may hang if mapreduce.job.committer.setup.cleanup.needed=false and mapreduce.map/reduce.failures.maxpercent&gt;0</b><br>
      <blockquote>Job may hang at RUNNING state if mapreduce.job.committer.setup.cleanup.needed=false and mapreduce.map/reduce.failures.maxpercent&gt;0. It happens when some tasks fail but havent reached failures.maxpercent.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2289">MAPREDUCE-2289</a>.
-     Major bug reported by tlipcon and fixed by ahmed.radwan (job submission)<br>
-     <b>Permissions race can make getStagingDir fail on local filesystem</b><br>
-     <blockquote>I&apos;ve observed the following race condition in TestFairSchedulerSystem which uses a MiniMRCluster on top of RawLocalFileSystem:<br>- two threads call getStagingDir at the same time<br>- Thread A checks fs.exists(stagingArea) and sees false<br>-- Calls mkdirs(stagingArea, JOB_DIR_PERMISSIONS)<br>--- mkdirs calls the Java mkdir API which makes the file with umask-based permissions<br>- Thread B runs, checks fs.exists(stagingArea) and sees true<br>-- checks permissions, sees the default permissions, and throws IOE...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-2376">MAPREDUCE-2376</a>.
      Major bug reported by tlipcon and fixed by tlipcon (task-controller, test)<br>
@@ -740,11 +595,6 @@ Please see hdfs-default.xml for detailed description.
      Major sub-task reported by eli and fixed by eli (tasktracker)<br>
      <b>Add local dir failure info to metrics and the web UI</b><br>
      <blockquote>Like HDFS-811/HDFS-1850 but for the TT.</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3076">MAPREDUCE-3076</a>.
-     Blocker bug reported by acmurthy and fixed by acmurthy (test)<br>
-     <b>TestSleepJob fails </b><br>
-     <blockquote>TestSleepJob fails, it was intended to be used in other tests for MAPREDUCE-2981.</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-3278">MAPREDUCE-3278</a>.
      Major improvement reported by tlipcon and fixed by tlipcon (mrv1, performance, task)<br>
@@ -810,11 +660,6 @@ Please see hdfs-default.xml for detailed description.
      Major bug reported by eli2 and fixed by cmccabe <br>
      <b>TestJobInProgress#testLocality uses a bogus topology</b><br>
      <blockquote>The following in TestJobInProgress#testLocality:<br><br>{code}<br>    Node r2n4 = new NodeBase(&quot;/default/rack2/s1/node4&quot;);<br>    nt.add(r2n4);<br>{code}<br><br>violates the check introduced by HADOOP-8159:<br><br>{noformat}<br>Testcase: testLocality took 0.005 sec<br>        Caused an ERROR<br>Invalid network topology. You cannot have a rack and a non-rack node at the same level of the network topology.<br>org.apache.hadoop.net.NetworkTopology$InvalidTopologyException: Invalid network topology. You cannot have a rack and a non-ra...</blockquote></li>
-
-<li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4195">MAPREDUCE-4195</a>.
-     Critical bug reported by jira.shegalov and fixed by  (jobtracker)<br>
-     <b>With invalid queueName request param, jobqueue_details.jsp shows NPE</b><br>
-     <blockquote>When you access /jobqueue_details.jsp manually, instead of via a link, it has queueName set to null internally and this goes for a lookup into the scheduling info maps as well.<br><br>As a result, if using FairScheduler, a Pool with String name = null gets created and this brings the scheduler down. I have not tested what happens to the CapacityScheduler, but ideally if no queueName is set in that jsp, it should fall back to &apos;default&apos;. Otherwise, this brings down the JobTracker completely.<br><br>FairSch...</blockquote></li>
 
 <li> <a href="https://issues.apache.org/jira/browse/MAPREDUCE-4241">MAPREDUCE-4241</a>.
      Major bug reported by abayer and fixed by abayer (build, examples)<br>
