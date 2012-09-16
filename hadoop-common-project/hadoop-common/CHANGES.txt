@@ -211,6 +211,9 @@ Trunk (Unreleased)
     HADOOP-8818. Use equals instead == in MD5MD5CRC32FileChecksum
     and TFileDumper. (Brandon Li via suresh)
 
+    HADOOP-8821. Fix findbugs warning related to concatenating string in a 
+    for loop in Configuration#dumpDeprecatedKeys(). (suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)

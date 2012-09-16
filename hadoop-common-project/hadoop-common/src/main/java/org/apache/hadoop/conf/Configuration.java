@@ -2332,17 +2332,17 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   
   /**
    * A unique class which is used as a sentinel value in the caching
-   * for getClassByName. {@see Configuration#getClassByNameOrNull(String)}
+   * for getClassByName. {@link Configuration#getClassByNameOrNull(String)}
    */
   private static abstract class NegativeCacheSentinel {}
 
   public static void dumpDeprecatedKeys() {
     for (Map.Entry<String, DeprecatedKeyInfo> entry : deprecatedKeyMap.entrySet()) {
-      String newKeys = "";
+      StringBuilder newKeys = new StringBuilder();
       for (String newKey : entry.getValue().newKeys) {
-        newKeys += newKey + "\t";
+        newKeys.append(newKey).append("\t");
       }
-      System.out.println(entry.getKey() + "\t" + newKeys);
+      System.out.println(entry.getKey() + "\t" + newKeys.toString());
     }
   }
 }
