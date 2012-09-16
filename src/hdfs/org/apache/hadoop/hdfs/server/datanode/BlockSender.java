@@ -277,8 +277,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
                          throws IOException {
     // Sends multiple chunks in one packet with a single write().
 
-    int len = Math.min((int) (endOffset - offset),
-                       bytesPerChecksum*maxChunks);
+    int len = (int) Math.min(endOffset - offset,
+        (((long) bytesPerChecksum) * ((long) maxChunks)));
     
     // truncate len so that any partial chunks will be sent as a final packet.
     // this is not necessary for correctness, but partial chunks are 

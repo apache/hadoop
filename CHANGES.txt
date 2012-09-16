@@ -10,7 +10,7 @@ Release 1.1.1 - Unreleased
 
   BUG FIXES
 
-Release 1.1.0 - 2012.08.20
+Release 1.1.0 - 2012.09.16
 
   INCOMPATIBLE CHANGES
 
@@ -159,6 +159,9 @@ Release 1.1.0 - 2012.08.20
 
     HDFS-3814. Make the replication monitor multipliers configurable in 1.x.
     (Jing Zhao via suresh)
+
+    HDFS-3617. Port HDFS-96 to branch-1 (support blocks greater than 2GB).
+    (Patrick Kling and harsh via eli)
 
   BUG FIXES
 
