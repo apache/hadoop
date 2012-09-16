@@ -126,7 +126,7 @@ class TFileDumper {
           dataSizeUncompressed += region.getRawSize();
         }
         properties.put("Data Block Bytes", Long.toString(dataSize));
-        if (reader.readerBCF.getDefaultCompressionName() != "none") {
+        if (!reader.readerBCF.getDefaultCompressionName().equals("none")) {
           properties.put("Data Block Uncompressed Bytes", Long
               .toString(dataSizeUncompressed));
           properties.put("Data Block Compression Ratio", String.format(
