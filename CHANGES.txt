@@ -234,6 +234,9 @@ Release 1.2.0 - unreleased
     HADOOP-7688. When a servlet filter throws an exception in init(..), 
     the Jetty server failed silently.(umamahesh)
 
+    HADOOP-8786. HttpServer continues to start even if AuthenticationFilter 
+    fails to init. (Todd Lipcon via umamahesh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
