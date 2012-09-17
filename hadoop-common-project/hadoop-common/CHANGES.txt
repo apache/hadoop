@@ -229,6 +229,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8755. Print thread dump when tests fail due to timeout. (Andrey
     Klochkov via atm)
 
+    HADOOP-8806. libhadoop.so: dlopen should be better at locating
+    libsnappy.so, etc. (Colin Patrick McCabe via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES

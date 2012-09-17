@@ -109,6 +109,7 @@ add_executable(test_bulk_crc32
 )
 set_property(SOURCE main.cpp PROPERTY INCLUDE_DIRECTORIES "\"-Werror\" \"-Wall\"")
 
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 add_dual_library(hadoop
     ${D}/io/compress/lz4/Lz4Compressor.c
     ${D}/io/compress/lz4/Lz4Decompressor.c
@@ -125,6 +126,17 @@ add_dual_library(hadoop
     ${D}/util/NativeCrc32.c
     ${D}/util/bulk_crc32.c
 )
+
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+    #
+    # By embedding '$ORIGIN' into the RPATH of libhadoop.so,
+    # dlopen will look in the directory containing libhadoop.so.
+    # However, $ORIGIN is not supported by all operating systems.
+    #
+    SET_TARGET_PROPERTIES(hadoop 
+        PROPERTIES INSTALL_RPATH "\$ORIGIN/")
+ENDIF()
+
 target_link_dual_libraries(hadoop
     dl
     ${JAVA_JVM_LIBRARY}
