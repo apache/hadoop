@@ -69,7 +69,7 @@ public class FTPInputStream extends FSInputStream {
     if (byteRead >= 0) {
       pos++;
     }
-    if (stats != null & byteRead >= 0) {
+    if (stats != null && byteRead >= 0) {
       stats.incrementBytesRead(1);
     }
     return byteRead;
@@ -84,7 +84,7 @@ public class FTPInputStream extends FSInputStream {
     if (result > 0) {
       pos += result;
     }
-    if (stats != null & result > 0) {
+    if (stats != null && result > 0) {
       stats.incrementBytesRead(result);
     }
 

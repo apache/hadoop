@@ -477,7 +477,7 @@ public class FTPFileSystem extends FileSystem {
       if (created) {
         String parentDir = parent.toUri().getPath();
         client.changeWorkingDirectory(parentDir);
-        created = created & client.makeDirectory(pathName);
+        created = client.makeDirectory(pathName);
       }
     } else if (isFile(client, absolute)) {
       throw new IOException(String.format(

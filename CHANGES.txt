@@ -228,6 +228,9 @@ Release 1.2.0 - unreleased
     HADOOP-8767. Secondary namenode is started on slave nodes instead of
     master nodes. (Giovanni Delussu via suresh)
 
+    HADOOP-8819. Incorrectly & is used instead of && in some file system 
+    implementations. (Brandon Li via suresh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
