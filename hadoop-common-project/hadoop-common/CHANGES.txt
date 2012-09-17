@@ -366,6 +366,9 @@ Release 2.0.2-alpha - 2012-09-07
 
     HADOOP-8801. ExitUtil#terminate should capture the exception stack trace. (eli)
 
+    HADOOP-8819. Incorrectly & is used instead of && in some file system 
+    implementations. (Brandon Li via suresh)
+
   BUG FIXES
 
     HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname
