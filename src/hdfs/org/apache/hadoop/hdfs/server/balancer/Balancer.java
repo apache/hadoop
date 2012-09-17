@@ -184,6 +184,11 @@ import org.apache.hadoop.util.ToolRunner;
  */
 
 public class Balancer implements Tool {
+
+  static {
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
   private static final Log LOG = 
     LogFactory.getLog(Balancer.class.getName());
   final private static long MAX_BLOCKS_SIZE_TO_FETCH = 2*1024*1024*1024L; //2GB
@@ -228,6 +233,7 @@ public class Balancer implements Tool {
                  = new HashMap<String, BalancerDatanode>();
   
   private NetworkTopology cluster = new NetworkTopology();
+  private BlockPlacementPolicy policy;
   
   private double avgUtilization = 0.0D;
   
@@ -795,33 +801,27 @@ public class Balancer implements Tool {
    * Check that this Balancer is compatible with the Block Placement Policy used
    * by the Namenode.
    */
-  private void checkReplicationPolicyCompatibility(Configuration conf)
-      throws UnsupportedActionException {
-    if (BlockPlacementPolicy.getInstance(conf, null, null).getClass() != BlockPlacementPolicyDefault.class) {
-      throw new UnsupportedActionException(
-          "Balancer without BlockPlacementPolicyDefault");
+  private void checkReplicationPolicyCompatibility() throws UnsupportedActionException {
+    if (!policy.isCompatibleWithBalancer()) {
+      throw new UnsupportedActionException("Balancer is not compatible with the current policy");
     }
   }
+   
+   /** Default constructor */
+  Balancer() {
+   }
 
-  /** Default constructor */
-  Balancer() throws UnsupportedActionException {
-    checkReplicationPolicyCompatibility(getConf());
-  }
-
-  /** Construct a balancer from the given configuration */
-  Balancer(Configuration conf) throws UnsupportedActionException {
-    checkReplicationPolicyCompatibility(conf);
+   /** Construct a balancer from the given configuration */
+  Balancer(Configuration conf) {
     setConf(conf);
-  }
-
-  /** Construct a balancer from the given configuration and threshold */
-  Balancer(Configuration conf, double threshold)
-      throws UnsupportedActionException {
-    checkReplicationPolicyCompatibility(conf);
-    setConf(conf);
-    this.threshold = threshold;
-  }
-
+   } 
+ 
+   /** Construct a balancer from the given configuration and threshold */
+  Balancer(Configuration conf, double threshold) {
+     setConf(conf);
+     this.threshold = threshold;
+   }
+  
   /**
    * Run a balancer
    * @param args
@@ -876,6 +876,9 @@ public class Balancer implements Tool {
    * when connection fails.
    */
   private void init(double threshold) throws IOException {
+  
+    this.policy = BlockPlacementPolicy.getInstance(conf, null, cluster);
+    checkReplicationPolicyCompatibility();
     this.threshold = threshold;
     this.namenode = createNamenode(conf);
     this.client = DFSClient.createNamenode(conf);
@@ -1394,33 +1397,15 @@ public class Balancer implements Tool {
     }
 
     boolean goodBlock = false;
-    if (cluster.isOnSameRack(source.getDatanode(), target.getDatanode())) {
-      // good if source and target are on the same rack
-      goodBlock = true;
-    } else {
-      boolean notOnSameRack = true;
-      synchronized (block) {
-        for (BalancerDatanode loc : block.locations) {
-          if (cluster.isOnSameRack(loc.datanode, target.datanode)) {
-            notOnSameRack = false;
-            break;
-          }
-        }
+    synchronized (block) {     
+      List<DatanodeInfo> locations = new ArrayList<DatanodeInfo>();
+      for (BalancerDatanode loc : block.locations) {
+        locations.add(loc.getDatanode());
       }
-      if (notOnSameRack) {
-        // good if target is target is not on the same rack as any replica
-        goodBlock = true;
-      } else {
-        // good if source is on the same rack as on of the replicas
-        for (BalancerDatanode loc : block.locations) {
-          if (loc != source && 
-              cluster.isOnSameRack(loc.datanode, source.datanode)) {
-            goodBlock = true;
-            break;
-          }
-        }
-      }
+      goodBlock = policy.canMove(block.getBlock(), source.getDatanode(),
+          target.getDatanode(), locations);
     }
+        
     return goodBlock;
   }
   

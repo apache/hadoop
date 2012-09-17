@@ -89,6 +89,10 @@ Branch-hadoop-1-win - unreleased
     HADOOP-8734. Modify LocalJobRunner to support private distributed cache.
     (Ivan Mitic via vinodkv)
 
+    HDFS-3564. Improve BlockPlacementPolicy interface and change
+    BlockPlacementPolicyDefault to make it more extendible.  (Sumadhur Reddy
+    Bolli via szetszwo)
+
 OPTIMAZATIONS
 
 BUG FIXES

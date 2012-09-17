@@ -39,16 +39,16 @@ import java.util.*;
  */
 @InterfaceAudience.Private
 public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
-  private boolean considerLoad; 
-  private NetworkTopology clusterMap;
-  private FSClusterStats stats;
+  protected boolean considerLoad; 
+  protected NetworkTopology clusterMap;
+  protected FSClusterStats stats;
 
   BlockPlacementPolicyDefault(Configuration conf,  FSClusterStats stats,
                            NetworkTopology clusterMap) {
     initialize(conf, stats, clusterMap);
   }
 
-  BlockPlacementPolicyDefault() {
+  protected BlockPlacementPolicyDefault() {
   }
     
   /** {@inheritDoc} */
@@ -92,7 +92,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   /**
    * This is not part of the public API but is used by the unit tests.
    */
-  DatanodeDescriptor[] chooseTarget(int numOfReplicas,
+  protected DatanodeDescriptor[] chooseTarget(int numOfReplicas,
                                     DatanodeDescriptor writer,
                                     List<DatanodeDescriptor> chosenNodes,
                                     HashMap<Node, Node> excludedNodes,
@@ -136,7 +136,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   }
     
   /* choose <i>numOfReplicas</i> from all data nodes */
-  private DatanodeDescriptor chooseTarget(int numOfReplicas,
+  protected DatanodeDescriptor chooseTarget(int numOfReplicas,
                                           DatanodeDescriptor writer,
                                           HashMap<Node, Node> excludedNodes,
                                           long blocksize,
@@ -197,7 +197,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * choose a node on the same rack
    * @return the chosen node
    */
-  private DatanodeDescriptor chooseLocalNode(
+  protected DatanodeDescriptor chooseLocalNode(
                                              DatanodeDescriptor localMachine,
                                              HashMap<Node, Node> excludedNodes,
                                              long blocksize,
@@ -231,7 +231,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * in the cluster.
    * @return the chosen node
    */
-  private DatanodeDescriptor chooseLocalRack(
+  protected DatanodeDescriptor chooseLocalRack(
                                              DatanodeDescriptor localMachine,
                                              HashMap<Node, Node> excludedNodes,
                                              long blocksize,
@@ -284,7 +284,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * from the local rack
    */
     
-  private void chooseRemoteRack(int numOfReplicas,
+  protected void chooseRemoteRack(int numOfReplicas,
                                 DatanodeDescriptor localMachine,
                                 HashMap<Node, Node> excludedNodes,
                                 long blocksize,
@@ -306,7 +306,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   /* Randomly choose one target from <i>nodes</i>.
    * @return the chosen node
    */
-  private DatanodeDescriptor chooseRandom(
+  protected DatanodeDescriptor chooseRandom(
                                           String nodes,
                                           HashMap<Node, Node> excludedNodes,
                                           long blocksize,
@@ -335,7 +335,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     
   /* Randomly choose <i>numOfReplicas</i> targets from <i>nodes</i>.
    */
-  private void chooseRandom(int numOfReplicas,
+  protected void chooseRandom(int numOfReplicas,
                             String nodes,
                             HashMap<Node, Node> excludedNodes,
                             long blocksize,
@@ -369,14 +369,14 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * return true if <i>node</i> has enough space, 
    * does not have too much load, and the rack does not have too many nodes
    */
-  private boolean isGoodTarget(DatanodeDescriptor node,
+  protected boolean isGoodTarget(DatanodeDescriptor node,
                                long blockSize, int maxTargetPerLoc,
                                List<DatanodeDescriptor> results) {
     return isGoodTarget(node, blockSize, maxTargetPerLoc,
                         this.considerLoad, results);
   }
     
-  private boolean isGoodTarget(DatanodeDescriptor node,
+  protected boolean isGoodTarget(DatanodeDescriptor node,
                                long blockSize, int maxTargetPerLoc,
                                boolean considerLoad,
                                List<DatanodeDescriptor> results) {
@@ -434,7 +434,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
    * starts from the writer and traverses all <i>nodes</i>
    * This is basically a traveling salesman problem.
    */
-  private DatanodeDescriptor[] getPipeline(
+  protected DatanodeDescriptor[] getPipeline(
                                            DatanodeDescriptor writer,
                                            DatanodeDescriptor[] nodes) {
     if (nodes.length==0) return nodes;
@@ -471,7 +471,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   /** {@inheritDoc} */
   public int verifyBlockPlacement(String srcPath,
                                   LocatedBlock lBlk,
-                                  int minRacks) {
+                                  short replication) {
+    int minRacks = Math.min(2,replication);
     DatanodeInfo[] locs = lBlk.getLocations();
     if (locs == null)
       locs = new DatanodeInfo[0];
@@ -512,5 +513,45 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
     return cur;
   }
-}
 
+  /** {@inheritDoc} */
+  @Override
+  public boolean canMove(Block block, DatanodeInfo source, DatanodeInfo target,
+      List<DatanodeInfo> locations) {
+
+    boolean goodBlock = false;
+
+    if (clusterMap.isOnSameRack(source, target)) {
+      // good if source and target are on the same rack
+      goodBlock = true;
+    } else {
+      boolean notOnSameRack = true;
+      for (DatanodeInfo loc : locations) {
+        if (clusterMap.isOnSameRack(loc, target)) {
+          notOnSameRack = false;
+          break;
+        }
+      }
+      if (notOnSameRack) {
+        // good if target is not on the same rack as any replica
+        goodBlock = true;
+      } else {
+        // good if source is on the same rack as one of the replicas
+        for (DatanodeInfo loc : locations) {
+          if (loc != source && clusterMap.isOnSameRack(loc, source)) {
+            goodBlock = true;
+            break;
+          }
+        }
+      }
+    }
+    return goodBlock;
+  }
+
+  /** {@inheritDoc} */
+  @Override
+  public boolean isCompatibleWithBalancer() {
+    return true;
+  }
+
+}

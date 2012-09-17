@@ -284,7 +284,7 @@ public class NamenodeFsck {
       }
       // verify block placement policy
       int missingRacks = BlockPlacementPolicy.getInstance(conf, null, networktopology).
-                          verifyBlockPlacement(path, lBlk, Math.min(2,targetFileReplication));
+                          verifyBlockPlacement(path, lBlk, targetFileReplication);
       if (missingRacks > 0) {
         res.numMisReplicatedBlocks++;
         misReplicatedPerFile++;

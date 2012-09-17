@@ -27,7 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 
 import junit.framework.TestCase;
@@ -40,6 +42,7 @@ public class TestReplicationPolicy extends TestCase {
   private static final NameNode namenode;
   private static final BlockPlacementPolicy replicator;
   private static final String filename = "/dummyfile.txt";
+  private static final Block dummyBlock = new Block();
   private static final DatanodeDescriptor dataNodes[] = 
     new DatanodeDescriptor[] {
       new DatanodeDescriptor(new DatanodeID("h1:5020"), "/d1/r1"),
@@ -422,4 +425,45 @@ public class TestReplicationPolicy extends TestCase {
     assertTrue(cluster.isOnSameRack(dataNodes[2], targets[0]));
   }
   
+  /**
+   * This test case tests if a block can be moved 
+   * from one node to another for various cases like
+   * a) source and target being on same rack
+   * b) source and target being on different racks
+   *    with additional replicas on target and source racks. 
+   * c) source and target being on different racks
+   *    with no replicas on target rack.
+   * d) source and target being on different racks
+   *    with additional replicas on target rack and not on source rack. 
+   */
+  public void testCanMove() {
+    List<DatanodeInfo> blockLocations = new ArrayList<DatanodeInfo>();
+    blockLocations.add(dataNodes[0]);
+    blockLocations.add(dataNodes[1]);
+    blockLocations.add(dataNodes[2]);
+
+    // case (a) source and target on same rack
+    assertTrue(replicator.canMove(dummyBlock, dataNodes[0], dataNodes[1],
+        blockLocations));
+
+    // case (b) source and target on different racks. Both source and
+    // target racks contain additional replicas
+    assertTrue(replicator.canMove(dummyBlock, dataNodes[0], dataNodes[2],
+        blockLocations));
+    assertTrue(replicator.canMove(dummyBlock, dataNodes[0], dataNodes[3],
+        blockLocations));
+
+    // case (c) source and target on different racks with no replicas on target
+    // rack
+    assertTrue(replicator.canMove(dummyBlock, dataNodes[0], dataNodes[4],
+        blockLocations));
+
+    // case (d) source and target being on different racks
+    // with additional replicas on target rack and not on source rack.
+    assertFalse(replicator.canMove(dummyBlock, dataNodes[2], dataNodes[0],
+        blockLocations));
+    assertFalse(replicator.canMove(dummyBlock, dataNodes[2], dataNodes[1],
+        blockLocations));
+
+  }
 }
