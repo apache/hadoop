@@ -44,7 +44,6 @@ message SegmentStateProto {
   required uint64 startTxId = 1;
   required uint64 endTxId = 2;
   required bool isInProgress = 3;
-  required bytes md5sum = 4;
 }
 
 /**

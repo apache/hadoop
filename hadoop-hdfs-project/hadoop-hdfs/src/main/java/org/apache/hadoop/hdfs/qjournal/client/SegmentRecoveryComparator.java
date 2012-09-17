@@ -71,10 +71,8 @@ class SegmentRecoveryComparator
     }
     
     if (!r1Seg.getIsInProgress()) {
-      // If both are finalized, they should match lengths, and be considered
-      // equal
-      if (r1Seg.getEndTxId() != r2Seg.getEndTxId()  ||
-          !r1Seg.getMd5Sum().equals(r2Seg.getMd5Sum())) {
+      // If both are finalized, they should match lengths
+      if (r1Seg.getEndTxId() != r2Seg.getEndTxId()) {
         throw new AssertionError("finalized segs with different lengths: " + 
             r1 + ", " + r2);
       }

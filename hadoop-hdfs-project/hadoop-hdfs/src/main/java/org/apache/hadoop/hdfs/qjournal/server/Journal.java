@@ -59,7 +59,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Range;
 import com.google.common.collect.Ranges;
-import com.google.protobuf.ByteString;
 import com.google.protobuf.TextFormat;
 
 /**
@@ -628,7 +627,6 @@ class Journal implements Closeable {
         .setStartTxId(segmentTxId)
         .setEndTxId(elf.getLastTxId())
         .setIsInProgress(elf.isInProgress())
-        .setMd5Sum(ByteString.EMPTY) // TODO
         .build();
     LOG.info("getSegmentInfo(" + segmentTxId + "): " + elf + " -> " +
         TextFormat.shortDebugString(ret));
@@ -655,8 +653,7 @@ class Journal implements Closeable {
 
     if (previouslyAccepted != null && !hasFinalizedSegment) {
       SegmentStateProto acceptedState = previouslyAccepted.getSegmentState();
-      assert acceptedState.getEndTxId() == segInfo.getEndTxId() &&
-             acceptedState.getMd5Sum().equals(segInfo.getMd5Sum()) :
+      assert acceptedState.getEndTxId() == segInfo.getEndTxId() :
             "prev accepted: " + TextFormat.shortDebugString(previouslyAccepted)+ "\n" +
             "on disk:       " + TextFormat.shortDebugString(segInfo);
             

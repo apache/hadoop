@@ -74,3 +74,5 @@ HDFS-3840. JournalNodes log JournalNotFormattedException backtrace error before 
 HDFS-3894. QJM: testRecoverAfterDoubleFailures can be flaky due to IPC client caching (todd)
 
 HDFS-3926. QJM: Add user documentation for QJM. (atm)
+
+HDFS-3943. QJM: remove currently-unused md5sum field (todd)

@@ -28,7 +28,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Maps;
-import com.google.protobuf.ByteString;
 
 import static org.apache.hadoop.hdfs.qjournal.client.SegmentRecoveryComparator.INSTANCE;
 
@@ -46,7 +45,6 @@ public class TestSegmentRecoveryComparator {
           .setSegmentState(SegmentStateProto.newBuilder()
               .setStartTxId(1L)
               .setEndTxId(3L)
-              .setMd5Sum(ByteString.EMPTY)
               .setIsInProgress(true))
           .setLastWriterEpoch(0L)
           .build());
@@ -55,7 +53,6 @@ public class TestSegmentRecoveryComparator {
           .setSegmentState(SegmentStateProto.newBuilder()
               .setStartTxId(1L)
               .setEndTxId(4L)
-              .setMd5Sum(ByteString.EMPTY)
               .setIsInProgress(true))
           .setLastWriterEpoch(0L)
           .build());
@@ -64,7 +61,6 @@ public class TestSegmentRecoveryComparator {
           .setSegmentState(SegmentStateProto.newBuilder()
               .setStartTxId(1L)
               .setEndTxId(4L)
-              .setMd5Sum(ByteString.EMPTY)
               .setIsInProgress(true))
           .setLastWriterEpoch(0L)
           .setAcceptedInEpoch(1L)
@@ -75,7 +71,6 @@ public class TestSegmentRecoveryComparator {
           .setSegmentState(SegmentStateProto.newBuilder()
               .setStartTxId(1L)
               .setEndTxId(3L)
-              .setMd5Sum(ByteString.EMPTY)
               .setIsInProgress(false))
           .setLastWriterEpoch(0L)
           .build());
