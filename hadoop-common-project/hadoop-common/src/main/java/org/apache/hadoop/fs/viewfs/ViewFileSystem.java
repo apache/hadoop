@@ -707,7 +707,7 @@ public class ViewFileSystem extends FileSystem {
     @Override
     public boolean mkdirs(Path dir, FsPermission permission)
         throws AccessControlException, FileAlreadyExistsException {
-      if (theInternalDir.isRoot & dir == null) {
+      if (theInternalDir.isRoot && dir == null) {
         throw new FileAlreadyExistsException("/ already exits");
       }
       // Note dir starts with /
