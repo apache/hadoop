@@ -14,6 +14,9 @@ Release 2.0.3-alpha - Unreleased
     YARN-93. Fixed RM to propagate diagnostics from applications that have
     finished but failed (Jason Lowe via vinodkv). 
 
+    YARN-28. Fixed TestCompositeService to not depend on test-order and thus
+    made it pass on JDK7 (Thomas Graves via vinodkv).
+
   OPTIMIZATIONS
 
   BUG FIXES 

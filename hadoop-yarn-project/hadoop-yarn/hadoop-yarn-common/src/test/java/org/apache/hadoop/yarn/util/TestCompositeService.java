@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service.STATE;
+import org.junit.Before;
 import org.junit.Test;
 
 public class TestCompositeService {
@@ -32,6 +33,11 @@ public class TestCompositeService {
   private static final int NUM_OF_SERVICES = 5;
 
   private static final int FAILED_SERVICE_SEQ_NUMBER = 2;
+
+  @Before
+  public void setup() {
+    CompositeServiceImpl.resetCounter();
+  }
 
   @Test
   public void testCallSequence() {
@@ -223,6 +229,10 @@ public class TestCompositeService {
 
     public void reset() {
       callSequenceNumber = -1;
+      counter = -1;
+    }
+
+    public static void resetCounter() {
       counter = -1;
     }
 
