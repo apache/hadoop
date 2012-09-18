@@ -31,9 +31,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.io.RandomAccessFile;
-import java.io.StringWriter;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1229,10 +1227,8 @@ public class TestEditLog {
         }
       } catch (IOException e) {
       } catch (Throwable t) {
-        StringWriter sw = new StringWriter();
-        t.printStackTrace(new PrintWriter(sw));
-        fail("caught non-IOException throwable with message " +
-            t.getMessage() + "\nstack trace\n" + sw.toString());
+        fail("Caught non-IOException throwable " +
+             StringUtils.stringifyException(t));
       }
     } finally {
       if ((elfos != null) && (elfos.isOpen()))

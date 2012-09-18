@@ -232,6 +232,8 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8806. libhadoop.so: dlopen should be better at locating
     libsnappy.so, etc. (Colin Patrick McCabe via eli)
 
+    HADOOP-8812. ExitUtil#terminate should print Exception#toString. (eli)
+
   OPTIMIZATIONS
 
   BUG FIXES

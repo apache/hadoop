@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.util;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -104,10 +101,7 @@ public final class ExitUtil {
    * @throws ExitException if System.exit is disabled for test purposes
    */
   public static void terminate(int status, Throwable t) throws ExitException {
-    StringWriter sw = new StringWriter();
-    t.printStackTrace(new PrintWriter(sw));
-    terminate(status, "Fatal exception with message " + t.getMessage() +
-        "\nstack trace\n" + sw.toString());
+    terminate(status, StringUtils.stringifyException(t));
   }
 
   /**
