@@ -609,6 +609,8 @@ Release 2.0.2-alpha - 2012-09-07
     HDFS-3928. MiniDFSCluster should reset the first ExitException on shutdown. (eli)
    
     HDFS-3938. remove current limitations from HttpFS docs. (tucu)
+
+    HDFS-3944. Httpfs resolveAuthority() is not resolving host correctly. (tucu)
  
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
