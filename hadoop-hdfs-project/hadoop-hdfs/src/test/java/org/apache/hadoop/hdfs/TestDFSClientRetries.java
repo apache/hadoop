@@ -778,7 +778,7 @@ public class TestDFSClientRetries {
   }
 
   /** Test client retry with namenode restarting. */
-  @Test
+  @Test(timeout=300000)
   public void testNamenodeRestart() throws Exception {
     namenodeRestartTest(new Configuration(), false);
   }
