@@ -37,7 +37,6 @@ import org.apache.hadoop.ha.HAServiceProtocol.StateChangeRequestInfo;
 import org.apache.hadoop.ha.HAServiceStatus;
 import org.apache.hadoop.ha.HealthCheckFailedException;
 import org.apache.hadoop.ha.ServiceFailedException;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Trash;
@@ -491,9 +490,9 @@ public class NameNode {
         LOG.warn("ServicePlugin " + p + " could not be started", t);
       }
     }
-    LOG.info(getRole() + " up at: " + rpcServer.getRpcAddress());
+    LOG.info(getRole() + " RPC up at: " + rpcServer.getRpcAddress());
     if (rpcServer.getServiceRpcAddress() != null) {
-      LOG.info(getRole() + " service server is up at: "
+      LOG.info(getRole() + " service RPC up at: "
           + rpcServer.getServiceRpcAddress());
     }
   }
@@ -619,7 +618,7 @@ public class NameNode {
    */
   public void join() {
     try {
-      this.rpcServer.join();
+      rpcServer.join();
     } catch (InterruptedException ie) {
       LOG.info("Caught interrupted exception ", ie);
     }
@@ -667,27 +666,31 @@ public class NameNode {
   }
 
   /**
-   * Returns the address on which the NameNodes is listening to.
-   * @return namenode rpc address
+   * @return NameNode RPC address
    */
   public InetSocketAddress getNameNodeAddress() {
     return rpcServer.getRpcAddress();
   }
-  
+
   /**
-   * Returns namenode service rpc address, if set. Otherwise returns
-   * namenode rpc address.
-   * @return namenode service rpc address used by datanodes
+   * @return NameNode RPC address in "host:port" string form
    */
-  public InetSocketAddress getServiceRpcAddress() {
-    return rpcServer.getServiceRpcAddress() != null ? rpcServer.getServiceRpcAddress() : rpcServer.getRpcAddress();
+  public String getNameNodeAddressHostPortString() {
+    return NetUtils.getHostPortString(rpcServer.getRpcAddress());
   }
 
   /**
-   * Returns the address of the NameNodes http server, 
-   * which is used to access the name-node web UI.
-   * 
-   * @return the http address.
+   * @return NameNode service RPC address if configured, the
+   *    NameNode RPC address otherwise
+   */
+  public InetSocketAddress getServiceRpcAddress() {
+    final InetSocketAddress serviceAddr = rpcServer.getServiceRpcAddress();
+    return serviceAddr == null ? rpcServer.getRpcAddress() : serviceAddr;
+  }
+
+  /**
+   * @return NameNode HTTP address, used by the Web UI, image transfer,
+   *    and HTTP-based file system clients like Hftp and WebHDFS
    */
   public InetSocketAddress getHttpAddress() {
     return httpServer.getHttpAddress();
@@ -1201,10 +1204,12 @@ public class NameNode {
           NAMESERVICE_SPECIFIC_KEYS);
     }
     
+    // If the RPC address is set use it to (re-)configure the default FS
     if (conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
       conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
+      LOG.info("Setting " + FS_DEFAULT_NAME_KEY + " to " + defaultUri.toString());
     }
   }
     
@@ -1226,8 +1231,9 @@ public class NameNode {
     try {
       StringUtils.startupShutdownMessage(NameNode.class, argv, LOG);
       NameNode namenode = createNameNode(argv, null);
-      if (namenode != null)
+      if (namenode != null) {
         namenode.join();
+      }
     } catch (Throwable e) {
       LOG.fatal("Exception in namenode join", e);
       terminate(1, e);

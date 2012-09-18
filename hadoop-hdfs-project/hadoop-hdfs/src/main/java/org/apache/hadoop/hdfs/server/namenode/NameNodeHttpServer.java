@@ -49,11 +49,8 @@ public class NameNodeHttpServer {
   private final Configuration conf;
   private final NameNode nn;
   
-  private final Log LOG = NameNode.LOG;
   private InetSocketAddress httpAddress;
-  
   private InetSocketAddress bindAddress;
-  
   
   public static final String NAMENODE_ADDRESS_ATTRIBUTE_KEY = "name.node.address";
   public static final String FSIMAGE_ATTRIBUTE_KEY = "name.system.image";
@@ -68,12 +65,6 @@ public class NameNodeHttpServer {
     this.bindAddress = bindAddress;
   }
   
-  private String getDefaultServerPrincipal() throws IOException {
-    return SecurityUtil.getServerPrincipal(
-        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY),
-        nn.getNameNodeAddress().getHostName());
-  }
-
   public void start() throws IOException {
     final String infoHost = bindAddress.getHostName();
     int infoPort = bindAddress.getPort();
