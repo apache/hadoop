@@ -31,6 +31,8 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3936. MiniDFSCluster shutdown races with BlocksMap usage. (eli)
 
+    HDFS-3951. datanode web ui does not work over HTTPS when datanode is started in secure mode. (tucu)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
