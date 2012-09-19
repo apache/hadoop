@@ -14,6 +14,9 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-3118. Backport Gridmix and Rumen features to
                     branch-0.20-security (Ravi Gummadi via amarrk)
+    MAPREDUCE-4400. Avoid task finish sleep to improve small job/workflow
+    latency. (llu)
+
   BUG FIXES
 
     HDFS-2305. Running multiple 2NNs can result in corrupt file system. (atm)
