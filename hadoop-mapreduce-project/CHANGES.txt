@@ -12,6 +12,9 @@ Release 0.23.4 - UNRELEASED
 
   BUG FIXES
 
+    MAPREDUCE-4193. broken doc link for yarn-default.xml in site.xml.
+    (phunt via tomwhite)
+
 Release 0.23.3 - UNRELEASED
 
   INCOMPATIBLE CHANGES
