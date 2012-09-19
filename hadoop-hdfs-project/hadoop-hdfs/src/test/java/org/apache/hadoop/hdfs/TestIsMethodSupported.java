@@ -27,6 +27,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocolPB.ClientDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.InterDatanodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
@@ -40,7 +41,6 @@ import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.apache.hadoop.tools.impl.pb.client.GetUserMappingsProtocolPBClientImpl;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -141,8 +141,8 @@ public class TestIsMethodSupported {
   
   @Test
   public void testGetUserMappingsProtocol() throws IOException {
-    GetUserMappingsProtocolPBClientImpl translator = 
-        (GetUserMappingsProtocolPBClientImpl)
+    GetUserMappingsProtocolClientSideTranslatorPB translator = 
+        (GetUserMappingsProtocolClientSideTranslatorPB)
         NameNodeProxies.createNonHAProxy(conf, nnAddress,
             GetUserMappingsProtocol.class, UserGroupInformation.getCurrentUser(),
             true).getProxy();
