@@ -86,6 +86,19 @@ class JNStorage extends Storage {
     return new File(sd.getCurrentDir(),
         NNStorage.getInProgressEditsFileName(startTxId));
   }
+  
+  /**
+   * @param segmentTxId the first txid of the segment
+   * @param epoch the epoch number of the writer which is coordinating
+   * recovery
+   * @return the temporary path in which an edits log should be stored
+   * while it is being downloaded from a remote JournalNode
+   */
+  File getSyncLogTemporaryFile(long segmentTxId, long epoch) {
+    String name = NNStorage.getInProgressEditsFileName(segmentTxId) +
+        ".epoch=" + epoch; 
+    return new File(sd.getCurrentDir(), name);
+  }
 
   /**
    * @return the path for the file which contains persisted data for the

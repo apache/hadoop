@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocol;
+import org.apache.hadoop.hdfs.qjournal.server.JournalFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -83,6 +84,10 @@ public class TestQJMWithFaults {
     // Make tests run faster by avoiding fsync()
     EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
   }
+
+  // Set up fault injection mock.
+  private static JournalFaultInjector faultInjector =
+      JournalFaultInjector.instance = Mockito.mock(JournalFaultInjector.class); 
 
   /**
    * Run through the creation of a log without any faults injected,
@@ -238,7 +243,7 @@ public class TestQJMWithFaults {
             recovered = QJMTestUtil.recoverAndReturnLastTxn(qjm);
           } catch (Throwable t) {
             LOG.info("Failed recovery", t);
-            GenericTestUtils.assertExceptionContains("faking being down", t);
+            checkException(t);
             continue;
           }
           assertTrue("Recovered only up to txnid " + recovered +
@@ -252,8 +257,7 @@ public class TestQJMWithFaults {
             lastAcked = writeSegmentUntilCrash(cluster, qjm, txid, 4, thrown);
             if (thrown.held != null) {
               LOG.info("Failed write", thrown.held);
-              GenericTestUtils.assertExceptionContains("faking being down",
-                  thrown.held);
+              checkException(thrown.held);
               break;
             }
             txid += 4;
@@ -264,6 +268,14 @@ public class TestQJMWithFaults {
       }
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  private void checkException(Throwable t) {
+    GenericTestUtils.assertExceptionContains("Injected", t);
+    if (t.toString().contains("AssertionError")) {
+      throw new RuntimeException("Should never see AssertionError in fault test!",
+          t);
     }
   }
 
@@ -344,6 +356,23 @@ public class TestQJMWithFaults {
               if (!isUp) {
                 throw new IOException("Injected - faking being down");
               }
+              
+              if (invocation.getMethod().getName().equals("acceptRecovery")) {
+                if (random.nextFloat() < injectionProbability) {
+                  Mockito.doThrow(new IOException(
+                      "Injected - faking fault before persisting paxos data"))
+                      .when(faultInjector).beforePersistPaxosData();
+                } else if (random.nextFloat() < injectionProbability) {
+                  Mockito.doThrow(new IOException(
+                      "Injected - faking fault after persisting paxos data"))
+                      .when(faultInjector).afterPersistPaxosData();
+                }
+              }
+            }
+            
+            @Override
+            public void afterCall(InvocationOnMock invocation, boolean succeeded) {
+              Mockito.reset(faultInjector);
             }
           });
     }
@@ -432,16 +461,21 @@ public class TestQJMWithFaults {
             invocation.getMethod().getDeclaringClass())) {
         beforeCall(invocation);
       }
-
+      boolean success = false;
       try {
-        return (T) invocation.getMethod().invoke(realObj,
+        T ret = (T) invocation.getMethod().invoke(realObj,
           invocation.getArguments());
+        success = true;
+        return ret;
       } catch (InvocationTargetException ite) {
         throw ite.getCause();
+      } finally {
+        afterCall(invocation, success);
       }
     }
 
     abstract void beforeCall(InvocationOnMock invocation) throws Exception;
+    void afterCall(InvocationOnMock invocation, boolean succeeded) {}
   }
   
   private static QuorumJournalManager createInjectableQJM(MiniJournalCluster cluster)

@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.qjournal.MiniJournalCluster;
 import org.apache.hadoop.hdfs.qjournal.QJMTestUtil;
 import org.apache.hadoop.hdfs.qjournal.protocol.QJournalProtocolProtos.SegmentStateProto;
+import org.apache.hadoop.hdfs.qjournal.server.JournalFaultInjector;
 import org.apache.hadoop.hdfs.server.namenode.EditLogInputStream;
 import org.apache.hadoop.hdfs.server.namenode.EditLogOutputStream;
 import org.apache.hadoop.hdfs.server.namenode.FileJournalManager;
@@ -56,6 +57,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Stubber;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -399,26 +401,7 @@ public class TestQuorumJournalManager {
   
   private void doOutOfSyncTest(int missingOnRecoveryIdx,
       long expectedRecoveryTxnId) throws Exception {
-    EditLogOutputStream stm = qjm.startLogSegment(1);
-    
-    failLoggerAtTxn(spies.get(0), 4);
-    failLoggerAtTxn(spies.get(1), 5);
-    
-    writeTxns(stm, 1, 3);
-    
-    // This should succeed to 2/3 loggers
-    writeTxns(stm, 4, 1);
-    
-    // This should only succeed to 1 logger (index 2). Hence it should
-    // fail
-    try {
-      writeTxns(stm, 5, 1);
-      fail("Did not fail to write when only a minority succeeded");
-    } catch (QuorumException qe) {
-      GenericTestUtils.assertExceptionContains(
-          "too many exceptions to achieve quorum size 2/3",
-          qe);
-    }
+    setupLoggers345();
     
     QJMTestUtil.assertExistsInQuorum(cluster,
         NNStorage.getInProgressEditsFileName(1));
@@ -503,26 +486,7 @@ public class TestQuorumJournalManager {
    */
   @Test
   public void testRecoverAfterIncompleteRecovery() throws Exception {
-    EditLogOutputStream stm = qjm.startLogSegment(1);
-    
-    failLoggerAtTxn(spies.get(0), 4);
-    failLoggerAtTxn(spies.get(1), 5);
-    
-    writeTxns(stm, 1, 3);
-    
-    // This should succeed to 2/3 loggers
-    writeTxns(stm, 4, 1);
-    
-    // This should only succeed to 1 logger (index 2). Hence it should
-    // fail
-    try {
-      writeTxns(stm, 5, 1);
-      fail("Did not fail to write when only a minority succeeded");
-    } catch (QuorumException qe) {
-      GenericTestUtils.assertExceptionContains(
-          "too many exceptions to achieve quorum size 2/3",
-          qe);
-    }
+    setupLoggers345();
 
     // Shut down the logger that has length = 5
     cluster.getJournalNode(2).stopAndJoin(0);
@@ -554,6 +518,37 @@ public class TestQuorumJournalManager {
     checkRecovery(cluster, 1, 4);
   }
   
+  /**
+   * Set up the loggers into the following state:
+   * - JN0: edits 1-3 in progress
+   * - JN1: edits 1-4 in progress
+   * - JN2: edits 1-5 in progress
+   * 
+   * None of the loggers have any associated paxos info.
+   */
+  private void setupLoggers345() throws Exception {
+    EditLogOutputStream stm = qjm.startLogSegment(1);
+    
+    failLoggerAtTxn(spies.get(0), 4);
+    failLoggerAtTxn(spies.get(1), 5);
+    
+    writeTxns(stm, 1, 3);
+    
+    // This should succeed to 2/3 loggers
+    writeTxns(stm, 4, 1);
+    
+    // This should only succeed to 1 logger (index 2). Hence it should
+    // fail
+    try {
+      writeTxns(stm, 5, 1);
+      fail("Did not fail to write when only a minority succeeded");
+    } catch (QuorumException qe) {
+      GenericTestUtils.assertExceptionContains(
+          "too many exceptions to achieve quorum size 2/3",
+          qe);
+    }
+  }
+
   /**
    * Set up the following tricky edge case state which is used by
    * multiple tests:
@@ -760,6 +755,83 @@ public class TestQuorumJournalManager {
     }
   }
   
+  @Test(timeout=20000)
+  public void testCrashBetweenSyncLogAndPersistPaxosData() throws Exception {
+    JournalFaultInjector faultInjector =
+        JournalFaultInjector.instance = Mockito.mock(JournalFaultInjector.class);
+
+    setupLoggers345();
+
+    // Run recovery where the client only talks to JN0, JN1, such that it
+    // decides that the correct length is through txid 4.
+    // Only allow it to call acceptRecovery() on JN0.
+    qjm = createSpyingQJM();
+    spies = qjm.getLoggerSetForTests().getLoggersForTests();    
+    cluster.getJournalNode(2).stopAndJoin(0);
+    injectIOE().when(spies.get(1)).acceptRecovery(
+        Mockito.<SegmentStateProto>any(), Mockito.<URL>any());
+    
+    tryRecoveryExpectingFailure();
+
+    cluster.restartJournalNode(2);
+    
+    // State at this point:
+    // JN0: edit log for 1-4, paxos recovery data for txid 4
+    // JN1: edit log for 1-4,
+    // JN2: edit log for 1-5
+    
+    // Run recovery again, but don't allow JN0 to respond to the
+    // prepareRecovery() call. This will cause recovery to decide
+    // on txid 5.
+    // Additionally, crash all of the nodes before they persist
+    // any new paxos data.
+    qjm = createSpyingQJM();
+    spies = qjm.getLoggerSetForTests().getLoggersForTests();    
+    injectIOE().when(spies.get(0)).prepareRecovery(Mockito.eq(1L));
+
+    Mockito.doThrow(new IOException("Injected")).when(faultInjector)
+      .beforePersistPaxosData();
+    tryRecoveryExpectingFailure();
+    Mockito.reset(faultInjector);
+    
+    // State at this point:
+    // JN0: edit log for 1-5, paxos recovery data for txid 4
+    // !!!   This is the interesting bit, above. The on-disk data and the
+    //       paxos data don't match up!
+    // JN1: edit log for 1-5,
+    // JN2: edit log for 1-5,
+
+    // Now, stop JN2, and see if we can still start up even though
+    // JN0 is in a strange state where its log data is actually newer
+    // than its accepted Paxos state.
+
+    cluster.getJournalNode(2).stopAndJoin(0);
+    
+    qjm = createSpyingQJM();
+    try {
+      long recovered = QJMTestUtil.recoverAndReturnLastTxn(qjm);
+      assertTrue(recovered >= 4); // 4 was committed to a quorum
+    } finally {
+      qjm.close();
+    }
+  }
+  
+  private void tryRecoveryExpectingFailure() throws IOException {
+    try {
+      QJMTestUtil.recoverAndReturnLastTxn(qjm);
+      fail("Expected to fail recovery");
+    } catch (QuorumException qe) {
+      GenericTestUtils.assertExceptionContains("Injected", qe);
+    } finally {
+      qjm.close();
+    }
+
+  }
+  
+  private Stubber injectIOE() {
+    return futureThrows(new IOException("Injected"));
+  }
+
   @Test
   public void testPurgeLogs() throws Exception {
     for (int txid = 1; txid <= 5; txid++) {

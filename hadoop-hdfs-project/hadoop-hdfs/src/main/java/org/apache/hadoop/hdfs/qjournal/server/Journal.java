@@ -693,10 +693,11 @@ class Journal implements Closeable {
     PrepareRecoveryResponseProto.Builder builder =
         PrepareRecoveryResponseProto.newBuilder();
 
+    PersistedRecoveryPaxosData previouslyAccepted = getPersistedPaxosData(segmentTxId);
+    completeHalfDoneAcceptRecovery(previouslyAccepted);
+
     SegmentStateProto segInfo = getSegmentInfo(segmentTxId);
     boolean hasFinalizedSegment = segInfo != null && !segInfo.getIsInProgress();
-    
-    PersistedRecoveryPaxosData previouslyAccepted = getPersistedPaxosData(segmentTxId);
 
     if (previouslyAccepted != null && !hasFinalizedSegment) {
       SegmentStateProto acceptedState = previouslyAccepted.getSegmentState();
@@ -722,7 +723,7 @@ class Journal implements Closeable {
         TextFormat.shortDebugString(resp));
     return resp;
   }
-
+  
   /**
    * @see QJournalProtocol#acceptRecovery(RequestInfo, SegmentStateProto, URL)
    */
@@ -757,7 +758,9 @@ class Journal implements Closeable {
           "Bad paxos transition, out-of-order epochs.\nOld: %s\nNew: %s\n",
           oldData, newData);
     }
-
+    
+    File syncedFile = null;
+    
     SegmentStateProto currentSegment = getSegmentInfo(segmentTxId);
     if (currentSegment == null ||
         currentSegment.getEndTxId() != segment.getEndTxId()) {
@@ -799,7 +802,7 @@ class Journal implements Closeable {
           highestWrittenTxId = segment.getEndTxId();
         }
       }
-      syncLog(reqInfo, segment, fromUrl);
+      syncedFile = syncLog(reqInfo, segment, fromUrl);
       
     } else {
       LOG.info("Skipping download of log " +
@@ -807,10 +810,34 @@ class Journal implements Closeable {
           ": already have up-to-date logs");
     }
     
-    // TODO: is it OK that this is non-atomic?
-    // we might be left with an older epoch recorded, but a newer log
-    
+    // This is one of the few places in the protocol where we have a single
+    // RPC that results in two distinct actions:
+    //
+    // - 1) Downloads the new log segment data (above)
+    // - 2) Records the new Paxos data about the synchronized segment (below)
+    //
+    // These need to be treated as a transaction from the perspective
+    // of any external process. We do this by treating the persistPaxosData()
+    // success as the "commit" of an atomic transaction. If we fail before
+    // this point, the downloaded edit log will only exist at a temporary
+    // path, and thus not change any externally visible state. If we fail
+    // after this point, then any future prepareRecovery() call will see
+    // the Paxos data, and by calling completeHalfDoneAcceptRecovery() will
+    // roll forward the rename of the referenced log file.
+    //
+    // See also: HDFS-3955
+    //
+    // The fault points here are exercised by the randomized fault injection
+    // test case to ensure that this atomic "transaction" operates correctly.
+    JournalFaultInjector.get().beforePersistPaxosData();
     persistPaxosData(segmentTxId, newData);
+    JournalFaultInjector.get().afterPersistPaxosData();
+
+    if (syncedFile != null) {
+      FileUtil.replaceFile(syncedFile,
+          storage.getInProgressEditLog(segmentTxId));
+    }
+
     LOG.info("Accepted recovery for segment " + segmentTxId + ": " +
         TextFormat.shortDebugString(newData));
   }
@@ -822,21 +849,17 @@ class Journal implements Closeable {
   }
 
   /**
-   * Synchronize a log segment from another JournalNode.
-   * @param reqInfo the request info for the recovery IPC
-   * @param segment 
-   * @param url
-   * @throws IOException
+   * Synchronize a log segment from another JournalNode. The log is
+   * downloaded from the provided URL into a temporary location on disk,
+   * which is named based on the current request's epoch.
+   *
+   * @return the temporary location of the downloaded file
    */
-  private void syncLog(RequestInfo reqInfo,
+  private File syncLog(RequestInfo reqInfo,
       final SegmentStateProto segment, final URL url) throws IOException {
-    String tmpFileName =
-        "synclog_" + segment.getStartTxId() + "_" +
-        reqInfo.getEpoch() + "." + reqInfo.getIpcSerialNumber();
-    
-    final List<File> localPaths = storage.getFiles(null, tmpFileName);
-    assert localPaths.size() == 1;
-    final File tmpFile = localPaths.get(0);
+    final File tmpFile = storage.getSyncLogTemporaryFile(
+        segment.getStartTxId(), reqInfo.getEpoch());
+    final List<File> localPaths = ImmutableList.of(tmpFile);
 
     LOG.info("Synchronizing log " +
         TextFormat.shortDebugString(segment) + " from " + url);
@@ -844,12 +867,11 @@ class Journal implements Closeable {
         new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws IOException {
-            TransferFsImage.doGetUrl(url, localPaths, storage, true);
-            assert tmpFile.exists();
             boolean success = false;
             try {
-              success = tmpFile.renameTo(storage.getInProgressEditLog(
-                  segment.getStartTxId()));
+              TransferFsImage.doGetUrl(url, localPaths, storage, true);
+              assert tmpFile.exists();
+              success = true;
             } finally {
               if (!success) {
                 if (!tmpFile.delete()) {
@@ -860,6 +882,41 @@ class Journal implements Closeable {
             return null;
           }
         });
+    return tmpFile;
+  }
+  
+
+  /**
+   * In the case the node crashes in between downloading a log segment
+   * and persisting the associated paxos recovery data, the log segment
+   * will be left in its temporary location on disk. Given the paxos data,
+   * we can check if this was indeed the case, and &quot;roll forward&quot;
+   * the atomic operation.
+   * 
+   * See the inline comments in
+   * {@link #acceptRecovery(RequestInfo, SegmentStateProto, URL)} for more
+   * details.
+   *
+   * @throws IOException if the temporary file is unable to be renamed into
+   * place
+   */
+  private void completeHalfDoneAcceptRecovery(
+      PersistedRecoveryPaxosData paxosData) throws IOException {
+    if (paxosData == null) {
+      return;
+    }
+
+    long segmentId = paxosData.getSegmentState().getStartTxId();
+    long epoch = paxosData.getAcceptedInEpoch();
+    
+    File tmp = storage.getSyncLogTemporaryFile(segmentId, epoch);
+    
+    if (tmp.exists()) {
+      File dst = storage.getInProgressEditLog(segmentId);
+      LOG.info("Rolling forward previously half-completed synchronization: " +
+          tmp + " -> " + dst);
+      FileUtil.replaceFile(tmp, dst);
+    }
   }
 
   /**

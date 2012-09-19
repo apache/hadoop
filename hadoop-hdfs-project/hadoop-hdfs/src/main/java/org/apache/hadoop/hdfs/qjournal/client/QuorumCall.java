@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Preconditions;
@@ -108,6 +109,7 @@ class QuorumCall<KEY, RESULT> {
     long nextLogTime = st + (long)(millis * WAIT_PROGRESS_INFO_THRESHOLD);
     long et = st + millis;
     while (true) {
+      checkAssertionErrors();
       if (minResponses > 0 && countResponses() >= minResponses) return;
       if (minSuccesses > 0 && countSuccesses() >= minSuccesses) return;
       if (maxExceptions >= 0 && countExceptions() > maxExceptions) return;
@@ -132,6 +134,33 @@ class QuorumCall<KEY, RESULT> {
       rem = Math.min(rem, nextLogTime - now);
       rem = Math.max(rem, 1);
       wait(rem);
+    }
+  }
+
+  /**
+   * Check if any of the responses came back with an AssertionError.
+   * If so, it re-throws it, even if there was a quorum of responses.
+   * This code only runs if assertions are enabled for this class,
+   * otherwise it should JIT itself away.
+   * 
+   * This is done since AssertionError indicates programmer confusion
+   * rather than some kind of expected issue, and thus in the context
+   * of test cases we'd like to actually fail the test case instead of
+   * continuing through.
+   */
+  private synchronized void checkAssertionErrors() {
+    boolean assertsEnabled = false;
+    assert assertsEnabled = true; // sets to true if enabled
+    if (assertsEnabled) {
+      for (Throwable t : exceptions.values()) {
+        if (t instanceof AssertionError) {
+          throw (AssertionError)t;
+        } else if (t instanceof RemoteException &&
+            ((RemoteException)t).getClassName().equals(
+                AssertionError.class.getName())) {
+          throw new AssertionError(t);
+        }
+      }
     }
   }
 

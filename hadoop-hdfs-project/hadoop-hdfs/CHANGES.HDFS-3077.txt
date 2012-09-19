@@ -78,3 +78,5 @@ HDFS-3926. QJM: Add user documentation for QJM. (atm)
 HDFS-3943. QJM: remove currently-unused md5sum field (todd)
 
 HDFS-3950. QJM: misc TODO cleanup, improved log messages, etc. (todd)
+
+HDFS-3955. QJM: Make acceptRecovery() atomic. (todd)

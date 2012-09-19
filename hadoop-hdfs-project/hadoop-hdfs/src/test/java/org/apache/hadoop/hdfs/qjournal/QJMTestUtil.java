@@ -60,7 +60,7 @@ public abstract class QJMTestUtil {
     return Arrays.copyOf(buf.getData(), buf.getLength());
   }
   
-  public static void writeSegment(MiniJournalCluster cluster,
+  public static EditLogOutputStream writeSegment(MiniJournalCluster cluster,
       QuorumJournalManager qjm, long startTxId, int numTxns,
       boolean finalize) throws IOException {
     EditLogOutputStream stm = qjm.startLogSegment(startTxId);
@@ -72,6 +72,9 @@ public abstract class QJMTestUtil {
     if (finalize) {
       stm.close();
       qjm.finalizeLogSegment(startTxId, startTxId + numTxns - 1);
+      return null;
+    } else {
+      return stm;
     }
   }
 
