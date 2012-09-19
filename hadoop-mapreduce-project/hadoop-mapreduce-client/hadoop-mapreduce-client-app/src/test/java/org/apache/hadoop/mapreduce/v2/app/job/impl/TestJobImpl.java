@@ -45,11 +45,14 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.app.job.Task;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.JobEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.JobEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.InitTransition;
 import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl.JobNoTasksCompletedTransition;
 import org.apache.hadoop.mapreduce.v2.app.metrics.MRAppMetrics;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Records;
@@ -172,6 +175,8 @@ public class TestJobImpl {
     t.testCheckJobCompleteSuccess();
     t.testCheckJobCompleteSuccessFailed();
     t.testCheckAccess();
+    t.testReportDiagnostics();
+    t.testUberDecision();
   }
 
   @Test
@@ -241,6 +246,41 @@ public class TestJobImpl {
     Assert.assertTrue(job5.checkAccess(ugi1, null));
     Assert.assertTrue(job5.checkAccess(ugi2, null));
   }
+
+  @Test
+  public void testReportDiagnostics() throws Exception {
+    JobID jobID = JobID.forName("job_1234567890000_0001");
+    JobId jobId = TypeConverter.toYarn(jobID);
+    final String diagMsg = "some diagnostic message";
+    final JobDiagnosticsUpdateEvent diagUpdateEvent =
+        new JobDiagnosticsUpdateEvent(jobId, diagMsg);
+    MRAppMetrics mrAppMetrics = MRAppMetrics.create();
+    JobImpl job = new JobImpl(jobId, Records
+        .newRecord(ApplicationAttemptId.class), new Configuration(),
+        mock(EventHandler.class),
+        null, mock(JobTokenSecretManager.class), null,
+        new SystemClock(), null,
+        mrAppMetrics, mock(OutputCommitter.class),
+        true, null, 0, null, null);
+    job.handle(diagUpdateEvent);
+    String diagnostics = job.getReport().getDiagnostics();
+    Assert.assertNotNull(diagnostics);
+    Assert.assertTrue(diagnostics.contains(diagMsg));
+
+    job = new JobImpl(jobId, Records
+        .newRecord(ApplicationAttemptId.class), new Configuration(),
+        mock(EventHandler.class),
+        null, mock(JobTokenSecretManager.class), null,
+        new SystemClock(), null,
+        mrAppMetrics, mock(OutputCommitter.class),
+        true, null, 0, null, null);
+    job.handle(new JobEvent(jobId, JobEventType.JOB_KILL));
+    job.handle(diagUpdateEvent);
+    diagnostics = job.getReport().getDiagnostics();
+    Assert.assertNotNull(diagnostics);
+    Assert.assertTrue(diagnostics.contains(diagMsg));
+  }
+
   @Test
   public void testUberDecision() throws Exception {
 

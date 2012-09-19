@@ -16,6 +16,10 @@ Trunk (Unreleased)
     HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
     with 4-layer network topology.  (Junping Du via szetszwo)
 
+    HDFS-3703. Datanodes are marked stale if heartbeat is not received in
+    configured timeout and are selected as the last location to read from.
+    (Jing Zhao via suresh)
+
   IMPROVEMENTS
 
     HDFS-1620. Rename HdfsConstants -> HdfsServerConstants, FSConstants ->
@@ -225,10 +229,22 @@ Release 2.0.3-alpha - Unreleased
     (Jaimin D Jetly and Jing Zhao via szetszwo)
 
   IMPROVEMENTS
+  
+    HDFS-3925. Prettify PipelineAck#toString() for printing to a log
+    (Andrew Wang via todd)
+
+    HDFS-3939. NN RPC address cleanup. (eli)
 
   OPTIMIZATIONS
 
   BUG FIXES
+
+    HDFS-3919. MiniDFSCluster:waitClusterUp can hang forever.
+    (Andy Isaacson via eli)
+
+    HDFS-3924. Multi-byte id in HdfsVolumeId. (Andrew Wang via atm)
+
+    HDFS-3936. MiniDFSCluster shutdown races with BlocksMap usage. (eli)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -463,6 +479,10 @@ Release 2.0.2-alpha - 2012-09-07
     (Jing Zhao via szetszwo)
 
     HDFS-3888. Clean up BlockPlacementPolicyDefault.  (Jing Zhao via szetszwo)
+
+    HDFS-3907. Allow multiple users for local block readers. (eli)
+
+    HDFS-3910. DFSTestUtil#waitReplication should timeout. (eli)
 
   OPTIMIZATIONS
 
@@ -750,7 +770,16 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-2757. Cannot read a local block that's being written to when
     using the local read short circuit. (Jean-Daniel Cryans via eli)
-    
+
+    HDFS-3664. BlockManager race when stopping active services.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3928. MiniDFSCluster should reset the first ExitException on shutdown. (eli)
+   
+    HDFS-3938. remove current limitations from HttpFS docs. (tucu)
+
+    HDFS-3944. Httpfs resolveAuthority() is not resolving host correctly. (tucu)
+ 
   BREAKDOWN OF HDFS-3042 SUBTASKS
 
     HDFS-2185. HDFS portion of ZK-based FailoverController (todd)
@@ -769,6 +798,9 @@ Release 2.0.2-alpha - 2012-09-07
 
     HDFS-3833. TestDFSShell fails on windows due to concurrent file 
     read/write. (Brandon Li via suresh)
+
+    HDFS-3902. TestDatanodeBlockScanner#testBlockCorruptionPolicy is broken.
+    (Andy Isaacson via eli)
 
 Release 2.0.0-alpha - 05-23-2012
 

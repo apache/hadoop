@@ -35,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 public class TestServletFilter extends HttpServerFunctionalTest {
@@ -163,7 +164,7 @@ public class TestServletFilter extends HttpServerFunctionalTest {
   @Test
   public void testServletFilterWhenInitThrowsException() throws Exception {
     Configuration conf = new Configuration();
-    // start a http server with CountingFilter
+    // start a http server with ErrorFilter
     conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
         ErrorFilter.Initializer.class.getName());
     HttpServer http = createTestServer(conf);
@@ -174,4 +175,25 @@ public class TestServletFilter extends HttpServerFunctionalTest {
       assertTrue( e.getMessage().contains("Problem in starting http server. Server handlers failed"));
     }
   }
+  
+  /**
+   * Similar to the above test case, except that it uses a different API to add the
+   * filter. Regression test for HADOOP-8786.
+   */
+  @Test
+  public void testContextSpecificServletFilterWhenInitThrowsException()
+      throws Exception {
+    Configuration conf = new Configuration();
+    HttpServer http = createTestServer(conf);
+    http.defineFilter(http.webAppContext,
+        "ErrorFilter", ErrorFilter.class.getName(),
+        null, null);
+    try {
+      http.start();
+      fail("expecting exception");
+    } catch (IOException e) {
+      GenericTestUtils.assertExceptionContains("Unable to initialize WebAppContext", e);
+    }
+  }
+
 }

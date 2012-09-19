@@ -15,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-option java_package = "org.apache.hadoop.hdfs.protocol.proto";
-option java_outer_classname = "GetUserMappingsProtocolProtos";
+ 
+option java_package = "org.apache.hadoop.tools.proto";
+option java_outer_classname = "GetUserMappingsProtocol";
 option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 

@@ -189,6 +189,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
             <startKdc>${startKdc}</startKdc>
             <kdc.resource.dir>${kdc.resource.dir}</kdc.resource.dir>
           </systemPropertyVariables>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hadoop.test.TimedOutTestsListener</value>
+            </property>
+          </properties>
         </configuration>
       </plugin>
       <plugin>

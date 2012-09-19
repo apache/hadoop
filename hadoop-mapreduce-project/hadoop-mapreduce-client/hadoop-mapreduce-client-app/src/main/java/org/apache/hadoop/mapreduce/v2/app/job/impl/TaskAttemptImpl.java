@@ -71,6 +71,7 @@ import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptReport;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
@@ -86,6 +87,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptKillEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptEvent;
@@ -120,6 +122,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
+import org.apache.hadoop.yarn.state.MultipleArcTransition;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -127,6 +130,8 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Implementation of TaskAttempt interface.
@@ -404,10 +409,10 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptState.FAILED,
          TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
          new TooManyFetchFailureTransition())
-     .addTransition(
-         TaskAttemptState.SUCCEEDED, TaskAttemptState.KILLED,
-         TaskAttemptEventType.TA_KILL,
-         new KilledAfterSuccessTransition())
+      .addTransition(TaskAttemptState.SUCCEEDED,
+          EnumSet.of(TaskAttemptState.SUCCEEDED, TaskAttemptState.KILLED),
+          TaskAttemptEventType.TA_KILL, 
+          new KilledAfterSuccessTransition())
      .addTransition(
          TaskAttemptState.SUCCEEDED, TaskAttemptState.SUCCEEDED,
          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
@@ -1483,6 +1488,9 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
+      // too many fetch failure can only happen for map tasks
+      Preconditions
+          .checkArgument(taskAttempt.getID().getTaskId().getTaskType() == TaskType.MAP);
       //add to diagnostic
       taskAttempt.addDiagnosticInfo("Too Many fetch failures.Failing the attempt");
       //set the finish time
@@ -1506,15 +1514,30 @@ public abstract class TaskAttemptImpl implements
   }
   
   private static class KilledAfterSuccessTransition implements
-      SingleArcTransition<TaskAttemptImpl, TaskAttemptEvent> {
+      MultipleArcTransition<TaskAttemptImpl, TaskAttemptEvent, TaskAttemptState> {
 
     @SuppressWarnings("unchecked")
     @Override
-    public void transition(TaskAttemptImpl taskAttempt, 
+    public TaskAttemptState transition(TaskAttemptImpl taskAttempt, 
         TaskAttemptEvent event) {
-      TaskAttemptKillEvent msgEvent = (TaskAttemptKillEvent) event;
-      //add to diagnostic
-      taskAttempt.addDiagnosticInfo(msgEvent.getMessage());
+      if(taskAttempt.getID().getTaskId().getTaskType() == TaskType.REDUCE) {
+        // after a reduce task has succeeded, its outputs are in safe in HDFS.
+        // logically such a task should not be killed. we only come here when
+        // there is a race condition in the event queue. E.g. some logic sends
+        // a kill request to this attempt when the successful completion event
+        // for this task is already in the event queue. so the kill event will
+        // get executed immediately after the attempt is marked successful and 
+        // result in this transition being exercised.
+        // ignore this for reduce tasks
+        LOG.info("Ignoring killed event for successful reduce task attempt" +
+                  taskAttempt.getID().toString());
+        return TaskAttemptState.SUCCEEDED;
+      }
+      if(event instanceof TaskAttemptKillEvent) {
+        TaskAttemptKillEvent msgEvent = (TaskAttemptKillEvent) event;
+        //add to diagnostic
+        taskAttempt.addDiagnosticInfo(msgEvent.getMessage());
+      }
 
       // not setting a finish time since it was set on success
       assert (taskAttempt.getFinishTime() != 0);
@@ -1528,6 +1551,7 @@ public abstract class TaskAttemptImpl implements
           .getTaskId().getJobId(), tauce));
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId, TaskEventType.T_ATTEMPT_KILLED));
+      return TaskAttemptState.KILLED;
     }
   }
 

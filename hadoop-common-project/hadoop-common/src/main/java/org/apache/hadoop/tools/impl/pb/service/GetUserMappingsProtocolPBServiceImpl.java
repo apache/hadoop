@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,42 +16,43 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.protocolPB;
+package org.apache.hadoop.tools.impl.pb.service;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserResponseProto;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.tools.GetUserMappingsProtocolPB;
+import org.apache.hadoop.tools.proto.GetUserMappingsProtocol.GetGroupsForUserRequestProto;
+import org.apache.hadoop.tools.proto.GetUserMappingsProtocol.GetGroupsForUserResponseProto;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class GetUserMappingsProtocolServerSideTranslatorPB implements
+public class GetUserMappingsProtocolPBServiceImpl implements
     GetUserMappingsProtocolPB {
 
-  private final GetUserMappingsProtocol impl;
-
-  public GetUserMappingsProtocolServerSideTranslatorPB(
-      GetUserMappingsProtocol impl) {
-    this.impl = impl;
+  private GetUserMappingsProtocol real;
+  
+  public GetUserMappingsProtocolPBServiceImpl(GetUserMappingsProtocol impl) {
+    this.real = impl;
   }
-
+  
   @Override
   public GetGroupsForUserResponseProto getGroupsForUser(
       RpcController controller, GetGroupsForUserRequestProto request)
       throws ServiceException {
-    String[] groups;
+    String user = request.getUser();
     try {
-      groups = impl.getGroupsForUser(request.getUser());
+      String[] groups = real.getGroupsForUser(user);
+      GetGroupsForUserResponseProto.Builder responseBuilder =
+          GetGroupsForUserResponseProto.newBuilder();
+      for (String group : groups) {
+        responseBuilder.addGroups(group);
+      }
+      return responseBuilder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
-    GetGroupsForUserResponseProto.Builder builder = GetGroupsForUserResponseProto
-        .newBuilder();
-    for (String g : groups) {
-      builder.addGroups(g);
-    }
-    return builder.build();
   }
+
 }

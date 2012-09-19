@@ -582,17 +582,23 @@ public class JobImpl implements org.apache.hadoop.mapreduce.v2.app.job.Job,
       String jobFile =
           remoteJobConfFile == null ? "" : remoteJobConfFile.toString();
 
+      StringBuilder diagsb = new StringBuilder();
+      for (String s : getDiagnostics()) {
+        diagsb.append(s).append("\n");
+      }
+
       if (getState() == JobState.NEW) {
         return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
             appSubmitTime, startTime, finishTime, setupProgress, 0.0f, 0.0f,
-            cleanupProgress, jobFile, amInfos, isUber);
+            cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
       }
 
       computeProgress();
-      return MRBuilderUtils.newJobReport(jobId, jobName, username, state,
-          appSubmitTime, startTime, finishTime, setupProgress,
+      JobReport report = MRBuilderUtils.newJobReport(jobId, jobName, username,
+          state, appSubmitTime, startTime, finishTime, setupProgress,
           this.mapProgress, this.reduceProgress,
-          cleanupProgress, jobFile, amInfos, isUber);
+          cleanupProgress, jobFile, amInfos, isUber, diagsb.toString());
+      return report;
     } finally {
       readLock.unlock();
     }

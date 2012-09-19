@@ -101,6 +101,8 @@ public class RMAppImpl implements RMApp {
   @SuppressWarnings("rawtypes")
   private EventHandler handler;
   private static final FinalTransition FINAL_TRANSITION = new FinalTransition();
+  private static final AppFinishedTransition FINISHED_TRANSITION =
+      new AppFinishedTransition();
 
   private static final StateMachineFactory<RMAppImpl,
                                            RMAppState,
@@ -150,7 +152,7 @@ public class RMAppImpl implements RMApp {
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHING,
         RMAppEventType.ATTEMPT_FINISHING, new RMAppFinishingTransition())
     .addTransition(RMAppState.RUNNING, RMAppState.FINISHED,
-        RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
+        RMAppEventType.ATTEMPT_FINISHED, FINISHED_TRANSITION)
     .addTransition(RMAppState.RUNNING,
         EnumSet.of(RMAppState.SUBMITTED, RMAppState.FAILED),
         RMAppEventType.ATTEMPT_FAILED,
@@ -160,7 +162,7 @@ public class RMAppImpl implements RMApp {
 
      // Transitions from FINISHING state
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
-        RMAppEventType.ATTEMPT_FINISHED, FINAL_TRANSITION)
+        RMAppEventType.ATTEMPT_FINISHED, FINISHED_TRANSITION)
     .addTransition(RMAppState.FINISHING, RMAppState.FINISHED,
         RMAppEventType.KILL, new KillAppAndAttemptTransition())
     // ignorable transitions
@@ -570,6 +572,15 @@ public class RMAppImpl implements RMApp {
     public void transition(RMAppImpl app, RMAppEvent event) {
       app.finishTime = System.currentTimeMillis();
     }
+  }
+
+  private static class AppFinishedTransition extends FinalTransition {
+    public void transition(RMAppImpl app, RMAppEvent event) {
+      RMAppFinishedAttemptEvent finishedEvent =
+          (RMAppFinishedAttemptEvent)event;
+      app.diagnostics.append(finishedEvent.getDiagnostics());
+      super.transition(app, event);
+    };
   }
 
   private static class AppKilledTransition extends FinalTransition {

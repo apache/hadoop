@@ -27,6 +27,7 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -420,8 +421,8 @@ public class TestReplication {
     }
   }
   
-  private void changeBlockLen(MiniDFSCluster cluster, 
-      int lenDelta) throws IOException, InterruptedException {
+  private void changeBlockLen(MiniDFSCluster cluster, int lenDelta)
+      throws IOException, InterruptedException, TimeoutException {
     final Path fileName = new Path("/file1");
     final short REPLICATION_FACTOR = (short)1;
     final FileSystem fs = cluster.getFileSystem();

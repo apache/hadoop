@@ -301,6 +301,12 @@
             <java.security.krb5.conf>${project.build.directory}/test-classes/krb5.conf</java.security.krb5.conf>
             <kerberos.realm>${kerberos.realm}</kerberos.realm>
           </systemPropertyVariables>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hadoop.test.TimedOutTestsListener</value>
+            </property>
+          </properties>
           <excludes>
             <exclude>**/${test.exclude}.java</exclude>
             <exclude>${test.exclude.pattern}</exclude>

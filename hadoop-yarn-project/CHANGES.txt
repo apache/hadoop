@@ -25,6 +25,15 @@ Release 2.0.3-alpha - Unreleased
 
   IMPROVEMENTS
 
+    YARN-78. Changed UnManagedAM application to use YarnClient. (Bikas Saha via
+    vinodkv)
+
+    YARN-93. Fixed RM to propagate diagnostics from applications that have
+    finished but failed (Jason Lowe via vinodkv). 
+
+    YARN-28. Fixed TestCompositeService to not depend on test-order and thus
+    made it pass on JDK7 (Thomas Graves via vinodkv).
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -82,7 +91,10 @@ Release 0.23.4 - UNRELEASED
 
   IMPROVEMENTS
 
-     Change package of YarnClient to org.apache.hadoop. (Bikas Saha via vinodkv)
+    Change package of YarnClient to org.apache.hadoop. (Bikas Saha via vinodkv)
+
+    YARN-108. FSDownload can create cache directories with the wrong
+    permissions (Jason Lowe via bobby)
 
   OPTIMIZATIONS
 

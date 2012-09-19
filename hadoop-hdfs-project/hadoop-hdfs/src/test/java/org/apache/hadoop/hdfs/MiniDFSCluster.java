@@ -857,8 +857,8 @@ public class MiniDFSCluster {
     // After the NN has started, set back the bound ports into
     // the conf
     conf.set(DFSUtil.addKeySuffixes(
-        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId, nnId), NetUtils
-        .getHostPortString(nn.getNameNodeAddress()));
+        DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId, nnId),
+        nn.getNameNodeAddressHostPortString());
     conf.set(DFSUtil.addKeySuffixes(
         DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId, nnId), NetUtils
         .getHostPortString(nn.getHttpAddress()));
@@ -880,8 +880,8 @@ public class MiniDFSCluster {
    * @return URI of the given namenode in MiniDFSCluster
    */
   public URI getURI(int nnIndex) {
-    InetSocketAddress addr = nameNodes[nnIndex].nameNode.getNameNodeAddress();
-    String hostPort = NetUtils.getHostPortString(addr);
+    String hostPort =
+        nameNodes[nnIndex].nameNode.getNameNodeAddressHostPortString();
     URI uri = null;
     try {
       uri = new URI("hdfs://" + hostPort);
@@ -918,13 +918,17 @@ public class MiniDFSCluster {
   /**
    * wait for the cluster to get out of safemode.
    */
-  public void waitClusterUp() {
+  public void waitClusterUp() throws IOException {
+    int i = 0;
     if (numDataNodes > 0) {
       while (!isClusterUp()) {
         try {
           LOG.warn("Waiting for the Mini HDFS Cluster to start...");
           Thread.sleep(1000);
         } catch (InterruptedException e) {
+        }
+        if (++i > 10) {
+          throw new IOException("Timed out waiting for Mini HDFS Cluster to start");
         }
       }
     }
@@ -1354,6 +1358,7 @@ public class MiniDFSCluster {
       if (ExitUtil.terminateCalled()) {
         LOG.fatal("Test resulted in an unexpected exit",
             ExitUtil.getFirstExitException());
+        ExitUtil.resetFirstExitException();
         throw new AssertionError("Test resulted in an unexpected exit");
       }
     }

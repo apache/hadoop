@@ -66,7 +66,6 @@ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ClientNamenodeProtocol;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeProtocolService;
-import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetUserMappingsProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.NamenodeProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.RefreshAuthorizationPolicyProtocolProtos.RefreshAuthorizationPolicyProtocolService;
 import org.apache.hadoop.hdfs.protocol.proto.RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService;
@@ -74,8 +73,6 @@ import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolServerSideTranslatorPB;
-import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.RefreshAuthorizationPolicyProtocolPB;
@@ -119,6 +116,9 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.tools.GetUserMappingsProtocolPB;
+import org.apache.hadoop.tools.impl.pb.service.GetUserMappingsProtocolPBServiceImpl;
+import org.apache.hadoop.tools.proto.GetUserMappingsProtocol.GetUserMappingsProtocolService;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.VersionUtil;
 
@@ -159,10 +159,11 @@ class NameNodeRpcServer implements NamenodeProtocols {
     int handlerCount = 
       conf.getInt(DFS_NAMENODE_HANDLER_COUNT_KEY, 
                   DFS_NAMENODE_HANDLER_COUNT_DEFAULT);
-    InetSocketAddress socAddr = nn.getRpcServerAddress(conf);
-		RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
-         ProtobufRpcEngine.class);
-     ClientNamenodeProtocolServerSideTranslatorPB 
+
+    RPC.setProtocolEngine(conf, ClientNamenodeProtocolPB.class,
+        ProtobufRpcEngine.class);
+
+    ClientNamenodeProtocolServerSideTranslatorPB 
        clientProtocolServerTranslator = 
          new ClientNamenodeProtocolServerSideTranslatorPB(this);
      BlockingService clientNNPbService = ClientNamenodeProtocol.
@@ -188,8 +189,8 @@ class NameNodeRpcServer implements NamenodeProtocols {
     BlockingService refreshUserMappingService = RefreshUserMappingsProtocolService
         .newReflectiveBlockingService(refreshUserMappingXlator);
 
-    GetUserMappingsProtocolServerSideTranslatorPB getUserMappingXlator = 
-        new GetUserMappingsProtocolServerSideTranslatorPB(this);
+    GetUserMappingsProtocolPBServiceImpl getUserMappingXlator = 
+        new GetUserMappingsProtocolPBServiceImpl(this);
     BlockingService getUserMappingService = GetUserMappingsProtocolService
         .newReflectiveBlockingService(getUserMappingXlator);
     
@@ -199,22 +200,24 @@ class NameNodeRpcServer implements NamenodeProtocols {
         .newReflectiveBlockingService(haServiceProtocolXlator);
 	  
     WritableRpcEngine.ensureInitialized();
-    
-    InetSocketAddress dnSocketAddr = nn.getServiceRpcServerAddress(conf);
-    if (dnSocketAddr != null) {
+
+    InetSocketAddress serviceRpcAddr = nn.getServiceRpcServerAddress(conf);
+    if (serviceRpcAddr != null) {
       int serviceHandlerCount =
         conf.getInt(DFS_NAMENODE_SERVICE_HANDLER_COUNT_KEY,
                     DFS_NAMENODE_SERVICE_HANDLER_COUNT_DEFAULT);
-      // Add all the RPC protocols that the namenode implements
-      this.serviceRpcServer = new RPC.Builder(conf)
+      serviceRpcServer = new RPC.Builder(conf)
           .setProtocol(
               org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
           .setInstance(clientNNPbService)
-          .setBindAddress(dnSocketAddr.getHostName())
-          .setPort(dnSocketAddr.getPort()).setNumHandlers(serviceHandlerCount)
+          .setBindAddress(serviceRpcAddr.getHostName())
+          .setPort(serviceRpcAddr.getPort())
+          .setNumHandlers(serviceHandlerCount)
           .setVerbose(false)
           .setSecretManager(namesystem.getDelegationTokenSecretManager())
           .build();
+
+      // Add all the RPC protocols that the namenode implements
       DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
           serviceRpcServer);
       DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
@@ -228,20 +231,26 @@ class NameNodeRpcServer implements NamenodeProtocols {
       DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
           getUserMappingService, serviceRpcServer);
   
-      this.serviceRPCAddress = this.serviceRpcServer.getListenerAddress();
+      serviceRPCAddress = serviceRpcServer.getListenerAddress();
       nn.setRpcServiceServerAddress(conf, serviceRPCAddress);
     } else {
       serviceRpcServer = null;
       serviceRPCAddress = null;
     }
-    // Add all the RPC protocols that the namenode implements
-    this.clientRpcServer = new RPC.Builder(conf)
+
+    InetSocketAddress rpcAddr = nn.getRpcServerAddress(conf);
+    clientRpcServer = new RPC.Builder(conf)
         .setProtocol(
             org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB.class)
-        .setInstance(clientNNPbService).setBindAddress(socAddr.getHostName())
-        .setPort(socAddr.getPort()).setNumHandlers(handlerCount)
+        .setInstance(clientNNPbService)
+        .setBindAddress(rpcAddr.getHostName())
+        .setPort(rpcAddr.getPort())
+        .setNumHandlers(handlerCount)
         .setVerbose(false)
-        .setSecretManager(namesystem.getDelegationTokenSecretManager()).build();
+        .setSecretManager(namesystem.getDelegationTokenSecretManager())
+        .build();
+
+    // Add all the RPC protocols that the namenode implements
     DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
         clientRpcServer);
     DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
@@ -259,44 +268,51 @@ class NameNodeRpcServer implements NamenodeProtocols {
     if (serviceAuthEnabled =
           conf.getBoolean(
             CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
-      this.clientRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
-      if (this.serviceRpcServer != null) {
-        this.serviceRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
+      clientRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
+      if (serviceRpcServer != null) {
+        serviceRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
       }
     }
 
     // The rpc-server port can be ephemeral... ensure we have the correct info
-    this.clientRpcAddress = this.clientRpcServer.getListenerAddress(); 
+    clientRpcAddress = clientRpcServer.getListenerAddress();
     nn.setRpcServerAddress(conf, clientRpcAddress);
     
-    this.minimumDataNodeVersion = conf.get(
+    minimumDataNodeVersion = conf.get(
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_KEY,
         DFSConfigKeys.DFS_NAMENODE_MIN_SUPPORTED_DATANODE_VERSION_DEFAULT);
 
     // Set terse exception whose stack trace won't be logged
-    this.clientRpcServer.addTerseExceptions(SafeModeException.class);
+    clientRpcServer.addTerseExceptions(SafeModeException.class);
  }
   
   /**
-   * Actually start serving requests.
+   * Start client and service RPC servers.
    */
   void start() {
-    clientRpcServer.start();  //start RPC server
+    clientRpcServer.start();
     if (serviceRpcServer != null) {
       serviceRpcServer.start();      
     }
   }
   
   /**
-   * Wait until the RPC server has shut down.
+   * Wait until the client RPC server has shutdown.
    */
   void join() throws InterruptedException {
-    this.clientRpcServer.join();
+    clientRpcServer.join();
   }
-  
+
+  /**
+   * Stop client and service RPC servers.
+   */
   void stop() {
-    if(clientRpcServer != null) clientRpcServer.stop();
-    if(serviceRpcServer != null) serviceRpcServer.stop();
+    if (clientRpcServer != null) {
+      clientRpcServer.stop();
+    }
+    if (serviceRpcServer != null) {
+      serviceRpcServer.stop();
+    }
   }
   
   InetSocketAddress getServiceRpcAddress() {
@@ -333,8 +349,9 @@ class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
     verifyRequest(registration);
     LOG.info("Error report from " + registration + ": " + msg);
-    if(errorCode == FATAL)
+    if (errorCode == FATAL) {
       namesystem.releaseBackupNode(registration);
+    }
   }
 
   @Override // NamenodeProtocol

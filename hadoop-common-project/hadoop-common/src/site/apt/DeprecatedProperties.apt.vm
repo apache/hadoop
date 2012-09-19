@@ -24,8 +24,6 @@ Deprecated Properties
 *-------------------------------+-----------------------+
 || <<Deprecated property name>> || <<New property name>>|
 *-------------------------------+-----------------------+
-|StorageId | dfs.datanode.StorageId
-*---+---+
 |create.empty.dir.if.nonexist | mapreduce.jobcontrol.createdir.ifnotexist
 *---+---+
 |dfs.access.time.precision | dfs.namenode.accesstime.precision
@@ -38,13 +36,15 @@ Deprecated Properties
 *---+---+
 |dfs.block.size | dfs.blocksize
 *---+---+
-|dfs.client.buffer.dir | fs.client.buffer.dir
-*---+---+
 |dfs.data.dir | dfs.datanode.data.dir
 *---+---+
 |dfs.datanode.max.xcievers | dfs.datanode.max.transfer.threads
 *---+---+
 |dfs.df.interval | fs.df.interval
+*---+---+
+|dfs.federation.nameservice.id | dfs.nameservice.id
+*---+---+
+|dfs.federation.nameservices | dfs.nameservices
 *---+---+
 |dfs.http.address | dfs.namenode.http-address
 *---+---+
@@ -54,9 +54,9 @@ Deprecated Properties
 *---+---+
 |dfs.https.need.client.auth | dfs.client.https.need-auth
 *---+---+
-|dfs.max-repl-streams | dfs.namenode.replication.max-streams
-*---+---+
 |dfs.max.objects | dfs.namenode.max.objects
+*---+---+
+|dfs.max-repl-streams | dfs.namenode.replication.max-streams
 *---+---+
 |dfs.name.dir | dfs.namenode.name.dir
 *---+---+
@@ -86,6 +86,8 @@ Deprecated Properties
 *---+---+
 |dfs.socket.timeout | dfs.client.socket-timeout
 *---+---+
+|dfs.umaskmode | fs.permissions.umask-mode
+*---+---+
 |dfs.write.packet.size | dfs.client-write-packet-size
 *---+---+
 |fs.checkpoint.dir | dfs.namenode.checkpoint.dir
@@ -106,9 +108,9 @@ Deprecated Properties
 *---+---+
 |hadoop.pipes.command-file.keep | mapreduce.pipes.commandfile.preserve
 *---+---+
-|hadoop.pipes.executable | mapreduce.pipes.executable
-*---+---+
 |hadoop.pipes.executable.interpretor | mapreduce.pipes.executable.interpretor
+*---+---+
+|hadoop.pipes.executable | mapreduce.pipes.executable
 *---+---+
 |hadoop.pipes.java.mapper | mapreduce.pipes.isjavamapper
 *---+---+
@@ -130,6 +132,12 @@ Deprecated Properties
 *---+---+
 |io.sort.spill.percent | mapreduce.map.sort.spill.percent
 *---+---+
+|jobclient.completion.poll.interval | mapreduce.client.completion.pollinterval
+*---+---+
+|jobclient.output.filter | mapreduce.client.output.filter
+*---+---+
+|jobclient.progress.monitor.poll.interval | mapreduce.client.progressmonitor.pollinterval
+*---+---+
 |job.end.notification.url | mapreduce.job.end-notification.url
 *---+---+
 |job.end.retry.attempts | mapreduce.job.end-notification.retry.attempts
@@ -137,12 +145,6 @@ Deprecated Properties
 |job.end.retry.interval | mapreduce.job.end-notification.retry.interval
 *---+---+
 |job.local.dir | mapreduce.job.local.dir
-*---+---+
-|jobclient.completion.poll.interval | mapreduce.client.completion.pollinterval
-*---+---+
-|jobclient.output.filter | mapreduce.client.output.filter
-*---+---+
-|jobclient.progress.monitor.poll.interval | mapreduce.client.progressmonitor.pollinterval
 *---+---+
 |keep.failed.task.files | mapreduce.task.files.preserve.failedtasks
 *---+---+
@@ -196,10 +198,6 @@ Deprecated Properties
 *---+---+
 |mapred.compress.map.output | mapreduce.map.output.compress
 *---+---+
-|mapred.create.symlink | NONE - symlinking is always on
-*---+---+
-|mapreduce.job.cache.symlink.create | NONE - symlinking is always on
-*---+---+
 |mapred.data.field.separator | mapreduce.fieldsel.data.field.separator
 *---+---+
 |mapred.debug.out.lines | mapreduce.task.debugout.lines
@@ -214,17 +212,17 @@ Deprecated Properties
 *---+---+
 |mapred.heartbeats.in.second | mapreduce.jobtracker.heartbeats.in.second
 *---+---+
-|mapred.hosts | mapreduce.jobtracker.hosts.filename
-*---+---+
 |mapred.hosts.exclude | mapreduce.jobtracker.hosts.exclude.filename
 *---+---+
-|mapred.inmem.merge.threshold | mapreduce.reduce.merge.inmem.threshold
+|mapred.hosts | mapreduce.jobtracker.hosts.filename
 *---+---+
-|mapred.input.dir | mapreduce.input.fileinputformat.inputdir
+|mapred.inmem.merge.threshold | mapreduce.reduce.merge.inmem.threshold
 *---+---+
 |mapred.input.dir.formats | mapreduce.input.multipleinputs.dir.formats
 *---+---+
 |mapred.input.dir.mappers | mapreduce.input.multipleinputs.dir.mappers
+*---+---+
+|mapred.input.dir | mapreduce.input.fileinputformat.inputdir
 *---+---+
 |mapred.input.pathFilter.class | mapreduce.input.pathFilter.class
 *---+---+
@@ -235,6 +233,8 @@ Deprecated Properties
 |mapred.job.classpath.files | mapreduce.job.classpath.files
 *---+---+
 |mapred.job.id | mapreduce.job.id
+*---+---+
+|mapred.jobinit.threads | mapreduce.jobtracker.jobinit.threads
 *---+---+
 |mapred.job.map.memory.mb | mapreduce.map.memory.mb
 *---+---+
@@ -258,15 +258,21 @@ Deprecated Properties
 *---+---+
 |mapred.job.shuffle.merge.percent | mapreduce.reduce.shuffle.merge.percent
 *---+---+
-|mapred.job.tracker | mapreduce.jobtracker.address
-*---+---+
 |mapred.job.tracker.handler.count | mapreduce.jobtracker.handler.count
 *---+---+
 |mapred.job.tracker.history.completed.location | mapreduce.jobtracker.jobhistory.completed.location
 *---+---+
 |mapred.job.tracker.http.address | mapreduce.jobtracker.http.address
 *---+---+
+|mapred.jobtracker.instrumentation | mapreduce.jobtracker.instrumentation
+*---+---+
+|mapred.jobtracker.job.history.block.size | mapreduce.jobtracker.jobhistory.block.size
+*---+---+
 |mapred.job.tracker.jobhistory.lru.cache.size | mapreduce.jobtracker.jobhistory.lru.cache.size
+*---+---+
+|mapred.job.tracker | mapreduce.jobtracker.address
+*---+---+
+|mapred.jobtracker.maxtasks.per.job | mapreduce.jobtracker.maxtasks.perjob
 *---+---+
 |mapred.job.tracker.persist.jobstatus.active | mapreduce.jobtracker.persist.jobstatus.active
 *---+---+
@@ -274,25 +280,17 @@ Deprecated Properties
 *---+---+
 |mapred.job.tracker.persist.jobstatus.hours | mapreduce.jobtracker.persist.jobstatus.hours
 *---+---+
-|mapred.job.tracker.retire.jobs | mapreduce.jobtracker.retirejobs
+|mapred.jobtracker.restart.recover | mapreduce.jobtracker.restart.recover
 *---+---+
 |mapred.job.tracker.retiredjobs.cache.size | mapreduce.jobtracker.retiredjobs.cache.size
 *---+---+
-|mapred.jobinit.threads | mapreduce.jobtracker.jobinit.threads
+|mapred.job.tracker.retire.jobs | mapreduce.jobtracker.retirejobs
 *---+---+
-|mapred.jobtracker.instrumentation | mapreduce.jobtracker.instrumentation
-*---+---+
-|mapred.jobtracker.job.history.block.size | mapreduce.jobtracker.jobhistory.block.size
-*---+---+
-|mapred.jobtracker.maxtasks.per.job | mapreduce.jobtracker.maxtasks.perjob
-*---+---+
-|mapred.jobtracker.restart.recover | mapreduce.jobtracker.restart.recover
+|mapred.jobtracker.taskalloc.capacitypad | mapreduce.jobtracker.taskscheduler.taskalloc.capacitypad
 *---+---+
 |mapred.jobtracker.taskScheduler | mapreduce.jobtracker.taskscheduler
 *---+---+
 |mapred.jobtracker.taskScheduler.maxRunningTasksPerJob | mapreduce.jobtracker.taskscheduler.maxrunningtasks.perjob
-*---+---+
-|mapred.jobtracker.taskalloc.capacitypad | mapreduce.jobtracker.taskscheduler.taskalloc.capacitypad
 *---+---+
 |mapred.join.expr | mapreduce.join.expr
 *---+---+
@@ -320,19 +318,19 @@ Deprecated Properties
 *---+---+
 |mapred.map.output.compression.codec | mapreduce.map.output.compress.codec
 *---+---+
+|mapred.mapoutput.key.class | mapreduce.map.output.key.class
+*---+---+
+|mapred.mapoutput.value.class | mapreduce.map.output.value.class
+*---+---+
+|mapred.mapper.regex.group | mapreduce.mapper.regexmapper..group
+*---+---+
+|mapred.mapper.regex | mapreduce.mapper.regex
+*---+---+
 |mapred.map.task.debug.script | mapreduce.map.debug.script
 *---+---+
 |mapred.map.tasks | mapreduce.job.maps
 *---+---+
 |mapred.map.tasks.speculative.execution | mapreduce.map.speculative
-*---+---+
-|mapred.mapoutput.key.class | mapreduce.map.output.key.class
-*---+---+
-|mapred.mapoutput.value.class | mapreduce.map.output.value.class
-*---+---+
-|mapred.mapper.regex | mapreduce.mapper.regex
-*---+---+
-|mapred.mapper.regex.group | mapreduce.mapper.regexmapper..group
 *---+---+
 |mapred.max.map.failures.percent | mapreduce.map.failures.maxpercent
 *---+---+
@@ -352,11 +350,11 @@ Deprecated Properties
 *---+---+
 |mapred.min.split.size.per.rack | mapreduce.input.fileinputformat.split.minsize.per.rack
 *---+---+
-|mapred.output.compress | mapreduce.output.fileoutputformat.compress
-*---+---+
 |mapred.output.compression.codec | mapreduce.output.fileoutputformat.compress.codec
 *---+---+
 |mapred.output.compression.type | mapreduce.output.fileoutputformat.compress.type
+*---+---+
+|mapred.output.compress | mapreduce.output.fileoutputformat.compress
 *---+---+
 |mapred.output.dir | mapreduce.output.fileoutputformat.outputdir
 *---+---+
@@ -440,12 +438,6 @@ Deprecated Properties
 *---+---+
 |mapred.task.timeout | mapreduce.task.timeout
 *---+---+
-|mapred.task.tracker.http.address | mapreduce.tasktracker.http.address
-*---+---+
-|mapred.task.tracker.report.address | mapreduce.tasktracker.report.address
-*---+---+
-|mapred.task.tracker.task-controller | mapreduce.tasktracker.taskcontroller
-*---+---+
 |mapred.tasktracker.dns.interface | mapreduce.tasktracker.dns.interface
 *---+---+
 |mapred.tasktracker.dns.nameserver | mapreduce.tasktracker.dns.nameserver
@@ -453,6 +445,8 @@ Deprecated Properties
 |mapred.tasktracker.events.batchsize | mapreduce.tasktracker.events.batchsize
 *---+---+
 |mapred.tasktracker.expiry.interval | mapreduce.jobtracker.expire.trackers.interval
+*---+---+
+|mapred.task.tracker.http.address | mapreduce.tasktracker.http.address
 *---+---+
 |mapred.tasktracker.indexcache.mb | mapreduce.tasktracker.indexcache.mb
 *---+---+
@@ -465,6 +459,10 @@ Deprecated Properties
 |mapred.tasktracker.memorycalculatorplugin | mapreduce.tasktracker.resourcecalculatorplugin
 *---+---+
 |mapred.tasktracker.reduce.tasks.maximum | mapreduce.tasktracker.reduce.tasks.maximum
+*---+---+
+|mapred.task.tracker.report.address | mapreduce.tasktracker.report.address
+*---+---+
+|mapred.task.tracker.task-controller | mapreduce.tasktracker.taskcontroller
 *---+---+
 |mapred.tasktracker.taskmemorymanager.monitoring-interval | mapreduce.tasktracker.taskmemorymanager.monitoringinterval
 *---+---+
@@ -480,19 +478,11 @@ Deprecated Properties
 *---+---+
 |mapred.tip.id | mapreduce.task.id
 *---+---+
-|mapred.used.genericoptionsparser | mapreduce.client.genericoptionsparser.used
-*---+---+
-|mapred.userlog.limit.kb | mapreduce.task.userlog.limit.kb
-*---+---+
-|mapred.userlog.retain.hours | mapreduce.job.userlog.retain.hours
-*---+---+
-|mapred.work.output.dir | mapreduce.task.output.dir
-*---+---+
-|mapred.working.dir | mapreduce.job.working.dir
-*---+---+
 |mapreduce.combine.class | mapreduce.job.combine.class
 *---+---+
 |mapreduce.inputformat.class | mapreduce.job.inputformat.class
+*---+---+
+|mapreduce.job.counters.limit | mapreduce.job.counters.max
 *---+---+
 |mapreduce.jobtracker.permissions.supergroup | mapreduce.cluster.permissions.supergroup
 *---+---+
@@ -503,6 +493,16 @@ Deprecated Properties
 |mapreduce.partitioner.class | mapreduce.job.partitioner.class
 *---+---+
 |mapreduce.reduce.class | mapreduce.job.reduce.class
+*---+---+
+|mapred.used.genericoptionsparser | mapreduce.client.genericoptionsparser.used
+*---+---+
+|mapred.userlog.limit.kb | mapreduce.task.userlog.limit.kb
+*---+---+
+|mapred.userlog.retain.hours | mapreduce.job.userlog.retain.hours
+*---+---+
+|mapred.working.dir | mapreduce.job.working.dir
+*---+---+
+|mapred.work.output.dir | mapreduce.task.output.dir
 *---+---+
 |min.num.spills.for.combine | mapreduce.map.combine.minspills
 *---+---+
@@ -537,4 +537,14 @@ Deprecated Properties
 |user.name | mapreduce.job.user.name
 *---+---+
 |webinterface.private.actions | mapreduce.jobtracker.webinterface.trusted
+*---+---+
+
+  The following table lists additional changes to some configuration properties:
+
+*-------------------------------+-----------------------+
+|| <<Deprecated property name>> || <<New property name>>|
+*-------------------------------+-----------------------+
+|mapred.create.symlink | NONE - symlinking is always on
+*---+---+
+|mapreduce.job.cache.symlink.create | NONE - symlinking is always on
 *---+---+

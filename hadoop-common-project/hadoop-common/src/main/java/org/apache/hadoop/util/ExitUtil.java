@@ -101,7 +101,7 @@ public final class ExitUtil {
    * @throws ExitException if System.exit is disabled for test purposes
    */
   public static void terminate(int status, Throwable t) throws ExitException {
-    terminate(status, t.getMessage());
+    terminate(status, StringUtils.stringifyException(t));
   }
 
   /**

@@ -105,4 +105,9 @@ public class HdfsConfiguration extends Configuration {
     deprecate("dfs.federation.nameservices", DFSConfigKeys.DFS_NAMESERVICES);
     deprecate("dfs.federation.nameservice.id", DFSConfigKeys.DFS_NAMESERVICE_ID);
   }
+
+  public static void main(String[] args) {
+    init();
+    Configuration.dumpDeprecatedKeys();
+  }
 }

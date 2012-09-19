@@ -74,6 +74,11 @@ class HeartbeatManager implements DatanodeStatistics {
 
   void close() {
     heartbeatThread.interrupt();
+    try {
+      // This will no effect if the thread hasn't yet been started.
+      heartbeatThread.join(3000);
+    } catch (InterruptedException e) {
+    }
   }
   
   synchronized int getLiveDatanodeCount() {
