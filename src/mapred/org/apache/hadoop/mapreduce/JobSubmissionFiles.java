@@ -100,31 +100,22 @@ public class JobSubmissionFiles {
     String currentUser;
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     realUser = ugi.getShortUserName();
-    currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
+    UserGroupInformation currentUgi = UserGroupInformation.getCurrentUser();
+    currentUser = currentUgi.getShortUserName();
     if (fs.exists(stagingArea)) {
       FileStatus fsStatus = fs.getFileStatus(stagingArea);
-      String owner = fsStatus.getOwner();
-      if (!(owner.equals(currentUser) || owner.equals(realUser)) || 
-          !fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
+      if (!(fsStatus.isOwnedByUser(currentUser, currentUgi.getGroupNames())
+            || fsStatus.isOwnedByUser(realUser, ugi.getGroupNames()))
+          || !fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
          throw new IOException("The ownership/permissions on the staging " +
                       "directory " + stagingArea + " is not as expected. " + 
-                      "It is owned by " + owner + " and permissions are "+ 
+                      "It is owned by " + fsStatus.getOwner() + " and permissions are "+ 
                       fsStatus.getPermission() + ". The directory must " +
                       "be owned by the submitter " + currentUser + " or " +
                       "by " + realUser + " and permissions must be rwx------");
       }
     } else {
-      if (fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION))) {
-        if (Shell.WINDOWS) {
-          // On Windows, if a file or directory is created by users in
-          // Administrators group, the file owner will be the Administrators
-          // group as opposed to the actual users. This causes problem
-          // because Hadoop security model assumes whoever created the
-          // file should be the owner. We explicitly set ownership here
-          // to fix the problem on Windows.
-          fs.setOwner(stagingArea, realUser, null);
-        }
-      }
+      fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION));
     }
     return stagingArea;
   }

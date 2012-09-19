@@ -81,11 +81,16 @@ abstract public class Shell {
   }
 
   /** Return a command to set permission */
-  public static String[] getSetPermissionCommand(String perm) {
-    return (WINDOWS) ? new String[] { WINUTILS, "chmod", perm }
-                     : new String[] { "chmod", perm };
+  public static String[] getSetPermissionCommand(String perm, boolean recursive) {
+    if (recursive) {
+      return (WINDOWS) ? new String[] { WINUTILS, "chmod", "-R", perm }
+                         : new String[] { "chmod", "-R", perm };
+    } else {
+      return (WINDOWS) ? new String[] { WINUTILS, "chmod", perm }
+                       : new String[] { "chmod", perm };
+    }
   }
-  
+
   /** Return a regular expression string that match environment variables */
   public static String getEnvironmentVariableRegex() {
     return (WINDOWS) ? "%([A-Za-z_][A-Za-z0-9_]*?)%" :

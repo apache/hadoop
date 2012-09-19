@@ -464,6 +464,38 @@ public class RawLocalFileSystem extends FileSystem {
       return super.getGroup();
     }
 
+    @Override
+    public boolean isOwnedByUser(String user, String [] userGroups) {
+      if (user == null) {
+        throw new IllegalArgumentException(
+            "user argument is null");
+      }
+      if (!isPermissionLoaded()) {
+        loadPermissionInfo();
+      }
+
+      String owner = super.getOwner();
+      boolean success = owner.equals(user);
+
+      if (!success && Shell.WINDOWS && userGroups != null) {
+        final String AdminsGroupString = "Administrators";
+
+        // On Windows Server 2003 and later, if a file or a directory is
+        // created by users in the Administrators group, the file owner will be
+        // the Administrators group instead of to the actual user. Since it
+        // would be technically challenging to go against the OS behavior
+        // and update all such cases by explicitly setting the ownership on
+        // Windows (and would have some performance implications), we are
+        // following the OS model. Specifically, if a given user is a member of
+        // the Administrators group and a file is owned by Administrators
+        // group, isOwnedByUser will return true.
+        success = owner.equals(AdminsGroupString)
+            && Arrays.asList(userGroups).contains(AdminsGroupString);
+      }
+
+      return success;
+    }
+
     /// loads permissions, owner, and group from `ls -ld`
     private void loadPermissionInfo() {
       IOException e = null;

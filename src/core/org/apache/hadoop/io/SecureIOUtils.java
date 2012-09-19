@@ -105,10 +105,7 @@ public class SecureIOUtils {
       return fis;
     }
     if (skipSecurity) {
-      // Subject to race conditions but this is the best we can do
-      FileStatus status =
-        rawFilesystem.getFileStatus(new Path(f.getAbsolutePath()));
-      checkStat(f, status.getOwner(), expectedOwner);
+      checkStatFileSystem(f, expectedOwner);
       return fis;
     }
 
@@ -116,6 +113,7 @@ public class SecureIOUtils {
     try {
       String owner = NativeIO.getOwner(fis.getFD());
       checkStat(f, owner, expectedOwner);
+
       success = true;
       return fis;
     } finally {
@@ -173,12 +171,29 @@ public class SecureIOUtils {
   }
 
   private static void checkStat(File f, String owner, String expectedOwner) throws IOException {
-    if (Shell.DISABLEWINDOWS_TEMPORARILY)
-      return;
     if (expectedOwner != null &&
         !expectedOwner.equals(owner)) {
       throw new IOException(
         "Owner '" + owner + "' for path " + f + " did not match " +
+        "expected owner '" + expectedOwner + "'");
+    }
+  }
+
+  private static void checkStatFileSystem(File f, String expectedOwner)
+  throws IOException {
+    // Subject to race conditions but this is the best we can do
+    FileStatus status =
+      rawFilesystem.getFileStatus(new Path(f.getAbsolutePath()));
+    // Create ugi and check file ownership through isOwnedByUser
+    // as there are some specific OS dependent considerations for
+    // checking the ownership.
+    UserGroupInformation ugi =
+      UserGroupInformation.createRemoteUser(expectedOwner);
+
+    if (expectedOwner != null &&
+        !status.isOwnedByUser(ugi.getShortUserName(), ugi.getGroupNames())) {
+      throw new IOException(
+        "Owner '" + status.getOwner() + "' for path " + f + " did not match " +
         "expected owner '" + expectedOwner + "'");
     }
   }

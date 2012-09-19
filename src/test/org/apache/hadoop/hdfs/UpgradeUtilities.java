@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
@@ -44,6 +45,7 @@ import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_N
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -74,6 +76,8 @@ public class UpgradeUtilities {
   private static File datanodeStorage = new File(TEST_ROOT_DIR, "datanodeMaster");
   // A checksum of the contents in datanodeStorage directory
   private static long datanodeStorageChecksum;
+  // Default permissions used for data directories
+  private static String defaultPermissions;
   
   /**
    * Initialize the data structures used by this class.  
@@ -86,10 +90,12 @@ public class UpgradeUtilities {
    * block files).  This can be a lengthy operation.
    */
   public static void initialize() throws Exception {
-    createEmptyDirs(new String[] {TEST_ROOT_DIR.toString()});
     Configuration config = new Configuration();
     config.set("dfs.name.dir", namenodeStorage.toString());
     config.set("dfs.data.dir", datanodeStorage.toString());
+    defaultPermissions = config.get("dfs.datanode.data.dir.perm",
+                                    DataNode.DEFAULT_DATA_DIR_PERMISSION);
+    createEmptyDirs(new String[] {TEST_ROOT_DIR.toString()});
     MiniDFSCluster cluster = null;
     try {
       // format data-node
@@ -178,7 +184,9 @@ public class UpgradeUtilities {
       if (dir.exists()) {
         FileUtil.fullyDelete(dir);
       }
-      dir.mkdirs();
+      if (dir.mkdirs()) {
+        FileUtil.setPermission(dir, new FsPermission(defaultPermissions));
+      }
     }
   }
   
@@ -264,9 +272,12 @@ public class UpgradeUtilities {
   public static File[] createStorageDirs(NodeType nodeType, String[] parents, String dirName) throws Exception {
     File[] retVal = new File[parents.length];
     for (int i = 0; i < parents.length; i++) {
+      File parent = new File(parents[i]);
       File newDir = new File(parents[i], dirName);
+      Configuration conf = new Configuration();
       createEmptyDirs(new String[] {newDir.toString()});
-      LocalFileSystem localFS = FileSystem.getLocal(new Configuration());
+      FileUtil.setPermission(parent, new FsPermission(defaultPermissions));
+      LocalFileSystem localFS = FileSystem.getLocal(conf);
       switch (nodeType) {
       case NAME_NODE:
         localFS.copyToLocalFile(new Path(namenodeStorage.toString(), "current"),

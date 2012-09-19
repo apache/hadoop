@@ -148,6 +148,18 @@ public class FileStatus implements Writable, Comparable {
     return path;
   }
 
+  /**
+   * Checks if the given user is an owner of this file.
+   * @return true if yes, false otherwise
+   */
+  public boolean isOwnedByUser(String user, String [] userGroups) {
+    if (user == null) {
+      throw new IllegalArgumentException(
+          "user argument is null");
+    }
+    return owner.equals(user);
+  }
+
   /* These are provided so that these values could be loaded lazily 
    * by a filesystem (e.g. local file system).
    */

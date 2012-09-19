@@ -127,3 +127,6 @@ BUG FIXES
 
     MAPREDUCE-4564. Fix issues with timing out shell processes. (Bikas Saha
     via acmurthy)
+
+    HADOOP-8457. Address file ownership issue for users in Admin group on
+    windows. (Ivan Mitic via suresh)

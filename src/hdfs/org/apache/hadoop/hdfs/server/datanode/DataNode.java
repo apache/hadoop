@@ -247,7 +247,12 @@ public class DataNode extends Configured
   public static final String DATA_DIR_KEY = "dfs.data.dir";
   public final static String DATA_DIR_PERMISSION_KEY = 
     "dfs.datanode.data.dir.perm";
-  private static final String DEFAULT_DATA_DIR_PERMISSION = "755";
+
+  /** 
+   * Default permissions set by the DataNode if DATA_DIR_PERMISSION_KEY
+   * configuration is not set
+   */
+  public static final String DEFAULT_DATA_DIR_PERMISSION = "755";
 
   // Thresholds for when we start to log when a block report is
   // taking a long time to generate. Under heavy disk load and

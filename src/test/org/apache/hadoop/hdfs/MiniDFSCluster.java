@@ -32,6 +32,7 @@ import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
@@ -389,6 +390,16 @@ public class MiniDFSCluster {
           throw new IOException("Mkdirs failed to create directory for DataNode "
                                 + i + ": " + dir1 + " or " + dir2);
         }
+
+        // Set default permissions on data dirs as not all platforms have the
+        // same defaults
+        FileUtil.setPermission(dir1, new FsPermission(
+            conf.get("dfs.datanode.data.dir.perm",
+                     DataNode.DEFAULT_DATA_DIR_PERMISSION)));
+        FileUtil.setPermission(dir2, new FsPermission(
+            conf.get("dfs.datanode.data.dir.perm",
+                     DataNode.DEFAULT_DATA_DIR_PERMISSION)));
+
         dnConf.set(DataNode.DATA_DIR_KEY, dir1.getPath() + "," + dir2.getPath());
       }
       if (simulatedCapacities != null) {

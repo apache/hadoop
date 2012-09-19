@@ -698,23 +698,14 @@ public class FileUtil {
    * @param recursive true, if permissions should be changed recursively
    * @return the exit code from the command.
    * @throws IOException
-   * @throws InterruptedException
    */
   public static int chmod(String filename, String perm, boolean recursive)
                             throws IOException {
-    if (Shell.DISABLEWINDOWS_TEMPORARILY) {
-      return 0;
-    }
-
-    StringBuffer cmdBuf = new StringBuffer();
-    cmdBuf.append("chmod ");
-    if (recursive) {
-      cmdBuf.append("-R ");
-    }
-    cmdBuf.append(perm).append(" ");
-    cmdBuf.append(filename);
-    String[] shellCmd = {"bash", "-c" ,cmdBuf.toString()};
-    ShellCommandExecutor shExec = new ShellCommandExecutor(shellCmd);
+    String [] cmd = Shell.getSetPermissionCommand(perm, recursive);
+    String[] args = new String[cmd.length + 1];
+    System.arraycopy(cmd, 0, args, 0, cmd.length);
+    args[cmd.length] = filename;
+    ShellCommandExecutor shExec = new ShellCommandExecutor(args);
     try {
       shExec.execute();
     }catch(IOException e) {
@@ -790,7 +781,7 @@ public class FileUtil {
       NativeIO.chmod(f.getCanonicalPath(), permission.toShort());
     } else {
       execCommand(f, Shell.getSetPermissionCommand(
-                  String.format("%04o", permission.toShort())));
+                  String.format("%04o", permission.toShort()), false));
     }
   }
   
