@@ -234,10 +234,6 @@ public class TestQJMWithFaults {
         
         QuorumJournalManager qjm = createRandomFaultyQJM(cluster, r);
         try {
-          if (txid > 100) {
-            qjm.purgeLogsOlderThan(txid - 100);
-          }
-  
           long recovered;
           try {
             recovered = QJMTestUtil.recoverAndReturnLastTxn(qjm);
@@ -252,6 +248,12 @@ public class TestQJMWithFaults {
           
           txid = recovered + 1;
           
+          // Periodically purge old data on disk so it's easier to look
+          // at failure cases.
+          if (txid > 100 && i % 10 == 1) {
+            qjm.purgeLogsOlderThan(txid - 100);
+          }
+
           Holder<Throwable> thrown = new Holder<Throwable>(null);
           for (int j = 0; j < SEGMENTS_PER_WRITER; j++) {
             lastAcked = writeSegmentUntilCrash(cluster, qjm, txid, 4, thrown);

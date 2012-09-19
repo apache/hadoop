@@ -854,6 +854,12 @@ public class TestQuorumJournalManager {
     GenericTestUtils.assertGlobEquals(paxosDir, "\\d+",
         "1", "3");
     
+    // Create some temporary files of the sort that are used during recovery.
+    assertTrue(new File(curDir,
+        "edits_inprogress_0000000000000000001.epoch=140").createNewFile());
+    assertTrue(new File(curDir,
+        "edits_inprogress_0000000000000000002.empty").createNewFile());
+    
     qjm.purgeLogsOlderThan(3);
     
     // Log purging is asynchronous, so we have to wait for the calls

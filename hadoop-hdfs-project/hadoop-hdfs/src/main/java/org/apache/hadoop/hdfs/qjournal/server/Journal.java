@@ -27,6 +27,8 @@ import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -595,8 +597,7 @@ class Journal implements Closeable {
     checkFormatted();
     checkRequest(reqInfo);
     
-    fjm.purgeLogsOlderThan(minTxIdToKeep);
-    purgePaxosDecisionsOlderThan(minTxIdToKeep);
+    storage.purgeDataOlderThan(minTxIdToKeep);
   }
   
   /**
@@ -613,30 +614,6 @@ class Journal implements Closeable {
       }
     }
   }
-
-  private void purgePaxosDecisionsOlderThan(long minTxIdToKeep)
-      throws IOException {
-    File dir = storage.getPaxosDir();
-    for (File f : FileUtil.listFiles(dir)) {
-      if (!f.isFile()) continue;
-      
-      long txid;
-      try {
-        txid = Long.valueOf(f.getName());
-      } catch (NumberFormatException nfe) {
-        LOG.warn("Unexpected non-numeric file name for " + f.getAbsolutePath());
-        continue;
-      }
-      
-      if (txid < minTxIdToKeep) {
-        if (!f.delete()) {
-          LOG.warn("Unable to delete no-longer-needed paxos decision record " +
-              f);
-        }
-      }
-    }
-  }
-
 
   /**
    * @see QJournalProtocol#getEditLogManifest(String, long)
