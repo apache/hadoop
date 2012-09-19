@@ -71,6 +71,7 @@ public class QuorumJournalManager implements JournalManager {
   private final int selectInputStreamsTimeoutMs;
   private final int getJournalStateTimeoutMs;
   private final int newEpochTimeoutMs;
+  private final int writeTxnsTimeoutMs;
 
   // Since these don't occur during normal operation, we can
   // use rather lengthy timeouts, and don't need to make them
@@ -84,6 +85,8 @@ public class QuorumJournalManager implements JournalManager {
   private boolean isActiveWriter;
   
   private final AsyncLoggerSet loggers;
+
+  private int outputBufferCapacity = 512 * 1024;
   
   public QuorumJournalManager(Configuration conf,
       URI uri, NamespaceInfo nsInfo) throws IOException {
@@ -122,8 +125,9 @@ public class QuorumJournalManager implements JournalManager {
     this.newEpochTimeoutMs = conf.getInt(
         DFSConfigKeys.DFS_QJOURNAL_NEW_EPOCH_TIMEOUT_KEY,
         DFSConfigKeys.DFS_QJOURNAL_NEW_EPOCH_TIMEOUT_DEFAULT);
-    
-        
+    this.writeTxnsTimeoutMs = conf.getInt(
+        DFSConfigKeys.DFS_QJOURNAL_WRITE_TXNS_TIMEOUT_KEY,
+        DFSConfigKeys.DFS_QJOURNAL_WRITE_TXNS_TIMEOUT_DEFAULT);
   }
   
   protected List<AsyncLogger> createLoggers(
@@ -303,9 +307,6 @@ public class QuorumJournalManager implements JournalManager {
       return;
     }
     
-    
-    // TODO: check that md5s match up between any "tied" logs
-    
     SegmentStateProto logToSync = bestResponse.getSegmentState();
     assert segmentTxId == logToSync.getStartTxId();
     
@@ -329,12 +330,11 @@ public class QuorumJournalManager implements JournalManager {
     QuorumCall<AsyncLogger,Void> accept = loggers.acceptRecovery(logToSync, syncFromUrl);
     loggers.waitForWriteQuorum(accept, acceptRecoveryTimeoutMs,
         "acceptRecovery(" + TextFormat.shortDebugString(logToSync) + ")");
-    
-    // TODO:
-    // we should only try to finalize loggers who successfully synced above
-    // eg if a logger was down, we don't want to send the finalize request.
-    // write a test for this!
-    
+
+    // If one of the loggers above missed the synchronization step above, but
+    // we send a finalize() here, that's OK. It validates the log before
+    // finalizing. Hence, even if it is not "in sync", it won't incorrectly
+    // finalize.
     QuorumCall<AsyncLogger, Void> finalize =
         loggers.finalizeLogSegment(logToSync.getStartTxId(), logToSync.getEndTxId()); 
     loggers.waitForWriteQuorum(finalize, finalizeSegmentTimeoutMs,
@@ -386,7 +386,8 @@ public class QuorumJournalManager implements JournalManager {
     QuorumCall<AsyncLogger,Void> q = loggers.startLogSegment(txId);
     loggers.waitForWriteQuorum(q, startSegmentTimeoutMs,
         "startLogSegment(" + txId + ")");
-    return new QuorumOutputStream(loggers, txId);
+    return new QuorumOutputStream(loggers, txId,
+        outputBufferCapacity, writeTxnsTimeoutMs);
   }
 
   @Override
@@ -400,8 +401,7 @@ public class QuorumJournalManager implements JournalManager {
 
   @Override
   public void setOutputBufferCapacity(int size) {
-    // TODO Auto-generated method stub
-    
+    outputBufferCapacity = size;
   }
 
   @Override
@@ -416,9 +416,14 @@ public class QuorumJournalManager implements JournalManager {
   public void recoverUnfinalizedSegments() throws IOException {
     Preconditions.checkState(!isActiveWriter, "already active writer");
     
+    LOG.info("Starting recovery process for unclosed journal segments...");
     Map<AsyncLogger, NewEpochResponseProto> resps = createNewUniqueEpoch();
-    LOG.info("newEpoch(" + loggers.getEpoch() + ") responses:\n" +
+    LOG.info("Successfully started new epoch " + loggers.getEpoch());
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("newEpoch(" + loggers.getEpoch() + ") responses:\n" +
         QuorumCall.mapToString(resps));
+    }
     
     long mostRecentSegmentTxId = Long.MIN_VALUE;
     for (NewEpochResponseProto r : resps.values()) {
@@ -476,7 +481,7 @@ public class QuorumJournalManager implements JournalManager {
   
   @Override
   public String toString() {
-    return "Quorum journal manager " + uri;
+    return "QJM to " + loggers;
   }
 
   @VisibleForTesting

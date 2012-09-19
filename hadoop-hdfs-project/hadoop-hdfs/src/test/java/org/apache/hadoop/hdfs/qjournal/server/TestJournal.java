@@ -177,7 +177,7 @@ public class TestJournal {
     journal.journal(makeRI(2), 1, 1, 2, 
         QJMTestUtil.createTxnData(1, 2));
     journal.finalizeLogSegment(makeRI(3), 1, 2);
-    journal.startLogSegment(makeRI(3), 3);
+    journal.startLogSegment(makeRI(4), 3);
     NewEpochResponseProto resp = journal.newEpoch(FAKE_NSINFO, 2);
     assertEquals(1, resp.getLastSegmentTxId());
   }

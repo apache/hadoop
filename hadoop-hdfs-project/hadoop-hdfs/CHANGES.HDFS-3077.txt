@@ -76,3 +76,5 @@ HDFS-3894. QJM: testRecoverAfterDoubleFailures can be flaky due to IPC client ca
 HDFS-3926. QJM: Add user documentation for QJM. (atm)
 
 HDFS-3943. QJM: remove currently-unused md5sum field (todd)
+
+HDFS-3950. QJM: misc TODO cleanup, improved log messages, etc. (todd)

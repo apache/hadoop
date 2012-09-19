@@ -70,11 +70,14 @@ class JournalNodeRpcServer implements QJournalProtocol {
     BlockingService service = QJournalProtocolService
         .newReflectiveBlockingService(translator);
     
-    this.server = RPC.getServer(
-        QJournalProtocolPB.class,
-        service, addr.getHostName(),
-            addr.getPort(), HANDLER_COUNT, false, confCopy,
-            null /*secretManager*/);
+    this.server = new RPC.Builder(confCopy)
+      .setProtocol(QJournalProtocolPB.class)
+      .setInstance(service)
+      .setBindAddress(addr.getHostName())
+      .setPort(addr.getPort())
+      .setNumHandlers(HANDLER_COUNT)
+      .setVerbose(false)
+      .build();
 
     // set service-level authorization security policy
     if (confCopy.getBoolean(

@@ -32,13 +32,16 @@ class QuorumOutputStream extends EditLogOutputStream {
   private final AsyncLoggerSet loggers;
   private EditsDoubleBuffer buf;
   private final long segmentTxId;
+  private final int writeTimeoutMs;
 
   public QuorumOutputStream(AsyncLoggerSet loggers,
-      long txId) throws IOException {
+      long txId, int outputBufferCapacity,
+      int writeTimeoutMs) throws IOException {
     super();
-    this.buf = new EditsDoubleBuffer(256*1024); // TODO: conf
+    this.buf = new EditsDoubleBuffer(outputBufferCapacity);
     this.loggers = loggers;
     this.segmentTxId = txId;
+    this.writeTimeoutMs = writeTimeoutMs;
   }
 
   @Override
@@ -101,7 +104,7 @@ class QuorumOutputStream extends EditLogOutputStream {
       QuorumCall<AsyncLogger, Void> qcall = loggers.sendEdits(
           segmentTxId, firstTxToFlush,
           numReadyTxns, data);
-      loggers.waitForWriteQuorum(qcall, 20000, "sendEdits"); // TODO: configurable timeout
+      loggers.waitForWriteQuorum(qcall, writeTimeoutMs, "sendEdits");
       
       // Since we successfully wrote this batch, let the loggers know. Any future
       // RPCs will thus let the loggers know of the most recent transaction, even
@@ -118,4 +121,8 @@ class QuorumOutputStream extends EditLogOutputStream {
     return sb.toString();
   }
   
+  @Override
+  public String toString() {
+    return "QuorumOutputStream starting at txid " + segmentTxId;
+  }
 }

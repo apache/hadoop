@@ -54,6 +54,7 @@ import org.apache.hadoop.security.SecurityUtil;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -554,7 +555,8 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   @Override
   public String toString() {
-    return "Channel to journal node " + addr; 
+    return InetAddresses.toAddrString(addr.getAddress()) + ':' +
+        addr.getPort();
   }
 
   @Override

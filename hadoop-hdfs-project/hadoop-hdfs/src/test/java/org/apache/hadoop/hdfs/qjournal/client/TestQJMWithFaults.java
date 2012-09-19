@@ -74,6 +74,8 @@ public class TestQJMWithFaults {
   private static final int SEGMENTS_PER_WRITER = 2;
 
   private static Configuration conf = new Configuration();
+
+
   static {
     // Don't retry connections - it just slows down the tests.
     conf.setInt(CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY, 0);

@@ -211,7 +211,7 @@ public class TestNNWithQJM {
       cluster.getFileSystem().mkdirs(TEST_PATH);
       
       String contents = DFSTestUtil.urlGet(url); 
-      assertTrue(contents.contains("Channel to journal node"));
+      assertTrue(contents.contains("QJM to ["));
       assertTrue(contents.contains("Written txid 2"));
 
       // Stop one JN, do another txn, and make sure it shows as behind

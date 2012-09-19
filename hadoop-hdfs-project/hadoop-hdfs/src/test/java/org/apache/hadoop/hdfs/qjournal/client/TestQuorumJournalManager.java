@@ -799,6 +799,13 @@ public class TestQuorumJournalManager {
         "3");
   }
   
+  @Test
+  public void testToString() throws Exception {
+    GenericTestUtils.assertMatches(
+        qjm.toString(),
+        "QJM to \\[127.0.0.1:\\d+, 127.0.0.1:\\d+, 127.0.0.1:\\d+\\]");
+  }
+  
   
   private QuorumJournalManager createSpyingQJM()
       throws IOException, URISyntaxException {

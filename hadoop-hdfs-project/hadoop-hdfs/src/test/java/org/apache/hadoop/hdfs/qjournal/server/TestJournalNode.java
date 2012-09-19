@@ -240,7 +240,6 @@ public class TestJournalNode {
     assertTrue(prep.hasSegmentState());
     
     // accept() should save the accepted value in persistent storage
-    // TODO: should be able to accept without a URL here
     ch.acceptRecovery(prep.getSegmentState(), new URL("file:///dev/null")).get();
 
     // So another prepare() call from a new epoch would return this value
@@ -326,12 +325,7 @@ public class TestJournalNode {
         " bytes in " + time + "ms");
     float avgRtt = (float)time/(float)numEdits;
     long throughput = ((long)numEdits * editsSize * 1000L)/time;
-    System.err.println("Time per batch: " + avgRtt);
+    System.err.println("Time per batch: " + avgRtt + "ms");
     System.err.println("Throughput: " + throughput + " bytes/sec");
   }
-  
-  // TODO:
-  // - add test that checks formatting behavior
-  // - add test that checks rejects newEpoch if nsinfo doesn't match
-  
 }
