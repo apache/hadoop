@@ -234,8 +234,6 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8812. ExitUtil#terminate should print Exception#toString. (eli)
 
-    HADOOP-8805. Move protocol buffer implementation of GetUserMappingProtocol from HDFS to Common. (bowang via tucu)
-
   OPTIMIZATIONS
 
   BUG FIXES

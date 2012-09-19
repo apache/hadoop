@@ -36,6 +36,8 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.JournalProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
@@ -65,8 +67,6 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.apache.hadoop.tools.GetUserMappingsProtocolPB;
-import org.apache.hadoop.tools.impl.pb.client.GetUserMappingsProtocolPBClientImpl;
 
 import com.google.common.base.Preconditions;
 
@@ -218,7 +218,7 @@ public class NameNodeProxies {
       throws IOException {
     GetUserMappingsProtocolPB proxy = (GetUserMappingsProtocolPB)
         createNameNodeProxy(address, conf, ugi, GetUserMappingsProtocolPB.class);
-    return new GetUserMappingsProtocolPBClientImpl(proxy);
+    return new GetUserMappingsProtocolClientSideTranslatorPB(proxy);
   }
   
   private static NamenodeProtocol createNNProxyWithNamenodeProtocol(
