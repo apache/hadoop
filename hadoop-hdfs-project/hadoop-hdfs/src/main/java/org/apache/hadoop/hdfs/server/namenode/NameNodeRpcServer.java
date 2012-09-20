@@ -285,10 +285,13 @@ class NameNodeRpcServer implements NamenodeProtocols {
   }
   
   /**
-   * Wait until the client RPC server has shutdown.
+   * Wait until the RPC servers have shutdown.
    */
   void join() throws InterruptedException {
     clientRpcServer.join();
+    if (serviceRpcServer != null) {
+      serviceRpcServer.join();      
+    }
   }
 
   /**

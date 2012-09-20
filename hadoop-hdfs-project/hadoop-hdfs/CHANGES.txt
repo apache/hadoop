@@ -33,6 +33,9 @@ Release 2.0.3-alpha - Unreleased
 
     HDFS-3951. datanode web ui does not work over HTTPS when datanode is started in secure mode. (tucu)
 
+    HDFS-3949. NameNodeRpcServer#join should join on both client and
+    server RPC servers. (eli)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
