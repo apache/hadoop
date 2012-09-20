@@ -265,8 +265,8 @@ public class FSEditLog {
       long oldSize = size;
       long total = 0;
       long fillCapacity = PREALLOCATION_BUFFER.capacity();
-      PREALLOCATION_BUFFER.position(0);
       while (need > 0) {
+        PREALLOCATION_BUFFER.position(0);
         do {
           size += fc.write(PREALLOCATION_BUFFER, size);
         } while (PREALLOCATION_BUFFER.remaining() > 0);

@@ -565,6 +565,9 @@ Release 1.1.0 - unreleased
     HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
     (omalley)
 
+    HDFS-3961. FSEditLog preallocate() preallocated more than 1MB. (Jing Zhoa
+    via suresh)
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
