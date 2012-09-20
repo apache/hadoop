@@ -2105,7 +2105,7 @@ public class TFile {
     }
 
     public boolean isSorted() {
-      return !strComparator.equals("");
+      return !strComparator.isEmpty();
     }
 
     public String getComparatorString() {

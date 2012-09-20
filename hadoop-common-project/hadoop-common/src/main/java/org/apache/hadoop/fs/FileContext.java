@@ -2003,7 +2003,7 @@ public final class FileContext {
       String filename = inPathPattern.toUri().getPath();
       
       // path has only zero component
-      if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
+      if (filename.isEmpty() || Path.SEPARATOR.equals(filename)) {
         Path p = inPathPattern.makeQualified(uri, null);
         return getFileStatus(new Path[]{p});
       }

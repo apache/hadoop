@@ -103,6 +103,9 @@ Trunk (Unreleased)
 
     HADOOP-8736. Add Builder for building RPC server. (Brandon Li via Suresh)
 
+    HADOOP-8814. Replace string equals "" by String#isEmpty().
+    (Brandon Li via suresh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
