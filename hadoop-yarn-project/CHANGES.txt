@@ -15,6 +15,9 @@ Release 0.23.4 - UNRELEASED
     YARN-108. FSDownload can create cache directories with the wrong
     permissions (Jason Lowe via bobby)
 
+    YARN-88. DefaultContainerExecutor can fail to set proper permissions.
+    (Jason Lowe via sseth)
+
 Release 0.23.3 - Unreleased
 
   INCOMPATIBLE CHANGES
