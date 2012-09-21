@@ -165,8 +165,10 @@ public class MiniRPCBenchmark {
         new TestDelegationTokenSecretManager(24*60*60*1000,
             7*24*60*60*1000,24*60*60*1000,3600000);
       secretManager.startThreads();
-      rpcServer = RPC.getServer(MiniProtocol.class,
-          this, DEFAULT_SERVER_ADDRESS, 0, 1, false, conf, secretManager);
+      rpcServer = new RPC.Builder(conf).setProtocol(MiniProtocol.class)
+          .setInstance(this).setBindAddress(DEFAULT_SERVER_ADDRESS).setPort(0)
+          .setNumHandlers(1).setVerbose(false).setSecretManager(secretManager)
+          .build();
       rpcServer.start();
     }
 

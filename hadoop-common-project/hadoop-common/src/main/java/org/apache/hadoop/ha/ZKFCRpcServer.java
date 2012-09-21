@@ -55,11 +55,10 @@ public class ZKFCRpcServer implements ZKFCProtocol {
         new ZKFCProtocolServerSideTranslatorPB(this);
     BlockingService service = ZKFCProtocolService
         .newReflectiveBlockingService(translator);
-    this.server = RPC.getServer(
-        ZKFCProtocolPB.class,
-        service, bindAddr.getHostName(),
-            bindAddr.getPort(), HANDLER_COUNT, false, conf,
-            null /*secretManager*/);
+    this.server = new RPC.Builder(conf).setProtocol(ZKFCProtocolPB.class)
+        .setInstance(service).setBindAddress(bindAddr.getHostName())
+        .setPort(bindAddr.getPort()).setNumHandlers(HANDLER_COUNT)
+        .setVerbose(false).build();
     
     // set service-level authorization security policy
     if (conf.getBoolean(

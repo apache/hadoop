@@ -725,6 +725,110 @@ public class RPC {
                  null);
   }
 
+  /**
+   * Class to construct instances of RPC server with specific options.
+   */
+  public static class Builder {
+    private Class<?> protocol = null;
+    private Object instance = null;
+    private String bindAddress = "0.0.0.0";
+    private int port = 0;
+    private int numHandlers = 1;
+    private int numReaders = -1;
+    private int queueSizePerHandler = -1;
+    private boolean verbose = false;
+    private final Configuration conf;    
+    private SecretManager<? extends TokenIdentifier> secretManager = null;
+    private String portRangeConfig = null;
+    
+    public Builder(Configuration conf) {
+      this.conf = conf;
+    }
+
+    /** Mandatory field */
+    public Builder setProtocol(Class<?> protocol) {
+      this.protocol = protocol;
+      return this;
+    }
+    
+    /** Mandatory field */
+    public Builder setInstance(Object instance) {
+      this.instance = instance;
+      return this;
+    }
+    
+    /** Default: 0.0.0.0 */
+    public Builder setBindAddress(String bindAddress) {
+      this.bindAddress = bindAddress;
+      return this;
+    }
+    
+    /** Default: 0 */
+    public Builder setPort(int port) {
+      this.port = port;
+      return this;
+    }
+    
+    /** Default: 1 */
+    public Builder setNumHandlers(int numHandlers) {
+      this.numHandlers = numHandlers;
+      return this;
+    }
+    
+    /** Default: -1 */
+    public Builder setnumReaders(int numReaders) {
+      this.numReaders = numReaders;
+      return this;
+    }
+    
+    /** Default: -1 */
+    public Builder setQueueSizePerHandler(int queueSizePerHandler) {
+      this.queueSizePerHandler = queueSizePerHandler;
+      return this;
+    }
+    
+    /** Default: false */
+    public Builder setVerbose(boolean verbose) {
+      this.verbose = verbose;
+      return this;
+    }
+    
+    /** Default: null */
+    public Builder setSecretManager(
+        SecretManager<? extends TokenIdentifier> secretManager) {
+      this.secretManager = secretManager;
+      return this;
+    }
+    
+    /** Default: null */
+    public Builder setPortRangeConfig(String portRangeConfig) {
+      this.portRangeConfig = portRangeConfig;
+      return this;
+    }
+    
+    /**
+     * Build the RPC Server. 
+     * @throws IOException on error
+     * @throws HadoopIllegalArgumentException when mandatory fields are not set
+     */
+    public Server build() throws IOException, HadoopIllegalArgumentException {
+      if (this.conf == null) {
+        throw new HadoopIllegalArgumentException("conf is not set");
+      }
+      if (this.protocol == null) {
+        throw new HadoopIllegalArgumentException("protocol is not set");
+      }
+      if (this.instance == null) {
+        throw new HadoopIllegalArgumentException("instance is not set");
+      }
+      
+      return getProtocolEngine(this.protocol, this.conf).getServer(
+          this.protocol, this.instance, this.bindAddress, this.port,
+          this.numHandlers, this.numReaders, this.queueSizePerHandler,
+          this.verbose, this.conf, this.secretManager, this.portRangeConfig);
+    }
+  }
+  
   /** An RPC Server. */
   public abstract static class Server extends org.apache.hadoop.ipc.Server {
    boolean verbose;

@@ -227,11 +227,14 @@ public class RPCCallBenchmark implements Tool, Configurable {
       BlockingService service = TestProtobufRpcProto
           .newReflectiveBlockingService(serverImpl);
 
-      server = RPC.getServer(TestRpcService.class, service,
-          opts.host, opts.port, opts.serverThreads, false, conf, null);
+      server = new RPC.Builder(conf).setProtocol(TestRpcService.class)
+          .setInstance(service).setBindAddress(opts.host).setPort(opts.port)
+          .setNumHandlers(opts.serverThreads).setVerbose(false).build();
     } else if (opts.rpcEngine == WritableRpcEngine.class) {
-      server = RPC.getServer(TestProtocol.class, new TestRPC.TestImpl(),
-          opts.host, opts.port, opts.serverThreads, false, conf, null);
+      server = new RPC.Builder(conf).setProtocol(TestProtocol.class)
+          .setInstance(new TestRPC.TestImpl()).setBindAddress(opts.host)
+          .setPort(opts.port).setNumHandlers(opts.serverThreads)
+          .setVerbose(false).build();
     } else {
       throw new RuntimeException("Bad engine: " + opts.rpcEngine);
     }
