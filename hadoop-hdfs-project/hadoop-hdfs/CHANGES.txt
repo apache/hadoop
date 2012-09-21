@@ -36,6 +36,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3949. NameNodeRpcServer#join should join on both client and
     server RPC servers. (eli)
 
+    HDFS-3932. NameNode Web UI broken if the rpc-address is set to the wildcard.
+    (Colin Patrick McCabe via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
