@@ -107,6 +107,7 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -896,6 +897,15 @@ public class MRAppMaster extends CompositeService {
     @Override
     public AMNodeMap getAllNodes() {
       return nodes;
+    }
+
+    @Override
+    public Map<ApplicationAccessType, String> getApplicationACLs() {
+      if (getServiceState() != STATE.STARTED) {
+        throw new YarnException(
+            "Cannot get ApplicationACLs before all services have started");
+      }
+      return ((RMCommunicator) containerRequestor).getApplicationAcls();
     }
   }
 

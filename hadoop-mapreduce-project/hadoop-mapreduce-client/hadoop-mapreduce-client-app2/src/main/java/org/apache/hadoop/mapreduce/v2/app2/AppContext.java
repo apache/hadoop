@@ -29,6 +29,7 @@ import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNode;
 import org.apache.hadoop.mapreduce.v2.app2.rm.node.AMNodeMap;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -47,6 +48,8 @@ public interface AppContext {
   ApplicationAttemptId getApplicationAttemptId();
 
   String getApplicationName();
+  
+  Map<ApplicationAccessType, String> getApplicationACLs();
 
   long getStartTime();
 

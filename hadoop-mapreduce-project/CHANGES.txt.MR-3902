@@ -20,3 +20,5 @@ Branch MR-3902
   MAPREDUCE-4617. Re-wire AM Recovery (sseth)
 
   MAPREDUCE-4618. Re-wire LocalContainerAllocator/UberAM (sseth)
+
+  MAPREDUCE-4665. Use the configured shuffle port and application ACLs (sseth)

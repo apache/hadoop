@@ -74,12 +74,11 @@ public class TaskAttemptListenerImpl2 extends CompositeService
   // .... TaskAttemptId registration and unregistration by the TaskAttempt. Can this be split into a 
   // ContainerListener + TaskAttemptListener ?
   
-  // TODO XXX. Re-look at big chungs. Possibly redo bits.
+  // TODO XXX. Re-look at big chunks. Possibly redo bits.
   // ..launchedJvm map etc.
   // ..Sending back errors for unknown tasks.
   
   private static final JvmTask TASK_FOR_INVALID_JVM = new JvmTask(null, true);
-  private static final JvmTask UNASSIGNED_TASK = new JvmTask(null, false);
 
   private static final Log LOG = LogFactory.getLog(TaskAttemptListenerImpl2.class);
 
@@ -444,9 +443,10 @@ public class TaskAttemptListenerImpl2 extends CompositeService
         jvmTask = null;
       } else {
         TaskAttemptId yTaskAttemptId = TypeConverter.toYarn(task.getTaskID());
-        // TODO XXX: Generate this event properly - proper params etc etc etc.s
-        // TODO XXX: Fix the hardcoded port.
-        context.getEventHandler().handle(new TaskAttemptRemoteStartEvent(yTaskAttemptId, containerId, null, 8080));
+        context.getEventHandler().handle(
+            new TaskAttemptRemoteStartEvent(yTaskAttemptId, containerId,
+                context.getApplicationACLs(), context.getAllContainers()
+                    .get(containerId).getShufflePort()));
         LOG.info("JVM with ID: " + jvmId + " given task: " + task.getTaskID());
         registerTaskAttempt(yTaskAttemptId, wJvmID);
         jvmTask = new JvmTask(task, false);

@@ -33,6 +33,7 @@ public abstract class HeartbeatHandlerBase<T> extends AbstractService {
     this.eventHandler = appContext.getEventHandler();
     this.clock = appContext.getClock();
     this.appContext = appContext;
+    numThreads = numThreads == 0 ? 1 : numThreads;
     this.runningMap = new ConcurrentHashMap<T, HeartbeatHandlerBase.ReportTime>(
         16, 0.75f, numThreads);
   }
@@ -40,7 +41,6 @@ public abstract class HeartbeatHandlerBase<T> extends AbstractService {
   @Override
   public void init(Configuration conf) {
     super.init(conf);
-    // TODO XXX: TaskTimeout / ContainerTimeOut
     timeOut = getConfiguredTimeout(conf);
     timeOutCheckInterval = getConfiguredTimeoutCheckInterval(conf);
   }

@@ -65,6 +65,7 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.ClusterInfo;
 import org.apache.hadoop.yarn.SystemClock;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -861,6 +862,11 @@ public class TestRuntimeEstimators {
     public AMNodeMap getAllNodes() {
       // TODO Auto-generated method stub
       return null;
+    }
+
+    @Override
+    public Map<ApplicationAccessType, String> getApplicationACLs() {
+      throw new UnsupportedOperationException("Not supported yet.");
     }
   }
 }

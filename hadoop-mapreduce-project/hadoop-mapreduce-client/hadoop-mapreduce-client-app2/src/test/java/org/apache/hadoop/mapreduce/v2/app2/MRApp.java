@@ -108,6 +108,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
@@ -598,9 +599,16 @@ public class MRApp extends MRAppMaster {
     return new MRAppAMScheduler();
   }
 
-  protected class MRAppAMScheduler implements ContainerAllocator {
+  protected class MRAppAMScheduler extends AbstractService implements ContainerAllocator{
     private int containerCount;
     
+    MRAppAMScheduler() {
+      super(MRAppAMScheduler.class.getSimpleName());
+    }
+    
+    public void start() {}
+    public void init(Configuration conf) {}
+    public void stop() {}
     
     @Override
     public void handle(AMSchedulerEvent rawEvent) {
