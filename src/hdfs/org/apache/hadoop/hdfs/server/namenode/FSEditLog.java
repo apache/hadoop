@@ -37,6 +37,8 @@ import java.lang.Math;
 import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -55,6 +57,8 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
  * 
  */
 public class FSEditLog {
+  private static final Log LOG = LogFactory.getLog(FSEditLog.class);
+  
   private static final byte OP_INVALID = -1;
   private static final byte OP_ADD = 0;
   private static final byte OP_RENAME = 1;  // rename
@@ -80,6 +84,8 @@ public class FSEditLog {
   private static final byte OP_UPDATE_MASTER_KEY = 21; //update master key
 
   private static int sizeFlushBuffer = 512*1024;
+  /** Preallocation length in bytes for writing edit log. */
+  static final int MIN_PREALLOCATION_LENGTH = 1024 * 1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
   private FSImage fsimage = null;
@@ -121,13 +127,22 @@ public class FSEditLog {
    * An implementation of the abstract class {@link EditLogOutputStream},
    * which stores edits in a local file.
    */
-  static private class EditLogFileOutputStream extends EditLogOutputStream {
+  static class EditLogFileOutputStream extends EditLogOutputStream {
+    /** Preallocation buffer, padded with OP_INVALID */
+    private static final ByteBuffer PREALLOCATION_BUFFER
+        = ByteBuffer.allocateDirect(MIN_PREALLOCATION_LENGTH);
+    static {
+      PREALLOCATION_BUFFER.position(0).limit(MIN_PREALLOCATION_LENGTH);
+      for(int i = 0; i < PREALLOCATION_BUFFER.capacity(); i++) {
+        PREALLOCATION_BUFFER.put(OP_INVALID);
+      }
+    }
+    
     private File file;
     private FileOutputStream fp;    // file stream for storing edit logs 
     private FileChannel fc;         // channel of the file stream for sync
     private DataOutputBuffer bufCurrent;  // current buffer for writing
     private DataOutputBuffer bufReady;    // buffer ready for flushing
-    static ByteBuffer fill = ByteBuffer.allocateDirect(512); // preallocation
 
     EditLogFileOutputStream(File name) throws IOException {
       super();
@@ -174,6 +189,8 @@ public class FSEditLog {
 
     @Override
     public void close() throws IOException {
+      LOG.info("closing edit log: position=" + fc.position() + ", editlog=" + getName());
+      
       // close should have been called after all pending transactions 
       // have been flushed & synced.
       int bufSize = bufCurrent.size();
@@ -185,11 +202,13 @@ public class FSEditLog {
       bufCurrent.close();
       bufReady.close();
 
-      // remove the last INVALID marker from transaction log.
+      // remove any preallocated padding bytes from the transaction log.
       fc.truncate(fc.position());
       fp.close();
       
       bufCurrent = bufReady = null;
+      
+      LOG.info("close success: truncate to " + file.length() + ", editlog=" + getName());
     }
 
     /**
@@ -199,7 +218,6 @@ public class FSEditLog {
     @Override
     void setReadyToFlush() throws IOException {
       assert bufReady.size() == 0 : "previous data is not flushed yet";
-      write(OP_INVALID);           // insert end-of-file marker
       DataOutputBuffer tmp = bufReady;
       bufReady = bufCurrent;
       bufCurrent = tmp;
@@ -216,7 +234,6 @@ public class FSEditLog {
       bufReady.writeTo(fp);     // write data to file
       bufReady.reset();         // erase all data in the buffer
       fc.force(false);          // metadata updates not needed because of preallocation
-      fc.position(fc.position()-1); // skip back the end-of-file marker
     }
 
     /**
@@ -230,16 +247,26 @@ public class FSEditLog {
 
     // allocate a big chunk of data
     private void preallocate() throws IOException {
-      long position = fc.position();
-      if (position + 4096 >= fc.size()) {
-        FSNamesystem.LOG.debug("Preallocating Edit log, current size " +
-                                fc.size());
-        long newsize = position + 1024*1024; // 1MB
-        fill.position(0);
-        int written = fc.write(fill, newsize);
-        FSNamesystem.LOG.debug("Edit log size is now " + fc.size() +
-                              " written " + written + " bytes " +
-                              " at offset " +  newsize);
+      long size = fc.size();
+      int bufSize = bufReady.getLength();
+      long need = bufSize - (size - fc.position());
+      if (need <= 0) {
+        return;
+      }
+      long oldSize = size;
+      long total = 0;
+      long fillCapacity = PREALLOCATION_BUFFER.capacity();
+      while (need > 0) {
+        PREALLOCATION_BUFFER.position(0);
+        do {
+          size += fc.write(PREALLOCATION_BUFFER, size);
+        } while (PREALLOCATION_BUFFER.remaining() > 0);
+        need -= fillCapacity;
+        total += fillCapacity;
+      }
+      if(FSNamesystem.LOG.isDebugEnabled()) {
+        FSNamesystem.LOG.debug("Preallocated " + total + " bytes at the end of " +
+            "the edit log (offset " + oldSize + ")");
       }
     }
     

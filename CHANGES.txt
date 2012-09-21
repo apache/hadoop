@@ -341,6 +341,9 @@ Release 1.1.0 - 2012.09.16
     HDFS-3466. Get HTTP kerberos principal from the web authentication keytab.
     (omalley)
 
+    HDFS-3596. Improve FSEditLog pre-allocation in branch-1
+    (Colin Patrick McCabe, backported by Jing Zhao via suresh)
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
