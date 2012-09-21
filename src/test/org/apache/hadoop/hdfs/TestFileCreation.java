@@ -47,14 +47,16 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
 import static org.junit.Assume.assumeTrue;
+import static org.junit.Assert.*;
 
 /**
  * This class tests that a file need not be closed before its
  * data can be read by another client.
  */
-public class TestFileCreation extends junit.framework.TestCase {
+public class TestFileCreation {
   static final String DIR = "/" + TestFileCreation.class.getSimpleName() + "/";
 
   {
@@ -172,11 +174,13 @@ public class TestFileCreation extends junit.framework.TestCase {
     stm.close();
   }
 
+  @Test
   public void testFileCreation() throws IOException {
     checkFileCreation(null, null);
   }
 
   /** Same test but the client should use DN hostname instead of IPs */
+  @Test
   public void testFileCreationByHostname() throws IOException {
     assumeTrue(System.getProperty("os.name").startsWith("Linux"));
 
@@ -188,6 +192,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   /** Same test but the client should bind to a local interface */
+  @Test
   public void testFileCreationSetLocalInterface() throws IOException {
     assumeTrue(System.getProperty("os.name").startsWith("Linux"));
 
@@ -295,6 +300,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test deleteOnExit
    */
+  @Test
   public void testDeleteOnExit() throws IOException {
     Configuration conf = new Configuration();
     if (simulatedStorage) {
@@ -357,6 +363,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test file creation using createNonRecursive().
    */
+  @Test
   public void testFileCreationNonRecursive() throws IOException {
     Configuration conf = new Configuration();
     if (simulatedStorage) {
@@ -449,6 +456,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test that file data does not become corrupted even in the face of errors.
    */
+  @Test
   public void testFileCreationError1() throws IOException {
     Configuration conf = new Configuration();
     conf.setInt("heartbeat.recheck.interval", 1000);
@@ -521,6 +529,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * Test that the filesystem removes the last block from a file if its
    * lease expires.
    */
+  @Test
   public void testFileCreationError2() throws IOException {
     long leasePeriod = 1000;
     System.out.println("testFileCreationError2 start");
@@ -590,6 +599,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * This test is currently not triggered because more HDFS work is 
    * is needed to handle persistent leases.
    */
+  //@Test
   public void xxxtestFileCreationNamenodeRestart() throws IOException {
     Configuration conf = new Configuration();
     final int MAX_IDLE_TIME = 2000; // 2s
@@ -731,6 +741,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test that all open files are closed when client dies abnormally.
    */
+  @Test
   public void testDFSClientDeath() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     System.out.println("Testing adbornal client death.");
@@ -767,6 +778,7 @@ public class TestFileCreation extends junit.framework.TestCase {
 /**
  * Test that file data becomes available before file is closed.
  */
+  @Test
   public void testFileCreationSimulated() throws IOException {
     simulatedStorage = true;
     testFileCreation();
@@ -776,6 +788,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   /**
    * Test creating two files at the same time. 
    */
+  @Test
   public void testConcurrentFileCreation() throws IOException {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
@@ -810,6 +823,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    * Then change lease period and wait for lease recovery.
    * Finally, read the block directly from each Datanode and verify the content.
    */
+  @Test
   public void testLeaseExpireHardLimit() throws Exception {
     System.out.println("testLeaseExpireHardLimit start");
     final long leasePeriod = 1000;
@@ -872,6 +886,7 @@ public class TestFileCreation extends junit.framework.TestCase {
   }
 
   // test closing file system before all file handles are closed.
+  @Test
   public void testFsClose() throws Exception {
     System.out.println("test file system close start");
     final int DATANODE_NUM = 3;
