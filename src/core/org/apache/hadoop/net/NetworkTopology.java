@@ -19,7 +19,9 @@ package org.apache.hadoop.net;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -422,6 +424,37 @@ public class NetworkTopology {
     }
   }
     
+  /**
+   * Returns all the leaf nodes(data nodes) by traversing the topology
+   * 
+   * @return
+   */
+  public List<Node> getLeaves() {
+    netlock.readLock().lock();
+    try {
+      
+      ArrayList<Node> leaves = new ArrayList<Node>();
+      Queue<Node> nodesQueue = new LinkedList<Node>();
+      nodesQueue.add(clusterMap);
+
+      // Doing a breadth-first search to get all the leaf nodes
+      // that represent the data nodes in the system
+      while (!nodesQueue.isEmpty()) {
+        Node node = nodesQueue.poll();
+        if (node instanceof InnerNode) {
+          Collection<Node> children = ((InnerNode) node).getChildren();
+          if (children != null)
+            nodesQueue.addAll(children);
+        } else {
+          leaves.add(node);
+        }
+      }
+      return leaves;
+    } finally {
+      netlock.readLock().unlock();
+    }
+  }
+  
   /** Return the distance between two nodes
    * It is assumed that the distance from one node to its parent is 1
    * The distance between two nodes is calculated by summing up their distances

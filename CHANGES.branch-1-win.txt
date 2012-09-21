@@ -93,6 +93,9 @@ Branch-hadoop-1-win - unreleased
     BlockPlacementPolicyDefault to make it more extendible.  (Sumadhur Reddy
     Bolli via szetszwo)
 
+    HDFS-3566. Add AzureBlockPlacementPolicy to handle fault and upgrade
+    domains in Azure.  (Sumadhur Reddy Bolli via szetszwo)
+
 OPTIMAZATIONS
 
 BUG FIXES
