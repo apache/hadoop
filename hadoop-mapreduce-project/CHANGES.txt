@@ -18,6 +18,9 @@ Release 2.0.3-alpha - Unreleased
     MAPREDUCE-4646. Fixed MR framework to send diagnostic information correctly
     to clients in case of failed jobs also. (Jason Lowe via vinodkv)
 
+    MAPREDUCE-4674. Hadoop examples secondarysort has a typo
+    "secondarysrot" in the usage. (Robert Justice via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES
