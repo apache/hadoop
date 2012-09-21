@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.WrappedJvmID;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.JobID;
@@ -637,8 +638,11 @@ public class MRApp extends MRAppMaster {
         if (getContext().getAllContainers().get(cId).getState() == AMContainerState.ALLOCATED) {
           LOG.info("XXX: Sending launch request for container: " + cId
               + " for taskAttemptId: " + lEvent.getAttemptID());
-          getContext().getEventHandler().handle(
-              new AMContainerLaunchRequestEvent(cId, lEvent, appAcls, jobId));
+          AMContainerLaunchRequestEvent lrEvent = new AMContainerLaunchRequestEvent(
+              cId, jobId, lEvent.getAttemptID().getTaskId().getTaskType(),
+              lEvent.getJobToken(), lEvent.getCredentials(), false,
+              new JobConf(getContext().getJob(jobId).getConf()));
+          getContext().getEventHandler().handle(lrEvent);
         }
         LOG.info("XXX: Assigning attempt [" + lEvent.getAttemptID()
             + "] to Container [" + cId + "]");

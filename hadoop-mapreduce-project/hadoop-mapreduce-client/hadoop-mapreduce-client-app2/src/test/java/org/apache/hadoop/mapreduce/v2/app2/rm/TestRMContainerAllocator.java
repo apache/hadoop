@@ -970,7 +970,7 @@ public class TestRMContainerAllocator {
 
     AMContainerMap amContainerMap = new AMContainerMap(
         mock(ContainerHeartbeatHandler.class), mock(TaskAttemptListener.class),
-        eventHandler, appContext);
+        appContext);
     amContainerMap.init(conf);
     amContainerMap.start();
     when(appContext.getAllContainers()).thenReturn(amContainerMap);

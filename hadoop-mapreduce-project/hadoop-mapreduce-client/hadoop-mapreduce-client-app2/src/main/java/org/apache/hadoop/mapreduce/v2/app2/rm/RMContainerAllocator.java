@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -75,8 +76,8 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.RackResolver;
 
 /**
@@ -98,12 +99,9 @@ public class RMContainerAllocator extends AbstractService
   private volatile boolean stopEventHandling;
 
   static {
-    PRIORITY_FAST_FAIL_MAP = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Priority.class);
-    PRIORITY_FAST_FAIL_MAP.setPriority(5);
-    PRIORITY_REDUCE = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Priority.class);
-    PRIORITY_REDUCE.setPriority(10);
-    PRIORITY_MAP = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(Priority.class);
-    PRIORITY_MAP.setPriority(20);
+    PRIORITY_FAST_FAIL_MAP = BuilderUtils.newPriority(5);
+    PRIORITY_REDUCE = BuilderUtils.newPriority(10);
+    PRIORITY_MAP = BuilderUtils.newPriority(20);
   }
   
   protected final AppContext appContext;
@@ -970,10 +968,17 @@ public class RMContainerAllocator extends AbstractService
               // TODO Maybe: ApplicationACLs should be populated into the appContext from the RMCommunicator.
 
               if (appContext.getAllContainers().get(containerId).getState() == AMContainerState.ALLOCATED) {
-                eventHandler.handle(new AMContainerLaunchRequestEvent(
-                    containerId, attemptToLaunchRequestMap.get(assigned
-                        .getAttemptId()), requestor.getApplicationAcls(),
-                    getJob().getID()));
+                AMSchedulerTALaunchRequestEvent tlrEvent = attemptToLaunchRequestMap
+                    .get(assigned.getAttemptId());
+                JobConf jobConf = new JobConf(job.getConf());
+
+                AMContainerLaunchRequestEvent launchRequest = new AMContainerLaunchRequestEvent(
+                    containerId, jobId, assigned.getAttemptId().getTaskId()
+                        .getTaskType(), tlrEvent.getJobToken(),
+                    tlrEvent.getCredentials(), shouldProfileTaskAttempt(
+                        jobConf, tlrEvent.getRemoteTask()), jobConf);
+
+                eventHandler.handle(launchRequest);
               }
               eventHandler.handle(new AMContainerAssignTAEvent(containerId,
                   assigned.getAttemptId(), attemptToLaunchRequestMap.get(
@@ -1237,6 +1242,22 @@ public class RMContainerAllocator extends AbstractService
         new ContainerRequest(orig.capability, hosts, orig.racks, orig.priority),
         origRequestInfo.launchRequestEvent);
     return newReq;
+  }
+
+  /*
+   * Not very useful for a re-use scheduler.
+   */
+  protected boolean shouldProfileTaskAttempt(JobConf conf,
+      org.apache.hadoop.mapred.Task remoteTask) {
+    TaskType taskType = TypeConverter.toYarn(remoteTask.getTaskID()
+        .getTaskType());
+    if (conf.getProfileEnabled()) {
+      if (conf.getProfileTaskRange(taskType == TaskType.MAP).isIncluded(
+          remoteTask.getPartition())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static class ContainerRequestInfo {

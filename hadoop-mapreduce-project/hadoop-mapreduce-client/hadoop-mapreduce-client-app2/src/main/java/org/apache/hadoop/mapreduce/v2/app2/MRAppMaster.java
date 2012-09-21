@@ -270,10 +270,12 @@ public class MRAppMaster extends CompositeService {
     addIfService(containerHeartbeatHandler);
     
     //service to handle requests to TaskUmbilicalProtocol
-    taskAttemptListener = createTaskAttemptListener(context, taskHeartbeatHandler, containerHeartbeatHandler);
+    taskAttemptListener = createTaskAttemptListener(context,
+        taskHeartbeatHandler, containerHeartbeatHandler);
     addIfService(taskAttemptListener);
 
-    containers = new AMContainerMap(containerHeartbeatHandler, taskAttemptListener, dispatcher.getEventHandler(), context);
+    containers = new AMContainerMap(containerHeartbeatHandler,
+        taskAttemptListener, context);
     addIfService(containers);
     dispatcher.register(AMContainerEventType.class, containers);
     

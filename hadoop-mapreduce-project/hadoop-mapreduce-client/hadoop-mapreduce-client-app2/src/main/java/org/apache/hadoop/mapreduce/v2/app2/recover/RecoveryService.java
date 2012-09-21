@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -568,8 +569,12 @@ public class RecoveryService extends CompositeService implements Recovery {
       
       // Request container launch for new containers.
       if (appContext.getAllContainers().get(cId).getState() == AMContainerState.ALLOCATED) {
-        actualHandler.handle(new AMContainerLaunchRequestEvent(cId, event,
-            null, yarnAttemptID.getTaskId().getJobId()));
+        TaskId taskId = yarnAttemptID.getTaskId();
+        AMContainerLaunchRequestEvent lrEvent = new AMContainerLaunchRequestEvent(
+            cId, taskId.getJobId(), taskId.getTaskType(), event.getJobToken(),
+            event.getCredentials(), false, new JobConf(appContext.getJob(
+                taskId.getJobId()).getConf()));
+        actualHandler.handle(lrEvent);
       }
       // Assing the task attempt to this container.
       actualHandler.handle(new AMContainerAssignTAEvent(cId, yarnAttemptID,

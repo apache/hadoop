@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapreduce.ID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.util.MRApps;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -65,13 +66,11 @@ public class MapReduceChildJVM2 {
     }
   }
   
-  public static void setVMEnv(Map<String, String> environment,
-      Task task) {
-
-    JobConf conf = task.conf;
+  public static void setVMEnv(Map<String, String> environment, JobConf conf,
+      TaskType taskType) {
 
     // Add the env variables passed by the user
-    String mapredChildEnv = getChildEnv(conf, task.isMapTask());
+    String mapredChildEnv = getChildEnv(conf, taskType == TaskType.MAP);
     Apps.setEnvFromInputString(environment, mapredChildEnv);
 
     // Set logging level in the environment.
@@ -79,7 +78,7 @@ public class MapReduceChildJVM2 {
     // streaming) it will have the correct loglevel.
     environment.put(
         "HADOOP_ROOT_LOGGER", 
-        getChildLogLevel(conf, task.isMapTask()) + ",CLA"); 
+        getChildLogLevel(conf, taskType == TaskType.MAP) + ",CLA"); 
 
     // TODO: The following is useful for instance in streaming tasks. Should be
     // set in ApplicationMaster's env by the RM.
@@ -93,7 +92,7 @@ public class MapReduceChildJVM2 {
     // properties.
     long logSize = TaskLog.getTaskLogLength(conf);
     Vector<String> logProps = new Vector<String>(4);
-    setupLog4jProperties(task, logProps, logSize);
+    setupLog4jProperties(conf, taskType, logProps, logSize);
     Iterator<String> it = logProps.iterator();
     StringBuffer buffer = new StringBuffer();
     while (it.hasNext()) {
@@ -148,21 +147,19 @@ public class MapReduceChildJVM2 {
     return adminClasspath + " " + userClasspath;
   }
 
-  private static void setupLog4jProperties(Task task,
-      Vector<String> vargs,
-      long logSize) {
-    String logLevel = getChildLogLevel(task.conf, task.isMapTask()); 
+  private static void setupLog4jProperties(JobConf conf, TaskType taskType,
+      Vector<String> vargs, long logSize) {
+    String logLevel = getChildLogLevel(conf, taskType == TaskType.MAP);
     MRApps.addLog4jSystemProperties(logLevel, logSize, vargs);
   }
 
   public static List<String> getVMCommand(
-      InetSocketAddress taskAttemptListenerAddr, Task task, 
-      ID jvmID) {
+      InetSocketAddress taskAttemptListenerAddr, JobConf conf, TaskType taskType, 
+      ID jvmID, JobID jobID, boolean shouldProfile) {
 
-    TaskAttemptID attemptID = task.getTaskID();
-    JobConf conf = task.conf;
+    // TaskAttemptID attemptID = task.getTaskID();
 
-    Vector<String> vargs = new Vector<String>(8);
+    Vector<String> vargs = new Vector<String>(9);
 
     vargs.add("exec");
     vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
@@ -195,8 +192,9 @@ public class MapReduceChildJVM2 {
     //    </value>
     //  </property>
     //
-    String javaOpts = getChildJavaOpts(conf, task.isMapTask());
-    javaOpts = javaOpts.replace("@taskid@", attemptID.toString());
+    String javaOpts = getChildJavaOpts(conf, taskType == TaskType.MAP);
+    // Broken by the AM re-factor. TaskID is not JVM specific.
+    // javaOpts = javaOpts.replace("@taskid@", attemptID.toString());
     String [] javaOptsSplit = javaOpts.split(" ");
     for (int i = 0; i < javaOptsSplit.length; i++) {
       vargs.add(javaOptsSplit[i]);
@@ -208,24 +206,16 @@ public class MapReduceChildJVM2 {
 
     // Setup the log4j prop
     long logSize = TaskLog.getTaskLogLength(conf);
-    setupLog4jProperties(task, vargs, logSize);
+    setupLog4jProperties(conf, taskType, vargs, logSize);
 
-    if (conf.getProfileEnabled()) {
-      if (conf.getProfileTaskRange(task.isMapTask()
-                                   ).isIncluded(task.getPartition())) {
-        vargs.add(
-            String.format(
-                conf.getProfileParams(), 
-                getTaskLogFile(TaskLog.LogName.PROFILE)
-                )
-            );
-        if (task.isMapTask()) {
-          vargs.add(conf.get(MRJobConfig.TASK_MAP_PROFILE_PARAMS, ""));
-        }
-        else {
-          vargs.add(conf.get(MRJobConfig.TASK_REDUCE_PROFILE_PARAMS, ""));
-        }
-        
+    // Decision to profile needs to be made in the scheduler.
+    if (shouldProfile) {
+      vargs.add(String.format(conf.getProfileParams(),
+          getTaskLogFile(TaskLog.LogName.PROFILE)));
+      if (taskType == TaskType.MAP) {
+        vargs.add(conf.get(MRJobConfig.TASK_MAP_PROFILE_PARAMS, ""));
+      } else {
+        vargs.add(conf.get(MRJobConfig.TASK_REDUCE_PROFILE_PARAMS, ""));
       }
     }
 
@@ -233,8 +223,10 @@ public class MapReduceChildJVM2 {
     vargs.add(YarnChild2.class.getName());  // main of Child
     // pass TaskAttemptListener's address
     vargs.add(taskAttemptListenerAddr.getAddress().getHostAddress()); 
-    vargs.add(Integer.toString(taskAttemptListenerAddr.getPort())); 
-    vargs.add(attemptID.toString());                      // pass task identifier
+    vargs.add(Integer.toString(taskAttemptListenerAddr.getPort()));
+    // Set the job id, and task type.
+    vargs.add(jobID.toString());
+    vargs.add(taskType.toString());
 
     // Finally add the jvmID
     vargs.add(String.valueOf(jvmID.getId()));

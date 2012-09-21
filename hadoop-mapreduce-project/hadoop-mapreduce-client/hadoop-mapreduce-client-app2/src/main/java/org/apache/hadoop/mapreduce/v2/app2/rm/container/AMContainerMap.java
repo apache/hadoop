@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.mapreduce.v2.app2.rm.container;
 
 import java.util.Collection;
@@ -13,25 +31,21 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 
-public class AMContainerMap extends AbstractService
-    implements EventHandler<AMContainerEvent> {
+public class AMContainerMap extends AbstractService implements
+    EventHandler<AMContainerEvent> {
 
   private static final Log LOG = LogFactory.getLog(AMContainerMap.class);
-  
+
   private final ContainerHeartbeatHandler chh;
   private final TaskAttemptListener tal;
-  @SuppressWarnings("rawtypes")
-  private final EventHandler eventHandler;
   private final AppContext context;
-  private final ConcurrentHashMap<ContainerId, AMContainer>containerMap;
+  private final ConcurrentHashMap<ContainerId, AMContainer> containerMap;
 
-  @SuppressWarnings("rawtypes")
   public AMContainerMap(ContainerHeartbeatHandler chh, TaskAttemptListener tal,
-      EventHandler eventHandler, AppContext context) {
+      AppContext context) {
     super("AMContainerMaps");
     this.chh = chh;
     this.tal = tal;
-    this.eventHandler = eventHandler;
     this.context = context;
     this.containerMap = new ConcurrentHashMap<ContainerId, AMContainer>();
   }
@@ -43,16 +57,15 @@ public class AMContainerMap extends AbstractService
   }
 
   public void addContainerIfNew(Container container) {
-    AMContainer amc = new AMContainerImpl(container, chh, tal, eventHandler,
-        context);
+    AMContainer amc = new AMContainerImpl(container, chh, tal, context);
     containerMap.putIfAbsent(container.getId(), amc);
   }
-  
+
   public AMContainer get(ContainerId containerId) {
     return containerMap.get(containerId);
   }
-  
-  public Collection<AMContainer>values() {
+
+  public Collection<AMContainer> values() {
     return containerMap.values();
   }
 }

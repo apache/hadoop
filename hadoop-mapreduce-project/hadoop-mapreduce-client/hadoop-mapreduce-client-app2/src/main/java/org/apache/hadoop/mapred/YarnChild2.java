@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -70,6 +69,10 @@ class YarnChild2 {
 
   static volatile TaskAttemptID taskid = null;
 
+  /*
+   * Expected arguments args[0] - host, args[1] - port, args[2] - JobId, args[3]
+   * - TaskType, args[4] - jvm integer id, rest are log redirects etc.
+   */
   public static void main(String[] args) throws Throwable {
     LOG.info("XXX: Child starting");
 
@@ -81,20 +84,22 @@ class YarnChild2 {
     int port = Integer.parseInt(args[1]);
     final InetSocketAddress address =
         NetUtils.createSocketAddrForHost(host, port);
-    final TaskAttemptID firstTaskid = TaskAttemptID.forName(args[2]);
-    int jvmIdInt = Integer.parseInt(args[3]);
-    JVMId jvmId = new JVMId(firstTaskid.getJobID(),
-        firstTaskid.getTaskType() == TaskType.MAP, jvmIdInt);
+
+    final JobID jobID = JobID.forName(args[2]);
+    final TaskType taskType = TaskType.valueOf(args[3]);
+    
+    final int jvmIdInt = Integer.parseInt(args[4]);
+    JVMId jvmId = new JVMId(jobID, taskType == TaskType.MAP, jvmIdInt);
 
     // initialize metrics
     DefaultMetricsSystem.initialize(
-        StringUtils.camelize(firstTaskid.getTaskType().name()) +"Task");
+        StringUtils.camelize(taskType.name()) +"Task");
 
     Token<JobTokenIdentifier> jt = loadCredentials(defaultConf, address);
 
     // Create TaskUmbilicalProtocol as actual task owner.
     UserGroupInformation taskOwner =
-      UserGroupInformation.createRemoteUser(firstTaskid.getJobID().toString());
+      UserGroupInformation.createRemoteUser(jobID.toString());
     taskOwner.addToken(jt);
     final TaskUmbilicalProtocol umbilical =
       taskOwner.doAs(new PrivilegedExceptionAction<TaskUmbilicalProtocol>() {
