@@ -86,6 +86,9 @@ Release 0.23.4 - UNRELEASED
 
   BUG FIXES
 
+    YARN-88. DefaultContainerExecutor can fail to set proper permissions.
+    (Jason Lowe via sseth)
+
 Release 0.23.3 - Unreleased 
 
   INCOMPATIBLE CHANGES
