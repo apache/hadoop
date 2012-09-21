@@ -13,9 +13,6 @@ Trunk - Unreleased
     YARN-57. Allow process-tree based resource calculation et al. to be
     pluggable to support it on multiple platforms. (Radim Kolar via acmurthy)
 
-    YARN-82. Change the default local and log dirs to be based on
-    hadoop.tmp.dir and yarn.log.dir. (Hemanth Yamijala via sseth)
-
   OPTIMAZATIONS
 
   BUG FIXES
@@ -36,6 +33,9 @@ Release 2.0.3-alpha - Unreleased
 
     YARN-28. Fixed TestCompositeService to not depend on test-order and thus
     made it pass on JDK7 (Thomas Graves via vinodkv).
+
+    YARN-82. Change the default local and log dirs to be based on
+    hadoop.tmp.dir and yarn.log.dir. (Hemanth Yamijala via sseth)
 
   OPTIMIZATIONS
 
