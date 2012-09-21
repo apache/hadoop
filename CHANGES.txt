@@ -344,6 +344,9 @@ Release 1.1.0 - 2012.09.16
     HDFS-3596. Improve FSEditLog pre-allocation in branch-1
     (Colin Patrick McCabe, backported by Jing Zhao via suresh)
 
+    HDFS-3966. TestFileCreation should use JUnit4 to make assumeTrue work.
+    (Jing Zhao via suresh)
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
