@@ -39,6 +39,9 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3932. NameNode Web UI broken if the rpc-address is set to the wildcard.
     (Colin Patrick McCabe via eli)
 
+    HDFS-3931. TestDatanodeBlockScanner#testBlockCorruptionPolicy2 is broken.
+    (Andy Isaacson via eli)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES
