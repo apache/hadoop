@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -61,14 +60,13 @@ import org.apache.hadoop.yarn.util.Records;
  * Keeps the data structures to send container requests to RM.
  */
 // TODO XXX: Eventually rename to RMCommunicator
-public class RMContainerRequestor extends RMCommunicator implements EventHandler<RMCommunicatorEvent> {
+public class RMContainerRequestor extends RMCommunicator implements ContainerRequestor {
   
   private static final Log LOG = LogFactory.getLog(RMContainerRequestor.class);
   static final String ANY = "*";
   
   private final Clock clock;
 
-  private int lastResponseID;
   private Resource availableResources; // aka headroom.
   private long retrystartTime;
   private long retryInterval;

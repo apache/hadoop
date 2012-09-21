@@ -74,6 +74,7 @@ import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTALaunchRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTAStopRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerTASucceededEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerAllocator;
+import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicatorContainerDeAllocateRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicatorEvent;
@@ -81,8 +82,8 @@ import org.apache.hadoop.mapreduce.v2.app2.rm.RMContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainer;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerAssignTAEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEvent;
-import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventLaunched;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventCompleted;
+import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventLaunched;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerLaunchRequestEvent;
 import org.apache.hadoop.mapreduce.v2.app2.rm.container.AMContainerState;
@@ -547,7 +548,7 @@ public class MRApp extends MRAppMaster {
   }
 
   @Override
-  protected RMContainerRequestor createRMContainerRequestor(
+  protected ContainerRequestor createContainerRequestor(
       ClientService clientService, AppContext appContext) {
     return new MRAppContainerRequestor(clientService, appContext);
   }
@@ -592,9 +593,9 @@ public class MRApp extends MRAppMaster {
   }
  
   @Override
-  protected ContainerAllocator createAMScheduler(
-      RMContainerRequestor requestor, AppContext appContext) {
-    return new MRAppAMScheduler();    
+  protected ContainerAllocator createAMScheduler(ContainerRequestor requestor,
+      AppContext appContext) {
+    return new MRAppAMScheduler();
   }
 
   protected class MRAppAMScheduler implements ContainerAllocator {

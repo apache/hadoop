@@ -36,7 +36,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.FileOutputCommitter;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.LocalContainerAllocator;
 import org.apache.hadoop.mapred.TaskAttemptListenerImpl2;
+import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.OutputFormat;
@@ -68,13 +70,15 @@ import org.apache.hadoop.mapreduce.v2.app2.job.event.TaskEventType;
 import org.apache.hadoop.mapreduce.v2.app2.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncher;
 import org.apache.hadoop.mapreduce.v2.app2.launcher.ContainerLauncherImpl;
+import org.apache.hadoop.mapreduce.v2.app2.local.LocalContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app2.metrics.MRAppMetrics;
 import org.apache.hadoop.mapreduce.v2.app2.recover.Recovery;
 import org.apache.hadoop.mapreduce.v2.app2.recover.RecoveryService;
 import org.apache.hadoop.mapreduce.v2.app2.rm.AMSchedulerEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerAllocator;
-import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEvent;
+import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerRequestor;
 import org.apache.hadoop.mapreduce.v2.app2.rm.NMCommunicatorEventType;
+import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicator;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMCommunicatorEventType;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app2.rm.RMContainerRequestor;
@@ -176,7 +180,7 @@ public class MRAppMaster extends CompositeService {
   private JobHistoryEventHandler2 jobHistoryEventHandler;
   private boolean inRecovery = false;
   private SpeculatorEventDispatcher speculatorEventDispatcher;
-  private RMContainerRequestor rmContainerRequestor;
+  private ContainerRequestor containerRequestor;
   private ContainerAllocator amScheduler;
   
 
@@ -310,26 +314,9 @@ public class MRAppMaster extends CompositeService {
     dispatcher.register(Speculator.EventType.class,
         speculatorEventDispatcher);
 
-    // service to allocate containers from RM (if non-uber) or to fake it (uber)
-    rmContainerRequestor = createRMContainerRequestor(clientService, context);
-    addIfService(rmContainerRequestor);
-    dispatcher.register(RMCommunicatorEventType.class, rmContainerRequestor);
-    
-    // TODO XXX: Get rid of eventHandlers being sent as part of the constructors. context should be adequate.
-    amScheduler = createAMScheduler(rmContainerRequestor, context);
-    addIfService(amScheduler);
-    dispatcher.register(AMSchedulerEventType.class, amScheduler);
-    
-//    containerAllocator = createContainerAllocator(clientService, context);
-//    addIfService(containerAllocator);
-//    dispatcher.register(ContainerAllocator.EventType.class, containerAllocator);
-
-    // TODO XXX: initialization of RMComm, Scheduler, etc.
-    
-        
-    // TODO XXX: Rename to NMComm
-    // corresponding service to launch allocated containers via NodeManager
-//    containerLauncher = createNMCommunicator(context);
+    //    TODO XXX: Rename to NMComm
+    //    corresponding service to launch allocated containers via NodeManager
+    //    containerLauncher = createNMCommunicator(context);
     containerLauncher = createContainerLauncher(context);
     addIfService(containerLauncher);
     dispatcher.register(NMCommunicatorEventType.class, containerLauncher);
@@ -508,17 +495,21 @@ public class MRAppMaster extends CompositeService {
         maybeSendJobEndNotification();
         // TODO XXX Add a timeout.
         LOG.info("Waiting for all containers and TaskAttempts to complete");
-        while (!allContainersComplete() || !allTaskAttemptsComplete()) {
-          try {
-            synchronized(this) {
-              wait(100l);
+        if (!job.isUber()) {
+          while (!allContainersComplete() || !allTaskAttemptsComplete()) {
+            try {
+              synchronized (this) {
+                wait(100l);
+              }
+            } catch (InterruptedException e) {
+              LOG.info("AM Shutdown Thread interrupted. Exiting");
+              break;
             }
-          } catch (InterruptedException e) {
-            LOG.info("AM Shutdown Thread interrupted. Exiting");
-            break;
           }
+          LOG.info("All Containers and TaskAttempts Complete. Stopping services");
+        } else {
+          LOG.info("Uberized job. Not waiting for all containers to finish");
         }
-        LOG.info("All Containers and TaskAttempts Complete. Stopping services");
         stopAM();
         LOG.info("AM Shutdown Thread Completing");
       }
@@ -593,20 +584,37 @@ public class MRAppMaster extends CompositeService {
    * @param appContext the application context.
    * @return an instance of the RMContainerRequestor.
    */
-  protected RMContainerRequestor createRMContainerRequestor(
+  protected ContainerRequestor createContainerRequestor(
       ClientService clientService, AppContext appContext) {
-    return new RMContainerRequestor(clientService, appContext);
+    ContainerRequestor containerRequestor;
+    if (job.isUber()) {
+      containerRequestor = new LocalContainerRequestor(clientService,
+          appContext);
+    } else {
+      containerRequestor = new RMContainerRequestor(clientService, appContext);
+    }
+    return containerRequestor;
   }
-  
+
   /**
    * Create the AM Scheduler.
-   * @param requestor The RM Container Requestor.
+   * 
+   * @param requestor The Container Requestor.
    * @param appContext the application context.
    * @return an instance of the AMScheduler.
    */
-  protected ContainerAllocator createAMScheduler(
-      RMContainerRequestor requestor, AppContext appContext) {
-    return new RMContainerAllocator(requestor, appContext);
+  protected ContainerAllocator createAMScheduler(ContainerRequestor requestor,
+      AppContext appContext) {
+    if (job.isUber()) {
+      return new LocalContainerAllocator(appContext, jobId, nmHost, nmPort,
+          nmHttpPort, containerID, (TaskUmbilicalProtocol) taskAttemptListener,
+          taskAttemptListener, (RMCommunicator)containerRequestor);
+    } else {
+      // TODO XXX: This is terrible. Assuming RMContainerRequestor is sent in
+      // when non-uberized. Fix RMContainerRequestor to be a proper interface, etc.
+      return new RMContainerAllocator((RMContainerRequestor) requestor,
+          appContext);
+    }
   }
 
   /** Create and initialize (but don't start) a single job. */
@@ -727,32 +735,25 @@ public class MRAppMaster extends CompositeService {
         MRJobConfig.DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT));
     return thh;
   }
-
+  
   protected ContainerHeartbeatHandler createContainerHeartbeatHandler(AppContext context,
       Configuration conf) {
     ContainerHeartbeatHandler chh = new ContainerHeartbeatHandler(context, conf.getInt(
         MRJobConfig.MR_AM_TASK_LISTENER_THREAD_COUNT,
         MRJobConfig.DEFAULT_MR_AM_TASK_LISTENER_THREAD_COUNT));
+    // TODO XXX: Define a CONTAINER_LISTENER_THREAD_COUNT
     return chh;
   }
   
+
   protected TaskCleaner createTaskCleaner(AppContext context) {
     return new TaskCleanerImpl(context);
   }
 
-//  protected ContainerAllocator createContainerAllocator(
-//      final ClientService clientService, final AppContext context) {
-//    return new ContainerAllocatorRouter(clientService, context);
-//  }
-
   protected ContainerLauncher
       createContainerLauncher(final AppContext context) {
-    return new ContainerLauncherRouter(context);
+    return new ContainerLauncherImpl(context);
   }
-  
-//  protected ContainerLauncher createNMCommunicator(final AppContext context) {
-//    return new ContainerLauncherImpl(context);
-//  }
 
   //TODO:should have an interface for MRClientService
   protected ClientService createClientService(AppContext context) {
@@ -797,12 +798,8 @@ public class MRAppMaster extends CompositeService {
 
   public List<AMInfo> getAllAMInfos() {
     return amInfos;
-  }
-  
-//  public ContainerAllocator getContainerAllocator() {
-//    return containerAllocator;
-//  }
-  
+  }  
+
   public ContainerLauncher getContainerLauncher() {
     return containerLauncher;
   }
@@ -813,96 +810,6 @@ public class MRAppMaster extends CompositeService {
   
   public TaskHeartbeatHandler getTaskHeartbeatHandler() {
     return taskHeartbeatHandler;
-  }
-
-  /**
-   * By the time life-cycle of this router starts, job-init would have already
-   * happened.
-   */
-//  private final class ContainerAllocatorRouter extends AbstractService
-//      implements ContainerAllocator {
-//    private final ClientService clientService;
-//    private final AppContext context;
-//    private ContainerAllocator containerAllocator;
-//
-//    ContainerAllocatorRouter(ClientService clientService,
-//        AppContext context) {
-//      super(ContainerAllocatorRouter.class.getName());
-//      this.clientService = clientService;
-//      this.context = context;
-//    }
-//
-//    @Override
-//    public synchronized void start() {
-//      if (job.isUber()) {
-//        this.containerAllocator = new LocalContainerAllocator(
-//            this.clientService, this.context, nmHost, nmPort, nmHttpPort
-//            , containerID);
-//      } else {
-//        
-//        // TODO XXX UberAM
-////        this.containerAllocator = new RMContainerAllocator(
-////            this.clientService, this.context);
-//      }
-//      ((Service)this.containerAllocator).init(getConfig());
-//      ((Service)this.containerAllocator).start();
-//      super.start();
-//    }
-//
-//    @Override
-//    public synchronized void stop() {
-//      ((Service)this.containerAllocator).stop();
-//      super.stop();
-//    }
-//
-//    @Override
-//    public void handle(ContainerAllocatorEvent event) {
-//      this.containerAllocator.handle(event);
-//    }
-//
-//    public void setSignalled(boolean isSignalled) {
-//      ((RMCommunicator) containerAllocator).setSignalled(true);
-//    }
-//  }
-
-  /**
-   * By the time life-cycle of this router starts, job-init would have already
-   * happened.
-   */
-  private final class ContainerLauncherRouter extends AbstractService
-      implements ContainerLauncher {
-    private final AppContext context;
-    private ContainerLauncher containerLauncher;
-
-    ContainerLauncherRouter(AppContext context) {
-      super(ContainerLauncherRouter.class.getName());
-      this.context = context;
-    }
-
-    @Override
-    public synchronized void start() {
-      if (job.isUber()) {
-        // TODO XXX: Handle uber.
-//        this.containerLauncher = new LocalContainerLauncher(context,
-//            (TaskUmbilicalProtocol) taskAttemptListener);
-      } else {
-        this.containerLauncher = new ContainerLauncherImpl(context);
-      }
-      ((Service)this.containerLauncher).init(getConfig());
-      ((Service)this.containerLauncher).start();
-      super.start();
-    }
-
-    @Override
-    public void handle(NMCommunicatorEvent event) {
-        this.containerLauncher.handle(event);
-    }
-
-    @Override
-    public synchronized void stop() {
-      ((Service)this.containerLauncher).stop();
-      super.stop();
-    }
   }
 
   private final class StagingDirCleaningService extends AbstractService {
@@ -1055,6 +962,16 @@ public class MRAppMaster extends CompositeService {
       LOG.info("MRAppMaster launching normal, non-uberized, multi-container "
                + "job " + job.getID() + ".");
     }
+    // service to allocate containers from RM (if non-uber) or to fake it (uber)
+    containerRequestor = createContainerRequestor(clientService, context);
+    addIfService(containerRequestor);
+    ((Service)containerRequestor).init(getConfig());
+    dispatcher.register(RMCommunicatorEventType.class, containerRequestor);
+
+    amScheduler = createAMScheduler(containerRequestor, context);
+    addIfService(amScheduler);
+    ((Service)amScheduler).init(getConfig());
+    dispatcher.register(AMSchedulerEventType.class, amScheduler);
 
     //start all the components
     super.start();
@@ -1223,11 +1140,11 @@ public class MRAppMaster extends CompositeService {
       LOG.info("MRAppMaster received a signal. Signaling RMCommunicator and "
         + "JobHistoryEventHandler.");
       // Notify the JHEH and RMCommunicator that a SIGTERM has been received so
-      // that they don't take too long in shutting down 
-//      if(appMaster.containerAllocator instanceof ContainerAllocatorRouter) {
-//        ((ContainerAllocatorRouter) appMaster.containerAllocator)
-//        .setSignalled(true);
-//      }
+      // that they don't take too long in shutting down
+      
+      // Signal the RMCommunicator.
+      ((RMCommunicator)appMaster.containerRequestor).setSignalled(true);
+
       if(appMaster.jobHistoryEventHandler != null) {
         appMaster.jobHistoryEventHandler.setSignalled(true);
       }

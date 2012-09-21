@@ -82,7 +82,7 @@ public abstract class RMCommunicator extends AbstractService  {
   protected volatile boolean isSignalled = false;
 
   public RMCommunicator(ClientService clientService, AppContext context) {
-    super("RMCommunicator");
+    super(RMCommunicator.class.getSimpleName());
     this.clientService = clientService;
     this.context = context;
     this.eventHandler = context.getEventHandler();

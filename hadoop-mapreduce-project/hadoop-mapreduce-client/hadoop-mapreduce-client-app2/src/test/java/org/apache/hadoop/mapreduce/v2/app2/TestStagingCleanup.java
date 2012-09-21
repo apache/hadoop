@@ -38,7 +38,7 @@ import org.apache.hadoop.mapreduce.v2.app2.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app2.job.Job;
 import org.apache.hadoop.mapreduce.v2.app2.job.event.JobFinishEvent;
 import org.apache.hadoop.mapreduce.v2.app2.job.impl.JobImpl;
-import org.apache.hadoop.mapreduce.v2.app2.rm.RMContainerRequestor;
+import org.apache.hadoop.mapreduce.v2.app2.rm.ContainerRequestor;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -140,7 +140,7 @@ import org.junit.Test;
     }
 
     @Override
-    protected RMContainerRequestor createRMContainerRequestor(
+    protected ContainerRequestor createContainerRequestor(
         ClientService clientService, AppContext appContext) {
       return new TestCleanupContainerRequestor(clientService, appContext);
     }

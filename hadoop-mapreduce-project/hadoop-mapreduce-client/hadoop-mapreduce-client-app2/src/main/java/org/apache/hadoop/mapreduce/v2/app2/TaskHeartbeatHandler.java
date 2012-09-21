@@ -52,14 +52,14 @@ public class TaskHeartbeatHandler extends HeartbeatHandlerBase<TaskAttemptId> {
   }
 
   @Override
-  public boolean hasTimedOut(
+  protected boolean hasTimedOut(
       org.apache.hadoop.mapreduce.jobhistory.HeartbeatHandlerBase.ReportTime report,
       long currentTime) {
     return (timeOut > 0) && (currentTime > report.getLastPing() + timeOut);
   }
 
   @Override
-  public void handleTimeOut(TaskAttemptId attemptId) {
+  protected void handleTimeOut(TaskAttemptId attemptId) {
     eventHandler.handle(new TaskAttemptDiagnosticsUpdateEvent(attemptId,
         "AttemptID:" + attemptId.toString()
         + " Timed out after " + timeOut / 1000 + " secs"));

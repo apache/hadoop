@@ -18,3 +18,5 @@ Branch MR-3902
   MAPREDUCE-4626. Fix and re-enable RMContainerAllocator unit tests (sseth)
 
   MAPREDUCE-4617. Re-wire AM Recovery (sseth)
+
+  MAPREDUCE-4618. Re-wire LocalContainerAllocator/UberAM (sseth)

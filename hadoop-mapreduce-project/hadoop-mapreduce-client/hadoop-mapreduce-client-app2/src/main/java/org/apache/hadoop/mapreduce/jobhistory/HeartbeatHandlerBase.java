@@ -26,16 +26,17 @@ public abstract class HeartbeatHandlerBase<T> extends AbstractService {
   
   private ConcurrentMap<T, ReportTime> runningMap;
   private volatile boolean stopped;
-  
-  public HeartbeatHandlerBase(AppContext appContext,int numThreads, String name) {
+
+  public HeartbeatHandlerBase(AppContext appContext, int numThreads, String name) {
     super(name);
     this.name = name;
     this.eventHandler = appContext.getEventHandler();
     this.clock = appContext.getClock();
     this.appContext = appContext;
-    this.runningMap = new ConcurrentHashMap<T, HeartbeatHandlerBase.ReportTime>();
+    this.runningMap = new ConcurrentHashMap<T, HeartbeatHandlerBase.ReportTime>(
+        16, 0.75f, numThreads);
   }
-  
+
   @Override
   public void init(Configuration conf) {
     super.init(conf);
@@ -55,7 +56,9 @@ public abstract class HeartbeatHandlerBase<T> extends AbstractService {
   @Override
   public void stop() {
     stopped = true;
-    timeOutCheckerThread.interrupt();
+    if (timeOutCheckerThread != null) {
+      timeOutCheckerThread.interrupt();
+    }
     super.stop();
   }
   
@@ -115,9 +118,9 @@ public abstract class HeartbeatHandlerBase<T> extends AbstractService {
     }
   }
   
-  public abstract boolean hasTimedOut(ReportTime report, long currentTime);
+  protected abstract boolean hasTimedOut(ReportTime report, long currentTime);
   
-  public abstract void handleTimeOut(T t);
+  protected abstract void handleTimeOut(T t);
   
   private class PingChecker implements Runnable {
 

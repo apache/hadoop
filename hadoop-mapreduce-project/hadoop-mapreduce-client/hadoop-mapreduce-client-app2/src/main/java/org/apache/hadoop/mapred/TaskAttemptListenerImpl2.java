@@ -92,11 +92,11 @@ public class TaskAttemptListenerImpl2 extends CompositeService
   private Server server;
   
   // TODO XXX: Use this to figure out whether an incoming ping is valid.
-  private ConcurrentMap<TaskAttemptID, WrappedJvmID>
-    jvmIDToActiveAttemptMap
-      = new ConcurrentHashMap<TaskAttemptID, WrappedJvmID>();
+  private ConcurrentMap<TaskAttemptID, WrappedJvmID> attemptToJvmIdMap =
+      new ConcurrentHashMap<TaskAttemptID, WrappedJvmID>();
   // jvmIdToContainerIdMap also serving to check whether the container is still running.
-  private ConcurrentMap<WrappedJvmID, ContainerId> jvmIDToContainerIdMap = new ConcurrentHashMap<WrappedJvmID, ContainerId>();
+  private ConcurrentMap<WrappedJvmID, ContainerId> jvmIDToContainerIdMap =
+      new ConcurrentHashMap<WrappedJvmID, ContainerId>();
 //  private Set<WrappedJvmID> launchedJVMs = Collections
 //      .newSetFromMap(new ConcurrentHashMap<WrappedJvmID, Boolean>()); 
   
@@ -162,7 +162,7 @@ public class TaskAttemptListenerImpl2 extends CompositeService
   }
 
   private void pingContainerHeartbeatHandler(TaskAttemptID attemptID) {
-    containerHeartbeatHandler.pinged(jvmIDToContainerIdMap.get(jvmIDToActiveAttemptMap.get(attemptID)));
+    containerHeartbeatHandler.pinged(jvmIDToContainerIdMap.get(attemptToJvmIdMap.get(attemptID)));
   }
   
   /**
@@ -494,14 +494,14 @@ public class TaskAttemptListenerImpl2 extends CompositeService
   }
   
   public void registerTaskAttempt(TaskAttemptId attemptId, WrappedJvmID jvmId) {
-    jvmIDToActiveAttemptMap.put(TypeConverter.fromYarn(attemptId), jvmId);
+    attemptToJvmIdMap.put(TypeConverter.fromYarn(attemptId), jvmId);
   }
   
   // Unregister called by the Container. Registration happens when TAL asks
   // the container for a task.
   @Override
   public void unregisterTaskAttempt(TaskAttemptId attemptId) {
-    jvmIDToActiveAttemptMap.remove(TypeConverter.fromYarn(attemptId));
+    attemptToJvmIdMap.remove(TypeConverter.fromYarn(attemptId));
   }
 
   public org.apache.hadoop.mapred.Task pullTaskAttempt(ContainerId containerId) {
