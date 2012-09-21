@@ -506,7 +506,7 @@ public class DFSTestUtil {
   public static void waitReplication(FileSystem fs, Path fileName, short replFactor)
       throws IOException, InterruptedException, TimeoutException {
     boolean correctReplFactor;
-    final int ATTEMPTS = 20;
+    final int ATTEMPTS = 40;
     int count = 0;
 
     do {
