@@ -42,6 +42,8 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3931. TestDatanodeBlockScanner#testBlockCorruptionPolicy2 is broken.
     (Andy Isaacson via eli)
 
+    HDFS-3964. Make NN log of fs.defaultFS debug rather than info. (eli)
+
 Release 2.0.2-alpha - 2012-09-07 
   
   INCOMPATIBLE CHANGES

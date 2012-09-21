@@ -1209,7 +1209,7 @@ public class NameNode {
       URI defaultUri = URI.create(HdfsConstants.HDFS_URI_SCHEME + "://"
           + conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY));
       conf.set(FS_DEFAULT_NAME_KEY, defaultUri.toString());
-      LOG.info("Setting " + FS_DEFAULT_NAME_KEY + " to " + defaultUri.toString());
+      LOG.debug("Setting " + FS_DEFAULT_NAME_KEY + " to " + defaultUri.toString());
     }
   }
     
