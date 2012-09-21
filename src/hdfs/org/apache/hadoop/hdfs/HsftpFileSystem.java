@@ -67,7 +67,8 @@ public class HsftpFileSystem extends HftpFileSystem {
 
   @Override
   protected int getDefaultPort() {
-    return getDefaultSecurePort();
+    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
   }
 
   @Override

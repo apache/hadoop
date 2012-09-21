@@ -347,6 +347,9 @@ Release 1.1.0 - 2012.09.16
     HDFS-3966. TestFileCreation should use JUnit4 to make assumeTrue work.
     (Jing Zhao via suresh)
 
+    HDFS-3698. TestHftpFileSystem is failing in branch-1 due to changed
+    default secure port. (atm)
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
