@@ -24,11 +24,15 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.any;
 
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.jobhistory.ContainerHeartbeatHandler;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.v2.app2.AppContext;
 import org.apache.hadoop.mapreduce.v2.app2.TaskHeartbeatHandler;
@@ -48,8 +52,8 @@ public class TestTaskAttemptListenerImpl {
 
     public MockTaskAttemptListenerImpl(AppContext context,
         JobTokenSecretManager jobTokenSecretManager,
-        TaskHeartbeatHandler hbHandler) {
-      super(context, hbHandler, null, jobTokenSecretManager);
+        ContainerHeartbeatHandler chh, TaskHeartbeatHandler thh) {
+      super(context, thh, chh, jobTokenSecretManager);
     }
 
     @Override
@@ -91,10 +95,11 @@ public class TestTaskAttemptListenerImpl {
     when(appCtx.getEventHandler()).thenReturn(mockHandler);
     
     JobTokenSecretManager secret = mock(JobTokenSecretManager.class); 
-    TaskHeartbeatHandler hbHandler = mock(TaskHeartbeatHandler.class);
+    TaskHeartbeatHandler thh = mock(TaskHeartbeatHandler.class);
+    ContainerHeartbeatHandler chh = mock(ContainerHeartbeatHandler.class);
     
     MockTaskAttemptListenerImpl listener = 
-      new MockTaskAttemptListenerImpl(appCtx, secret, hbHandler);
+      new MockTaskAttemptListenerImpl(appCtx, secret, chh, thh);
     Configuration conf = new Configuration();
     listener.init(conf);
     listener.start();
@@ -116,11 +121,13 @@ public class TestTaskAttemptListenerImpl {
     result = listener.getTask(context1);
     assertNotNull(result);
     assertTrue(result.shouldDie);
+    verify(chh, never()).pinged(any(ContainerId.class));
 
     // Verify ask after JVM registration, but before container is assigned a task.
     listener.registerRunningJvm(wid1, containerId1);
     result = listener.getTask(context1);
     assertNull(result);
+    verify(chh, times(1)).pinged(any(ContainerId.class));
     
     // Verify ask after JVM registration, and when the container has a task.
     listener.registerRunningJvm(wid2, containerId2);
@@ -128,6 +135,7 @@ public class TestTaskAttemptListenerImpl {
     assertNotNull(result);
     assertFalse(result.shouldDie);
     assertTrue(result.getTask() == task);
+    verify(chh, times(2)).pinged(any(ContainerId.class));
     ArgumentCaptor<Event> ac = ArgumentCaptor.forClass(Event.class);
     verify(mockHandler).handle(ac.capture());
     Event cEvent = ac.getValue();
