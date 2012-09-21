@@ -101,6 +101,9 @@ Release 1.2.0 - unreleased
 
     HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
 
+    HADOOP-8832. Port generic service plugin mechanism from HADOOP-5257
+    to branch-1. (backported by Brandon Li via suresh) 
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
