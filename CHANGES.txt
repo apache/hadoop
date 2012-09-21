@@ -104,6 +104,9 @@ Release 1.2.0 - unreleased
     HADOOP-8832. Port generic service plugin mechanism from HADOOP-5257
     to branch-1. (backported by Brandon Li via suresh) 
 
+    MAPREDUCE-2770. Improve hadoop.job.history.location doc in
+    mapred-default.xml. (Sandy Ryza via tomwhite)
+
   OPTIMIZATIONS
 
     HDFS-2533. Backport: Remove needless synchronization on some FSDataSet
