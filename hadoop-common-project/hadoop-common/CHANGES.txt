@@ -32,6 +32,9 @@ Release 2.0.3-alpha - Unreleased
     HADOOP-8780. Update DeprecatedProperties apt file. (Ahmed Radwan via
     tomwhite)
 
+    HADOOP-8833. fs -text should make sure to call inputstream.seek(0)
+    before using input stream. (tomwhite and harsh)
+
 Release 2.0.2-alpha - 2012-09-07 
 
   INCOMPATIBLE CHANGES

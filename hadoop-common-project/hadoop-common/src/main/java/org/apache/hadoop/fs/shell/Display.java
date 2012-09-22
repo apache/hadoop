@@ -143,6 +143,7 @@ class Display extends FsCommand {
           CompressionCodecFactory cf = new CompressionCodecFactory(getConf());
           CompressionCodec codec = cf.getCodec(item.path);
           if (codec != null) {
+            i.seek(0);
             return codec.createInputStream(i);
           }
           break;
