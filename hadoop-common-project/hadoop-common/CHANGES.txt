@@ -215,6 +215,9 @@ Trunk (Unreleased)
     HADOOP-8821. Fix findbugs warning related to concatenating string in a 
     for loop in Configuration#dumpDeprecatedKeys(). (suresh)
 
+    HADOOP-7256. Resource leak during failure scenario of closing
+    of resources. (Ramkrishna S. Vasudevan via harsh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
