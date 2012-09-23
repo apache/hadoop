@@ -83,7 +83,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Compressor_comp
 
   compressed_direct_buf_len = LZ4_compress(uncompressed_bytes, compressed_bytes, uncompressed_direct_buf_len);
   if (compressed_direct_buf_len < 0){
-    THROW(env, "Ljava/lang/InternalError", "LZ4_compress failed");
+    THROW(env, "java/lang/InternalError", "LZ4_compress failed");
   }
 
   (*env)->SetIntField(env, thisj, Lz4Compressor_uncompressedDirectBufLen, 0);

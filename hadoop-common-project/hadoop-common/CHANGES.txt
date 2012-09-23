@@ -47,6 +47,9 @@ Release 2.7.2 - UNRELEASED
     HADOOP-12213. Interrupted exception can occur when Client#stop is called.
     (Kuhu Shukla via ozawa)
 
+    HADOOP-8151. Error handling in snappy decompressor throws invalid
+    exceptions. (Matt Foley via harsh)
+
 Release 2.7.1 - 2015-07-06 
 
   INCOMPATIBLE CHANGES

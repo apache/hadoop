@@ -80,7 +80,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_lz4_Lz4Decompressor_de
 
   uncompressed_direct_buf_len = LZ4_decompress_safe(compressed_bytes, uncompressed_bytes, compressed_direct_buf_len, uncompressed_direct_buf_len);
   if (uncompressed_direct_buf_len < 0) {
-    THROW(env, "Ljava/lang/InternalError", "LZ4_uncompress_unknownOutputSize failed.");
+    THROW(env, "java/lang/InternalError", "LZ4_uncompress_unknownOutputSize failed.");
   }
 
   (*env)->SetIntField(env, thisj, Lz4Decompressor_compressedDirectBufLen, 0);

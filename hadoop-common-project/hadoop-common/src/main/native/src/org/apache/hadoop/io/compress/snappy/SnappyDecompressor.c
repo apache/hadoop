@@ -126,11 +126,11 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_snappy_SnappyDecompres
   ret = dlsym_snappy_uncompress(compressed_bytes, compressed_direct_buf_len,
         uncompressed_bytes, &uncompressed_direct_buf_len);
   if (ret == SNAPPY_BUFFER_TOO_SMALL){
-    THROW(env, "Ljava/lang/InternalError", "Could not decompress data. Buffer length is too small.");
+    THROW(env, "java/lang/InternalError", "Could not decompress data. Buffer length is too small.");
   } else if (ret == SNAPPY_INVALID_INPUT){
-    THROW(env, "Ljava/lang/InternalError", "Could not decompress data. Input is invalid.");
+    THROW(env, "java/lang/InternalError", "Could not decompress data. Input is invalid.");
   } else if (ret != SNAPPY_OK){
-    THROW(env, "Ljava/lang/InternalError", "Could not decompress data.");
+    THROW(env, "java/lang/InternalError", "Could not decompress data.");
   }
 
   (*env)->SetIntField(env, thisj, SnappyDecompressor_compressedDirectBufLen, 0);
