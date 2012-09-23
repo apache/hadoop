@@ -219,6 +219,9 @@ Trunk (Unreleased)
 
     HDFS-3678. Edit log files are never being purged from 2NN. (atm)
 
+    HADOOP-8158. Interrupting hadoop fs -put from the command line
+    causes a LeaseExpiredException. (daryn via harsh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
