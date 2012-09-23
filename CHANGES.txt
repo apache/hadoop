@@ -246,6 +246,8 @@ Release 1.2.0 - unreleased
     HDFS-3961. FSEditLog preallocate() preallocated more than 1MB. (Jing Zhoa
     via suresh)
 
+    HADOOP-7698. jsvc target fails on x86_64. (daryn via harsh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

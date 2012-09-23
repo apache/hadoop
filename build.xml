@@ -172,6 +172,13 @@
 
   <property name="jsvc.build.dir" value="${build.dir}/jsvc.${os.arch}" />
   <property name="jsvc.install.dir" value="${dist.dir}/libexec" /> 
+  <exec executable="sh" outputproperty="os-name">
+    <arg value="-c" />
+    <arg value="uname -s | tr '[:upper:]' '[:lower:]'" />
+  </exec>
+  <condition property="os-arch" value="universal">
+    <equals arg1="darwin" arg2="${os-name}" />
+  </condition>
   <condition property="os-arch" value="x86_64">
     <and>
       <os arch="amd64" />
@@ -186,7 +193,7 @@
       <os arch="x86" />
     </or>
   </condition>
-  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-${os-arch}.tar.gz" />
+  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/${os-name}/commons-daemon-1.0.2-bin-${os-name}-${os-arch}.tar.gz" />
   <property name="jsvc.dest.name" value="jsvc.${os.arch}.tar.gz" />
 
   <!-- task-controller properties set here -->
