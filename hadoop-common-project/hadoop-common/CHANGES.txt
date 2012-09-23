@@ -222,6 +222,9 @@ Trunk (Unreleased)
     HADOOP-7256. Resource leak during failure scenario of closing
     of resources. (Ramkrishna S. Vasudevan via harsh)
 
+    HADOOP-8151. Error handling in snappy decompressor throws invalid
+    exceptions. (Matt Foley via harsh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
