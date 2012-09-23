@@ -383,7 +383,10 @@ Release 2.8.0 - UNRELEASED
     (Brahma Reddy Battula via aajisaka)
 
     HADOOP-12076. Incomplete Cache Mechanism in CredentialProvider API.
-    (Larry McCay via cnauroth)
+    (Larry McCay via cnauroth) 
+
+    HADOOP-8151. Error handling in snappy decompressor throws invalid
+    exceptions. (Matt Foley via harsh)
 
 Release 2.7.1 - UNRELEASED
 
