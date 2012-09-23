@@ -66,6 +66,9 @@ Release 2.6.1 - UNRELEASED
     HADOOP-11491. HarFs incorrectly declared as requiring an authority.
     (Brahma Reddy Battula via gera)
 
+    HADOOP-8151. Error handling in snappy decompressor throws invalid
+    exceptions. (Matt Foley via harsh)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
