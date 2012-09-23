@@ -104,6 +104,10 @@ Trunk (Unreleased)
     HADOOP-8814. Replace string equals "" by String#isEmpty().
     (Brandon Li via suresh)
 
+    HADOOP-8588. SerializationFactory shouldn't throw a
+    NullPointerException if the serializations list is empty.
+    (Sho Shimauchi via harsh)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
