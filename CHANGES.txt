@@ -585,6 +585,9 @@ Release 1.1.0 - unreleased
     MAPREDUCE-4673. Fix TestRawHistoryFile and TestJobHistoryServer to not write
     to /tmp. (Arpit Gupta via vinodkv)
 
+    MAPREDUCE-4675. Fixed a race condition caused in TestKillSubProcesses caused
+    due to a recent commit. (Bikas Saha via vinodkv)
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
