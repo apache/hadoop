@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.api.impl.pb.service;
 
+import java.io.IOException;
+
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsRequestProto;
-import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshServiceAclsResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.*;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocol;
 import org.apache.hadoop.yarn.server.resourcemanager.api.RMAdminProtocolPB;
@@ -137,6 +137,24 @@ public class RMAdminProtocolPBServiceImpl implements RMAdminProtocolPB {
       } catch (YarnRemoteException e) {
         throw new ServiceException(e);
       }
+  }
+
+  @Override
+  public GetGroupsForUserResponseProto getGroupsForUser(
+      RpcController controller, GetGroupsForUserRequestProto request)
+      throws ServiceException {
+    String user = request.getUser();
+    try {
+      String[] groups = real.getGroupsForUser(user);
+      GetGroupsForUserResponseProto.Builder responseBuilder =
+          GetGroupsForUserResponseProto.newBuilder();
+      for (String group : groups) {
+        responseBuilder.addGroups(group);
+      }
+      return responseBuilder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
 }
