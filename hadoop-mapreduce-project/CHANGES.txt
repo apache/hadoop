@@ -126,6 +126,9 @@ Trunk (Unreleased)
 
     MAPREDUCE-3868. Make Raid Compile. (Weiyan Wang via schen)
 
+    MAPREDUCE-4645. Provide a random seed to Slive to make the sequence
+    of file names deterministic. (Ravi Prakash via shv)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
