@@ -23,7 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.Path;
@@ -34,14 +33,13 @@ import org.junit.Assert;
 import junit.framework.TestCase;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.MalformedURLException;
 
 public class TestJobHistoryServer extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestJobHistoryServer.class);
-
+  private String inputPath = System.getProperty("test.build.data",
+      "build/test/data") + "/TestJobHistoryServer";
+  
   public void testHistoryServerEmbedded() {
 
     MiniMRCluster mrCluster = null;
@@ -61,7 +59,7 @@ public class TestJobHistoryServer extends TestCase {
       LOG.info("******** History Address: " + historyAddress);
 
       conf = mrCluster.createJobConf();
-      createInputFile(conf, "/tmp/input");
+      createInputFile(conf, inputPath);
 
       RunningJob job = runJob(conf);
       LOG.info("Job details: " + job);
@@ -100,7 +98,7 @@ public class TestJobHistoryServer extends TestCase {
       LOG.info("******** History Address: " + historyAddress);
 
       conf = mrCluster.createJobConf();
-      createInputFile(conf, "/tmp/input");
+      createInputFile(conf, inputPath);
 
       RunningJob job = runJob(conf);
       LOG.info("Job details: " + job);
@@ -145,7 +143,7 @@ public class TestJobHistoryServer extends TestCase {
     conf.setMapperClass(org.apache.hadoop.mapred.lib.IdentityMapper.class);
     conf.setReducerClass(org.apache.hadoop.mapred.lib.IdentityReducer.class);
 
-    FileInputFormat.setInputPaths(conf, "/tmp/input");
+    FileInputFormat.setInputPaths(conf, inputPath);
 
     return JobClient.runJob(conf);
   }
