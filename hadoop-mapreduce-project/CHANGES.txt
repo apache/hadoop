@@ -409,6 +409,9 @@ Release 0.23.4 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-4645. Provide a random seed to Slive to make the sequence
+    of file names deterministic. (Ravi Prakash via shv)
+
   OPTIMIZATIONS
 
   BUG FIXES
