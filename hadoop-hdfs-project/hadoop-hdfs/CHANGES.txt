@@ -8,9 +8,6 @@ Trunk (Unreleased)
 
   NEW FEATURES
 
-    HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
-    via jitendra)
-
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
     HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
@@ -900,6 +897,9 @@ Release 2.0.0-alpha - 05-23-2012
     HDFS-3282. Add HdfsDataInputStream as a public API. (umamahesh)
 
     HDFS-3298. Add HdfsDataOutputStream as a public API.  (szetszwo)
+
+    HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
+    via jitendra)
 
   IMPROVEMENTS
 
