@@ -37,6 +37,8 @@ import org.apache.hadoop.mapred.UtilsForTests.InlineCleanupQueue;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
 import static org.junit.Assert.*;
 import org.junit.Before;
@@ -52,6 +54,11 @@ public class TestJvmManager {
   private JobConf ttConf;
   private boolean threadCaughtException = false;
   private String user;
+  private final String sleepScriptName = Shell.WINDOWS ? "SLEEP.cmd" : "SLEEP";
+  private final String sleepCommand = "sleep 60\n";
+  private final String lsScriptName = Shell.WINDOWS ? "LS.cmd" : "LS";
+  private final String lsCommand =
+      StringUtils.join(" ", Shell.getGetPermissionCommand());
 
   @Before
   public void setUp() {
@@ -89,10 +96,13 @@ public class TestJvmManager {
   private File writeScript(String fileName, String cmd, File pidFile) throws IOException {
     File script = new File(TEST_DIR, fileName);
     FileOutputStream out = new FileOutputStream(script);
-    // write pid into a file
-    out.write(("echo $$ >" + pidFile.toString() + ";").getBytes());
-    // ignore SIGTERM
-    out.write(("trap '' 15\n").getBytes());
+    // write pid into a file and ignore SIGTERM
+    String command = Shell.WINDOWS
+        // On Windows we pass back the attempt id that was passed to the task
+        // through the environment.
+      ? "echo %ATTEMPT_ID% > " + pidFile.toString() + "\r\n"
+      : "echo $$ >" + pidFile.toString() + ";\n trap '' 15\n";
+    out.write((command).getBytes());
     // write the actual command it self.
     out.write(cmd.getBytes());
     out.close();
@@ -130,8 +140,11 @@ public class TestJvmManager {
       newTaskDistributedCacheManager(attemptID.getJobID(), taskConf);
     final TaskRunner taskRunner = task.createRunner(tt, tip, rjob);
     // launch a jvm which sleeps for 60 seconds
+    final Vector<String> setup = new Vector<String>(1);
+    setup.add((Shell.WINDOWS ? "set " : "export ")
+      + "ATTEMPT_ID=" + attemptID.toString());
     final Vector<String> vargs = new Vector<String>(2);
-    vargs.add(writeScript("SLEEP", "sleep 60\n", pidFile).getAbsolutePath());
+    vargs.add(writeScript(sleepScriptName, sleepCommand, pidFile).getAbsolutePath());
     final File workDir = new File(TEST_DIR, "work");
     final File stdout = new File(TEST_DIR, "stdout");
     final File stderr = new File(TEST_DIR, "stderr");
@@ -140,7 +153,7 @@ public class TestJvmManager {
     Thread launcher = new Thread() {
       public void run() {
         try {
-          taskRunner.launchJvmAndWait(null, vargs, stdout, stderr, 100,
+          taskRunner.launchJvmAndWait(setup, vargs, stdout, stderr, 100,
               workDir);
         } catch (InterruptedException e) {
           e.printStackTrace();
@@ -204,7 +217,7 @@ public class TestJvmManager {
     TaskRunner taskRunner2 = task.createRunner(tt, tip, rjob);
     // build dummy vargs to call ls
     Vector<String> vargs2 = new Vector<String>(1);
-    vargs2.add(writeScript("LS", "ls", pidFile).getAbsolutePath());
+    vargs2.add(writeScript(lsScriptName, lsCommand, pidFile).getAbsolutePath());
     File workDir2 = new File(TEST_DIR, "work2");
     File stdout2 = new File(TEST_DIR, "stdout2");
     File stderr2 = new File(TEST_DIR, "stderr2");

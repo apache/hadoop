@@ -22,6 +22,7 @@ import java.io.*;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
@@ -77,7 +78,7 @@ public class TestStreamingTaskLog extends TestCase {
       }
       fs.mkdirs(testDir);
       File scriptFile = createScript(
-          testDir.toString() + "/testTaskLog.sh");
+          testDir.toString());
       mr = new MiniMRCluster(numSlaves, fs.getUri().toString(), 1);
       
       writeInputFile(fs, inputPath);
@@ -97,16 +98,19 @@ public class TestStreamingTaskLog extends TestCase {
     }
   }
 
-  private File createScript(String script) throws IOException {
-    File scriptFile = new File(script);
+  private File createScript(String testDir) throws IOException {
+    File scriptFile = new File(testDir,
+      "testTaskLog" + ((Shell.WINDOWS) ? ".cmd" : ".sh"));
     UtilTest.recursiveDelete(scriptFile);
     FileOutputStream in = new FileOutputStream(scriptFile);
-    in.write(("cat > /dev/null 2>&1\n" +
-              "echo $HADOOP_ROOT_LOGGER $HADOOP_CLIENT_OPTS").getBytes());
+    in.write((Shell.WINDOWS ?
+      "cat > NUL 2>&1\necho %HADOOP_ROOT_LOGGER% %HADOOP_CLIENT_OPTS%" :
+      "cat > /dev/null 2>&1\necho $HADOOP_ROOT_LOGGER $HADOOP_CLIENT_OPTS")
+      .getBytes());
     in.close();
-    
-    Shell.execCommand(new String[]{"chmod", "+x",
-                                   scriptFile.getAbsolutePath()});
+
+    FileUtil.chmod(scriptFile.getAbsolutePath(), "+x", false);
+
     return scriptFile;
   }
   
