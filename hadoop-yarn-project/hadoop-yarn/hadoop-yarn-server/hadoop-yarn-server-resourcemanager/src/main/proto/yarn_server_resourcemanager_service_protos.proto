@@ -52,3 +52,10 @@ message RefreshServiceAclsRequestProto {
 message RefreshServiceAclsResponseProto {
 }
 
+message GetGroupsForUserRequestProto {
+  required string user = 1;
+}
+
+message GetGroupsForUserResponseProto {
+  repeated string groups = 1;
+}

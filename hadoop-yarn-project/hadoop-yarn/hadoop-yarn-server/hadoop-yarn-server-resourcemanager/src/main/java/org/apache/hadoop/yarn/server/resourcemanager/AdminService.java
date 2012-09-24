@@ -271,5 +271,10 @@ public class AdminService extends AbstractService implements RMAdminProtocol {
       PolicyProvider policyProvider) {
     this.server.refreshServiceAcl(configuration, policyProvider);
   }
+
+  @Override
+  public String[] getGroupsForUser(String user) throws IOException {
+    return UserGroupInformation.createRemoteUser(user).getGroupNames();
+  }
   
 }
