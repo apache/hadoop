@@ -93,7 +93,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
   /**
    * The length of the random keys to use.
    */
-  private static final int KEY_LENGTH = 20;
+  private static final int KEY_LENGTH = 64;
 
   /**
    * A thread local store for the Macs.
