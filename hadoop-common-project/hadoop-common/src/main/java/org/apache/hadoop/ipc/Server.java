@@ -132,6 +132,8 @@ import com.google.protobuf.Message.Builder;
  * 
  * @see Client
  */
+@InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
+@InterfaceStability.Evolving
 public abstract class Server {
   private final boolean authorize;
   private List<AuthMethod> enabledAuthMethods;
