@@ -107,6 +107,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.mortbay.util.ajax.JSON;
@@ -217,6 +218,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private final List<JobInProgressListener> jobInProgressListeners =
     new CopyOnWriteArrayList<JobInProgressListener>();
 
+  private List<ServicePlugin> plugins;
+  
   private static final LocalDirAllocator lDirAlloc = 
                               new LocalDirAllocator("mapred.local.dir");
   //system directory is completely owned by the JobTracker
@@ -2042,7 +2045,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       hdfsMonitor = new HDFSMonitorThread(this.conf, this, this.fs);
       hdfsMonitor.start();
     }
-
   }
   
   JobTracker(final JobConf conf, String identifier, Clock clock, QueueManager qm) 
@@ -2211,7 +2213,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             DNSToSwitchMapping.class), conf);
     this.numTaskCacheLevels = conf.getInt("mapred.task.cache.levels", 
         NetworkTopology.DEFAULT_HOST_LEVEL);
-
+    
+    plugins = conf.getInstances("mapreduce.jobtracker.plugins",
+        ServicePlugin.class);
+    for (ServicePlugin p : plugins) {
+      try {
+        p.start(this);
+        LOG.info("Started plug-in " + p + " of type " + p.getClass());
+      } catch (Throwable t) {
+        LOG.warn("ServicePlugin " + p + " of type " + p.getClass()
+            + " could not be started", t);
+      }
+    }
   }
 
   private static SimpleDateFormat getDateFormat() {
@@ -2363,6 +2376,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   void close() throws IOException {
+    if (plugins != null) {
+      for (ServicePlugin p : plugins) {
+        try {
+          p.stop();
+          LOG.info("Stopped plug-in " + p + " of type " + p.getClass());
+        } catch (Throwable t) {
+          LOG.warn("ServicePlugin " + p + " of type " + p.getClass()
+              + " could not be stopped", t);
+        }
+      }
+    }
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {
