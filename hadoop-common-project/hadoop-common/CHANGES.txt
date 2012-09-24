@@ -225,6 +225,9 @@ Trunk (Unreleased)
     HADOOP-8151. Error handling in snappy decompressor throws invalid
     exceptions. (Matt Foley via harsh)
 
+    HADOOP-8813. Add InterfaceAudience and InterfaceStability annotations
+    to RPC Server and Client classes. (Brandon Li via suresh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
