@@ -220,6 +220,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4662.  JobHistoryFilesManager thread pool never expands 
     (Kihwal Lee via tgraves)
 
+    HADOOP-8791. Fix rm command documentation to indicte it deletes
+    files and not directories. (Jing Zhao via suresh)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES
