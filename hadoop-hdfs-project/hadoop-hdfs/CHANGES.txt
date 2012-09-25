@@ -8,9 +8,6 @@ Trunk (Unreleased)
 
   NEW FEATURES
 
-    HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
-    via jitendra)
-
     HDFS-3125. Add JournalService to enable Journal Daemon. (suresh)
 
     HDFS-3601. Add BlockPlacementPolicyWithNodeGroup to support block placement
@@ -219,6 +216,9 @@ Trunk (Unreleased)
 
     HDFS-3678. Edit log files are never being purged from 2NN. (atm)
 
+    HADOOP-8158. Interrupting hadoop fs -put from the command line
+    causes a LeaseExpiredException. (daryn via harsh)
+
 Release 2.0.3-alpha - Unreleased 
 
   INCOMPATIBLE CHANGES
@@ -245,6 +245,19 @@ Release 2.0.3-alpha - Unreleased
     HDFS-3924. Multi-byte id in HdfsVolumeId. (Andrew Wang via atm)
 
     HDFS-3936. MiniDFSCluster shutdown races with BlocksMap usage. (eli)
+
+    HDFS-3951. datanode web ui does not work over HTTPS when datanode is started in secure mode. (tucu)
+
+    HDFS-3949. NameNodeRpcServer#join should join on both client and
+    server RPC servers. (eli)
+
+    HDFS-3932. NameNode Web UI broken if the rpc-address is set to the wildcard.
+    (Colin Patrick McCabe via eli)
+
+    HDFS-3931. TestDatanodeBlockScanner#testBlockCorruptionPolicy2 is broken.
+    (Andy Isaacson via eli)
+
+    HDFS-3964. Make NN log of fs.defaultFS debug rather than info. (eli)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -884,6 +897,9 @@ Release 2.0.0-alpha - 05-23-2012
     HDFS-3282. Add HdfsDataInputStream as a public API. (umamahesh)
 
     HDFS-3298. Add HdfsDataOutputStream as a public API.  (szetszwo)
+
+    HDFS-234. Integration with BookKeeper logging system. (Ivan Kelly 
+    via jitendra)
 
   IMPROVEMENTS
 

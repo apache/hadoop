@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.api;
 
+import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshAdminAclsResponse;
@@ -32,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.Refresh
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsRequest;
 import org.apache.hadoop.yarn.server.resourcemanager.api.protocolrecords.RefreshUserToGroupsMappingsResponse;
 
-public interface RMAdminProtocol {
+public interface RMAdminProtocol extends GetUserMappingsProtocol {
   public RefreshQueuesResponse refreshQueues(RefreshQueuesRequest request) 
   throws YarnRemoteException;
   

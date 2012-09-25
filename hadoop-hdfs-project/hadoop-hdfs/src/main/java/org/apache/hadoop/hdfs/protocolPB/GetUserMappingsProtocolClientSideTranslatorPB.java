@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,66 +16,54 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.tools.impl.pb.client;
+package org.apache.hadoop.hdfs.protocolPB;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.GetUserMappingsProtocolProtos.GetGroupsForUserResponseProto;
 import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.apache.hadoop.tools.GetUserMappingsProtocolPB;
-import org.apache.hadoop.tools.proto.GetUserMappingsProtocol.GetGroupsForUserRequestProto;
-import org.apache.hadoop.tools.proto.GetUserMappingsProtocol.GetGroupsForUserResponseProto;
 
+import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-public class GetUserMappingsProtocolPBClientImpl implements
+public class GetUserMappingsProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, GetUserMappingsProtocol, Closeable {
 
-  private GetUserMappingsProtocolPB proxy;
+  /** RpcController is not used and hence is set to null */
+  private final static RpcController NULL_CONTROLLER = null;
+  private final GetUserMappingsProtocolPB rpcProxy;
   
-  public GetUserMappingsProtocolPBClientImpl(
-      long clientVersion, InetSocketAddress addr, Configuration conf)
-      throws IOException {
-    RPC.setProtocolEngine(conf, GetUserMappingsProtocolPB.class,
-        ProtobufRpcEngine.class);
-    proxy = (GetUserMappingsProtocolPB) RPC.getProxy(
-        GetUserMappingsProtocolPB.class, clientVersion, addr, conf);
+  public GetUserMappingsProtocolClientSideTranslatorPB(
+      GetUserMappingsProtocolPB rpcProxy) {
+    this.rpcProxy = rpcProxy;
   }
-  
-  public GetUserMappingsProtocolPBClientImpl(
-      GetUserMappingsProtocolPB proxy) {
-    this.proxy = proxy;
-  }
-  
+
   @Override
   public void close() throws IOException {
-    RPC.stopProxy(proxy);
+    RPC.stopProxy(rpcProxy);
   }
-  
+
   @Override
   public String[] getGroupsForUser(String user) throws IOException {
-    GetGroupsForUserRequestProto requestProto = 
-        GetGroupsForUserRequestProto.newBuilder().setUser(user).build();
+    GetGroupsForUserRequestProto request = GetGroupsForUserRequestProto
+        .newBuilder().setUser(user).build();
+    GetGroupsForUserResponseProto resp;
     try {
-      GetGroupsForUserResponseProto responseProto =
-          proxy.getGroupsForUser(null, requestProto);
-      return (String[]) responseProto.getGroupsList().toArray(
-          new String[responseProto.getGroupsCount()]);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      resp = rpcProxy.getGroupsForUser(NULL_CONTROLLER, request);
+    } catch (ServiceException se) {
+      throw ProtobufHelper.getRemoteException(se);
     }
+    return resp.getGroupsList().toArray(new String[resp.getGroupsCount()]);
   }
 
   @Override
   public boolean isMethodSupported(String methodName) throws IOException {
-    return RpcClientUtil.isMethodSupported(proxy,
+    return RpcClientUtil.isMethodSupported(rpcProxy,
         GetUserMappingsProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
         RPC.getProtocolVersion(GetUserMappingsProtocolPB.class), methodName);
   }

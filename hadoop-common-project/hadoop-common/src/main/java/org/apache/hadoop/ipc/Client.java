@@ -83,6 +83,8 @@ import org.apache.hadoop.util.Time;
  * 
  * @see Server
  */
+@InterfaceAudience.LimitedPrivate(value = { "Common", "HDFS", "MapReduce", "Yarn" })
+@InterfaceStability.Evolving
 public class Client {
   
   public static final Log LOG = LogFactory.getLog(Client.class);

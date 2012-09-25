@@ -115,7 +115,7 @@ public class CsvRecordOutput implements RecordOutput {
     
   @Override
   public void startRecord(Record r, String tag) throws IOException {
-    if (tag != null && !"".equals(tag)) {
+    if (tag != null && ! tag.isEmpty()) {
       printCommaUnlessFirst();
       stream.print("s{");
       isFirst = true;
@@ -124,7 +124,7 @@ public class CsvRecordOutput implements RecordOutput {
     
   @Override
   public void endRecord(Record r, String tag) throws IOException {
-    if (tag == null || "".equals(tag)) {
+    if (tag == null || tag.isEmpty()) {
       stream.print("\n");
       isFirst = true;
     } else {

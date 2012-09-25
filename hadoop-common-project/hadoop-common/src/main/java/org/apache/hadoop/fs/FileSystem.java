@@ -1597,7 +1597,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     String filename = pathPattern.toUri().getPath();
     
     // path has only zero component
-    if ("".equals(filename) || Path.SEPARATOR.equals(filename)) {
+    if (filename.isEmpty() || Path.SEPARATOR.equals(filename)) {
       return getFileStatus(new Path[]{pathPattern});
     }
 

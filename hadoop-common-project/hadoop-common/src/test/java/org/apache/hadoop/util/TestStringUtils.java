@@ -231,7 +231,8 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     assertArrayEquals(expectedArray, StringUtils.getTrimmedStrings(pathologicalDirList2));
     
     assertArrayEquals(emptyArray, StringUtils.getTrimmedStrings(emptyList1));
-    assertArrayEquals(emptyArray, StringUtils.getTrimmedStrings(emptyList2));
+    String[] estring = StringUtils.getTrimmedStrings(emptyList2);
+    assertArrayEquals(emptyArray, estring);
   } 
 
   @Test

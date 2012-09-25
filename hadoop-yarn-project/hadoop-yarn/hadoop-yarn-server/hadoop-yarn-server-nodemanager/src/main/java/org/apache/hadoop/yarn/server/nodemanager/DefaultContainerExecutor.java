@@ -109,6 +109,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       String userName, String appId, Path containerWorkDir,
       List<String> localDirs, List<String> logDirs) throws IOException {
 
+    FsPermission dirPerm = new FsPermission(APPDIR_PERM);
     ContainerId containerId = container.getContainerID();
 
     // create container dirs on all disks
@@ -123,7 +124,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       Path appCacheDir = new Path(userdir, ContainerLocalizer.APPCACHE);
       Path appDir = new Path(appCacheDir, appIdStr);
       Path containerDir = new Path(appDir, containerIdStr);
-      lfs.mkdir(containerDir, null, false);
+      createDir(containerDir, dirPerm, false);
     }
 
     // Create the container log-dirs on all disks
@@ -131,7 +132,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
 
     Path tmpDir = new Path(containerWorkDir,
         YarnConfiguration.DEFAULT_CONTAINER_TEMP_DIR);
-    lfs.mkdir(tmpDir, null, false);
+    createDir(tmpDir, dirPerm, false);
 
     // copy launch script to work dir
     Path launchDst =
@@ -286,20 +287,20 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   }
 
   /** Permissions for user dir.
-   * $loaal.dir/usercache/$user */
-  private static final short USER_PERM = (short)0750;
+   * $local.dir/usercache/$user */
+  static final short USER_PERM = (short)0750;
   /** Permissions for user appcache dir.
-   * $loaal.dir/usercache/$user/appcache */
-  private static final short APPCACHE_PERM = (short)0710;
+   * $local.dir/usercache/$user/appcache */
+  static final short APPCACHE_PERM = (short)0710;
   /** Permissions for user filecache dir.
-   * $loaal.dir/usercache/$user/filecache */
-  private static final short FILECACHE_PERM = (short)0710;
+   * $local.dir/usercache/$user/filecache */
+  static final short FILECACHE_PERM = (short)0710;
   /** Permissions for user app dir.
-   * $loaal.dir/usercache/$user/filecache */
-  private static final short APPDIR_PERM = (short)0710;
+   * $local.dir/usercache/$user/appcache/$appId */
+  static final short APPDIR_PERM = (short)0710;
   /** Permissions for user log dir.
    * $logdir/$user/$appId */
-  private static final short LOGDIR_PERM = (short)0710;
+  static final short LOGDIR_PERM = (short)0710;
 
   private Path getFirstApplicationDir(List<String> localDirs, String user,
       String appId) {
@@ -324,20 +325,28 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         ContainerLocalizer.FILECACHE);
   }
 
+  private void createDir(Path dirPath, FsPermission perms,
+      boolean createParent) throws IOException {
+    lfs.mkdir(dirPath, perms, createParent);
+    if (!perms.equals(perms.applyUMask(lfs.getUMask()))) {
+      lfs.setPermission(dirPath, perms);
+    }
+  }
+
   /**
    * Initialize the local directories for a particular user.
-   * <ul>
+   * <ul>.mkdir
    * <li>$local.dir/usercache/$user</li>
    * </ul>
    */
-  private void createUserLocalDirs(List<String> localDirs, String user)
+  void createUserLocalDirs(List<String> localDirs, String user)
       throws IOException {
     boolean userDirStatus = false;
     FsPermission userperms = new FsPermission(USER_PERM);
     for (String localDir : localDirs) {
       // create $local.dir/usercache/$user and its immediate parent
       try {
-        lfs.mkdir(getUserCacheDir(new Path(localDir), user), userperms, true);
+        createDir(getUserCacheDir(new Path(localDir), user), userperms, true);
       } catch (IOException e) {
         LOG.warn("Unable to create the user directory : " + localDir, e);
         continue;
@@ -359,7 +368,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * <li>$local.dir/usercache/$user/filecache</li>
    * </ul>
    */
-  private void createUserCacheDirs(List<String> localDirs, String user)
+  void createUserCacheDirs(List<String> localDirs, String user)
       throws IOException {
     LOG.info("Initializing user " + user);
 
@@ -373,7 +382,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       Path localDirPath = new Path(localDir);
       final Path appDir = getAppcacheDir(localDirPath, user);
       try {
-        lfs.mkdir(appDir, appCachePerms, true);
+        createDir(appDir, appCachePerms, true);
         appcacheDirStatus = true;
       } catch (IOException e) {
         LOG.warn("Unable to create app cache directory : " + appDir, e);
@@ -381,7 +390,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       // create $local.dir/usercache/$user/filecache
       final Path distDir = getFileCacheDir(localDirPath, user);
       try {
-        lfs.mkdir(distDir, fileperms, true);
+        createDir(distDir, fileperms, true);
         distributedCacheDirStatus = true;
       } catch (IOException e) {
         LOG.warn("Unable to create file cache directory : " + distDir, e);
@@ -406,7 +415,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * </ul>
    * @param localDirs 
    */
-  private void createAppDirs(List<String> localDirs, String user, String appId)
+  void createAppDirs(List<String> localDirs, String user, String appId)
       throws IOException {
     boolean initAppDirStatus = false;
     FsPermission appperms = new FsPermission(APPDIR_PERM);
@@ -414,7 +423,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       Path fullAppDir = getApplicationDir(new Path(localDir), user, appId);
       // create $local.dir/usercache/$user/appcache/$appId
       try {
-        lfs.mkdir(fullAppDir, appperms, true);
+        createDir(fullAppDir, appperms, true);
         initAppDirStatus = true;
       } catch (IOException e) {
         LOG.warn("Unable to create app directory " + fullAppDir.toString(), e);
@@ -430,7 +439,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   /**
    * Create application log directories on all disks.
    */
-  private void createAppLogDirs(String appId, List<String> logDirs)
+  void createAppLogDirs(String appId, List<String> logDirs)
       throws IOException {
 
     boolean appLogDirStatus = false;
@@ -439,7 +448,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       // create $log.dir/$appid
       Path appLogDir = new Path(rootLogDir, appId);
       try {
-        lfs.mkdir(appLogDir, appLogDirPerms, true);
+        createDir(appLogDir, appLogDirPerms, true);
       } catch (IOException e) {
         LOG.warn("Unable to create the app-log directory : " + appLogDir, e);
         continue;
@@ -455,7 +464,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   /**
    * Create application log directories on all disks.
    */
-  private void createContainerLogDirs(String appId, String containerId,
+  void createContainerLogDirs(String appId, String containerId,
       List<String> logDirs) throws IOException {
 
     boolean containerLogDirStatus = false;
@@ -465,7 +474,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       Path appLogDir = new Path(rootLogDir, appId);
       Path containerLogDir = new Path(appLogDir, containerId);
       try {
-        lfs.mkdir(containerLogDir, containerLogDirPerms, true);
+        createDir(containerLogDir, containerLogDirPerms, true);
       } catch (IOException e) {
         LOG.warn("Unable to create the container-log directory : "
             + appLogDir, e);

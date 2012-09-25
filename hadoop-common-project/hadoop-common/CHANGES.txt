@@ -101,7 +101,21 @@ Trunk (Unreleased)
     HADOOP-8619. WritableComparator must implement no-arg constructor.
     (Chris Douglas via Suresh)
 
-    HADOOP-8736. Add Builder for building RPC server. (Brandon Li via Suresh)
+    HADOOP-8814. Replace string equals "" by String#isEmpty().
+    (Brandon Li via suresh)
+
+    HADOOP-8588. SerializationFactory shouldn't throw a
+    NullPointerException if the serializations list is empty.
+    (Sho Shimauchi via harsh)
+
+    HADOOP-7930. Kerberos relogin interval in UserGroupInformation
+    should be configurable (Robert Kanter via harsh)
+
+    HADOOP-8838. Colorize the test-patch output sent to JIRA (Harsh J via
+    bobby)
+
+    HADOOP-8840. Fix the test-patch colorizer to cover all sorts of +1 lines.
+    (Harsh J via bobby)
 
   BUG FIXES
 
@@ -214,6 +228,22 @@ Trunk (Unreleased)
     HADOOP-8821. Fix findbugs warning related to concatenating string in a 
     for loop in Configuration#dumpDeprecatedKeys(). (suresh)
 
+    HADOOP-7256. Resource leak during failure scenario of closing
+    of resources. (Ramkrishna S. Vasudevan via harsh)
+
+    HADOOP-8151. Error handling in snappy decompressor throws invalid
+    exceptions. (Matt Foley via harsh)
+
+    HADOOP-8813. Add InterfaceAudience and InterfaceStability annotations
+    to RPC Server and Client classes. (Brandon Li via suresh)
+
+    HADOOP-8815. RandomDatum needs to override hashCode().
+    (Brandon Li via suresh)
+
+    HADOOP-8436. NPE In getLocalPathForWrite ( path, conf ) when the
+    required context item is not configured
+    (Brahma Reddy Battula via harsh)
+
   OPTIMIZATIONS
 
     HADOOP-7761. Improve the performance of raw comparisons. (todd)
@@ -240,7 +270,7 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8812. ExitUtil#terminate should print Exception#toString. (eli)
 
-    HADOOP-8805. Move protocol buffer implementation of GetUserMappingProtocol from HDFS to Common. (bowang via tucu)
+    HADOOP-8736. Add Builder for building RPC server. (Brandon Li via Suresh)
 
   OPTIMIZATIONS
 
@@ -251,6 +281,12 @@ Release 2.0.3-alpha - Unreleased
 
     HADOOP-8780. Update DeprecatedProperties apt file. (Ahmed Radwan via
     tomwhite)
+
+    HADOOP-8833. fs -text should make sure to call inputstream.seek(0)
+    before using input stream. (tomwhite and harsh)
+
+    HADOOP-8791. Fix rm command documentation to indicte it deletes
+    files and not directories. (Jing Zhao via suresh)
 
 Release 2.0.2-alpha - 2012-09-07 
 
@@ -947,6 +983,8 @@ Release 0.23.4 - UNRELEASED
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-8822. relnotes.py was deleted post mavenization (bobby)
 
   OPTIMIZATIONS
 

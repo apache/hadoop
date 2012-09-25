@@ -16,9 +16,11 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.channels.ServerSocketChannel;
+import java.security.GeneralSecurityException;
 
 import org.apache.commons.daemon.Daemon;
 import org.apache.commons.daemon.DaemonContext;
@@ -26,9 +28,15 @@ import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.ssl.SSLFactory;
+import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.nio.SelectChannelConnector;
+import org.mortbay.jetty.security.SslSocketConnector;
+
+import javax.net.ssl.SSLServerSocketFactory;
 
 /**
  * Utility class to start a datanode in a secure cluster, first obtaining 
@@ -40,9 +48,9 @@ public class SecureDataNodeStarter implements Daemon {
    */
   public static class SecureResources {
     private final ServerSocket streamingSocket;
-    private final SelectChannelConnector listener;
+    private final Connector listener;
     public SecureResources(ServerSocket streamingSocket,
-        SelectChannelConnector listener) {
+        Connector listener) {
 
       this.streamingSocket = streamingSocket;
       this.listener = listener;
@@ -50,12 +58,13 @@ public class SecureDataNodeStarter implements Daemon {
 
     public ServerSocket getStreamingSocket() { return streamingSocket; }
 
-    public SelectChannelConnector getListener() { return listener; }
+    public Connector getListener() { return listener; }
   }
   
   private String [] args;
   private SecureResources resources;
-  
+  private SSLFactory sslFactory;
+
   @Override
   public void init(DaemonContext context) throws Exception {
     System.err.println("Initializing secure datanode resources");
@@ -80,13 +89,30 @@ public class SecureDataNodeStarter implements Daemon {
     }
 
     // Obtain secure listener for web server
-    SelectChannelConnector listener = 
-                   (SelectChannelConnector)HttpServer.createDefaultChannelConnector();
+    Connector listener;
+    if (HttpConfig.isSecure()) {
+      sslFactory = new SSLFactory(SSLFactory.Mode.SERVER, conf);
+      try {
+        sslFactory.init();
+      } catch (GeneralSecurityException ex) {
+        throw new IOException(ex);
+      }
+      SslSocketConnector sslListener = new SslSocketConnector() {
+        @Override
+        protected SSLServerSocketFactory createFactory() throws Exception {
+          return sslFactory.createSSLServerSocketFactory();
+        }
+      };
+      listener = sslListener;
+    } else {
+      listener = HttpServer.createDefaultChannelConnector();
+    }
+
     InetSocketAddress infoSocAddr = DataNode.getInfoAddr(conf);
     listener.setHost(infoSocAddr.getHostName());
     listener.setPort(infoSocAddr.getPort());
     // Open listener here in order to bind to port as root
-    listener.open(); 
+    listener.open();
     if (listener.getPort() != infoSocAddr.getPort()) {
       throw new RuntimeException("Unable to bind on specified info port in secure " +
           "context. Needed " + streamingAddr.getPort() + ", got " + ss.getLocalPort());
@@ -109,6 +135,9 @@ public class SecureDataNodeStarter implements Daemon {
     DataNode.secureMain(args, resources);
   }
   
-  @Override public void destroy() { /* Nothing to do */ }
+  @Override public void destroy() {
+    sslFactory.destroy();
+  }
+
   @Override public void stop() throws Exception { /* Nothing to do */ }
 }

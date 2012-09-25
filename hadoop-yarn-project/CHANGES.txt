@@ -34,6 +34,12 @@ Release 2.0.3-alpha - Unreleased
     YARN-28. Fixed TestCompositeService to not depend on test-order and thus
     made it pass on JDK7 (Thomas Graves via vinodkv).
 
+    YARN-82. Change the default local and log dirs to be based on
+    hadoop.tmp.dir and yarn.log.dir. (Hemanth Yamijala via sseth)
+
+    YARN-53. Added the missing getGroups API to ResourceManager. (Bo Wang via
+    vinodkv)
+
   OPTIMIZATIONS
 
   BUG FIXES
@@ -99,6 +105,9 @@ Release 0.23.4 - UNRELEASED
   OPTIMIZATIONS
 
   BUG FIXES
+
+    YARN-88. DefaultContainerExecutor can fail to set proper permissions.
+    (Jason Lowe via sseth)
 
 Release 0.23.3 - Unreleased 
 

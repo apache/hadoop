@@ -19,14 +19,16 @@
 package org.apache.hadoop.yarn.server.resourcemanager.api.impl.pb.client;
 
 import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetGroupsForUserRequestProto;
+import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.GetGroupsForUserResponseProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshAdminAclsRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerServiceProtos.RefreshQueuesRequestProto;
@@ -154,5 +156,18 @@ public class RMAdminProtocolPBClientImpl implements RMAdminProtocol {
     }
   }
 
+  @Override
+  public String[] getGroupsForUser(String user) throws IOException {
+    GetGroupsForUserRequestProto requestProto = 
+        GetGroupsForUserRequestProto.newBuilder().setUser(user).build();
+    try {
+      GetGroupsForUserResponseProto responseProto =
+          proxy.getGroupsForUser(null, requestProto);
+      return (String[]) responseProto.getGroupsList().toArray(
+          new String[responseProto.getGroupsCount()]);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
   
 }

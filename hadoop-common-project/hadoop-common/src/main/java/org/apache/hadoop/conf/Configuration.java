@@ -1073,7 +1073,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public boolean getBoolean(String name, boolean defaultValue) {
     String valueString = getTrimmed(name);
-    if (null == valueString || "".equals(valueString)) {
+    if (null == valueString || valueString.isEmpty()) {
       return defaultValue;
     }
 
@@ -1140,7 +1140,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Pattern getPattern(String name, Pattern defaultValue) {
     String valString = get(name);
-    if (null == valString || "".equals(valString)) {
+    if (null == valString || valString.isEmpty()) {
       return defaultValue;
     }
     try {
