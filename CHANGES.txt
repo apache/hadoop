@@ -53,11 +53,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4415. Backport the Job.getInstance methods from
     MAPREDUCE-1505 to branch-1. (harsh)
 
-    HDFS-496. Backport: Use PureJavaCrc32 in HDFS.  (Brandon Li via szetszwo)
-
-    MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. 
-    (Todd Lipcon, backport by Brandon Li via sseth)
-
     HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
 
     HDFS-3697. Enable fadvise readahead by default. (todd via eli)
@@ -401,6 +396,11 @@ Release 1.1.0 - unreleased
 
     HADOOP-8617. Backport HADOOP-6148, HADOOP-6166 and HADOOP-7333 for a pure
     Java CRC32 calculator implementation.  (Brandon Li via szetszwo)
+
+    HDFS-496. Backport: Use PureJavaCrc32 in HDFS.  (Brandon Li via szetszwo)
+
+    MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. 
+    (Todd Lipcon, backport by Brandon Li via sseth)
 
   BUG FIXES
 
