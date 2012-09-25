@@ -72,9 +72,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4499. Looking for speculative tasks is very expensive in 1.x
     (Koji Noguchi via tgraves)
 
-    HDFS-3871. Change DFSClient to use RetryUtils.  (Arun C Murthy
-    via szetszwo)
-
     HDFS-1108 Log newly allocated blocks (hdfs-1108-hadoop-1-v5.patch) (sanjay) 
 
     HADOOP-8832. Port generic service plugin mechanism from HADOOP-5257
@@ -401,6 +398,9 @@ Release 1.1.0 - unreleased
 
     HADOOP-8748. Refactor DFSClient retry utility methods to a new class in
     org.apache.hadoop.io.retry.  Contributed by Arun C Murthy.
+
+    HDFS-3871. Change DFSClient to use RetryUtils.  (Arun C Murthy
+    via szetszwo)
 
   BUG FIXES
 
