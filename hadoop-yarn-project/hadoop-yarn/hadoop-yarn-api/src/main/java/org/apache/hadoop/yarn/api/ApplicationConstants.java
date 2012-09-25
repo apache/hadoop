@@ -169,9 +169,9 @@ public interface ApplicationConstants {
     MALLOC_ARENA_MAX("MALLOC_ARENA_MAX"),
     
     /**
-     * $YARN_HOME
+     * $HADOOP_YARN_HOME
      */
-    YARN_HOME("YARN_HOME");
+    HADOOP_YARN_HOME("HADOOP_YARN_HOME");
 
     private final String variable;
     private Environment(String variable) {

@@ -318,7 +318,7 @@ Hadoop MapReduce Next Generation - Capacity Scheduler
   
 ----
 $ vi $HADOOP_CONF_DIR/capacity-scheduler.xml
-$ $YARN_HOME/bin/yarn rmadmin -refreshQueues
+$ $HADOOP_YARN_HOME/bin/yarn rmadmin -refreshQueues
 ----  
 
   <Note:> Queues cannot be <deleted>, only addition of new queues is supported -

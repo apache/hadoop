@@ -49,7 +49,7 @@ then
 fi
  
 # Allow alternate conf dir location.
-export YARN_CONF_DIR="${HADOOP_CONF_DIR:-$YARN_HOME/conf}"
+export YARN_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_YARN_HOME/conf}"
 
 #check to see it is specified whether to use the slaves or the
 # masters file
