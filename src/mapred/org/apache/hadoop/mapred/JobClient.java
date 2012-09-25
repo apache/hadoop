@@ -40,6 +40,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -59,6 +60,10 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.Counters.Counter;
@@ -428,7 +433,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     }
   }
 
+  private JobSubmissionProtocol rpcJobSubmitClient;
   private JobSubmissionProtocol jobSubmitClient;
+  
   private Path sysDir = null;
   private Path stagingAreaDir = null;
   
@@ -439,6 +446,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private static final int DEFAULT_TASKLOG_TIMEOUT = 60000;
   static int tasklogtimeout;
 
+  public static final String MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_KEY =
+      "mapreduce.jobclient.retry.policy.enabled";
+  public static final boolean MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_DEFAULT = 
+      false;
+  public static final String MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_KEY =
+      "mapreduce.jobclient.retry.policy.spec";
+  public static final String MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT =
+      "10000,6,60000,10"; //t1,n1,t2,n2,...
+  
   /**
    * Create a job client.
    */
@@ -471,16 +487,61 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       conf.setNumMapTasks(1);
       this.jobSubmitClient = new LocalJobRunner(conf);
     } else {
-      this.jobSubmitClient = createRPCProxy(JobTracker.getAddress(conf), conf);
+      this.rpcJobSubmitClient = 
+          createRPCProxy(JobTracker.getAddress(conf), conf);
+      this.jobSubmitClient = createProxy(this.rpcJobSubmitClient, conf);
     }        
   }
 
   private static JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
       Configuration conf) throws IOException {
-    return (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
-        JobSubmissionProtocol.versionID, addr, 
-        UserGroupInformation.getCurrentUser(), conf,
-        NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class));
+    
+    JobSubmissionProtocol rpcJobSubmitClient = 
+        (JobSubmissionProtocol)RPC.getProxy(
+            JobSubmissionProtocol.class,
+            JobSubmissionProtocol.versionID, addr, 
+            UserGroupInformation.getCurrentUser(), conf,
+            NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class), 
+            0,
+            RetryUtils.getMultipleLinearRandomRetry(
+                conf,
+                MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_KEY,
+                MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
+                MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_KEY,
+                MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT
+                )
+            );
+    
+    return rpcJobSubmitClient;
+  }
+
+  private static JobSubmissionProtocol createProxy(
+      JobSubmissionProtocol rpcJobSubmitClient,
+      Configuration conf) throws IOException {
+
+    RetryPolicy defaultPolicy = 
+        RetryUtils.getDefaultRetryPolicy(
+            conf,
+            MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_KEY,
+            MAPREDUCE_CLIENT_RETRY_POLICY_ENABLED_DEFAULT,
+            MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_KEY,
+            MAPREDUCE_CLIENT_RETRY_POLICY_SPEC_DEFAULT,
+            SafeModeException.class
+            ); 
+    
+    /* 
+     * Method specific retry policies for killJob and killTask...
+     * 
+     * No retries on any exception including 
+     * ConnectionException and SafeModeException
+     */
+    Map<String,RetryPolicy> methodNameToPolicyMap = 
+        new HashMap<String,RetryPolicy>();
+    methodNameToPolicyMap.put("killJob", RetryPolicies.TRY_ONCE_THEN_FAIL);
+    methodNameToPolicyMap.put("killTask", RetryPolicies.TRY_ONCE_THEN_FAIL);
+    
+    return (JobSubmissionProtocol) RetryProxy.create(JobSubmissionProtocol.class,
+        rpcJobSubmitClient, defaultPolicy, methodNameToPolicyMap);
   }
 
   @InterfaceAudience.Private
@@ -496,7 +557,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public long renew(Token<?> token, Configuration conf
                       ) throws IOException, InterruptedException {
       InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
-      JobSubmissionProtocol jt = createRPCProxy(addr, conf);
+      JobSubmissionProtocol jt = createProxy(createRPCProxy(addr, conf), conf);
       return jt.renewDelegationToken((Token<DelegationTokenIdentifier>) token);
     }
 
@@ -505,7 +566,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public void cancel(Token<?> token, Configuration conf
                        ) throws IOException, InterruptedException {
       InetSocketAddress addr = SecurityUtil.getTokenServiceAddr(token);
-      JobSubmissionProtocol jt = createRPCProxy(addr, conf);
+      JobSubmissionProtocol jt = createProxy(createRPCProxy(addr, conf), conf);
       jt.cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
     }
 
@@ -531,15 +592,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   public JobClient(InetSocketAddress jobTrackAddr, 
                    Configuration conf) throws IOException {
     this.ugi = UserGroupInformation.getCurrentUser();
-    jobSubmitClient = createRPCProxy(jobTrackAddr, conf);
+    rpcJobSubmitClient = createRPCProxy(jobTrackAddr, conf); 
+    jobSubmitClient = createProxy(rpcJobSubmitClient, conf);
   }
 
   /**
    * Close the <code>JobClient</code>.
    */
   public synchronized void close() throws IOException {
-    if (!(jobSubmitClient instanceof LocalJobRunner)) {
-      RPC.stopProxy(jobSubmitClient);
+    if (!(rpcJobSubmitClient instanceof LocalJobRunner)) {
+      RPC.stopProxy(rpcJobSubmitClient);
     }
   }
 
