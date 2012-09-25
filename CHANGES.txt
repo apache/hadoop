@@ -53,8 +53,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4415. Backport the Job.getInstance methods from
     MAPREDUCE-1505 to branch-1. (harsh)
 
-    HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
-
     HDFS-3697. Enable fadvise readahead by default. (todd via eli)
 
     MAPREDUCE-4565. Backport MR-2855 to branch-1: ResourceBundle lookup during
@@ -395,6 +393,8 @@ Release 1.1.0 - unreleased
 
     MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. 
     (Todd Lipcon, backport by Brandon Li via sseth)
+
+    HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
 
     HADOOP-8748. Refactor DFSClient retry utility methods to a new class in
     org.apache.hadoop.io.retry.  Contributed by Arun C Murthy.
