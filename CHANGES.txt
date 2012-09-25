@@ -68,10 +68,6 @@ Release 1.2.0 - unreleased
     MAPREDUCE-782. Use PureJavaCrc32 in mapreduce spills. 
     (Todd Lipcon, backport by Brandon Li via sseth)
 
-    MAPREDUCE-1906. Lower minimum heartbeat interval between tasktracker and 
-    JobTracker for smaller clusters. (Todd Lipcon, backport by 
-    Brandon Li via sseth)
-
     HDFS-3667.  Add retry support to WebHdfsFileSystem.  (szetszwo)
 
     HDFS-3697. Enable fadvise readahead by default. (todd via eli)
@@ -406,6 +402,10 @@ Release 1.1.0 - unreleased
     (Todd Lipcon and Brandon Li via sseth)
 
     MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
+
+    MAPREDUCE-1906. Lower minimum heartbeat interval between tasktracker and 
+    JobTracker for smaller clusters. (Todd Lipcon, backport by 
+    Brandon Li via sseth)
 
   BUG FIXES
 
