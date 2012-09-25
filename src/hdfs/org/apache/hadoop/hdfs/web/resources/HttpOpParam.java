@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hdfs.web.resources;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import javax.ws.rs.core.Response;
 
 
@@ -42,6 +46,9 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
     /** @return true if the operation will do output. */
     public boolean getDoOutput();
 
+    /** @return true if the operation will be redirected. */
+    public boolean getRedirect();
+
     /** @return true the expected http response code. */
     public int getExpectedHttpResponseCode();
 
@@ -51,15 +58,25 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
 
   /** Expects HTTP response 307 "Temporary Redirect". */
   public static class TemporaryRedirectOp implements Op {
-    static final TemporaryRedirectOp CREATE = new TemporaryRedirectOp(PutOpParam.Op.CREATE);
-    static final TemporaryRedirectOp APPEND = new TemporaryRedirectOp(PostOpParam.Op.APPEND);
+    static final TemporaryRedirectOp CREATE = new TemporaryRedirectOp(
+        PutOpParam.Op.CREATE);
+    static final TemporaryRedirectOp APPEND = new TemporaryRedirectOp(
+        PostOpParam.Op.APPEND);
+    static final TemporaryRedirectOp OPEN = new TemporaryRedirectOp(
+        GetOpParam.Op.OPEN);
+    static final TemporaryRedirectOp GETFILECHECKSUM = new TemporaryRedirectOp(
+        GetOpParam.Op.GETFILECHECKSUM);
+    
+    static final List<TemporaryRedirectOp> values
+        = Collections.unmodifiableList(Arrays.asList(
+            new TemporaryRedirectOp[]{CREATE, APPEND, OPEN, GETFILECHECKSUM}));
     
     /** Get an object for the given op. */
     public static TemporaryRedirectOp valueOf(final Op op) {
-      if (op == CREATE.op) {
-        return CREATE;
-      } else if (op == APPEND.op) {
-        return APPEND;
+      for(TemporaryRedirectOp t : values) {
+        if (op == t.op) {
+          return t;
+        }
       }
       throw new IllegalArgumentException(op + " not found.");
     }
@@ -78,6 +95,11 @@ public abstract class HttpOpParam<E extends Enum<E> & HttpOpParam.Op>
     @Override
     public boolean getDoOutput() {
       return op.getDoOutput();
+    }
+
+    @Override
+    public boolean getRedirect() {
+      return false;
     }
 
     /** Override the original expected response with "Temporary Redirect". */

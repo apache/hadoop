@@ -142,7 +142,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    *     
    * Note that dfs.client.retry.max < 0 is not allowed.
    */
-  private static RetryPolicy getDefaultRpcRetryPolicy(Configuration conf) {
+  public static RetryPolicy getDefaultRetryPolicy(Configuration conf) {
     final RetryPolicy multipleLinearRandomRetry = getMultipleLinearRandomRetry(conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("multipleLinearRandomRetry = " + multipleLinearRandomRetry);
@@ -173,6 +173,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 + p.getClass().getSimpleName() + ", exception=" + e);
           }
           return p.shouldRetry(e, retries);
+        }
+
+        @Override
+        public String toString() {
+          return "RetryPolicy[" + multipleLinearRandomRetry + ", "
+              + RetryPolicies.TRY_ONCE_THEN_FAIL.getClass().getSimpleName()
+              + "]";
         }
       };
     }
@@ -207,7 +214,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   private static ClientProtocol createNamenode(ClientProtocol rpcNamenode,
       Configuration conf) throws IOException {
     //default policy
-    final RetryPolicy defaultPolicy = getDefaultRpcRetryPolicy(conf);
+    final RetryPolicy defaultPolicy = getDefaultRetryPolicy(conf);
 
     //create policy
     RetryPolicy createPolicy = RetryPolicies.retryUpToMaximumCountWithFixedSleep(
