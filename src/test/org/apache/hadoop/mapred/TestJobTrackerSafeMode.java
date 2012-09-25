@@ -35,6 +35,7 @@ import org.junit.*;
  * join back.
  */
 
+@Ignore
 public class TestJobTrackerSafeMode extends TestCase {
   final Path testDir = 
     new Path(System.getProperty("test.build.data", "/tmp"), "jt-safemode");
@@ -197,7 +198,7 @@ public class TestJobTrackerSafeMode extends TestCase {
 
   private boolean checkTrackers(JobTracker jobtracker, Set<String> present, 
                                 Set<String> absent) {
-    while (jobtracker.getClusterStatus(true).getActiveTrackerNames().size() != 2) {
+    while (jobtracker.getClusterStatus(true).getActiveTrackerNames().size() != 3) {
       LOG.info("Waiting for Initialize all Task Trackers");
       UtilsForTests.waitFor(1000);
     }
