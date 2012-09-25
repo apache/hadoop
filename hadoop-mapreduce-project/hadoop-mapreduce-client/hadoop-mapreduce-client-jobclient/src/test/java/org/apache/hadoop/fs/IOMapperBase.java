@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Base mapper class for IO operations.
@@ -35,7 +34,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  * statistics data to be collected by subsequent reducers.
  * 
  */
-@SuppressWarnings("deprecation")
 public abstract class IOMapperBase<T> extends Configured
     implements Mapper<Text, LongWritable, Text, Text> {
   
@@ -43,7 +41,7 @@ public abstract class IOMapperBase<T> extends Configured
   protected int bufferSize;
   protected FileSystem fs;
   protected String hostName;
-  protected CompressionCodec compressionCodec;
+  protected Closeable stream;
 
   public IOMapperBase() { 
   }
@@ -61,22 +59,6 @@ public abstract class IOMapperBase<T> extends Configured
       hostName = InetAddress.getLocalHost().getHostName();
     } catch(Exception e) {
       hostName = "localhost";
-    }
-    
-    //grab compression
-    String compression = getConf().get("test.io.compression.class", null);
-    Class<? extends CompressionCodec> codec;
-
-    //try to initialize codec
-    try {
-      codec = (compression == null) ? null : 
-     Class.forName(compression).asSubclass(CompressionCodec.class);
-    } catch(Exception e) {
-      throw new RuntimeException("Compression codec not found: ", e);
-    }
-
-    if(codec != null) {
-      compressionCodec = (CompressionCodec) ReflectionUtils.newInstance(codec, getConf());
     }
   }
 
@@ -96,6 +78,18 @@ public abstract class IOMapperBase<T> extends Configured
   abstract T doIO(Reporter reporter, 
                        String name, 
                        long value) throws IOException;
+
+  /**
+   * Create an input or output stream based on the specified file.
+   * Subclasses should override this method to provide an actual stream.
+   * 
+   * @param name file name
+   * @return the stream
+   * @throws IOException
+   */
+  public Closeable getIOStream(String name) throws IOException {
+    return null;
+  }
 
   /**
    * Collect stat data to be combined by a subsequent reducer.
@@ -132,9 +126,15 @@ public abstract class IOMapperBase<T> extends Configured
     long longValue = value.get();
     
     reporter.setStatus("starting " + name + " ::host = " + hostName);
-    
+
+    this.stream = getIOStream(name);
+    T statValue = null;
     long tStart = System.currentTimeMillis();
-    T statValue = doIO(reporter, name, longValue);
+    try {
+      statValue = doIO(reporter, name, longValue);
+    } finally {
+      if(stream != null) stream.close();
+    }
     long tEnd = System.currentTimeMillis();
     long execTime = tEnd - tStart;
     collectStats(output, name, execTime, statValue);
