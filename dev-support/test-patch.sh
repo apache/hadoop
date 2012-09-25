@@ -341,14 +341,14 @@ checkTests () {
     fi
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 tests included.  The patch doesn't appear to include any new or modified tests.
+    {color:red}-1 tests included{color}.  The patch doesn't appear to include any new or modified tests.
                         Please justify why no new tests are needed for this patch.
                         Also please list what manual steps were performed to verify this patch."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 tests included.  The patch appears to include $testReferences new or modified test files."
+    {color:green}+1 tests included{color}.  The patch appears to include $testReferences new or modified test files."
   return 0
 }
 
@@ -498,7 +498,7 @@ checkReleaseAuditWarnings () {
       if [[ $patchReleaseAuditWarnings -gt 0 ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 release audit.  The applied patch generated $patchReleaseAuditWarnings release audit warnings."
+        {color:red}-1 release audit{color}.  The applied patch generated $patchReleaseAuditWarnings release audit warnings."
         $GREP '\!?????' $PATCH_DIR/patchReleaseAuditWarnings.txt > $PATCH_DIR/patchReleaseAuditProblems.txt
         echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." >> $PATCH_DIR/patchReleaseAuditProblems.txt
         JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/trunk/patchprocess/patchReleaseAuditProblems.txt
@@ -509,7 +509,7 @@ $JIRA_COMMENT_FOOTER"
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 release audit.  The applied patch does not increase the total number of release audit warnings."
+    {color:green}+1 release audit{color}.  The applied patch does not increase the total number of release audit warnings."
   return 0
 }
 
@@ -655,12 +655,12 @@ checkEclipseGeneration () {
   if [[ $? != 0 ]] ; then
       JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 eclipse:eclipse.  The patch failed to build with eclipse:eclipse."
+    {color:red}-1 eclipse:eclipse{color}.  The patch failed to build with eclipse:eclipse."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 eclipse:eclipse.  The patch built with eclipse:eclipse."
+    {color:green}+1 eclipse:eclipse{color}.  The patch built with eclipse:eclipse."
   return 0
 }
 
@@ -700,13 +700,13 @@ ${module_failed_tests}"
   if [[ -n "$failed_tests" ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 core tests.  The patch failed these unit tests in $modules:
+    {color:red}-1 core tests{color}.  The patch failed these unit tests in $modules:
 $failed_tests"
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 core tests.  The patch passed unit tests in $modules."
+    {color:green}+1 core tests{color}.  The patch passed unit tests in $modules."
   return 0
 }
 
@@ -782,12 +782,12 @@ runContribTests () {
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 contrib tests.  The patch failed contrib unit tests."
+    {color:red}-1 contrib tests{color}.  The patch failed contrib unit tests."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 contrib tests.  The patch passed contrib unit tests."
+    {color:green}+1 contrib tests{color}.  The patch passed contrib unit tests."
   return 0
 }
 
@@ -814,12 +814,12 @@ checkInjectSystemFaults () {
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 system test framework.  The patch failed system test framework compile."
+    {color:red}-1 system test framework{color}.  The patch failed system test framework compile."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 system test framework.  The patch passed system test framework compile."
+    {color:green}+1 system test framework{color}.  The patch passed system test framework compile."
   return 0
 }
 

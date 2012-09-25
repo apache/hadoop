@@ -114,6 +114,9 @@ Trunk (Unreleased)
     HADOOP-8838. Colorize the test-patch output sent to JIRA (Harsh J via
     bobby)
 
+    HADOOP-8840. Fix the test-patch colorizer to cover all sorts of +1 lines.
+    (Harsh J via bobby)
+
   BUG FIXES
 
     HADOOP-8177. MBeans shouldn't try to register when it fails to create MBeanName.
