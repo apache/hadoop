@@ -182,6 +182,8 @@ Release 1.1.0 - 2012.09.16
     HADOOP-8617. Backport HADOOP-6148, HADOOP-6166 and HADOOP-7333 for a pure
     Java CRC32 calculator implementation.  (Brandon Li via szetszwo)
 
+    HDFS-496. Backport: Use PureJavaCrc32 in HDFS.  (Brandon Li via szetszwo)
+
   BUG FIXES
 
     HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
