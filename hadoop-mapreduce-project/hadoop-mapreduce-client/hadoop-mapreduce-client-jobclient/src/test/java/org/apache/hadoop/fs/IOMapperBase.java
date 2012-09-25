@@ -22,7 +22,9 @@ import java.net.InetAddress;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Base mapper class for IO operations.
@@ -41,6 +43,7 @@ public abstract class IOMapperBase<T> extends Configured
   protected int bufferSize;
   protected FileSystem fs;
   protected String hostName;
+  protected CompressionCodec compressionCodec;
 
   public IOMapperBase() { 
   }
@@ -58,6 +61,22 @@ public abstract class IOMapperBase<T> extends Configured
       hostName = InetAddress.getLocalHost().getHostName();
     } catch(Exception e) {
       hostName = "localhost";
+    }
+    
+    //grab compression
+    String compression = getConf().get("test.io.compression.class", null);
+    Class<? extends CompressionCodec> codec;
+
+    //try to initialize codec
+    try {
+      codec = (compression == null) ? null : 
+     Class.forName(compression).asSubclass(CompressionCodec.class);
+    } catch(Exception e) {
+      throw new RuntimeException("Compression codec not found: ", e);
+    }
+
+    if(codec != null) {
+      compressionCodec = (CompressionCodec) ReflectionUtils.newInstance(codec, getConf());
     }
   }
 

@@ -8,6 +8,9 @@ Release 0.23.4 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-2786. Add compression option for TestDFSIO.
+    (Plamen Jeliazkov via shv)
+
     MAPREDUCE-4645. Provide a random seed to Slive to make the sequence
     of file names deterministic. (Ravi Prakash via shv)
 
