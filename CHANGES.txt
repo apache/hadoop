@@ -163,6 +163,9 @@ Release 1.1.0 - 2012.09.16
     HDFS-3617. Port HDFS-96 to branch-1 (support blocks greater than 2GB).
     (Patrick Kling and harsh via eli)
 
+    MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
+    (Todd Lipcon and Brandon Li via sseth)
+
   BUG FIXES
 
     HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations
