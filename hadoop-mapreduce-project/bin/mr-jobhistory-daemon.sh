@@ -16,22 +16,16 @@
 # limitations under the License.
 
 
-# Runs a yarn command as a daemon.
 #
 # Environment Variables
 #
-#   HADOOP_LOGFILE Hadoop log file.
-#   HADOOP_ROOT_LOGGER Hadoop root logger.
 #   HADOOP_JHS_LOGGER  Hadoop JobSummary logger.
-#   YARN_CONF_DIR  Alternate conf dir. Default is ${YARN_HOME}/conf.
-#   YARN_LOG_DIR   Where log files are stored.  PWD by default.
-#   YARN_MASTER    host:path where hadoop code should be rsync'd from
-#   YARN_PID_DIR   The pid files are stored. /tmp by default.
-#   YARN_IDENT_STRING   A string representing this instance of hadoop. $USER by default
-#   YARN_NICENESS The scheduling priority for daemons. Defaults to 0.
+#   HADOOP_CONF_DIR  Alternate conf dir. Default is ${HADOOP_MAPRED_HOME}/conf.
+#   HADOOP_MAPRED_PID_DIR   The pid files are stored. /tmp by default.
+#   HADOOP_MAPRED_NICENESS The scheduling priority for daemons. Defaults to 0.
 ##
 
-usage="Usage: mr-jobhistory-daemon.sh [--config <conf-dir>] [--hosts hostlistfile] (start|stop) <mapred-command> "
+usage="Usage: mr-jobhistory-daemon.sh [--config <conf-dir>] (start|stop) <mapred-command> "
 
 # if no args specified, show usage
 if [ $# -le 1 ]; then
@@ -41,10 +35,6 @@ fi
 
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
-
-DEFAULT_LIBEXEC_DIR="$bin"/../libexec
-HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
-. $HADOOP_LIBEXEC_DIR/yarn-config.sh
 
 # get arguments
 startStop=$1
@@ -69,43 +59,47 @@ hadoop_rotate_log ()
   fi
 }
 
-if [ -f "${YARN_CONF_DIR}/yarn-env.sh" ]; then
-  . "${YARN_CONF_DIR}/yarn-env.sh"
+if [ "$HADOOP_MAPRED_IDENT_STRING" = "" ]; then
+  export HADOOP_MAPRED_IDENT_STRING="$USER"
 fi
 
-if [ "$YARN_IDENT_STRING" = "" ]; then
-  export YARN_IDENT_STRING="$USER"
-fi
-
-# get log directory
-if [ "$YARN_LOG_DIR" = "" ]; then
-  export YARN_LOG_DIR="$YARN_HOME/logs"
-fi
-mkdir -p "$YARN_LOG_DIR"
-chown $YARN_IDENT_STRING $YARN_LOG_DIR
-
-if [ "$YARN_PID_DIR" = "" ]; then
-  YARN_PID_DIR=/tmp
-fi
-
-# some variables
-export HADOOP_LOGFILE=yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.log
-export HADOOP_ROOT_LOGGER=${HADOOP_ROOT_LOGGER:-INFO,RFA}
+export HADOOP_MAPRED_HOME=${HADOOP_MAPRED_HOME:-${HADOOP_PREFIX}}
+export HADOOP_MAPRED_LOGFILE=mapred-$HADOOP_MAPRED_IDENT_STRING-$command-$HOSTNAME.log
+export HADOOP_MAPRED_ROOT_LOGGER=${HADOOP_MAPRED_ROOT_LOGGER:-INFO,RFA}
 export HADOOP_JHS_LOGGER=${HADOOP_JHS_LOGGER:-INFO,JSA}
-log=$YARN_LOG_DIR/yarn-$YARN_IDENT_STRING-$command-$HOSTNAME.out
-pid=$YARN_PID_DIR/yarn-$YARN_IDENT_STRING-$command.pid
-YARN_STOP_TIMEOUT=${YARN_STOP_TIMEOUT:-5}
+
+DEFAULT_LIBEXEC_DIR="$bin"/../libexec
+HADOOP_LIBEXEC_DIR=${HADOOP_LIBEXEC_DIR:-$DEFAULT_LIBEXEC_DIR}
+. $HADOOP_LIBEXEC_DIR/mapred-config.sh
+
+if [ -f "${HADOOP_CONF_DIR}/mapred-env.sh" ]; then
+  . "${HADOOP_CONF_DIR}/mapred-env.sh"
+fi
+
+mkdir -p "$HADOOP_MAPRED_LOG_DIR"
+chown $HADOOP_MAPRED_IDENT_STRING $HADOOP_MAPRED_LOG_DIR
+
+if [ "$HADOOP_MAPRED_PID_DIR" = "" ]; then
+  HADOOP_MAPRED_PID_DIR=/tmp
+fi
+
+HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.id.str=$HADOOP_MAPRED_IDENT_STRING"
+
+log=$HADOOP_MAPRED_LOG_DIR/mapred-$HADOOP_MAPRED_IDENT_STRING-$command-$HOSTNAME.out
+pid=$HADOOP_MAPRED_PID_DIR/mapred-$HADOOP_MAPRED_IDENT_STRING-$command.pid
+
+HADOOP_MAPRED_STOP_TIMEOUT=${HADOOP_MAPRED_STOP_TIMEOUT:-5}
 
 # Set default scheduling priority
-if [ "$YARN_NICENESS" = "" ]; then
-  export YARN_NICENESS=0
+if [ "$HADOOP_MAPRED_NICENESS" = "" ]; then
+  export HADOOP_MAPRED_NICENESS=0
 fi
 
 case $startStop in
 
   (start)
 
-    mkdir -p "$YARN_PID_DIR"
+    mkdir -p "$HADOOP_MAPRED_PID_DIR"
 
     if [ -f $pid ]; then
       if kill -0 `cat $pid` > /dev/null 2>&1; then
@@ -114,15 +108,10 @@ case $startStop in
       fi
     fi
 
-    if [ "$YARN_MASTER" != "" ]; then
-      echo rsync from $YARN_MASTER
-      rsync -a -e ssh --delete --exclude=.svn --exclude='logs/*' --exclude='contrib/hod/logs/*' $YARN_MASTER/ "$YARN_HOME"
-    fi
-
     hadoop_rotate_log $log
     echo starting $command, logging to $log
-    cd "$YARN_HOME"
-    nohup nice -n $YARN_NICENESS "$YARN_HOME"/bin/mapred --config $YARN_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
+    cd "$HADOOP_MAPRED_HOME"
+    nohup nice -n $HADOOP_MAPRED_NICENESS "$HADOOP_MAPRED_HOME"/bin/mapred --config $HADOOP_CONF_DIR $command "$@" > "$log" 2>&1 < /dev/null &
     echo $! > $pid
     sleep 1; head "$log"
     ;;
@@ -134,9 +123,9 @@ case $startStop in
       if kill -0 $TARGET_PID > /dev/null 2>&1; then
         echo stopping $command
         kill $TARGET_PID
-        sleep $YARN_STOP_TIMEOUT
+        sleep $HADOOP_MAPRED_STOP_TIMEOUT
         if kill -0 $TARGET_PID > /dev/null 2>&1; then
-          echo "$command did not stop gracefully after $YARN_STOP_TIMEOUT seconds: killing with kill -9"
+          echo "$command did not stop gracefully after $HADOOP_MAPRED_STOP_TIMEOUT seconds: killing with kill -9"
           kill -9 $TARGET_PID
         fi
       else

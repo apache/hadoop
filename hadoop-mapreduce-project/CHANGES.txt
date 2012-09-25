@@ -201,6 +201,10 @@ Release 2.0.2-alpha - 2012-09-07
     MAPREDUCE-4380. Empty Userlogs directory is getting created under logs
     directory (Devaraj K via bobby)
 
+    MAPREDUCE-4649. Ensure MapReduce JobHistory Daemon doens't assume
+    HADOOP_YARN_HOME and HADOOP_MAPRED_HOME are the same. (vinodkv via
+    acmurthy)
+
 Release 2.0.0-alpha - 05-23-2012
 
   INCOMPATIBLE CHANGES
