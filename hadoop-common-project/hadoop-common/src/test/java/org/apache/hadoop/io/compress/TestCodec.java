@@ -34,6 +34,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -226,6 +228,15 @@ public class TestCodec {
       v2.readFields(inflateIn);
       assertTrue("original and compressed-then-decompressed-output not equal",
                  k1.equals(k2) && v1.equals(v2));
+      
+      // original and compressed-then-decompressed-output have the same hashCode
+      Map<RandomDatum, String> m = new HashMap<RandomDatum, String>();
+      m.put(k1, k1.toString());
+      m.put(v1, v1.toString());
+      String result = m.get(k2);
+      assertEquals("k1 and k2 hashcode not equal", result, k1.toString());
+      result = m.get(v2);
+      assertEquals("v1 and v2 hashcode not equal", result, v1.toString());
     }
 
     // De-compress data byte-at-a-time

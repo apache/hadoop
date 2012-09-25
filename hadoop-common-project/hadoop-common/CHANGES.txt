@@ -321,6 +321,9 @@ Release 2.6.0 - UNRELEASED
     HADOOP-10989. Work around buggy getgrouplist() implementations on Linux that
     return 0 on failure. (cnauroth)
 
+    HADOOP-8815. RandomDatum needs to override hashCode().
+    (Brandon Li via suresh)
+
 Release 2.5.1 - UNRELEASED
 
   INCOMPATIBLE CHANGES
