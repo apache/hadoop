@@ -254,6 +254,9 @@ Release 1.2.0 - unreleased
     MAPREDUCE-4652. ValueAggregatorJob sets the wrong job jar.
     (Ahmed Radwan via tomwhite)
 
+    MAPREDUCE-4662.  JobHistoryFilesManager thread pool never expands 
+    (Kihwal Lee via tgraves)
+
 Release 1.1.0 - unreleased
 
   INCOMPATIBLE CHANGES

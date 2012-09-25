@@ -221,8 +221,11 @@ public class JobHistory {
 
 
     void start() {
-      executor = new ThreadPoolExecutor(1, 3, 1, 
+      executor = new ThreadPoolExecutor(5, 5, 1, 
           TimeUnit.HOURS, new LinkedBlockingQueue<Runnable>());
+      // make core threads to terminate if there has been no work
+      // for the keppalive period.
+      executor.allowCoreThreadTimeOut(true);
     }
 
     private FilesHolder getFileHolder(JobID id) {
