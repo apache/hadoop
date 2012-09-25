@@ -365,6 +365,9 @@ Release 1.1.0 - 2012.09.16
     MAPREDUCE-4675. Fixed a race condition caused in TestKillSubProcesses caused
     due to a recent commit. (Bikas Saha via vinodkv)
 
+    MAPREDUCE-3837. Job tracker is not able to recover job in case of crash
+    and after that no user can submit job. (Mayank Bansal via tomwhite)
+
 Release 1.0.4 - Unreleased
 
   NEW FEATURES
