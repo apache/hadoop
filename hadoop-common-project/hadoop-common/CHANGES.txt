@@ -736,6 +736,8 @@ Release 0.23.4 - UNRELEASED
 
   IMPROVEMENTS
 
+    HADOOP-8822. relnotes.py was deleted post mavenization (bobby)
+
   OPTIMIZATIONS
 
   BUG FIXES
