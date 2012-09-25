@@ -1704,8 +1704,17 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           }
           
           String dir = jobClient.getSystemDir();
-          if (dir == null) {
-            throw new IOException("Failed to get system directory");
+          while (dir == null) {
+            LOG.info("Failed to get system directory...");
+            
+            // Re-try
+            try {
+              // Sleep interval: 1000 ms - 5000 ms
+              int sleepInterval = 1000 + r.nextInt(4000);
+              Thread.sleep(sleepInterval);
+            } catch (InterruptedException ie) 
+            {}
+            dir = jobClient.getSystemDir();
           }
           systemDirectory = new Path(dir);
           systemFS = systemDirectory.getFileSystem(fConf);

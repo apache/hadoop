@@ -50,4 +50,13 @@ public interface AdminOperationsProtocol extends VersionedProtocol {
    * Refresh the node list at the {@link JobTracker} 
    */
   void refreshNodes() throws IOException;
+  
+  /**
+   * Set safe mode for the JobTracker.
+   * @param safeModeAction safe mode action
+   * @return current safemode
+   * @throws IOException
+   */
+  boolean setSafeMode(JobTracker.SafeModeAction safeModeAction) 
+      throws IOException;
 }

@@ -31,6 +31,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.SortedRanges.Range;
+import org.apache.hadoop.mapred.TaskStatus.State;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.net.Node;
@@ -604,10 +605,18 @@ class TaskInProgress {
           
       changed = oldState != newState;
     }
+    
     // if task is a cleanup attempt, do not replace the complete status,
     // update only specific fields.
     // For example, startTime should not be updated, 
     // but finishTime has to be updated.
+    
+    // Don't fail tasks when JobTracker is in safe-mode
+    if (status.getRunState() == State.FAILED && jobtracker.isInSafeMode()) {
+      LOG.info("JT is in safe-mode; marking " + taskid + " as KILLED");
+      status.setRunState(State.KILLED);
+    }
+
     if (!isCleanupAttempt(taskid)) {
       taskStatuses.put(taskid, status);
     } else {

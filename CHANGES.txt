@@ -54,6 +54,13 @@ Release 1.1.0 - 2012.09.16
     configured timeout and are selected as the last location to read from.
     (Jing Zhao via szetszwo)
 
+    MAPREDUCE-4328. Add a JobTracker safemode to allow it to be resilient to
+    NameNode failures. The safemode can be entered either automatically via
+    the configurable background thread to monitor the NameNode or by the
+    admin. In the safemode the JobTracker doesn't schedule new tasks, marks
+    all failed tasks as KILLED for future retries and doesn't accept new job
+    submissions. (acmurthy)
+
   IMPROVEMENTS
 
     HADOOP-8656. Backport forced daemon shutdown of HADOOP-8353 into branch-1
