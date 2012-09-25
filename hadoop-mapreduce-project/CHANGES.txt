@@ -49,9 +49,6 @@ Release 2.0.2-alpha - 2012-09-07
     MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached 
     (rkanter via tucu)
 
-    MAPREDUCE-2786. Add compression option for TestDFSIO.
-    (Plamen Jeliazkov via shv)
-
     MAPREDUCE-4440. Changed SchedulerApp and SchedulerNode to be a minimal
     interface to allow schedulers to maintain their own. (acmurthy) 
 
@@ -409,8 +406,13 @@ Release 0.23.4 - UNRELEASED
 
   IMPROVEMENTS
 
+    MAPREDUCE-2786. Add compression option for TestDFSIO.
+    (Plamen Jeliazkov via shv)
+
     MAPREDUCE-4645. Provide a random seed to Slive to make the sequence
     of file names deterministic. (Ravi Prakash via shv)
+
+    MAPREDUCE-4651. Benchmarking random reads with DFSIO. (shv)
 
   OPTIMIZATIONS
 
