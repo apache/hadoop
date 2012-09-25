@@ -29,6 +29,8 @@ Release 2.0.3-alpha - Unreleased
 
 Release 2.0.2-alpha - 2012-09-07 
 
+    YARN-9. Rename YARN_HOME to HADOOP_YARN_HOME. (vinodkv via acmurthy)
+
   NEW FEATURES
 
     YARN-1. Promote YARN to be a sub-project of Apache Hadoop. (acmurthy)
