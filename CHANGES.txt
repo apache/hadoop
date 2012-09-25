@@ -166,6 +166,8 @@ Release 1.1.0 - 2012.09.16
     MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler.
     (Todd Lipcon and Brandon Li via sseth)
 
+    MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
+
   BUG FIXES
 
     HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations

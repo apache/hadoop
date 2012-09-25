@@ -1684,7 +1684,7 @@ class ReduceTask extends Task {
         }
 
         IFileInputStream checksumIn = 
-          new IFileInputStream(input,compressedLength);
+          new IFileInputStream(input,compressedLength, conf);
 
         input = checksumIn;       
       
