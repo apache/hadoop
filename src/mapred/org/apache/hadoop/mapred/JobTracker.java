@@ -3719,9 +3719,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public JobStatus submitJob(JobID jobId, String jobSubmitDir,
       UserGroupInformation ugi, Credentials ts, boolean recovered)
       throws IOException {
-    if (isInSafeMode()) {
-      throw new IOException("JobTracker in safemode");
-    }
+    // Check for safe-mode
+    checkSafeMode();
     
     JobInfo jobInfo = null;
     if (ugi == null) {
@@ -3804,6 +3803,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getStagingAreaDir()
    */
   public String getStagingAreaDir() throws IOException {
+    // Check for safe-mode
+    checkSafeMode();
+
     try{
       final String user =
         UserGroupInformation.getCurrentUser().getShortUserName();
@@ -3919,6 +3921,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       LOG.info("Null jobid object sent to JobTracker.killJob()");
       return;
     }
+    
+    // No 'killJob' in safe-mode
+    checkSafeMode();
     
     JobInProgress job = jobs.get(jobid);
     
@@ -4375,6 +4380,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   public synchronized boolean killTask(TaskAttemptID taskid, boolean shouldFail)
       throws IOException {
+    // No 'killTask' in safe-mode
+    checkSafeMode();
+
     TaskInProgress tip = taskidToTIPMap.get(taskid);
     if(tip != null) {
       // check both queue-level and job-level access
@@ -5266,4 +5274,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return "<em>ON - " + safeModeInfo + "</em>";
   }
   
+  private void checkSafeMode() throws SafeModeException {
+    if (isInSafeMode()) {
+      try {
+        throw new SafeModeException((
+            isInAdminSafeMode()) ? adminSafeModeUser : null);
+      } catch (SafeModeException sfe) {
+        LOG.info("JobTracker in safe-mode, aborting operation", sfe);
+        throw sfe;
+      }
+    }
+  }
 }
